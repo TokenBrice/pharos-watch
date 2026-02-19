@@ -11,13 +11,15 @@ import { setCache } from "../lib/db";
  * Runs every 2 hours.
  */
 
-const CURRENCIES = ["EUR", "GBP", "CHF", "BRL"] as const;
+const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR"] as const;
 
 const CURRENCY_TO_PEG: Record<string, string> = {
   EUR: "peggedEUR",
   GBP: "peggedGBP",
   CHF: "peggedCHF",
   BRL: "peggedBRL",
+  JPY: "peggedJPY",
+  IDR: "peggedIDR",
 };
 
 // RUB not available from ECB — use fixed approximation
