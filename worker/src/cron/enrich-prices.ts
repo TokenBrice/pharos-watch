@@ -27,6 +27,11 @@ export function isReasonablePrice(price: number, pegType: string | undefined): b
   if (pegType.includes("USD") || pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL")) {
     return price > 0.01 && price < 50;
   }
+  if (pegType.includes("JPY")) return price > 0.001 && price < 0.05;
+  if (pegType.includes("IDR")) return price > 0.00001 && price < 0.001;
+  if (pegType.includes("SGD")) return price > 0.2 && price < 5;
+  if (pegType.includes("TRY")) return price > 0.005 && price < 0.5;
+  if (pegType.includes("AUD")) return price > 0.2 && price < 5;
   if (pegType.includes("RUB")) {
     return price > 0.005 && price < 50; // RUB ~$0.0127, lower bound allows for further weakening
   }

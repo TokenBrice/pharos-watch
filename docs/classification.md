@@ -26,7 +26,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 ### Peg Currency
 
-`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `GOLD`, `VAR` (variable/CPI-linked), `OTHER`
+`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `IDR`, `SGD`, `TRY`, `AUD`, `GOLD`, `VAR` (variable/CPI-linked), `OTHER`
 
 ### Boolean Flags
 
@@ -49,7 +49,7 @@ Peg deviation for non-USD stablecoins requires knowing the USD value of the peg 
 
 For thin peg groups (GBP, CHF, BRL, RUB, JPY — often <3 qualifying coins), a `FALLBACK_RATES` map provides approximate FX rates. If the median from <3 coins deviates >10% from the fallback, the fallback is used instead. This prevents a single depegged coin from becoming its own reference rate (which would always show 0 bps deviation).
 
-Live FX rates are fetched every 2 hours by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR. RUB uses a secondary API (`open.er-api.com`) since ECB doesn't publish ruble rates.
+Live FX rates are fetched every 2 hours by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD. RUB uses a secondary API (`open.er-api.com`) since ECB doesn't publish ruble rates.
 
 ## Gold Stablecoins (XAUT, PAXG)
 

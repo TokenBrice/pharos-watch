@@ -11,6 +11,7 @@ export function formatCurrency(value: number, decimals = 2): string {
 
 const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
+  IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$",
   GOLD: "$", VAR: "$", OTHER: "$",
 };
 

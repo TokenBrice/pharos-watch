@@ -1,20 +1,6 @@
 import type { StablecoinData, StablecoinMeta } from "./types";
 
 /**
- * Hardcoded FX rate fallbacks — used only when live rates are unavailable.
- * Prefer passing dynamic rates from the FX rate sync cron via `fallbackRates`.
- */
-const DEFAULT_FALLBACK_RATES: Record<string, number> = {
-  peggedEUR: 1.08,
-  peggedGBP: 1.27,
-  peggedCHF: 1.13,
-  peggedBRL: 0.18,
-  peggedRUB: 0.0125,
-  peggedJPY: 0.00645,
-  peggedIDR: 0.0000591,
-};
-
-/**
  * Derive peg reference rates from the DefiLlama data itself.
  * For each pegType, compute the median price of coins with mcap > $1M.
  * This gives us live FX rates (e.g. peggedEUR -> ~1.19 USD).
@@ -60,9 +46,10 @@ export function derivePegRates(
     groups[peg].push(price);
   }
 
-  const mergedFallbacks = fallbackRates
-    ? { ...DEFAULT_FALLBACK_RATES, ...fallbackRates }
-    : DEFAULT_FALLBACK_RATES;
+  // Use only live cached FX rates — no stale hardcoded defaults.
+  // On fresh deploy before first FX sync, fallbackRates is undefined
+  // and thin-group validation is skipped for one cycle.
+  const mergedFallbacks = fallbackRates ?? {};
 
   const rates: Record<string, number> = {};
   for (const [peg, prices] of Object.entries(groups)) {

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercentChange } from "@/lib/format";
 import { PEG_META } from "@/lib/peg-config";
-import { getCirculatingUSD, getPrevWeekUSD } from "@/lib/supply";
+import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS, TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
@@ -19,12 +19,11 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
-    const rates = pegRates ?? { peggedUSD: 1 };
     const trackedIds = TRACKED_IDS;
     const trackedData = data.filter((c) => trackedIds.has(c.id));
 
-    const totalAll = trackedData.reduce((sum, c) => sum + getCirculatingUSD(c, rates), 0);
-    const totalPrevWeek = trackedData.reduce((sum, c) => sum + getPrevWeekUSD(c, rates), 0);
+    const totalAll = trackedData.reduce((sum, c) => sum + getCirculatingRaw(c), 0);
+    const totalPrevWeek = trackedData.reduce((sum, c) => sum + getPrevWeekRaw(c), 0);
 
     // Breakdown by governance
     const centralizedIds = new Set(TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").map((s) => s.id));
@@ -43,16 +42,16 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
     let usdcPrev = 0;
     let restPrev = 0;
     for (const coin of trackedData) {
-      const mcap = getCirculatingUSD(coin, rates);
-      const prev = getPrevWeekUSD(coin, rates);
+      const mcap = getCirculatingRaw(coin);
+      const prev = getPrevWeekRaw(coin);
       if (coin.id === "1") { usdt = mcap; usdtPrev = prev; }
       else if (coin.id === "2") { usdc = mcap; usdcPrev = prev; }
       else { rest += mcap; restPrev += prev; }
     }
 
-    const centralizedMcap = centralizedCoins.reduce((s, c) => s + getCirculatingUSD(c, rates), 0);
-    const dependentMcap = dependentCoins.reduce((s, c) => s + getCirculatingUSD(c, rates), 0);
-    const decentralizedMcap = decentralizedCoins.reduce((s, c) => s + getCirculatingUSD(c, rates), 0);
+    const centralizedMcap = centralizedCoins.reduce((s, c) => s + getCirculatingRaw(c), 0);
+    const dependentMcap = dependentCoins.reduce((s, c) => s + getCirculatingRaw(c), 0);
+    const decentralizedMcap = decentralizedCoins.reduce((s, c) => s + getCirculatingRaw(c), 0);
     const govTotal = centralizedMcap + dependentMcap + decentralizedMcap;
 
     // Alternative peg breakdown (non-USD)
@@ -62,7 +61,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
     for (const coin of trackedData) {
       const meta = metaById.get(coin.id);
       if (!meta || meta.flags.pegCurrency === "USD") continue;
-      const mcap = getCirculatingUSD(coin, rates);
+      const mcap = getCirculatingRaw(coin);
       pegTotals[meta.flags.pegCurrency] = (pegTotals[meta.flags.pegCurrency] ?? 0) + mcap;
       altTotal += mcap;
     }
@@ -84,7 +83,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
       usdtPrev, usdcPrev, restPrev,
       altPegs, altTotal,
     };
-  }, [data, pegRates]);
+  }, [data]);
 
   if (!stats) {
     return (

@@ -12,7 +12,7 @@ import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
  * Runs every 2 hours.
  */
 
-const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR"] as const;
+const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR", "SGD", "TRY", "AUD"] as const;
 
 const CURRENCY_TO_PEG: Record<string, string> = {
   EUR: "peggedEUR",
@@ -21,6 +21,9 @@ const CURRENCY_TO_PEG: Record<string, string> = {
   BRL: "peggedBRL",
   JPY: "peggedJPY",
   IDR: "peggedIDR",
+  SGD: "peggedSGD",
+  TRY: "peggedTRY",
+  AUD: "peggedAUD",
 };
 
 

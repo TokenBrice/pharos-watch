@@ -29,7 +29,7 @@ function other(id: string, name: string, symbol: string, backing: StablecoinMeta
  *
  * Classification flags:
  *   backing:      rwa-backed | crypto-backed | algorithmic
- *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | GOLD | VAR | OTHER
+ *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | IDR | SGD | TRY | AUD | GOLD | VAR | OTHER
  *   governance:   centralized | centralized-dependent | decentralized
  *   yieldBearing: token itself accrues yield
  *   rwa:          backed by real-world assets (treasuries, bonds, etc.)
@@ -1038,7 +1038,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Additional non-USD pegs ────────────────────────────────────────
-  other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "OTHER", {
+  other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
     collateral: "Singapore dollar cash reserves held at DBS and Standard Chartered banks",
     pegMechanism: "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution)",
     proofOfReserves: { type: "independent-audit", url: "https://www.straitsx.com/xsgd" },
@@ -1058,7 +1058,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
   }),
-  other("300", "BiLira", "TRYB", "rwa-backed", "centralized", "OTHER", {
+  other("300", "BiLira", "TRYB", "rwa-backed", "centralized", "TRY", {
     collateral: "Turkish lira reserves held in Turkish bank accounts",
     pegMechanism: "Direct 1:1 redemption for TRY through BiLira",
     links: [
@@ -1067,7 +1067,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Turkey", regulator: "SPK/CMB" },
   }),
-  other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "OTHER", {
+  other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
     collateral: "Australian dollar cash and cash equivalents held at Australian deposit-taking institutions",
     pegMechanism: "Direct 1:1 redemption for AUD through AUDC (Novatti subsidiary)",
     proofOfReserves: { type: "independent-audit", url: "https://www.audd.digital/", provider: "William Buck Audit" },
@@ -1085,7 +1085,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Japan", regulator: "FSA" },
   }),
-  other("cg-idrt", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "OTHER", {
+  other("cg-idrt", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "IDR", {
     collateral: "Indonesian rupiah reserves held 1:1 in Indonesian bank accounts",
     pegMechanism: "Direct 1:1 redemption for IDR through PT Rupiah Token Indonesia",
     links: [

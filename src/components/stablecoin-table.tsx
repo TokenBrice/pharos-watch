@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@/lib/format";
 import { getPegReference } from "@/lib/peg-rates";
-import { getCirculatingUSD, getPrevDayUSD, getPrevWeekUSD } from "@/lib/supply";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@/lib/stablecoins";
 import type { StablecoinData, FilterTag, PegSummaryCoin, BluechipRating, DexLiquidityMap } from "@/lib/types";
 import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
@@ -108,21 +108,21 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
           bVal = b.price ?? 0;
           break;
         case "mcap":
-          aVal = getCirculatingUSD(a, pegRates);
-          bVal = getCirculatingUSD(b, pegRates);
+          aVal = getCirculatingRaw(a);
+          bVal = getCirculatingRaw(b);
           break;
         case "change24h": {
-          const aPrev24 = getPrevDayUSD(a, pegRates);
-          const bPrev24 = getPrevDayUSD(b, pegRates);
-          aVal = aPrev24 > 0 ? (getCirculatingUSD(a, pegRates) - aPrev24) / aPrev24 : 0;
-          bVal = bPrev24 > 0 ? (getCirculatingUSD(b, pegRates) - bPrev24) / bPrev24 : 0;
+          const aPrev24 = getPrevDayRaw(a);
+          const bPrev24 = getPrevDayRaw(b);
+          aVal = aPrev24 > 0 ? (getCirculatingRaw(a) - aPrev24) / aPrev24 : 0;
+          bVal = bPrev24 > 0 ? (getCirculatingRaw(b) - bPrev24) / bPrev24 : 0;
           break;
         }
         case "change7d": {
-          const aPrev7 = getPrevWeekUSD(a, pegRates);
-          const bPrev7 = getPrevWeekUSD(b, pegRates);
-          aVal = aPrev7 > 0 ? (getCirculatingUSD(a, pegRates) - aPrev7) / aPrev7 : 0;
-          bVal = bPrev7 > 0 ? (getCirculatingUSD(b, pegRates) - bPrev7) / bPrev7 : 0;
+          const aPrev7 = getPrevWeekRaw(a);
+          const bPrev7 = getPrevWeekRaw(b);
+          aVal = aPrev7 > 0 ? (getCirculatingRaw(a) - aPrev7) / aPrev7 : 0;
+          bVal = bPrev7 > 0 ? (getCirculatingRaw(b) - bPrev7) / bPrev7 : 0;
           break;
         }
         case "stability": {
@@ -160,8 +160,8 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
           break;
         }
         default:
-          aVal = getCirculatingUSD(a, pegRates);
-          bVal = getCirculatingUSD(b, pegRates);
+          aVal = getCirculatingRaw(a);
+          bVal = getCirculatingRaw(b);
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
@@ -288,9 +288,9 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
         </TableHeader>
         <TableBody>
           {paginated.map((coin, index) => {
-            const circulating = getCirculatingUSD(coin, pegRates);
-            const prevDay = getPrevDayUSD(coin, pegRates);
-            const prevWeek = getPrevWeekUSD(coin, pegRates);
+            const circulating = getCirculatingRaw(coin);
+            const prevDay = getPrevDayRaw(coin);
+            const prevWeek = getPrevWeekRaw(coin);
             const meta = metaById.get(coin.id);
             const change24h = prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0;
             const change7d = prevWeek > 0 ? ((circulating - prevWeek) / prevWeek) * 100 : 0;
@@ -361,7 +361,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     {prevWeek > 0 ? (
                       <>
                         <span className="hidden sm:inline">
-                          <MiniSparkline values={[getPrevWeekUSD(coin, pegRates), getPrevDayUSD(coin, pegRates), getCirculatingUSD(coin, pegRates)]} />
+                          <MiniSparkline values={[getPrevWeekRaw(coin), getPrevDayRaw(coin), getCirculatingRaw(coin)]} />
                         </span>
                         {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
                       </>
