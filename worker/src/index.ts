@@ -38,7 +38,7 @@ function addCorsHeaders(response: Response, origin: string): Response {
   });
 }
 
-export default {
+const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const origin = env.CORS_ORIGIN;
 
@@ -119,3 +119,5 @@ export default {
     }
   },
 };
+
+export default worker;

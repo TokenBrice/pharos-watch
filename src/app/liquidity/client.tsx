@@ -269,8 +269,6 @@ export function LiquidityClient() {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
-  const metaById = useMemo(() => new Map(TRACKED_STABLECOINS.map((s) => [s.id, s])), []);
-
   // Combine tracked stablecoins with liquidity data
   const rows = useMemo(() => {
     if (!liquidityMap) return [];

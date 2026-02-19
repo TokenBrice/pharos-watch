@@ -5,7 +5,6 @@ import { Search } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
@@ -21,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { derivePegRates } from "@/lib/peg-rates";
-import type { FilterTag, DepegEvent, PegSummaryCoin } from "@/lib/types";
+import type { FilterTag, PegSummaryCoin } from "@/lib/types";
 import { FILTER_TAG_LABELS } from "@/lib/types";
 
 interface FilterGroup {
@@ -51,21 +50,10 @@ const FILTER_GROUPS: FilterGroup[] = [
 export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
   const { data: logos } = useLogos();
-  const { data: depegData } = useDepegEvents();
   const { data: pegSummaryData } = usePegSummary();
   const { data: bluechipRatings } = useBluechipRatings();
   const { data: dexLiquidity } = useDexLiquidity();
   const metaById = useMemo(() => new Map(TRACKED_STABLECOINS.map((s) => [s.id, s])), []);
-  const depegEventsByStablecoin = useMemo(() => {
-    const map = new Map<string, DepegEvent[]>();
-    if (!depegData?.events) return map;
-    for (const event of depegData.events) {
-      const arr = map.get(event.stablecoinId);
-      if (arr) arr.push(event);
-      else map.set(event.stablecoinId, [event]);
-    }
-    return map;
-  }, [depegData]);
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
     if (!pegSummaryData?.coins) return map;

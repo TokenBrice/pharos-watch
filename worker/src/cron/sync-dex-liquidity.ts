@@ -169,7 +169,7 @@ function parsePoolSymbols(symbol: string): string[] {
 }
 
 /** Classify a DeFiLlama pool into a pool type for quality weighting */
-function classifyPoolType(project: string, _symbol: string): string {
+function classifyPoolType(project: string): string {
   const proj = project.toLowerCase();
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
@@ -705,7 +705,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
     if (matchedIds.size === 0) continue;
 
-    const poolType = classifyPoolType(pool.project, pool.symbol);
+    const poolType = classifyPoolType(pool.project);
     const protocol = normalizeProtocol(pool.project);
     const vol1d = pool.volumeUsd1d ?? 0;
     const vol7d = pool.volumeUsd7d ?? 0;

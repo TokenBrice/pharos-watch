@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback } from "react";
-import { Search } from "lucide-react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
@@ -11,7 +10,6 @@ import { PegHeatmap } from "@/components/peg-heatmap";
 import { PegLeaderboard } from "@/components/peg-leaderboard";
 import { DepegTimeline } from "@/components/depeg-timeline";
 import { DepegFeed } from "@/components/depeg-feed";
-import { Input } from "@/components/ui/input";
 import type { PegCurrency, GovernanceType } from "@/lib/types";
 
 const VALID_PEG_FILTERS = new Set(["all", "USD", "EUR", "GOLD"]);

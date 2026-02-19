@@ -23,7 +23,6 @@ const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]
 function BlacklistPageInner() {
   const { data, isLoading, isError, error } = useBlacklistEvents();
   const events = data?.events;
-  const totalInDb = data?.total ?? 0;
 
   const searchParams = useSearchParams();
   const router = useRouter();
