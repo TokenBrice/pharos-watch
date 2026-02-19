@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useCallback } from "react";
 
 interface UseSortReturn<K extends string> {

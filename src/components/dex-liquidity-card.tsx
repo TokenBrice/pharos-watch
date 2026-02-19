@@ -14,14 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
+import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol } from "@/lib/dex-constants";
+import { getScoreTier, TIER_TEXT } from "@/lib/severity-colors";
 import type { DexLiquidityPool, DexLiquidityData } from "@/lib/types";
-
-function getScoreTier(score: number): "green" | "blue" | "amber" | "red" {
-  if (score >= 80) return "green";
-  if (score >= 60) return "blue";
-  if (score >= 40) return "amber";
-  return "red";
-}
 
 function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
@@ -39,55 +34,11 @@ function getConcentrationLabel(hhi: number): { label: string; color: string } {
   return { label: "Low", color: "text-emerald-500" };
 }
 
-const TIER_TEXT = {
-  green: "text-emerald-500",
-  blue: "text-blue-500",
-  amber: "text-amber-500",
-  red: "text-red-500",
-};
-
-const KNOWN_PROTOCOL_NAMES: Record<string, string> = {
-  curve: "Curve",
-  "uniswap-v3": "Uniswap V3",
-  uniswap: "Uniswap",
-  fluid: "Fluid",
-  balancer: "Balancer",
-  aerodrome: "Aerodrome",
-  velodrome: "Velodrome",
-  pancakeswap: "PancakeSwap",
-  sushiswap: "SushiSwap",
-  "trader-joe": "Trader Joe",
-};
-
-function formatProtocolName(project: string): string {
-  if (KNOWN_PROTOCOL_NAMES[project]) return KNOWN_PROTOCOL_NAMES[project];
-  return project
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
 function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
   const entries = Object.entries(protocolTvl).sort((a, b) => b[1] - a[1]);
   const total = entries.reduce((sum, [, v]) => sum + v, 0);
   if (total === 0) return null;
 
-  const PROTOCOL_COLORS: Record<string, string> = {
-    curve: "bg-blue-500",
-    "uniswap-v3": "bg-pink-500",
-    uniswap: "bg-pink-400",
-    fluid: "bg-cyan-500",
-    balancer: "bg-violet-500",
-    aerodrome: "bg-sky-500",
-    velodrome: "bg-red-500",
-    pancakeswap: "bg-amber-500",
-    sushiswap: "bg-indigo-500",
-    "trader-joe": "bg-orange-500",
-  };
-  const EXTRA_COLORS = [
-    "bg-emerald-500", "bg-lime-500", "bg-teal-500", "bg-rose-500",
-    "bg-fuchsia-500", "bg-yellow-500", "bg-purple-500", "bg-orange-400",
-  ];
   // Pre-compute color for each protocol in display order
   let extraIdx = 0;
   const colorFor: Record<string, string> = {};
@@ -107,7 +58,7 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
               key={protocol}
               className={`${colorFor[protocol] ?? "bg-muted-foreground"}`}
               style={{ width: `${pct}%` }}
-              title={`${formatProtocolName(protocol)}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
+              title={`${prettifyProtocol(protocol)}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
             />
           );
         })}
@@ -116,26 +67,13 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
         {entries.slice(0, 5).map(([protocol, tvl]) => (
           <span key={protocol} className="flex items-center gap-1.5">
             <span className={`inline-block h-2 w-2 rounded-full ${colorFor[protocol] ?? "bg-muted-foreground"}`} />
-            {formatProtocolName(protocol)} {((tvl / total) * 100).toFixed(0)}%
+            {prettifyProtocol(protocol)} {((tvl / total) * 100).toFixed(0)}%
           </span>
         ))}
       </div>
     </div>
   );
 }
-
-const CHAIN_COLORS: Record<string, string> = {
-  Ethereum: "bg-blue-600",
-  Arbitrum: "bg-sky-500",
-  Base: "bg-blue-400",
-  Polygon: "bg-violet-500",
-  BSC: "bg-amber-500",
-  Optimism: "bg-red-500",
-  Avalanche: "bg-red-600",
-  Solana: "bg-emerald-500",
-  Gnosis: "bg-teal-500",
-  Fantom: "bg-blue-300",
-};
 
 function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   const entries = Object.entries(chainTvl).sort((a, b) => b[1] - a[1]);

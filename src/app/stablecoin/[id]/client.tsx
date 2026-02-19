@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, Globe } from "lucide-react";
 import { useStablecoinDetail, useStablecoins } from "@/hooks/use-stablecoins";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
-import { findStablecoinMeta, TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { findStablecoinMeta, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRaw } from "@/lib/supply";
@@ -287,7 +287,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
   const prevDay = getPrevDayRaw(coinData);
   const prevWeek = getPrevWeekRaw(coinData);
   const prevMonth = getPrevMonthRaw(coinData);
-  const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+  const metaById = TRACKED_META_BY_ID;
   const pegRates = derivePegRates(listData?.peggedAssets ?? [], metaById, listData?.fxFallbackRates);
   const pegRef = getPegReference(coinData.pegType, pegRates, meta?.goldOunces);
 

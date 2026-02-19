@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercentChange } from "@/lib/format";
 import { PEG_META } from "@/lib/peg-config";
 import { getCirculatingUSD, getPrevWeekUSD } from "@/lib/supply";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
@@ -20,7 +20,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
     if (!data) return null;
 
     const rates = pegRates ?? { peggedUSD: 1 };
-    const trackedIds = new Set(TRACKED_STABLECOINS.map((s) => s.id));
+    const trackedIds = TRACKED_IDS;
     const trackedData = data.filter((c) => trackedIds.has(c.id));
 
     const totalAll = trackedData.reduce((sum, c) => sum + getCirculatingUSD(c, rates), 0);
@@ -56,7 +56,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
     const govTotal = centralizedMcap + dependentMcap + decentralizedMcap;
 
     // Alternative peg breakdown (non-USD)
-    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+    const metaById = TRACKED_META_BY_ID;
     const pegTotals: Record<string, number> = {};
     let altTotal = 0;
     for (const coin of trackedData) {

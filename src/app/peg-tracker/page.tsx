@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { PegTrackerClient } from "./client";
 
 const pegTrackerDescription = `Real-time peg deviation heatmap, weighted peg scores, and 4-year depeg event history for ${TRACKED_STABLECOINS.length} stablecoins.`;
@@ -16,28 +17,13 @@ export const metadata: Metadata = {
     title: "Peg Tracker — Stablecoin Peg Monitoring & History",
     description: pegTrackerDescription,
     url: "/peg-tracker/",
-    type: "website",
-    siteName: "Pharos",
-    images: [{ url: "/og-card.png", width: 1200, height: 630 }],
   },
 };
 
 export default function PegTrackerPage() {
   return (
     <div className="space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-              { "@type": "ListItem", position: 2, name: "Peg Tracker", item: "https://pharos.watch/peg-tracker/" },
-            ],
-          }),
-        }}
-      />
+      <BreadcrumbJsonLd name="Peg Tracker" path="/peg-tracker/" />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>

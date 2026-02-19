@@ -1,6 +1,7 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, batchExecute } from "../lib/db";
+import { USER_AGENT } from "../lib/constants";
 
 const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
@@ -440,14 +441,14 @@ interface ScoreResult {
 async function fetchDataSources(graphApiKey: string | null): Promise<DataSources | null> {
   const [llamaRes, protocolsRes, ...curveResponses] = await Promise.all([
     fetchWithRetry(DEFILLAMA_YIELDS_URL, {
-      headers: { "User-Agent": "Pharos/1.0" },
+      headers: { "User-Agent": USER_AGENT },
     }),
     fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, {
-      headers: { "User-Agent": "Pharos/1.0" },
+      headers: { "User-Agent": USER_AGENT },
     }),
     ...CURVE_CHAINS.map((chain) =>
       fetchWithRetry(`${CURVE_API_BASE}/${chain}`, {
-        headers: { "User-Agent": "Pharos/1.0" },
+        headers: { "User-Agent": USER_AGENT },
       })
     ),
   ]);
@@ -664,7 +665,7 @@ async function fetchUniV3Data(
       const url = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
       const res = await fetchWithRetry(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": "Pharos/1.0" },
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
         body: JSON.stringify({ query: UNIV3_POOL_QUERY }),
       });
       if (!res?.ok) {

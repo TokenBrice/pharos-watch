@@ -1,5 +1,4 @@
-import type { StablecoinMeta, FilterTag } from "./types";
-import { getFilterTags } from "./types";
+import type { StablecoinMeta } from "./types";
 
 // Helper to reduce boilerplate
 interface StablecoinOpts {
@@ -1251,16 +1250,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 ];
 
-// --- Lookup helpers ---
+// --- Pre-computed lookups (static data, computed once at module level) ---
 
-export function getTrackedIds(): Set<string> {
-  return new Set(TRACKED_STABLECOINS.map((s) => s.id));
-}
+/** Map of stablecoin ID → metadata. Use instead of constructing in components. */
+export const TRACKED_META_BY_ID = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+
+/** Set of all tracked stablecoin IDs. */
+export const TRACKED_IDS = new Set(TRACKED_STABLECOINS.map((s) => s.id));
 
 export function findStablecoinMeta(id: string): StablecoinMeta | undefined {
-  return TRACKED_STABLECOINS.find((s) => s.id === id);
-}
-
-export function filterByTag(tag: FilterTag): StablecoinMeta[] {
-  return TRACKED_STABLECOINS.filter((s) => getFilterTags(s).includes(tag));
+  return TRACKED_META_BY_ID.get(id);
 }

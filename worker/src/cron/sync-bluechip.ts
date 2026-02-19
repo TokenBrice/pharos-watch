@@ -2,6 +2,7 @@ import { BLUECHIP_SLUG_MAP } from "../../../src/lib/bluechip";
 import type { BluechipRating, BluechipSmidge } from "../../../src/lib/types";
 import { getCache, setCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { USER_AGENT } from "../lib/constants";
 
 const CACHE_KEY = "bluechip-ratings";
 const STALE_HOURS = 6;
@@ -46,7 +47,7 @@ export async function syncBluechip(db: D1Database): Promise<void> {
     entries.map(async ([slug, pharosId]) => {
       const res = await fetchWithRetry(
         `${API_BASE}/${slug}`,
-        { headers: { "User-Agent": "Pharos/1.0" } },
+        { headers: { "User-Agent": USER_AGENT } },
         2,
         { passthrough404: true }
       );

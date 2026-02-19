@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 
 export const metadata: Metadata = {
   title: "Freeze & Blacklist Tracker",
@@ -12,9 +13,6 @@ export const metadata: Metadata = {
     description:
       "Track USDC, USDT, EURC, PAXG, and XAUT address freezes and blacklist events across Ethereum, Tron, and L2 chains.",
     url: "/blacklist/",
-    type: "website",
-    siteName: "Pharos",
-    images: [{ url: "/og-card.png", width: 1200, height: 630 }],
   },
 };
 
@@ -25,19 +23,7 @@ export default function BlacklistLayout({
 }) {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-              { "@type": "ListItem", position: 2, name: "Freeze & Blacklist Tracker", item: "https://pharos.watch/blacklist/" },
-            ],
-          }),
-        }}
-      />
+      <BreadcrumbJsonLd name="Freeze & Blacklist Tracker" path="/blacklist/" />
       {children}
     </>
   );

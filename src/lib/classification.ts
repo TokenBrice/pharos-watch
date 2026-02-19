@@ -5,7 +5,7 @@
  * Tailwind class strings are always complete static literals (never constructed dynamically).
  */
 
-import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType } from "./types";
+import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType } from "./types";
 
 // ---------------------------------------------------------------------------
 // Governance (Type) labels
@@ -174,14 +174,30 @@ export const GRADE_COLORS: Record<string, string> = {
 // Blacklist event badge styles
 // ---------------------------------------------------------------------------
 
-export const EVENT_BADGE_STYLES: Record<string, string> = {
+export const EVENT_BADGE_STYLES: Record<BlacklistEventType, string> = {
   blacklist: "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400",
   unblacklist: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
   destroy: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
 };
 
-export const EVENT_LABELS: Record<string, string> = {
+export const EVENT_LABELS: Record<BlacklistEventType, string> = {
   blacklist: "Blacklist",
   unblacklist: "Unblacklist",
   destroy: "Destroy",
+};
+
+// ---------------------------------------------------------------------------
+// Peg currency chart colors (text + bg pairs for charts and stat cards)
+// ---------------------------------------------------------------------------
+
+export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string; bgColor: string }> = {
+  GOLD: { label: "Gold", textColor: "text-yellow-500", bgColor: "bg-yellow-500" },
+  EUR: { label: "Euro", textColor: "text-violet-500", bgColor: "bg-violet-500" },
+  RUB: { label: "Ruble", textColor: "text-red-500", bgColor: "bg-red-500" },
+  BRL: { label: "Real", textColor: "text-orange-500", bgColor: "bg-orange-500" },
+  CHF: { label: "Franc", textColor: "text-pink-500", bgColor: "bg-pink-500" },
+  GBP: { label: "Pound", textColor: "text-cyan-500", bgColor: "bg-cyan-500" },
+  JPY: { label: "Yen", textColor: "text-rose-500", bgColor: "bg-rose-500" },
+  VAR: { label: "Variable", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
+  OTHER: { label: "Other", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
 };

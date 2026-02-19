@@ -8,7 +8,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { formatNativePrice, formatPegDeviation } from "@/lib/format";
 import { getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
 
 interface MarketHighlightsProps {
@@ -27,7 +27,7 @@ function BiggestDepegs({
   const depegs = useMemo(() => {
     if (!data) return [];
 
-    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+    const metaById = TRACKED_META_BY_ID;
     const entries: {
       id: string;
       symbol: string;
@@ -131,7 +131,7 @@ function FastestMovers({
   const { growers, shrinkers } = useMemo(() => {
     if (!data) return { growers: [], shrinkers: [] };
 
-    const metaIds = new Set(TRACKED_STABLECOINS.map((s) => s.id));
+    const metaIds = TRACKED_IDS;
     const entries: {
       id: string;
       symbol: string;

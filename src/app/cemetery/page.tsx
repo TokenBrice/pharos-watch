@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
@@ -18,28 +19,13 @@ export const metadata: Metadata = {
     title: "Stablecoin Cemetery — Failed & Defunct Stablecoins",
     description: cemeteryDescription,
     url: "/cemetery/",
-    type: "website",
-    siteName: "Pharos",
-    images: [{ url: "/og-card.png", width: 1200, height: 630 }],
   },
 };
 
 export default function CemeteryPage() {
   return (
     <div className="space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-              { "@type": "ListItem", position: 2, name: "Stablecoin Cemetery", item: "https://pharos.watch/cemetery/" },
-            ],
-          }),
-        }}
-      />
+      <BreadcrumbJsonLd name="Stablecoin Cemetery" path="/cemetery/" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

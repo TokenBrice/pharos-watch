@@ -14,40 +14,13 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortIcon } from "@/components/sort-icon";
 import { useSort } from "@/hooks/use-sort";
 import { formatCurrency } from "@/lib/format";
+import { prettifyProtocol } from "@/lib/dex-constants";
+import { getScoreColor } from "@/lib/severity-colors";
 import type { StablecoinMeta, DexLiquidityData } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
 type SortKey = "score" | "tvl" | "effectiveTvl" | "tvlTrend" | "volume" | "volume7d" | "vtRatio" | "pools" | "chains" | "balance" | "organic" | "durability";
-
-const PROTOCOL_NAMES: Record<string, string> = {
-  curve: "Curve",
-  "uniswap-v3": "Uniswap V3",
-  uniswap: "Uniswap",
-  fluid: "Fluid",
-  balancer: "Balancer",
-  aerodrome: "Aerodrome",
-  velodrome: "Velodrome",
-  pancakeswap: "PancakeSwap",
-  sushiswap: "SushiSwap",
-  "trader-joe": "Trader Joe",
-};
-
-/** Prettify a DeFiLlama project slug into a display name */
-function prettifyProtocol(slug: string): string {
-  if (PROTOCOL_NAMES[slug]) return PROTOCOL_NAMES[slug];
-  return slug
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
-function getScoreColor(score: number): string {
-  if (score >= 80) return "text-emerald-500";
-  if (score >= 60) return "text-blue-500";
-  if (score >= 40) return "text-amber-500";
-  return "text-red-500";
-}
 
 function BalanceBar({ ratio }: { ratio: number }) {
   const pct = Math.round(ratio * 100);

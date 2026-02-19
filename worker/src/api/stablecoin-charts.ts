@@ -13,7 +13,7 @@ export const handleStablecoinCharts = withErrorHandler("stablecoin-charts", asyn
   return new Response(cached.value, {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "public, max-age=300",
+      "Cache-Control": "public, s-maxage=300, max-age=60",
     },
   });
 });

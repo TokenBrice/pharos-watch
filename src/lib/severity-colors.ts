@@ -30,3 +30,44 @@ export function deviationColorHex(absBps: number): string {
   if (absBps < THRESHOLDS.ORANGE) return "#f97316";
   return "#ef4444";
 }
+
+// ---------------------------------------------------------------------------
+// Score tier system (used by liquidity, bluechip, peg components)
+// ---------------------------------------------------------------------------
+
+export type ScoreTier = "green" | "blue" | "amber" | "red";
+
+export const TIER_TEXT: Record<ScoreTier, string> = {
+  green: "text-emerald-500",
+  blue: "text-blue-500",
+  amber: "text-amber-500",
+  red: "text-red-500",
+};
+
+export const TIER_BORDER: Record<ScoreTier, string> = {
+  green: "border-l-emerald-500",
+  blue: "border-l-blue-500",
+  amber: "border-l-amber-500",
+  red: "border-l-red-500",
+};
+
+/** Map a 0-100 liquidity/durability score to a tier */
+export function getScoreTier(score: number): ScoreTier {
+  if (score >= 80) return "green";
+  if (score >= 60) return "blue";
+  if (score >= 40) return "amber";
+  return "red";
+}
+
+/** Map a 0-100 liquidity/durability score to a Tailwind text color class */
+export function getScoreColor(score: number): string {
+  return TIER_TEXT[getScoreTier(score)];
+}
+
+/** Map a peg score (0-100, null) to a Tailwind text color class */
+export function pegScoreColor(score: number | null): string {
+  if (score === null) return "text-muted-foreground";
+  if (score >= 90) return "text-green-500";
+  if (score >= 70) return "text-amber-500";
+  return "text-red-500";
+}

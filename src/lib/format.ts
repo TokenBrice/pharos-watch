@@ -14,7 +14,7 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   GOLD: "$", VAR: "$", OTHER: "$",
 };
 
-export function formatPrice(price: number | null | undefined, symbol = "$"): string {
+function formatPrice(price: number | null | undefined, symbol = "$"): string {
   if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
   return `${symbol}${price.toFixed(4)}`;
 }
@@ -124,7 +124,3 @@ export function formatDeathDateShort(d: string): string {
   return dt.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
-export function formatPercent(value: number, decimals = 1): string {
-  if (!Number.isFinite(value)) return "N/A";
-  return `${value >= 0 ? "" : "-"}${Math.abs(value).toFixed(decimals)}%`;
-}

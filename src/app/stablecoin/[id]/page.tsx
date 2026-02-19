@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, findStablecoinMeta } from "@/lib/stablecoins";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +40,6 @@ export async function generateMetadata({
       title: `${coin.name} (${coin.symbol})`,
       description: desc,
       url: `/stablecoin/${id}/`,
-      type: "website",
-      siteName: "Pharos",
-      images: [{ url: "/og-card.png", width: 1200, height: 630 }],
     },
   };
 }
@@ -149,29 +147,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               </div>
             </section>
           )}
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "BreadcrumbList",
-                itemListElement: [
-                  {
-                    "@type": "ListItem",
-                    position: 1,
-                    name: "Home",
-                    item: "https://pharos.watch",
-                  },
-                  {
-                    "@type": "ListItem",
-                    position: 2,
-                    name: `${coin.name} (${coin.symbol})`,
-                    item: `https://pharos.watch/stablecoin/${id}/`,
-                  },
-                ],
-              }),
-            }}
-          />
+          <BreadcrumbJsonLd name={`${coin.name} (${coin.symbol})`} path={`/stablecoin/${id}/`} />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{

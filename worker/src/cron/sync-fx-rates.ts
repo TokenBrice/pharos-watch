@@ -1,4 +1,5 @@
 import { setCache } from "../lib/db";
+import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 
 /**
  * Fetches live FX rates from the European Central Bank (via frankfurter.app)
@@ -22,8 +23,6 @@ const CURRENCY_TO_PEG: Record<string, string> = {
   IDR: "peggedIDR",
 };
 
-// RUB not available from ECB — use fixed approximation
-const RUB_FALLBACK = 0.011;
 
 interface FrankfurterResponse {
   base: string;
@@ -35,7 +34,7 @@ export async function syncFxRates(db: D1Database): Promise<void> {
   try {
     const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Pharos/1.0 (stablecoin analytics)" },
+      headers: { "User-Agent": USER_AGENT },
     });
 
     if (!res.ok) {
@@ -58,7 +57,7 @@ export async function syncFxRates(db: D1Database): Promise<void> {
     // Secondary: fetch RUB from exchangerate-api.com (ECB doesn't publish RUB)
     try {
       const rubRes = await fetch("https://open.er-api.com/v6/latest/USD", {
-        headers: { "User-Agent": "Pharos/1.0 (stablecoin analytics)" },
+        headers: { "User-Agent": USER_AGENT },
       });
       if (rubRes.ok) {
         const rubData = (await rubRes.json()) as { rates?: Record<string, number> };

@@ -50,14 +50,15 @@ function decodeAddress(topicOrData: string): string {
   return "0x" + cleaned.slice(24).toLowerCase();
 }
 
+/** Convert a raw BigInt token amount to a decimal number using BigInt division to avoid precision loss above 2^53 */
+function bigIntToDecimal(raw: bigint, decimals: number): number {
+  const divisor = BigInt(10) ** BigInt(decimals);
+  return Number(raw / divisor) + Number(raw % divisor) / Number(divisor);
+}
+
 function decodeUint256(hexData: string, decimals: number): number {
   const cleaned = hexData.startsWith("0x") ? hexData.slice(2) : hexData;
-  const raw = BigInt("0x" + cleaned);
-  // Use BigInt division to avoid precision loss above 2^53
-  const divisor = BigInt(10) ** BigInt(decimals);
-  const whole = raw / divisor;
-  const frac = raw % divisor;
-  return Number(whole) + Number(frac) / Number(divisor);
+  return bigIntToDecimal(BigInt("0x" + cleaned), decimals);
 }
 
 function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
@@ -148,9 +149,7 @@ async function fetchEvmBalanceAtTag(
       return null;
     }
 
-    const raw = BigInt(json.result);
-    const divisor = BigInt(10) ** BigInt(decimals);
-    return Number(raw / divisor) + Number(raw % divisor) / Number(divisor);
+    return bigIntToDecimal(BigInt(json.result), decimals);
   } catch {
     return null;
   }
@@ -208,9 +207,7 @@ async function fetchBalanceViaDrpc(
       return null;
     }
 
-    const raw = BigInt(json.result);
-    const divisor = BigInt(10) ** BigInt(decimals);
-    return Number(raw / divisor) + Number(raw % divisor) / Number(divisor);
+    return bigIntToDecimal(BigInt(json.result), decimals);
   } catch {
     return null;
   }
@@ -271,9 +268,7 @@ async function fetchTronTokenBalance(
 
     for (const tokenEntry of json.data[0].trc20) {
       if (contractAddress in tokenEntry) {
-        const raw = BigInt(tokenEntry[contractAddress]);
-        const divisor = BigInt(10) ** BigInt(decimals);
-        return Number(raw / divisor) + Number(raw % divisor) / Number(divisor);
+        return bigIntToDecimal(BigInt(tokenEntry[contractAddress]), decimals);
       }
     }
 

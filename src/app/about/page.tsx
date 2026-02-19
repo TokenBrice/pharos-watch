@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Github } from "lucide-react";
+import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
@@ -18,28 +19,13 @@ export const metadata: Metadata = {
     description:
       "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
-    type: "website",
-    siteName: "Pharos",
-    images: [{ url: "/og-card.png", width: 1200, height: 630 }],
   },
 };
 
 export default function AboutPage() {
   return (
     <div className="space-y-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://pharos.watch" },
-              { "@type": "ListItem", position: 2, name: "About Pharos", item: "https://pharos.watch/about/" },
-            ],
-          }),
-        }}
-      />
+      <BreadcrumbJsonLd name="About Pharos" path="/about/" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

@@ -43,6 +43,3 @@ export function getPrevWeekUSD(c: StablecoinData, rates: Record<string, number>)
   return toUSD(c.circulatingPrevWeek, rates);
 }
 
-export function getPrevMonthUSD(c: StablecoinData, rates: Record<string, number>): number {
-  return toUSD(c.circulatingPrevMonth, rates);
-}

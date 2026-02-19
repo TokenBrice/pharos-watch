@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
+import { TIER_TEXT, TIER_BORDER, type ScoreTier } from "@/lib/severity-colors";
 
 const SMIDGE_LABELS = [
   { key: "stability", short: "S", full: "Stability" },
@@ -15,27 +16,13 @@ const SMIDGE_LABELS = [
   { key: "externals", short: "E", full: "Externals" },
 ] as const;
 
-function getGradeTier(grade: string): "green" | "blue" | "amber" | "red" {
+function getGradeTier(grade: string): ScoreTier {
   const order = GRADE_ORDER[grade] ?? 0;
   if (order >= 10) return "green";
   if (order >= 7) return "blue";
   if (order >= 4) return "amber";
   return "red";
 }
-
-const TIER_BORDER = {
-  green: "border-l-emerald-500",
-  blue: "border-l-blue-500",
-  amber: "border-l-amber-500",
-  red: "border-l-red-500",
-};
-
-const TIER_TEXT = {
-  green: "text-emerald-500",
-  blue: "text-blue-500",
-  amber: "text-amber-500",
-  red: "text-red-500",
-};
 
 export function BluechipRatingCard({ stablecoinId }: { stablecoinId: string }) {
   const { data: ratingsMap, isLoading } = useBluechipRatings();

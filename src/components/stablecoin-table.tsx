@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@/lib/format";
 import { getPegReference } from "@/lib/peg-rates";
 import { getCirculatingUSD, getPrevDayUSD, getPrevWeekUSD } from "@/lib/supply";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@/lib/stablecoins";
 import type { StablecoinData, FilterTag, PegSummaryCoin, BluechipRating, DexLiquidityMap } from "@/lib/types";
 import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
 import { GRADE_ORDER } from "@/lib/bluechip";
@@ -69,11 +69,11 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const [page, setPage] = useState(0);
   const router = useRouter();
-  const metaById = useMemo(() => new Map(TRACKED_STABLECOINS.map((s) => [s.id, s])), []);
+  const metaById = TRACKED_META_BY_ID;
 
   const trackedIds = useMemo(() => {
     if (activeFilters.length === 0) {
-      return new Set(TRACKED_STABLECOINS.map((s) => s.id));
+      return TRACKED_IDS;
     }
     return new Set(
       TRACKED_STABLECOINS.filter((s) => {

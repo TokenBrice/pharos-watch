@@ -18,7 +18,7 @@ import { PegTrackerSummary } from "@/components/peg-tracker-summary";
 import { LiquiditySummary } from "@/components/liquidity-summary";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates } from "@/lib/peg-rates";
 import type { FilterTag, PegSummaryCoin } from "@/lib/types";
 import { FILTER_TAG_LABELS } from "@/lib/types";
@@ -53,7 +53,7 @@ export function HomepageClient() {
   const { data: pegSummaryData } = usePegSummary();
   const { data: bluechipRatings } = useBluechipRatings();
   const { data: dexLiquidity } = useDexLiquidity();
-  const metaById = useMemo(() => new Map(TRACKED_STABLECOINS.map((s) => [s.id, s])), []);
+  const metaById = TRACKED_META_BY_ID;
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
     if (!pegSummaryData?.coins) return map;

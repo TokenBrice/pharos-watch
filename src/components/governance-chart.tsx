@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
 import { getCirculatingRaw } from "@/lib/supply";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
@@ -16,7 +16,7 @@ export function GovernanceChart({ data }: GovernanceDominanceProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
-    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+    const metaById = TRACKED_META_BY_ID;
 
     let centralized = 0;
     let dependent = 0;

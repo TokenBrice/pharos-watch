@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
 import { PEG_META } from "@/lib/peg-config";
 import { getCirculatingRaw } from "@/lib/supply";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
 
 interface AltPegDominanceProps {
@@ -16,8 +16,8 @@ export function PegTypeChart({ data }: AltPegDominanceProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
-    const trackedIds = new Set(TRACKED_STABLECOINS.map((s) => s.id));
-    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+    const trackedIds = TRACKED_IDS;
+    const metaById = TRACKED_META_BY_ID;
 
     // Group market caps by peg currency (excluding USD)
     const pegTotals: Record<string, number> = {};

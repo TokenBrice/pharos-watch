@@ -1,12 +1,9 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
-import { DEPEG_THRESHOLD_BPS } from "../lib/constants";
+import { DEPEG_THRESHOLD_BPS, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
 import { withErrorHandler } from "../lib/api-utils";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
-
-const DEFILLAMA_COINS = "https://coins.llama.fi";
-const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
 const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
 
 // ── Historical FX rate support ──────────────────────────────────────
@@ -28,7 +25,6 @@ const OTHER_COIN_FX: Record<string, string> = {
   "165": "AUD",  // AUDD
 };
 
-const RUB_FALLBACK = 0.011;
 
 interface FxTimeSeries {
   timestamp: number; // unix seconds
@@ -56,7 +52,7 @@ async function fetchHistoricalFxRates(
   try {
     const url = `https://api.frankfurter.app/${startDate}..${endDate}?from=USD&to=${currencies.join(",")}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Pharos/1.0 (stablecoin analytics)" },
+      headers: { "User-Agent": USER_AGENT },
     });
     if (!res.ok) {
       console.error(`[backfill-depegs] frankfurter.app returned ${res.status}`);
@@ -189,9 +185,6 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   );
 
   // Manual overrides for coins where DefiLlama has wrong/missing geckoId
-  const GECKO_OVERRIDES: Record<string, string> = {
-    "226": "frankencoin",
-  };
 
   let totalEvents = 0;
   const errors: string[] = [];
@@ -226,7 +219,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       }
     } catch { /* skip */ }
 
-    const geckoId = GECKO_OVERRIDES[meta.id] ?? detail?.gecko_id;
+    const geckoId = GECKO_ID_OVERRIDES[meta.id] ?? detail?.gecko_id;
 
     // Build coins chart API identifier: prefer geckoId, fall back to address
     let coinId: string | null = null;
@@ -348,7 +341,7 @@ async function fetchPriceChart(coinId: string, start: number): Promise<PricePoin
   try {
     const res = await fetch(
       `${DEFILLAMA_COINS}/chart/${coinId}?start=${start}&span=800&period=1d`,
-      { headers: { "User-Agent": "stablecoin-dashboard/1.0" } }
+      { headers: { "User-Agent": USER_AGENT } }
     );
     if (!res.ok) return [];
     const data = (await res.json()) as {

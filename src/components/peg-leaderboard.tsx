@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPegStability, formatWorstDeviation } from "@/lib/format";
-import { deviationColorClass } from "@/lib/severity-colors";
+import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import type { PegSummaryCoin } from "@/lib/types";
 
 interface PegLeaderboardProps {
@@ -25,13 +25,6 @@ interface PegLeaderboardProps {
 }
 
 type SortKey = "pegScore" | "currentDeviationBps" | "pegPct" | "eventCount" | "worstDeviationBps" | "trackingSpanDays";
-
-function scoreColor(score: number | null): string {
-  if (score === null) return "text-muted-foreground";
-  if (score >= 90) return "text-green-500";
-  if (score >= 70) return "text-amber-500";
-  return "text-red-500";
-}
 
 function formatSpan(days: number): string {
   if (days < 30) return `${days}d`;
@@ -140,7 +133,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <span className={`font-mono font-semibold ${scoreColor(coin.pegScore)}`}>
+                      <span className={`font-mono font-semibold ${pegScoreColor(coin.pegScore)}`}>
                         {coin.pegScore !== null ? coin.pegScore : "N/A"}
                       </span>
                     </TableCell>

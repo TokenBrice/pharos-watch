@@ -1,7 +1,6 @@
 import { setCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-
-const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
+import { DEFILLAMA_BASE } from "../lib/constants";
 
 interface RawChartPoint {
   date: number;

@@ -1,4 +1,4 @@
-const DEFILLAMA_COINS = "https://coins.llama.fi";
+import { DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -189,7 +189,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
       const ids = afterPass2.map((m) => m.geckoId).join(",");
       const cgRes = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
-        { headers: { "Accept": "application/json", "User-Agent": "stablecoin-dashboard/1.0" } }
+        { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
       );
       if (cgRes.ok) {
         const cgData = (await cgRes.json()) as Record<string, { usd?: number }>;
@@ -213,7 +213,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
       try {
         const res = await fetch(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-          { headers: { "User-Agent": "stablecoin-dashboard/1.0" } }
+          { headers: { "User-Agent": USER_AGENT } }
         );
         if (!res.ok) {
           console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);

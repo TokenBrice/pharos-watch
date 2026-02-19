@@ -1,9 +1,7 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API } from "../lib/constants";
 
-const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
-const DEFILLAMA_COINS = "https://coins.llama.fi";
-const DEFILLAMA_API = "https://api.llama.fi";
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
 // Data sources for gold tokens (not in DefiLlama's stablecoin API)
@@ -12,6 +10,8 @@ const GOLD_TOKEN_SOURCES: Record<string, { geckoId: string; protocolSlug: string
   "gold-paxg": { geckoId: "pax-gold", protocolSlug: "paxos-gold" },
   "gold-kau": { geckoId: "kinesis-gold", protocolSlug: "" },
   "gold-xaum": { geckoId: "matrixdock-gold", protocolSlug: "" },
+  "gold-vro": { geckoId: "veraone", protocolSlug: "" },
+  "gold-cgo": { geckoId: "comtech-gold", protocolSlug: "" },
 };
 
 function findNearestPrice(

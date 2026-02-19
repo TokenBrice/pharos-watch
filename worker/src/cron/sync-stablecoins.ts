@@ -6,9 +6,7 @@ import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enric
 import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
 import { detectDepegEvents } from "./detect-depegs";
 
-const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
-const DEFILLAMA_COINS = "https://coins.llama.fi";
-const DEFILLAMA_API = "https://api.llama.fi";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
 
 interface GoldTokenConfig {
   internalId: string;
@@ -64,7 +62,7 @@ async function fetchGoldTokens(): Promise<unknown[]> {
       try {
         const res = await fetch(
           `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-          { headers: { "Accept": "application/json", "User-Agent": "stablecoin-dashboard/1.0" } }
+          { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
         );
         if (res.ok) {
           const data = (await res.json()) as Record<string, { usd_market_cap?: number }>;
@@ -174,7 +172,7 @@ async function fetchFiatCoinGeckoTokens(): Promise<unknown[]> {
     try {
       const res = await fetch(
         `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-        { headers: { "Accept": "application/json", "User-Agent": "stablecoin-dashboard/1.0" } }
+        { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
       );
       if (res.ok) {
         const data = (await res.json()) as Record<string, { usd_market_cap?: number }>;
@@ -233,7 +231,7 @@ async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
   try {
     const res = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-      { headers: { Accept: "application/json", "User-Agent": "stablecoin-dashboard/1.0" } }
+      { headers: { Accept: "application/json", "User-Agent": USER_AGENT } }
     );
     if (!res.ok) return;
     const data = (await res.json()) as Record<string, { usd?: number; usd_market_cap?: number }>;
@@ -311,15 +309,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   await patchSupplyOverrides(llamaData.peggedAssets);
 
   // Patch known missing/wrong geckoIds so enrichMissingPrices can resolve them
-  const GECKO_ID_OVERRIDES: Record<string, string> = {
-    "226": "frankencoin",              // ZCHF — DL price intermittently returns 0
-    "269": "liquity-bold-2",           // BOLD — no geckoId in DL stablecoins API
-    "255": "aegis-yusd",               // YUSD — no geckoId in DL stablecoins API
-    "275": "quantoz-usdq",             // USDQ — no geckoId in DL stablecoins API
-    "302": "hylo-usd",                 // HYUSD — no geckoId in DL stablecoins API
-    "342": "megausd",                  // USDM (MegaUSD) — no geckoId in DL stablecoins API
-    "185": "gyroscope-gyd",            // GYD — no geckoId in DL stablecoins API
-  };
+  // GECKO_ID_OVERRIDES imported from ../lib/constants
   // Patch known missing contract addresses for Pass 1 resolution
   const ADDRESS_OVERRIDES: Record<string, string> = {
     "213": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b", // M by M0 — no address in DL stablecoins API

@@ -91,5 +91,5 @@ export async function savePriceCache(db: D1Database, entries: { id: string; pric
   const stmts = entries.map((e) =>
     db.prepare("INSERT OR REPLACE INTO price_cache (asset_id, price, updated_at) VALUES (?, ?, ?)").bind(e.id, e.price, now)
   );
-  await db.batch(stmts);
+  await batchExecute(db, stmts);
 }
