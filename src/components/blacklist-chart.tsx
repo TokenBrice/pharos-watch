@@ -16,14 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
+import { BLACKLIST_CHART_COLORS } from "@/lib/classification";
 import type { BlacklistEvent } from "@/lib/types";
-
-const STABLECOIN_COLORS: Record<string, string> = {
-  USDT: "#06b6d4",
-  USDC: "#3b82f6",
-  PAXG: "#eab308",
-  XAUT: "#f59e0b",
-};
 
 const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"];
 
@@ -150,7 +144,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
                   key={coin}
                   dataKey={coin}
                   stackId="a"
-                  fill={STABLECOIN_COLORS[coin]}
+                  fill={BLACKLIST_CHART_COLORS[coin]}
                   radius={coin === "XAUT" ? [2, 2, 0, 0] : undefined}
                 />
               ))}

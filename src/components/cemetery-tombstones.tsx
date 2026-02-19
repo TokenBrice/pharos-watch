@@ -253,7 +253,7 @@ function Tombstone({
             {coin.obituary.split(". ")[0]}.
           </p>
           <div className="mt-1.5 flex items-center justify-between">
-            <span className={CAUSE_META[coin.causeOfDeath].color.split(" ")[0]}>
+            <span className={CAUSE_META[coin.causeOfDeath].textColor}>
               {CAUSE_META[coin.causeOfDeath].label}
             </span>
           </div>

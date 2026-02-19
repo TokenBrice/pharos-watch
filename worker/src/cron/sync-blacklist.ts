@@ -5,6 +5,7 @@ import {
   type ChainConfig,
 } from "../../../src/lib/blacklist-contracts";
 import type { BlacklistEventType } from "../../../src/lib/types";
+import { bigIntToDecimal } from "../lib/bigint";
 import { getLastBlock, setLastBlock } from "../lib/db";
 
 const MAX_RECURSION_DEPTH = 5;
@@ -48,12 +49,6 @@ function createRateLimiter(requestsPerSecond: number): RateLimitedFetch {
 function decodeAddress(topicOrData: string): string {
   const cleaned = topicOrData.startsWith("0x") ? topicOrData.slice(2) : topicOrData;
   return "0x" + cleaned.slice(24).toLowerCase();
-}
-
-/** Convert a raw BigInt token amount to a decimal number using BigInt division to avoid precision loss above 2^53 */
-function bigIntToDecimal(raw: bigint, decimals: number): number {
-  const divisor = BigInt(10) ** BigInt(decimals);
-  return Number(raw / divisor) + Number(raw % divisor) / Number(divisor);
 }
 
 function decodeUint256(hexData: string, decimals: number): number {

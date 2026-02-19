@@ -84,8 +84,8 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
     console.log(`[depeg] Merged duplicate open events, ${mergeStmts.length} DB ops`);
   }
 
-  // Track which open events we've seen (to close orphans)
-  const seen = new Set<string>();
+  // Track event IDs that are still legitimately open after this run
+  const seen = new Set<number>();
 
   const stmts: D1PreparedStatement[] = [];
 
@@ -112,7 +112,6 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
 
     if (absBps >= DEPEG_THRESHOLD_BPS) {
       if (existing) {
-        seen.add(asset.id);
         // Direction change: close old event and open a new one
         if (existing.direction !== direction) {
           stmts.push(
@@ -120,19 +119,25 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
               "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
             ).bind(now, price, existing.id)
           );
+          // New event will be created — its ID is unknown until insert,
+          // but it won't be orphaned (handled by started_at check below)
           stmts.push(
             db.prepare(
               `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
             ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, price, pegRef)
           );
-        } else if (absBps > Math.abs(existing.peak_deviation_bps)) {
-          // Same direction — update peak if this deviation is worse
-          stmts.push(
-            db.prepare(
-              "UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?"
-            ).bind(bps, price, existing.id)
-          );
+        } else {
+          // Same direction — event stays open
+          seen.add(existing.id);
+          if (absBps > Math.abs(existing.peak_deviation_bps)) {
+            // Update peak if this deviation is worse
+            stmts.push(
+              db.prepare(
+                "UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE id = ?"
+              ).bind(bps, price, existing.id)
+            );
+          }
         }
       } else {
         // Open new event — check DEX price cross-validation first
@@ -152,17 +157,17 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
             continue;
           }
         }
+        // New event — its ID is unknown until insert,
+        // but it won't be orphaned (handled by started_at check below)
         stmts.push(
           db.prepare(
             `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
           ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, price, pegRef)
         );
-        seen.add(asset.id);
       }
     } else if (existing) {
-      // Price recovered — close the event
-      seen.add(asset.id);
+      // Price recovered — close the event (not added to seen since it's being closed)
       stmts.push(
         db.prepare(
           "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
@@ -171,8 +176,35 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
     }
   }
 
+  // Execute main loop statements before orphan cleanup
   if (stmts.length > 0) {
     await db.batch(stmts);
     console.log(`[depeg] Wrote ${stmts.length} depeg event updates`);
+  }
+
+  // Close orphaned open events: events that remain open but were not
+  // processed during this run (e.g., coin removed from tracked list,
+  // or skipped by detection logic due to missing price/low supply)
+  const orphanResult = await db
+    .prepare("SELECT id, stablecoin_id, started_at FROM depeg_events WHERE ended_at IS NULL")
+    .all<{ id: number; stablecoin_id: string; started_at: number }>();
+
+  const orphanStmts: D1PreparedStatement[] = [];
+  for (const row of orphanResult.results ?? []) {
+    // Skip events we know are legitimately still open
+    if (seen.has(row.id)) continue;
+    // Skip events just created in this run (their IDs weren't known during the loop)
+    if (row.started_at === now) continue;
+    // This event is orphaned — close it
+    orphanStmts.push(
+      db.prepare(
+        "UPDATE depeg_events SET ended_at = ?, recovery_price = NULL WHERE id = ?"
+      ).bind(now, row.id)
+    );
+    console.log(`[depeg] Closing orphan event for ${row.stablecoin_id} (id=${row.id})`);
+  }
+  if (orphanStmts.length > 0) {
+    await db.batch(orphanStmts);
+    console.log(`[depeg] Closed ${orphanStmts.length} orphaned depeg events`);
   }
 }

@@ -46,7 +46,7 @@ export function CemeterySummary() {
           <div className="space-y-1">
             {topCauses.map(([cause, count]) => (
               <div key={cause} className="flex items-center justify-between text-xs">
-                <span className={CAUSE_META[cause].color.split(" ")[0]}>{CAUSE_META[cause].label}</span>
+                <span className={CAUSE_META[cause].textColor}>{CAUSE_META[cause].label}</span>
                 <span className="font-mono font-semibold">{count}</span>
               </div>
             ))}

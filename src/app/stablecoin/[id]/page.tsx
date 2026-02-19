@@ -72,6 +72,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const coin = findStablecoinMeta(id);
   const tags = coin ? getFilterTags(coin) : [];
   const related = getRelatedStablecoins(id);
+  const typedLogos = logos as Record<string, string>;
 
   return (
     <>
@@ -95,9 +96,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {(logos as Record<string, string>)[coin.id] ? (
+              {typedLogos[coin.id] ? (
                 <Image
-                  src={(logos as Record<string, string>)[coin.id]}
+                  src={typedLogos[coin.id]}
                   alt={`${coin.name} logo`}
                   width={40}
                   height={40}

@@ -5,8 +5,7 @@
  * CORS headers are applied in index.ts after the handler returns,
  * so error responses from this wrapper get CORS automatically.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiHandler<T extends any[] = any[]> = (...args: T) => Promise<Response>;
+type ApiHandler<T extends unknown[] = unknown[]> = (...args: T) => Promise<Response>;
 
 export function withErrorHandler<T extends unknown[]>(
   endpoint: string,

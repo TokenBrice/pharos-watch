@@ -1,7 +1,8 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { getChainRpc } from "../lib/chain-rpcs";
 import { upsertOnchainSupply } from "../lib/db";
-import { USER_AGENT } from "../lib/constants";
+import { bigIntToDecimal } from "../lib/bigint";
+import { TRON_BURN_ADDRESS, USER_AGENT } from "../lib/constants";
 import type { ContractDeployment } from "../../../src/lib/types";
 
 interface ContractQuery {
@@ -49,8 +50,7 @@ async function runEvmBatch(
       }
 
       try {
-        const rawBigInt = BigInt(resp.result);
-        const supply = Number(rawBigInt) / Math.pow(10, query.contract.decimals);
+        const supply = bigIntToDecimal(BigInt(resp.result), query.contract.decimals);
         if (supply > 0) {
           const key = `${query.stablecoinId}:${query.contract.chain}`;
           results.set(key, supply);
@@ -104,7 +104,7 @@ async function fetchTronTotalSupply(
         method: "POST",
         headers,
         body: JSON.stringify({
-          owner_address: "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+          owner_address: TRON_BURN_ADDRESS,
           contract_address: query.contract.address,
           function_selector: "totalSupply()",
           parameter: "",
@@ -119,8 +119,7 @@ async function fetchTronTotalSupply(
       const hex = data.constant_result?.[0];
       if (!hex) continue;
 
-      const rawBigInt = BigInt("0x" + hex);
-      const supply = Number(rawBigInt) / Math.pow(10, query.contract.decimals);
+      const supply = bigIntToDecimal(BigInt("0x" + hex), query.contract.decimals);
       if (supply > 0) {
         const key = `${query.stablecoinId}:${query.contract.chain}`;
         results.set(key, supply);

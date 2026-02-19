@@ -8,12 +8,12 @@ export const CAUSE_HEX: Record<CauseOfDeath, string> = {
   abandoned: "#71717a",
 };
 
-export const CAUSE_META: Record<CauseOfDeath, { label: string; color: string }> = {
-  "algorithmic-failure": { label: "Algorithmic Failure", color: "text-red-500 border-red-500/30" },
-  "counterparty-failure": { label: "Counterparty Failure", color: "text-amber-500 border-amber-500/30" },
-  "liquidity-drain": { label: "Liquidity Drain", color: "text-orange-500 border-orange-500/30" },
-  "regulatory": { label: "Regulatory", color: "text-blue-500 border-blue-500/30" },
-  "abandoned": { label: "Abandoned", color: "text-zinc-500 border-zinc-500/30" },
+export const CAUSE_META: Record<CauseOfDeath, { label: string; textColor: string; borderColor: string }> = {
+  "algorithmic-failure": { label: "Algorithmic Failure", textColor: "text-red-500", borderColor: "border-red-500/30" },
+  "counterparty-failure": { label: "Counterparty Failure", textColor: "text-amber-500", borderColor: "border-amber-500/30" },
+  "liquidity-drain": { label: "Liquidity Drain", textColor: "text-orange-500", borderColor: "border-orange-500/30" },
+  "regulatory": { label: "Regulatory", textColor: "text-blue-500", borderColor: "border-blue-500/30" },
+  "abandoned": { label: "Abandoned", textColor: "text-zinc-500", borderColor: "border-zinc-500/30" },
 };
 
 /**

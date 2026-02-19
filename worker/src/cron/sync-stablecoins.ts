@@ -6,7 +6,7 @@ import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enric
 import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
 import { detectDepegEvents } from "./detect-depegs";
 
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, GECKO_ID_OVERRIDES, USER_AGENT, MIN_VALID_ASSET_COUNT } from "../lib/constants";
 
 interface GoldTokenConfig {
   internalId: string;
@@ -75,10 +75,9 @@ async function fetchSilverTokens(): Promise<unknown[]> {
         const priceInfo = priceData.coins[`coingecko:${token.geckoId}`];
         if (!priceInfo) return null;
 
-        const mcap = mcapMap[token.internalId];
+        const mcap = mcapMap[token.internalId] ?? 0;
         if (!mcap) {
-          console.log(`[silver] No mcap for ${token.symbol}, skipping`);
-          return null;
+          console.warn(`[silver] No mcap for ${token.symbol}, including with mcap=0`);
         }
 
         return {
@@ -181,12 +180,10 @@ async function fetchGoldTokens(): Promise<unknown[]> {
         const priceInfo = priceData.coins[`coingecko:${token.geckoId}`];
         if (!priceInfo) return null;
 
-        // Use protocol mcap if available, otherwise estimate from price
-        // For tokens without protocol data, we skip them (no reliable mcap source)
-        const mcap = mcapMap[token.internalId];
+        // Use protocol mcap if available; if missing, still include token (mcap = 0)
+        const mcap = mcapMap[token.internalId] ?? 0;
         if (!mcap) {
-          console.log(`[gold] No mcap for ${token.symbol}, skipping`);
-          return null;
+          console.warn(`[gold] No mcap for ${token.symbol}, including with mcap=0`);
         }
 
         const history = tvlHistoryMap[token.internalId];
@@ -376,8 +373,8 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
 
   const llamaData = await llamaRes.json() as { peggedAssets: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
 
-  if (!llamaData.peggedAssets || llamaData.peggedAssets.length < 50) {
-    console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), skipping cache write`);
+  if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
+    console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
     return;
   }
 
@@ -385,8 +382,8 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   const validAssets = llamaData.peggedAssets.filter(
     (a) => a.id != null && typeof a.name === "string" && typeof a.symbol === "string" && a.circulating != null
   );
-  if (validAssets.length < 50) {
-    console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need 50+), skipping cache write`);
+  if (validAssets.length < MIN_VALID_ASSET_COUNT) {
+    console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
     return;
   }
   if (validAssets.length < llamaData.peggedAssets.length) {

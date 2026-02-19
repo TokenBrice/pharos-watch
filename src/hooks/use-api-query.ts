@@ -25,7 +25,7 @@ export function useApiQuery<T>(
     queryFn: async () => {
       const res = await fetch(`${API_BASE}${path}`);
       if (!res.ok) throw new Error(`Failed to fetch ${path}`);
-      return res.json();
+      return res.json() as Promise<T>;
     },
     staleTime: cronInterval,
     refetchInterval: 2 * cronInterval,

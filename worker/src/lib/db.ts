@@ -169,8 +169,12 @@ export async function logCronRun(
     throw e;
   }
   // Prune rows older than 7 days
-  await db
-    .prepare("DELETE FROM cron_runs WHERE started_at < ?")
-    .bind(Math.floor(Date.now() / 1000) - 604800)
-    .run();
+  try {
+    await db
+      .prepare("DELETE FROM cron_runs WHERE started_at < ?")
+      .bind(Math.floor(Date.now() / 1000) - 604800)
+      .run();
+  } catch (e) {
+    console.error("[db] Failed to prune old cron runs:", e);
+  }
 }

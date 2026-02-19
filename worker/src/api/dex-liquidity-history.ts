@@ -1,5 +1,12 @@
 import { withErrorHandler } from "../lib/api-utils";
 
+interface LiquidityHistoryRow {
+  total_tvl_usd: number;
+  total_volume_24h_usd: number;
+  liquidity_score: number | null;
+  snapshot_date: number;
+}
+
 export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history", async (
   db: D1Database,
   url: URL
@@ -23,13 +30,13 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
        ORDER BY snapshot_date ASC`
     )
     .bind(stablecoinId, cutoff)
-    .all();
+    .all<LiquidityHistoryRow>();
 
   const history = (result.results ?? []).map((row) => ({
-    tvl: row.total_tvl_usd as number,
-    volume24h: row.total_volume_24h_usd as number,
-    score: row.liquidity_score as number | null,
-    date: row.snapshot_date as number,
+    tvl: row.total_tvl_usd,
+    volume24h: row.total_volume_24h_usd,
+    score: row.liquidity_score,
+    date: row.snapshot_date,
   }));
 
   return new Response(JSON.stringify(history), {

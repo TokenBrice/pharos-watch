@@ -208,20 +208,28 @@ export const EVENT_LABELS: Record<BlacklistEventType, string> = {
 // Peg currency chart colors (text + bg pairs for charts and stat cards)
 // ---------------------------------------------------------------------------
 
-export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string; bgColor: string }> = {
-  GOLD: { label: "Gold", textColor: "text-yellow-500", bgColor: "bg-yellow-500" },
-  EUR: { label: "Euro", textColor: "text-violet-500", bgColor: "bg-violet-500" },
-  RUB: { label: "Ruble", textColor: "text-red-500", bgColor: "bg-red-500" },
-  BRL: { label: "Real", textColor: "text-orange-500", bgColor: "bg-orange-500" },
-  CHF: { label: "Franc", textColor: "text-pink-500", bgColor: "bg-pink-500" },
-  GBP: { label: "Pound", textColor: "text-cyan-500", bgColor: "bg-cyan-500" },
-  JPY: { label: "Yen", textColor: "text-rose-500", bgColor: "bg-rose-500" },
-  IDR: { label: "Rupiah", textColor: "text-amber-500", bgColor: "bg-amber-500" },
-  SGD: { label: "SGD", textColor: "text-teal-500", bgColor: "bg-teal-500" },
-  TRY: { label: "Lira", textColor: "text-lime-500", bgColor: "bg-lime-500" },
-  AUD: { label: "AUD", textColor: "text-indigo-500", bgColor: "bg-indigo-500" },
-  ZAR: { label: "Rand", textColor: "text-fuchsia-500", bgColor: "bg-fuchsia-500" },
-  SILVER: { label: "Silver", textColor: "text-gray-400", bgColor: "bg-gray-400" },
-  VAR: { label: "CPI", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
-  OTHER: { label: "Other", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
+export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string; bgColor: string; hex: string }> = {
+  GOLD: { label: "Gold", textColor: "text-yellow-500", bgColor: "bg-yellow-500", hex: "#eab308" },
+  EUR: { label: "Euro", textColor: "text-violet-500", bgColor: "bg-violet-500", hex: "#8b5cf6" },
+  RUB: { label: "Ruble", textColor: "text-red-500", bgColor: "bg-red-500", hex: "#ef4444" },
+  BRL: { label: "Real", textColor: "text-orange-500", bgColor: "bg-orange-500", hex: "#f97316" },
+  CHF: { label: "Franc", textColor: "text-pink-500", bgColor: "bg-pink-500", hex: "#ec4899" },
+  GBP: { label: "Pound", textColor: "text-cyan-500", bgColor: "bg-cyan-500", hex: "#06b6d4" },
+  JPY: { label: "Yen", textColor: "text-rose-500", bgColor: "bg-rose-500", hex: "#f43f5e" },
+  IDR: { label: "Rupiah", textColor: "text-amber-500", bgColor: "bg-amber-500", hex: "#f59e0b" },
+  SGD: { label: "SGD", textColor: "text-teal-500", bgColor: "bg-teal-500", hex: "#14b8a6" },
+  TRY: { label: "Lira", textColor: "text-lime-500", bgColor: "bg-lime-500", hex: "#84cc16" },
+  AUD: { label: "AUD", textColor: "text-indigo-500", bgColor: "bg-indigo-500", hex: "#6366f1" },
+  ZAR: { label: "Rand", textColor: "text-fuchsia-500", bgColor: "bg-fuchsia-500", hex: "#d946ef" },
+  SILVER: { label: "Silver", textColor: "text-gray-400", bgColor: "bg-gray-400", hex: "#9ca3af" },
+  VAR: { label: "CPI", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500", hex: "#64748b" },
+  OTHER: { label: "Other", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500", hex: "#64748b" },
+};
+
+/** Chart hex colors for blacklist stablecoin breakdown */
+export const BLACKLIST_CHART_COLORS: Record<string, string> = {
+  USDT: "#06b6d4",
+  USDC: "#3b82f6",
+  PAXG: "#eab308",
+  XAUT: "#f59e0b",
 };

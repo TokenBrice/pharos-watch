@@ -13,7 +13,7 @@ interface BlacklistResponse {
 async function fetchBlacklistEvents(): Promise<BlacklistResponse> {
   const res = await fetch(`${API_BASE}/api/blacklist`);
   if (!res.ok) throw new Error("Failed to fetch /api/blacklist");
-  const json = await res.json();
+  const json = await (res.json() as Promise<BlacklistResponse | BlacklistEvent[]>);
 
   // Support both old (plain array) and new ({ events, total }) response format
   if (Array.isArray(json)) {

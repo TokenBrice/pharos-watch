@@ -90,7 +90,7 @@ export function StablecoinCemetery() {
                   onClick={() => setCauseFilter(isActive ? null : key)}
                   className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
                     isActive
-                      ? `${meta.color} bg-foreground/5 border-current`
+                      ? `${meta.textColor} ${meta.borderColor} bg-foreground/5`
                       : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/30"
                   }`}
                 >
@@ -124,7 +124,7 @@ export function StablecoinCemetery() {
                     )}
                   </div>
                   <span
-                    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${cause.color}`}
+                    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${cause.textColor} ${cause.borderColor}`}
                   >
                     {cause.label}
                   </span>

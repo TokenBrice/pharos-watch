@@ -1,4 +1,4 @@
-import { DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
+import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD } from "../lib/constants";
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -233,7 +233,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
         const candidates = data.pairs.filter((p) => {
           if (p.baseToken.symbol.toUpperCase() !== m.asset.symbol.toUpperCase()) return false;
           if (!p.priceUsd || !p.liquidity?.usd) return false;
-          if (p.liquidity.usd < 50_000) return false;
+          if (p.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
           return true;
         });
 

@@ -1,4 +1,4 @@
-import { setCache } from "../lib/db";
+import { setCacheIfNewer } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 
@@ -52,6 +52,7 @@ function downsample(data: RawChartPoint[]): DownsampledPoint[] {
 }
 
 export async function syncStablecoinCharts(db: D1Database): Promise<void> {
+  const syncStartSec = Math.floor(Date.now() / 1000);
   const res = await fetchWithRetry(`${DEFILLAMA_BASE}/stablecoincharts/all`);
 
   if (!res || !res.ok) {
@@ -68,6 +69,6 @@ export async function syncStablecoinCharts(db: D1Database): Promise<void> {
 
   const downsampled = downsample(raw);
 
-  await setCache(db, "stablecoin-charts", JSON.stringify(downsampled));
+  await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
   console.log(`[sync-charts] Cached ${downsampled.length} points (from ${raw.length} raw)`);
 }

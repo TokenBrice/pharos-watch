@@ -19,7 +19,7 @@ export function useStatus(adminKey: string): UseQueryResult<StatusResponse, Erro
         if (res.status === 401) throw new Error("Invalid admin key");
         throw new Error(`Failed to fetch status: ${res.status}`);
       }
-      return res.json();
+      return res.json() as Promise<StatusResponse>;
     },
     enabled: !!adminKey,
     staleTime: Infinity,

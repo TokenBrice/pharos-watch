@@ -27,3 +27,12 @@ export const GECKO_ID_OVERRIDES: Record<string, string> = {
   "342": "megausd",                  // USDM (MegaUSD) — no geckoId in DL stablecoins API
   "185": "gyroscope-gyd",            // GYD — no geckoId in DL stablecoins API
 };
+
+/** Minimum number of assets expected from DefiLlama to consider sync valid */
+export const MIN_VALID_ASSET_COUNT = 50;
+
+/** DexScreener minimum liquidity threshold in USD for pool validation */
+export const DEXSCREENER_MIN_LIQUIDITY_USD = 50_000;
+
+/** Tron burn address (used to exclude from supply calculations) */
+export const TRON_BURN_ADDRESS = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";

@@ -25,6 +25,7 @@ function corsHeaders(origin: string): Record<string, string> {
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
     "Access-Control-Max-Age": "86400",
+    "X-Content-Type-Options": "nosniff",
   };
 }
 
@@ -60,7 +61,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status";
+    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs";
 
     // Check edge cache first
     const cache = caches.default;

@@ -3,6 +3,7 @@ import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
 import { DEPEG_THRESHOLD_BPS, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
 import { withErrorHandler } from "../lib/api-utils";
+import { timingSafeEqual } from "../lib/auth";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
 
@@ -134,7 +135,7 @@ interface CoinDetail {
 export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
   // Admin-only endpoint: require X-Admin-Key header matching ADMIN_KEY secret
   const adminKey = request?.headers.get("X-Admin-Key");
-  if (!adminSecret || !adminKey || adminKey !== adminSecret) {
+  if (!adminSecret || !adminKey || !(await timingSafeEqual(adminKey, adminSecret))) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -174,8 +175,8 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       const data = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
       const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
       pegRates = derivePegRates(data.peggedAssets, metaById, data.fxFallbackRates);
-    } catch {
-      // Fall back to USD=1 only
+    } catch (err) {
+      console.error("[backfill-depegs] Failed to parse peg rates from cache:", err);
     }
   }
 
@@ -217,7 +218,9 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       if (res.ok) {
         detail = (await res.json()) as CoinDetail;
       }
-    } catch { /* skip */ }
+    } catch (err) {
+      console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
+    }
 
     const geckoId = GECKO_ID_OVERRIDES[meta.id] ?? detail?.gecko_id;
 
@@ -348,7 +351,8 @@ async function fetchPriceChart(coinId: string, start: number): Promise<PricePoin
       coins: Record<string, { prices: PricePoint[] }>;
     };
     return data.coins?.[coinId]?.prices ?? [];
-  } catch {
+  } catch (err) {
+    console.error(`[backfill-depegs] Failed to fetch price chart for ${coinId}:`, err);
     return [];
   }
 }

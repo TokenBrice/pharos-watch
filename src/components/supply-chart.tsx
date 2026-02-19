@@ -16,8 +16,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 
 interface SupplyChartProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
   pegType?: string;
 }
 
@@ -40,7 +39,7 @@ export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
     return data
       .map((point) => {
         const rawDate = point.date;
-        const ts = typeof rawDate === "number" ? rawDate * 1000 : new Date(rawDate).getTime();
+        const ts = typeof rawDate === "number" ? rawDate * 1000 : typeof rawDate === "string" ? new Date(rawDate).getTime() : NaN;
         const supply = extractSupply(point, pegType);
         return { ts, supply };
       })

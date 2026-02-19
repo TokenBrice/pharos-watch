@@ -18,31 +18,12 @@ import { formatCurrency } from "@/lib/format";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
 import { PEG_CHART_COLORS } from "@/lib/classification";
 
-// Hardcoded hex values matching Tailwind classes in PEG_CHART_COLORS
-const PEG_HEX: Record<string, string> = {
-  GOLD: "#eab308",
-  EUR: "#8b5cf6",
-  RUB: "#ef4444",
-  BRL: "#f97316",
-  CHF: "#ec4899",
-  GBP: "#06b6d4",
-  JPY: "#f43f5e",
-  IDR: "#f59e0b",
-  SGD: "#14b8a6",
-  TRY: "#84cc16",
-  AUD: "#6366f1",
-  ZAR: "#d946ef",
-  SILVER: "#9ca3af",
-  VAR: "#64748b",
-  OTHER: "#64748b",
-};
-
 function pegKeyToCode(key: string): string {
   return key.replace(/^pegged/, "");
 }
 
 function pegKeyToHex(key: string): string {
-  return PEG_HEX[pegKeyToCode(key)] ?? "#64748b";
+  return PEG_CHART_COLORS[pegKeyToCode(key)]?.hex ?? "#64748b";
 }
 
 function pegKeyToLabel(key: string): string {

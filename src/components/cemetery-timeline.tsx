@@ -128,7 +128,7 @@ export function CemeteryTimeline() {
                         <span className="text-muted-foreground"> · peak {formatCurrency(coin.peakMcap, 1)}</span>
                       )}
                       <br />
-                      <span className={cause.color.split(" ")[0]}>{cause.label}</span>
+                      <span className={cause.textColor}>{cause.label}</span>
                     </div>
                   )}
                 </div>

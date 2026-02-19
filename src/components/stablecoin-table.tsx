@@ -22,6 +22,7 @@ import type { StablecoinData, FilterTag, PegSummaryCoin, BluechipRating, DexLiqu
 import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
 import { GRADE_ORDER } from "@/lib/bluechip";
 import { GRADE_COLORS, BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
+import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortIcon } from "@/components/sort-icon";
 import { useSort } from "@/hooks/use-sort";
@@ -165,7 +166,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
-  }, [filtered, sort, pegRates, pegScores, bluechipRatings, dexLiquidity]);
+  }, [filtered, sort, pegScores, bluechipRatings, dexLiquidity]);
 
   // Reset page when filters, search, or sort change (adjusting state during render)
   const [prev, setPrev] = useState({ filtered, sort });
@@ -331,16 +332,12 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   ) : (() => {
                     const ref = getPegReference(coin.pegType, pegRates, meta?.goldOunces);
                     const price = coin.price;
-                    const ratio = (price != null && typeof price === "number" && ref > 0)
-                      ? Math.abs(price / ref - 1)
+                    const absBps = (price != null && typeof price === "number" && ref > 0)
+                      ? Math.abs(price / ref - 1) * 10_000
                       : null;
-                    const colorClass = ratio === null
+                    const colorClass = absBps === null
                       ? "text-muted-foreground"
-                      : ratio < 0.005
-                        ? "text-green-500"
-                        : ratio < 0.02
-                          ? "text-yellow-500"
-                          : "text-red-500";
+                      : deviationColorClass(absBps);
                     return (
                       <span className={colorClass}>
                         {formatPegDeviation(price, ref)}
@@ -378,8 +375,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                       return <span className="text-muted-foreground">—</span>;
                     }
                     const score = pegCoin.pegScore;
-                    const colorClass = score >= 90 ? "text-emerald-500" : score >= 70 ? "text-amber-500" : "text-red-500";
-                    return <span className={colorClass}>{score}</span>;
+                    return <span className={pegScoreColor(score)}>{score}</span>;
                   })()}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-center">
@@ -401,8 +397,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                       return <span className="text-muted-foreground">—</span>;
                     }
                     const score = liq.liquidityScore;
-                    const colorClass = score >= 80 ? "text-emerald-500" : score >= 60 ? "text-blue-500" : score >= 40 ? "text-amber-500" : "text-red-500";
-                    return <span className={colorClass}>{score}</span>;
+                    return <span className={getScoreColor(score)}>{score}</span>;
                   })()}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">

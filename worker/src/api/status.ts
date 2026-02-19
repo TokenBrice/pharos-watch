@@ -1,5 +1,6 @@
 import { getCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
+import { timingSafeEqual } from "../lib/auth";
 
 // --- Types ---
 
@@ -70,7 +71,7 @@ export const handleStatus = withErrorHandler(
   async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
     // Admin key auth
     const provided = request?.headers.get("X-Admin-Key");
-    if (!adminKey || provided !== adminKey) {
+    if (!adminKey || !provided || !(await timingSafeEqual(provided, adminKey))) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -79,42 +80,63 @@ export const handleStatus = withErrorHandler(
 
     const now = Math.floor(Date.now() / 1000);
 
-    // 1. Cache freshness
+    // 1. Cache freshness (batch query)
+    const cacheKeys = Object.keys(CACHE_THRESHOLDS);
+    const cacheRows = await db
+      .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
+      .bind(...cacheKeys)
+      .all<{ key: string; value: string; updated_at: number }>();
+    const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, { value: r.value, updatedAt: r.updated_at }]));
+
     const caches: Record<string, CacheStatus> = {};
     let worstCacheRatio = 0;
     for (const [key, maxAge] of Object.entries(CACHE_THRESHOLDS)) {
-      const cached = await getCache(db, key);
+      const cached = cacheMap.get(key);
       const ageSeconds = cached ? now - cached.updatedAt : null;
       const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
       if (ratio > worstCacheRatio) worstCacheRatio = ratio;
       caches[key] = { ageSeconds, maxAge, healthy: ratio <= 1.5 };
     }
 
-    // 2. Cron run history
+    // 2. Cron run history (batch query)
+    const cronJobs = Object.keys(CRON_INTERVALS);
+    const cronRows = await db
+      .prepare(
+        `SELECT job, started_at, duration_ms, status, error, item_count
+         FROM cron_runs
+         WHERE job IN (${cronJobs.map(() => '?').join(',')})
+         ORDER BY started_at DESC`
+      )
+      .bind(...cronJobs)
+      .all<{
+        job: string;
+        started_at: number;
+        duration_ms: number;
+        status: string;
+        error: string | null;
+        item_count: number | null;
+      }>();
+
+    // Group by job, keeping only the 10 most recent per job
+    const cronByJob = new Map<string, CronRun[]>();
+    for (const r of cronRows.results ?? []) {
+      const runs = cronByJob.get(r.job) ?? [];
+      if (runs.length < 10) {
+        runs.push({
+          startedAt: r.started_at,
+          durationMs: r.duration_ms,
+          status: r.status,
+          ...(r.error ? { error: r.error } : {}),
+          ...(r.item_count != null ? { itemCount: r.item_count } : {}),
+        });
+        cronByJob.set(r.job, runs);
+      }
+    }
+
     const crons: Record<string, CronStatus> = {};
     let anyCronError = false;
     for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
-      const rows = await db
-        .prepare(
-          "SELECT started_at, duration_ms, status, error, item_count FROM cron_runs WHERE job = ? ORDER BY started_at DESC LIMIT 10"
-        )
-        .bind(job)
-        .all<{
-          started_at: number;
-          duration_ms: number;
-          status: string;
-          error: string | null;
-          item_count: number | null;
-        }>();
-
-      const runs: CronRun[] = (rows.results ?? []).map((r) => ({
-        startedAt: r.started_at,
-        durationMs: r.duration_ms,
-        status: r.status,
-        ...(r.error ? { error: r.error } : {}),
-        ...(r.item_count != null ? { itemCount: r.item_count } : {}),
-      }));
-
+      const runs = cronByJob.get(job) ?? [];
       const lastRun = runs.length > 0 ? runs[0] : null;
       const healthy =
         lastRun != null &&
@@ -169,14 +191,14 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
     const cached = await getCache(db, "stablecoins");
     if (cached) {
       const data = JSON.parse(cached.value);
-      const assets = Array.isArray(data) ? data : data?.assets ?? [];
+      const assets = Array.isArray(data) ? data : data?.peggedAssets ?? [];
       totalStablecoins = assets.length;
       missingPrices = assets.filter(
         (a: { price?: number | null }) => a.price == null || a.price === 0
       ).length;
     }
-  } catch {
-    // cache parse failed
+  } catch (e) {
+    console.error("[status] Failed to parse stablecoins cache:", e);
   }
 
   // Blacklist gaps
@@ -192,8 +214,8 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
       blacklistTotal = bl.total;
       blacklistMissingAmounts = bl.missing;
     }
-  } catch {
-    // query failed
+  } catch (e) {
+    console.error("[status] Failed to query blacklist gaps:", e);
   }
 
   // Active depegs
@@ -203,8 +225,8 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
       .prepare("SELECT COUNT(*) as cnt FROM depeg_events WHERE ended_at IS NULL")
       .first<{ cnt: number }>();
     if (dp) activeDepegs = dp.cnt;
-  } catch {
-    // query failed
+  } catch (e) {
+    console.error("[status] Failed to query active depegs:", e);
   }
 
   // Stale on-chain supply (rows older than 2h)
@@ -217,8 +239,8 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
       .bind(now - 7200)
       .first<{ cnt: number }>();
     if (stale) staleOnchainSupply = stale.cnt;
-  } catch {
-    // query failed
+  } catch (e) {
+    console.error("[status] Failed to query stale on-chain supply:", e);
   }
 
   // On-chain supply divergences (compare on-chain vs DefiLlama)
@@ -236,7 +258,7 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
       if (cached) {
         const data = JSON.parse(cached.value);
         const assets: Array<{ id: string; price?: number; circulating?: Record<string, number> }> =
-          Array.isArray(data) ? data : data?.assets ?? [];
+          Array.isArray(data) ? data : data?.peggedAssets ?? [];
         const assetMap = new Map(assets.map((a) => [a.id, a]));
 
         for (const row of onchainRows.results) {
@@ -253,8 +275,8 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
         }
       }
     }
-  } catch {
-    // divergence check failed
+  } catch (e) {
+    console.error("[status] Failed to check on-chain supply divergences:", e);
   }
 
   return {

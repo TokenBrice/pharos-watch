@@ -3,7 +3,7 @@ import { buildPaginatedQuery } from "../lib/db";
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = Math.max(parseInt(params.get("limit") ?? "0", 10) || 0, 0);
+  const limit = Math.min(Math.max(parseInt(params.get("limit") ?? "0", 10) || 0, 0), 1000);
   const offset = Math.max(parseInt(params.get("offset") ?? "0", 10) || 0, 0);
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");

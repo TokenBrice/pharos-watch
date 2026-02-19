@@ -27,6 +27,7 @@ import {
   PEG_BADGE_STYLES,
   POR_BADGE_STYLES,
 } from "@/lib/classification";
+import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 
 function MechanismCard({ meta }: { meta: StablecoinMeta }) {
   const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
@@ -250,7 +251,7 @@ function LiquidityBox({ stablecoinId, liquidityMap }: { stablecoinId: string; li
   if (!liq || (liq.liquidityScore === null && liq.poolCount === 0)) return null;
 
   const score = liq.liquidityScore ?? 0;
-  const textColor = score >= 70 ? "text-emerald-500" : score >= 40 ? "text-amber-500" : "text-red-500";
+  const textColor = getScoreColor(score);
 
   return (
     <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
@@ -418,13 +419,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
             <CardContent>
               {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
                 <>
-                  <div className={`text-3xl font-bold font-mono tracking-tight ${
-                    pegScoreResult.pegScore >= 90
-                      ? "text-emerald-500"
-                      : pegScoreResult.pegScore >= 70
-                        ? "text-amber-500"
-                        : "text-red-500"
-                  }`}>
+                  <div className={`text-3xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
                     {pegScoreResult.pegScore}<span className="text-lg text-muted-foreground">/100</span>
                   </div>
                   <p className="text-sm text-muted-foreground font-mono">

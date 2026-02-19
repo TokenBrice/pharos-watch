@@ -11,7 +11,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   // 1. Load stablecoins cache (live prices)
   const cached = await getCache(db, "stablecoins");
   if (!cached) {
-    return new Response(JSON.stringify({ coins: [], summary: null }), {
+    return new Response(JSON.stringify({ error: "Data not yet available" }), {
+      status: 503,
       headers: { "Content-Type": "application/json" },
     });
   }
@@ -19,7 +20,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
 
   // 2. Load ALL depeg events and DEX prices from DB
   const [eventsResult, dexPriceResult] = await Promise.all([
-    db.prepare("SELECT * FROM depeg_events ORDER BY started_at DESC").all<DepegRow>(),
+    db.prepare("SELECT * FROM depeg_events ORDER BY started_at DESC LIMIT 10000").all<DepegRow>(),
     db.prepare("SELECT * FROM dex_prices").all<{
       stablecoin_id: string;
       dex_price_usd: number;
