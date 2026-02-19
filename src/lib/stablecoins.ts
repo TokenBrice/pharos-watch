@@ -609,6 +609,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://pmusd.raac.io/" },
       { label: "Twitter", url: "https://x.com/Raacfi" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf", decimals: 18 },
+    ],
   }),
   usd("202", "Anzen USDz", "USDz", "rwa-backed", "centralized", {
     rwa: true,
