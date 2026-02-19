@@ -15,6 +15,7 @@
 | `GET /api/dex-liquidity` | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID) |
 | `GET /api/dex-liquidity-history` | Per-coin historical liquidity data (`?stablecoin=ID&days=90`) |
 | `GET /api/health` | Worker health check |
+| `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 
 ## Full File Tree
@@ -34,6 +35,9 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx              # Server component (metadata)
 │   │   └── client.tsx            # Interactive client component
 │   ├── about/page.tsx            # About & methodology
+│   ├── status/                   # Admin status dashboard (not in nav)
+│   │   ├── page.tsx
+│   │   └── client.tsx
 │   ├── stablecoin/[id]/          # Detail page: price chart, supply chart, chains
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -94,6 +98,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-dex-liquidity.ts      # GET /api/dex-liquidity
 │   ├── use-dex-liquidity-history.ts # GET /api/dex-liquidity-history
 │   ├── use-usds-status.ts        # GET /api/usds-status
+│   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   └── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
@@ -120,7 +125,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (13 total)
+├── migrations/                   # D1 SQL migrations (14 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -129,7 +134,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
-    │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min)
+    │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */10 cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
     │   ├── sync-bluechip.ts     # Bluechip safety ratings → D1 (6h cache)
@@ -146,9 +151,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dex-liquidity.ts     # GET /api/dex-liquidity (includes HHI, trends)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
+    │   ├── status.ts             # GET /api/status (admin)
     │   └── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
     └── lib/
-        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply)
+        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply, logCronRun)
         ├── chain-rpcs.ts         # Chain RPC endpoint config for on-chain supply queries (11 chains: EVM + Tron)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper

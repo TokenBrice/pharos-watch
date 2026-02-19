@@ -322,6 +322,47 @@ export interface DexLiquidityHistoryPoint {
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 
+// --- Status page types ---
+
+export interface CacheStatus {
+  ageSeconds: number | null;
+  maxAge: number;
+  healthy: boolean;
+}
+
+export interface CronRun {
+  startedAt: number;
+  durationMs: number;
+  status: string;
+  error?: string;
+  itemCount?: number;
+}
+
+export interface CronStatus {
+  lastRun: CronRun | null;
+  recentRuns: CronRun[];
+  expectedIntervalSec: number;
+  healthy: boolean;
+}
+
+export interface DataQuality {
+  totalStablecoins: number;
+  missingPrices: number;
+  blacklistMissingAmounts: number;
+  blacklistTotal: number;
+  onchainSupplyDivergences: number;
+  activeDepegs: number;
+  staleOnchainSupply: number;
+}
+
+export interface StatusResponse {
+  timestamp: number;
+  overallStatus: "healthy" | "degraded" | "stale";
+  caches: Record<string, CacheStatus>;
+  crons: Record<string, CronStatus>;
+  dataQuality: DataQuality;
+}
+
 // --- Blacklist/Freeze tracker types ---
 
 // --- Depeg event types ---

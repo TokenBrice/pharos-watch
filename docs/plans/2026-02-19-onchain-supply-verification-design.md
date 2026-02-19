@@ -145,7 +145,7 @@ For contract addresses, the frontend reads directly from `StablecoinMeta` (alrea
 | Cron | Interval | Purpose |
 |------|----------|---------|
 | `sync-stablecoins` | 5 min | DefiLlama + price enrichment + override application |
-| `sync-onchain-supply` | 30 min | On-chain totalSupply queries → D1 |
+| `sync-onchain-supply` | 30 min (piggybacks on `*/10` cron at :00 and :30) | On-chain totalSupply queries → D1 |
 | `sync-blacklist` | 10 min | Blacklist/freeze event tracking |
 | `sync-dex-liquidity` | 15 min | DEX liquidity scoring |
 | `sync-fx-rates` | 2 hours | FX rates from ECB |

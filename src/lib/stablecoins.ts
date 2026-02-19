@@ -111,6 +111,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/worldlibertyfi" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "South Dakota Trust Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
+    ],
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     collateral: "Mix of crypto (ETH, wBTC), RWA (U.S. Treasuries), and centralized stablecoins (USDC) via Maker vaults",
@@ -147,6 +150,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/FalconStable" },
     ],
     jurisdiction: { country: "United Arab Emirates" },
+    contracts: [
+      { chain: "ethereum", address: "0xfa2b947eec368f42195f24f36d2af29f7c24cec2", decimals: 18 },
+    ],
   }),
   usd("237", "Hashnote USYC", "USYC", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -158,6 +164,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://usyc.docs.hashnote.com/" },
     ],
     jurisdiction: { country: "Bermuda", regulator: "BMA", license: "DABA License" },
+    contracts: [
+      { chain: "ethereum", address: "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b", decimals: 6 },
+    ],
   }),
   usd("286", "Global Dollar", "USDG", "rwa-backed", "centralized", {
     collateral: "Cash and short-term U.S. Treasury securities",
@@ -168,6 +177,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/paxos" },
     ],
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
+    contracts: [
+      { chain: "ethereum", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6 },
+    ],
   }),
 
   // ── Rank 11-20 ───────────────────────────────────────────────────────
@@ -180,6 +192,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/Ripple" },
     ],
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed", decimals: 18 },
+    ],
   }),
   usd("129", "Ondo US Dollar Yield", "USDY", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -204,6 +219,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://securitize.io/blackrock/buidl" },
     ],
     jurisdiction: { country: "British Virgin Islands", regulator: "SEC (Reg D)", license: "Regulation D Exemption" },
+    contracts: [
+      { chain: "ethereum", address: "0x7712c34205737192402172409a8f7ccef8aa2aec", decimals: 6 },
+    ],
   }),
   usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
     collateral: "Over-collateralized by BTC, USDT, and TRX held in TRON DAO Reserve",
@@ -214,6 +232,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/usddio" },
     ],
     jurisdiction: { country: "Dominica" },
+    contracts: [
+      { chain: "tron", address: "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz", decimals: 18 },
+    ],
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
     rwa: true,
@@ -226,6 +247,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.ethena.fi/usdtb" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0xc139190f447e929f090edeb554d95abb8b18ac1c", decimals: 18 },
+    ],
   }),
   usd("213", "M by M0", "M", "rwa-backed", "centralized-dependent", {
     rwa: true,
@@ -236,6 +260,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/m0foundation" },
     ],
     jurisdiction: { country: "Switzerland" },
+    contracts: [
+      { chain: "ethereum", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
+    ],
   }),
   usd("336", "United Stables", "U", "rwa-backed", "centralized", {
     collateral: "Cash, USDC, USDT, and USD1 held in segregated custodial accounts (BVI entity)",
@@ -244,6 +271,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://u.tech/" },
     ],
     jurisdiction: { country: "British Virgin Islands" },
+    contracts: [
+      { chain: "ethereum", address: "0xce24439f2d9c6a2289f741120fe202248b666666", decimals: 18 },
+    ],
   }),
   usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
     collateral: "U.S. Treasuries via M0 platform; minted by depositing USDC or USDT",
@@ -252,6 +282,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://usd.ai/" },
       { label: "Twitter", url: "https://x.com/USDai_Official" },
       { label: "Docs", url: "https://docs.usd.ai" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
     ],
   }),
   usd("195", "Usual USD", "USD0", "rwa-backed", "centralized-dependent", {
@@ -290,6 +323,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.a7a5.io/" },
     ],
     jurisdiction: { country: "Kyrgyzstan" },
+    contracts: [
+      { chain: "ethereum", address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", decimals: 6 },
+      { chain: "tron", address: "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ", decimals: 6 },
+    ],
   }),
   usd("7", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
     collateral: "U.S. dollars held in escrow accounts with independent attestation",
@@ -325,6 +362,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/capmoney_" },
       { label: "Docs", url: "https://docs.cap.app/" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", decimals: 18 },
+    ],
   }),
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
   eur("50", "EURC", "EURC", "rwa-backed", "centralized", {
@@ -347,6 +387,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://resolv.xyz/" },
       { label: "Twitter", url: "https://x.com/ResolvLabs" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110", decimals: 18 },
     ],
   }),
   usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
@@ -380,6 +423,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/solsticefi" },
     ],
     jurisdiction: { country: "Switzerland" },
+    contracts: [
+      { chain: "ethereum", address: "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8", decimals: 18 },
+    ],
   }),
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
@@ -390,6 +436,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.avalonfinance.xyz/" },
       { label: "Twitter", url: "https://x.com/avalonfinance_" },
       { label: "Docs", url: "https://docs.avalonfinance.xyz" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x0000206329b97db379d5e1bf586bbdb969c63274", decimals: 18 },
     ],
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
@@ -414,6 +463,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/InverseFinance" },
       { label: "Docs", url: "https://docs.inverse.finance/" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0x865377367054516e17014ccded1e7d814edc9ce4", decimals: 18 },
+    ],
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
     collateral: "U.S. dollar deposits, U.S. Treasury bills, and overnight reverse repos",
@@ -424,6 +476,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/withAUSD" },
     ],
     jurisdiction: { country: "Cayman Islands" },
+    contracts: [
+      { chain: "ethereum", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
+    ],
   }),
   usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
     collateral: "USDC deposits allocated across Aave, Pendle, and Ethena yield strategies",
@@ -433,6 +488,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/infiniFi" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "ethereum", address: "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c", decimals: 18 },
+    ],
   }),
   usd("219", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
     collateral: "USDT deposits deployed in delta-neutral strategies exclusively on Binance",
@@ -441,6 +499,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.asterdex.com/en/usdf" },
       { label: "Twitter", url: "https://x.com/Aster_DEX" },
       { label: "Docs", url: "https://docs.asterdex.com/" },
+    ],
+    contracts: [
+      { chain: "bsc", address: "0x5a110fc00474038f6c02e89c707d638602ea44b5", decimals: 18 },
     ],
   }),
   // FLEXUSD (id 21) removed — CoinFLEX exchange bankruptcy June 2022 (see cemetery)
@@ -451,6 +512,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://standx.com/" },
       { label: "Twitter", url: "https://x.com/StandX_Official" },
       { label: "Docs", url: "https://docs.standx.com/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xa48f322f8b3edff967629af79e027628b9dd1298", decimals: 18 },
     ],
   }),
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "centralized-dependent", {
@@ -491,6 +555,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.frax.com/protocol/assets/frxusd/frxusd" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "ethereum", address: "0xcacd6fd266af91b8aed52accc382b4e165586e29", decimals: 18 },
+    ],
   }),
   usd("340", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
     rwa: true,
@@ -509,12 +576,18 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.avantprotocol.com/" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "avalanche", address: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346", decimals: 18 },
+    ],
   }),
   usd("341", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
     collateral: "USDT reserves and tokenized gold (PGOLD) exposure",
     pegMechanism: "1:1 redeemability into USDT",
     links: [
       { label: "Twitter", url: "https://x.com/PleasingGolden" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6 },
     ],
   }),
   usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
@@ -525,6 +598,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.re.xyz" },
     ],
     jurisdiction: { country: "British Virgin Islands" },
+    contracts: [
+      { chain: "ethereum", address: "0x5086bf358635b81d8c47c66d1c8b9e567db70c72", decimals: 18 },
+    ],
   }),
   usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized-dependent", {
     collateral: "Tokenized precious metals (gold) via RAAC protocol with Chainlink proof-of-reserves",
@@ -544,6 +620,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.anzen.finance/" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "ethereum", address: "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067", decimals: 18 },
+    ],
   }),
   usd("316", "CASH", "CASH", "rwa-backed", "centralized", {
     collateral: "Cash and cash equivalents",
@@ -553,6 +632,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/Stabl_Fi" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "polygon", address: "0x5d066d022ede10efa2717ed3d79f22f949f8c175", decimals: 18 },
+    ],
   }),
 
   // ── Rank 51-60 ───────────────────────────────────────────────────────
@@ -564,6 +646,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/MNEE_cash" },
     ],
     jurisdiction: { country: "Antigua and Barbuda", regulator: "FSRC", license: "Digital Asset Issuer" },
+    contracts: [
+      { chain: "ethereum", address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", decimals: 18 },
+    ],
   }),
   usd("257", "OpenEden TBILL", "TBILL", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -576,6 +661,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.openeden.com/" },
     ],
     jurisdiction: { country: "British Virgin Islands", regulator: "BVI FSC", license: "Registered Professional Fund" },
+    contracts: [
+      { chain: "ethereum", address: "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a", decimals: 6 },
+    ],
   }),
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
     navToken: true,
@@ -586,6 +674,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/fraxfinance" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "ethereum", address: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", decimals: 18 },
+    ],
   }),
   usd("283", "Unitas", "USDU", "crypto-backed", "centralized-dependent", {
     collateral: "USDC deposits routed into Jupiter LP tokens (JLP) and hedged via CEX perpetual shorts",
@@ -594,6 +685,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://unitas.so/" },
       { label: "Twitter", url: "https://x.com/UnitasLabs" },
       { label: "Docs", url: "https://docs.unitas.so/" },
+    ],
+    contracts: [
+      { chain: "bsc", address: "0xea953ea6634d55dac6697c436b1e81a679db5882", decimals: 18 },
     ],
   }),
   // DEUSD removed — collapsed Nov 2025 when Stream Finance failed
@@ -614,6 +708,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/lista_dao" },
       { label: "Docs", url: "https://docs.bsc.lista.org" },
     ],
+    contracts: [
+      { chain: "bsc", address: "0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5", decimals: 18 },
+    ],
   }),
   usd("241", "OpenDollar USDO", "USDO", "rwa-backed", "centralized", {
     collateral: "RWA-backed reserves",
@@ -625,6 +722,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.openeden.com/usdo/introduction" },
     ],
     jurisdiction: { country: "Bermuda", regulator: "BMA", license: "DABA License" },
+    contracts: [
+      { chain: "ethereum", address: "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe", decimals: 18 },
+    ],
   }),
   usd("166", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
     collateral: "U.S. dollar reserves via Cygnus Finance",
@@ -632,6 +732,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.cygnus.finance/" },
       { label: "Twitter", url: "https://x.com/CygnusFi" },
+    ],
+    contracts: [
+      { chain: "base", address: "0xca72827a3d211cfd8f6b00ac98824872b72cab49", decimals: 6 },
     ],
   }),
 
@@ -645,6 +748,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/sgforge" },
     ],
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
+    ],
   }),
   // USP (id 97) removed — Platypus exploited in 2023, protocol defunct (see cemetery)
   eur("147", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
@@ -655,6 +761,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/AnchoredCoins" },
     ],
     jurisdiction: { country: "Switzerland", regulator: "FINMA (VQF)", license: "SRO Member" },
+    contracts: [
+      { chain: "ethereum", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18 },
+    ],
   }),
   // BUSD (id 4) removed — regulatory shutdown Feb 2023 (see cemetery)
   usd("275", "Quantoz USDQ", "USDQ", "rwa-backed", "centralized", {
@@ -664,6 +773,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.quantoz.com/products/eurq-usdq" },
     ],
     jurisdiction: { country: "Netherlands", regulator: "DNB", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0xc83e27f270cce0a3a3a29521173a83f402c1768b", decimals: 6 },
+    ],
   }),
   usd("256", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
     collateral: "crvUSD lending positions and Curve LP tokens",
@@ -672,6 +784,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://resupply.fi/" },
       { label: "Twitter", url: "https://x.com/ResupplyFi" },
       { label: "Docs", url: "https://docs.resupply.fi/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 },
     ],
   }),
   eur("325", "Eurite", "EURI", "rwa-backed", "centralized", {
@@ -682,6 +797,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.eurite.com/" },
     ],
     jurisdiction: { country: "Luxembourg", regulator: "CSSF", license: "Credit Institution (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18 },
+    ],
   }),
   usd("19", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
     collateral: "U.S. dollar deposits held at State Street Bank",
@@ -692,6 +810,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/gemini" },
     ],
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", decimals: 2 },
+    ],
   }),
   usd("11", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
     collateral: "U.S. dollar deposits and T-bills held in bankruptcy-remote accounts",
@@ -714,6 +835,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/Hex_Trust" },
     ],
     jurisdiction: { country: "Hong Kong", license: "TCSP License" },
+    contracts: [
+      { chain: "ethereum", address: "0xf8750b54d86be7ae9e32b4a0c826811198d63313", decimals: 18 },
+    ],
   }),
 
   // ── Rank 71-80 ───────────────────────────────────────────────────────
@@ -726,6 +850,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/straitsx" },
     ],
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
+    contracts: [
+      { chain: "ethereum", address: "0xc08e7e23c235073c6807c2efe7021304cb7c2815", decimals: 6 },
+    ],
   }),
   usd("313", "Metamask USD", "MUSD", "rwa-backed", "centralized", {
     collateral: "U.S. Treasury bills in bankruptcy-remote accounts via Bridge (Stripe) and Blackstone",
@@ -734,6 +861,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://metamask.io/news/introducing-metamask-usd-your-dollar-your-wallet" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "ethereum", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
+    ],
   }),
   usd("255", "Aegis YUSD", "YUSD", "rwa-backed", "centralized", {
     collateral: "U.S. dollar reserves",
@@ -744,6 +874,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/aegis_im" },
     ],
     jurisdiction: { country: "British Virgin Islands" },
+    contracts: [
+      { chain: "ethereum", address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a", decimals: 18 },
+    ],
   }),
   usd("22", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
     collateral: "SNX, ETH, and USDC/stataUSDC via Synthetix V3; V2 was SNX-only",
@@ -764,6 +897,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.liquity.org/bold" },
       { label: "Twitter", url: "https://x.com/LiquityProtocol" },
       { label: "Docs", url: "https://docs.liquity.org/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x6440f144b7e50d6a8439336510312d2f54beb01d", decimals: 18 },
     ],
   }),
   usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "centralized-dependent", {
@@ -793,6 +929,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://fx.aladdin.club" },
       { label: "Twitter", url: "https://x.com/protocol_fx" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0x085780639cc2cacd35e474e71f4d000e2405d8f6", decimals: 18 },
+    ],
   }),
   usd("67", "Bean", "BEAN", "algorithmic", "decentralized", {
     collateral: "None; purely credit-based algorithmic stablecoin using debt instruments (Pods)",
@@ -800,6 +939,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://bean.money/" },
       { label: "Twitter", url: "https://x.com/beanstalkfarms" },
+    ],
+    contracts: [
+      { chain: "arbitrum", address: "0xbea0005b8599265d41256905a9b3073d397812e4", decimals: 6 },
     ],
   }),
   usd("282", "Noble Dollar", "USDN", "rwa-backed", "centralized", {
@@ -828,6 +970,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/sgforge" },
     ],
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x5422374b27757da72d5265cc745ea906e0446634", decimals: 18 },
+    ],
   }),
   usd("231", "Honey", "HONEY", "crypto-backed", "centralized-dependent", {
     collateral: "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
@@ -886,6 +1031,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("230", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
     collateral: "USDC/USDT deposits and short-term U.S. Treasury bills via custodians (Ceffu, Alpaca)",
     pegMechanism: "1:1 mint/redeem against USDC/USDT; delta-neutral yield strategies on centralized exchanges",
+    contracts: [
+      { chain: "ethereum", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
+    ],
   }),
   usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
     collateral: "Diversified reserve of sDAI, USDC, LUSD, and crvUSD in yield-generating vaults",
@@ -893,6 +1041,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.gyro.finance/" },
       { label: "Twitter", url: "https://x.com/GyroStable" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a", decimals: 18 },
     ],
   }),
   usd("329", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
@@ -912,6 +1063,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://lybra.finance/" },
       { label: "Twitter", url: "https://x.com/LybraFinance" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xdf3ac4f479375802a821f7b7b46cd7eb5e4262cc", decimals: 18 },
     ],
   }),
   usd("154", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
@@ -943,6 +1097,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/MezoNetwork" },
       { label: "Docs", url: "https://mezo.org/docs/users/musd" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
+    ],
   }),
   usd("305", "XSY UTY", "UTY", "crypto-backed", "centralized-dependent", {
     collateral: "Delta-neutral positions pairing long AVAX spot with short perpetual futures",
@@ -952,6 +1109,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/xsy_fi" },
     ],
     jurisdiction: { country: "United States" },
+    contracts: [
+      { chain: "avalanche", address: "0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a", decimals: 18 },
+    ],
   }),
   eur("51", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
     collateral: "Euro-denominated reserves verified by independent auditors",
@@ -970,6 +1130,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("63", "Fantom USD", "FUSD", "crypto-backed", "centralized-dependent", {
     collateral: "Staked FTM tokens only; 300-500% overcollateralization ratio",
     pegMechanism: "Overcollateralized CDP with FTM-only collateral and liquidation auctions; operates on Fantom/Sonic (not Ethereum or a Stage 1 L2)",
+    contracts: [
+      { chain: "fantom", address: "0xad84341756bf337f5a0164515b1f6f993d194e1f", decimals: 18 },
+    ],
   }),
   usd("326", "Metronome Synth USD", "MSUSD", "crypto-backed", "centralized-dependent", {
     collateral: "USDC, FRAX, DAI, ETH, WBTC, and yield-bearing versions (vaUSDC, vaFRAX)",
@@ -986,6 +1149,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.neutrl.fi/" },
       { label: "Twitter", url: "https://x.com/neutral_project" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
     ],
   }),
   usd("344", "Yuzu USD", "YZUSD", "crypto-backed", "centralized-dependent", {
@@ -1022,6 +1188,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/yalaorg" },
       { label: "Docs", url: "https://docs.yala.org/" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0xe868084cf08f3c3db11f4b73a95473762d9463f7", decimals: 18 },
+    ],
   }),
   usd("343", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
     collateral: "U.S. Treasury bills held by Anchorage Digital Bank under GENIUS Act federal regulation",
@@ -1032,6 +1201,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/Tether_to" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0x07041776f5007aca2a54844f50503a18a72a8b68", decimals: 6 },
+    ],
   }),
   usd("24", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
     collateral: "Mento reserve containing USDC, DAI, plus BTC, ETH, and CELO (110%+ overcollateralization)",
@@ -1042,6 +1214,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.celo.org/learn/platform-native-stablecoins-summary" },
     ],
     jurisdiction: { country: "Germany" },
+    contracts: [
+      { chain: "celo", address: "0x765de816845861e75a25fca122bb6898b8b1282a", decimals: 18 },
+    ],
   }),
   usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "centralized-dependent", {
     collateral: "DAI, USDC, USDT, and their yield-bearing vault tokens (yvDAI, yvUSDC, yvUSDT) via Alchemix CDPs",
@@ -1051,6 +1226,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/alchemixfi" },
     ],
     jurisdiction: { country: "Saint Kitts and Nevis" },
+    contracts: [
+      { chain: "ethereum", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
+    ],
   }),
   usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "centralized-dependent", {
     collateral: "HYPE, WBTC, ETH, and liquid staking tokens via overcollateralized CDPs on Hyperliquid",
@@ -1067,6 +1245,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.fidelitydigitalassets.com/stablecoin" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Bank Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d", decimals: 18 },
+    ],
   }),
   usd("347", "USDGO", "USDGO", "rwa-backed", "centralized", {
     collateral: "U.S. Treasuries and high-quality liquid assets held by Anchorage Digital Bank",
@@ -1083,6 +1264,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://mainstreet.finance/" },
     ],
+    contracts: [
+      { chain: "ethereum", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
+    ],
   }),
   usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
     collateral: "1:1 USD reserves custodied by Norwegian Block Exchange (NBX)",
@@ -1091,6 +1275,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://moneta.global/" },
     ],
     jurisdiction: { country: "United States", regulator: "FinCEN" },
+    contracts: [
+      { chain: "ethereum", address: "0x59d9356e565ab3a36dd77763fc0d87feaf85508c", decimals: 18 },
+    ],
   }),
   usd("312", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
     collateral: "Overcollateralized by DOT, ETH, WBTC, USDT, USDC, and liquid staking tokens on Hydration",
@@ -1129,6 +1316,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/straitsx" },
     ],
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
+    contracts: [
+      { chain: "ethereum", address: "0x70e8de73ce538da2beed35d14187f6959a8eca96", decimals: 6 },
+    ],
   }),
   other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
     collateral: "Japanese yen reserves held at FDIC-insured banks",
@@ -1139,6 +1329,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/GMOTrust" },
     ],
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
+    contracts: [
+      { chain: "ethereum", address: "0xc08512927d12348f6620a698105e1baac6ecd911", decimals: 6 },
+    ],
   }),
   other("300", "BiLira", "TRYB", "rwa-backed", "centralized", "TRY", {
     collateral: "Turkish lira reserves held in Turkish bank accounts",
@@ -1148,6 +1341,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/BiLira_Official" },
     ],
     jurisdiction: { country: "Turkey", regulator: "SPK/CMB" },
+    contracts: [
+      { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
+    ],
   }),
   other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
     collateral: "Australian dollar cash and cash equivalents held at Australian deposit-taking institutions",
@@ -1158,6 +1354,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/AUDD_digital" },
     ],
     jurisdiction: { country: "Australia", regulator: "ASIC", license: "AFSL" },
+    contracts: [
+      { chain: "ethereum", address: "0x4cce605ed955295432958d8951d0b176c10720d5", decimals: 6 },
+    ],
   }),
   other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
@@ -1166,6 +1365,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://corporate.jpyc.co.jp/en" },
     ],
     jurisdiction: { country: "Japan", regulator: "FSA" },
+    contracts: [
+      { chain: "ethereum", address: "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb", decimals: 18 },
+    ],
   }),
   other("cg-idrt", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "IDR", {
     collateral: "Indonesian rupiah reserves held 1:1 in Indonesian bank accounts",
@@ -1174,6 +1376,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://rupiahtoken.com/" },
     ],
     jurisdiction: { country: "Indonesia" },
+    contracts: [
+      { chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 },
+    ],
   }),
 
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
@@ -1227,6 +1432,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/matrixdock" },
     ],
     jurisdiction: { country: "Singapore" },
+    contracts: [
+      { chain: "ethereum", address: "0x2103e845c5e135493bb6c2a4f0b8651956ea8682", decimals: 18 },
+    ],
   }),
   other("gold-vro", "VeraOne", "VRO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, goldOunces: 1 / 31.1035,
@@ -1236,6 +1444,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://music.veraone.net/" },
     ],
     jurisdiction: { country: "France" },
+    contracts: [
+      { chain: "ethereum", address: "0x10bc518c32fbae5e38ecb50a612160571bd81e44", decimals: 8 },
+    ],
   }),
   other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, goldOunces: 1 / 31.1035,
@@ -1254,6 +1465,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://dgld.ch/" },
     ],
     jurisdiction: { country: "Switzerland" },
+    contracts: [
+      { chain: "ethereum", address: "0xa9299c296d7830a99414d1e5546f5171fa01e9c8", decimals: 18 },
+    ],
   }),
 
   // ── Silver-Pegged (data via DefiLlama coins API) ──────────────────────
@@ -1267,6 +1481,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/KinesisMonetary" },
     ],
     jurisdiction: { country: "Cayman Islands", regulator: "CIMA", license: "VASP Registration" },
+    contracts: [
+      { chain: "ethereum", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9 },
+    ],
   }),
 
   // ── Additional EUR-pegged ────────────────────────────────────────────
@@ -1275,6 +1492,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Mento reserve containing USDC, DAI, USDT, plus BTC, ETH, and CELO (110%+ ratio)",
     pegMechanism: "Constant-product market maker arbitrage against reserve assets including centralized stablecoins",
     jurisdiction: { country: "Germany" },
+    contracts: [
+      { chain: "celo", address: "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73", decimals: 18 },
+    ],
   }),
   // PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
   // IBEUR removed — liquidity drain Dec 2023 (see cemetery)
@@ -1286,6 +1506,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.euroe.com/" },
     ],
     jurisdiction: { country: "Finland", regulator: "FIN-FSA", license: "EMI" },
+    contracts: [
+      { chain: "ethereum", address: "0x820802fa8a99901f52e39acd21177b0be6ee2974", decimals: 6 },
+    ],
   }),
   eur("158", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
     collateral: "Euro-denominated reserves",
@@ -1296,6 +1519,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/VNX_Platform" },
     ],
     jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "Blockchain Act" },
+    contracts: [
+      { chain: "ethereum", address: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3", decimals: 18 },
+    ],
   }),
   eur("239", "StablR Euro", "EURR", "rwa-backed", "centralized", {
     collateral: "Euro-denominated reserves",
@@ -1306,6 +1532,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/StablREuro" },
     ],
     jurisdiction: { country: "Malta", regulator: "MFSA", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x50753cfaf86c094925bf976f218d043f8791e408", decimals: 6 },
+    ],
   }),
   eur("247", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
     collateral: "Euro-denominated reserves under French regulatory oversight",
@@ -1316,6 +1545,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/Schuman_io" },
     ],
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
+    ],
   }),
   eur("cg-eurq", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {
     collateral: "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
@@ -1324,6 +1556,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.quantoz.com/products/eurq-usdq" },
     ],
     jurisdiction: { country: "Netherlands", regulator: "DNB", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x8df723295214ea6f21026eeeb4382d475f146f9f", decimals: 6 },
+    ],
   }),
   eur("319", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
     collateral: "Euro-denominated reserves",
@@ -1333,6 +1568,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/AllUnityStable" },
     ],
     jurisdiction: { country: "Germany", regulator: "BaFin", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
+    ],
   }),
   eur("cg-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
     collateral: "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
@@ -1341,6 +1579,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.deuro.com/" },
       { label: "Twitter", url: "https://x.com/dEURO_com" },
       { label: "Docs", url: "https://docs.deuro.com/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea", decimals: 18 },
     ],
   }),
 
@@ -1354,6 +1595,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/VNX_Platform" },
     ],
     jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "Blockchain Act" },
+    contracts: [
+      { chain: "ethereum", address: "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f", decimals: 18 },
+    ],
   }),
 
   // ── GBP-pegged ───────────────────────────────────────────────────────
@@ -1366,6 +1610,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/VNX_Platform" },
     ],
     jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "Blockchain Act" },
+    contracts: [
+      { chain: "ethereum", address: "0x34c9c643becd939c950bb9f141e35777559817cb", decimals: 18 },
+    ],
   }),
   other("317", "Tokenised GBP", "tGBP", "rwa-backed", "centralized", "GBP", {
     collateral: "GBP-denominated reserves",
@@ -1374,6 +1621,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.tokenisedgbp.com/" },
     ],
     jurisdiction: { country: "United Kingdom", regulator: "FCA" },
+    contracts: [
+      { chain: "ethereum", address: "0x00000000441378008ea67f4284a57932b1c000a5", decimals: 18 },
+    ],
   }),
 
   // ── Additional non-USD/non-EUR pegs ──────────────────────────────────
@@ -1384,6 +1634,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://zarp.co.za/" },
     ],
     jurisdiction: { country: "South Africa" },
+    contracts: [
+      { chain: "ethereum", address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18 },
+    ],
   }),
   other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
     navToken: true,
@@ -1392,7 +1645,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.isc.money/" },
     ],
-  }),
+  }), // no EVM contract — Solana-only
 ];
 
 // --- Pre-computed lookups (static data, computed once at module level) ---

@@ -1,4 +1,5 @@
 import { route } from "./router";
+import { logCronRun } from "./lib/db";
 import { syncStablecoins } from "./cron/sync-stablecoins";
 import { syncStablecoinCharts } from "./cron/sync-stablecoin-charts";
 import { syncBlacklist } from "./cron/sync-blacklist";
@@ -22,7 +23,7 @@ function corsHeaders(origin: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
     "Access-Control-Max-Age": "86400",
   };
 }
@@ -59,7 +60,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    const skipCache = url.pathname === "/api/health";
+    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status";
 
     // Check edge cache first
     const cache = caches.default;
@@ -92,34 +93,31 @@ const worker = {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    const db = env.DB;
     const cron = event.cron;
 
     switch (cron) {
       case "*/5 * * * *":
-        ctx.waitUntil(syncStablecoins(env.DB));
-        ctx.waitUntil(syncStablecoinCharts(env.DB));
+        ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db)));
+        ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
         break;
       case "*/10 * * * *":
-        ctx.waitUntil(syncDexLiquidity(env.DB, env.GRAPH_API_KEY ?? null));
-        // On-chain supply runs every 30min (at :00 and :30 within the */10 schedule)
+        ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
         if (new Date(event.scheduledTime).getMinutes() % 30 === 0) {
-          ctx.waitUntil(syncOnchainSupply(env.DB, env.TRONGRID_API_KEY ?? null));
+          ctx.waitUntil(logCronRun(db, "sync-onchain-supply", () => syncOnchainSupply(db, env.TRONGRID_API_KEY ?? null)));
         }
         break;
       case "*/15 * * * *":
         ctx.waitUntil(
-          syncBlacklist(
-            env.DB,
-            env.ETHERSCAN_API_KEY ?? null,
-            env.TRONGRID_API_KEY ?? null,
-            env.DRPC_API_KEY ?? null
+          logCronRun(db, "sync-blacklist", () =>
+            syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
           )
         );
-        ctx.waitUntil(syncUsdsStatus(env.DB, env.ETHERSCAN_API_KEY ?? null));
-        ctx.waitUntil(syncBluechip(env.DB));
+        ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
+        ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
         break;
       case "0 */2 * * *":
-        ctx.waitUntil(syncFxRates(env.DB));
+        ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
         break;
     }
   },

@@ -124,3 +124,53 @@ export async function upsertOnchainSupply(
   );
   await batchExecute(db, stmts);
 }
+
+// --- Cron run logging ---
+
+export interface CronResult {
+  itemCount?: number;
+  metadata?: string;
+}
+
+/**
+ * Wraps a cron job function with execution logging.
+ * Logs start time, duration, status, and optional item count to cron_runs table.
+ * Prunes rows older than 7 days after each insert.
+ */
+export async function logCronRun(
+  db: D1Database,
+  job: string,
+  fn: () => Promise<CronResult | void>
+): Promise<void> {
+  const startMs = Date.now();
+  const startSec = Math.floor(startMs / 1000);
+  try {
+    const result = await fn();
+    await db
+      .prepare(
+        "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, ?, ?, ?, ?)"
+      )
+      .bind(
+        job,
+        startSec,
+        Date.now() - startMs,
+        "ok",
+        result?.itemCount ?? null,
+        result?.metadata ?? null
+      )
+      .run();
+  } catch (e) {
+    await db
+      .prepare(
+        "INSERT INTO cron_runs (job, started_at, duration_ms, status, error) VALUES (?, ?, ?, ?, ?)"
+      )
+      .bind(job, startSec, Date.now() - startMs, "error", String(e))
+      .run();
+    throw e;
+  }
+  // Prune rows older than 7 days
+  await db
+    .prepare("DELETE FROM cron_runs WHERE started_at < ?")
+    .bind(Math.floor(Date.now() / 1000) - 604800)
+    .run();
+}

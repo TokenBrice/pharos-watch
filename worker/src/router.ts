@@ -10,6 +10,7 @@ import { handleUsdsStatus } from "./api/usds-status";
 import { handleBluechipRatings } from "./api/bluechip";
 import { handleDexLiquidity } from "./api/dex-liquidity";
 import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
+import { handleStatus } from "./api/status";
 
 export function route(
   url: URL,
@@ -62,6 +63,10 @@ export function route(
 
   if (path === "/api/dex-liquidity-history") {
     return handleDexLiquidityHistory(db, url);
+  }
+
+  if (path === "/api/status") {
+    return handleStatus(db, adminKey, request);
   }
 
   // /api/stablecoin/:id
