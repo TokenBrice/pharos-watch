@@ -225,7 +225,7 @@ export function HomepageClient() {
 
       {dataUpdatedAt > 0 && (
         <p className="text-xs text-muted-foreground text-center">
-          Last updated: {new Date(dataUpdatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short", timeZoneName: "short" })}
+          Last updated: {new Date(dataUpdatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })}
         </p>
       )}
     </div>
