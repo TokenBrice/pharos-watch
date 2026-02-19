@@ -17,6 +17,7 @@ const PEG_TO_FX: Record<string, string> = {
   GBP: "GBP",
   CHF: "CHF",
   BRL: "BRL",
+  JPY: "JPY",
 };
 
 /** Maps coin ID → frankfurter currency code for OTHER-pegged coins */

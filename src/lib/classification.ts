@@ -55,6 +55,7 @@ export const PEG_LABELS: Record<PegCurrency, string> = {
   CHF: "the Swiss Franc",
   BRL: "the Brazilian Real",
   RUB: "the Russian Ruble",
+  JPY: "the Japanese Yen",
   GOLD: "Gold",
   VAR: "a Variable (CPI-linked) target",
   OTHER: "Other",
@@ -68,6 +69,7 @@ export const PEG_LABELS_SHORT: Record<PegCurrency, string> = {
   CHF: "Swiss Franc",
   BRL: "Brazilian Real",
   RUB: "Russian Ruble",
+  JPY: "Japanese Yen",
   GOLD: "Gold",
   VAR: "Variable (CPI-linked)",
   OTHER: "Other",
@@ -123,6 +125,7 @@ export const PEG_BADGE_STYLES: Record<PegCurrency, BadgeStyle> = {
   GBP: { label: "GBP Peg", cls: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20" },
   BRL: { label: "BRL Peg", cls: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
   RUB: { label: "RUB Peg", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
+  JPY: { label: "JPY Peg", cls: "bg-rose-500/10 text-rose-500 border-rose-500/20" },
   VAR: { label: "Variable Peg", cls: "bg-sky-500/10 text-sky-500 border-sky-500/20" },
   OTHER: { label: "Other Peg", cls: "bg-slate-500/10 text-slate-500 border-slate-500/20" },
 };

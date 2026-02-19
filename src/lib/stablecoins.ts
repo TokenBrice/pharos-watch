@@ -30,7 +30,7 @@ function other(id: string, name: string, symbol: string, backing: StablecoinMeta
  *
  * Classification flags:
  *   backing:      rwa-backed | crypto-backed | algorithmic
- *   pegCurrency:  USD | EUR | CHF | BRL | RUB | VAR | OTHER
+ *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | GOLD | VAR | OTHER
  *   governance:   centralized | centralized-dependent | decentralized
  *   yieldBearing: token itself accrues yield
  *   rwa:          backed by real-world assets (treasuries, bonds, etc.)
@@ -1049,7 +1049,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
   }),
-  other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "OTHER", {
+  other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
     collateral: "Japanese yen reserves held at FDIC-insured banks",
     pegMechanism: "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
     proofOfReserves: { type: "independent-audit", url: "https://stablecoin.z.com/attestation/" },
@@ -1078,7 +1078,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Australia", regulator: "ASIC", license: "AFSL" },
   }),
-  other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "OTHER", {
+  other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
     pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. (FSA-registered Fund Transfer Service Provider)",
     links: [

@@ -4,7 +4,7 @@
 export type BackingType = "rwa-backed" | "crypto-backed" | "algorithmic";
 
 /** Peg currency */
-export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "GOLD" | "VAR" | "OTHER";
+export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "JPY" | "GOLD" | "VAR" | "OTHER";
 
 /** Governance model */
 export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
@@ -60,6 +60,7 @@ export type FilterTag =
   | "gbp-peg"
   | "brl-peg"
   | "rub-peg"
+  | "jpy-peg"
   | "var-peg"
   | "other-peg"
   | "centralized"
@@ -72,7 +73,7 @@ export type FilterTag =
   | "rwa";
 
 /** Tags that fall under the "Other Peg" umbrella filter on the homepage */
-export const OTHER_PEG_TAGS: FilterTag[] = ["chf-peg", "gbp-peg", "brl-peg", "rub-peg", "var-peg", "other-peg"];
+export const OTHER_PEG_TAGS: FilterTag[] = ["chf-peg", "gbp-peg", "brl-peg", "rub-peg", "jpy-peg", "var-peg", "other-peg"];
 
 export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "usd-peg": "USD Peg",
@@ -82,6 +83,7 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "gbp-peg": "GBP Peg",
   "brl-peg": "BRL Peg",
   "rub-peg": "RUB Peg",
+  "jpy-peg": "JPY Peg",
   "var-peg": "Variable Peg",
   "other-peg": "Other Peg",
   centralized: "Centralized",
@@ -103,6 +105,7 @@ function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
     case "GBP": return "gbp-peg";
     case "BRL": return "brl-peg";
     case "RUB": return "rub-peg";
+    case "JPY": return "jpy-peg";
     case "VAR": return "var-peg";
     default: return "other-peg";
   }
