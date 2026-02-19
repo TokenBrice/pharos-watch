@@ -4,14 +4,16 @@ import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API } from "../lib/constants
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
-// Data sources for gold tokens (not in DefiLlama's stablecoin API)
-const GOLD_TOKEN_SOURCES: Record<string, { geckoId: string; protocolSlug: string }> = {
-  "gold-xaut": { geckoId: "tether-gold", protocolSlug: "tether-gold" },
-  "gold-paxg": { geckoId: "pax-gold", protocolSlug: "paxos-gold" },
-  "gold-kau": { geckoId: "kinesis-gold", protocolSlug: "" },
-  "gold-xaum": { geckoId: "matrixdock-gold", protocolSlug: "" },
-  "gold-vro": { geckoId: "veraone", protocolSlug: "" },
-  "gold-cgo": { geckoId: "comtech-gold", protocolSlug: "" },
+// Data sources for commodity tokens (not in DefiLlama's stablecoin API)
+const COMMODITY_TOKEN_SOURCES: Record<string, { geckoId: string; protocolSlug: string; pegType: string }> = {
+  "gold-xaut": { geckoId: "tether-gold", protocolSlug: "tether-gold", pegType: "peggedGOLD" },
+  "gold-paxg": { geckoId: "pax-gold", protocolSlug: "paxos-gold", pegType: "peggedGOLD" },
+  "gold-kau": { geckoId: "kinesis-gold", protocolSlug: "", pegType: "peggedGOLD" },
+  "gold-xaum": { geckoId: "matrixdock-gold", protocolSlug: "", pegType: "peggedGOLD" },
+  "gold-vro": { geckoId: "veraone", protocolSlug: "", pegType: "peggedGOLD" },
+  "gold-cgo": { geckoId: "comtech-gold", protocolSlug: "", pegType: "peggedGOLD" },
+  "gold-dgld": { geckoId: "gold-token-sa-dgld-tokenized-gold", protocolSlug: "", pegType: "peggedGOLD" },
+  "silver-kag": { geckoId: "kinesis-silver", protocolSlug: "", pegType: "peggedSILVER" },
 };
 
 function findNearestPrice(
@@ -36,9 +38,10 @@ function findNearestPrice(
   return sortedPrices[lo].price;
 }
 
-async function fetchGoldDetail(config: {
+async function fetchCommodityDetail(config: {
   geckoId: string;
   protocolSlug: string;
+  pegType: string;
 }): Promise<string> {
   const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
 
@@ -85,9 +88,9 @@ async function fetchGoldDetail(config: {
       const mcap = point.totalLiquidityUSD;
       return {
         date: point.date,
-        totalCirculatingUSD: { peggedGOLD: mcap },
+        totalCirculatingUSD: { [config.pegType]: mcap },
         totalCirculating: {
-          peggedGOLD: price > 0 ? mcap / price : 0,
+          [config.pegType]: price > 0 ? mcap / price : 0,
         },
       };
     });
@@ -116,18 +119,11 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     }
   }
 
-  // Gold tokens: fetch from DefiLlama coins chart + protocol APIs
-  if (id.startsWith("gold-")) {
-    const config = GOLD_TOKEN_SOURCES[id];
-    if (!config) {
-      return new Response(
-        JSON.stringify({ error: "Unknown gold token" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
+  // Commodity tokens (gold/silver): fetch from DefiLlama coins chart + protocol APIs
+  const commodityConfig = COMMODITY_TOKEN_SOURCES[id];
+  if (commodityConfig) {
     try {
-      const body = await fetchGoldDetail(config);
+      const body = await fetchCommodityDetail(commodityConfig);
       ctx.waitUntil(setCache(db, cacheKey, body));
       return new Response(body, {
         headers: {
@@ -145,7 +141,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
         });
       }
       return new Response(
-        JSON.stringify({ error: "Failed to fetch gold token data" }),
+        JSON.stringify({ error: "Failed to fetch commodity token data" }),
         { status: 502, headers: { "Content-Type": "application/json" } }
       );
     }

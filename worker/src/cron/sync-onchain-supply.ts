@@ -1,0 +1,174 @@
+import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { getChainRpc } from "../lib/chain-rpcs";
+import { upsertOnchainSupply } from "../lib/db";
+import { USER_AGENT } from "../lib/constants";
+import type { ContractDeployment } from "../../../src/lib/types";
+
+interface ContractQuery {
+  stablecoinId: string;
+  contract: ContractDeployment;
+}
+
+/** Fetch totalSupply for a batch of EVM contracts on one chain via JSON-RPC batch */
+async function fetchEvmTotalSupply(
+  rpcUrl: string,
+  queries: ContractQuery[]
+): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  const selector = "0x18160ddd"; // totalSupply()
+
+  const batchBody = queries.map((q, i) => ({
+    jsonrpc: "2.0",
+    id: i,
+    method: "eth_call",
+    params: [{ to: q.contract.address, data: selector }, "latest"],
+  }));
+
+  try {
+    const res = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify(batchBody),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!res.ok) {
+      console.error(`[onchain-supply] RPC batch failed for ${rpcUrl}: ${res.status}`);
+      return results;
+    }
+
+    const responses = (await res.json()) as { id: number; result?: string; error?: unknown }[];
+
+    for (const resp of responses) {
+      const query = queries[resp.id];
+      if (!query || !resp.result || resp.result === "0x") continue;
+
+      try {
+        const rawBigInt = BigInt(resp.result);
+        const supply = Number(rawBigInt) / Math.pow(10, query.contract.decimals);
+        if (supply > 0) {
+          const key = `${query.stablecoinId}:${query.contract.chain}`;
+          results.set(key, supply);
+        }
+      } catch {
+        console.warn(`[onchain-supply] Failed to parse supply for ${query.stablecoinId} on ${query.contract.chain}`);
+      }
+    }
+  } catch (err) {
+    console.error(`[onchain-supply] RPC request failed for ${rpcUrl}:`, err);
+  }
+
+  return results;
+}
+
+/** Fetch totalSupply for Tron contracts via triggerConstantContract */
+async function fetchTronTotalSupply(
+  rpcUrl: string,
+  queries: ContractQuery[],
+  apiKey: string | null
+): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "User-Agent": USER_AGENT,
+  };
+  if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
+
+  for (const query of queries) {
+    try {
+      const res = await fetch(`${rpcUrl}/wallet/triggerConstantContract`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          owner_address: "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+          contract_address: query.contract.address,
+          function_selector: "totalSupply()",
+          parameter: "",
+          visible: true,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!res.ok) continue;
+
+      const data = (await res.json()) as { constant_result?: string[] };
+      const hex = data.constant_result?.[0];
+      if (!hex) continue;
+
+      const rawBigInt = BigInt("0x" + hex);
+      const supply = Number(rawBigInt) / Math.pow(10, query.contract.decimals);
+      if (supply > 0) {
+        const key = `${query.stablecoinId}:${query.contract.chain}`;
+        results.set(key, supply);
+      }
+    } catch {
+      console.warn(`[onchain-supply] Tron query failed for ${query.stablecoinId}`);
+    }
+  }
+
+  return results;
+}
+
+export async function syncOnchainSupply(db: D1Database, tronApiKey: string | null): Promise<void> {
+  const allQueries: ContractQuery[] = [];
+  for (const meta of TRACKED_STABLECOINS) {
+    if (!meta.contracts) continue;
+    for (const contract of meta.contracts) {
+      allQueries.push({ stablecoinId: meta.id, contract });
+    }
+  }
+
+  if (allQueries.length === 0) {
+    console.log("[onchain-supply] No contracts configured, skipping");
+    return;
+  }
+
+  // Group by chain
+  const byChain = new Map<string, ContractQuery[]>();
+  for (const q of allQueries) {
+    const list = byChain.get(q.contract.chain) ?? [];
+    list.push(q);
+    byChain.set(q.contract.chain, list);
+  }
+
+  // Query each chain in parallel
+  const supplyMap = new Map<string, number>();
+  const chainPromises: Promise<void>[] = [];
+
+  for (const [chainId, queries] of byChain) {
+    const rpc = getChainRpc(chainId);
+    if (!rpc) {
+      console.warn(`[onchain-supply] No RPC config for chain: ${chainId}`);
+      continue;
+    }
+
+    chainPromises.push(
+      (async () => {
+        let results: Map<string, number>;
+        if (rpc.type === "evm") {
+          results = await fetchEvmTotalSupply(rpc.rpcUrl, queries);
+        } else {
+          results = await fetchTronTotalSupply(rpc.rpcUrl, queries, tronApiKey);
+        }
+        for (const [key, supply] of results) {
+          supplyMap.set(key, supply);
+        }
+      })()
+    );
+  }
+
+  await Promise.all(chainPromises);
+
+  // Write results to D1
+  const rows = Array.from(supplyMap.entries()).map(([key, supply]) => {
+    const [stablecoinId, chain] = key.split(":");
+    return { stablecoinId, chain, supply };
+  });
+
+  if (rows.length > 0) {
+    await upsertOnchainSupply(db, rows);
+    console.log(`[onchain-supply] Updated ${rows.length} supply entries across ${byChain.size} chains`);
+  } else {
+    console.warn("[onchain-supply] No supply data retrieved");
+  }
+}

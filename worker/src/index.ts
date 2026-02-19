@@ -6,6 +6,7 @@ import { syncUsdsStatus } from "./cron/sync-usds-status";
 import { syncBluechip } from "./cron/sync-bluechip";
 import { syncFxRates } from "./cron/sync-fx-rates";
 import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
+import { syncOnchainSupply } from "./cron/sync-onchain-supply";
 
 interface Env {
   DB: D1Database;
@@ -112,6 +113,9 @@ const worker = {
         );
         ctx.waitUntil(syncUsdsStatus(env.DB, env.ETHERSCAN_API_KEY ?? null));
         ctx.waitUntil(syncBluechip(env.DB));
+        break;
+      case "*/30 * * * *":
+        ctx.waitUntil(syncOnchainSupply(env.DB, env.TRONGRID_API_KEY ?? null));
         break;
       case "0 */2 * * *":
         ctx.waitUntil(syncFxRates(env.DB));

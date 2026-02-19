@@ -12,7 +12,7 @@ import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
  * Runs every 2 hours.
  */
 
-const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR", "SGD", "TRY", "AUD"] as const;
+const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR", "SGD", "TRY", "AUD", "ZAR"] as const;
 
 const CURRENCY_TO_PEG: Record<string, string> = {
   EUR: "peggedEUR",
@@ -24,6 +24,7 @@ const CURRENCY_TO_PEG: Record<string, string> = {
   SGD: "peggedSGD",
   TRY: "peggedTRY",
   AUD: "peggedAUD",
+  ZAR: "peggedZAR",
 };
 
 
@@ -76,6 +77,23 @@ export async function syncFxRates(db: D1Database): Promise<void> {
     // Fallback: RUB if secondary API also failed
     if (!rates["peggedRUB"]) {
       rates["peggedRUB"] = RUB_FALLBACK;
+    }
+
+    // Silver spot price (USD per troy ounce) from DefiLlama coins API
+    // Used as FX fallback for peggedSILVER thin-group validation
+    try {
+      const silverRes = await fetch("https://coins.llama.fi/prices/current/coingecko:silver", {
+        headers: { "User-Agent": USER_AGENT },
+      });
+      if (silverRes.ok) {
+        const silverData = (await silverRes.json()) as { coins?: Record<string, { price?: number }> };
+        const silverPrice = silverData?.coins?.["coingecko:silver"]?.price;
+        if (typeof silverPrice === "number" && silverPrice > 0) {
+          rates["peggedSILVER"] = silverPrice;
+        }
+      }
+    } catch {
+      // Silver spot fetch failed — peg-rates will rely on median only
     }
 
     // Sanity check: we should have rates for all mapped currencies

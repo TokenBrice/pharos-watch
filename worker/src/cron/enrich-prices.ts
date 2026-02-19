@@ -35,7 +35,9 @@ export function isReasonablePrice(price: number, pegType: string | undefined): b
   if (pegType.includes("RUB")) {
     return price > 0.005 && price < 50; // RUB ~$0.0127, lower bound allows for further weakening
   }
+  if (pegType.includes("ZAR")) return price > 0.01 && price < 0.5;
   if (pegType.includes("GOLD")) return price > 100 && price < 100_000;
+  if (pegType.includes("SILVER")) return price > 5 && price < 500;
   return price > 0 && price < 100_000;
 }
 

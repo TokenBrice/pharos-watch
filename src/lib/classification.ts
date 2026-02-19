@@ -60,7 +60,9 @@ export const PEG_LABELS: Record<PegCurrency, string> = {
   SGD: "the Singapore Dollar",
   TRY: "the Turkish Lira",
   AUD: "the Australian Dollar",
+  ZAR: "the South African Rand",
   GOLD: "Gold",
+  SILVER: "Silver",
   VAR: "a Variable (CPI-linked) target",
   OTHER: "Other",
 };
@@ -78,7 +80,9 @@ export const PEG_LABELS_SHORT: Record<PegCurrency, string> = {
   SGD: "Singapore Dollar",
   TRY: "Turkish Lira",
   AUD: "Australian Dollar",
+  ZAR: "South African Rand",
   GOLD: "Gold",
+  SILVER: "Silver",
   VAR: "Variable (CPI-linked)",
   OTHER: "Other",
 };
@@ -128,7 +132,6 @@ export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = {
 export const PEG_BADGE_STYLES: Record<PegCurrency, BadgeStyle> = {
   USD: { label: "USD Peg", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
   EUR: { label: "EUR Peg", cls: "bg-violet-500/10 text-violet-500 border-violet-500/20" },
-  GOLD: { label: "Gold Peg", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
   CHF: { label: "CHF Peg", cls: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
   GBP: { label: "GBP Peg", cls: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20" },
   BRL: { label: "BRL Peg", cls: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
@@ -138,6 +141,9 @@ export const PEG_BADGE_STYLES: Record<PegCurrency, BadgeStyle> = {
   SGD: { label: "SGD Peg", cls: "bg-teal-500/10 text-teal-500 border-teal-500/20" },
   TRY: { label: "TRY Peg", cls: "bg-lime-500/10 text-lime-500 border-lime-500/20" },
   AUD: { label: "AUD Peg", cls: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" },
+  ZAR: { label: "ZAR Peg", cls: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20" },
+  GOLD: { label: "Gold Peg", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+  SILVER: { label: "Silver Peg", cls: "bg-gray-400/10 text-gray-400 border-gray-400/20" },
   VAR: { label: "Variable Peg", cls: "bg-sky-500/10 text-sky-500 border-sky-500/20" },
   OTHER: { label: "Other Peg", cls: "bg-slate-500/10 text-slate-500 border-slate-500/20" },
 };
@@ -214,6 +220,8 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
   SGD: { label: "SGD", textColor: "text-teal-500", bgColor: "bg-teal-500" },
   TRY: { label: "Lira", textColor: "text-lime-500", bgColor: "bg-lime-500" },
   AUD: { label: "AUD", textColor: "text-indigo-500", bgColor: "bg-indigo-500" },
+  ZAR: { label: "Rand", textColor: "text-fuchsia-500", bgColor: "bg-fuchsia-500" },
+  SILVER: { label: "Silver", textColor: "text-gray-400", bgColor: "bg-gray-400" },
   VAR: { label: "Variable", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
   OTHER: { label: "Other", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
 };

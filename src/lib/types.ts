@@ -4,7 +4,7 @@
 export type BackingType = "rwa-backed" | "crypto-backed" | "algorithmic";
 
 /** Peg currency */
-export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "JPY" | "IDR" | "SGD" | "TRY" | "AUD" | "GOLD" | "VAR" | "OTHER";
+export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "JPY" | "IDR" | "SGD" | "TRY" | "AUD" | "ZAR" | "GOLD" | "SILVER" | "VAR" | "OTHER";
 
 /** Governance model */
 export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
@@ -37,6 +37,12 @@ export interface Jurisdiction {
   license?: string;
 }
 
+export interface ContractDeployment {
+  chain: string;      // Chain ID (e.g., "ethereum", "arbitrum", "tron")
+  address: string;    // Contract address (0x... for EVM, T... for Tron)
+  decimals: number;   // Token decimals
+}
+
 export interface StablecoinMeta {
   id: string; // DefiLlama numeric ID
   name: string;
@@ -48,6 +54,7 @@ export interface StablecoinMeta {
   proofOfReserves?: ProofOfReserves;
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
+  contracts?: ContractDeployment[];  // On-chain contract deployments per chain
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
@@ -65,6 +72,8 @@ export type FilterTag =
   | "sgd-peg"
   | "try-peg"
   | "aud-peg"
+  | "zar-peg"
+  | "silver-peg"
   | "var-peg"
   | "other-peg"
   | "centralized"
@@ -77,7 +86,7 @@ export type FilterTag =
   | "rwa";
 
 /** Tags that fall under the "Other Peg" umbrella filter on the homepage */
-export const OTHER_PEG_TAGS: FilterTag[] = ["chf-peg", "gbp-peg", "brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "var-peg", "other-peg"];
+export const OTHER_PEG_TAGS: FilterTag[] = ["chf-peg", "gbp-peg", "brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "zar-peg", "silver-peg", "var-peg", "other-peg"];
 
 export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "usd-peg": "USD Peg",
@@ -92,6 +101,8 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "sgd-peg": "SGD Peg",
   "try-peg": "TRY Peg",
   "aud-peg": "AUD Peg",
+  "zar-peg": "ZAR Peg",
+  "silver-peg": "Silver Peg",
   "var-peg": "Variable Peg",
   "other-peg": "Other Peg",
   centralized: "Centralized",
@@ -118,6 +129,8 @@ function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
     case "SGD": return "sgd-peg";
     case "TRY": return "try-peg";
     case "AUD": return "aud-peg";
+    case "ZAR": return "zar-peg";
+    case "SILVER": return "silver-peg";
     case "VAR": return "var-peg";
     default: return "other-peg";
   }

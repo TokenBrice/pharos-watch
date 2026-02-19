@@ -1,4 +1,4 @@
-import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib/db";
+import { setCacheIfNewer, getCache, getPriceCache, savePriceCache, getOnchainSupply } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { StablecoinData } from "../../../src/lib/types";
@@ -24,7 +24,87 @@ const GOLD_TOKENS: GoldTokenConfig[] = [
   { internalId: "gold-xaum", geckoId: "matrixdock-gold", protocolSlug: "", name: "Matrixdock Gold", symbol: "XAUm", goldOunces: 1 },
   { internalId: "gold-vro", geckoId: "veraone", protocolSlug: "", name: "VeraOne", symbol: "VRO", goldOunces: 1 / 31.1035 },
   { internalId: "gold-cgo", geckoId: "comtech-gold", protocolSlug: "", name: "Comtech Gold", symbol: "CGO", goldOunces: 1 / 31.1035 },
+  { internalId: "gold-dgld", geckoId: "gold-token-sa-dgld-tokenized-gold", protocolSlug: "", name: "DGLD Tokenized Gold", symbol: "DGLD", goldOunces: 1 },
 ];
+
+interface SilverTokenConfig {
+  internalId: string;
+  geckoId: string;
+  name: string;
+  symbol: string;
+  silverOunces: number; // troy ounces per token
+}
+
+const SILVER_TOKENS: SilverTokenConfig[] = [
+  { internalId: "silver-kag", geckoId: "kinesis-silver", name: "Kinesis Silver", symbol: "KAG", silverOunces: 1 },
+];
+
+async function fetchSilverTokens(): Promise<unknown[]> {
+  if (SILVER_TOKENS.length === 0) return [];
+  try {
+    // Fetch prices from DefiLlama coins API
+    const coinIds = SILVER_TOKENS.map((t) => `coingecko:${t.geckoId}`).join(",");
+    const priceRes = await fetch(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+    if (!priceRes.ok) {
+      console.error(`[silver] Price fetch failed: ${priceRes.status}`);
+      return [];
+    }
+    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+
+    // Fetch market caps from CoinGecko
+    const mcapMap: Record<string, number> = {};
+    const ids = SILVER_TOKENS.map((t) => t.geckoId).join(",");
+    try {
+      const res = await fetch(
+        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
+        { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
+      );
+      if (res.ok) {
+        const data = (await res.json()) as Record<string, { usd_market_cap?: number }>;
+        for (const t of SILVER_TOKENS) {
+          const mcap = data[t.geckoId]?.usd_market_cap;
+          if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
+        }
+      }
+    } catch {
+      // CoinGecko fallback failed
+    }
+
+    return SILVER_TOKENS
+      .map((token) => {
+        const priceInfo = priceData.coins[`coingecko:${token.geckoId}`];
+        if (!priceInfo) return null;
+
+        const mcap = mcapMap[token.internalId];
+        if (!mcap) {
+          console.log(`[silver] No mcap for ${token.symbol}, skipping`);
+          return null;
+        }
+
+        return {
+          id: token.internalId,
+          name: token.name,
+          symbol: token.symbol,
+          geckoId: token.geckoId,
+          pegType: "peggedSILVER",
+          pegMechanism: "rwa-backed",
+          price: priceInfo.price,
+          priceSource: "defillama",
+          circulating: { peggedSILVER: mcap },
+          circulatingPrevDay: null,
+          circulatingPrevWeek: null,
+          circulatingPrevMonth: null,
+          chainCirculating: {},
+          chains: ["Ethereum"],
+          goldOunces: token.silverOunces, // reuse field — normalization math is identical
+        };
+      })
+      .filter((t): t is NonNullable<typeof t> => t !== null);
+  } catch (err) {
+    console.error("[silver] fetchSilverTokens failed:", err);
+    return [];
+  }
+}
 
 async function fetchGoldTokens(): Promise<unknown[]> {
   try {
@@ -152,6 +232,9 @@ interface FiatCoinGeckoConfig {
 const FIAT_COINGECKO_TOKENS: FiatCoinGeckoConfig[] = [
   { internalId: "cg-jpyc", geckoId: "jpy-coin", name: "JPY Coin", symbol: "JPYC", pegType: "peggedJPY", pegKey: "peggedJPY" },
   { internalId: "cg-idrt", geckoId: "rupiah-token", name: "Rupiah Token", symbol: "IDRT", pegType: "peggedIDR", pegKey: "peggedIDR" },
+  { internalId: "cg-eurq", geckoId: "quantoz-eurq", name: "Quantoz EURQ", symbol: "EURQ", pegType: "peggedEUR", pegKey: "peggedEUR" },
+  { internalId: "cg-zarp", geckoId: "zarp-stablecoin", name: "ZARP Stablecoin", symbol: "ZARP", pegType: "peggedZAR", pegKey: "peggedZAR" },
+  { internalId: "cg-deuro", geckoId: "decentralized-euro", name: "Decentralized Euro", symbol: "DEURO", pegType: "peggedEUR", pegKey: "peggedEUR" },
 ];
 
 async function fetchFiatCoinGeckoTokens(): Promise<unknown[]> {
@@ -245,21 +328,21 @@ async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
       const mcap = geckoData.usd_market_cap;
       if (!price || !mcap || price <= 0) continue;
 
-      // Derive supply in peg currency: mcap / price = circulating tokens (1:1 peg)
-      const supplyInPeg = mcap / price;
+      // DefiLlama stores circulating values in USD — store mcap directly
       const circ = asset.circulating as Record<string, number> | undefined;
       const oldSupply = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
 
-      // Only override if CoinGecko supply is dramatically different (>10x)
-      if (oldSupply > 0 && supplyInPeg / oldSupply < 10) continue;
+      // Only override if CoinGecko value is dramatically different (>10x)
+      if (oldSupply > 0 && mcap / oldSupply < 10) continue;
 
-      asset.circulating = { [override.pegKey]: supplyInPeg };
+      asset.circulating = { [override.pegKey]: mcap };
+      asset.price = price;
       // Clear historical supply (DL data unreliable) — shows "N/A" for changes
       (asset as Record<string, unknown>).circulatingPrevDay = null;
       (asset as Record<string, unknown>).circulatingPrevWeek = null;
       (asset as Record<string, unknown>).circulatingPrevMonth = null;
       console.log(
-        `[sync-stablecoins] Supply override for ${asset.symbol}: ${oldSupply.toFixed(0)} → ${supplyInPeg.toFixed(0)} ${override.pegKey}`
+        `[sync-stablecoins] Supply override for ${asset.symbol}: ${oldSupply.toFixed(0)} → ${mcap.toFixed(0)} USD, price $${price.toFixed(6)}`
       );
     }
   } catch (err) {
@@ -270,9 +353,10 @@ async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
 export async function syncStablecoins(db: D1Database): Promise<void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
-  const [llamaRes, goldTokens, fiatCgTokens] = await Promise.all([
+  const [llamaRes, goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
     fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`),
     fetchGoldTokens(),
+    fetchSilverTokens(),
     fetchFiatCoinGeckoTokens(),
   ]);
 
@@ -301,8 +385,8 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     llamaData.peggedAssets = validAssets;
   }
 
-  if (goldTokens.length || fiatCgTokens.length) {
-    llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
+  if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
+    llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...silverTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
   }
 
   // Patch corrupted supply data from DefiLlama using CoinGecko
@@ -400,6 +484,69 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   if (totalSupply < 100_000_000_000) {
     console.error(`[sync-stablecoins] Total supply $${(totalSupply / 1e9).toFixed(1)}B is below $100B floor, skipping cache write`);
     return;
+  }
+
+  // --- On-chain supply override ---
+  try {
+    const onchainRows = await getOnchainSupply(db, 7200); // 2-hour freshness
+    if (onchainRows.length > 0) {
+      // Group by stablecoin ID
+      const byStablecoin = new Map<string, { chain: string; supply: number }[]>();
+      for (const row of onchainRows) {
+        const list = byStablecoin.get(row.stablecoin_id) ?? [];
+        list.push({ chain: row.chain, supply: row.supply });
+        byStablecoin.set(row.stablecoin_id, list);
+      }
+
+      let overrideCount = 0;
+      for (const [stablecoinId, chainSupplies] of byStablecoin) {
+        const asset = llamaData.peggedAssets.find((a) => String(a.id) === stablecoinId);
+        if (!asset) continue;
+
+        const onchainTotal = chainSupplies.reduce((s, c) => s + c.supply, 0);
+        const price = asset.price as number | null;
+        if (!price || price <= 0 || onchainTotal <= 0) continue;
+
+        // Compare on-chain supply (token units) with DefiLlama supply (token units)
+        const circ = asset.circulating as Record<string, number> | undefined;
+        const llamaMcap = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
+        const llamaSupply = llamaMcap / price;
+
+        const divergence = Math.abs(onchainTotal - llamaSupply) / Math.max(llamaSupply, 1);
+        if (divergence <= 0.05) continue; // Within 5%, keep DefiLlama
+
+        // Override: recompute circulating in USD (DefiLlama convention)
+        const pegKey = Object.keys(circ ?? {})[0] ?? asset.pegType ?? "peggedUSD";
+        const newMcap = onchainTotal * price;
+        asset.circulating = { [pegKey]: newMcap };
+
+        // Override chainCirculating with per-chain data
+        const chainCirc: Record<string, { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number }> = {};
+        for (const cs of chainSupplies) {
+          const chainMcap = cs.supply * price;
+          chainCirc[cs.chain] = {
+            current: chainMcap,
+            circulatingPrevDay: 0,
+            circulatingPrevWeek: 0,
+            circulatingPrevMonth: 0,
+          };
+        }
+        asset.chainCirculating = chainCirc;
+        asset.chains = chainSupplies.map((cs) => cs.chain);
+
+        overrideCount++;
+        console.log(
+          `[sync-stablecoins] On-chain override for ${asset.symbol} (id=${stablecoinId}): ` +
+          `DL=${llamaSupply.toFixed(0)} → OnChain=${onchainTotal.toFixed(0)} tokens, mcap $${newMcap.toFixed(0)}`
+        );
+      }
+
+      if (overrideCount > 0) {
+        console.log(`[sync-stablecoins] Applied ${overrideCount} on-chain supply overrides`);
+      }
+    }
+  } catch (err) {
+    console.error("[sync-stablecoins] On-chain supply override failed:", err);
   }
 
   // Embed live FX fallback rates if available

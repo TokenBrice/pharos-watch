@@ -115,7 +115,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
           <CardContent>
             <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(stats.totalAll)}</div>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">{stats.totalCount} stablecoins</p>
+              <p className="text-xs text-muted-foreground">{stats.totalCount} with live data</p>
               {stats.totalPrevWeek > 0 && (
                 <span className={`text-xs font-mono ${stats.totalAll >= stats.totalPrevWeek ? "text-green-500" : "text-red-500"}`}>
                   {stats.totalAll >= stats.totalPrevWeek ? "\u2191" : "\u2193"} {formatPercentChange(stats.totalAll, stats.totalPrevWeek)} 7d

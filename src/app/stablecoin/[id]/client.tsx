@@ -161,6 +161,58 @@ function IssuerInfoCard({ meta }: { meta: StablecoinMeta }) {
   );
 }
 
+function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
+  if (!meta.contracts || meta.contracts.length === 0) return null;
+
+  // Explorer URL mapping (matching chain-rpcs.ts chain IDs)
+  const EXPLORER_URLS: Record<string, { name: string; url: string }> = {
+    ethereum:  { name: "Ethereum",  url: "https://etherscan.io" },
+    arbitrum:  { name: "Arbitrum",  url: "https://arbiscan.io" },
+    base:      { name: "Base",      url: "https://basescan.org" },
+    optimism:  { name: "Optimism",  url: "https://optimistic.etherscan.io" },
+    polygon:   { name: "Polygon",   url: "https://polygonscan.com" },
+    avalanche: { name: "Avalanche", url: "https://snowscan.xyz" },
+    bsc:       { name: "BSC",       url: "https://bscscan.com" },
+    gnosis:    { name: "Gnosis",    url: "https://gnosisscan.io" },
+    fantom:    { name: "Fantom",    url: "https://ftmscan.com" },
+    celo:      { name: "Celo",      url: "https://celoscan.io" },
+    tron:      { name: "Tron",      url: "https://tronscan.org" },
+  };
+
+  return (
+    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Addresses</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {meta.contracts.map((c) => {
+            const explorer = EXPLORER_URLS[c.chain];
+            const addressUrl = c.chain === "tron"
+              ? `${explorer?.url}/#/contract/${c.address}`
+              : `${explorer?.url}/address/${c.address}`;
+
+            return (
+              <div key={`${c.chain}-${c.address}`} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                <span className="text-sm font-medium text-muted-foreground">{explorer?.name ?? c.chain}</span>
+                <a
+                  href={addressUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-mono text-xs text-blue-500 hover:underline"
+                >
+                  {c.address.slice(0, 6)}...{c.address.slice(-4)}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function BluechipBox({ stablecoinId, ratingsMap }: { stablecoinId: string; ratingsMap: import("@/lib/types").BluechipRatingsMap | undefined | null }) {
   const rating = ratingsMap?.[stablecoinId];
   if (!rating) return null;
@@ -402,6 +454,10 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
 
       {meta && (
         <IssuerInfoCard meta={meta} />
+      )}
+
+      {meta && (
+        <ContractAddresses meta={meta} />
       )}
 
       <DexLiquidityCard stablecoinId={id} />

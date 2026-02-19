@@ -33,8 +33,8 @@ export function derivePegRates(
       : 0;
     if (supply < 1_000_000) continue;
 
-    // For gold tokens, normalize price to "per troy ounce"
-    if (peg === "peggedGOLD" && metaById) {
+    // For gold/silver tokens, normalize price to "per troy ounce"
+    if ((peg === "peggedGOLD" || peg === "peggedSILVER") && metaById) {
       const meta = metaById.get(a.id);
       const oz = meta?.goldOunces;
       if (oz && oz > 0) {
@@ -91,8 +91,8 @@ export function getPegReference(
 ): number {
   if (!pegType) return 1;
   const rate = rates[pegType] ?? 1;
-  // For gold tokens, scale the per-ounce rate by the token's gold weight
-  if (pegType === "peggedGOLD" && goldOunces && goldOunces > 0) {
+  // For gold/silver tokens, scale the per-ounce rate by the token's weight
+  if ((pegType === "peggedGOLD" || pegType === "peggedSILVER") && goldOunces && goldOunces > 0) {
     return rate * goldOunces;
   }
   return rate;

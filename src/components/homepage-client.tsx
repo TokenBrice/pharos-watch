@@ -12,6 +12,7 @@ import { StablecoinTable } from "@/components/stablecoin-table";
 import { CategoryStats } from "@/components/category-stats";
 import { MarketHighlights } from "@/components/market-highlights";
 import { TotalMcapChart } from "@/components/total-mcap-chart";
+import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { BlacklistSummary } from "@/components/blacklist-summary";
 import { CemeterySummary } from "@/components/cemetery-summary";
 import { PegTrackerSummary } from "@/components/peg-tracker-summary";
@@ -131,6 +132,8 @@ export function HomepageClient() {
       <CategoryStats data={data?.peggedAssets} pegRates={pegRates} />
 
       <TotalMcapChart />
+
+      <PegDiversityChart />
 
       <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
 
