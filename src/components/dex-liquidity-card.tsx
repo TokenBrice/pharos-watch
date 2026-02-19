@@ -207,7 +207,7 @@ function TopPoolsTable({ pools }: { pools: DexLiquidityPool[] }) {
                   </div>
                   {pool.extra?.organicFraction != null && (
                     <div className="mt-0.5">
-                      <OrganicBadge fraction={pool.extra.organicFraction} />
+                      <OrganicBadge fraction={pool.extra.organicFraction} maturityDays={pool.extra.maturityDays} />
                     </div>
                   )}
                 </td>
@@ -352,14 +352,22 @@ function BalanceBar({ ratio }: { ratio: number }) {
   );
 }
 
-function OrganicBadge({ fraction }: { fraction: number | undefined }) {
+function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined; maturityDays?: number }) {
   if (fraction == null) return null;
-  const label = fraction >= 0.7 ? "Organic" : fraction >= 0.3 ? "Mixed" : "Farmed";
-  const color = fraction >= 0.7
-    ? "text-emerald-600 bg-emerald-500/10"
-    : fraction >= 0.3
-      ? "text-amber-600 bg-amber-500/10"
-      : "text-red-600 bg-red-500/10";
+  // Mature pools (>1yr) with long-running reward programs aren't mercenary farming
+  const mature = (maturityDays ?? 0) >= 365;
+  let label: string;
+  let color: string;
+  if (fraction >= 0.7) {
+    label = "Organic";
+    color = "text-emerald-600 bg-emerald-500/10";
+  } else if (fraction >= 0.3 || mature) {
+    label = mature && fraction < 0.3 ? "Established" : "Mixed";
+    color = "text-amber-600 bg-amber-500/10";
+  } else {
+    label = "Incentivized";
+    color = "text-red-600 bg-red-500/10";
+  }
   return (
     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${color}`}>
       {label}

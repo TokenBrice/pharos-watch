@@ -16,8 +16,10 @@ import { SupplyChart } from "@/components/supply-chart";
 
 import { ChainDistribution } from "@/components/chain-distribution";
 import { DepegHistory } from "@/components/depeg-history";
-import { BluechipRatingCard } from "@/components/bluechip-rating-card";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
+import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
+import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
 import type { StablecoinData, StablecoinMeta } from "@/lib/types";
 
 
@@ -186,6 +188,67 @@ function IssuerInfoCard({ meta }: { meta: StablecoinMeta }) {
   );
 }
 
+function BluechipBox({ stablecoinId, ratingsMap }: { stablecoinId: string; ratingsMap: import("@/lib/types").BluechipRatingsMap | undefined | null }) {
+  const rating = ratingsMap?.[stablecoinId];
+  if (!rating) return null;
+
+  const order = GRADE_ORDER[rating.grade] ?? 0;
+  const borderColor = order >= 10 ? "border-l-emerald-500" : order >= 7 ? "border-l-blue-500" : order >= 4 ? "border-l-amber-500" : "border-l-red-500";
+  const textColor = order >= 10 ? "text-emerald-500" : order >= 7 ? "text-blue-500" : order >= 4 ? "text-amber-500" : "text-red-500";
+
+  return (
+    <Card className={`rounded-2xl border-l-[3px] ${borderColor}`}>
+      <CardHeader className="pb-1">
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bluechip Rating</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={`text-3xl font-bold font-mono tracking-tight ${textColor}`}>
+          {rating.grade}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {rating.collateralization}% collateralized
+        </p>
+        <a
+          href={`${BLUECHIP_REPORT_BASE}/${rating.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+        >
+          Full report <ExternalLink className="h-3 w-3" />
+        </a>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LiquidityBox({ stablecoinId, liquidityMap }: { stablecoinId: string; liquidityMap: import("@/lib/types").DexLiquidityMap | undefined }) {
+  const liq = liquidityMap?.[stablecoinId];
+  if (!liq || (liq.liquidityScore === null && liq.poolCount === 0)) return null;
+
+  const score = liq.liquidityScore ?? 0;
+  const borderColor = score >= 70 ? "border-l-emerald-500" : score >= 40 ? "border-l-amber-500" : "border-l-red-500";
+  const textColor = score >= 70 ? "text-emerald-500" : score >= 40 ? "text-amber-500" : "text-red-500";
+
+  return (
+    <Card className={`rounded-2xl border-l-[3px] ${borderColor}`}>
+      <CardHeader className="pb-1">
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidity Score</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={`text-3xl font-bold font-mono tracking-tight ${textColor}`}>
+          {Math.round(score)}<span className="text-lg text-muted-foreground">/100</span>
+        </div>
+        <p className="text-sm text-muted-foreground font-mono">
+          {formatCurrency(liq.totalTvlUsd)} TVL
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {liq.poolCount} pool{liq.poolCount !== 1 ? "s" : ""} &middot; {liq.chainCount} chain{liq.chainCount !== 1 ? "s" : ""}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function computePegScoreWithWindow(isNavToken: boolean, events: import("@/lib/types").DepegEvent[] | null, earliestTrackingDate: string | null) {
   if (isNavToken || !events) return null;
   const nowSec = Math.floor(Date.now() / 1000);
@@ -201,6 +264,8 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
   const { data: detailData, isLoading: detailLoading, isError: detailError } = useStablecoinDetail(id);
   const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
+  const { data: ratingsMap } = useBluechipRatings();
+  const { data: liquidityMap } = useDexLiquidity();
   const meta = findStablecoinMeta(id);
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
@@ -266,7 +331,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
           Detailed chart data is temporarily unavailable. Showing summary data only.
         </div>
       )}
-      <div className={`grid gap-5 sm:grid-cols-2 ${isNavToken ? "lg:grid-cols-4" : "lg:grid-cols-5"}`}>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
@@ -359,6 +424,9 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
             </CardContent>
           </Card>
         )}
+
+        <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
+        <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
       </div>
 
       <SupplyChart data={chartHistory} pegType={coinData.pegType} />
@@ -368,13 +436,11 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
         <MechanismCard meta={meta} />
       )}
 
-      <BluechipRatingCard stablecoinId={id} />
-
-      <DexLiquidityCard stablecoinId={id} />
-
       {meta && (
         <IssuerInfoCard meta={meta} />
       )}
+
+      <DexLiquidityCard stablecoinId={id} />
 
       <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
 

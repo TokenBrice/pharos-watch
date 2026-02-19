@@ -416,7 +416,7 @@ export default function AboutPage() {
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Organic Badge</span>
               <span>
-                classifies each pool as Organic (&ge;70% fee-based APY), Mixed (30-70%), or Farmed (&lt;30%), based on the ratio of base APY to total APY from DeFiLlama Yields
+                classifies each pool as Organic (&ge;70% fee-based APY), Mixed (30-70%), or Incentivized (&lt;30%), based on the ratio of base APY to total APY from DeFiLlama Yields. Pools older than one year with reward-heavy APY show &ldquo;Established&rdquo; instead, recognizing structural protocol incentives
               </span>
             </li>
             <li className="flex gap-2">
