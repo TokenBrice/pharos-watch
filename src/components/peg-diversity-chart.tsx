@@ -155,7 +155,7 @@ export function PegDiversityChart() {
     return (
       <Card className="rounded-2xl">
         <CardHeader>
-          <CardTitle as="h2">Non-USD Peg Diversity</CardTitle>
+          <CardTitle as="h2">Fiat-pegged, other than USD</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[200px] sm:h-[280px] w-full" />
@@ -174,7 +174,7 @@ export function PegDiversityChart() {
     <Card className="rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle as="h2">Non-USD Peg Diversity</CardTitle>
+          <CardTitle as="h2">Fiat-pegged, other than USD</CardTitle>
           {pegCount > 0 && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {pegCount} peg currencies &middot; {formatCurrency(totalNonUsd, 1)} non-USD
@@ -189,7 +189,7 @@ export function PegDiversityChart() {
             <div
               className="h-[200px] sm:h-[280px]"
               role="figure"
-              aria-label={`Non-USD peg diversity stacked area chart showing ${pegCount} peg currencies`}
+              aria-label={`Fiat-pegged other than USD stacked area chart showing ${pegCount} peg currencies`}
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
