@@ -1078,13 +1078,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Australia", regulator: "ASIC", license: "AFSL" },
   }),
-  other("351", "Tetris Money", "RUBT", "rwa-backed", "centralized", "RUB", {
-    collateral: "Russian ruble-denominated monetary claims within Tetris digital rights platform",
-    pegMechanism: "On-chain ruble liquidity layer for cross-border flows",
-    links: [
-      { label: "Website", url: "https://tetris.money/en/" },
-    ],
-  }),
   other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "OTHER", {
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
     pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. (FSA-registered Fund Transfer Service Provider)",
