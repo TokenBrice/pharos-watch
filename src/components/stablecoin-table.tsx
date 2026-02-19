@@ -14,31 +14,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@/lib/format";
 import { getPegReference } from "@/lib/peg-rates";
 import { getCirculatingUSD, getPrevDayUSD, getPrevWeekUSD } from "@/lib/supply";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import type { StablecoinData, FilterTag, SortConfig, PegSummaryCoin, BluechipRating, DexLiquidityMap } from "@/lib/types";
+import type { StablecoinData, FilterTag, PegSummaryCoin, BluechipRating, DexLiquidityMap } from "@/lib/types";
 import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
 import { GRADE_ORDER } from "@/lib/bluechip";
+import { GRADE_COLORS, BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { SortIcon } from "@/components/sort-icon";
+import { useSort } from "@/hooks/use-sort";
 
 const PAGE_SIZE = 25;
-
-const GRADE_COLORS: Record<string, string> = {
-  "A+": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  A: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "A-": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "B+": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  B: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "B-": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "C+": "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  C: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  "C-": "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  D: "bg-red-500/10 text-red-500 border-red-500/20",
-  F: "bg-red-500/10 text-red-500 border-red-500/20",
-};
 
 interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
@@ -74,29 +62,11 @@ function MiniSparkline({ values }: { values: number[] }) {
   );
 }
 
-const BACKING_COLORS: Record<string, string> = {
-  "rwa-backed": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "crypto-backed": "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  algorithmic: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-};
-
-const GOVERNANCE_COLORS: Record<string, string> = {
-  centralized: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
-  "centralized-dependent": "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  decentralized: "bg-green-500/10 text-green-500 border-green-500/20",
-};
-
-function SortIcon({ columnKey, sort }: { columnKey: string; sort: SortConfig }) {
-  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 text-muted-foreground/50" />;
-  return sort.direction === "asc" ? (
-    <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-foreground" />
-  ) : (
-    <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-foreground" />
-  );
-}
 
 export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, bluechipRatings, dexLiquidity, onClearSearch, onClearFilters }: StablecoinTableProps) {
-  const [sort, setSort] = useState<SortConfig>({ key: "mcap", direction: "desc" });
+  type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "safety" | "liquidity";
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("mcap", "desc");
+  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const [page, setPage] = useState(0);
   const router = useRouter();
   const metaById = useMemo(() => new Map(TRACKED_STABLECOINS.map((s) => [s.id, s])), []);
@@ -209,25 +179,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const rangeStart = sorted.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min((page + 1) * PAGE_SIZE, sorted.length);
 
-  function toggleSort(key: string) {
-    setSort((prev) =>
-      prev.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "desc" }
-    );
-  }
-
-  function getAriaSortValue(columnKey: string): "ascending" | "descending" | "none" {
-    if (sort.key !== columnKey) return "none";
-    return sort.direction === "asc" ? "ascending" : "descending";
-  }
-
-  function handleSortKeyDown(e: React.KeyboardEvent, key: string) {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      toggleSort(key);
-    }
-  }
 
   if (isLoading) {
     return (
@@ -263,7 +214,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "name")}
             >
-              Name <SortIcon columnKey="name" sort={sort} />
+              Name <SortIcon columnKey="name" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
               className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
@@ -272,7 +223,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "price")}
             >
-              Price <SortIcon columnKey="price" sort={sort} />
+              Price <SortIcon columnKey="price" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead className="text-right">Peg</TableHead>
             <TableHead
@@ -282,7 +233,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "mcap")}
             >
-              Market Cap <SortIcon columnKey="mcap" sort={sort} />
+              Market Cap <SortIcon columnKey="mcap" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
               className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
@@ -291,7 +242,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "change24h")}
             >
-              24h <SortIcon columnKey="change24h" sort={sort} />
+              24h <SortIcon columnKey="change24h" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
               className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
@@ -300,7 +251,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "change7d")}
             >
-              7d <SortIcon columnKey="change7d" sort={sort} />
+              7d <SortIcon columnKey="change7d" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
               className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
@@ -309,7 +260,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "stability")}
             >
-              Peg Score <SortIcon columnKey="stability" sort={sort} />
+              Peg Score <SortIcon columnKey="stability" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
               className="hidden sm:table-cell cursor-pointer text-center hover:bg-muted/50 transition-colors"
@@ -318,7 +269,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               tabIndex={0}
               onKeyDown={(e) => handleSortKeyDown(e, "safety")}
             >
-              Safety <SortIcon columnKey="safety" sort={sort} />
+              Safety <SortIcon columnKey="safety" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
               className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
@@ -328,7 +279,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               onKeyDown={(e) => handleSortKeyDown(e, "liquidity")}
               title="DEX Liquidity Score — measures pool depth, volume, and diversity across decentralized exchanges"
             >
-              Liq <SortIcon columnKey="liquidity" sort={sort} />
+              Liq <SortIcon columnKey="liquidity" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead className="hidden md:table-cell text-center">Backing</TableHead>
             <TableHead className="hidden md:table-cell text-center">Type</TableHead>
@@ -457,14 +408,14 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                 <TableCell className="hidden md:table-cell text-center">
                   {meta && (
                     <Badge variant="outline" className={`text-xs ${BACKING_COLORS[meta.flags.backing] ?? ""}`}>
-                      {meta.flags.backing === "rwa-backed" ? "RWA" : meta.flags.backing === "crypto-backed" ? "Crypto" : "Algo"}
+                      {BACKING_LABELS_SHORT[meta.flags.backing]}
                     </Badge>
                   )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">
                   {meta && (
                     <Badge variant="outline" className={`text-xs ${GOVERNANCE_COLORS[meta.flags.governance] ?? ""}`}>
-                      {meta.flags.governance === "centralized" ? "CeFi" : meta.flags.governance === "centralized-dependent" ? "CeFi-Dep" : "DeFi"}
+                      {GOVERNANCE_LABELS_SHORT[meta.flags.governance]}
                     </Badge>
                   )}
                 </TableCell>

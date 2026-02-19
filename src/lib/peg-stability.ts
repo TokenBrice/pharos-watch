@@ -1,4 +1,5 @@
 import type { DepegEvent } from "./types";
+import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 
 export interface PegStabilityMetrics {
   /** Percentage of tracked history at peg (0–100) */
@@ -45,34 +46,13 @@ export function computePegStability(
   if (historySpanSec <= 0) return null;
 
   // Total depeg time — merge overlapping intervals to avoid double-counting
-  let totalDepegSec = 0;
-  {
-    const intervals = events
-      .map((e) => [Math.max(e.startedAt, earliestSec), e.endedAt ?? nowSec] as [number, number])
-      .filter(([s, e]) => e > s)
-      .sort((a, b) => a[0] - b[0]);
-    let i = 0;
-    while (i < intervals.length) {
-      const mergedStart = intervals[i][0]; let mergedEnd = intervals[i][1];
-      while (i + 1 < intervals.length && intervals[i + 1][0] <= mergedEnd) {
-        i++;
-        mergedEnd = Math.max(mergedEnd, intervals[i][1]);
-      }
-      totalDepegSec += mergedEnd - mergedStart;
-      i++;
-    }
-  }
+  const totalDepegSec = mergeDepegSeconds(events, earliestSec, nowSec);
 
   const pegPct = Math.max(0, (1 - totalDepegSec / historySpanSec) * 100);
   const limited = historySpanSec < 30 * 86400;
 
   // Worst deviation (largest absolute value, keep sign)
-  let worstDeviationBps: number | null = null;
-  for (const e of events) {
-    if (worstDeviationBps === null || Math.abs(e.peakDeviationBps) > Math.abs(worstDeviationBps)) {
-      worstDeviationBps = e.peakDeviationBps;
-    }
-  }
+  const worstDeviationBps = worstDeviation(events);
 
   // Current streak: days since last closed event ended
   const depeggedNow = events.some((e) => e.endedAt === null);

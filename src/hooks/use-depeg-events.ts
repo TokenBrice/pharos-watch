@@ -21,8 +21,9 @@ export function useDepegEvents(stablecoinId?: string) {
   return useQuery({
     queryKey: ["depeg-events", stablecoinId],
     queryFn: () => fetchDepegEvents(stablecoinId),
-    staleTime: 10 * 60 * 1000,
-    refetchInterval: 30 * 60 * 1000,
+    // Depeg detection runs during syncStablecoins (every 5min); poll at 2x interval
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
     retry: 1,
   });
 }

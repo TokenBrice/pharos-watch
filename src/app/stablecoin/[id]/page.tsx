@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, findStablecoinMeta } from "@/lib/stablecoins";
 import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
+import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
 import { Badge } from "@/components/ui/badge";
 import StablecoinDetailClient from "./client";
 import logos from "../../../../data/logos.json";
@@ -45,36 +46,6 @@ export async function generateMetadata({
   };
 }
 
-const GOVERNANCE_LABELS: Record<string, string> = {
-  centralized: "Centralized (CeFi)",
-  "centralized-dependent": "CeFi-Dependent",
-  decentralized: "Decentralized (DeFi)",
-};
-
-const BACKING_LABELS: Record<string, string> = {
-  "rwa-backed": "Real-World Asset Backed",
-  "crypto-backed": "Crypto-Collateralized",
-  algorithmic: "Algorithmic",
-};
-
-const PEG_LABELS: Record<string, string> = {
-  USD: "the US Dollar",
-  EUR: "the Euro",
-  GBP: "the British Pound",
-  CHF: "the Swiss Franc",
-  BRL: "the Brazilian Real",
-  RUB: "the Russian Ruble",
-  GOLD: "Gold",
-  VAR: "a Variable (CPI-linked) target",
-  OTHER: "Other",
-};
-
-/** Labels without article, for metadata */
-const PEG_LABELS_SHORT: Record<string, string> = {
-  USD: "US Dollar", EUR: "Euro", GBP: "British Pound", CHF: "Swiss Franc",
-  BRL: "Brazilian Real", RUB: "Russian Ruble", GOLD: "Gold",
-  VAR: "Variable (CPI-linked)", OTHER: "Other",
-};
 
 function getRelatedStablecoins(coinId: string, limit = 6) {
   const coin = findStablecoinMeta(coinId);

@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { usePegSummary } from "@/hooks/use-peg-summary";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { PegTrackerStats } from "@/components/peg-tracker-stats";
@@ -20,30 +20,17 @@ export function PegTrackerClient() {
   const { data: eventsData } = useDepegEvents();
   const { data: logos } = useLogos();
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { getParam, setParam } = useUrlFilters();
 
-  const rawPeg = searchParams.get("peg") ?? "all";
-  const rawType = searchParams.get("type") ?? "all";
-  const searchQuery = searchParams.get("q") ?? "";
+  const rawPeg = getParam("peg", "all");
+  const rawType = getParam("type", "all");
+  const searchQuery = getParam("q");
   const pegFilter = (VALID_PEG_FILTERS.has(rawPeg) ? rawPeg : "all") as PegCurrency | "all";
   const typeFilter = (VALID_TYPE_FILTERS.has(rawType) ? rawType : "all") as GovernanceType | "all";
 
-  const updateParams = useCallback((key: string, value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value === "all" || value === "") {
-      params.delete(key);
-    } else {
-      params.set(key, value);
-    }
-    const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [searchParams, router, pathname]);
-
-  const setPegFilter = useCallback((v: PegCurrency | "all") => updateParams("peg", v), [updateParams]);
-  const setTypeFilter = useCallback((v: GovernanceType | "all") => updateParams("type", v), [updateParams]);
-  const setSearchQuery = useCallback((v: string) => updateParams("q", v), [updateParams]);
+  const setPegFilter = useCallback((v: PegCurrency | "all") => setParam("peg", v), [setParam]);
+  const setTypeFilter = useCallback((v: GovernanceType | "all") => setParam("type", v), [setParam]);
+  const setSearchQuery = useCallback((v: string) => setParam("q", v), [setParam]);
 
   const filteredCoins = (pegData?.coins ?? []).filter((c) => {
     if (pegFilter !== "all" && c.pegCurrency !== pegFilter) return false;

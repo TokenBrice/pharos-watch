@@ -19,8 +19,9 @@ export function useUsdsStatus() {
   return useQuery({
     queryKey: ["usds-status"],
     queryFn: fetchUsdsStatus,
-    staleTime: 60 * 60 * 1000,      // 1 hour
-    refetchInterval: 2 * 60 * 60 * 1000, // 2 hours
+    // Worker syncs every 15min (syncUsdsStatus); poll at 2x interval
+    staleTime: 15 * 60 * 1000,
+    refetchInterval: 30 * 60 * 1000,
     retry: 1,
   });
 }

@@ -14,8 +14,9 @@ export function usePegSummary() {
   return useQuery({
     queryKey: ["peg-summary"],
     queryFn: fetchPegSummary,
+    // Depeg detection runs during syncStablecoins (every 5min); poll at 2x interval
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
     retry: 1,
   });
 }

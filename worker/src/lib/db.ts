@@ -1,3 +1,28 @@
+import { D1_BATCH_SIZE } from "./constants";
+
+/** Execute D1 prepared statements in chunks to stay within the batch limit */
+export async function batchExecute(db: D1Database, stmts: D1PreparedStatement[], chunkSize = D1_BATCH_SIZE): Promise<void> {
+  for (let i = 0; i < stmts.length; i += chunkSize) {
+    await db.batch(stmts.slice(i, i + chunkSize));
+  }
+}
+
+/** Build WHERE, LIMIT, and OFFSET clauses for paginated SQL queries */
+export function buildPaginatedQuery(opts: {
+  conditions: string[];
+  bindings: (string | number)[];
+  limit: number;
+  offset: number;
+}): { where: string; limitClause: string; offsetClause: string; paginationBindings: number[] } {
+  const where = opts.conditions.length > 0 ? ` WHERE ${opts.conditions.join(" AND ")}` : "";
+  const limitClause = opts.limit > 0 ? " LIMIT ?" : opts.offset > 0 ? " LIMIT -1" : "";
+  const offsetClause = opts.offset > 0 ? " OFFSET ?" : "";
+  const paginationBindings: number[] = [];
+  if (opts.limit > 0) paginationBindings.push(opts.limit);
+  if (opts.offset > 0) paginationBindings.push(opts.offset);
+  return { where, limitClause, offsetClause, paginationBindings };
+}
+
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await db
     .prepare("SELECT value, updated_at FROM cache WHERE key = ?")

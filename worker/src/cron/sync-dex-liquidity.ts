@@ -1,6 +1,6 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache } from "../lib/db";
+import { getCache, batchExecute } from "../lib/db";
 
 const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
@@ -389,10 +389,55 @@ function isCryptoSwap(registryId: string): boolean {
   return r.includes("crypto") || r.includes("twocrypto") || r.includes("tricrypto");
 }
 
-export async function syncDexLiquidity(db: D1Database, graphApiKey: string | null): Promise<void> {
-  console.log("[dex-liquidity] Starting sync");
+// ---------------------------------------------------------------------------
+// Intermediate types for data passed between orchestrator steps
+// ---------------------------------------------------------------------------
 
-  // --- 1. Fetch DeFiLlama yields, protocols list, and Curve data ---
+interface CurvePoolEntry {
+  A: number;
+  balanceRatio: number;
+  tvl: number;
+  registryId: string;
+  isMetaPool: boolean;
+  metapoolAdjustedTvl: number;
+  creationTs: number;
+  balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
+}
+
+interface SymbolLookups {
+  symbolToIds: Map<string, string[]>;
+  addressToId: Map<string, string>;
+}
+
+interface DataSources {
+  pools: LlamaPool[];
+  dexProjects: Set<string>;
+  curveResponses: (Response | null)[];
+  graphApiKey: string | null;
+}
+
+interface CurveLookups {
+  curvePoolMap: Map<string, CurvePoolEntry>;
+  curvePriceObs: Map<string, DexPriceObs[]>;
+}
+
+interface UniV3Lookups {
+  uniV3PoolFees: Map<string, number>;
+  uniV3SymbolFees: Map<string, number>;
+}
+
+interface ScoreResult {
+  tvl: number;
+  vol24h: number;
+  score: number;
+}
+
+// ---------------------------------------------------------------------------
+// Extracted sub-functions
+// ---------------------------------------------------------------------------
+
+/** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null on critical failure. */
+async function fetchDataSources(graphApiKey: string | null): Promise<DataSources | null> {
   const [llamaRes, protocolsRes, ...curveResponses] = await Promise.all([
     fetchWithRetry(DEFILLAMA_YIELDS_URL, {
       headers: { "User-Agent": "Pharos/1.0" },
@@ -409,7 +454,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
   if (!llamaRes?.ok) {
     console.error("[dex-liquidity] DeFiLlama yields fetch failed");
-    return;
+    return null;
   }
 
   // Build set of project slugs categorized as "Dexs" by DeFiLlama
@@ -431,52 +476,53 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects from DeFiLlama protocols`);
   } else {
     console.error("[dex-liquidity] DeFiLlama protocols fetch failed — cannot filter DEX pools, aborting");
-    return;
+    return null;
   }
 
   const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
   const pools = llamaData.data;
   if (!pools || pools.length < 100) {
     console.error(`[dex-liquidity] DeFiLlama returned only ${pools?.length ?? 0} pools, skipping`);
-    return;
+    return null;
   }
   console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
 
-  // Build symbol → stablecoinId lookup (needed early for Curve price extraction)
-  const symbolToIdsEarly = new Map<string, string[]>();
-  // Track symbols that map to multiple IDs (collisions like GUSD)
+  return { pools, dexProjects, curveResponses, graphApiKey };
+}
+
+/** Build symbol → stablecoinId and address → stablecoinId lookup maps. */
+function buildSymbolLookups(): SymbolLookups {
+  const symbolToIds = new Map<string, string[]>();
   const collidingSymbols = new Set<string>();
   for (const meta of TRACKED_STABLECOINS) {
     const key = meta.symbol.toUpperCase();
-    const existing = symbolToIdsEarly.get(key) ?? [];
+    const existing = symbolToIds.get(key) ?? [];
     existing.push(meta.id);
-    symbolToIdsEarly.set(key, existing);
+    symbolToIds.set(key, existing);
     if (existing.length > 1) collidingSymbols.add(key);
   }
   if (collidingSymbols.size > 0) {
     console.log(`[dex-liquidity] Symbol collisions detected: ${[...collidingSymbols].join(", ")}`);
   }
 
-  // Address → stablecoinId lookup for disambiguation (learned from Curve coins[].address)
   // Seed with known addresses for colliding symbols (e.g. reUSD vs REUSD)
   const addressToId = new Map<string, string>([
     ["0x5086bf358635b81d8c47c66d1c8b9e567db70c72", "339"], // Re Protocol reUSD
     ["0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a", "256"], // Resupply REUSD
   ]);
 
-  // --- 2. Parse Curve API responses for A-factor, balance data, and per-token prices ---
-  const curvePoolMap = new Map<string, {
-    A: number;
-    balanceRatio: number;
-    tvl: number;
-    registryId: string;
-    isMetaPool: boolean;
-    metapoolAdjustedTvl: number;
-    creationTs: number;
-    balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[];
-  }>();
-  // Per-stablecoin price observations from Curve pools (for cross-validation)
+  return { symbolToIds, addressToId };
+}
+
+/** Parse Curve API responses into pool lookup maps and per-token price observations. */
+async function buildCurveLookups(
+  curveResponses: (Response | null)[],
+  symbolToIds: Map<string, string[]>,
+  addressToId: Map<string, string>,
+): Promise<CurveLookups> {
+  const curvePoolMap = new Map<string, CurvePoolEntry>();
   const curvePriceObs = new Map<string, DexPriceObs[]>();
+
   for (let i = 0; i < CURVE_CHAINS.length; i++) {
     const res = curveResponses[i];
     if (!res?.ok) continue;
@@ -518,7 +564,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
           // Learn address→stablecoinId from unambiguous symbol matches
           if (c.address) {
             const sym = c.symbol.toUpperCase();
-            const ids = symbolToIdsEarly.get(sym);
+            const ids = symbolToIds.get(sym);
             if (ids && ids.length === 1) {
               addressToId.set(c.address.toLowerCase(), ids[0]);
             }
@@ -526,7 +572,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
           return {
             symbol: c.symbol,
             balancePct: totalUsd > 0 ? Math.round((usdBal / totalUsd) * 1000) / 10 : 0,
-            isTracked: symbolToIdsEarly.has(c.symbol.toUpperCase()),
+            isTracked: symbolToIds.has(c.symbol.toUpperCase()),
           };
         });
 
@@ -541,7 +587,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
           .map((c) => c.symbol.toUpperCase())
           .sort()
           .join("-");
-        const entry = {
+        const entry: CurvePoolEntry = {
           A,
           balanceRatio,
           tvl: pool.usdTotal,
@@ -574,7 +620,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
             }
             if (!resolvedIds) {
               const sym = coin.symbol.toUpperCase();
-              resolvedIds = symbolToIdsEarly.get(sym);
+              resolvedIds = symbolToIds.get(sym);
             }
             if (!resolvedIds) continue;
             for (const id of resolvedIds) {
@@ -596,72 +642,88 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   }
   console.log(`[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${curvePriceObs.size} coins with price obs`);
 
-  // --- 2b. Fetch Uniswap V3 subgraph data for fee tier enrichment ---
+  return { curvePoolMap, curvePriceObs };
+}
+
+/** Fetch Uniswap V3 subgraph data for fee tier enrichment. Mutates addressToId with learned addresses. */
+async function fetchUniV3Data(
+  graphApiKey: string | null,
+  symbolToIds: Map<string, string[]>,
+  addressToId: Map<string, string>,
+): Promise<UniV3Lookups> {
   const uniV3PoolFees = new Map<string, number>(); // "chain:address" → feeTier
   const uniV3SymbolFees = new Map<string, number>(); // "chain:SYM0:SYM1" → lowest feeTier
-  if (graphApiKey) {
-    for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
-      try {
-        const url = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
-        const res = await fetchWithRetry(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "User-Agent": "Pharos/1.0" },
-          body: JSON.stringify({ query: UNIV3_POOL_QUERY }),
-        });
-        if (!res?.ok) {
-          console.warn(`[dex-liquidity] Uni V3 subgraph failed for ${chain}: ${res?.status}`);
-          continue;
-        }
-        const json = (await res.json()) as {
-          data?: {
-            pools?: {
-              id: string;
-              token0: { id: string; symbol: string };
-              token1: { id: string; symbol: string };
-              feeTier: string;
-              totalValueLockedUSD: string;
-              volumeUSD: string;
-            }[];
-          };
-        };
-        const subPools = json.data?.pools ?? [];
-        for (const p of subPools) {
-          const feeTier = parseInt(p.feeTier, 10);
-          if (isNaN(feeTier)) continue;
-          // Address-based lookup
-          uniV3PoolFees.set(`${chain}:${p.id.toLowerCase()}`, feeTier);
-          // Symbol-based fallback (keep lowest fee tier per pair = most optimized for stables)
-          const syms = [p.token0.symbol.toUpperCase(), p.token1.symbol.toUpperCase()].sort().join(":");
-          const symKey = `${chain}:${syms}`;
-          const existing = uniV3SymbolFees.get(symKey);
-          if (existing == null || feeTier < existing) {
-            uniV3SymbolFees.set(symKey, feeTier);
-          }
-          // Learn addresses for disambiguation from Uni V3 token data
-          for (const tok of [p.token0, p.token1]) {
-            const sym = tok.symbol.toUpperCase();
-            const ids = symbolToIdsEarly.get(sym);
-            if (ids?.length === 1 && tok.id) {
-              addressToId.set(tok.id.toLowerCase(), ids[0]);
-            }
-          }
-        }
-        console.log(`[dex-liquidity] Indexed ${subPools.length} Uni V3 pools from ${chain} subgraph`);
-      } catch (err) {
-        console.warn(`[dex-liquidity] Uni V3 subgraph error for ${chain}:`, err);
-      }
-    }
-  } else {
+
+  if (!graphApiKey) {
     console.log("[dex-liquidity] No GRAPH_API_KEY, skipping Uni V3 subgraph enrichment");
+    return { uniV3PoolFees, uniV3SymbolFees };
   }
 
-  // --- 3. Symbol → stablecoinId lookup (reuse early map) ---
-  const symbolToIds = symbolToIdsEarly;
-  if (addressToId.size > 0) {
-    console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
+  for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
+    try {
+      const url = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
+      const res = await fetchWithRetry(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": "Pharos/1.0" },
+        body: JSON.stringify({ query: UNIV3_POOL_QUERY }),
+      });
+      if (!res?.ok) {
+        console.warn(`[dex-liquidity] Uni V3 subgraph failed for ${chain}: ${res?.status}`);
+        continue;
+      }
+      const json = (await res.json()) as {
+        data?: {
+          pools?: {
+            id: string;
+            token0: { id: string; symbol: string };
+            token1: { id: string; symbol: string };
+            feeTier: string;
+            totalValueLockedUSD: string;
+            volumeUSD: string;
+          }[];
+        };
+      };
+      const subPools = json.data?.pools ?? [];
+      for (const p of subPools) {
+        const feeTier = parseInt(p.feeTier, 10);
+        if (isNaN(feeTier)) continue;
+        // Address-based lookup
+        uniV3PoolFees.set(`${chain}:${p.id.toLowerCase()}`, feeTier);
+        // Symbol-based fallback (keep lowest fee tier per pair = most optimized for stables)
+        const syms = [p.token0.symbol.toUpperCase(), p.token1.symbol.toUpperCase()].sort().join(":");
+        const symKey = `${chain}:${syms}`;
+        const existing = uniV3SymbolFees.get(symKey);
+        if (existing == null || feeTier < existing) {
+          uniV3SymbolFees.set(symKey, feeTier);
+        }
+        // Learn addresses for disambiguation from Uni V3 token data
+        for (const tok of [p.token0, p.token1]) {
+          const sym = tok.symbol.toUpperCase();
+          const ids = symbolToIds.get(sym);
+          if (ids?.length === 1 && tok.id) {
+            addressToId.set(tok.id.toLowerCase(), ids[0]);
+          }
+        }
+      }
+      console.log(`[dex-liquidity] Indexed ${subPools.length} Uni V3 pools from ${chain} subgraph`);
+    } catch (err) {
+      console.warn(`[dex-liquidity] Uni V3 subgraph error for ${chain}:`, err);
+    }
   }
 
-  // --- 4. Process DeFiLlama pools ---
+  return { uniV3PoolFees, uniV3SymbolFees };
+}
+
+/** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
+function processPoolMetrics(
+  pools: LlamaPool[],
+  dexProjects: Set<string>,
+  symbolToIds: Map<string, string[]>,
+  addressToId: Map<string, string>,
+  curvePoolMap: Map<string, CurvePoolEntry>,
+  uniV3PoolFees: Map<string, number>,
+  uniV3SymbolFees: Map<string, number>,
+): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
 
   for (const pool of pools) {
@@ -861,14 +923,14 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   }
 
   console.log(`[dex-liquidity] Matched ${metrics.size} stablecoins with DEX liquidity`);
+  return metrics;
+}
 
-  // --- 5. Compute scores and prepare DB writes ---
-  const nowSec = Math.floor(Date.now() / 1000);
-  const stmts: D1PreparedStatement[] = [];
-
-  // Track scores for daily snapshot
-  const scoreMap = new Map<string, { tvl: number; vol24h: number; score: number }>();
-
+/** Compute HHI, durability, and 6-component composite score per stablecoin. */
+async function computeStablecoinScores(
+  db: D1Database,
+  metrics: Map<string, LiquidityMetrics>,
+): Promise<Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>> {
   // Pre-fetch depth stability for durability computation
   const stabilityMap = new Map<string, number>();
   try {
@@ -910,6 +972,8 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     }
   } catch { /* first run has no data */ }
 
+  const results = new Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>();
+
   for (const [id, m] of metrics) {
     // Compute HHI from full pool list BEFORE truncation
     let hhi = 0;
@@ -922,7 +986,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
     // Sort and trim top pools to 10
     m.topPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
-    const topPools = m.topPools.slice(0, 10);
+    m.topPools.length = Math.min(m.topPools.length, 10);
 
     // v2: Compute durability score
     const tvlStab = stabilityMap.get(id) ?? null;
@@ -931,7 +995,6 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
     // v2: Compute 6-component score
     const { score, components } = computeLiquidityScore(m, durability);
-    scoreMap.set(id, { tvl: m.totalTvlUsd, vol24h: m.totalVolume24hUsd, score });
 
     // v2: Compute aggregate metrics
     const weightedBalanceRatio = m.totalTvlForBalance > 0
@@ -943,6 +1006,35 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     const avgStress = m.totalTvlUsd > 0
       ? Math.round((m.stressWeightedSum / m.totalTvlUsd) * 100) / 100
       : null;
+
+    results.set(id, {
+      tvl: m.totalTvlUsd,
+      vol24h: m.totalVolume24hUsd,
+      score,
+      hhi: Math.round(hhi * 10000) / 10000,
+      durability,
+      components,
+      weightedBalanceRatio,
+      organicFrac,
+      avgStress,
+    });
+  }
+
+  return results;
+}
+
+/** Persist liquidity scores to D1 (both data rows and zero-score rows). */
+async function persistScores(
+  db: D1Database,
+  metrics: Map<string, LiquidityMetrics>,
+  scoreResults: Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>,
+  nowSec: number,
+): Promise<void> {
+  const stmts: D1PreparedStatement[] = [];
+
+  for (const [id, m] of metrics) {
+    const sr = scoreResults.get(id);
+    if (!sr) continue;
 
     stmts.push(
       db
@@ -967,15 +1059,15 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
           m.chains.size,
           JSON.stringify(m.protocolTvl),
           JSON.stringify(m.chainTvl),
-          JSON.stringify(topPools),
-          score,
-          Math.round(hhi * 10000) / 10000,
-          avgStress,
-          weightedBalanceRatio,
-          organicFrac,
+          JSON.stringify(m.topPools),
+          sr.score,
+          sr.hhi,
+          sr.avgStress,
+          sr.weightedBalanceRatio,
+          sr.organicFrac,
           Math.round(m.effectiveTvl),
-          durability,
-          JSON.stringify(components),
+          sr.durability,
+          JSON.stringify(sr.components),
           nowSec,
         ),
     );
@@ -998,15 +1090,17 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     }
   }
 
-  // D1 batch limit is 100 statements — chunk
-  for (let i = 0; i < stmts.length; i += 100) {
-    await db.batch(stmts.slice(i, i + 100));
-  }
+  // D1 batch limit — chunk
+  await batchExecute(db, stmts);
 
   console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${stmts.length - metrics.size} zero)`);
+}
 
-  // --- 6. Daily snapshot for historical tracking ---
-  // Write one snapshot per day (first sync invocation after UTC midnight)
+/** Write daily snapshot rows (first sync invocation after UTC midnight). */
+async function writeHistoricalSnapshots(
+  db: D1Database,
+  scoreMap: Map<string, ScoreResult>,
+): Promise<void> {
   const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
   try {
     const lastSnap = await db
@@ -1040,16 +1134,17 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
           );
         }
       }
-      for (let i = 0; i < snapStmts.length; i += 100) {
-        await db.batch(snapStmts.slice(i, i + 100));
-      }
+      await batchExecute(db, snapStmts);
       console.log(`[dex-liquidity] Wrote daily snapshot (${snapStmts.length} rows) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`);
     }
   } catch (err) {
     console.warn("[dex-liquidity] Daily snapshot failed:", err);
   }
+}
 
-  // --- 7. Compute depth stability from 30-day history ---
+/** Compute depth stability (CV-based) from 30-day history and persist to D1. */
+async function computeDepthStability(db: D1Database): Promise<void> {
+  const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400;
   try {
     const thirtyDaysAgo = todayMidnight - 30 * 86_400;
     const histRows = await db
@@ -1084,96 +1179,148 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
       );
     }
     if (stabilityStmts.length > 0) {
-      for (let i = 0; i < stabilityStmts.length; i += 100) {
-        await db.batch(stabilityStmts.slice(i, i + 100));
-      }
+      await batchExecute(db, stabilityStmts);
       console.log(`[dex-liquidity] Updated depth stability for ${stabilityStmts.length} coins`);
     }
   } catch (err) {
     console.warn("[dex-liquidity] Depth stability computation failed:", err);
   }
+}
 
-  // --- 8. Compute DEX-implied prices from Curve observations and write to dex_prices ---
+/** Compute DEX-implied prices from Curve observations (TVL-weighted median) and persist to dex_prices. */
+async function computeDexPrices(
+  db: D1Database,
+  curvePriceObs: Map<string, DexPriceObs[]>,
+  nowSec: number,
+): Promise<void> {
   try {
-    if (curvePriceObs.size > 0) {
-      // Load primary prices from stablecoins cache for comparison
-      const primaryPrices = new Map<string, number>();
-      const cached = await getCache(db, "stablecoins");
-      if (cached) {
-        try {
-          const { peggedAssets } = JSON.parse(cached.value) as { peggedAssets: { id: string; price?: number | null }[] };
-          for (const a of peggedAssets) {
-            if (a.price != null && typeof a.price === "number" && a.price > 0) {
-              primaryPrices.set(a.id, a.price);
-            }
-          }
-        } catch { /* ignore malformed cache */ }
-      }
+    if (curvePriceObs.size === 0) return;
 
-      const priceStmts: D1PreparedStatement[] = [];
-      for (const [id, observations] of curvePriceObs) {
-        if (observations.length === 0) continue;
-
-        // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
-        observations.sort((a, b) => a.price - b.price);
-        const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
-        const halfTvl = totalTvl / 2;
-        let cumTvl = 0;
-        let medianPrice = observations[0].price;
-        for (const obs of observations) {
-          cumTvl += obs.tvl;
-          if (cumTvl >= halfTvl) {
-            medianPrice = obs.price;
-            break;
+    // Load primary prices from stablecoins cache for comparison
+    const primaryPrices = new Map<string, number>();
+    const cached = await getCache(db, "stablecoins");
+    if (cached) {
+      try {
+        const { peggedAssets } = JSON.parse(cached.value) as { peggedAssets: { id: string; price?: number | null }[] };
+        for (const a of peggedAssets) {
+          if (a.price != null && typeof a.price === "number" && a.price > 0) {
+            primaryPrices.set(a.id, a.price);
           }
         }
+      } catch { /* ignore malformed cache */ }
+    }
 
-        // Compute deviation from primary price
-        const primaryPrice = primaryPrices.get(id);
-        let deviationBps: number | null = null;
-        if (primaryPrice != null && primaryPrice > 0) {
-          deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
+    const priceStmts: D1PreparedStatement[] = [];
+    for (const [id, observations] of curvePriceObs) {
+      if (observations.length === 0) continue;
+
+      // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
+      observations.sort((a, b) => a.price - b.price);
+      const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
+      const halfTvl = totalTvl / 2;
+      let cumTvl = 0;
+      let medianPrice = observations[0].price;
+      for (const obs of observations) {
+        cumTvl += obs.tvl;
+        if (cumTvl >= halfTvl) {
+          medianPrice = obs.price;
+          break;
         }
-
-        // Top 5 sources by TVL for transparency (spread to avoid mutating price-sorted array)
-        const topSources = [...observations]
-          .sort((a, b) => b.tvl - a.tvl)
-          .slice(0, 5)
-          .map((o) => ({ protocol: o.protocol, chain: o.chain, price: o.price, tvl: o.tvl }));
-
-        const meta = TRACKED_STABLECOINS.find((s) => s.id === id);
-        const symbol = meta?.symbol ?? id;
-
-        priceStmts.push(
-          db
-            .prepare(
-              `INSERT OR REPLACE INTO dex_prices
-                (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
-                 deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-            )
-            .bind(
-              id,
-              symbol,
-              Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
-              observations.length,
-              Math.round(totalTvl),
-              deviationBps,
-              primaryPrice ?? null,
-              JSON.stringify(topSources),
-              nowSec
-            )
-        );
       }
 
-      if (priceStmts.length > 0) {
-        for (let i = 0; i < priceStmts.length; i += 100) {
-          await db.batch(priceStmts.slice(i, i + 100));
-        }
-        console.log(`[dex-liquidity] Wrote ${priceStmts.length} DEX price observations to dex_prices`);
+      // Compute deviation from primary price
+      const primaryPrice = primaryPrices.get(id);
+      let deviationBps: number | null = null;
+      if (primaryPrice != null && primaryPrice > 0) {
+        deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
       }
+
+      // Top 5 sources by TVL for transparency (spread to avoid mutating price-sorted array)
+      const topSources = [...observations]
+        .sort((a, b) => b.tvl - a.tvl)
+        .slice(0, 5)
+        .map((o) => ({ protocol: o.protocol, chain: o.chain, price: o.price, tvl: o.tvl }));
+
+      const meta = TRACKED_STABLECOINS.find((s) => s.id === id);
+      const symbol = meta?.symbol ?? id;
+
+      priceStmts.push(
+        db
+          .prepare(
+            `INSERT OR REPLACE INTO dex_prices
+              (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
+               deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            id,
+            symbol,
+            Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
+            observations.length,
+            Math.round(totalTvl),
+            deviationBps,
+            primaryPrice ?? null,
+            JSON.stringify(topSources),
+            nowSec
+          )
+      );
+    }
+
+    if (priceStmts.length > 0) {
+      await batchExecute(db, priceStmts);
+      console.log(`[dex-liquidity] Wrote ${priceStmts.length} DEX price observations to dex_prices`);
     }
   } catch (err) {
     console.warn("[dex-liquidity] DEX price extraction failed:", err);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Main orchestrator
+// ---------------------------------------------------------------------------
+
+export async function syncDexLiquidity(db: D1Database, graphApiKey: string | null): Promise<void> {
+  console.log("[dex-liquidity] Starting sync");
+
+  // 1. Fetch all external data sources
+  const dataSources = await fetchDataSources(graphApiKey);
+  if (!dataSources) return;
+
+  // 2. Build symbol/address lookup maps
+  const { symbolToIds, addressToId } = buildSymbolLookups();
+
+  // 3. Parse Curve data into pool lookups and price observations
+  const { curvePoolMap, curvePriceObs } = await buildCurveLookups(
+    dataSources.curveResponses, symbolToIds, addressToId,
+  );
+
+  // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment
+  const { uniV3PoolFees, uniV3SymbolFees } = await fetchUniV3Data(
+    graphApiKey, symbolToIds, addressToId,
+  );
+  if (addressToId.size > 0) {
+    console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
+  }
+
+  // 5. Match pools to stablecoins and compute per-pool metrics
+  const metrics = processPoolMetrics(
+    dataSources.pools, dataSources.dexProjects, symbolToIds, addressToId,
+    curvePoolMap, uniV3PoolFees, uniV3SymbolFees,
+  );
+
+  // 6. Compute composite scores per stablecoin
+  const scoreResults = await computeStablecoinScores(db, metrics);
+
+  // 7. Persist scores to D1
+  const nowSec = Math.floor(Date.now() / 1000);
+  await persistScores(db, metrics, scoreResults, nowSec);
+
+  // 8. Write daily historical snapshots
+  await writeHistoricalSnapshots(db, scoreResults);
+
+  // 9. Compute and persist depth stability from 30-day history
+  await computeDepthStability(db);
+
+  // 10. Compute and persist DEX-implied prices from Curve observations
+  await computeDexPrices(db, curvePriceObs, nowSec);
 }

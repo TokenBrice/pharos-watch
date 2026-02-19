@@ -14,8 +14,9 @@ export function useBluechipRatings() {
   return useQuery({
     queryKey: ["bluechip-ratings"],
     queryFn: fetchBluechipRatings,
-    staleTime: 60 * 60 * 1000,           // 1 hour
-    refetchInterval: 2 * 60 * 60 * 1000, // 2 hours
+    // Worker syncs every 2h; poll at 2x interval
+    staleTime: 2 * 60 * 60 * 1000,
+    refetchInterval: 4 * 60 * 60 * 1000,
     retry: 1,
   });
 }

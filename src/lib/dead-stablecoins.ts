@@ -106,6 +106,18 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
 
   // ── 2022 ────────────────────────────────────────────────────────────
   {
+    name: "Cashio Dollar",
+    symbol: "CASH",
+    pegCurrency: "USD",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2022-03",
+    peakMcap: 52_000_000,
+    obituary:
+      "Missing validation code on Solana allowed an attacker to mint 2 billion CASH using a fake worthless token as collateral, draining $52M. CASH crashed from $1 to $0.00005 in minutes. The unaudited contract was a sitting duck. The hacker, Shakeeb Ahmed, was later caught and sentenced by the DOJ.",
+    sourceUrl: "https://www.coindesk.com/tech/2022/03/23/stablecoin-cashio-suffers-infinite-glitch-exploit-tvl-drops-by-28m",
+    sourceLabel: "CoinDesk",
+  },
+  {
     name: "Neutrino USD",
     symbol: "USDN",
     logo: "usdn.png",
@@ -119,6 +131,18 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "CoinTelegraph",
   },
   {
+    name: "Beanstalk v1",
+    symbol: "BEAN",
+    pegCurrency: "USD",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2022-04",
+    peakMcap: 100_000_000,
+    obituary:
+      "The original Beanstalk deployment grew to $100M and $144M in liquidity before a flash-loan governance attack drained $182M. The attacker flash-loaned $1B+ to gain 79% governance power and passed a malicious proposal in a single transaction. BEAN crashed from $1 to $0.09. The protocol was 'Replanted' with new contracts four months later.",
+    sourceUrl: "https://www.coindesk.com/tech/2022/04/17/attacker-drains-182m-from-beanstalk-stablecoin-protocol",
+    sourceLabel: "CoinDesk",
+  },
+  {
     name: "TerraUSD",
     symbol: "UST",
     logo: "ust.png",
@@ -130,6 +154,18 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
       "The largest stablecoin collapse in history. UST's algorithmic peg relied on minting/burning LUNA, but a coordinated sell-off triggered a death spiral that vaporized $40B in combined value within days. Anchor's unsustainable 20% yield had concentrated 70% of supply in a single venue.",
     sourceUrl: "https://www.coindesk.com/tech/2022/05/11/usts-do-kwon-was-behind-earlier-failed-stablecoin-ex-terra-colleagues-say",
     sourceLabel: "CoinDesk",
+  },
+  {
+    name: "TerraKRW",
+    symbol: "KRT",
+    pegCurrency: "OTHER",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2022-05",
+    peakMcap: 80_000_000,
+    obituary:
+      "The most-used non-USD stablecoin in the Terra ecosystem, powering real Korean e-commerce payments via the CHAI app with millions of transactions. Destroyed alongside UST and LUNA in the May 2022 death spiral — all Terra stablecoins died simultaneously, but KRT was the only alternative peg with meaningful market cap.",
+    sourceUrl: "https://en.wikipedia.org/wiki/Terra_(blockchain)",
+    sourceLabel: "Wikipedia",
   },
   {
     name: "DEI",
@@ -197,6 +233,19 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "Axios",
   },
   {
+    name: "SpiceUSD",
+    symbol: "USDS",
+    llamaId: "31",
+    pegCurrency: "USD",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2022-09",
+    peakMcap: 18_000_000,
+    obituary:
+      "A partially algorithmic stablecoin on Avalanche from the Spice Trade DEX ecosystem. Launched in May 2022 into the post-UST wreckage, it never gained meaningful adoption. The peg broke almost immediately, sliding to $0.07, and the anonymous team abandoned the project. $18M in ghost supply sits unredeemable on Avalanche.",
+    sourceUrl: "https://www.coingecko.com/en/coins/spiceusd",
+    sourceLabel: "CoinGecko",
+  },
+  {
     name: "HUSD",
     symbol: "HUSD",
     logo: "husd.jpg",
@@ -207,6 +256,20 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     obituary:
       "A fiat-backed stablecoin tied to the Huobi ecosystem. When Justin Sun acquired Huobi and replaced it with USDD, HUSD was delisted with no redemption path. Crashed to $0.28.",
     sourceUrl: "https://www.coindesk.com/business/2022/10/31/after-huobi-delisting-stablecoin-husd-falls-72-from-dollar-peg",
+    sourceLabel: "CoinDesk",
+  },
+
+  {
+    name: "USN",
+    symbol: "USN",
+    llamaId: "54",
+    pegCurrency: "USD",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2022-10",
+    peakMcap: 136_700_000,
+    obituary:
+      "NEAR Protocol's native algorithmic stablecoin launched in April 2022. After UST's collapse, it was hastily converted to USDT-backed, but a double-minting bug left it $40M undercollateralized. The NEAR Foundation formally shut it down in October 2022 with a $40M 'USN Protection Programme.' Remaining ~$38M sits unredeemed.",
+    sourceUrl: "https://www.coindesk.com/markets/2022/10/24/near-foundation-urges-wind-down-of-usn-stablecoin-sets-aside-40m",
     sourceLabel: "CoinDesk",
   },
 
@@ -329,6 +392,18 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "CoinDesk",
   },
   {
+    name: "Multichain USDC",
+    symbol: "USDC.m",
+    pegCurrency: "USD",
+    causeOfDeath: "counterparty-failure",
+    deathDate: "2023-07",
+    peakMcap: 180_000_000,
+    obituary:
+      "Bridge-wrapped USDC on Fantom became worthless overnight when the Multichain bridge collapsed after the CEO was arrested by Chinese authorities. ~$180M in 'USDC' was revealed to be backed by nothing as the team lost access to MPC servers. Circle froze $63M, and Fantom's entire DeFi ecosystem was devastated.",
+    sourceUrl: "https://www.coindesk.com/business/2023/07/06/multichain-bridges-experience-unannounced-outflows-of-over-130m-in-crypto",
+    sourceLabel: "CoinDesk",
+  },
+  {
     name: "Parrot USD",
     symbol: "PAI",
     logo: "pai.png",
@@ -394,6 +469,32 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
       "Tangible's grand experiment in real estate-backed stablecoins ended exactly how skeptics predicted: with a classic bank run on illiquid assets. USDR promised 16% yields backed by UK rental properties, but when the $6M DAI cushion was drained in a single week, holders discovered that tokenized houses cannot be liquidated at 3 AM on a Wednesday. The team candidly admitted there were 'too many attack vectors in the design.'",
     sourceUrl: "https://www.coindesk.com/markets/2023/10/11/real-estate-backed-stablecoin-usdr-de-pegs-after-treasury-was-drained-of-liquid-assets",
     sourceLabel: "CoinDesk",
+  },
+  {
+    name: "Raft R",
+    symbol: "R",
+    llamaId: "115",
+    pegCurrency: "USD",
+    causeOfDeath: "counterparty-failure",
+    deathDate: "2023-11",
+    peakMcap: 32_900_000,
+    obituary:
+      "Allowed minting R stablecoin against wstETH and rETH collateral. A smart contract exploit drained $3.3M in ETH — though the hacker lost money due to a slippage error, netting only ~$1.6M. Raft halted minting, offered a 42% recovery plan, and was abandoned.",
+    sourceUrl: "https://rekt.news/raft-rekt/",
+    sourceLabel: "Rekt News",
+  },
+  {
+    name: "YUSD Stablecoin",
+    symbol: "YUSD",
+    llamaId: "13",
+    pegCurrency: "USD",
+    causeOfDeath: "abandoned",
+    deathDate: "2023-12",
+    peakMcap: 296_400_000,
+    obituary:
+      "Yeti Finance's cross-margin lending protocol on Avalanche allowed borrowing YUSD at 0% interest against diverse collateral. After declining TVL and concentration among few users, the team announced dissolution in December 2023, raising interest rates to encourage position closure and returning 90% of treasury to YETI holders.",
+    sourceUrl: "https://crypto-economy.com/yeti-finance-announces-its-dissolution-here-the-reasons/",
+    sourceLabel: "Crypto Economy",
   },
   {
     name: "Iron Bank EURO",
@@ -500,6 +601,19 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     obituary:
       "Stabl.fi's CASH was the native stablecoin of an ambitious Polygon DeFi empire spanning Satin Exchange, Retro DEX, and more. When Satin's launch imploded on day one, the ecosystem was rebranded around Retro — a Thena fork that briefly hit $18.8M TVL before bleeding out. The team's last blog post in February 2024 acknowledged 'adoption has been fairly low and TVL has bled,' then went silent. The website, docs, and dreams of a cross-chain yield-bearing indexcoin now all return connection refused.",
     sourceUrl: "https://defillama.com/stablecoin/stabl.fi-cash",
+    sourceLabel: "DefiLlama",
+  },
+  {
+    name: "NOTE",
+    symbol: "NOTE",
+    llamaId: "78",
+    pegCurrency: "USD",
+    causeOfDeath: "liquidity-drain",
+    deathDate: "2024-06",
+    peakMcap: 48_800_000,
+    obituary:
+      "Native overcollateralized stablecoin of the Canto L1 blockchain. Canto launched with 'free public infrastructure' DeFi primitives in late 2022, briefly attracting $300M TVL. As the chain's ecosystem collapsed, NOTE's supply fell 97% from $49M to $1.3M. The chain itself is essentially abandoned.",
+    sourceUrl: "https://defillama.com/stablecoin/note",
     sourceLabel: "DefiLlama",
   },
   {
@@ -741,6 +855,19 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "DefiLlama",
   },
   {
+    name: "Liquid Loans USDL",
+    symbol: "USDL",
+    llamaId: "152",
+    pegCurrency: "USD",
+    causeOfDeath: "liquidity-drain",
+    deathDate: "2025-06",
+    peakMcap: 32_700_000,
+    obituary:
+      "A Liquity V1 fork on PulseChain where users minted USDL against PLS collateral at 110% minimum ratio. As PulseChain's ecosystem collapsed with PLS price down over 90%, USDL supply followed — from $33M peak to $3.4M. The immutable contracts still technically work, but with PulseChain abandoned by mainstream DeFi, nobody is using them.",
+    sourceUrl: "https://defillama.com/stablecoin/liquid-loans-usdl",
+    sourceLabel: "DefiLlama",
+  },
+  {
     name: "JUST USDJ",
     symbol: "USDJ",
     logo: "usdj.png",
@@ -817,6 +944,30 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
       "Lost 97% of value overnight when counterparty Stream Finance disclosed a $93M loss, wiping out 65% of deUSD's collateral.",
     sourceUrl: "https://beincrypto.com/elixir-deusd-stablecoin-collapse-stream-finance-loss/",
     sourceLabel: "BeInCrypto",
+  },
+  {
+    name: "Stables Labs USDX",
+    symbol: "USDX",
+    pegCurrency: "USD",
+    causeOfDeath: "counterparty-failure",
+    deathDate: "2025-11",
+    peakMcap: 125_000_000,
+    obituary:
+      "Synthetic USD backed by delta-neutral positions across exchanges. A Balancer V2 security flaw drained $1M, then contagion from Stream Finance's $93M loss accelerated a full collapse. USDX crashed 64% to $0.35 as founder Flex Yang's wallet was linked to addresses draining liquidity. Now trades at $0.01–0.04 with Discord shut down.",
+    sourceUrl: "https://www.theblock.co/post/377917/synthetic-stablecoin-usdx-depegs-pancakeswap-lista",
+    sourceLabel: "The Block",
+  },
+  {
+    name: "Stream Finance xUSD",
+    symbol: "xUSD",
+    pegCurrency: "USD",
+    causeOfDeath: "counterparty-failure",
+    deathDate: "2025-11",
+    peakMcap: 160_000_000,
+    obituary:
+      "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 77% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
+    sourceUrl: "https://finance.yahoo.com/news/stream-finance-loses-93-million-225557903.html",
+    sourceLabel: "Yahoo Finance",
   },
   {
     name: "Reservoir rUSD",

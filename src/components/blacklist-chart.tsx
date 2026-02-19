@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
 import type { BlacklistEvent } from "@/lib/types";
 
 const STABLECOIN_COLORS: Record<string, string> = {
@@ -46,14 +47,8 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
   const { data: stablecoins } = useStablecoins();
 
   const goldPrices = useMemo(() => {
-    const prices: Record<string, number> = {};
-    if (!stablecoins) return prices;
-    for (const coin of stablecoins.peggedAssets) {
-      if (coin.symbol === "PAXG" || coin.symbol === "XAUT") {
-        if (typeof coin.price === "number") prices[coin.symbol] = coin.price;
-      }
-    }
-    return prices;
+    if (!stablecoins) return {};
+    return extractGoldPrices(stablecoins.peggedAssets);
   }, [stablecoins]);
 
   const chartData = useMemo(() => {
@@ -65,8 +60,8 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
     for (const evt of events) {
       if (evt.eventType !== "blacklist" || evt.amount == null) continue;
 
-      const isGold = evt.stablecoin === "PAXG" || evt.stablecoin === "XAUT";
-      const usdMultiplier = isGold ? (goldPrices[evt.stablecoin] ?? 0) : 1;
+      const gold = isGoldStablecoin(evt.stablecoin);
+      const usdMultiplier = gold ? (goldPrices[evt.stablecoin] ?? 0) : 1;
       const usdValue = evt.amount * usdMultiplier;
       if (usdValue <= 0) continue;
 

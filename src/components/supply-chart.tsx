@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -11,6 +11,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TimeRangeButtons } from "@/components/time-range-buttons";
+import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 
 interface SupplyChartProps {
@@ -32,8 +34,6 @@ function extractSupply(point: Record<string, unknown>, pegType: string): number 
 }
 
 export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
-  const [range, setRange] = useState<"7d" | "30d" | "90d" | "1y" | "all">("all");
-
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
@@ -51,38 +51,13 @@ export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
       }));
   }, [data, pegType]);
 
-  const filteredData = useMemo(() => {
-    if (range === "all" || chartData.length === 0) return chartData;
-    const latest = chartData[chartData.length - 1]?.ts ?? 0;
-    const ms: Record<string, number> = {
-      "7d": 7 * 86400000,
-      "30d": 30 * 86400000,
-      "90d": 90 * 86400000,
-      "1y": 365 * 86400000,
-    };
-    return chartData.filter((d) => d.ts >= latest - ms[range]);
-  }, [chartData, range]);
+  const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
   return (
     <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Circulating Supply</CardTitle>
-        <div className="flex gap-1">
-          {(["7d", "30d", "90d", "1y", "all"] as const).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              aria-pressed={range === r}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
-                range === r
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              }`}
-            >
-              {r === "all" ? "All" : r.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (

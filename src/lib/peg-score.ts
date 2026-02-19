@@ -1,4 +1,5 @@
 import type { DepegEvent } from "./types";
+import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 
 export interface PegScoreResult {
   /** Composite score 0-100, or null if insufficient data (<30 days tracking) */
@@ -59,24 +60,7 @@ export function computePegScore(
   const insufficientData = spanDays < 30;
 
   // --- Time score (pegPct) ---
-  // Merge overlapping intervals to avoid double-counting depeg time
-  let totalDepegSec = 0;
-  {
-    const intervals = events
-      .map((e) => [Math.max(e.startedAt, startSec), e.endedAt ?? now] as [number, number])
-      .filter(([s, e]) => e > s)
-      .sort((a, b) => a[0] - b[0]);
-    let i = 0;
-    while (i < intervals.length) {
-      const mergedStart = intervals[i][0]; let mergedEnd = intervals[i][1];
-      while (i + 1 < intervals.length && intervals[i + 1][0] <= mergedEnd) {
-        i++;
-        mergedEnd = Math.max(mergedEnd, intervals[i][1]);
-      }
-      totalDepegSec += mergedEnd - mergedStart;
-      i++;
-    }
-  }
+  const totalDepegSec = mergeDepegSeconds(events, startSec, now);
   const pegPct = Math.max(0, (1 - totalDepegSec / spanSec) * 100);
 
   // --- Severity score ---
@@ -110,12 +94,7 @@ export function computePegScore(
   const pegScore = insufficientData ? null : Math.max(0, Math.min(100, Math.round(raw)));
 
   // --- Worst deviation ---
-  let worstDeviationBps: number | null = null;
-  for (const e of events) {
-    if (worstDeviationBps === null || Math.abs(e.peakDeviationBps) > Math.abs(worstDeviationBps)) {
-      worstDeviationBps = e.peakDeviationBps;
-    }
-  }
+  const worstDeviationBps = worstDeviation(events);
 
   return {
     pegScore,

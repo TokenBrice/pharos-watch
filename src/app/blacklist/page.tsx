@@ -3,8 +3,8 @@
 import { useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft, Search } from "lucide-react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
@@ -24,33 +24,18 @@ function BlacklistPageInner() {
   const { data, isLoading, isError, error } = useBlacklistEvents();
   const events = data?.events;
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { getParam, setParams: updateParams } = useUrlFilters();
 
-  const rawStablecoin = searchParams.get("stablecoin") ?? "all";
-  const rawChain = searchParams.get("chain") ?? "all";
-  const rawEventType = searchParams.get("event") ?? "all";
-  const rawPage = searchParams.get("page");
-  const searchQuery = searchParams.get("q") ?? "";
+  const rawStablecoin = getParam("stablecoin", "all");
+  const rawChain = getParam("chain", "all");
+  const rawEventType = getParam("event", "all");
+  const rawPage = getParam("page");
+  const searchQuery = getParam("q");
 
   const stablecoinFilter = (VALID_STABLECOINS.has(rawStablecoin) ? rawStablecoin : "all") as BlacklistStablecoin | "all";
   const chainFilter = rawChain;
   const eventTypeFilter = (VALID_EVENT_TYPES.has(rawEventType) ? rawEventType : "all") as BlacklistEventType | "all";
   const page = rawPage ? Math.max(1, parseInt(rawPage, 10) || 1) : 1;
-
-  const updateParams = useCallback((updates: Record<string, string>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    for (const [key, value] of Object.entries(updates)) {
-      if (value === "all" || value === "1") {
-        params.delete(key);
-      } else {
-        params.set(key, value);
-      }
-    }
-    const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
-  }, [searchParams, router, pathname]);
 
   const handleStablecoinChange = useCallback((v: BlacklistStablecoin | "all") => {
     updateParams({ stablecoin: v, page: "1" });

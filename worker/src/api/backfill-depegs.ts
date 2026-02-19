@@ -1,11 +1,12 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
+import { DEPEG_THRESHOLD_BPS } from "../lib/constants";
+import { withErrorHandler } from "../lib/api-utils";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 
 const DEFILLAMA_COINS = "https://coins.llama.fi";
 const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
-const DEPEG_THRESHOLD_BPS = 100;
 const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
 
 // ── Historical FX rate support ──────────────────────────────────────
@@ -133,7 +134,7 @@ interface CoinDetail {
   tokens?: SupplyPoint[];
 }
 
-export async function handleBackfillDepegs(db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> {
+export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
   // Admin-only endpoint: require X-Admin-Key header matching ADMIN_KEY secret
   const adminKey = request?.headers.get("X-Admin-Key");
   if (!adminSecret || !adminKey || adminKey !== adminSecret) {
@@ -299,7 +300,7 @@ export async function handleBackfillDepegs(db: D1Database, url: URL, adminSecret
     }),
     { headers: { "Content-Type": "application/json" } }
   );
-}
+});
 
 interface BackfillEvent {
   pegType: string;

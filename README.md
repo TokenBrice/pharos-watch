@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 120+ stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking ~130 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -10,8 +10,11 @@ Public-facing analytics dashboard tracking 120+ stablecoins across multiple peg 
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, gold-pegged, and CPI-linked stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, EURC, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
+- **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, diversity, and cross-chain coverage with 10-minute refresh
+- **DEX Price Cross-Validation** — DEX-implied prices from Curve StableSwap pools provide a confirmation gate that suppresses false-positive depeg events
 - **Stablecoin Cemetery** — 62 dead stablecoins documented with cause of death, peak market cap, and obituaries
-- **Detail pages** — price chart, supply history, and chain distribution for each stablecoin
+- **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
+- **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
 - **Research-grade data pipeline** — structural validation, supply sanity checks, concurrent write protection, depeg deduplication, and price validation guardrails
@@ -86,31 +89,36 @@ src/                              Frontend (Next.js static export)
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── stablecoin/[id]/          Detail page per stablecoin
 │   └── about/                    About & methodology
-├── components/                   UI components (table, charts, cards)
-├── hooks/                        Data fetching hooks (TanStack Query)
-└── lib/                          Types, formatters, peg score, stablecoin master list
+├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
+├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
+└── lib/                          Types, formatters, peg score, classification labels, shared helpers
 
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
-│   ├── cron/                     Scheduled data sync (DefiLlama, CoinGecko, Etherscan, TronGrid)
-│   ├── api/                      REST endpoints
-│   └── lib/                      D1 helpers
-└── migrations/                   D1 SQL migrations (8 total, includes depeg dedup + unique constraint)
+│   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
+│   ├── api/                      REST endpoints (all wrapped with withErrorHandler)
+│   └── lib/                      D1 helpers, shared constants, depeg types, API error handler
+└── migrations/                   D1 SQL migrations (12 total)
 ```
 
 ## Infrastructure
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */5 * * * *    → sync stablecoin data (DefiLlama + CoinGecko gold) + chart history
-  └── Cron: */15 * * * *   → sync blacklist events (Etherscan/TronGrid/dRPC) + USDS status
+  ├── Cron: */5 * * * *    → sync stablecoin data (DefiLlama + CoinGecko gold) + price enrichment + depeg detection + chart history
+  ├── Cron: */10 * * * *   → sync DEX liquidity (DeFiLlama Yields + Curve API) + DEX price cross-validation
+  ├── Cron: */15 * * * *   → sync blacklist events (Etherscan/TronGrid/dRPC) + USDS status
+  └── Cron: 0 */2 * * *   → sync FX rates + Bluechip safety ratings
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, logos) with CAS write guard
   ├── blacklist_events     → normalized freeze/blacklist events
   ├── blacklist_sync_state → incremental sync progress (block numbers for EVM, timestamps for Tron)
   ├── depeg_events         → peg deviation events with unique constraint + direction tracking
-  └── price_cache          → historical price snapshots for depeg detection
+  ├── price_cache          → historical price snapshots for depeg detection
+  ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
+  ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
+  └── dex_prices           → DEX-implied prices from Curve pools for cross-validation
 
 Cloudflare Pages
   └── Static export from Next.js

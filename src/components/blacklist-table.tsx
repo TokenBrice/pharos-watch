@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -11,9 +11,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { formatAddress, formatEventDate, formatCurrency } from "@/lib/format";
-import type { BlacklistEvent, SortConfig } from "@/lib/types";
+import { isGoldStablecoin } from "@/lib/blacklist-helpers";
+import type { BlacklistEvent } from "@/lib/types";
+import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@/lib/classification";
+import { SortIcon } from "@/components/sort-icon";
+import { useSort } from "@/hooks/use-sort";
 
 interface BlacklistTableProps {
   events: BlacklistEvent[];
@@ -22,29 +26,10 @@ interface BlacklistTableProps {
   pageSize: number;
 }
 
-const EVENT_BADGE_STYLES: Record<string, string> = {
-  blacklist: "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400",
-  unblacklist: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
-  destroy: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
-};
-
-const EVENT_LABELS: Record<string, string> = {
-  blacklist: "Blacklist",
-  unblacklist: "Unblacklist",
-  destroy: "Destroy",
-};
-
-function SortIcon({ columnKey, sort }: { columnKey: string; sort: SortConfig }) {
-  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 text-muted-foreground/50" />;
-  return sort.direction === "asc" ? (
-    <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-foreground" />
-  ) : (
-    <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-foreground" />
-  );
-}
-
 export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistTableProps) {
-  const [sort, setSort] = useState<SortConfig>({ key: "date", direction: "desc" });
+  type SortKey = "date" | "stablecoin" | "chain" | "event";
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("date", "desc");
+  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
 
   const sorted = useMemo(() => {
     return [...events].sort((a, b) => {
@@ -74,13 +59,6 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
     return sorted.slice(start, start + pageSize);
   }, [sorted, page, pageSize]);
 
-  function toggleSort(key: string) {
-    setSort((prev) =>
-      prev.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "desc" }
-    );
-  }
 
   if (isLoading) {
     return (
@@ -109,17 +87,17 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("date")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("date"); } }} aria-sort={sort.key === "date" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
-              Date <SortIcon columnKey="date" sort={sort} />
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("date")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "date")} aria-sort={getAriaSortValue("date")}>
+              Date <SortIcon columnKey="date" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("stablecoin")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("stablecoin"); } }} aria-sort={sort.key === "stablecoin" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
-              Stablecoin <SortIcon columnKey="stablecoin" sort={sort} />
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("stablecoin")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "stablecoin")} aria-sort={getAriaSortValue("stablecoin")}>
+              Stablecoin <SortIcon columnKey="stablecoin" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("chain")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("chain"); } }} aria-sort={sort.key === "chain" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
-              Chain <SortIcon columnKey="chain" sort={sort} />
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("chain")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "chain")} aria-sort={getAriaSortValue("chain")}>
+              Chain <SortIcon columnKey="chain" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("event")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("event"); } }} aria-sort={sort.key === "event" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
-              Event <SortIcon columnKey="event" sort={sort} />
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("event")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "event")} aria-sort={getAriaSortValue("event")}>
+              Event <SortIcon columnKey="event" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead>Address</TableHead>
             <TableHead className="text-right">Amount</TableHead>
@@ -152,7 +130,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
               </TableCell>
               <TableCell className="text-right font-mono">
                 {evt.amount != null && !(evt.amount === 0 && evt.eventType !== "destroy")
-                  ? (evt.stablecoin === "PAXG" || evt.stablecoin === "XAUT")
+                  ? isGoldStablecoin(evt.stablecoin)
                     ? `${evt.amount.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${evt.stablecoin}`
                     : formatCurrency(evt.amount)
                   : "\u2014"}

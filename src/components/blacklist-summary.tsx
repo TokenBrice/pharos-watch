@@ -8,38 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { THIRTY_DAYS_SECONDS } from "@/lib/constants";
-import type { BlacklistEvent } from "@/lib/types";
-
-function computeStats(events: BlacklistEvent[], goldPrices: Record<string, number>) {
-  const nowSeconds = Date.now() / 1000;
-  const thirtyDaysAgo = nowSeconds - THIRTY_DAYS_SECONDS;
-
-  const addresses = new Map<string, number>();
-  let destroyedTotal = 0;
-  let recentCount = 0;
-
-  for (const evt of events) {
-    const isGold = evt.stablecoin === "PAXG" || evt.stablecoin === "XAUT";
-
-    if (evt.eventType === "blacklist") {
-      addresses.set(evt.address, (addresses.get(evt.address) ?? 0) + 1);
-    } else if (evt.eventType === "unblacklist") {
-      addresses.set(evt.address, (addresses.get(evt.address) ?? 0) - 1);
-    } else if (evt.eventType === "destroy" && evt.amount != null) {
-      const usdMultiplier = isGold ? (goldPrices[evt.stablecoin] ?? 0) : 1;
-      destroyedTotal += evt.amount * usdMultiplier;
-    }
-
-    if (evt.timestamp >= thirtyDaysAgo) {
-      recentCount++;
-    }
-  }
-
-  const frozenAddresses = Array.from(addresses.values()).filter((v) => v > 0).length;
-
-  return { frozenAddresses, destroyedTotal, recentCount };
-}
+import { extractGoldPrices, computeBlacklistStats } from "@/lib/blacklist-helpers";
 
 export function BlacklistSummary() {
   const { data, isLoading } = useBlacklistEvents();
@@ -47,19 +16,13 @@ export function BlacklistSummary() {
   const { data: stablecoins } = useStablecoins();
 
   const goldPrices = useMemo(() => {
-    const prices: Record<string, number> = {};
-    if (!stablecoins) return prices;
-    for (const coin of stablecoins.peggedAssets) {
-      if (coin.symbol === "PAXG" || coin.symbol === "XAUT") {
-        if (typeof coin.price === "number") prices[coin.symbol] = coin.price;
-      }
-    }
-    return prices;
+    if (!stablecoins) return {};
+    return extractGoldPrices(stablecoins.peggedAssets);
   }, [stablecoins]);
 
   const stats = useMemo(() => {
     if (!events) return null;
-    return computeStats(events, goldPrices);
+    return computeBlacklistStats(events, goldPrices);
   }, [events, goldPrices]);
 
   if (isLoading) {

@@ -25,7 +25,7 @@ function other(id: string, name: string, symbol: string, backing: StablecoinMeta
 }
 
 /**
- * Top 100 stablecoins by market cap (DefiLlama, July 2025).
+ * Tracked stablecoins by market cap (DefiLlama + CoinGecko).
  * IDs are DefiLlama numeric IDs (string).
  *
  * Classification flags:
@@ -978,6 +978,65 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/felixprotocol" },
     ],
   }),
+  usd("348", "Fidelity Digital Dollar", "FIDD", "rwa-backed", "centralized", {
+    collateral: "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon",
+    pegMechanism: "Direct 1:1 redemption through Fidelity Digital Assets platforms",
+    proofOfReserves: { type: "independent-audit", url: "https://www.fidelitydigitalassets.com/stablecoin", provider: "PricewaterhouseCoopers" },
+    links: [
+      { label: "Website", url: "https://www.fidelitydigitalassets.com/stablecoin" },
+    ],
+    jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Bank Charter" },
+  }),
+  usd("347", "USDGO", "USDGO", "rwa-backed", "centralized", {
+    collateral: "U.S. Treasuries and high-quality liquid assets held by Anchorage Digital Bank",
+    pegMechanism: "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
+    links: [
+      { label: "Website", url: "https://www.osl.com/hk-en/press-release/osl-group-unveils-usdgo-stablecoin-to-strengthen-global-compliant-payment-network" },
+      { label: "Twitter", url: "https://x.com/osldotcom" },
+    ],
+    jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
+  }),
+  usd("297", "Main Street USD", "MSUSD", "crypto-backed", "centralized-dependent", {
+    collateral: "USDC deposits deployed into institutional-grade options volatility arbitrage strategies on centralized exchanges",
+    pegMechanism: "Delta-neutral options strategy; always redeemable 1:1 for USDC",
+    links: [
+      { label: "Website", url: "https://mainstreet.finance/" },
+    ],
+  }),
+  usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
+    collateral: "1:1 USD reserves custodied by Norwegian Block Exchange (NBX)",
+    pegMechanism: "Direct 1:1 redemption through Moneta",
+    links: [
+      { label: "Website", url: "https://moneta.global/" },
+    ],
+    jurisdiction: { country: "United States", regulator: "FinCEN" },
+  }),
+  usd("312", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
+    collateral: "Overcollateralized by DOT, ETH, WBTC, USDT, USDC, and liquid staking tokens on Hydration",
+    pegMechanism: "Overcollateralized CDP with liquidation; accepts centralized stablecoins as collateral",
+    links: [
+      { label: "Website", url: "https://hydration.net/" },
+    ],
+  }),
+  usd("245", "Anzens USDA", "USDA", "rwa-backed", "centralized", {
+    collateral: "USD and dollar-equivalent reserves including U.S. Treasuries, custodied by BitGo Trust",
+    pegMechanism: "Direct 1:1 redemption through Anzens (EMURGO/Cardano founding entity partnership)",
+    links: [
+      { label: "Website", url: "https://www.anzens.com/" },
+    ],
+  }),
+  usd("75", "Youves uUSD", "UUSD", "crypto-backed", "centralized-dependent", {
+    collateral: "XTZ (Tezos native token) at 300% minimum overcollateralization ratio",
+    pegMechanism: "Overcollateralized CDP on Tezos; purely crypto-backed but on a chain outside the Ethereum/L2 ecosystem",
+  }),
+  usd("327", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
+    yieldBearing: true, rwa: true, navToken: true,
+    collateral: "Senior-tranche Asian institutional credit instruments (bonds and credit) providing 6-7% native yield",
+    pegMechanism: "Tokenized exposure to Asian credit markets; price appreciates as yield accrues",
+    links: [
+      { label: "Website", url: "https://mudigital.net/" },
+    ],
+  }),
 
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "OTHER", {
@@ -1018,6 +1077,29 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/AUDD_digital" },
     ],
     jurisdiction: { country: "Australia", regulator: "ASIC", license: "AFSL" },
+  }),
+  other("351", "Tetris Money", "RUBT", "rwa-backed", "centralized", "RUB", {
+    collateral: "Russian ruble-denominated monetary claims within Tetris digital rights platform",
+    pegMechanism: "On-chain ruble liquidity layer for cross-border flows",
+    links: [
+      { label: "Website", url: "https://tetris.money/en/" },
+    ],
+  }),
+  other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "OTHER", {
+    collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
+    pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. (FSA-registered Fund Transfer Service Provider)",
+    links: [
+      { label: "Website", url: "https://corporate.jpyc.co.jp/en" },
+    ],
+    jurisdiction: { country: "Japan", regulator: "FSA" },
+  }),
+  other("cg-idrt", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "OTHER", {
+    collateral: "Indonesian rupiah reserves held 1:1 in Indonesian bank accounts",
+    pegMechanism: "Direct 1:1 redemption for IDR through PT Rupiah Token Indonesia",
+    links: [
+      { label: "Website", url: "https://rupiahtoken.com/" },
+    ],
+    jurisdiction: { country: "Indonesia" },
   }),
 
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
@@ -1065,6 +1147,24 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/matrixdock" },
     ],
     jurisdiction: { country: "Singapore" },
+  }),
+  other("gold-vro", "VeraOne", "VRO", "rwa-backed", "centralized", "GOLD", {
+    rwa: true, goldOunces: 1 / 31.1035,
+    collateral: "Physical gold stored in secure zones in France (1 VRO = 1 gram of gold)",
+    pegMechanism: "Direct redemption for physical gold through VeraCash",
+    links: [
+      { label: "Website", url: "https://music.veraone.net/" },
+    ],
+    jurisdiction: { country: "France" },
+  }),
+  other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
+    rwa: true, goldOunces: 1 / 31.1035,
+    collateral: "Physical gold stored with Transguard in UAE (1 CGO = 1 gram of pure gold), Shariah-compliant",
+    pegMechanism: "Direct redemption for physical gold through Comtech Gold (DMCC-endorsed)",
+    links: [
+      { label: "Website", url: "https://www.comtechgold.com/" },
+    ],
+    jurisdiction: { country: "United Arab Emirates" },
   }),
 
   // ── Additional EUR-pegged ────────────────────────────────────────────

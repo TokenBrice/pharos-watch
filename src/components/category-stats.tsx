@@ -8,6 +8,7 @@ import { PEG_META } from "@/lib/peg-config";
 import { getCirculatingUSD, getPrevWeekUSD } from "@/lib/supply";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
+import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
 interface CategoryStatsProps {
   data: StablecoinData[] | undefined;
@@ -136,9 +137,9 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
             </div>
             <div className="space-y-1">
               {([
-                { label: "CeFi", pct: stats.cefiPct, mcap: stats.centralizedMcap, text: "text-yellow-500", bg: "bg-yellow-500" },
-                { label: "CeFi-Dep", pct: stats.depPct, mcap: stats.dependentMcap, text: "text-orange-500", bg: "bg-orange-500" },
-                { label: "DeFi", pct: stats.defiPct, mcap: stats.decentralizedMcap, text: "text-green-500", bg: "bg-green-500" },
+                { label: "CeFi", pct: stats.cefiPct, mcap: stats.centralizedMcap, ...GOVERNANCE_TIER_COLORS.centralized },
+                { label: "CeFi-Dep", pct: stats.depPct, mcap: stats.dependentMcap, ...GOVERNANCE_TIER_COLORS["centralized-dependent"] },
+                { label: "DeFi", pct: stats.defiPct, mcap: stats.decentralizedMcap, ...GOVERNANCE_TIER_COLORS.decentralized },
               ] as const).map((t) => (
                 <div key={t.label} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-1.5">

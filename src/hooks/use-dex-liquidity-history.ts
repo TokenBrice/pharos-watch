@@ -19,7 +19,9 @@ export function useDexLiquidityHistory(stablecoinId: string, days = 90) {
   return useQuery({
     queryKey: ["dex-liquidity-history", stablecoinId, days],
     queryFn: () => fetchDexLiquidityHistory(stablecoinId, days),
-    staleTime: 60 * 60 * 1000, // 1 hour
+    // Daily snapshots written once per day; cron runs every 10min but data changes slowly
+    staleTime: 60 * 60 * 1000,
+    refetchInterval: 2 * 60 * 60 * 1000,
     retry: 1,
   });
 }

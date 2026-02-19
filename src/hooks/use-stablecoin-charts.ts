@@ -18,7 +18,8 @@ export function useStablecoinCharts() {
   return useQuery({
     queryKey: ["stablecoin-charts"],
     queryFn: fetchStablecoinCharts,
+    // Worker syncs every 5min; poll at 2x interval
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 }

@@ -21,44 +21,17 @@ import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
 import type { StablecoinData, StablecoinMeta } from "@/lib/types";
-
-
-// --- Category colors (matching main page badges) ---
-
-const GOVERNANCE_STYLE: Record<string, { label: string; cls: string }> = {
-  centralized: { label: "Centralized", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-  "centralized-dependent": { label: "CeFi-Dependent", cls: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-  decentralized: { label: "Decentralized", cls: "bg-green-500/10 text-green-500 border-green-500/20" },
-};
-
-const BACKING_STYLE: Record<string, { label: string; cls: string }> = {
-  "rwa-backed": { label: "RWA-Backed", cls: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  "crypto-backed": { label: "Crypto-Backed", cls: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  algorithmic: { label: "Algorithmic", cls: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-};
-
-const PEG_STYLE: Record<string, { label: string; cls: string }> = {
-  USD: { label: "USD Peg", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  EUR: { label: "EUR Peg", cls: "bg-violet-500/10 text-violet-500 border-violet-500/20" },
-  GOLD: { label: "Gold Peg", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-  CHF: { label: "CHF Peg", cls: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
-  GBP: { label: "GBP Peg", cls: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20" },
-  BRL: { label: "BRL Peg", cls: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-  RUB: { label: "RUB Peg", cls: "bg-red-500/10 text-red-500 border-red-500/20" },
-  VAR: { label: "Variable Peg", cls: "bg-sky-500/10 text-sky-500 border-sky-500/20" },
-  OTHER: { label: "Other Peg", cls: "bg-slate-500/10 text-slate-500 border-slate-500/20" },
-};
-
-const POR_STYLE: Record<string, { label: string; cls: string }> = {
-  "independent-audit": { label: "Independent Audit", cls: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  "real-time": { label: "Real-Time PoR", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  "self-reported": { label: "Self-Reported PoR", cls: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
-};
+import {
+  GOVERNANCE_BADGE_STYLES,
+  BACKING_BADGE_STYLES,
+  PEG_BADGE_STYLES,
+  POR_BADGE_STYLES,
+} from "@/lib/classification";
 
 function MechanismCard({ meta }: { meta: StablecoinMeta }) {
-  const gov = GOVERNANCE_STYLE[meta.flags.governance];
-  const backing = BACKING_STYLE[meta.flags.backing];
-  const peg = PEG_STYLE[meta.flags.pegCurrency];
+  const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
+  const backing = BACKING_BADGE_STYLES[meta.flags.backing];
+  const peg = PEG_BADGE_STYLES[meta.flags.pegCurrency];
   const hasDescription = meta.collateral || meta.pegMechanism;
 
   return (
@@ -75,8 +48,8 @@ function MechanismCard({ meta }: { meta: StablecoinMeta }) {
           {meta.flags.rwa && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-500 border-sky-500/20">RWA</span>}
           {meta.flags.governance !== "decentralized" && (
             meta.proofOfReserves ? (
-              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_STYLE[meta.proofOfReserves.type].cls}`}>
-                {POR_STYLE[meta.proofOfReserves.type].label}
+              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}>
+                {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
               </span>
             ) : (
               <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-500 border-red-500/20">
@@ -109,7 +82,7 @@ function MechanismCard({ meta }: { meta: StablecoinMeta }) {
             {meta.proofOfReserves ? (
               <div className="space-y-1">
                 <p className="text-sm leading-relaxed">
-                  {POR_STYLE[meta.proofOfReserves.type].label}
+                  {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
                   {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
                 </p>
                 <a

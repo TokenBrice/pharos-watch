@@ -25,8 +25,9 @@ export function useBlacklistEvents() {
   return useQuery({
     queryKey: ["blacklist-events"],
     queryFn: fetchBlacklistEvents,
-    staleTime: 10 * 60 * 1000,      // 10 minutes
-    refetchInterval: 30 * 60 * 1000, // 30 minutes
+    // Worker syncs every 15min; poll at 2x interval
+    staleTime: 15 * 60 * 1000,
+    refetchInterval: 30 * 60 * 1000,
     retry: 1,
   });
 }

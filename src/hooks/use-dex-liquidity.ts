@@ -14,8 +14,9 @@ export function useDexLiquidity() {
   return useQuery({
     queryKey: ["dex-liquidity"],
     queryFn: fetchDexLiquidity,
+    // Worker syncs every 10min; poll at 2x interval
     staleTime: 10 * 60 * 1000,
-    refetchInterval: 10 * 60 * 1000,
+    refetchInterval: 20 * 60 * 1000,
     retry: 1,
   });
 }

@@ -14,8 +14,9 @@ export function useStablecoins() {
   return useQuery({
     queryKey: ["stablecoins"],
     queryFn: fetchStablecoins,
+    // Worker syncs every 5min; poll at 2x interval
     staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 }
 
@@ -30,6 +31,8 @@ export function useStablecoinDetail(id: string) {
     queryKey: ["stablecoin", id],
     queryFn: () => fetchStablecoinDetail(id),
     enabled: !!id,
+    // Worker syncs every 5min; poll at 2x interval
     staleTime: 5 * 60 * 1000,
+    refetchInterval: 10 * 60 * 1000,
   });
 }

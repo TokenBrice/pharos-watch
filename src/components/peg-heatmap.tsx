@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { deviationBgClass } from "@/lib/severity-colors";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
+import { GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 
 interface PegHeatmapProps {
   coins: PegSummaryCoin[];
@@ -32,9 +33,9 @@ const PEG_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
 
 const TYPE_OPTIONS: { value: GovernanceType | "all"; label: string }[] = [
   { value: "all", label: "All Types" },
-  { value: "centralized", label: "CeFi" },
-  { value: "centralized-dependent", label: "CeFi-Dep" },
-  { value: "decentralized", label: "DeFi" },
+  { value: "centralized", label: GOVERNANCE_LABELS_SHORT.centralized },
+  { value: "centralized-dependent", label: GOVERNANCE_LABELS_SHORT["centralized-dependent"] },
+  { value: "decentralized", label: GOVERNANCE_LABELS_SHORT.decentralized },
 ];
 
 /** Compound tile classes for heatmap cells, derived from shared severity thresholds. */

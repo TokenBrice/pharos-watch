@@ -1,4 +1,5 @@
 import { getCache, setCache } from "../lib/db";
+import { withErrorHandler } from "../lib/api-utils";
 
 const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
 const DEFILLAMA_COINS = "https://coins.llama.fi";
@@ -95,11 +96,11 @@ async function fetchGoldDetail(config: {
   return JSON.stringify({ tokens });
 }
 
-export async function handleStablecoinDetail(
+export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", async (
   db: D1Database,
   id: string,
   ctx: ExecutionContext
-): Promise<Response> {
+): Promise<Response> => {
   const cacheKey = `detail:${id}`;
   const cached = await getCache(db, cacheKey);
 
@@ -184,4 +185,4 @@ export async function handleStablecoinDetail(
       "Cache-Control": `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`,
     },
   });
-}
+});

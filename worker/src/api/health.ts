@@ -1,4 +1,5 @@
 import { getCache } from "../lib/db";
+import { withErrorHandler } from "../lib/api-utils";
 
 interface CacheStatus {
   ageSeconds: number | null;
@@ -19,7 +20,7 @@ const FRESHNESS_THRESHOLDS: Record<string, number> = {
   "usds-status": 86400,
 };
 
-export async function handleHealth(db: D1Database): Promise<Response> {
+export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
   const caches: Record<string, CacheStatus> = {};
   let worstRatio = 0;
@@ -65,4 +66,4 @@ export async function handleHealth(db: D1Database): Promise<Response> {
       "Cache-Control": "no-store",
     },
   });
-}
+});

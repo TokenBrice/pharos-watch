@@ -5,48 +5,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { THIRTY_DAYS_SECONDS } from "@/lib/constants";
+import { extractGoldPrices, computeBlacklistStats } from "@/lib/blacklist-helpers";
 import type { BlacklistEvent } from "@/lib/types";
-
-function computeStats(events: BlacklistEvent[], goldPrices: Record<string, number>) {
-  const nowSeconds = Date.now() / 1000;
-  const thirtyDaysAgo = nowSeconds - THIRTY_DAYS_SECONDS;
-
-  const usdcAddresses = new Map<string, number>();
-  const usdtAddresses = new Map<string, number>();
-  const goldAddresses = new Map<string, number>();
-
-  let destroyedTotal = 0;
-  let recentCount = 0;
-
-  for (const evt of events) {
-    const isGold = evt.stablecoin === "PAXG" || evt.stablecoin === "XAUT";
-    const map = isGold
-      ? goldAddresses
-      : evt.stablecoin === "USDC"
-        ? usdcAddresses
-        : usdtAddresses;
-
-    if (evt.eventType === "blacklist") {
-      map.set(evt.address, (map.get(evt.address) ?? 0) + 1);
-    } else if (evt.eventType === "unblacklist") {
-      map.set(evt.address, (map.get(evt.address) ?? 0) - 1);
-    } else if (evt.eventType === "destroy" && evt.amount != null) {
-      const usdMultiplier = isGold ? (goldPrices[evt.stablecoin] ?? 0) : 1;
-      destroyedTotal += evt.amount * usdMultiplier;
-    }
-
-    if (evt.timestamp >= thirtyDaysAgo) {
-      recentCount++;
-    }
-  }
-
-  const usdcBlacklisted = Array.from(usdcAddresses.values()).filter((v) => v > 0).length;
-  const usdtBlacklisted = Array.from(usdtAddresses.values()).filter((v) => v > 0).length;
-  const goldBlacklisted = Array.from(goldAddresses.values()).filter((v) => v > 0).length;
-
-  return { usdcBlacklisted, usdtBlacklisted, goldBlacklisted, destroyedTotal, recentCount };
-}
 
 interface BlacklistStatsProps {
   events: BlacklistEvent[] | undefined;
@@ -57,19 +17,13 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
   const { data: stablecoins } = useStablecoins();
 
   const goldPrices = useMemo(() => {
-    const prices: Record<string, number> = {};
-    if (!stablecoins) return prices;
-    for (const coin of stablecoins.peggedAssets) {
-      if (coin.symbol === "PAXG" || coin.symbol === "XAUT") {
-        if (typeof coin.price === "number") prices[coin.symbol] = coin.price;
-      }
-    }
-    return prices;
+    if (!stablecoins) return {};
+    return extractGoldPrices(stablecoins.peggedAssets);
   }, [stablecoins]);
 
   const stats = useMemo(() => {
     if (!events) return null;
-    return computeStats(events, goldPrices);
+    return computeBlacklistStats(events, goldPrices);
   }, [events, goldPrices]);
 
   if (isLoading) {

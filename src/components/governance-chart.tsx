@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/format";
 import { getCirculatingRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
+import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
 interface GovernanceDominanceProps {
   data: StablecoinData[] | undefined;
@@ -41,9 +42,9 @@ export function GovernanceChart({ data }: GovernanceDominanceProps) {
   if (!stats || stats.total === 0) return null;
 
   const tiers = [
-    { label: "Centralized", pct: stats.cefiPct, mcap: stats.centralized, text: "text-yellow-500", bg: "bg-yellow-500" },
-    { label: "CeFi-Dependent", pct: stats.depPct, mcap: stats.dependent, text: "text-orange-500", bg: "bg-orange-500" },
-    { label: "Decentralized", pct: stats.defiPct, mcap: stats.decentralized, text: "text-green-500", bg: "bg-green-500" },
+    { label: "Centralized", pct: stats.cefiPct, mcap: stats.centralized, ...GOVERNANCE_TIER_COLORS.centralized },
+    { label: "CeFi-Dependent", pct: stats.depPct, mcap: stats.dependent, ...GOVERNANCE_TIER_COLORS["centralized-dependent"] },
+    { label: "Decentralized", pct: stats.defiPct, mcap: stats.decentralized, ...GOVERNANCE_TIER_COLORS.decentralized },
   ];
 
   return (

@@ -1,6 +1,7 @@
 import { getCache } from "../lib/db";
+import { withErrorHandler } from "../lib/api-utils";
 
-export async function handleStablecoinCharts(db: D1Database): Promise<Response> {
+export const handleStablecoinCharts = withErrorHandler("stablecoin-charts", async (db: D1Database): Promise<Response> => {
   const cached = await getCache(db, "stablecoin-charts");
   if (!cached) {
     return new Response(JSON.stringify({ error: "Data not yet available" }), {
@@ -15,4 +16,4 @@ export async function handleStablecoinCharts(db: D1Database): Promise<Response> 
       "Cache-Control": "public, max-age=300",
     },
   });
-}
+});

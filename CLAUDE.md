@@ -1,6 +1,6 @@
 # Stablecoin Dashboard (Pharos)
 
-Public-facing analytics dashboard tracking ~118 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking ~130 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -177,6 +177,10 @@ src/                              # Next.js frontend (static export)
 │   ├── bluechip-rating-card.tsx   # Bluechip safety rating card (detail page)
 │   ├── dex-liquidity-card.tsx     # DEX liquidity card with trend chart (detail page)
 │   ├── usds-status-card.tsx      # USDS protocol status card
+│   ├── liquidity-stats.tsx       # Liquidity page summary stat cards + protocol/chain breakdown bars
+│   ├── liquidity-table.tsx       # Liquidity page sortable leaderboard table with pagination
+│   ├── sort-icon.tsx             # Shared sort direction arrow icon (used by 3 tables)
+│   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons (used by 2 charts)
 │   ├── theme-toggle.tsx          # Dark/light mode toggle
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
@@ -189,7 +193,10 @@ src/                              # Next.js frontend (static export)
 │   ├── use-bluechip-ratings.ts   # GET /api/bluechip-ratings
 │   ├── use-dex-liquidity.ts      # GET /api/dex-liquidity
 │   ├── use-dex-liquidity-history.ts # GET /api/dex-liquidity-history
-│   └── use-usds-status.ts        # GET /api/usds-status
+│   ├── use-usds-status.ts        # GET /api/usds-status
+│   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
+│   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
+│   └── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
 └── lib/
     ├── api.ts                    # API_BASE URL config (from NEXT_PUBLIC_API_BASE env var)
     ├── bluechip.ts               # Bluechip slug map, grade order, report URL base
@@ -198,28 +205,34 @@ src/                              # Next.js frontend (static export)
     ├── dead-stablecoins.ts       # 62 dead stablecoins with cause of death, peak mcap, obituaries
     ├── blacklist-contracts.ts    # Contract addresses + event configs (shared with worker)
     ├── format.ts                 # Currency, price, peg deviation, percent change formatters
-    ├── supply.ts                 # Shared supply helpers: getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD
+    ├── supply.ts                 # Shared supply helpers: getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, getPrevMonthUSD
     ├── chart-colors.ts           # Shared CHART_PALETTE for Recharts charts
     ├── peg-config.ts             # PEG_META: labels + Tailwind colors per peg currency
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics
+    ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
+    ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin(), extractGoldPrices(), computeBlacklistStats()
+    ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors
+    ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (11 total)
+├── migrations/                   # D1 SQL migrations (12 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
     ├── cron/
-    │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold + price enrichment → D1
+    │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
+    │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
+    │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
     │   ├── sync-bluechip.ts     # Bluechip safety ratings → D1 (6h cache)
-    │   └── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (10min) + daily snapshot + HHI + depth stability
+    │   └── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (10min) — decomposed into 8 named sub-functions with orchestrator
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
@@ -234,7 +247,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── health.ts             # GET /api/health
     │   └── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
     └── lib/
-        ├── db.ts                 # D1 read/write helpers (includes setCacheIfNewer CAS guard)
+        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery)
+        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE)
+        ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
+        ├── api-utils.ts          # withErrorHandler() wrapper for standardized API error handling
         └── fetch-retry.ts        # Fetch with retry + exponential backoff (configurable 404 handling)
 
 data/
@@ -296,7 +312,7 @@ These use synthetic IDs (`gold-xaut`, `gold-paxg`) since they're not in DefiLlam
 
 ## Price Enrichment Pipeline
 
-`enrichMissingPrices()` in `sync-stablecoins.ts` uses a 4-pass system for assets with missing or zero prices:
+`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 4-pass system for assets with missing or zero prices:
 
 1. **Pass 1:** Contract address → DefiLlama coins API (with multi-chain fallback)
 2. **Pass 2:** CoinGecko ID → DefiLlama CoinGecko proxy
@@ -378,7 +394,7 @@ Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin a
 3. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
 4. Store in `dex_prices` with top 5 source pools as JSON
 
-**Confirmation gate in `detectDepegEvents()`:**
+**Confirmation gate in `detectDepegEvents()` (`worker/src/cron/detect-depegs.ts`):**
 - When primary price shows depeg (≥100bps), check DEX price
 - If DEX price is fresh (<20 min) and shows coin at peg (<100bps): **suppress** new depeg event (likely false positive)
 - If DEX unavailable, stale, or confirms depeg: open event normally
@@ -403,13 +419,25 @@ Filters on the homepage use a multi-group AND logic:
 
 ## Key Patterns
 
-- **Circulating supply**: Use shared helpers from `src/lib/supply.ts` — `getCirculatingRaw(coin)` for raw sums, `getCirculatingUSD(coin, rates)` for FX-converted totals. Same pattern for `getPrevDayRaw/USD`, `getPrevWeekRaw/USD`, `getPrevMonthRaw`. For cross-currency totals (e.g. homepage "Total Tracked" stat), always use the USD variants which multiply each peg-denominated value by its FX rate from `derivePegRates()`
+- **Circulating supply**: Use shared helpers from `src/lib/supply.ts` — `getCirculatingRaw(coin)` for raw sums, `getCirculatingUSD(coin, rates)` for FX-converted totals. Same pattern for `getPrevDayRaw/USD`, `getPrevWeekRaw/USD`, `getPrevMonthRaw/USD`. For cross-currency totals (e.g. homepage "Total Tracked" stat), always use the USD variants which multiply each peg-denominated value by its FX rate from `derivePegRates()`
+- **Classification labels/colors**: All governance, backing, and peg labels plus badge/tier color maps are centralized in `src/lib/classification.ts`. Import from there instead of defining locally
+- **Sort state**: Use `useSort<K>()` from `src/hooks/use-sort.ts` + `<SortIcon>` from `src/components/sort-icon.tsx` for all sortable tables
+- **Time range filtering**: Use `useTimeRangeFilter()` from `src/hooks/use-time-range-filter.ts` + `<TimeRangeButtons>` from `src/components/time-range-buttons.tsx` for charts with range toggles
+- **URL filter state**: Use `useUrlFilters()` from `src/hooks/use-url-filters.ts` for pages that persist filter state in URL search params
+- **Peg interval merge**: Use `mergeDepegSeconds()` and `worstDeviation()` from `src/lib/peg-utils.ts` — shared between peg-score.ts and peg-stability.ts
+- **Blacklist stats**: Use `isGoldStablecoin()`, `extractGoldPrices()`, `computeBlacklistStats()` from `src/lib/blacklist-helpers.ts`
+- **Worker error handling**: All API handlers are wrapped with `withErrorHandler()` from `worker/src/lib/api-utils.ts` for standardized 500 responses
+- **Worker batch writes**: Use `batchExecute()` from `worker/src/lib/db.ts` for chunked D1 batch operations (respects D1_BATCH_SIZE limit)
+- **Worker pagination**: Use `buildPaginatedQuery()` from `worker/src/lib/db.ts` for WHERE + OFFSET/LIMIT SQL construction
+- **Worker depeg types**: Use `DepegRow` interface and `rowToDepegEvent()` mapper from `worker/src/lib/depeg-helpers.ts`
+- **Worker constants**: Use `DEPEG_THRESHOLD_BPS`, `DEX_FRESHNESS_SEC`, `D1_BATCH_SIZE` from `worker/src/lib/constants.ts`
 - **Tailwind class names**: Must be complete static strings — never construct classes dynamically (e.g., `color.replace("text-", "bg-")` won't work because Tailwind purges undetected classes)
 - **DefiLlama API quirk**: `/stablecoincharts/all` returns both `totalCirculating` (native currency units) and `totalCirculatingUSD` (USD-converted). Always use `totalCirculatingUSD` for cross-currency comparisons
 - **Price guards**: DefiLlama sometimes returns non-number prices. All formatters guard with `typeof price !== "number"` checks. `formatCurrency()` handles negative values (`-$5.00M` not `$-5.00M`) and non-finite values (returns `"N/A"`)
 - **Worker imports shared code**: The worker imports `types.ts`, `blacklist-contracts.ts`, `stablecoins.ts`, `peg-rates.ts`, and `peg-score.ts` from `../../../src/lib/` — wrangler's esbuild resolves these. The root `tsconfig.json` excludes `worker/` to avoid type conflicts with D1 types
 - **BigInt precision**: `decodeUint256()` in `sync-blacklist.ts` uses BigInt division (`raw / divisor` + `raw % divisor`) to avoid precision loss above 2^53. All balance-decoding callsites (EVM, dRPC, Tron) follow this pattern
 - **Table sort consistency**: 24h/7d columns sort by **percentage** change, not absolute dollar delta. This ensures small coins with large % moves sort correctly relative to large coins with tiny % changes
+- **Hook timing policy**: TanStack Query hooks use `staleTime = cron interval`, `refetchInterval = 2× cron interval`. E.g., useStablecoins: 5min/10min (*/5 cron), useBlacklistEvents: 15min/30min (*/15 cron), useBluechipRatings: 2h/4h (*/2h cron)
 
 ## Data Integrity Guardrails
 
