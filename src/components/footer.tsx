@@ -6,7 +6,7 @@ export function Footer() {
     <footer className="border-t py-6">
       <div className="container mx-auto px-4 space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+          <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
             <Link href="/peg-tracker" className="hover:text-foreground transition-colors">Peg Tracker</Link>
             <Link href="/blacklist" className="hover:text-foreground transition-colors">Freeze Tracker</Link>
@@ -19,7 +19,7 @@ export function Footer() {
             <span className="font-mono">Watching the peg.</span>
           </div>
         </div>
-        <nav aria-label="Browse by category" className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+        <nav aria-label="Browse by category" className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
           {CATEGORY_LINKS.map((cat) => (
             <Link
               key={cat.href}

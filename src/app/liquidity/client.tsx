@@ -40,11 +40,11 @@ const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
 ];
 
 function SortIcon({ columnKey, sort }: { columnKey: string; sort: SortConfig }) {
-  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-50" />;
+  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 text-muted-foreground/50" />;
   return sort.direction === "asc" ? (
-    <ArrowUp className="ml-1 inline h-3 w-3" />
+    <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-foreground" />
   ) : (
-    <ArrowDown className="ml-1 inline h-3 w-3" />
+    <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-foreground" />
   );
 }
 
@@ -439,8 +439,8 @@ export function LiquidityClient() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="rounded-2xl">
               <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
               <CardContent><Skeleton className="h-8 w-32" /></CardContent>
@@ -564,14 +564,14 @@ export function LiquidityClient() {
           </div>
         </div>
 
-        <div className="rounded-xl border overflow-x-auto table-striped">
+        <div className="rounded-xl border overflow-x-auto table-striped scroll-shadow">
           <Table>
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead className="w-[50px] text-right">#</TableHead>
                 <TableHead className="w-[200px]">Name</TableHead>
                 <TableHead
-                  className="cursor-pointer text-right"
+                  className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("score")}
                   aria-sort={getAriaSortValue("score")}
                   tabIndex={0}
@@ -580,7 +580,7 @@ export function LiquidityClient() {
                   Score <SortIcon columnKey="score" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer text-right"
+                  className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("tvl")}
                   aria-sort={getAriaSortValue("tvl")}
                   tabIndex={0}
@@ -589,7 +589,7 @@ export function LiquidityClient() {
                   DEX TVL <SortIcon columnKey="tvl" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden lg:table-cell cursor-pointer text-right"
+                  className="hidden lg:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("tvlTrend")}
                   aria-sort={getAriaSortValue("tvlTrend")}
                   tabIndex={0}
@@ -598,7 +598,7 @@ export function LiquidityClient() {
                   7d Trend <SortIcon columnKey="tvlTrend" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="cursor-pointer text-right"
+                  className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("volume")}
                   aria-sort={getAriaSortValue("volume")}
                   tabIndex={0}
@@ -607,7 +607,7 @@ export function LiquidityClient() {
                   24h Vol <SortIcon columnKey="volume" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden lg:table-cell cursor-pointer text-right"
+                  className="hidden lg:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("volume7d")}
                   aria-sort={getAriaSortValue("volume7d")}
                   tabIndex={0}
@@ -616,7 +616,7 @@ export function LiquidityClient() {
                   7d Vol <SortIcon columnKey="volume7d" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden sm:table-cell cursor-pointer text-right"
+                  className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("vtRatio")}
                   aria-sort={getAriaSortValue("vtRatio")}
                   tabIndex={0}
@@ -625,7 +625,7 @@ export function LiquidityClient() {
                   Vol/TVL <SortIcon columnKey="vtRatio" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden sm:table-cell cursor-pointer text-right"
+                  className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("pools")}
                   aria-sort={getAriaSortValue("pools")}
                   tabIndex={0}
@@ -634,7 +634,7 @@ export function LiquidityClient() {
                   Pools <SortIcon columnKey="pools" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden sm:table-cell cursor-pointer text-right"
+                  className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("chains")}
                   aria-sort={getAriaSortValue("chains")}
                   tabIndex={0}
@@ -644,7 +644,7 @@ export function LiquidityClient() {
                 </TableHead>
                 <TableHead className="hidden md:table-cell text-left">Top Protocol</TableHead>
                 <TableHead
-                  className="hidden xl:table-cell cursor-pointer text-right"
+                  className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("effectiveTvl")}
                   aria-sort={getAriaSortValue("effectiveTvl")}
                   tabIndex={0}
@@ -653,7 +653,7 @@ export function LiquidityClient() {
                   Eff. TVL <SortIcon columnKey="effectiveTvl" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden xl:table-cell cursor-pointer text-right"
+                  className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("balance")}
                   aria-sort={getAriaSortValue("balance")}
                   tabIndex={0}
@@ -662,7 +662,7 @@ export function LiquidityClient() {
                   Balance <SortIcon columnKey="balance" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden xl:table-cell cursor-pointer text-right"
+                  className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("organic")}
                   aria-sort={getAriaSortValue("organic")}
                   tabIndex={0}
@@ -671,7 +671,7 @@ export function LiquidityClient() {
                   Organic <SortIcon columnKey="organic" sort={sort} />
                 </TableHead>
                 <TableHead
-                  className="hidden xl:table-cell cursor-pointer text-right"
+                  className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
                   onClick={() => toggleSort("durability")}
                   aria-sort={getAriaSortValue("durability")}
                   tabIndex={0}

@@ -2,12 +2,13 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
+import { deviationBgClass } from "@/lib/severity-colors";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
 
 interface PegHeatmapProps {
@@ -36,9 +37,10 @@ const TYPE_OPTIONS: { value: GovernanceType | "all"; label: string }[] = [
   { value: "decentralized", label: "DeFi" },
 ];
 
-function deviationColor(absBps: number): string {
-  if (absBps >= 500) return "bg-red-600/20 border-red-600/50 text-red-600 dark:text-red-400";
-  if (absBps >= 200) return "bg-red-500/15 border-red-500/40 text-red-600 dark:text-red-400";
+/** Compound tile classes for heatmap cells, derived from shared severity thresholds. */
+function deviationTileClass(absBps: number): string {
+  if (absBps >= 500) return "bg-red-500/20 border-red-500/50 text-red-600 dark:text-red-400";
+  if (absBps >= 200) return "bg-orange-500/15 border-orange-500/40 text-orange-600 dark:text-orange-400";
   if (absBps >= 50) return "bg-amber-500/15 border-amber-500/40 text-amber-600 dark:text-amber-400";
   return "bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400";
 }
@@ -59,9 +61,9 @@ function FilterChips<T extends string>({
           key={opt.value}
           onClick={() => onChange(opt.value)}
           aria-pressed={value === opt.value}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+          className={`px-2.5 py-1.5 sm:py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
             value === opt.value
-              ? "bg-accent text-foreground"
+              ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
           }`}
         >
@@ -106,9 +108,18 @@ export function PegHeatmap({
                   placeholder="Search..."
                   value={searchQuery ?? ""}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-8 h-8 text-xs"
+                  className="pl-8 pr-7 h-9 sm:h-8 text-xs"
                   aria-label="Search stablecoins by name or symbol"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => onSearchChange("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -124,33 +135,41 @@ export function PegHeatmap({
         ) : sorted.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">No coins match filters</p>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-            {sorted.map((coin) => {
-              const absBps = Math.abs(coin.currentDeviationBps!);
-              const sign = coin.currentDeviationBps! >= 0 ? "+" : "";
-              const dex = coin.dexPriceCheck;
-              const dexDisagrees = dex && !dex.agrees;
-              return (
-                <Link
-                  key={coin.id}
-                  href={`/stablecoin/${coin.id}`}
-                  className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-transform hover:scale-105 ${deviationColor(absBps)}`}
-                  title={dexDisagrees
-                    ? `DEX price disagrees: $${dex.dexPrice.toFixed(4)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
-                    : undefined}
-                >
-                  {dexDisagrees && (
-                    <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white" aria-label="DEX price disagrees">!</span>
-                  )}
-                  <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
-                  <span className="text-[10px] font-medium truncate max-w-full">{coin.symbol}</span>
-                  <span className="text-[10px] font-mono font-semibold">
-                    {sign}{coin.currentDeviationBps}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+              {sorted.map((coin) => {
+                const absBps = Math.abs(coin.currentDeviationBps!);
+                const sign = coin.currentDeviationBps! >= 0 ? "+" : "";
+                const dex = coin.dexPriceCheck;
+                const dexDisagrees = dex && !dex.agrees;
+                return (
+                  <Link
+                    key={coin.id}
+                    href={`/stablecoin/${coin.id}`}
+                    className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-transform hover:scale-105 ${deviationTileClass(absBps)}`}
+                    title={dexDisagrees
+                      ? `DEX price disagrees: $${dex.dexPrice.toFixed(4)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
+                      : undefined}
+                  >
+                    {dexDisagrees && (
+                      <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white" aria-label="DEX price disagrees">!</span>
+                    )}
+                    <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
+                    <span className="text-[10px] font-medium truncate max-w-full">{coin.symbol}</span>
+                    <span className="text-[10px] font-mono font-semibold">
+                      {sign}{coin.currentDeviationBps}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(0)}`} /> &lt;50bps</div>
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(50)}`} /> 50-200</div>
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(200)}`} /> 200-500</div>
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(500)}`} /> &gt;500bps</div>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

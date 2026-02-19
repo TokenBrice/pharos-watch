@@ -113,7 +113,8 @@ export function BluechipRatingCard({ stablecoinId }: { stablecoinId: string }) {
                     : "bg-muted/20 text-muted-foreground border-border/50"
                 }`}
               >
-                {short}
+                <span className="sm:hidden">{short}</span>
+                <span className="hidden sm:inline">{full}</span>
               </span>
             );
           })}

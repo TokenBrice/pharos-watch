@@ -135,7 +135,7 @@ export default function AboutPage() {
               className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
             >
               TokenBrice
-              <ExternalLink className="inline h-3 w-3 ml-0.5 -mt-0.5" />
+              <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
             </a>
             , built with the help of{" "}
             <a
@@ -145,7 +145,7 @@ export default function AboutPage() {
               className="text-foreground underline underline-offset-4 hover:text-violet-500 transition-colors"
             >
               Claude
-              <ExternalLink className="inline h-3 w-3 ml-0.5 -mt-0.5" />
+              <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
             </a>
             .
           </p>
@@ -189,7 +189,7 @@ export default function AboutPage() {
               <span>
                 independent safety grades from{" "}
                 <a href="https://bluechip.org" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
-                  Bluechip<ExternalLink className="inline h-3 w-3 ml-0.5 -mt-0.5" />
+                  Bluechip<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
                 </a>
                 {" "}for rated stablecoins, using the SMIDGE framework (Stability, Management, Implementation, Decentralization, Governance, Externals)
               </span>
@@ -231,7 +231,7 @@ export default function AboutPage() {
         <CardHeader>
           <CardTitle as="h2">Peg Score Methodology</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
           <p>
             The{" "}
             <Link href="/peg-tracker" className="text-foreground underline underline-offset-4 hover:text-emerald-500 transition-colors">Peg Tracker</Link>
@@ -239,7 +239,7 @@ export default function AboutPage() {
             {" "}<span className="font-mono">0</span> to <span className="font-mono">100</span>, computed from its full depeg event history.
             The score combines three components:
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Time at Peg (50%)</span>
               <span>percentage of the tracking window where the coin stayed within its peg threshold — a coin that never depegged scores 100% here</span>
@@ -272,7 +272,7 @@ export default function AboutPage() {
         <CardHeader>
           <CardTitle as="h2">DEX Price Cross-Validation</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
           <p>
             To reduce false depeg alerts from single-source API glitches, Pharos cross-validates primary prices
             (from DefiLlama) against <span className="text-foreground font-medium">DEX-implied prices</span> derived
@@ -280,8 +280,8 @@ export default function AboutPage() {
             fetched every <span className="font-mono">10 minutes</span> for the liquidity score, and each pool
             response includes per-token USD prices.
           </p>
-          <p className="text-foreground font-medium pt-1">How It Works</p>
-          <ul className="space-y-2">
+          <p className="text-foreground font-medium pt-2">How It Works</p>
+          <ul className="space-y-3">
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Price Extraction</span>
               <span>
@@ -318,7 +318,7 @@ export default function AboutPage() {
         <CardHeader>
           <CardTitle as="h2">Liquidity Score Methodology</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
           <p>
             The{" "}
             <Link href="/liquidity" className="text-foreground underline underline-offset-4 hover:text-cyan-500 transition-colors">DEX Liquidity</Link>
@@ -326,7 +326,7 @@ export default function AboutPage() {
             {" "}<span className="font-mono">0</span> to <span className="font-mono">100</span>, measuring how easily it can be swapped at near-peg prices across decentralized exchanges.
             The score is a weighted composite of six components:
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">TVL Depth (30%)</span>
               <span>
@@ -361,11 +361,11 @@ export default function AboutPage() {
               <span>number of chains with DEX presence — 1 chain scores 15, each additional chain adds ~12 points up to 100</span>
             </li>
           </ul>
-          <p className="text-foreground font-medium pt-1">Pool Quality Adjustments</p>
+          <p className="text-foreground font-medium pt-2">Pool Quality Adjustments</p>
           <p>
             Each pool&apos;s TVL is adjusted by three multiplicative factors that together produce the effective TVL used for scoring:
           </p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-2.5">
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Mechanism</span>
               <span>
@@ -405,8 +405,8 @@ export default function AboutPage() {
             broken Curve pools, and dead/rugged protocols are excluded. CryptoSwap pools are correctly identified via Curve&apos;s{" "}
             <span className="font-mono">registryId</span> field and receive a lower multiplier than StableSwap.
           </p>
-          <p className="text-foreground font-medium pt-1">Per-Pool Health Signals</p>
-          <ul className="space-y-1.5">
+          <p className="text-foreground font-medium pt-2">Per-Pool Health Signals</p>
+          <ul className="space-y-2.5">
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Stress Index</span>
               <span>
@@ -426,8 +426,8 @@ export default function AboutPage() {
               </span>
             </li>
           </ul>
-          <p className="text-foreground font-medium pt-1">Aggregate Metrics</p>
-          <ul className="space-y-1.5">
+          <p className="text-foreground font-medium pt-2">Aggregate Metrics</p>
+          <ul className="space-y-2.5">
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Concentration (HHI)</span>
               <span>
@@ -463,12 +463,12 @@ export default function AboutPage() {
         <CardHeader>
           <CardTitle as="h2">Data Sources &amp; Infrastructure</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
           <p>
             All data is fetched server-side by a Cloudflare Worker and cached in a D1 database.
             The frontend never calls external APIs directly.
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             <li>
               <span className="text-foreground font-medium">DefiLlama</span> — primary source for stablecoin supply, price, chain distribution, and historical data.
               Refreshed every <span className="font-mono">5 minutes</span>.
@@ -492,14 +492,14 @@ export default function AboutPage() {
               <span className="text-foreground font-medium">Bluechip</span> — independent stablecoin safety ratings using the SMIDGE framework.
               Ratings refreshed every <span className="font-mono">6 hours</span>.{" "}
               <a href="https://bluechip.org" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
-                bluechip.org<ExternalLink className="inline h-3 w-3 ml-0.5 -mt-0.5" />
+                bluechip.org<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>
             </li>
             <li>
               <span className="text-foreground font-medium">European Central Bank</span> — live FX rates for non-USD peg groups (EUR, GBP, CHF, BRL), used as fallback validation for thin peg groups.
               Refreshed every <span className="font-mono">2 hours</span> via{" "}
               <a href="https://frankfurter.app" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
-                frankfurter.app<ExternalLink className="inline h-3 w-3 ml-0.5 -mt-0.5" />
+                frankfurter.app<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>.
             </li>
             <li>
@@ -533,7 +533,7 @@ export default function AboutPage() {
           >
             <Github className="inline h-3.5 w-3.5" />
             View on GitHub
-            <ExternalLink className="inline h-3 w-3" />
+            <ExternalLink className="inline h-3.5 w-3.5" />
           </a>
         </p>
         <p>
@@ -545,7 +545,7 @@ export default function AboutPage() {
             className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
           >
             tokenbrice.xyz
-            <ExternalLink className="inline h-3 w-3 ml-0.5 -mt-0.5" />
+            <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
           </a>
           .
         </p>

@@ -1,10 +1,20 @@
+"use client";
+
+import { useState, useMemo } from "react";
 import { ExternalLink } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { DEAD_STABLECOINS, CAUSE_META } from "@/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@/lib/format";
 import type { CauseOfDeath } from "@/lib/types";
 
+type SortKey = "date" | "peakMcap";
+
+const CAUSE_KEYS = Object.keys(CAUSE_META) as CauseOfDeath[];
+
 export function StablecoinCemetery() {
+  const [sortBy, setSortBy] = useState<SortKey>("date");
+  const [causeFilter, setCauseFilter] = useState<CauseOfDeath | null>(null);
+
   const byPeg = new Map<string, number>();
   const byCause = new Map<CauseOfDeath, number>();
   let totalDestroyed = 0;
@@ -14,6 +24,19 @@ export function StablecoinCemetery() {
     byCause.set(coin.causeOfDeath, (byCause.get(coin.causeOfDeath) ?? 0) + 1);
     if (coin.peakMcap) totalDestroyed += coin.peakMcap;
   }
+
+  const filteredAndSorted = useMemo(() => {
+    let list = causeFilter
+      ? DEAD_STABLECOINS.filter((c) => c.causeOfDeath === causeFilter)
+      : [...DEAD_STABLECOINS];
+
+    if (sortBy === "peakMcap") {
+      list = [...list].sort((a, b) => (b.peakMcap ?? 0) - (a.peakMcap ?? 0));
+    }
+    // "date" is the default order of DEAD_STABLECOINS (chronological), no re-sort needed
+
+    return list;
+  }, [sortBy, causeFilter]);
 
   return (
     <Card className="rounded-2xl border-l-[3px] border-l-zinc-500">
@@ -36,9 +59,51 @@ export function StablecoinCemetery() {
           ))}
         </div>
 
+        {/* Sort & filter controls */}
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortKey)}
+            className="text-sm rounded-lg border border-border bg-background px-2.5 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="date">Sort by Date</option>
+            <option value="peakMcap">Sort by Peak Market Cap</option>
+          </select>
+
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => setCauseFilter(null)}
+              className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                causeFilter === null
+                  ? "bg-foreground text-background border-foreground"
+                  : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/50"
+              }`}
+            >
+              All
+            </button>
+            {CAUSE_KEYS.map((key) => {
+              const meta = CAUSE_META[key];
+              const isActive = causeFilter === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setCauseFilter(isActive ? null : key)}
+                  className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+                    isActive
+                      ? `${meta.color} bg-foreground/5 border-current`
+                      : "text-muted-foreground border-border hover:text-foreground hover:border-foreground/30"
+                  }`}
+                >
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Obituary list */}
         <div className="rounded-xl border divide-y divide-border">
-          {DEAD_STABLECOINS.map((coin) => {
+          {filteredAndSorted.map((coin) => {
             const cause = CAUSE_META[coin.causeOfDeath];
             return (
               <div key={coin.symbol} id={`obituary-${coin.symbol}`} className="px-4 py-3.5 space-y-1.5 transition-all duration-500">
@@ -91,6 +156,12 @@ export function StablecoinCemetery() {
               </div>
             );
           })}
+
+          {filteredAndSorted.length === 0 && (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              No stablecoins match this filter.
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

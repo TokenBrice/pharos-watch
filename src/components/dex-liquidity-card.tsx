@@ -39,13 +39,6 @@ function getConcentrationLabel(hhi: number): { label: string; color: string } {
   return { label: "Low", color: "text-emerald-500" };
 }
 
-const TIER_BORDER = {
-  green: "border-l-emerald-500",
-  blue: "border-l-blue-500",
-  amber: "border-l-amber-500",
-  red: "border-l-red-500",
-};
-
 const TIER_TEXT = {
   green: "text-emerald-500",
   blue: "text-blue-500",
@@ -304,19 +297,19 @@ function ScoreBreakdown({ components }: {
 }) {
   if (!components) return null;
   const bars = [
-    { label: "TVL Depth", value: components.tvlDepth, weight: "30%" },
-    { label: "Volume", value: components.volumeActivity, weight: "20%" },
-    { label: "Pool Quality", value: components.poolQuality, weight: "20%" },
-    { label: "Durability", value: components.durability, weight: "15%" },
-    { label: "Diversity", value: components.pairDiversity, weight: "7.5%" },
-    { label: "Cross-chain", value: components.crossChain, weight: "7.5%" },
+    { label: "TVL Depth", value: components.tvlDepth, weight: "30%", tooltip: "Total value locked in DEX pools, quality-adjusted" },
+    { label: "Volume", value: components.volumeActivity, weight: "20%", tooltip: "Trading volume relative to pool TVL" },
+    { label: "Pool Quality", value: components.poolQuality, weight: "20%", tooltip: "Mechanism quality \u00d7 balance health \u00d7 pair quality" },
+    { label: "Durability", value: components.durability, weight: "15%", tooltip: "Organic fees, TVL stability, volume consistency, maturity" },
+    { label: "Diversity", value: components.pairDiversity, weight: "7.5%", tooltip: "Number of distinct liquidity pools" },
+    { label: "Cross-chain", value: components.crossChain, weight: "7.5%", tooltip: "Number of chains with active pools" },
   ];
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Score Breakdown</p>
-      {bars.map(({ label, value, weight }) => (
+      {bars.map(({ label, value, weight, tooltip }) => (
         <div key={label} className="flex items-center gap-2 text-xs">
-          <span className="w-24 text-muted-foreground shrink-0">{label} <span className="opacity-60">({weight})</span></span>
+          <span className="w-24 text-muted-foreground shrink-0 cursor-help" title={tooltip}>{label} <span className="opacity-60">({weight})</span></span>
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
               className={`h-full rounded-full ${
@@ -341,13 +334,14 @@ function DurabilityBadge({ score }: { score: number | null }) {
 
 function BalanceBar({ ratio }: { ratio: number }) {
   const pct = Math.round(ratio * 100);
-  const color = ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.5 ? "bg-amber-500" : "bg-red-500";
+  const bgColor = ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.5 ? "bg-amber-500" : "bg-red-500";
+  const textColor = ratio >= 0.8 ? "text-emerald-500" : ratio >= 0.5 ? "text-amber-500" : "text-red-500";
   return (
     <div className="flex items-center gap-1.5">
       <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full ${bgColor}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="font-mono tabular-nums text-xs">{pct}%</span>
+      <span className={`font-mono tabular-nums text-xs ${textColor}`}>{pct}%</span>
     </div>
   );
 }
@@ -386,7 +380,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl border-l-[3px] border-l-muted">
+      <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="pb-2">
           <Skeleton className="h-3 w-36" />
         </CardHeader>
@@ -408,7 +402,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const tier = getScoreTier(score);
 
   return (
-    <Card className={`rounded-2xl border-l-[3px] ${TIER_BORDER[tier]}`}>
+    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -502,7 +496,9 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             {liq.organicFraction != null && (
               <div>
                 <span className="text-muted-foreground">Organic: </span>
-                <span className="font-mono tabular-nums">{Math.round(liq.organicFraction * 100)}%</span>
+                <span className={`font-mono tabular-nums ${
+                  liq.organicFraction >= 0.8 ? "text-emerald-500" : liq.organicFraction >= 0.5 ? "text-amber-500" : "text-red-500"
+                }`}>{Math.round(liq.organicFraction * 100)}%</span>
               </div>
             )}
           </div>

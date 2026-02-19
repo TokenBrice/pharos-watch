@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { formatDuration, formatEventDate, formatWorstDeviation } from "@/lib/format";
 import type { DepegEvent } from "@/lib/types";
 
 interface DepegFeedProps {
@@ -15,18 +15,6 @@ interface DepegFeedProps {
 }
 
 const PAGE_SIZE = 20;
-
-function formatDuration(startSec: number, endSec: number | null): string {
-  if (!endSec) return "ongoing";
-  const days = Math.floor((endSec - startSec) / 86400);
-  if (days < 1) {
-    const hours = Math.floor((endSec - startSec) / 3600);
-    return `${hours}h`;
-  }
-  if (days < 30) return `${days}d`;
-  const months = Math.round(days / 30.44);
-  return `${months}mo`;
-}
 
 export function DepegFeed({ events, logos }: DepegFeedProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -74,9 +62,9 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                     </Badge>
                     {isOngoing && (
                       <span className="flex items-center gap-1 text-[10px] text-red-500 font-medium">
-                        <span className="relative flex h-1.5 w-1.5">
+                        <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
                         </span>
                         LIVE
                       </span>

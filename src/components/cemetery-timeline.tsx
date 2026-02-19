@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS, CAUSE_META } from "@/lib/dead-stablecoins";
@@ -24,6 +24,11 @@ const CAUSE_BORDER: Record<string, string> = {
 
 export function CemeteryTimeline() {
   const [hovered, setHovered] = useState<DeadStablecoin | null>(null);
+  const [tapped, setTapped] = useState<string | null>(null);
+
+  const handleMarkerClick = useCallback((symbol: string) => {
+    setTapped((prev) => (prev === symbol ? null : symbol));
+  }, []);
 
   const coins = DEAD_STABLECOINS.filter((c) => c.symbol !== "USNBT");
   if (coins.length === 0) return null;
@@ -75,7 +80,7 @@ export function CemeteryTimeline() {
               const pct = ((timestamps[i] - minTs) / range) * 100;
               const cause = CAUSE_META[coin.causeOfDeath];
               const borderColor = CAUSE_BORDER[coin.causeOfDeath] ?? "border-zinc-500";
-              const isHovered = hovered?.symbol === coin.symbol;
+              const isActive = hovered?.symbol === coin.symbol || tapped === coin.symbol;
               const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
 
               return (
@@ -85,6 +90,7 @@ export function CemeteryTimeline() {
                   style={{ left: `${pct}%`, top: 18 }}
                   onMouseEnter={() => setHovered(coin)}
                   onMouseLeave={() => setHovered(null)}
+                  onClick={() => handleMarkerClick(coin.symbol)}
                 >
                   {/* Vertical line to axis */}
                   <div className="w-px h-[32px] bg-border/50" />
@@ -92,7 +98,7 @@ export function CemeteryTimeline() {
                   {/* Logo or letter fallback */}
                   <div
                     className={`relative flex items-center justify-center rounded-full border-2 bg-background cursor-default transition-transform overflow-hidden ${borderColor} ${
-                      isHovered ? "scale-125 z-20" : "z-10"
+                      isActive ? "scale-125 z-20" : "z-10"
                     }`}
                     style={{ width: 28, height: 28 }}
                   >
@@ -113,7 +119,7 @@ export function CemeteryTimeline() {
                   </div>
 
                   {/* Tooltip */}
-                  {isHovered && (
+                  {isActive && (
                     <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 whitespace-nowrap rounded-md border bg-popover px-2.5 py-1.5 text-xs shadow-md">
                       <span className="font-semibold">{coin.name}</span>
                       <span className="text-muted-foreground"> ({coin.symbol})</span>

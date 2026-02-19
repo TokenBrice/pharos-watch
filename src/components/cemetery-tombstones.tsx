@@ -144,9 +144,20 @@ function Tombstone({
   return (
     <div
       className={`relative flex flex-col items-center ${staggerClass}`}
+      tabIndex={0}
+      role="button"
+      aria-label={`${coin.symbol} — ${coin.name}, ${CAUSE_META[coin.causeOfDeath].label}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
       onClick={() => onSelect(coin.symbol)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(coin.symbol);
+        }
+      }}
     >
       {/* Cross top for abandoned tombstones */}
       {shape === "cross" && (
@@ -236,7 +247,7 @@ function Tombstone({
 
       {/* Tooltip */}
       {hovered && (
-        <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 z-30 w-56 rounded-lg border bg-popover p-3 text-xs shadow-lg pointer-events-none">
+        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-30 w-56 rounded-lg border bg-popover p-3 text-xs shadow-lg pointer-events-none">
           <p className="font-semibold">{coin.name}</p>
           <p className="text-muted-foreground mt-1 leading-relaxed">
             {coin.obituary.split(". ")[0]}.
@@ -274,7 +285,7 @@ export function CemeteryTombstones() {
       </CardHeader>
       <CardContent>
         <div className="relative pb-8">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-x-3 gap-y-6 justify-items-center pt-16 pb-4">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-x-3 gap-y-6 justify-items-center pt-16 pb-4">
             {DEAD_STABLECOINS.map((coin, i) => (
               <Tombstone
                 key={coin.symbol}

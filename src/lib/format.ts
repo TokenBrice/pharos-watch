@@ -85,6 +85,29 @@ export function formatWorstDeviation(bps: number): string {
   return `${sign}${bps} bps`;
 }
 
+/**
+ * Format a duration between two epoch timestamps as a human-readable string.
+ * Returns two-unit precision for clarity: "2d 5h", "14h 30m", "45m".
+ * For very short durations: "< 1m". For ongoing events (null end): "Ongoing".
+ */
+export function formatDuration(startSec: number, endSec: number | null): string {
+  if (endSec === null) return "Ongoing";
+  const totalSeconds = endSec - startSec;
+  if (totalSeconds < 60) return "< 1m";
+
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (days > 0) {
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  }
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+}
+
 /** Format "YYYY-MM" death date as "Jan 2023" */
 export function formatDeathDate(d: string): string {
   const [year, month] = d.split("-");
@@ -99,4 +122,9 @@ export function formatDeathDateShort(d: string): string {
   if (!month) return year;
   const dt = new Date(Number(year), Number(month) - 1);
   return dt.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+}
+
+export function formatPercent(value: number, decimals = 1): string {
+  if (!Number.isFinite(value)) return "N/A";
+  return `${value >= 0 ? "" : "-"}${Math.abs(value).toFixed(decimals)}%`;
 }

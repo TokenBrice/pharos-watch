@@ -50,6 +50,8 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   bluechipRatings?: Record<string, BluechipRating>;
   dexLiquidity?: DexLiquidityMap;
+  onClearSearch?: () => void;
+  onClearFilters?: () => void;
 }
 
 function MiniSparkline({ values }: { values: number[] }) {
@@ -79,21 +81,21 @@ const BACKING_COLORS: Record<string, string> = {
 };
 
 const GOVERNANCE_COLORS: Record<string, string> = {
-  centralized: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+  centralized: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20",
   "centralized-dependent": "bg-orange-500/10 text-orange-500 border-orange-500/20",
   decentralized: "bg-green-500/10 text-green-500 border-green-500/20",
 };
 
 function SortIcon({ columnKey, sort }: { columnKey: string; sort: SortConfig }) {
-  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-50" />;
+  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 text-muted-foreground/50" />;
   return sort.direction === "asc" ? (
-    <ArrowUp className="ml-1 inline h-3 w-3" />
+    <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-foreground" />
   ) : (
-    <ArrowDown className="ml-1 inline h-3 w-3" />
+    <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-foreground" />
   );
 }
 
-export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, bluechipRatings, dexLiquidity }: StablecoinTableProps) {
+export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, bluechipRatings, dexLiquidity, onClearSearch, onClearFilters }: StablecoinTableProps) {
   const [sort, setSort] = useState<SortConfig>({ key: "mcap", direction: "desc" });
   const [page, setPage] = useState(0);
   const router = useRouter();
@@ -232,7 +234,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
       <div className="rounded-xl border overflow-hidden">
         <div className="bg-muted/50 h-10" />
         {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-4 py-3 border-t">
+          <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
             <Skeleton className="h-4 w-8 shrink-0" />
             <Skeleton className="h-6 w-6 rounded-full shrink-0" />
             <Skeleton className="h-4 w-28" />
@@ -249,13 +251,13 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   }
 
   return (
-    <div className="rounded-xl border overflow-x-auto table-striped">
+    <div className="rounded-xl border overflow-x-auto table-striped scroll-shadow">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
             <TableHead
-              className="w-[200px] cursor-pointer"
+              className="w-[200px] cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("name")}
               aria-sort={getAriaSortValue("name")}
               tabIndex={0}
@@ -264,7 +266,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               Name <SortIcon columnKey="name" sort={sort} />
             </TableHead>
             <TableHead
-              className="cursor-pointer text-right"
+              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("price")}
               aria-sort={getAriaSortValue("price")}
               tabIndex={0}
@@ -274,7 +276,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
             </TableHead>
             <TableHead className="text-right">Peg</TableHead>
             <TableHead
-              className="cursor-pointer text-right"
+              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("mcap")}
               aria-sort={getAriaSortValue("mcap")}
               tabIndex={0}
@@ -283,7 +285,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               Market Cap <SortIcon columnKey="mcap" sort={sort} />
             </TableHead>
             <TableHead
-              className="cursor-pointer text-right"
+              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("change24h")}
               aria-sort={getAriaSortValue("change24h")}
               tabIndex={0}
@@ -292,7 +294,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               24h <SortIcon columnKey="change24h" sort={sort} />
             </TableHead>
             <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right"
+              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("change7d")}
               aria-sort={getAriaSortValue("change7d")}
               tabIndex={0}
@@ -301,7 +303,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               7d <SortIcon columnKey="change7d" sort={sort} />
             </TableHead>
             <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right"
+              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("stability")}
               aria-sort={getAriaSortValue("stability")}
               tabIndex={0}
@@ -310,7 +312,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               Peg Score <SortIcon columnKey="stability" sort={sort} />
             </TableHead>
             <TableHead
-              className="hidden sm:table-cell cursor-pointer text-center"
+              className="hidden sm:table-cell cursor-pointer text-center hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("safety")}
               aria-sort={getAriaSortValue("safety")}
               tabIndex={0}
@@ -319,7 +321,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               Safety <SortIcon columnKey="safety" sort={sort} />
             </TableHead>
             <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right"
+              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("liquidity")}
               aria-sort={getAriaSortValue("liquidity")}
               tabIndex={0}
@@ -491,7 +493,24 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
           {sorted.length === 0 && (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
-                {searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}
+                <p>{searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}</p>
+                {(searchQuery || activeFilters.length > 0) && (
+                  <p className="mt-2 text-sm">
+                    {searchQuery && onClearSearch && (
+                      <button onClick={onClearSearch} className="text-primary hover:underline cursor-pointer text-sm">
+                        Clear search
+                      </button>
+                    )}
+                    {searchQuery && activeFilters.length > 0 && onClearSearch && onClearFilters && (
+                      <span className="mx-1.5">or</span>
+                    )}
+                    {activeFilters.length > 0 && onClearFilters && (
+                      <button onClick={onClearFilters} className="text-primary hover:underline cursor-pointer text-sm">
+                        Clear filters
+                      </button>
+                    )}
+                  </p>
+                )}
               </TableCell>
             </TableRow>
           )}
@@ -506,6 +525,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
             <Button
               variant="outline"
               size="sm"
+              className="h-10 min-w-10 sm:h-8 sm:min-w-8"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
             >
@@ -514,6 +534,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
             <Button
               variant="outline"
               size="sm"
+              className="h-10 min-w-10 sm:h-8 sm:min-w-8"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
             >

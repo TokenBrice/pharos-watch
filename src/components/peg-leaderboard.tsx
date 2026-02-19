@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatPegStability, formatWorstDeviation } from "@/lib/format";
+import { deviationColorClass } from "@/lib/severity-colors";
 import type { PegSummaryCoin } from "@/lib/types";
 
 interface PegLeaderboardProps {
@@ -83,13 +84,13 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
       </CardHeader>
       <CardContent className="p-0">
         {isLoading ? (
-          <div className="p-6 space-y-3">
+          <div className="p-6 space-y-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
+              <Skeleton key={i} className="h-9 w-full" />
             ))}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto scroll-shadow">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -99,7 +100,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                   {columns.map((col) => (
                     <TableHead
                       key={col.key}
-                      className="cursor-pointer select-none whitespace-nowrap"
+                      className="cursor-pointer select-none whitespace-nowrap hover:bg-muted/50 transition-colors"
                       onClick={() => handleSort(col.key)}
                       tabIndex={0}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort(col.key); } }}
@@ -107,7 +108,15 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                     >
                       <div className="flex items-center gap-1">
                         {col.label}
-                        <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
+                        {sortKey === col.key ? (
+                          sortDir === "asc" ? (
+                            <ArrowUp className="h-3.5 w-3.5 text-foreground" />
+                          ) : (
+                            <ArrowDown className="h-3.5 w-3.5 text-foreground" />
+                          )
+                        ) : (
+                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        )}
                       </div>
                     </TableHead>
                   ))}
@@ -117,7 +126,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                 {sorted.map((coin, i) => {
                   const isOdd = i % 2 !== 0;
                   return (
-                  <TableRow key={coin.id} className={isOdd ? "bg-muted/30" : ""}>
+                  <TableRow key={coin.id} className={`hover:bg-muted/50 ${isOdd ? "bg-muted/30" : ""}`}>
                     <TableCell className={`sticky left-0 z-10 ${isOdd ? "bg-muted" : "bg-background"}`}>
                       <Link
                         href={`/stablecoin/${coin.id}`}
@@ -138,11 +147,9 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                     <TableCell>
                       {coin.currentDeviationBps !== null ? (
                         <span className={`font-mono text-sm ${
-                          Math.abs(coin.currentDeviationBps) >= 50
-                            ? "text-red-500"
-                            : Math.abs(coin.currentDeviationBps) >= 10
-                              ? "text-amber-500"
-                              : "text-muted-foreground"
+                          Math.abs(coin.currentDeviationBps) < 10
+                            ? "text-muted-foreground"
+                            : deviationColorClass(Math.abs(coin.currentDeviationBps))
                         }`}>
                           {coin.currentDeviationBps >= 0 ? "+" : ""}{coin.currentDeviationBps} bps
                         </span>
@@ -158,9 +165,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                     </TableCell>
                     <TableCell>
                       {coin.worstDeviationBps !== null ? (
-                        <span className={`font-mono text-sm ${
-                          Math.abs(coin.worstDeviationBps) >= 500 ? "text-red-500" : "text-amber-500"
-                        }`}>
+                        <span className={`font-mono text-sm ${deviationColorClass(Math.abs(coin.worstDeviationBps))}`}>
                           {formatWorstDeviation(coin.worstDeviationBps)}
                         </span>
                       ) : (

@@ -37,9 +37,9 @@ export function Header() {
           {/* Desktop nav */}
           <div className="hidden sm:flex items-center gap-4">
             <div className="h-5 w-px bg-border" />
-            <nav className="flex items-center gap-1">
+            <nav aria-label="Main navigation" className="flex items-center gap-1">
               {NAV_ITEMS.map((item) => {
-                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                 const Icon = item.icon;
                 return (
                   <Link

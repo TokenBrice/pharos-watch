@@ -88,7 +88,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
   if (!stats) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="rounded-2xl">
               <CardHeader className="pb-1">
@@ -107,7 +107,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Tracked</CardTitle>
@@ -126,7 +126,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
         </Card>
         <Card className="rounded-2xl border-l-[3px] border-l-yellow-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Type</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Governance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
@@ -197,7 +197,7 @@ export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
         {stats.altTotal > 0 && (
           <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
             <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Non-USD-Pegged Stablecoins</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Alt-Peg Stablecoins</CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
               {stats.altPegs.map(([peg, mcap]) => {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { deviationColorHex } from "@/lib/severity-colors";
 import type { DepegEvent } from "@/lib/types";
 
 interface DepegTimelineProps {
@@ -17,12 +18,6 @@ type TimeRange = "1M" | "3M" | "1Y" | "ALL";
 const LANE_HEIGHT = 32;
 const LABEL_WIDTH = 100;
 const TICK_ROW_HEIGHT = 20;
-
-function severityColor(absBps: number): string {
-  if (absBps >= 500) return "#ef4444";
-  if (absBps >= 200) return "#f97316";
-  return "#f59e0b";
-}
 
 function getTimeRange(range: TimeRange, now: number): number {
   switch (range) {
@@ -88,6 +83,13 @@ export function DepegTimeline({ events, logos }: DepegTimelineProps) {
     return result;
   }, [startSec, endSec, timeSpan, range]);
 
+  const handleBarTouch = useCallback((evt: DepegEvent) => {
+    return (e: React.TouchEvent) => {
+      e.preventDefault();
+      setHoveredEvent((prev) => (prev?.id === evt.id ? null : evt));
+    };
+  }, []);
+
   const chartHeight = lanes.length * LANE_HEIGHT + 8;
 
   if (events.length === 0) return null;
@@ -123,7 +125,7 @@ export function DepegTimeline({ events, logos }: DepegTimelineProps) {
             No depeg events in this time range
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-w-5xl mx-auto">
             <div className="flex min-w-[400px] sm:min-w-[600px]">
               {/* Lane labels */}
               <div className="flex-shrink-0" style={{ width: LABEL_WIDTH }}>
@@ -186,7 +188,7 @@ export function DepegTimeline({ events, logos }: DepegTimelineProps) {
                       const w = Math.max(((evtEnd - evtStart) / timeSpan) * 1000, 3);
                       const y = laneIdx * LANE_HEIGHT + 4;
                       const h = LANE_HEIGHT - 8;
-                      const color = severityColor(Math.abs(evt.peakDeviationBps));
+                      const color = deviationColorHex(Math.abs(evt.peakDeviationBps));
                       const isOngoing = evt.endedAt === null;
 
                       return (
@@ -206,6 +208,7 @@ export function DepegTimeline({ events, logos }: DepegTimelineProps) {
                           opacity={hoveredEvent?.id === evt.id ? 1 : 0.7}
                           onMouseEnter={() => setHoveredEvent(evt)}
                           onMouseLeave={() => setHoveredEvent(null)}
+                          onTouchStart={handleBarTouch(evt)}
                         />
                       );
                     })

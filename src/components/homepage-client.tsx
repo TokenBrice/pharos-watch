@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -167,9 +167,18 @@ export function HomepageClient() {
               placeholder="Search by name or symbol..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs"
+              className="pl-8 pr-8 h-9 sm:h-8 text-xs"
               aria-label="Search stablecoins by name or symbol"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -189,7 +198,7 @@ export function HomepageClient() {
                     value={opt}
                     variant="outline"
                     size="sm"
-                    className="text-xs"
+                    className="text-xs py-1.5 sm:py-1"
                   >
                     {FILTER_TAG_LABELS[opt]}
                   </ToggleGroupItem>
@@ -210,11 +219,13 @@ export function HomepageClient() {
         pegScores={pegScores}
         bluechipRatings={bluechipRatings ?? undefined}
         dexLiquidity={dexLiquidity ?? undefined}
+        onClearSearch={() => setSearchQuery("")}
+        onClearFilters={clearAll}
       />
 
       {dataUpdatedAt > 0 && (
         <p className="text-xs text-muted-foreground text-center">
-          Last updated: {new Date(dataUpdatedAt).toLocaleTimeString()}
+          Last updated: {new Date(dataUpdatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short", timeZoneName: "short" })}
         </p>
       )}
     </div>

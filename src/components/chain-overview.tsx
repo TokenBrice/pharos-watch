@@ -59,7 +59,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
           <CardTitle as="h2">Chain Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[350px] w-full" />
+          <Skeleton className="h-[250px] sm:h-[350px] w-full" />
         </CardContent>
       </Card>
     );
@@ -71,8 +71,8 @@ export function ChainOverview({ data }: ChainOverviewProps) {
         <CardTitle as="h2">Chain Distribution</CardTitle>
       </CardHeader>
       <CardContent>
-        <div role="figure" aria-label="Chain distribution bar chart">
-        <ResponsiveContainer width="100%" height={350}>
+        <div className="h-[250px] sm:h-[350px]" role="figure" aria-label="Chain distribution bar chart">
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} horizontal={false} />
             <XAxis
@@ -92,7 +92,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
             />
             <Tooltip
               formatter={(value) => [formatCurrency(Number(value)), "TVL"]}
-              contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "0.5rem" }}
+              contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "var(--radius-lg, 0.5rem)" }}
               labelStyle={{ color: "var(--color-card-foreground)" }}
               itemStyle={{ color: "var(--color-card-foreground)" }}
             />

@@ -24,7 +24,7 @@ interface BlacklistTableProps {
 
 const EVENT_BADGE_STYLES: Record<string, string> = {
   blacklist: "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400",
-  unblacklist: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
+  unblacklist: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
   destroy: "bg-amber-500/15 text-amber-600 border-amber-500/30 dark:text-amber-400",
 };
 
@@ -35,11 +35,11 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 function SortIcon({ columnKey, sort }: { columnKey: string; sort: SortConfig }) {
-  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-50" />;
+  if (sort.key !== columnKey) return <ArrowUpDown className="ml-1 inline h-3.5 w-3.5 text-muted-foreground/50" />;
   return sort.direction === "asc" ? (
-    <ArrowUp className="ml-1 inline h-3 w-3" />
+    <ArrowUp className="ml-1 inline h-3.5 w-3.5 text-foreground" />
   ) : (
-    <ArrowDown className="ml-1 inline h-3 w-3" />
+    <ArrowDown className="ml-1 inline h-3.5 w-3.5 text-foreground" />
   );
 }
 
@@ -84,30 +84,41 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
+      <div className="rounded-xl border overflow-hidden">
+        <div className="bg-muted/50 h-10" />
         {Array.from({ length: 10 }).map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
+          <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
+            <Skeleton className="h-4 w-8 shrink-0" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-24" />
+            <div className="flex-1" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-4 shrink-0" />
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border table-header-sticky table-striped overflow-x-auto">
+    <div className="rounded-xl border table-header-sticky table-striped overflow-x-auto scroll-shadow">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead className="cursor-pointer" onClick={() => toggleSort("date")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("date"); } }} aria-sort={sort.key === "date" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("date")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("date"); } }} aria-sort={sort.key === "date" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
               Date <SortIcon columnKey="date" sort={sort} />
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => toggleSort("stablecoin")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("stablecoin"); } }} aria-sort={sort.key === "stablecoin" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("stablecoin")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("stablecoin"); } }} aria-sort={sort.key === "stablecoin" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
               Stablecoin <SortIcon columnKey="stablecoin" sort={sort} />
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => toggleSort("chain")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("chain"); } }} aria-sort={sort.key === "chain" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("chain")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("chain"); } }} aria-sort={sort.key === "chain" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
               Chain <SortIcon columnKey="chain" sort={sort} />
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => toggleSort("event")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("event"); } }} aria-sort={sort.key === "event" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
+            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("event")} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSort("event"); } }} aria-sort={sort.key === "event" ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
               Event <SortIcon columnKey="event" sort={sort} />
             </TableHead>
             <TableHead>Address</TableHead>
@@ -134,7 +145,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   href={evt.explorerAddressUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-mono text-xs hover:underline"
+                  className="block max-w-[120px] sm:max-w-none truncate sm:overflow-visible font-mono text-xs hover:underline"
                 >
                   {formatAddress(evt.address)}
                 </a>

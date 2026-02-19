@@ -12,20 +12,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatNativePrice, formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { formatDuration, formatNativePrice, formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { computePegStability } from "@/lib/peg-stability";
 import type { DepegEvent } from "@/lib/types";
-
-function formatDuration(startedAt: number, endedAt: number | null): string {
-  if (!endedAt) return "Ongoing";
-  const seconds = endedAt - startedAt;
-  const hours = Math.floor(seconds / 3600);
-  const days = Math.floor(hours / 24);
-  if (days > 0) return `${days}d ${hours % 24}h`;
-  if (hours > 0) return `${hours}h`;
-  return `${Math.floor(seconds / 60)}m`;
-}
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
   return [...events].sort((a, b) => {
@@ -49,7 +40,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
   const events = data?.events;
   if (!events || events.length === 0) {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-1">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Depeg History
@@ -82,7 +73,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
             {metrics.worstDeviationBps !== null && (
               <div>
                 <span className="text-muted-foreground">Worst Depeg </span>
-                <span className={`font-mono font-semibold ${Math.abs(metrics.worstDeviationBps) >= 500 ? "text-red-500" : "text-amber-500"}`}>
+                <span className={`font-mono font-semibold ${deviationColorClass(Math.abs(metrics.worstDeviationBps))}`}>
                   {formatWorstDeviation(metrics.worstDeviationBps)}
                 </span>
               </div>
@@ -105,7 +96,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
             </div>
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scroll-shadow">
           <Table>
             <TableHeader>
               <TableRow>
@@ -133,10 +124,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
 function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: string }) {
   const isOngoing = event.endedAt === null;
   const absBps = Math.abs(event.peakDeviationBps);
-  const isSevere = absBps >= 500;
-  const deviationColor = isSevere
-    ? "text-red-500"
-    : "text-amber-500";
+  const devColor = deviationColorClass(absBps);
 
   return (
     <TableRow>
@@ -155,7 +143,7 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
           {event.direction === "below" ? "Below" : "Above"}
         </Badge>
       </TableCell>
-      <TableCell className={`text-right font-mono ${deviationColor}`}>
+      <TableCell className={`text-right font-mono ${devColor}`}>
         {event.peakDeviationBps > 0 ? "+" : ""}
         {event.peakDeviationBps} bps
       </TableCell>

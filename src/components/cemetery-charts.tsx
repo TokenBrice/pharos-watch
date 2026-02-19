@@ -56,7 +56,8 @@ function CauseOfDeathByCountChart() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={260} aria-label="Cause of death distribution by count">
+        <div className="h-[250px] sm:h-[350px]">
+        <ResponsiveContainer width="100%" height="100%" aria-label="Cause of death distribution by count">
           <PieChart>
             <Pie
               data={data}
@@ -99,6 +100,7 @@ function CauseOfDeathByCountChart() {
             />
           </PieChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
@@ -133,7 +135,8 @@ function CauseOfDeathByMcapChart() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={260} aria-label="Cause of death distribution by peak market cap">
+        <div className="h-[250px] sm:h-[350px]">
+        <ResponsiveContainer width="100%" height="100%" aria-label="Cause of death distribution by peak market cap">
           <PieChart>
             <Pie
               data={data}
@@ -176,6 +179,7 @@ function CauseOfDeathByMcapChart() {
             />
           </PieChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
@@ -208,7 +212,8 @@ function DeathsByYearChart() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={260} aria-label="Stablecoin deaths per year">
+        <div className="h-[250px] sm:h-[350px]">
+        <ResponsiveContainer width="100%" height="100%" aria-label="Stablecoin deaths per year">
           <BarChart data={data} barGap={4}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
             <XAxis
@@ -263,6 +268,7 @@ function DeathsByYearChart() {
             <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill="#3b82f6" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
@@ -293,7 +299,8 @@ function TopFailuresChart() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={320} aria-label="Top 10 largest stablecoin failures">
+        <div className="h-[250px] sm:h-[350px]">
+        <ResponsiveContainer width="100%" height="100%" aria-label="Top 10 largest stablecoin failures">
           <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} horizontal={false} />
             <XAxis
@@ -331,6 +338,7 @@ function TopFailuresChart() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );
@@ -367,7 +375,8 @@ function CumulativeDestroyedChart() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={320} aria-label="Cumulative peak value destroyed over time">
+        <div className="h-[250px] sm:h-[350px]">
+        <ResponsiveContainer width="100%" height="100%" aria-label="Cumulative peak value destroyed over time">
           <AreaChart data={data}>
             <defs>
               <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
@@ -414,6 +423,7 @@ function CumulativeDestroyedChart() {
             />
           </AreaChart>
         </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

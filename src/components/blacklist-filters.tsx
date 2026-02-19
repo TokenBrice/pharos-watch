@@ -35,7 +35,7 @@ export function BlacklistFilters({
   }, [events]);
 
   return (
-    <div className="flex flex-wrap gap-6">
+    <div className="flex flex-wrap gap-4 sm:gap-6">
       <div className="space-y-1.5">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Stablecoin</span>
         <ToggleGroup

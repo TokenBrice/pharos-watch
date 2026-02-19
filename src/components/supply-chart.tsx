@@ -64,7 +64,7 @@ export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
   }, [chartData, range]);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Circulating Supply</CardTitle>
         <div className="flex gap-1">
@@ -86,8 +86,8 @@ export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
-          <div role="figure" aria-label={`Circulating supply chart showing ${filteredData.length} data points`}>
-          <ResponsiveContainer width="100%" height={350}>
+          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Circulating supply chart showing ${filteredData.length} data points`}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData}>
               <defs>
                 <linearGradient id="supplyGradient" x1="0" y1="0" x2="0" y2="1">
@@ -142,7 +142,7 @@ export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
           </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-[350px] items-center justify-center text-muted-foreground">
+          <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
             No supply data available
           </div>
         )}

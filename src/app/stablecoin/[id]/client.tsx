@@ -62,7 +62,7 @@ function MechanismCard({ meta }: { meta: StablecoinMeta }) {
   const hasDescription = meta.collateral || meta.pegMechanism;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Classification & Mechanism</CardTitle>
       </CardHeader>
@@ -139,7 +139,7 @@ function IssuerInfoCard({ meta }: { meta: StablecoinMeta }) {
   if (!hasLinks && !hasJurisdiction) return null;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Issuer Info</CardTitle>
       </CardHeader>
@@ -193,11 +193,10 @@ function BluechipBox({ stablecoinId, ratingsMap }: { stablecoinId: string; ratin
   if (!rating) return null;
 
   const order = GRADE_ORDER[rating.grade] ?? 0;
-  const borderColor = order >= 10 ? "border-l-emerald-500" : order >= 7 ? "border-l-blue-500" : order >= 4 ? "border-l-amber-500" : "border-l-red-500";
   const textColor = order >= 10 ? "text-emerald-500" : order >= 7 ? "text-blue-500" : order >= 4 ? "text-amber-500" : "text-red-500";
 
   return (
-    <Card className={`rounded-2xl border-l-[3px] ${borderColor}`}>
+    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
       <CardHeader className="pb-1">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bluechip Rating</CardTitle>
       </CardHeader>
@@ -226,11 +225,10 @@ function LiquidityBox({ stablecoinId, liquidityMap }: { stablecoinId: string; li
   if (!liq || (liq.liquidityScore === null && liq.poolCount === 0)) return null;
 
   const score = liq.liquidityScore ?? 0;
-  const borderColor = score >= 70 ? "border-l-emerald-500" : score >= 40 ? "border-l-amber-500" : "border-l-red-500";
   const textColor = score >= 70 ? "text-emerald-500" : score >= 40 ? "text-amber-500" : "text-red-500";
 
   return (
-    <Card className={`rounded-2xl border-l-[3px] ${borderColor}`}>
+    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
       <CardHeader className="pb-1">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidity Score</CardTitle>
       </CardHeader>
@@ -354,7 +352,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+        <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
           </CardHeader>
@@ -366,7 +364,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+        <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply Changes</CardTitle>
           </CardHeader>
@@ -387,15 +385,8 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
         </Card>
 
         {!isNavToken && (
-          <Card className={`rounded-2xl border-l-[3px] ${
-            pegScoreResult === null || pegScoreResult.pegScore === null
-              ? "border-l-muted-foreground"
-              : pegScoreResult.pegScore >= 90
-                ? "border-l-emerald-500"
-                : pegScoreResult.pegScore >= 70
-                  ? "border-l-amber-500"
-                  : "border-l-red-500"
-          }`}>
+          <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peg Score</CardTitle>
             </CardHeader>

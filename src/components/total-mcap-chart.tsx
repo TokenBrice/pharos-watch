@@ -57,7 +57,7 @@ export function TotalMcapChart() {
           <CardTitle as="h2">Total Stablecoin Market Cap</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[350px] w-full" />
+          <Skeleton className="h-[250px] sm:h-[350px] w-full" />
         </CardContent>
       </Card>
     );
@@ -86,8 +86,8 @@ export function TotalMcapChart() {
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
-          <div role="figure" aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}>
-          <ResponsiveContainer width="100%" height={350}>
+          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}>
+          <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData}>
               <defs>
                 <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
@@ -126,7 +126,7 @@ export function TotalMcapChart() {
                     year: "numeric",
                   })
                 }
-                contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "0.5rem" }}
+                contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "var(--radius-lg, 0.5rem)" }}
                 labelStyle={{ fontWeight: "bold", color: "var(--color-card-foreground)" }}
                 itemStyle={{ color: "var(--color-card-foreground)" }}
               />
@@ -141,7 +141,7 @@ export function TotalMcapChart() {
           </ResponsiveContainer>
           </div>
         ) : (
-          <div className="flex h-[350px] items-center justify-center text-muted-foreground">
+          <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
             No market cap data available
           </div>
         )}
