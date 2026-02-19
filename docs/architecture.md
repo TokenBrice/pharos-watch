@@ -100,8 +100,8 @@ src/                              # Next.js frontend (static export)
 └── lib/
     ├── api.ts                    # API_BASE URL config (from NEXT_PUBLIC_API_BASE env var)
     ├── bluechip.ts               # Bluechip slug map, grade order, report URL base
-    ├── types.ts                  # All TypeScript types, filter tag system
-    ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags
+    ├── types.ts                  # All TypeScript types, filter tag system (includes ContractDeployment)
+    ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags + contract addresses
     ├── dead-stablecoins.ts       # 63 dead stablecoins with cause of death, peak mcap, obituaries
     ├── blacklist-contracts.ts    # Contract addresses + event configs (shared with worker)
     ├── format.ts                 # Currency, price, peg deviation, percent change formatters
@@ -120,7 +120,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (12 total)
+├── migrations/                   # D1 SQL migrations (13 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -129,6 +129,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
+    │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
     │   ├── sync-bluechip.ts     # Bluechip safety ratings → D1 (6h cache)
@@ -147,7 +148,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── health.ts             # GET /api/health
     │   └── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
     └── lib/
-        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery)
+        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply)
+        ├── chain-rpcs.ts         # Chain RPC endpoint config for on-chain supply queries (11 chains: EVM + Tron)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
         ├── api-utils.ts          # withErrorHandler() wrapper for standardized API error handling

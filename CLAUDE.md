@@ -53,4 +53,4 @@ Read these when working on related code:
 - **`docs/architecture.md`** — Full file tree, API endpoints
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers, DEX price cross-validation
-- **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
+- **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync, on-chain supply verification

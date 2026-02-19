@@ -101,6 +101,10 @@ const worker = {
         break;
       case "*/10 * * * *":
         ctx.waitUntil(syncDexLiquidity(env.DB, env.GRAPH_API_KEY ?? null));
+        // On-chain supply runs every 30min (at :00 and :30 within the */10 schedule)
+        if (new Date(event.scheduledTime).getMinutes() % 30 === 0) {
+          ctx.waitUntil(syncOnchainSupply(env.DB, env.TRONGRID_API_KEY ?? null));
+        }
         break;
       case "*/15 * * * *":
         ctx.waitUntil(
@@ -113,9 +117,6 @@ const worker = {
         );
         ctx.waitUntil(syncUsdsStatus(env.DB, env.ETHERSCAN_API_KEY ?? null));
         ctx.waitUntil(syncBluechip(env.DB));
-        break;
-      case "*/30 * * * *":
-        ctx.waitUntil(syncOnchainSupply(env.DB, env.TRONGRID_API_KEY ?? null));
         break;
       case "0 */2 * * *":
         ctx.waitUntil(syncFxRates(env.DB));

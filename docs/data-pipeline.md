@@ -28,6 +28,59 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 11. **Backfill atomicity**: `backfill-depegs.ts` runs DELETE + INSERT in a single `db.batch()` call (D1 batch is transactional)
 12. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 13. **Freshness header**: `/api/stablecoins` returns `X-Data-Updated-At` header from the cache timestamp
+14. **On-chain supply override**: `syncOnchainSupply()` writes to `onchain_supply` table; main sync reads it and overrides DefiLlama data when on-chain diverges >5%. 2-hour freshness guard prevents stale on-chain data from being used. Wrapped in try/catch so failures don't block the main sync
+
+## On-Chain Supply Verification
+
+`syncOnchainSupply()` in `worker/src/cron/sync-onchain-supply.ts` runs every 30 minutes and queries `totalSupply()` on-chain for stablecoins that have contract addresses configured in `src/lib/stablecoins.ts`.
+
+### How It Works
+
+1. Iterates `TRACKED_STABLECOINS`, collects all entries with `contracts` defined
+2. Groups contracts by chain ID
+3. For EVM chains: sends a **JSON-RPC batch** of `eth_call` requests for `totalSupply()` (selector `0x18160ddd`) — one HTTP POST per chain
+4. For Tron: calls `triggerConstantContract` sequentially per contract
+5. Parses `BigInt` results, divides by `10^decimals` to get human-readable supply
+6. Writes per-chain supply to D1 `onchain_supply` table via `INSERT OR REPLACE`
+
+All chains are queried in parallel. Individual contract/chain failures are logged and skipped without blocking others.
+
+### Override Logic
+
+In `sync-stablecoins.ts`, after DefiLlama data is fetched and prices are enriched but before cache write:
+
+1. Reads `onchain_supply` rows with 2-hour freshness (`updated_at > now - 7200`)
+2. For each stablecoin with on-chain data, compares on-chain total supply (token units) with DefiLlama supply (`llamaMcap / price`)
+3. If divergence exceeds **5%**: overrides `circulating` with `onchainTotal × price` (USD, matching DefiLlama convention), and overwrites `chainCirculating` and `chains`
+4. If divergence is within 5%, keeps DefiLlama data (small differences are normal — DefiLlama may exclude burned tokens, lock contracts, etc.)
+
+The override is wrapped in `try/catch` so failures never block the main sync.
+
+### Contract Address Registry
+
+Contract addresses are stored in the `contracts` field of `StablecoinMeta` in `src/lib/stablecoins.ts`:
+
+```typescript
+interface ContractDeployment {
+  chain: string;      // Chain ID matching CHAIN_RPCS (e.g., "ethereum", "tron")
+  address: string;    // Contract address (0x... for EVM, T... for Tron)
+  decimals: number;   // Token decimals
+}
+```
+
+Chain RPC endpoints are configured in `worker/src/lib/chain-rpcs.ts` (11 chains: Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Gnosis, Fantom, Celo, Tron).
+
+### D1 Table
+
+```sql
+CREATE TABLE onchain_supply (
+  stablecoin_id TEXT NOT NULL,
+  chain TEXT NOT NULL,
+  supply REAL NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (stablecoin_id, chain)
+);
+```
 
 ## Blacklist Sync State Semantics
 

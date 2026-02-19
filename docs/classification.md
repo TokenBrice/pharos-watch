@@ -42,6 +42,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 - `proofOfReserves?: ProofOfReserves` — proof of reserves configuration
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
+- `contracts?: ContractDeployment[]` — on-chain contract addresses per chain (used for supply verification and displayed on detail page)
 
 ## Non-USD Peg Handling
 
