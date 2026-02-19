@@ -528,6 +528,16 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
         const divergence = Math.abs(onchainTotal - llamaSupply) / Math.max(llamaSupply, 1);
         if (divergence <= 0.05) continue; // Within 5%, keep DefiLlama
 
+        // Guard: never override if on-chain total is dramatically LOWER than DefiLlama.
+        // RPC glitches returning low/partial values are far more likely than DL over-reporting.
+        if (onchainTotal < llamaSupply * 0.5) {
+          console.warn(
+            `[sync-stablecoins] Rejecting on-chain override for ${asset.symbol}: ` +
+            `on-chain ${onchainTotal.toFixed(0)} is <50% of DL ${llamaSupply.toFixed(0)} — likely RPC issue`
+          );
+          continue;
+        }
+
         // Override: recompute circulating in USD (DefiLlama convention)
         const pegKey = Object.keys(circ ?? {})[0] ?? asset.pegType ?? "peggedUSD";
         const newMcap = onchainTotal * price;
@@ -560,6 +570,21 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     }
   } catch (err) {
     console.error("[sync-stablecoins] On-chain supply override failed:", err);
+  }
+
+  // Post-override sanity check: re-validate total supply after on-chain overrides
+  const postOverrideSupply = llamaData.peggedAssets
+    .filter((a) => trackedIds.has(a.id))
+    .reduce((sum, a) => {
+      const circ = a.circulating as Record<string, number> | undefined;
+      return sum + (circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0);
+    }, 0);
+  if (postOverrideSupply < 100_000_000_000) {
+    console.error(
+      `[sync-stablecoins] Post-override total supply $${(postOverrideSupply / 1e9).toFixed(1)}B ` +
+      `is below $100B floor (pre-override was $${(totalSupply / 1e9).toFixed(1)}B), skipping cache write`
+    );
+    return;
   }
 
   // Embed live FX fallback rates if available
