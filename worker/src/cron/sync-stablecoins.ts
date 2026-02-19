@@ -1,6 +1,6 @@
 import { setCacheIfNewer, getCache, getPriceCache, savePriceCache, getOnchainSupply } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import type { StablecoinData } from "../../../src/lib/types";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enrich-prices";
 import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
@@ -502,6 +502,19 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
       for (const [stablecoinId, chainSupplies] of byStablecoin) {
         const asset = llamaData.peggedAssets.find((a) => String(a.id) === stablecoinId);
         if (!asset) continue;
+
+        // Skip override if we don't have on-chain data for ALL configured chains
+        // (partial data would produce a wrong, lower total)
+        const meta = TRACKED_META_BY_ID.get(stablecoinId);
+        if (meta?.contracts) {
+          const configuredChains = new Set(meta.contracts.map((c) => c.chain));
+          const dataChains = new Set(chainSupplies.map((cs) => cs.chain));
+          const missing = [...configuredChains].filter((c) => !dataChains.has(c));
+          if (missing.length > 0) {
+            console.warn(`[sync-stablecoins] Skipping on-chain override for ${asset.symbol}: missing chains ${missing.join(", ")}`);
+            continue;
+          }
+        }
 
         const onchainTotal = chainSupplies.reduce((s, c) => s + c.supply, 0);
         const price = asset.price as number | null;

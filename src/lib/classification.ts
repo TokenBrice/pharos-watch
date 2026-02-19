@@ -63,7 +63,7 @@ export const PEG_LABELS: Record<PegCurrency, string> = {
   ZAR: "the South African Rand",
   GOLD: "Gold",
   SILVER: "Silver",
-  VAR: "a Variable (CPI-linked) target",
+  VAR: "CPI",
   OTHER: "Other",
 };
 
@@ -83,7 +83,7 @@ export const PEG_LABELS_SHORT: Record<PegCurrency, string> = {
   ZAR: "South African Rand",
   GOLD: "Gold",
   SILVER: "Silver",
-  VAR: "Variable (CPI-linked)",
+  VAR: "CPI",
   OTHER: "Other",
 };
 
@@ -144,7 +144,7 @@ export const PEG_BADGE_STYLES: Record<PegCurrency, BadgeStyle> = {
   ZAR: { label: "ZAR Peg", cls: "bg-fuchsia-500/10 text-fuchsia-500 border-fuchsia-500/20" },
   GOLD: { label: "Gold Peg", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
   SILVER: { label: "Silver Peg", cls: "bg-gray-400/10 text-gray-400 border-gray-400/20" },
-  VAR: { label: "Variable Peg", cls: "bg-sky-500/10 text-sky-500 border-sky-500/20" },
+  VAR: { label: "CPI Peg", cls: "bg-sky-500/10 text-sky-500 border-sky-500/20" },
   OTHER: { label: "Other Peg", cls: "bg-slate-500/10 text-slate-500 border-slate-500/20" },
 };
 
@@ -222,6 +222,6 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
   AUD: { label: "AUD", textColor: "text-indigo-500", bgColor: "bg-indigo-500" },
   ZAR: { label: "Rand", textColor: "text-fuchsia-500", bgColor: "bg-fuchsia-500" },
   SILVER: { label: "Silver", textColor: "text-gray-400", bgColor: "bg-gray-400" },
-  VAR: { label: "Variable", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
+  VAR: { label: "CPI", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
   OTHER: { label: "Other", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500" },
 };

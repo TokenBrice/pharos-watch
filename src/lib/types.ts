@@ -103,7 +103,7 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "aud-peg": "AUD Peg",
   "zar-peg": "ZAR Peg",
   "silver-peg": "Silver Peg",
-  "var-peg": "Variable Peg",
+  "var-peg": "CPI Peg",
   "other-peg": "Other Peg",
   centralized: "Centralized",
   "centralized-dependent": "CeFi-Dependent",

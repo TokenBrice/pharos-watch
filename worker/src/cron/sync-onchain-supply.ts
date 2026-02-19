@@ -9,13 +9,14 @@ interface ContractQuery {
   contract: ContractDeployment;
 }
 
-/** Fetch totalSupply for a batch of EVM contracts on one chain via JSON-RPC batch */
-async function fetchEvmTotalSupply(
+/** Run a JSON-RPC batch and parse totalSupply results into the map */
+async function runEvmBatch(
   rpcUrl: string,
-  queries: ContractQuery[]
-): Promise<Map<string, number>> {
-  const results = new Map<string, number>();
+  queries: ContractQuery[],
+  results: Map<string, number>
+): Promise<ContractQuery[]> {
   const selector = "0x18160ddd"; // totalSupply()
+  const failed: ContractQuery[] = [];
 
   const batchBody = queries.map((q, i) => ({
     jsonrpc: "2.0",
@@ -34,14 +35,18 @@ async function fetchEvmTotalSupply(
 
     if (!res.ok) {
       console.error(`[onchain-supply] RPC batch failed for ${rpcUrl}: ${res.status}`);
-      return results;
+      return queries; // all failed
     }
 
     const responses = (await res.json()) as { id: number; result?: string; error?: unknown }[];
 
     for (const resp of responses) {
       const query = queries[resp.id];
-      if (!query || !resp.result || resp.result === "0x") continue;
+      if (!query) continue;
+      if (!resp.result || resp.result === "0x" || resp.error) {
+        failed.push(query);
+        continue;
+      }
 
       try {
         const rawBigInt = BigInt(resp.result);
@@ -52,10 +57,29 @@ async function fetchEvmTotalSupply(
         }
       } catch {
         console.warn(`[onchain-supply] Failed to parse supply for ${query.stablecoinId} on ${query.contract.chain}`);
+        failed.push(query);
       }
     }
   } catch (err) {
     console.error(`[onchain-supply] RPC request failed for ${rpcUrl}:`, err);
+    return queries; // all failed
+  }
+
+  return failed;
+}
+
+/** Fetch totalSupply for a batch of EVM contracts, with optional fallback RPC */
+async function fetchEvmTotalSupply(
+  rpcUrl: string,
+  queries: ContractQuery[],
+  fallbackRpcUrl?: string
+): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  const failed = await runEvmBatch(rpcUrl, queries, results);
+
+  if (failed.length > 0 && fallbackRpcUrl) {
+    console.log(`[onchain-supply] Retrying ${failed.length} failed queries on fallback RPC`);
+    await runEvmBatch(fallbackRpcUrl, failed, results);
   }
 
   return results;
@@ -146,7 +170,7 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey: string | nul
       (async () => {
         let results: Map<string, number>;
         if (rpc.type === "evm") {
-          results = await fetchEvmTotalSupply(rpc.rpcUrl, queries);
+          results = await fetchEvmTotalSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl);
         } else {
           results = await fetchTronTotalSupply(rpc.rpcUrl, queries, tronApiKey);
         }

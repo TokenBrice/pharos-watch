@@ -8,7 +8,7 @@ export interface ChainRpcConfig {
 }
 
 export const CHAIN_RPCS: ChainRpcConfig[] = [
-  { chainId: "ethereum",  chainName: "Ethereum",  type: "evm",  rpcUrl: "https://cloudflare-eth.com",              explorerUrl: "https://etherscan.io" },
+  { chainId: "ethereum",  chainName: "Ethereum",  type: "evm",  rpcUrl: "https://cloudflare-eth.com",  fallbackRpcUrl: "https://eth.llamarpc.com",  explorerUrl: "https://etherscan.io" },
   { chainId: "arbitrum",  chainName: "Arbitrum",  type: "evm",  rpcUrl: "https://arb1.arbitrum.io/rpc",            explorerUrl: "https://arbiscan.io" },
   { chainId: "base",      chainName: "Base",      type: "evm",  rpcUrl: "https://mainnet.base.org",                explorerUrl: "https://basescan.org" },
   { chainId: "optimism",  chainName: "Optimism",  type: "evm",  rpcUrl: "https://mainnet.optimism.io",             explorerUrl: "https://optimistic.etherscan.io" },

@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { HomepageClient } from "@/components/homepage-client";
-import { CategoryNav } from "@/components/category-nav";
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
@@ -50,9 +49,6 @@ export default function HomePage() {
           deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
           fallen stablecoins — updated every 5 minutes.
         </p>
-        <Suspense fallback={null}>
-          <CategoryNav />
-        </Suspense>
       </div>
       <Suspense fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
