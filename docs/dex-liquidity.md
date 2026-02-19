@@ -70,7 +70,7 @@ Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin a
 `dex_prices` table (migration 0011) stores DEX-implied USD prices extracted from Curve StableSwap pools. Updated every 10 minutes during `syncDexLiquidity()` at zero additional API cost.
 
 **Price extraction pipeline:**
-1. During Curve API parsing, collect price observations for each tracked stablecoin from pools with TVL >= $50K and balance ratio >= 0.3
+1. During Curve API parsing, collect price observations for each tracked stablecoin from pools with TVL >= `DEXSCREENER_MIN_LIQUIDITY_USD` ($50K) and balance ratio >= 0.3
 2. Compute TVL-weighted median per stablecoin (robust against single distorted pool)
 3. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
 4. Store in `dex_prices` with top 5 source pools as JSON

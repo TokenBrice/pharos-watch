@@ -101,13 +101,14 @@ src/                              # Next.js frontend (static export)
 │   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
+│   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 9 data hooks)
 │   └── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
 └── lib/
     ├── api.ts                    # API_BASE URL config (from NEXT_PUBLIC_API_BASE env var)
     ├── bluechip.ts               # Bluechip slug map, grade order, report URL base
     ├── types.ts                  # All TypeScript types, filter tag system (includes ContractDeployment)
     ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags + contract addresses
-    ├── dead-stablecoins.ts       # 63 dead stablecoins with cause of death, peak mcap, obituaries
+    ├── dead-stablecoins.ts       # 74 dead stablecoins with cause of death, peak mcap, obituaries
     ├── blacklist-contracts.ts    # Contract addresses + event configs (shared with worker)
     ├── format.ts                 # Currency, price, peg deviation, percent change formatters
     ├── supply.ts                 # Shared supply helpers: getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD
@@ -119,7 +120,7 @@ src/                              # Next.js frontend (static export)
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin(), extractGoldPrices(), computeBlacklistStats()
-    ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors
+    ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors, chart hex colors (PEG_CHART_COLORS, BLACKLIST_CHART_COLORS)
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
@@ -132,7 +133,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
     │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
-    │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation
+    │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */10 cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
@@ -156,7 +157,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply, logCronRun)
         ├── chain-rpcs.ts         # Chain RPC endpoint config for on-chain supply queries (11 chains: EVM + Tron)
-        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE)
+        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, DEXSCREENER_MIN_LIQUIDITY_USD, TRON_BURN_ADDRESS, GECKO_ID_OVERRIDES)
+        ├── auth.ts               # Timing-safe admin key comparison (crypto.subtle.timingSafeEqual)
+        ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
         ├── api-utils.ts          # withErrorHandler() wrapper for standardized API error handling
         └── fetch-retry.ts        # Fetch with retry + exponential backoff (configurable 404 handling)

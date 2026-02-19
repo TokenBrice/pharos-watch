@@ -15,7 +15,7 @@
 
 The sync pipeline includes multiple layers of validation to prevent bad data from reaching users:
 
-1. **Structural validation**: DefiLlama response must contain 50+ assets with valid `id`, `name`, `symbol`, and `circulating` fields. Malformed objects are dropped before caching
+1. **Structural validation**: DefiLlama response must contain `MIN_VALID_ASSET_COUNT` (50) assets with valid `id`, `name`, `symbol`, and `circulating` fields. Malformed objects are dropped before caching
 2. **Supply sanity floor**: Cache write is skipped if total tracked supply falls below $100B (current total ~$230B). Prevents a partial DefiLlama outage from showing $0 market cap
 3. **Price validation ordering**: `isReasonablePrice()` rejects prices outside peg-type bounds **before** `savePriceCache()`, not after
 4. **Concurrent cron guard**: `setCacheIfNewer()` uses a compare-and-swap pattern — a slow sync run can't overwrite a newer run's data. Uses `syncStartSec` as CAS guard
@@ -28,7 +28,15 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 11. **Backfill atomicity**: `backfill-depegs.ts` runs DELETE + INSERT in a single `db.batch()` call (D1 batch is transactional)
 12. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 13. **Freshness header**: `/api/stablecoins` returns `X-Data-Updated-At` header from the cache timestamp
-14. **On-chain supply override**: `syncOnchainSupply()` writes to `onchain_supply` table; main sync reads it and overrides DefiLlama data when on-chain diverges >5%. 2-hour freshness guard prevents stale on-chain data from being used. Wrapped in try/catch so failures don't block the main sync
+14. **On-chain supply override**: `syncOnchainSupply()` writes to `onchain_supply` table; main sync reads it and overrides DefiLlama data when on-chain diverges >5%. 2-hour freshness guard prevents stale on-chain data from being used. Wrapped in try/catch so failures don't block the main sync. BigInt-to-number conversion uses shared `bigIntToDecimal()` from `worker/src/lib/bigint.ts` (handles >15 decimal tokens safely)
+15. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) use `crypto.subtle.timingSafeEqual()` for key comparison, preventing timing side-channel attacks
+16. **Pagination caps**: `/api/blacklist` and `/api/depeg-events` cap `limit` to `Math.min(limit, 1000)` to prevent unbounded result sets
+17. **Unbounded query guard**: `/api/peg-summary` adds `LIMIT 10000` to depeg_events query
+18. **Cache-empty 503**: `/api/peg-summary` returns HTTP 503 (not 200) when cache is empty, signaling data unavailability
+19. **Orphan depeg cleanup**: `detectDepegEvents()` closes open depeg events whose stablecoin was not processed during the current run (removed from tracked list, failed validation, etc.)
+20. **Cron prune resilience**: `logCronRun()` wraps old-entry pruning in try/catch so prune failures don't crash the cron after successful completion
+21. **Security headers**: Worker adds `X-Content-Type-Options: nosniff` to all responses
+22. **Admin cache bypass**: `/api/backfill-depegs` skips the response cache (alongside `/api/health` and `/api/status`)
 
 ## On-Chain Supply Verification
 
@@ -39,8 +47,8 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 1. Iterates `TRACKED_STABLECOINS`, collects all entries with `contracts` defined
 2. Groups contracts by chain ID
 3. For EVM chains: sends a **JSON-RPC batch** of `eth_call` requests for `totalSupply()` (selector `0x18160ddd`) — one HTTP POST per chain
-4. For Tron: calls `triggerConstantContract` sequentially per contract
-5. Parses `BigInt` results, divides by `10^decimals` to get human-readable supply
+4. For Tron: calls `triggerConstantContract` sequentially per contract (excludes `TRON_BURN_ADDRESS` from supply)
+5. Parses `BigInt` results via `bigIntToDecimal()` (from `worker/src/lib/bigint.ts`) to get human-readable supply
 6. Writes per-chain supply to D1 `onchain_supply` table via `INSERT OR REPLACE`
 
 All chains are queried in parallel. Individual contract/chain failures are logged and skipped without blocking others.

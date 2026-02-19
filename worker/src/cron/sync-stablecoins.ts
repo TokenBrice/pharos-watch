@@ -39,7 +39,7 @@ const SILVER_TOKENS: SilverTokenConfig[] = [
   { internalId: "silver-kag", geckoId: "kinesis-silver", name: "Kinesis Silver", symbol: "KAG", silverOunces: 1 },
 ];
 
-async function fetchSilverTokens(): Promise<unknown[]> {
+async function fetchSilverTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
   if (SILVER_TOKENS.length === 0) return [];
   try {
     // Fetch prices from DefiLlama coins API
@@ -51,23 +51,11 @@ async function fetchSilverTokens(): Promise<unknown[]> {
     }
     const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
 
-    // Fetch market caps from CoinGecko
+    // Use pre-fetched CoinGecko market cap data
     const mcapMap: Record<string, number> = {};
-    const ids = SILVER_TOKENS.map((t) => t.geckoId).join(",");
-    try {
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-        { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
-      );
-      if (res.ok) {
-        const data = (await res.json()) as Record<string, { usd_market_cap?: number }>;
-        for (const t of SILVER_TOKENS) {
-          const mcap = data[t.geckoId]?.usd_market_cap;
-          if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
-        }
-      }
-    } catch {
-      // CoinGecko fallback failed
+    for (const t of SILVER_TOKENS) {
+      const mcap = cgData[t.geckoId]?.usd_market_cap;
+      if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
     }
 
     return SILVER_TOKENS
@@ -105,7 +93,7 @@ async function fetchSilverTokens(): Promise<unknown[]> {
   }
 }
 
-async function fetchGoldTokens(): Promise<unknown[]> {
+async function fetchGoldTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
   try {
     // Fetch prices from DefiLlama coins API
     const coinIds = GOLD_TOKENS.map((t) => `coingecko:${t.geckoId}`).join(",");
@@ -134,25 +122,11 @@ async function fetchGoldTokens(): Promise<unknown[]> {
       });
     await Promise.all(protocolFetches);
 
-    // Fallback: fetch mcap from CoinGecko for tokens without a DefiLlama protocol slug
+    // Fallback: use pre-fetched CoinGecko data for tokens without a DefiLlama protocol slug
     const noSlugTokens = GOLD_TOKENS.filter((t) => !t.protocolSlug && !mcapMap[t.internalId]);
-    if (noSlugTokens.length > 0) {
-      const ids = noSlugTokens.map((t) => t.geckoId).join(",");
-      try {
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-          { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
-        );
-        if (res.ok) {
-          const data = (await res.json()) as Record<string, { usd_market_cap?: number }>;
-          for (const t of noSlugTokens) {
-            const mcap = data[t.geckoId]?.usd_market_cap;
-            if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
-          }
-        }
-      } catch {
-        // CoinGecko fallback failed — tokens will be skipped
-      }
+    for (const t of noSlugTokens) {
+      const mcap = cgData[t.geckoId]?.usd_market_cap;
+      if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
     }
 
     const nowSec = Math.floor(Date.now() / 1000);
@@ -234,7 +208,7 @@ const FIAT_COINGECKO_TOKENS: FiatCoinGeckoConfig[] = [
   { internalId: "cg-deuro", geckoId: "decentralized-euro", name: "Decentralized Euro", symbol: "DEURO", pegType: "peggedEUR", pegKey: "peggedEUR" },
 ];
 
-async function fetchFiatCoinGeckoTokens(): Promise<unknown[]> {
+async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
   if (FIAT_COINGECKO_TOKENS.length === 0) return [];
   try {
     // Fetch prices from DefiLlama coins API
@@ -246,23 +220,11 @@ async function fetchFiatCoinGeckoTokens(): Promise<unknown[]> {
     }
     const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
 
-    // Fetch market caps from CoinGecko
+    // Use pre-fetched CoinGecko market cap data
     const mcapMap: Record<string, number> = {};
-    const ids = FIAT_COINGECKO_TOKENS.map((t) => t.geckoId).join(",");
-    try {
-      const res = await fetch(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-        { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
-      );
-      if (res.ok) {
-        const data = (await res.json()) as Record<string, { usd_market_cap?: number }>;
-        for (const t of FIAT_COINGECKO_TOKENS) {
-          const mcap = data[t.geckoId]?.usd_market_cap;
-          if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
-        }
-      }
-    } catch {
-      // CoinGecko fallback failed
+    for (const t of FIAT_COINGECKO_TOKENS) {
+      const mcap = cgData[t.geckoId]?.usd_market_cap;
+      if (mcap && mcap > 0) mcapMap[t.internalId] = mcap;
     }
 
     return FIAT_COINGECKO_TOKENS
@@ -304,21 +266,35 @@ const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string;
   { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
 ];
 
-async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
+type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number }>;
+
+async function fetchCoinGeckoMarketData(): Promise<CoinGeckoMcapData> {
+  const ids = [
+    ...GOLD_TOKENS.filter((t) => !t.protocolSlug).map((t) => t.geckoId),
+    ...SILVER_TOKENS.map((t) => t.geckoId),
+    ...FIAT_COINGECKO_TOKENS.map((t) => t.geckoId),
+    ...SUPPLY_OVERRIDE_COINS.map((c) => c.geckoId),
+  ].join(",");
+  if (!ids) return {};
+
+  const res = await fetchWithRetry(
+    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
+    { headers: { Accept: "application/json", "User-Agent": USER_AGENT } }
+  );
+  if (!res || !res.ok) {
+    console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${res?.status ?? "no response"}`);
+    return {};
+  }
+  return (await res.json()) as CoinGeckoMcapData;
+}
+
+async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcapData): Promise<void> {
   if (SUPPLY_OVERRIDE_COINS.length === 0) return;
 
-  const ids = SUPPLY_OVERRIDE_COINS.map((c) => c.geckoId).join(",");
   try {
-    const res = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-      { headers: { Accept: "application/json", "User-Agent": USER_AGENT } }
-    );
-    if (!res.ok) return;
-    const data = (await res.json()) as Record<string, { usd?: number; usd_market_cap?: number }>;
-
     for (const override of SUPPLY_OVERRIDE_COINS) {
       const asset = assets.find((a) => String(a.id) === override.llamaId);
-      const geckoData = data[override.geckoId];
+      const geckoData = cgData[override.geckoId];
       if (!asset || !geckoData) continue;
 
       const price = geckoData.usd;
@@ -359,11 +335,13 @@ async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
 export async function syncStablecoins(db: D1Database): Promise<void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
+  const cgData = await fetchCoinGeckoMarketData();
+
   const [llamaRes, goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
     fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`),
-    fetchGoldTokens(),
-    fetchSilverTokens(),
-    fetchFiatCoinGeckoTokens(),
+    fetchGoldTokens(cgData),
+    fetchSilverTokens(cgData),
+    fetchFiatCoinGeckoTokens(cgData),
   ]);
 
   if (!llamaRes || !llamaRes.ok) {
@@ -396,7 +374,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   }
 
   // Patch corrupted supply data from DefiLlama using CoinGecko
-  await patchSupplyOverrides(llamaData.peggedAssets);
+  await patchSupplyOverrides(llamaData.peggedAssets, cgData);
 
   // Patch known missing/wrong geckoIds so enrichMissingPrices can resolve them
   // GECKO_ID_OVERRIDES imported from ../lib/constants

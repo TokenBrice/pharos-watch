@@ -26,7 +26,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 ### Peg Currency
 
-`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `IDR`, `SGD`, `TRY`, `AUD`, `GOLD`, `VAR` (variable/CPI-linked), `OTHER`
+`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `IDR`, `SGD`, `TRY`, `AUD`, `ZAR`, `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), `OTHER`
 
 ### Boolean Flags
 
