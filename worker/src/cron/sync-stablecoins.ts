@@ -303,8 +303,8 @@ async function fetchFiatCoinGeckoTokens(): Promise<unknown[]> {
   }
 }
 
-const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string }[] = [
-  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB" }, // DL supply data corrupted
+const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
+  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — always use CoinGecko
 ];
 
 async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
@@ -332,8 +332,8 @@ async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
       const circ = asset.circulating as Record<string, number> | undefined;
       const oldSupply = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
 
-      // Only override if CoinGecko value is dramatically different (>10x)
-      if (oldSupply > 0 && mcap / oldSupply < 10) continue;
+      // Skip override if DL is close enough — unless force flag is set
+      if (!override.force && oldSupply > 0 && mcap / oldSupply < 10) continue;
 
       asset.circulating = { [override.pegKey]: mcap };
       asset.price = price;
