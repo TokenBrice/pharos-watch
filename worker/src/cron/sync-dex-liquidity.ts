@@ -458,7 +458,11 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   }
 
   // Address → stablecoinId lookup for disambiguation (learned from Curve coins[].address)
-  const addressToId = new Map<string, string>();
+  // Seed with known addresses for colliding symbols (e.g. reUSD vs REUSD)
+  const addressToId = new Map<string, string>([
+    ["0x5086bf358635b81d8c47c66d1c8b9e567db70c72", "339"], // Re Protocol reUSD
+    ["0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a", "256"], // Resupply REUSD
+  ]);
 
   // --- 2. Parse Curve API responses for A-factor, balance data, and per-token prices ---
   const curvePoolMap = new Map<string, {

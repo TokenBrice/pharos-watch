@@ -92,7 +92,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos and gold-pegged tokens, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, and the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation.",
+                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, and Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB.",
                 },
               },
             ],
@@ -474,7 +474,7 @@ export default function AboutPage() {
               Refreshed every <span className="font-mono">5 minutes</span>.
             </li>
             <li>
-              <span className="text-foreground font-medium">CoinGecko</span> — stablecoin logos, gold-pegged token data (XAUT, PAXG are not in DefiLlama&apos;s stablecoin API), and fallback price enrichment for assets DefiLlama misses.
+              <span className="text-foreground font-medium">CoinGecko</span> — stablecoin logos, gold-pegged token data (XAUT, PAXG are not in DefiLlama&apos;s stablecoin API), fallback price enrichment for assets DefiLlama misses, and supply overrides for coins with corrupted upstream data.
               Logos refresh every <span className="font-mono">6 hours</span>.
             </li>
             <li>
@@ -500,6 +500,13 @@ export default function AboutPage() {
               Refreshed every <span className="font-mono">2 hours</span> via{" "}
               <a href="https://frankfurter.app" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
                 frankfurter.app<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+              </a>.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">Exchange Rate API</span> — live RUB/USD rate, since the ECB does not publish ruble rates (sanctions).
+              Refreshed every <span className="font-mono">2 hours</span> via{" "}
+              <a href="https://open.er-api.com" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
+                open.er-api.com<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>.
             </li>
             <li>

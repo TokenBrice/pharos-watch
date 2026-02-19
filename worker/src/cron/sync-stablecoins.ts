@@ -144,6 +144,53 @@ async function fetchGoldTokens(): Promise<unknown[]> {
   }
 }
 
+const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string }[] = [
+  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB" }, // DL supply data corrupted
+];
+
+async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
+  if (SUPPLY_OVERRIDE_COINS.length === 0) return;
+
+  const ids = SUPPLY_OVERRIDE_COINS.map((c) => c.geckoId).join(",");
+  try {
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
+      { headers: { Accept: "application/json", "User-Agent": "stablecoin-dashboard/1.0" } }
+    );
+    if (!res.ok) return;
+    const data = (await res.json()) as Record<string, { usd?: number; usd_market_cap?: number }>;
+
+    for (const override of SUPPLY_OVERRIDE_COINS) {
+      const asset = assets.find((a) => String(a.id) === override.llamaId);
+      const geckoData = data[override.geckoId];
+      if (!asset || !geckoData) continue;
+
+      const price = geckoData.usd;
+      const mcap = geckoData.usd_market_cap;
+      if (!price || !mcap || price <= 0) continue;
+
+      // Derive supply in peg currency: mcap / price = circulating tokens (1:1 peg)
+      const supplyInPeg = mcap / price;
+      const circ = asset.circulating as Record<string, number> | undefined;
+      const oldSupply = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
+
+      // Only override if CoinGecko supply is dramatically different (>10x)
+      if (oldSupply > 0 && supplyInPeg / oldSupply < 10) continue;
+
+      asset.circulating = { [override.pegKey]: supplyInPeg };
+      // Clear historical supply (DL data unreliable) — shows "N/A" for changes
+      (asset as Record<string, unknown>).circulatingPrevDay = null;
+      (asset as Record<string, unknown>).circulatingPrevWeek = null;
+      (asset as Record<string, unknown>).circulatingPrevMonth = null;
+      console.log(
+        `[sync-stablecoins] Supply override for ${asset.symbol}: ${oldSupply.toFixed(0)} → ${supplyInPeg.toFixed(0)} ${override.pegKey}`
+      );
+    }
+  } catch (err) {
+    console.warn("[sync-stablecoins] Supply override fetch failed:", err);
+  }
+}
+
 interface PeggedAsset {
   id: string;
   name: string;
@@ -393,8 +440,11 @@ async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> {
 /** Guard against corrupted API prices that would break peg deviation calculations */
 function isReasonablePrice(price: number, pegType: string | undefined): boolean {
   if (!pegType) return price > 0 && price < 100_000;
-  if (pegType.includes("USD") || pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL") || pegType.includes("RUB")) {
+  if (pegType.includes("USD") || pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL")) {
     return price > 0.01 && price < 50;
+  }
+  if (pegType.includes("RUB")) {
+    return price > 0.005 && price < 50; // RUB ~$0.0127, lower bound allows for further weakening
   }
   if (pegType.includes("GOLD")) return price > 100 && price < 100_000;
   return price > 0 && price < 100_000;
@@ -437,6 +487,9 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[]];
   }
 
+  // Patch corrupted supply data from DefiLlama using CoinGecko
+  await patchSupplyOverrides(llamaData.peggedAssets);
+
   // Patch known missing/wrong geckoIds so enrichMissingPrices can resolve them
   const GECKO_ID_OVERRIDES: Record<string, string> = {
     "226": "frankencoin",              // ZCHF — DL price intermittently returns 0
@@ -459,6 +512,19 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     }
     if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
       asset.address = ADDRESS_OVERRIDES[asset.id];
+    }
+  }
+
+  // Pre-validate: route unreasonable DefiLlama prices through enrichment
+  for (const asset of llamaData.peggedAssets) {
+    if (
+      asset.price != null &&
+      typeof asset.price === "number" &&
+      asset.price !== 0 &&
+      !isReasonablePrice(asset.price, asset.pegType as string | undefined)
+    ) {
+      console.warn(`[sync-stablecoins] Pre-rejected bad DL price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
+      asset.price = 0; // hasMissingPrice() treats 0 as missing
     }
   }
 

@@ -31,6 +31,7 @@ Cloudflare Workers (stablecoin-api)
   ├── Cron: */5 * * * *   → syncStablecoins (DefiLlama + CoinGecko gold) + syncStablecoinCharts
   ├── Cron: */10 * * * *  → syncDexLiquidity (DeFiLlama Yields + Curve API)
   ├── Cron: */15 * * * *  → syncBlacklist (Etherscan/TronGrid/dRPC) + syncUsdsStatus
+  ├── Cron: 0 */2 * * *   → syncFxRates (frankfurter.app + Exchange Rate API for RUB) + syncBluechip
   └── API endpoints (see below)
 
 Cloudflare D1 (stablecoin-db)
@@ -85,7 +86,7 @@ GitHub variable: `API_BASE_URL` (Worker URL)
 ## Data Sources
 
 - **DefiLlama** (`stablecoins.llama.fi`, `coins.llama.fi`) — primary source for stablecoin supply, price, chain distribution, and history
-- **CoinGecko** — gold-pegged stablecoin data (XAUT, PAXG are not in DefiLlama's stablecoin API), fallback price enrichment
+- **CoinGecko** — gold-pegged stablecoin data (XAUT, PAXG are not in DefiLlama's stablecoin API), fallback price enrichment, supply overrides for coins with corrupted upstream data
 - **DexScreener** — best-effort price fallback (Pass 4) for assets DefiLlama and CoinGecko both miss, using on-chain DEX pair data filtered by liquidity
 - **Etherscan v2** — USDC, USDT, EURC, PAXG, XAUT freeze/blacklist events across EVM chains
 - **TronGrid** — USDT freeze/blacklist events on Tron
@@ -93,6 +94,7 @@ GitHub variable: `API_BASE_URL` (Worker URL)
 - **Bluechip** (`backend.bluechip.org`) — independent stablecoin safety ratings using the SMIDGE framework. Refreshed every 6 hours
 - **DeFiLlama Yields** (`yields.llama.fi`) — DEX pool TVL, trading volume, and pool composition across all protocols and chains. Used for DEX liquidity scoring
 - **Curve Finance API** (`api.curve.finance`) — pool-level amplification coefficients (A-factor) and per-token balances for quality-adjusted TVL weighting and imbalance detection
+- **Exchange Rate API** (`open.er-api.com`) — live RUB/USD rate, since the ECB does not publish ruble rates (sanctions). Falls back to hardcoded rate if unavailable
 
 All external API calls go through the Cloudflare Worker. The frontend never calls external APIs directly.
 

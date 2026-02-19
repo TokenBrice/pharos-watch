@@ -214,7 +214,7 @@ function DeathsByYearChart() {
       <CardContent>
         <div className="h-[250px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%" aria-label="Stablecoin deaths per year">
-          <BarChart data={data} barGap={4}>
+          <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
             <XAxis
               dataKey="year"
@@ -377,7 +377,7 @@ function CumulativeDestroyedChart() {
       <CardContent>
         <div className="h-[250px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%" aria-label="Cumulative peak value destroyed over time">
-          <AreaChart data={data}>
+          <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
             <defs>
               <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />

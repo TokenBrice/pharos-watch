@@ -33,11 +33,16 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | Source | Purpose | Refresh |
 |--------|---------|---------|
 | [DefiLlama](https://defillama.com/) | Stablecoin supply, price, chain distribution, history | 5 min |
-| [CoinGecko](https://www.coingecko.com/) | Gold-pegged token data (XAUT, PAXG), fallback price enrichment | 5 min (as fallback) |
+| [CoinGecko](https://www.coingecko.com/) | Gold-pegged token data (XAUT, PAXG), fallback price enrichment, supply overrides | 5 min (as fallback) |
 | [DexScreener](https://dexscreener.com/) | Best-effort price fallback via on-chain DEX pair data | On demand |
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, EURC, PAXG, XAUT freeze/blacklist events (EVM chains) | 15 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 15 min |
 | [dRPC](https://drpc.org/) | Archive RPC for L2 balance lookups at historical block heights | 15 min |
+| [Exchange Rate API](https://open.er-api.com/) | Live RUB/USD rate (ECB doesn't publish RUB) | 2 hours |
+| [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL peg validation | 2 hours |
+| [Bluechip](https://bluechip.org/) | Independent stablecoin safety ratings (SMIDGE framework) | 6 hours |
+| [DeFiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 10 min |
+| [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances for quality-adjusted TVL | 10 min |
 
 ## Getting Started
 

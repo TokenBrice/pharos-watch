@@ -9,7 +9,7 @@ const DEFAULT_FALLBACK_RATES: Record<string, number> = {
   peggedGBP: 1.27,
   peggedCHF: 1.13,
   peggedBRL: 0.18,
-  peggedRUB: 0.011,
+  peggedRUB: 0.0125,
 };
 
 /**

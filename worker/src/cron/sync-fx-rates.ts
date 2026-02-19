@@ -53,8 +53,26 @@ export async function syncFxRates(db: D1Database): Promise<void> {
       }
     }
 
-    // Add RUB fallback (not available from ECB)
-    rates["peggedRUB"] = RUB_FALLBACK;
+    // Secondary: fetch RUB from exchangerate-api.com (ECB doesn't publish RUB)
+    try {
+      const rubRes = await fetch("https://open.er-api.com/v6/latest/USD", {
+        headers: { "User-Agent": "Pharos/1.0 (stablecoin analytics)" },
+      });
+      if (rubRes.ok) {
+        const rubData = (await rubRes.json()) as { rates?: Record<string, number> };
+        const rubPerUsd = rubData?.rates?.RUB;
+        if (typeof rubPerUsd === "number" && rubPerUsd > 0) {
+          rates["peggedRUB"] = Number((1 / rubPerUsd).toFixed(6));
+        }
+      }
+    } catch {
+      // Fall through to hardcoded fallback
+    }
+
+    // Fallback: RUB if secondary API also failed
+    if (!rates["peggedRUB"]) {
+      rates["peggedRUB"] = RUB_FALLBACK;
+    }
 
     // Sanity check: we should have rates for all mapped currencies
     const expected = Object.values(CURRENCY_TO_PEG);
