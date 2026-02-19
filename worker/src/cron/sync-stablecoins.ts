@@ -6,7 +6,7 @@ import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enric
 import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
 import { detectDepegEvents } from "./detect-depegs";
 
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, GECKO_ID_OVERRIDES, USER_AGENT, MIN_VALID_ASSET_COUNT } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, GECKO_ID_OVERRIDES, USER_AGENT, MIN_VALID_ASSET_COUNT, SUPPLY_OVERRIDE_COINS } from "../lib/constants";
 
 interface GoldTokenConfig {
   internalId: string;
@@ -262,9 +262,7 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData): Promise<unkn
   }
 }
 
-const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
-  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
-];
+// SUPPLY_OVERRIDE_COINS imported from ../lib/constants
 
 type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number }>;
 
@@ -472,13 +470,13 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
 
   // --- On-chain supply override ---
   try {
-    const onchainRows = await getOnchainSupply(db, 7200); // 2-hour freshness
+    const onchainRows = await getOnchainSupply(db, 30 * 24 * 3600); // 30-day window — per-coin freshness checked below
     if (onchainRows.length > 0) {
       // Group by stablecoin ID
-      const byStablecoin = new Map<string, { chain: string; supply: number }[]>();
+      const byStablecoin = new Map<string, { chain: string; supply: number; updated_at: number }[]>();
       for (const row of onchainRows) {
         const list = byStablecoin.get(row.stablecoin_id) ?? [];
-        list.push({ chain: row.chain, supply: row.supply });
+        list.push({ chain: row.chain, supply: row.supply, updated_at: row.updated_at });
         byStablecoin.set(row.stablecoin_id, list);
       }
 
@@ -491,6 +489,17 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
         // (partial data would produce a wrong, lower total)
         // Exception: force-override coins always use whatever on-chain data we have
         const isForced = SUPPLY_OVERRIDE_COINS.some((c) => c.llamaId === stablecoinId && c.force);
+
+        // Per-coin freshness: non-forced coins require data within 2 hours;
+        // forced coins accept any age (stale on-chain data is still better than broken DL data)
+        if (!isForced) {
+          const newestAt = Math.max(...chainSupplies.map((cs) => cs.updated_at));
+          const age = Math.floor(Date.now() / 1000) - newestAt;
+          if (age > 7200) {
+            continue; // Stale for regular coins — skip
+          }
+        }
+
         const meta = TRACKED_META_BY_ID.get(stablecoinId);
         if (!isForced && meta?.contracts) {
           const configuredChains = new Set(meta.contracts.map((c) => c.chain));

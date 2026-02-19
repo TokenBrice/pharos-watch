@@ -1,6 +1,6 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS } from "../lib/constants";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
@@ -165,11 +165,46 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     });
   }
 
-  const body = await res.text();
+  let body = await res.text();
 
   // Validate JSON structure before caching — skip cache on parse failure
   try {
-    JSON.parse(body);
+    const parsed = JSON.parse(body);
+
+    // For force-override coins, patch recent token entries with corrected supply from cache
+    const forceOverride = SUPPLY_OVERRIDE_COINS.find((c) => c.llamaId === id && c.force);
+    if (forceOverride && parsed.tokens && Array.isArray(parsed.tokens)) {
+      const stablecoinsCache = await getCache(db, "stablecoins");
+      if (stablecoinsCache) {
+        try {
+          const cacheData = JSON.parse(stablecoinsCache.value) as {
+            peggedAssets?: { id: unknown; circulating?: Record<string, number> }[];
+          };
+          const cachedAsset = cacheData.peggedAssets?.find((a) => String(a.id) === id);
+          if (cachedAsset?.circulating) {
+            const correctedMcap = Object.values(cachedAsset.circulating).reduce((s, v) => s + (v ?? 0), 0);
+            if (correctedMcap > 0) {
+              // Patch last 7 entries (covers ~1 week of daily data points)
+              const patchCount = Math.min(7, parsed.tokens.length);
+              for (let i = parsed.tokens.length - patchCount; i < parsed.tokens.length; i++) {
+                const entry = parsed.tokens[i];
+                if (entry.totalCirculatingUSD) {
+                  entry.totalCirculatingUSD = { [forceOverride.pegKey]: correctedMcap };
+                }
+                if (entry.totalCirculating) {
+                  entry.totalCirculating = { [forceOverride.pegKey]: correctedMcap };
+                }
+              }
+              console.log(`[detail] Patched ${patchCount} recent entries for ${id} with corrected mcap $${correctedMcap.toFixed(0)}`);
+            }
+          }
+        } catch {
+          // Stablecoins cache parse failed — continue with unpatched data
+        }
+      }
+      body = JSON.stringify(parsed);
+    }
+
     ctx.waitUntil(setCache(db, cacheKey, body));
   } catch {
     console.warn(`[detail] Invalid JSON response for ${id}, skipping cache write`);

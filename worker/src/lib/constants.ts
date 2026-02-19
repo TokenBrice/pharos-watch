@@ -36,3 +36,8 @@ export const DEXSCREENER_MIN_LIQUIDITY_USD = 50_000;
 
 /** Tron burn address (used to exclude from supply calculations) */
 export const TRON_BURN_ADDRESS = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";
+
+/** Coins whose supply must be overridden from on-chain data (DL list endpoint is broken) */
+export const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
+  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
+];
