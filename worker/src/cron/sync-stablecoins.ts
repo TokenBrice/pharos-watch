@@ -304,7 +304,7 @@ async function fetchFiatCoinGeckoTokens(): Promise<unknown[]> {
 }
 
 const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
-  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — always use CoinGecko
+  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
 ];
 
 async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
@@ -326,14 +326,23 @@ async function patchSupplyOverrides(assets: PeggedAsset[]): Promise<void> {
 
       const price = geckoData.usd;
       const mcap = geckoData.usd_market_cap;
-      if (!price || !mcap || price <= 0) continue;
+      if (!price || price <= 0) continue;
+
+      // Force mode: only override price from CoinGecko, let on-chain override handle supply
+      if (override.force) {
+        asset.price = price;
+        console.log(`[sync-stablecoins] Price-only override for ${asset.symbol}: price $${price.toFixed(6)} (supply deferred to on-chain)`);
+        continue;
+      }
+
+      if (!mcap) continue;
 
       // DefiLlama stores circulating values in USD — store mcap directly
       const circ = asset.circulating as Record<string, number> | undefined;
       const oldSupply = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
 
-      // Skip override if DL is close enough — unless force flag is set
-      if (!override.force && oldSupply > 0 && mcap / oldSupply < 10) continue;
+      // Skip override if DL is close enough
+      if (oldSupply > 0 && mcap / oldSupply < 10) continue;
 
       asset.circulating = { [override.pegKey]: mcap };
       asset.price = price;
@@ -505,8 +514,10 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
 
         // Skip override if we don't have on-chain data for ALL configured chains
         // (partial data would produce a wrong, lower total)
+        // Exception: force-override coins always use whatever on-chain data we have
+        const isForced = SUPPLY_OVERRIDE_COINS.some((c) => c.llamaId === stablecoinId && c.force);
         const meta = TRACKED_META_BY_ID.get(stablecoinId);
-        if (meta?.contracts) {
+        if (!isForced && meta?.contracts) {
           const configuredChains = new Set(meta.contracts.map((c) => c.chain));
           const dataChains = new Set(chainSupplies.map((cs) => cs.chain));
           const missing = [...configuredChains].filter((c) => !dataChains.has(c));
@@ -530,7 +541,8 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
 
         // Guard: never override if on-chain total is dramatically LOWER than DefiLlama.
         // RPC glitches returning low/partial values are far more likely than DL over-reporting.
-        if (onchainTotal < llamaSupply * 0.5) {
+        // Exception: force-override coins trust on-chain unconditionally
+        if (!isForced && onchainTotal < llamaSupply * 0.5) {
           console.warn(
             `[sync-stablecoins] Rejecting on-chain override for ${asset.symbol}: ` +
             `on-chain ${onchainTotal.toFixed(0)} is <50% of DL ${llamaSupply.toFixed(0)} — likely RPC issue`
