@@ -43,6 +43,7 @@ const FX_RATE_BOUNDS: Record<string, [number, number]> = {
   peggedZAR: [0.02, 0.20],     // ZAR ~$0.055
   peggedRUB: [0.003, 0.10],    // RUB ~$0.013
   peggedSILVER: [5, 500],      // Silver ~$30/oz
+  peggedGOLD: [500, 10000],     // Gold ~$2900/oz
 };
 
 /** Max allowed change from previous cached value (no FX rate moves 20% in 2 hours) */
@@ -166,6 +167,27 @@ export async function syncFxRates(db: D1Database): Promise<void> {
       }
     } catch {
       // Silver spot fetch failed — peg-rates will rely on median only
+    }
+
+    // Gold spot price (USD per troy ounce) from DefiLlama coins API
+    // Used as FX fallback for peggedGOLD — commodity spot is the definitive reference
+    try {
+      const goldRes = await fetchWithRetry("https://coins.llama.fi/prices/current/coingecko:gold", {
+        headers: { "User-Agent": USER_AGENT },
+      });
+      if (goldRes && goldRes.ok) {
+        const goldData = (await goldRes.json()) as { coins?: Record<string, { price?: number }> };
+        const goldPrice = goldData?.coins?.["coingecko:gold"]?.price;
+        if (typeof goldPrice === "number" && goldPrice > 0) {
+          if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
+            rates["peggedGOLD"] = goldPrice;
+          } else if (prevRates["peggedGOLD"]) {
+            rates["peggedGOLD"] = prevRates["peggedGOLD"];
+          }
+        }
+      }
+    } catch {
+      // Gold spot fetch failed — peg-rates will rely on median only
     }
 
     // Sanity check: we should have rates for all mapped currencies

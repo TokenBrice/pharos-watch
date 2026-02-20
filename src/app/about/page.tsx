@@ -62,7 +62,7 @@ export default function AboutPage() {
                 name: "How is the Peg Score calculated?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The Peg Score ranges from 0 to 100 and combines two equally-weighted components: Time at Peg (50%) measures the percentage of the tracking window where the coin stayed within its peg threshold. Severity (50%) penalizes based on each depeg event's peak deviation, duration (capped at 90 days), and recency (recent events weigh more via exponential decay). An ongoing depeg applies an additional penalty of up to 50 points.",
+                  text: "The Peg Score ranges from 0 to 100 and combines two equally-weighted components: Time at Peg (50%) measures the percentage of the tracking window where the coin stayed within its peg threshold. Severity (50%) penalizes based on each depeg event's peak deviation (linear scale), duration (capped at 90 days), and recency (recent events weigh more via exponential decay). An ongoing depeg applies an additional penalty of up to 50 points. A deviation spread penalty (up to 15 points) further penalizes coins whose depeg magnitudes are erratic and unpredictable.",
                 },
               },
               {
@@ -223,7 +223,7 @@ export default function AboutPage() {
             <Link href="/peg-tracker" className="text-foreground underline underline-offset-4 hover:text-emerald-500 transition-colors">Peg Tracker</Link>
             {" "}assigns every tracked stablecoin a <span className="text-foreground font-medium">Peg Score</span> from
             {" "}<span className="font-mono">0</span> to <span className="font-mono">100</span>, computed from its full depeg event history.
-            The score combines three components:
+            The score combines four components:
           </p>
           <ul className="space-y-3">
             <li className="flex gap-2">
@@ -233,13 +233,17 @@ export default function AboutPage() {
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Severity (50%)</span>
               <span>
-                penalizes based on each depeg event&apos;s peak deviation magnitude, duration (capped at 90 days), and recency —
+                penalizes based on each depeg event&apos;s peak deviation (linear scale), duration (capped at 90 days), and recency —
                 recent events weigh more heavily than old ones (exponential decay: an event 1 year ago has half the weight of a current one)
               </span>
             </li>
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Active Depeg</span>
               <span>an ongoing depeg applies an additional penalty of up to 50 points, scaled by current deviation severity</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-foreground font-medium shrink-0">Deviation Spread</span>
+              <span>penalizes coins whose depeg events vary widely in magnitude (up to 15 points) — a coin with erratic deviations ranging from 100 to 5000 bps is less predictable than one with consistent small breaches</span>
             </li>
           </ul>
           <p>

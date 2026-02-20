@@ -60,13 +60,14 @@ export function derivePegRates(
         ? (prices[mid - 1] + prices[mid]) / 2
         : prices[mid];
 
-    // For thin groups (<3 coins), always use the FX fallback rate.
-    // Median of 1-2 coins is unreliable:
-    //   - 1 coin: median = own price → always 0 bps (hides real deviations)
-    //   - 2 coins: median = average → perfect mirror deviations (hides asymmetry)
-    // The ECB FX rate is a far more reliable reference for these groups.
+    // For commodity pegs (gold/silver), always prefer the spot price.
+    // Peer median is self-referential when 2 tokens dominate the group —
+    // commodity spot IS the definitive reference.
+    // For fiat pegs with thin groups (<3 coins), use ECB FX rate instead of
+    // unreliable median (1 coin = own price, 2 coins = mirror deviations).
     const fallback = mergedFallbacks[peg];
-    if (prices.length < 3 && fallback) {
+    const isCommodity = peg === "peggedGOLD" || peg === "peggedSILVER";
+    if (fallback && (isCommodity || prices.length < 3)) {
       rates[peg] = fallback;
       continue;
     }

@@ -66,6 +66,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     pegScore: number | null;
     pegPct: number;
     severityScore: number;
+    spreadPenalty: number;
     eventCount: number;
     worstDeviationBps: number | null;
     activeDepeg: boolean;
@@ -146,6 +147,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       pegScore: scoreResult.pegScore,
       pegPct: scoreResult.pegPct,
       severityScore: scoreResult.severityScore,
+      spreadPenalty: scoreResult.spreadPenalty,
       eventCount: scoreResult.eventCount,
       worstDeviationBps: scoreResult.worstDeviationBps,
       activeDepeg: scoreResult.activeDepeg,

@@ -425,6 +425,7 @@ export interface PegSummaryCoin {
   pegScore: number | null;
   pegPct: number;
   severityScore: number;
+  spreadPenalty: number;
   eventCount: number;
   worstDeviationBps: number | null;
   activeDepeg: boolean;

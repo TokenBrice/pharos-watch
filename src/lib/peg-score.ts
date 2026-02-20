@@ -8,6 +8,8 @@ export interface PegScoreResult {
   pegPct: number;
   /** Severity component (0-100) */
   severityScore: number;
+  /** Deviation spread penalty (0-15) — stddev of peak deviations across events */
+  spreadPenalty: number;
   /** Total depeg events */
   eventCount: number;
   /** Worst peak deviation in bps (signed), or null */
@@ -47,6 +49,7 @@ export function computePegScore(
       pegScore: null,
       pegPct: 100,
       severityScore: 100,
+      spreadPenalty: 0,
       eventCount: 0,
       worstDeviationBps: null,
       activeDepeg: false,
@@ -72,9 +75,21 @@ export function computePegScore(
     const yearsAgo = (now - e.startedAt) / (365.25 * 86400);
     const recencyWeight = 1 / (1 + yearsAgo);
 
-    totalPenalty += Math.sqrt(peakBps / 100) * (durationDays / 30) * recencyWeight;
+    totalPenalty += (peakBps / 100) * (durationDays / 30) * recencyWeight;
   }
   const severityScore = Math.max(0, 100 - totalPenalty);
+
+  // --- Spread penalty (deviation variance proxy) ---
+  // Coins with erratic, unpredictable depeg magnitudes get penalized.
+  // stddev of |peakDeviationBps| scaled into 0-15 range.
+  let spreadPenalty = 0;
+  if (events.length >= 2) {
+    const absBpsList = events.map((e) => Math.abs(e.peakDeviationBps));
+    const mean = absBpsList.reduce((s, v) => s + v, 0) / absBpsList.length;
+    const variance = absBpsList.reduce((s, v) => s + (v - mean) ** 2, 0) / absBpsList.length;
+    const stdDev = Math.sqrt(variance);
+    spreadPenalty = Math.min(15, (stdDev / 1000) * 15);
+  }
 
   // --- Active depeg penalty ---
   // If there's an ongoing depeg, penalize based on its current peak severity.
@@ -90,7 +105,7 @@ export function computePegScore(
   }
 
   // --- Composite ---
-  const raw = 0.5 * pegPct + 0.5 * severityScore - activeDepegPenalty;
+  const raw = 0.5 * pegPct + 0.5 * severityScore - activeDepegPenalty - spreadPenalty;
   const pegScore = insufficientData ? null : Math.max(0, Math.min(100, Math.round(raw)));
 
   // --- Worst deviation ---
@@ -100,6 +115,7 @@ export function computePegScore(
     pegScore,
     pegPct,
     severityScore,
+    spreadPenalty,
     eventCount: events.length,
     worstDeviationBps,
     activeDepeg: events.some((e) => e.endedAt === null),
