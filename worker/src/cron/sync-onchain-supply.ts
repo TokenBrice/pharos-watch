@@ -239,7 +239,7 @@ async function callTron(
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json", "User-Agent": USER_AGENT };
     if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
-    const res = await fetch(`${rpcUrl}/wallet/triggerConstantContract`, {
+    const res = await fetch(`${rpcUrl}/wallet/triggerconstantcontract`, {
       method: "POST",
       headers,
       body: JSON.stringify({
