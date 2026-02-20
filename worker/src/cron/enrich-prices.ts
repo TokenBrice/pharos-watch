@@ -15,6 +15,8 @@ export interface PeggedAsset {
   address?: string;
   geckoId?: string;
   price?: number | null;
+  pegType?: string;
+  circulating?: Record<string, number>;
   [key: string]: unknown;
 }
 

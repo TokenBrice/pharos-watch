@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatWorstDeviation } from "@/lib/format";
+import { formatBps } from "@/lib/format";
 import type { PegSummaryStats } from "@/lib/types";
 
 interface PegTrackerStatsProps {
@@ -83,7 +83,7 @@ export function PegTrackerStats({ summary, isLoading }: PegTrackerStatsProps) {
           {summary.worstCurrent ? (
             <>
               <div className="text-2xl font-bold font-mono tracking-tight">
-                {formatWorstDeviation(summary.worstCurrent.bps)}
+                {formatBps(summary.worstCurrent.bps)}
               </div>
               <p className="text-xs text-muted-foreground">
                 {summary.worstCurrent.symbol}

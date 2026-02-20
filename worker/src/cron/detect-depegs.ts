@@ -1,12 +1,13 @@
 import { getDepegThresholdBps, DEX_FRESHNESS_SEC } from "../lib/constants";
+import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
-import type { StablecoinData } from "../../../src/lib/types";
+import type { PegAssetBase } from "../../../src/lib/types";
 
 // --- Depeg event detection ---
 
-export async function detectDepegEvents(db: D1Database, assets: StablecoinData[], fxFallbackRates?: Record<string, number>): Promise<void> {
+export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], fxFallbackRates?: Record<string, number>): Promise<void> {
   const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const pegRates = derivePegRates(assets, metaById, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
@@ -81,7 +82,7 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
     openEvents.set(coinId, keeper);
   }
   if (mergeStmts.length > 0) {
-    await db.batch(mergeStmts);
+    await batchExecute(db, mergeStmts);
     console.log(`[depeg] Merged duplicate open events, ${mergeStmts.length} DB ops`);
   }
 
@@ -103,7 +104,7 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
       : 0;
     if (supply < 1_000_000) continue;
 
-    const pegRef = getPegReference(asset.pegType, pegRates, meta.goldOunces);
+    const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
     if (pegRef <= 0) continue;
 
     const bps = Math.round(((price / pegRef) - 1) * 10000);
@@ -212,7 +213,7 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
 
   // Execute main loop statements before orphan cleanup
   if (stmts.length > 0) {
-    await db.batch(stmts);
+    await batchExecute(db, stmts);
     console.log(`[depeg] Wrote ${stmts.length} depeg event updates`);
   }
 
@@ -238,7 +239,7 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
     console.log(`[depeg] Closing orphan event for ${row.stablecoin_id} (id=${row.id})`);
   }
   if (orphanStmts.length > 0) {
-    await db.batch(orphanStmts);
+    await batchExecute(db, orphanStmts);
     console.log(`[depeg] Closed ${orphanStmts.length} orphaned depeg events`);
   }
 }

@@ -1,4 +1,5 @@
 import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1Database): Promise<Response> => {
   const row = await db.prepare(
@@ -9,7 +10,7 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
     return new Response(JSON.stringify({ digest: null }), {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, s-maxage=300, max-age=60",
+        "Cache-Control": CACHE_PROFILES.standard,
       },
     });
   }
@@ -20,7 +21,7 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
   }), {
     headers: addFreshnessHeaders({
       "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=3600, max-age=300",
+      "Cache-Control": CACHE_PROFILES.slow,
     }, row.generated_at, 7200),
   });
 });

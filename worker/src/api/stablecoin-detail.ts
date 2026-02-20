@@ -1,41 +1,16 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS, CACHE_PROFILES } from "../lib/constants";
+import { binarySearchNearest } from "../lib/binary-search";
+import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
-// Data sources for commodity tokens (not in DefiLlama's stablecoin API)
-const COMMODITY_TOKEN_SOURCES: Record<string, { geckoId: string; protocolSlug: string; pegType: string }> = {
-  "gold-xaut": { geckoId: "tether-gold", protocolSlug: "tether-gold", pegType: "peggedGOLD" },
-  "gold-paxg": { geckoId: "pax-gold", protocolSlug: "paxos-gold", pegType: "peggedGOLD" },
-  "gold-kau": { geckoId: "kinesis-gold", protocolSlug: "", pegType: "peggedGOLD" },
-  "gold-xaum": { geckoId: "matrixdock-gold", protocolSlug: "", pegType: "peggedGOLD" },
-  "gold-vro": { geckoId: "veraone", protocolSlug: "", pegType: "peggedGOLD" },
-  "gold-cgo": { geckoId: "comtech-gold", protocolSlug: "", pegType: "peggedGOLD" },
-  "gold-dgld": { geckoId: "gold-token-sa-dgld-tokenized-gold", protocolSlug: "", pegType: "peggedGOLD" },
-  "silver-kag": { geckoId: "kinesis-silver", protocolSlug: "", pegType: "peggedSILVER" },
-};
-
 function findNearestPrice(
   sortedPrices: { timestamp: number; price: number }[],
-  date: number
+  date: number,
 ): number {
-  if (sortedPrices.length === 0) return 0;
-  let lo = 0,
-    hi = sortedPrices.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (sortedPrices[mid].timestamp < date) lo = mid + 1;
-    else hi = mid;
-  }
-  if (lo > 0) {
-    const prev = sortedPrices[lo - 1];
-    const curr = sortedPrices[lo];
-    if (Math.abs(prev.timestamp - date) < Math.abs(curr.timestamp - date)) {
-      return prev.price;
-    }
-  }
-  return sortedPrices[lo].price;
+  return binarySearchNearest(sortedPrices, date, (p) => p.timestamp)?.price ?? 0;
 }
 
 async function fetchCommodityDetail(config: {
@@ -120,8 +95,14 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
   }
 
   // Commodity tokens (gold/silver): fetch from DefiLlama coins chart + protocol APIs
-  const commodityConfig = COMMODITY_TOKEN_SOURCES[id];
-  if (commodityConfig) {
+  const meta = TRACKED_META_BY_ID.get(id);
+  const isCommodity = meta && (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && meta.geckoId;
+  if (isCommodity) {
+    const commodityConfig = {
+      geckoId: meta.geckoId!,
+      protocolSlug: meta.protocolSlug ?? "",
+      pegType: `pegged${meta.flags.pegCurrency}`,
+    };
     try {
       const body = await fetchCommodityDetail(commodityConfig);
       ctx.waitUntil(setCache(db, cacheKey, body));
@@ -136,7 +117,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
         return new Response(cached.value, {
           headers: {
             "Content-Type": "application/json",
-            "Cache-Control": "public, s-maxage=60, max-age=10",
+            "Cache-Control": CACHE_PROFILES.realtime,
           },
         });
       }
@@ -155,7 +136,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
       return new Response(cached.value, {
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "public, s-maxage=60, max-age=10",
+          "Cache-Control": CACHE_PROFILES.realtime,
         },
       });
     }
@@ -218,7 +199,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
       return new Response(cached.value, {
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "public, s-maxage=60, max-age=10",
+          "Cache-Control": CACHE_PROFILES.realtime,
         },
       });
     }

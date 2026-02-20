@@ -1,10 +1,11 @@
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { withErrorHandler } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
+import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = Math.min(Math.max(parseInt(params.get("limit") ?? "0", 10) || 0, 0), 1000);
+  const limit = Math.min(Math.max(parseInt(params.get("limit") ?? "") || 100, 1), 1000);
   const offset = Math.max(parseInt(params.get("offset") ?? "0", 10) || 0, 0);
   const stablecoin = params.get("stablecoin");
   const active = params.get("active");
@@ -37,7 +38,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   return new Response(JSON.stringify({ events, total }), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=60, max-age=10",
+      "Cache-Control": CACHE_PROFILES.realtime,
     },
   });
 });

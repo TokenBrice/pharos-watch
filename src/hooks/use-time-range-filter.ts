@@ -13,9 +13,9 @@ const RANGE_MS: Record<string, number> = {
   "1y": 365 * 86400000,
 };
 
-export function useTimeRangeFilter<T>(
+export function useTimeRangeFilter<T extends Record<K, number>, K extends keyof T>(
   data: T[],
-  tsKey: keyof T,
+  tsKey: K,
   options: TimeRangeOption[] = DEFAULT_OPTIONS
 ) {
   const defaultRange = options[options.length - 1] ?? "all";
@@ -23,10 +23,10 @@ export function useTimeRangeFilter<T>(
 
   const filteredData = useMemo(() => {
     if (range === "all" || data.length === 0) return data;
-    const latest = (data[data.length - 1]?.[tsKey] as number) ?? 0;
+    const latest = data[data.length - 1]?.[tsKey] ?? 0;
     const cutoff = RANGE_MS[range];
     if (!cutoff) return data;
-    return data.filter((d) => (d[tsKey] as number) >= latest - cutoff);
+    return data.filter((d) => d[tsKey] >= latest - cutoff);
   }, [data, range, tsKey]);
 
   return { range, setRange, filteredData, options } as const;

@@ -15,7 +15,7 @@ import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
 import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol } from "@/lib/dex-constants";
-import { getScoreTier, TIER_TEXT } from "@/lib/severity-colors";
+import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@/lib/types";
 
@@ -251,9 +251,7 @@ function ScoreBreakdown({ components }: {
           <span className="w-24 text-muted-foreground shrink-0 cursor-help" title={tooltip}>{label} <span className="opacity-60">({weight})</span></span>
           <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
             <div
-              className={`h-full rounded-full ${
-                value >= 70 ? "bg-emerald-500" : value >= 40 ? "bg-amber-500" : "bg-red-500"
-              }`}
+              className={`h-full rounded-full ${getDurabilityBgColor(value)}`}
               style={{ width: `${value}%` }}
             />
           </div>
@@ -267,8 +265,7 @@ function ScoreBreakdown({ components }: {
 function DurabilityBadge({ score }: { score: number | null }) {
   if (score == null) return null;
   const label = score >= 70 ? "Durable" : score >= 40 ? "Moderate" : "Fragile";
-  const color = score >= 70 ? "text-emerald-500" : score >= 40 ? "text-amber-500" : "text-red-500";
-  return <span className={`text-xs font-medium ${color}`}>{label} ({score})</span>;
+  return <span className={`text-xs font-medium ${getDurabilityColor(score)}`}>{label} ({score})</span>;
 }
 
 function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined; maturityDays?: number }) {

@@ -1,17 +1,22 @@
-export function formatCurrency(value: number, decimals = 2): string {
+/** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
+function abbreviateNumber(value: number, decimals: number, prefix = ""): string {
   if (!Number.isFinite(value)) return "N/A";
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
-  if (abs >= 1e12) return `${sign}$${(abs / 1e12).toFixed(decimals)}T`;
-  if (abs >= 1e9) return `${sign}$${(abs / 1e9).toFixed(decimals)}B`;
-  if (abs >= 1e6) return `${sign}$${(abs / 1e6).toFixed(decimals)}M`;
-  if (abs >= 1e3) return `${sign}$${(abs / 1e3).toFixed(decimals)}K`;
-  return `${sign}$${abs.toFixed(decimals)}`;
+  if (abs >= 1e12) return `${sign}${prefix}${(abs / 1e12).toFixed(decimals)}T`;
+  if (abs >= 1e9) return `${sign}${prefix}${(abs / 1e9).toFixed(decimals)}B`;
+  if (abs >= 1e6) return `${sign}${prefix}${(abs / 1e6).toFixed(decimals)}M`;
+  if (abs >= 1e3) return `${sign}${prefix}${(abs / 1e3).toFixed(decimals)}K`;
+  return `${sign}${prefix}${abs.toFixed(decimals)}`;
+}
+
+export function formatCurrency(value: number, decimals = 2): string {
+  return abbreviateNumber(value, decimals, "$");
 }
 
 const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
-  IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$",
+  IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$", ZAR: "R",
   GOLD: "$", VAR: "$", OTHER: "$",
 };
 
@@ -34,6 +39,12 @@ export function formatNativePrice(
   return formatPrice(usdPrice / pegRef, symbol);
 }
 
+/** Format a basis-point value with a sign prefix, e.g. "+12 bps" or "-5 bps". */
+export function formatBps(bps: number): string {
+  const sign = bps >= 0 ? "+" : "";
+  return `${sign}${bps} bps`;
+}
+
 /**
  * Compute peg deviation in basis points.
  * `pegValue` should be the USD price of one unit of the peg currency
@@ -46,8 +57,7 @@ export function formatPegDeviation(price: number | null | undefined, pegValue = 
   const ratio = price / pegValue;
   const bps = Math.round((ratio - 1) * 10000);
   if (!Number.isFinite(bps)) return "N/A";
-  const sign = bps >= 0 ? "+" : "";
-  return `${sign}${bps} bps`;
+  return formatBps(bps);
 }
 
 export function formatPercentChange(current: number, previous: number): string {
@@ -59,11 +69,8 @@ export function formatPercentChange(current: number, previous: number): string {
 
 export function formatSupply(value: number): string {
   if (!Number.isFinite(value)) return "N/A";
-  if (value >= 1e12) return `${(value / 1e12).toFixed(2)}T`;
-  if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
-  if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
-  return value.toFixed(0);
+  if (value < 1e3) return value.toFixed(0);
+  return abbreviateNumber(value, 2);
 }
 
 export function formatAddress(address: string): string {
@@ -81,11 +88,6 @@ export function formatEventDate(timestamp: number): string {
 
 export function formatPegStability(pct: number): string {
   return `${pct.toFixed(2)}%`;
-}
-
-export function formatWorstDeviation(bps: number): string {
-  const sign = bps >= 0 ? "+" : "";
-  return `${sign}${bps} bps`;
 }
 
 /**
@@ -117,6 +119,16 @@ export function formatDeathDate(d: string): string {
   if (!month) return year;
   const date = new Date(Number(year), Number(month) - 1);
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+/** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
+export function timeAgo(epochSec: number): string {
+  const diffMin = Math.floor((Date.now() / 1000 - epochSec) / 60);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return `${Math.floor(diffH / 24)}d ago`;
 }
 
 /** Format "YYYY-MM" death date as "Jan '23" (short year) */

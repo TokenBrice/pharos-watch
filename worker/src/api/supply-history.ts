@@ -1,4 +1,5 @@
 import { withErrorHandler, isValidStablecoinId } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
 interface SupplyHistoryRow {
   snapshot_date: number;
@@ -47,7 +48,7 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
   return new Response(JSON.stringify(history), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=3600, max-age=300",
+      "Cache-Control": CACHE_PROFILES.slow,
     },
   });
 });

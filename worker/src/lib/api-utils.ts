@@ -1,4 +1,44 @@
 import { getCache } from "./db";
+import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
+
+// --- Shared types ---
+
+export interface CacheStatus {
+  ageSeconds: number | null;
+  maxAge: number;
+  healthy: boolean;
+}
+
+// --- Shared cache freshness logic ---
+
+/**
+ * Queries the cache table and evaluates freshness for every key in
+ * CACHE_FRESHNESS_THRESHOLDS. Used by both /health and /status endpoints.
+ */
+export async function buildCacheStatuses(
+  db: D1Database,
+  now: number,
+): Promise<{ caches: Record<string, CacheStatus>; worstRatio: number }> {
+  const cacheKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS);
+  const cacheRows = await db
+    .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
+    .bind(...cacheKeys)
+    .all<{ key: string; value: string; updated_at: number }>();
+  const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, { value: r.value, updatedAt: r.updated_at }]));
+
+  const caches: Record<string, CacheStatus> = {};
+  let worstRatio = 0;
+
+  for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
+    const cached = cacheMap.get(key);
+    const ageSeconds = cached ? now - cached.updatedAt : null;
+    const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
+    if (ratio > worstRatio) worstRatio = ratio;
+    caches[key] = { ageSeconds, maxAge, healthy: ratio <= 1.5 };
+  }
+
+  return { caches, worstRatio };
+}
 
 /**
  * Wraps an API handler with standardized error handling.

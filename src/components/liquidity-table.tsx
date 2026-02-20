@@ -17,7 +17,7 @@ import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
 import { prettifyProtocol } from "@/lib/dex-constants";
-import { getScoreColor } from "@/lib/severity-colors";
+import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import type { StablecoinMeta, DexLiquidityData } from "@/lib/types";
 
 const PAGE_SIZE = 25;
@@ -309,10 +309,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 </TableCell>
                 <TableCell className="hidden xl:table-cell text-right">
                   {liq.durabilityScore != null ? (
-                    <span className={`font-mono tabular-nums ${
-                      liq.durabilityScore >= 70 ? "text-emerald-500" :
-                      liq.durabilityScore >= 40 ? "text-amber-500" : "text-red-500"
-                    }`}>{liq.durabilityScore}</span>
+                    <span className={`font-mono tabular-nums ${getDurabilityColor(liq.durabilityScore)}`}>{liq.durabilityScore}</span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}

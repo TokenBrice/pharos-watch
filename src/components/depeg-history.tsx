@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDuration, formatNativePrice, formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { formatDuration, formatNativePrice, formatEventDate, formatBps } from "@/lib/format";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { computePegStability } from "@/lib/peg-stability";
@@ -74,7 +74,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
               <div>
                 <span className="text-muted-foreground">Worst Depeg </span>
                 <span className={`font-mono font-semibold ${deviationColorClass(Math.abs(metrics.worstDeviationBps))}`}>
-                  {formatWorstDeviation(metrics.worstDeviationBps)}
+                  {formatBps(metrics.worstDeviationBps)}
                 </span>
               </div>
             )}

@@ -1,4 +1,4 @@
-import { BLUECHIP_SLUG_MAP } from "../../../src/lib/bluechip";
+import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
 import type { BluechipRating, BluechipSmidge } from "../../../src/lib/types";
 import { getCache, setCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -22,13 +22,20 @@ function stripHtml(html: string): string {
 }
 
 function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
-  const smidge: Record<string, string | null> = {};
+  const smidge: BluechipSmidge = {
+    stability: null,
+    management: null,
+    implementation: null,
+    decentralization: null,
+    governance: null,
+    externals: null,
+  };
   for (const cat of SMIDGE_CATEGORIES) {
     const catObj = coin[cat] as { translations?: { summary?: string }[] } | null;
     const summary = catObj?.translations?.[0]?.summary;
     smidge[cat] = summary ? stripHtml(summary) : null;
   }
-  return smidge as unknown as BluechipSmidge;
+  return smidge;
 }
 
 export async function syncBluechip(db: D1Database): Promise<void> {

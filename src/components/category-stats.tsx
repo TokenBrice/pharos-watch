@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercentChange } from "@/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
-import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
-import { TRACKED_STABLECOINS, TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { getCirculatingRaw, getPrevWeekRaw, computeGovernanceBreakdown } from "@/lib/supply";
+import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
@@ -25,13 +25,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
     const totalPrevWeek = trackedData.reduce((sum, c) => sum + getPrevWeekRaw(c), 0);
 
     // Breakdown by governance
-    const centralizedIds = new Set(TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").map((s) => s.id));
-    const dependentIds = new Set(TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").map((s) => s.id));
-    const decentralizedIds = new Set(TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").map((s) => s.id));
-
-    const centralizedCoins = trackedData.filter((c) => centralizedIds.has(c.id));
-    const dependentCoins = trackedData.filter((c) => dependentIds.has(c.id));
-    const decentralizedCoins = trackedData.filter((c) => decentralizedIds.has(c.id));
+    const gov = computeGovernanceBreakdown(trackedData);
 
     // Dominance: USDT vs USDC vs rest
     let usdt = 0;
@@ -47,11 +41,6 @@ export function CategoryStats({ data }: CategoryStatsProps) {
       else if (coin.id === "2") { usdc = mcap; usdcPrev = prev; }
       else { rest += mcap; restPrev += prev; }
     }
-
-    const centralizedMcap = centralizedCoins.reduce((s, c) => s + getCirculatingRaw(c), 0);
-    const dependentMcap = dependentCoins.reduce((s, c) => s + getCirculatingRaw(c), 0);
-    const decentralizedMcap = decentralizedCoins.reduce((s, c) => s + getCirculatingRaw(c), 0);
-    const govTotal = centralizedMcap + dependentMcap + decentralizedMcap;
 
     // Alternative peg breakdown (non-USD)
     const metaById = TRACKED_META_BY_ID;
@@ -72,12 +61,12 @@ export function CategoryStats({ data }: CategoryStatsProps) {
       totalAll,
       totalPrevWeek,
       totalCount: trackedData.length,
-      centralizedMcap,
-      dependentMcap,
-      decentralizedMcap,
-      cefiPct: govTotal > 0 ? (centralizedMcap / govTotal) * 100 : 0,
-      depPct: govTotal > 0 ? (dependentMcap / govTotal) * 100 : 0,
-      defiPct: govTotal > 0 ? (decentralizedMcap / govTotal) * 100 : 0,
+      centralizedMcap: gov.centralizedMcap,
+      dependentMcap: gov.dependentMcap,
+      decentralizedMcap: gov.decentralizedMcap,
+      cefiPct: gov.cefiPct,
+      depPct: gov.depPct,
+      defiPct: gov.defiPct,
       usdt, usdc, rest,
       usdtPrev, usdcPrev, restPrev,
       altPegs, altTotal,

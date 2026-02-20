@@ -47,7 +47,7 @@ function BiggestDepegs({
       const supply = getCirculatingRaw(coin);
       if (supply < 1_000_000) continue;
 
-      const pegRef = getPegReference(coin.pegType, pegRates, meta.goldOunces);
+      const pegRef = getPegReference(coin.pegType, pegRates, meta.commodityOunces);
       if (pegRef === 0) continue;
       const bps = Math.round(((coin.price / pegRef) - 1) * 10000);
 

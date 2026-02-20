@@ -318,7 +318,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
                   {(() => {
-                    const ref = getPegReference(coin.pegType, pegRates, meta?.goldOunces);
+                    const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
                     return formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", ref);
                   })()}
                 </TableCell>
@@ -328,7 +328,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                       {meta.flags.pegCurrency === "VAR" ? "CPI" : "NAV"}
                     </span>
                   ) : (() => {
-                    const ref = getPegReference(coin.pegType, pegRates, meta?.goldOunces);
+                    const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
                     const price = coin.price;
                     const absBps = (price != null && typeof price === "number" && ref > 0)
                       ? Math.abs(price / ref - 1) * 10_000

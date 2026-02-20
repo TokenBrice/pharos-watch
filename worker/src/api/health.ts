@@ -1,11 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
-import { CACHE_FRESHNESS_THRESHOLDS } from "../lib/constants";
-
-interface CacheStatus {
-  ageSeconds: number | null;
-  maxAge: number;
-  healthy: boolean;
-}
+import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
@@ -16,29 +9,8 @@ interface HealthResponse {
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
-  // Batch query all cache keys at once
-  const cacheKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS);
-  const cacheRows = await db
-    .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
-    .bind(...cacheKeys)
-    .all<{ key: string; value: string; updated_at: number }>();
-  const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, { value: r.value, updatedAt: r.updated_at }]));
-
-  const caches: Record<string, CacheStatus> = {};
-  let worstRatio = 0;
-
-  for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
-    const cached = cacheMap.get(key);
-    const ageSeconds = cached ? now - cached.updatedAt : null;
-    const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
-    if (ratio > worstRatio) worstRatio = ratio;
-
-    caches[key] = {
-      ageSeconds,
-      maxAge,
-      healthy: ratio <= 1.5,
-    };
-  }
+  const { caches, worstRatio } = await buildCacheStatuses(db, now);
+  let worstRatioMut = worstRatio;
 
   let blacklist = { totalEvents: 0, missingAmounts: 0 };
   try {
@@ -66,14 +38,14 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     const dexMaxAge = 43200; // 12 hours
     const dexAgeSeconds = dexAge?.age ?? null;
     const dexRatio = dexAgeSeconds != null ? dexAgeSeconds / dexMaxAge : Infinity;
-    if (dexRatio > worstRatio) worstRatio = dexRatio;
+    if (dexRatio > worstRatioMut) worstRatioMut = dexRatio;
     caches["dex-liquidity"] = { ageSeconds: dexAgeSeconds, maxAge: dexMaxAge, healthy: dexRatio <= 1.5 };
   } catch {
     // dex_liquidity table may not exist yet
   }
 
   const status: HealthResponse["status"] =
-    worstRatio > 2 ? "stale" : worstRatio > 1.5 ? "degraded" : "healthy";
+    worstRatioMut > 2 ? "stale" : worstRatioMut > 1.5 ? "degraded" : "healthy";
 
   const body: HealthResponse = { status, timestamp: now, caches, blacklist };
 

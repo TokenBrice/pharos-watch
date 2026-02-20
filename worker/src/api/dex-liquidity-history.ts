@@ -1,4 +1,5 @@
 import { withErrorHandler, isValidStablecoinId } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
 interface LiquidityHistoryRow {
   total_tvl_usd: number;
@@ -49,7 +50,7 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
   return new Response(JSON.stringify(history), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=3600, max-age=300",
+      "Cache-Control": CACHE_PROFILES.slow,
     },
   });
 });

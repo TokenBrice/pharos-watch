@@ -6,6 +6,7 @@ import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { StablecoinData, DepegEvent } from "../../../src/lib/types";
 import { withErrorHandler } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
@@ -100,7 +101,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
         ? Object.values(asset.circulating).reduce((s, v) => s + (v ?? 0), 0)
         : 0;
       if (supply >= 1_000_000) {
-        const pegRef = getPegReference(asset.pegType, pegRates, meta.goldOunces);
+        const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
         if (pegRef > 0) {
           currentBps = Math.round(((asset.price / pegRef) - 1) * 10000);
         }
@@ -121,7 +122,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       : 0;
     if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC) {
       const pegRef = asset?.price != null && typeof asset.price === "number"
-        ? getPegReference(asset.pegType, pegRates, meta.goldOunces)
+        ? getPegReference(asset.pegType, pegRates, meta.commodityOunces)
         : 0;
       if (pegRef > 0) {
         const dexBps = Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000);
@@ -200,7 +201,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "public, s-maxage=60, max-age=10",
+        "Cache-Control": CACHE_PROFILES.realtime,
       },
     },
   );

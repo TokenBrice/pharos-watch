@@ -3,15 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/use-daily-digest";
-
-function timeAgo(epochSec: number): string {
-  const diffMin = Math.floor((Date.now() / 1000 - epochSec) / 60);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}min ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return `${Math.floor(diffH / 24)}d ago`;
-}
+import { timeAgo } from "@/lib/format";
 
 export function DailyDigest() {
   const { data, isLoading } = useDailyDigest();

@@ -1,3 +1,4 @@
 import { createCacheHandler } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
-export const handleStablecoinCharts = createCacheHandler("stablecoin-charts", "stablecoin-charts", "public, s-maxage=300, max-age=60", 600);
+export const handleStablecoinCharts = createCacheHandler("stablecoin-charts", "stablecoin-charts", CACHE_PROFILES.standard, 600);

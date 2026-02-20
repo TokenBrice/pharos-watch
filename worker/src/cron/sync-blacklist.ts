@@ -3,10 +3,10 @@ import {
   ETHERSCAN_V2_BASE,
   type ContractEventConfig,
   type ChainConfig,
-} from "../../../src/lib/blacklist-contracts";
+} from "../lib/blacklist-contracts";
 import type { BlacklistEventType } from "../../../src/lib/types";
 import { bigIntToDecimal } from "../lib/bigint";
-import { getLastBlock, setLastBlock } from "../lib/db";
+import { getLastBlock, setLastBlock, batchExecute } from "../lib/db";
 
 const MAX_RECURSION_DEPTH = 5;
 const ETHERSCAN_MAX_RESULTS = 1000;
@@ -690,7 +690,7 @@ async function backfillAmounts(
   }
 
   if (stmts.length > 0) {
-    await db.batch(stmts);
+    await batchExecute(db, stmts);
     console.log(`[sync-blacklist] Backfilled amounts for ${stmts.length} events`);
   }
 }
@@ -700,34 +700,29 @@ async function backfillAmounts(
 async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<void> {
   if (rows.length === 0) return;
 
-  // D1 batch limit: use batches of 50 for safety
-  const batchSize = 50;
-  for (let i = 0; i < rows.length; i += batchSize) {
-    const batch = rows.slice(i, i + batchSize);
-    const stmts = batch.map((row) =>
-      db
-        .prepare(
-          `INSERT OR IGNORE INTO blacklist_events
-           (id, stablecoin, chain_id, chain_name, event_type, address, amount, tx_hash, block_number, timestamp, explorer_tx_url, explorer_address_url)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .bind(
-          row.id,
-          row.stablecoin,
-          row.chain_id,
-          row.chain_name,
-          row.event_type,
-          row.address,
-          row.amount,
-          row.tx_hash,
-          row.block_number,
-          row.timestamp,
-          row.explorer_tx_url,
-          row.explorer_address_url
-        )
-    );
-    await db.batch(stmts);
-  }
+  const stmts = rows.map((row) =>
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO blacklist_events
+         (id, stablecoin, chain_id, chain_name, event_type, address, amount, tx_hash, block_number, timestamp, explorer_tx_url, explorer_address_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        row.id,
+        row.stablecoin,
+        row.chain_id,
+        row.chain_name,
+        row.event_type,
+        row.address,
+        row.amount,
+        row.tx_hash,
+        row.block_number,
+        row.timestamp,
+        row.explorer_tx_url,
+        row.explorer_address_url
+      )
+  );
+  await batchExecute(db, stmts);
 }
 
 export async function syncBlacklist(

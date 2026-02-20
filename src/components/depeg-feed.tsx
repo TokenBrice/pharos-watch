@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { formatDuration, formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { formatDuration, formatEventDate, formatBps } from "@/lib/format";
 import type { DepegEvent } from "@/lib/types";
 
 interface DepegFeedProps {
@@ -83,7 +83,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                 <span className={`font-mono text-xs font-semibold ${
                   Math.abs(evt.peakDeviationBps) >= 500 ? "text-red-500" : "text-amber-500"
                 }`}>
-                  {formatWorstDeviation(evt.peakDeviationBps)}
+                  {formatBps(evt.peakDeviationBps)}
                 </span>
                 <span className="text-xs text-muted-foreground font-mono w-10 text-right">
                   {formatDuration(evt.startedAt, evt.endedAt)}

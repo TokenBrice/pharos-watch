@@ -1,4 +1,5 @@
 import { withErrorHandler } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
 /** Safely parse JSON, returning fallback on failure */
 function safeParse<T>(json: string | null | undefined, fallback: T): T {
@@ -136,7 +137,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   return new Response(JSON.stringify(map), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=300, max-age=60",
+      "Cache-Control": CACHE_PROFILES.standard,
     },
   });
 });

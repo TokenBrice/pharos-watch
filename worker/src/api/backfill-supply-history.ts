@@ -3,6 +3,7 @@ import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../l
 import { batchExecute } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
+import { binarySearchNearest } from "../lib/binary-search";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -15,11 +16,7 @@ interface StablecoinDetail {
   tokens?: TokenEntry[];
 }
 
-// Commodity tokens: backfill from DefiLlama protocol TVL + coins price APIs
-const COMMODITY_BACKFILL: Record<string, { geckoId: string; protocolSlug: string }> = {
-  "gold-xaut": { geckoId: "tether-gold", protocolSlug: "tether-gold" },
-  "gold-paxg": { geckoId: "pax-gold", protocolSlug: "paxos-gold" },
-};
+// Commodity tokens eligible for backfill: must have both geckoId and protocolSlug (for TVL history)
 
 async function backfillCommodity(
   db: D1Database,
@@ -58,21 +55,7 @@ async function backfillCommodity(
   }
 
   function findPrice(date: number): number | null {
-    if (prices.length === 0) return null;
-    let lo = 0, hi = prices.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (prices[mid].timestamp < date) lo = mid + 1;
-      else hi = mid;
-    }
-    if (lo > 0) {
-      const prev = prices[lo - 1];
-      const curr = prices[lo];
-      if (Math.abs(prev.timestamp - date) < Math.abs(curr.timestamp - date)) {
-        return prev.price;
-      }
-    }
-    return prices[lo].price;
+    return binarySearchNearest(prices, date, (p) => p.timestamp)?.price ?? null;
   }
 
   const stmts: D1PreparedStatement[] = [];
@@ -141,11 +124,11 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     const skipped: string[] = [];
 
     for (const meta of coins) {
-      // Commodity tokens: backfill from protocol TVL API
-      const commodityConfig = COMMODITY_BACKFILL[meta.id];
-      if (commodityConfig) {
+      // Commodity tokens with protocolSlug: backfill from protocol TVL API
+      const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
+      if (isCommodity && meta.geckoId && meta.protocolSlug) {
         try {
-          const result = await backfillCommodity(db, meta.id, commodityConfig);
+          const result = await backfillCommodity(db, meta.id, { geckoId: meta.geckoId, protocolSlug: meta.protocolSlug });
           if (result.error) {
             errors.push(`${meta.symbol}: ${result.error}`);
           } else {

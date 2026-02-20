@@ -46,7 +46,7 @@ function bestPriceIndex(
   for (let i = 0; i < coins.length; i++) {
     const { data, meta } = coins[i];
     if (data.price == null || typeof data.price !== "number" || isNaN(data.price)) continue;
-    const ref = getPegReference(data.pegType, pegRates, meta.goldOunces);
+    const ref = getPegReference(data.pegType, pegRates, meta.commodityOunces);
     if (ref <= 0) continue;
     const dev = Math.abs(data.price / ref - 1);
     if (dev < bestDev) {
@@ -93,7 +93,7 @@ export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps
   // Pre-compute row data
   const rowData = useMemo(() => {
     const prices = coins.map(({ data, meta }) => {
-      const ref = getPegReference(data.pegType, pegRates, meta.goldOunces);
+      const ref = getPegReference(data.pegType, pegRates, meta.commodityOunces);
       return formatNativePrice(data.price, meta.flags.pegCurrency, ref);
     });
 

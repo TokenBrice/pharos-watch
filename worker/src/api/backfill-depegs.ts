@@ -1,9 +1,10 @@
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
-import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
+import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
+import { binarySearchNearest } from "../lib/binary-search";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
 
@@ -176,23 +177,8 @@ async function fetchCommoditySpotHistoryMetals(
 function buildFxLookup(series: FxTimeSeries[], fallback: number): (timestamp: number) => number {
   if (series.length === 0) return () => fallback;
 
-  return (timestamp: number): number => {
-    // Binary search for nearest timestamp
-    let lo = 0;
-    let hi = series.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (series[mid].timestamp < timestamp) lo = mid + 1;
-      else hi = mid;
-    }
-    // lo is the first entry >= timestamp; check if lo-1 is closer
-    if (lo > 0) {
-      const distLo = Math.abs(series[lo].timestamp - timestamp);
-      const distPrev = Math.abs(series[lo - 1].timestamp - timestamp);
-      if (distPrev < distLo) return series[lo - 1].rate;
-    }
-    return series[lo].rate;
-  };
+  return (timestamp: number): number =>
+    binarySearchNearest(series, timestamp, (s) => s.timestamp)?.rate ?? fallback;
 }
 
 interface PricePoint {
@@ -309,7 +295,8 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
     }
 
-    const geckoId = GECKO_ID_OVERRIDES[meta.id] ?? detail?.gecko_id;
+    const trackedMeta = TRACKED_META_BY_ID.get(meta.id);
+    const geckoId = trackedMeta?.geckoId ?? detail?.gecko_id;
 
     // Build coins chart API identifier: prefer geckoId, fall back to address
     let coinId: string | null = null;
@@ -330,7 +317,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     // Build time-varying peg reference function for this coin
     const peg = meta.flags.pegCurrency;
     const pegType = `pegged${peg}`;
-    const currentPegRef = getPegReference(pegType, pegRates, meta.goldOunces);
+    const currentPegRef = getPegReference(pegType, pegRates, meta.commodityOunces);
     let getPegRef: (timestamp: number) => number;
 
     if (peg === "USD") {
@@ -342,8 +329,8 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       const series = commoditySeries[peg] ?? [];
       const fallback = currentPegRef > 0 ? currentPegRef : 1;
       const spotLookup = buildFxLookup(series, fallback);
-      if (meta.goldOunces && meta.goldOunces > 0) {
-        const oz = meta.goldOunces;
+      if (meta.commodityOunces && meta.commodityOunces > 0) {
+        const oz = meta.commodityOunces;
         getPegRef = (ts) => spotLookup(ts) * oz;
       } else {
         getPegRef = spotLookup;

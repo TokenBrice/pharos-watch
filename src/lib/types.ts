@@ -70,7 +70,9 @@ export interface StablecoinMeta {
   flags: StablecoinFlags;
   collateral?: string;
   pegMechanism?: string;
-  goldOunces?: number; // troy ounces of gold per token (for gold-pegged stablecoins)
+  commodityOunces?: number; // troy ounces per token (for gold- and silver-pegged stablecoins)
+  geckoId?: string;        // CoinGecko coin ID (for price/mcap lookups when DefiLlama lacks it)
+  protocolSlug?: string;   // DefiLlama protocol slug (for TVL/mcap data via /protocol/ API)
   proofOfReserves?: ProofOfReserves;
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
@@ -168,6 +170,18 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
 }
 
 // --- API data types (DefiLlama responses) ---
+
+/** Minimal asset shape shared by PeggedAsset (worker enrichment) and StablecoinData.
+ *  Used as the parameter type for derivePegRates / detectDepegEvents so that
+ *  both PeggedAsset[] and StablecoinData[] are accepted without double-casting.
+ */
+export interface PegAssetBase {
+  id: string;
+  symbol: string;
+  price?: number | null;
+  pegType?: string;
+  circulating?: Record<string, number>;
+}
 
 export interface StablecoinData {
   id: string;

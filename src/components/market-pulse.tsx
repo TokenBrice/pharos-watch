@@ -3,9 +3,9 @@
 import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
-import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
-import { TRACKED_STABLECOINS, TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { formatCurrency, timeAgo } from "@/lib/format";
+import { getCirculatingRaw, getPrevWeekRaw, computeGovernanceBreakdown } from "@/lib/supply";
+import { TRACKED_IDS } from "@/lib/stablecoins";
 import { GOVERNANCE_TIER_COLORS, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import type { StablecoinData, PegSummaryCoin, PegSummaryStats, BlacklistEvent, GovernanceType } from "@/lib/types";
 
@@ -14,15 +14,6 @@ interface MarketPulseProps {
   pegRates?: Record<string, number>;
   pegSummary?: { coins: PegSummaryCoin[]; summary: PegSummaryStats | null };
   blacklistEvents?: { events: BlacklistEvent[]; total: number };
-}
-
-function timeAgo(epochSec: number): string {
-  const diffMin = Math.floor((Date.now() / 1000 - epochSec) / 60);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return `${Math.floor(diffH / 24)}d ago`;
 }
 
 // ── Zone 1: Key Numbers ─────────────────────────────────────────────────
@@ -46,30 +37,7 @@ function KeyNumbers({
       totalPrevWeek > 0 ? ((totalMcap - totalPrevWeek) / totalPrevWeek) * 100 : 0;
 
     // Governance breakdown
-    const centralizedIds = new Set(
-      TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").map((s) => s.id),
-    );
-    const dependentIds = new Set(
-      TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").map((s) => s.id),
-    );
-    const decentralizedIds = new Set(
-      TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").map((s) => s.id),
-    );
-
-    const centralizedMcap = trackedData
-      .filter((c) => centralizedIds.has(c.id))
-      .reduce((s, c) => s + getCirculatingRaw(c), 0);
-    const dependentMcap = trackedData
-      .filter((c) => dependentIds.has(c.id))
-      .reduce((s, c) => s + getCirculatingRaw(c), 0);
-    const decentralizedMcap = trackedData
-      .filter((c) => decentralizedIds.has(c.id))
-      .reduce((s, c) => s + getCirculatingRaw(c), 0);
-    const govTotal = centralizedMcap + dependentMcap + decentralizedMcap;
-
-    const cefiPct = govTotal > 0 ? (centralizedMcap / govTotal) * 100 : 0;
-    const depPct = govTotal > 0 ? (dependentMcap / govTotal) * 100 : 0;
-    const defiPct = govTotal > 0 ? (decentralizedMcap / govTotal) * 100 : 0;
+    const gov = computeGovernanceBreakdown(trackedData);
 
     // 24h freezes
     const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
@@ -83,9 +51,9 @@ function KeyNumbers({
       totalPrevWeek,
       activeDepegs: pegSummary?.summary?.activeDepegCount ?? 0,
       freezes24h,
-      cefiPct,
-      depPct,
-      defiPct,
+      cefiPct: gov.cefiPct,
+      depPct: gov.depPct,
+      defiPct: gov.defiPct,
     };
   }, [data, pegSummary, blacklistEvents]);
 

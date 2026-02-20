@@ -1,4 +1,5 @@
-import type { BlacklistStablecoin, BlacklistEventType } from "./types";
+import { CHAIN_META } from "../../../src/lib/chains";
+import type { BlacklistStablecoin, BlacklistEventType } from "../../../src/lib/types";
 
 export interface ChainConfig {
   chainId: string;          // Internal identifier (e.g. "ethereum")
@@ -27,76 +28,28 @@ export interface ContractEventConfig {
 
 export const ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api";
 
-// --- Chain configurations ---
+// --- Chain configurations (derived from shared CHAIN_META) ---
 
-const ETHEREUM: ChainConfig = {
-  chainId: "ethereum",
-  chainName: "Ethereum",
-  evmChainId: 1,
-  explorerUrl: "https://etherscan.io",
-  type: "evm",
-};
+function chainConfig(chainId: string): ChainConfig {
+  const meta = CHAIN_META[chainId];
+  if (!meta) throw new Error(`Unknown chain: ${chainId}`);
+  return {
+    chainId,
+    chainName: meta.name,
+    evmChainId: meta.evmChainId,
+    explorerUrl: meta.explorerUrl,
+    type: meta.type,
+  };
+}
 
-const ARBITRUM: ChainConfig = {
-  chainId: "arbitrum",
-  chainName: "Arbitrum",
-  evmChainId: 42161,
-  explorerUrl: "https://arbiscan.io",
-
-  type: "evm",
-};
-
-const BASE: ChainConfig = {
-  chainId: "base",
-  chainName: "Base",
-  evmChainId: 8453,
-  explorerUrl: "https://basescan.org",
-
-  type: "evm",
-};
-
-const OPTIMISM: ChainConfig = {
-  chainId: "optimism",
-  chainName: "Optimism",
-  evmChainId: 10,
-  explorerUrl: "https://optimistic.etherscan.io",
-
-  type: "evm",
-};
-
-const POLYGON: ChainConfig = {
-  chainId: "polygon",
-  chainName: "Polygon",
-  evmChainId: 137,
-  explorerUrl: "https://polygonscan.com",
-
-  type: "evm",
-};
-
-const AVALANCHE: ChainConfig = {
-  chainId: "avalanche",
-  chainName: "Avalanche",
-  evmChainId: 43114,
-  explorerUrl: "https://snowscan.xyz",
-
-  type: "evm",
-};
-
-const BSC: ChainConfig = {
-  chainId: "bsc",
-  chainName: "BSC",
-  evmChainId: 56,
-  explorerUrl: "https://bscscan.com",
-  type: "evm",
-};
-
-const TRON: ChainConfig = {
-  chainId: "tron",
-  chainName: "Tron",
-  evmChainId: null,
-  explorerUrl: "https://tronscan.org",
-  type: "tron",
-};
+const ETHEREUM  = chainConfig("ethereum");
+const ARBITRUM  = chainConfig("arbitrum");
+const BASE      = chainConfig("base");
+const OPTIMISM  = chainConfig("optimism");
+const POLYGON   = chainConfig("polygon");
+const AVALANCHE = chainConfig("avalanche");
+const BSC       = chainConfig("bsc");
+const TRON      = chainConfig("tron");
 
 // --- Event topic hashes (Keccak256) ---
 

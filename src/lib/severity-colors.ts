@@ -71,3 +71,22 @@ export function pegScoreColor(score: number | null): string {
   if (score >= 70) return "text-amber-500";
   return "text-red-500";
 }
+
+// ---------------------------------------------------------------------------
+// Durability score color helpers (70/40 thresholds — intentionally different
+// from the generic 80/60/40 score tier thresholds above)
+// ---------------------------------------------------------------------------
+
+/** Map a 0-100 durability score to a Tailwind text color class */
+export function getDurabilityColor(score: number): string {
+  if (score >= 70) return "text-emerald-500";
+  if (score >= 40) return "text-amber-500";
+  return "text-red-500";
+}
+
+/** Map a 0-100 durability score to a Tailwind background color class */
+export function getDurabilityBgColor(score: number): string {
+  if (score >= 70) return "bg-emerald-500";
+  if (score >= 40) return "bg-amber-500";
+  return "bg-red-500";
+}

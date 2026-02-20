@@ -3,8 +3,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
-import { getCirculatingRaw } from "@/lib/supply";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { computeGovernanceBreakdown } from "@/lib/supply";
 import type { StablecoinData } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
@@ -15,31 +14,20 @@ interface GovernanceDominanceProps {
 export function GovernanceChart({ data }: GovernanceDominanceProps) {
   const stats = useMemo(() => {
     if (!data) return null;
-
-    const metaById = TRACKED_META_BY_ID;
-
-    let centralized = 0;
-    let dependent = 0;
-    let decentralized = 0;
-
-    for (const coin of data) {
-      const meta = metaById.get(coin.id);
-      if (!meta) continue;
-      const mcap = getCirculatingRaw(coin);
-      if (meta.flags.governance === "centralized") centralized += mcap;
-      else if (meta.flags.governance === "centralized-dependent") dependent += mcap;
-      else decentralized += mcap;
-    }
-
-    const total = centralized + dependent + decentralized;
-    const cefiPct = total > 0 ? (centralized / total) * 100 : 0;
-    const depPct = total > 0 ? (dependent / total) * 100 : 0;
-    const defiPct = total > 0 ? (decentralized / total) * 100 : 0;
-
-    return { centralized, dependent, decentralized, total, cefiPct, depPct, defiPct };
+    const gov = computeGovernanceBreakdown(data);
+    if (gov.total === 0) return null;
+    return {
+      centralized: gov.centralizedMcap,
+      dependent: gov.dependentMcap,
+      decentralized: gov.decentralizedMcap,
+      total: gov.total,
+      cefiPct: gov.cefiPct,
+      depPct: gov.depPct,
+      defiPct: gov.defiPct,
+    };
   }, [data]);
 
-  if (!stats || stats.total === 0) return null;
+  if (!stats) return null;
 
   const tiers = [
     { label: "Centralized", pct: stats.cefiPct, mcap: stats.centralized, ...GOVERNANCE_TIER_COLORS.centralized },

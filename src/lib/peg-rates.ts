@@ -1,4 +1,4 @@
-import type { StablecoinData, StablecoinMeta } from "./types";
+import type { PegAssetBase, StablecoinMeta } from "./types";
 
 export type PegRateSource = "median" | "fallback";
 
@@ -13,7 +13,7 @@ export interface PegRatesResult {
  * This gives us live FX rates (e.g. peggedEUR -> ~1.19 USD).
  *
  * For gold-pegged tokens, prices are normalized to "per troy ounce" using
- * the goldOunces field from StablecoinMeta, since some tokens represent
+ * the commodityOunces field from StablecoinMeta, since some tokens represent
  * 1 gram (KAU) while others represent 1 troy ounce (XAUT, PAXG).
  *
  * @param fallbackRates  Optional live FX rates (from sync-fx-rates cron).
@@ -23,18 +23,18 @@ export interface PegRatesResult {
  * Returns a map of pegType -> USD value of 1 unit of the peg currency.
  */
 export function derivePegRates(
-  assets: StablecoinData[],
+  assets: PegAssetBase[],
   metaById?: Map<string, StablecoinMeta>,
   fallbackRates?: Record<string, number>,
 ): Record<string, number>;
 export function derivePegRates(
-  assets: StablecoinData[],
+  assets: PegAssetBase[],
   metaById: Map<string, StablecoinMeta> | undefined,
   fallbackRates: Record<string, number> | undefined,
   returnSources: true,
 ): PegRatesResult;
 export function derivePegRates(
-  assets: StablecoinData[],
+  assets: PegAssetBase[],
   metaById?: Map<string, StablecoinMeta>,
   fallbackRates?: Record<string, number>,
   returnSources?: boolean,
@@ -55,7 +55,7 @@ export function derivePegRates(
     // For gold/silver tokens, normalize price to "per troy ounce"
     if ((peg === "peggedGOLD" || peg === "peggedSILVER") && metaById) {
       const meta = metaById.get(a.id);
-      const oz = meta?.goldOunces;
+      const oz = meta?.commodityOunces;
       if (oz && oz > 0) {
         price = price / oz; // e.g. $162/gram → $162 / (1/31.1035) = ~$5039/oz
       }
@@ -107,19 +107,19 @@ export function derivePegRates(
 
 /**
  * Get the expected USD price for a coin given its pegType and the derived rates.
- * For gold-pegged tokens, adjusts the per-ounce reference by goldOunces
+ * For gold-pegged tokens, adjusts the per-ounce reference by commodityOunces
  * so that gram-denominated tokens get the correct per-gram reference.
  */
 export function getPegReference(
   pegType: string | undefined,
   rates: Record<string, number>,
-  goldOunces?: number
+  commodityOunces?: number
 ): number {
   if (!pegType) return 1;
   const rate = rates[pegType] ?? 1;
   // For gold/silver tokens, scale the per-ounce rate by the token's weight
-  if ((pegType === "peggedGOLD" || pegType === "peggedSILVER") && goldOunces && goldOunces > 0) {
-    return rate * goldOunces;
+  if ((pegType === "peggedGOLD" || pegType === "peggedSILVER") && commodityOunces && commodityOunces > 0) {
+    return rate * commodityOunces;
   }
   return rate;
 }

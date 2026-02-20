@@ -1,4 +1,4 @@
-import { ETHERSCAN_V2_BASE } from "../../../src/lib/blacklist-contracts";
+import { ETHERSCAN_V2_BASE } from "../lib/blacklist-contracts";
 import { getCache, setCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 

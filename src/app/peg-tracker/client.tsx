@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { CRON_5MIN } from "@/hooks/use-api-query";
@@ -34,15 +34,18 @@ export function PegTrackerClient() {
   const setTypeFilter = useCallback((v: GovernanceType | "all") => setParam("type", v), [setParam]);
   const setSearchQuery = useCallback((v: string) => setParam("q", v), [setParam]);
 
-  const filteredCoins = (pegData?.coins ?? []).filter((c) => {
-    if (pegFilter !== "all" && c.pegCurrency !== pegFilter) return false;
-    if (typeFilter !== "all" && c.governance !== typeFilter) return false;
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase().trim();
-      if (!c.name.toLowerCase().includes(q) && !c.symbol.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  const filteredCoins = useMemo(
+    () => (pegData?.coins ?? []).filter((c) => {
+      if (pegFilter !== "all" && c.pegCurrency !== pegFilter) return false;
+      if (typeFilter !== "all" && c.governance !== typeFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        if (!c.name.toLowerCase().includes(q) && !c.symbol.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    }),
+    [pegData, pegFilter, typeFilter, searchQuery],
+  );
 
   return (
     <div className="space-y-6">

@@ -1,9 +1,11 @@
-/** Timing-safe string comparison for admin key validation */
+/** Timing-safe string comparison for admin key validation.
+ *  Hashes both inputs first so the comparison never leaks length. */
 export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   const encoder = new TextEncoder();
-  const aBuf = encoder.encode(a);
-  const bBuf = encoder.encode(b);
-  if (aBuf.byteLength !== bBuf.byteLength) return false;
+  const [aBuf, bBuf] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
   return crypto.subtle.timingSafeEqual(aBuf, bBuf);
 }
 

@@ -1,15 +1,8 @@
 import { getCache } from "../lib/db";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
-import { CACHE_FRESHNESS_THRESHOLDS } from "../lib/constants";
 
 // --- Types ---
-
-interface CacheStatus {
-  ageSeconds: number | null;
-  maxAge: number;
-  healthy: boolean;
-}
 
 interface CronRun {
   startedAt: number;
@@ -68,23 +61,8 @@ export const handleStatus = withErrorHandler(
 
     const now = Math.floor(Date.now() / 1000);
 
-    // 1. Cache freshness (batch query)
-    const cacheKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS);
-    const cacheRows = await db
-      .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
-      .bind(...cacheKeys)
-      .all<{ key: string; value: string; updated_at: number }>();
-    const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, { value: r.value, updatedAt: r.updated_at }]));
-
-    const caches: Record<string, CacheStatus> = {};
-    let worstCacheRatio = 0;
-    for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
-      const cached = cacheMap.get(key);
-      const ageSeconds = cached ? now - cached.updatedAt : null;
-      const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
-      if (ratio > worstCacheRatio) worstCacheRatio = ratio;
-      caches[key] = { ageSeconds, maxAge, healthy: ratio <= 1.5 };
-    }
+    // 1. Cache freshness
+    const { caches, worstRatio: worstCacheRatio } = await buildCacheStatuses(db, now);
 
     // 2. Cron run history (batch query)
     const cronJobs = Object.keys(CRON_INTERVALS);

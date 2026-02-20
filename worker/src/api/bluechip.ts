@@ -1,3 +1,4 @@
 import { createCacheHandler } from "../lib/api-utils";
+import { CACHE_PROFILES } from "../lib/constants";
 
-export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "bluechip-ratings", "public, s-maxage=3600, max-age=300", 43200);
+export const handleBluechipRatings = createCacheHandler("bluechip-ratings", "bluechip-ratings", CACHE_PROFILES.slow, 43200);

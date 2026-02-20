@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { useSort } from "@/hooks/use-sort";
 import {
   Table,
   TableBody,
@@ -12,10 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SortableTableHead } from "@/components/sortable-table-head";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatPegStability, formatWorstDeviation } from "@/lib/format";
+import { formatPegStability, formatBps } from "@/lib/format";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import type { PegSummaryCoin } from "@/lib/types";
 
@@ -38,17 +39,7 @@ function formatSpan(days: number): string {
 
 export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps) {
   const prefetch = usePrefetchStablecoin();
-  const [sortKey, setSortKey] = useState<SortKey>("pegScore");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("desc");
-    }
-  };
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("pegScore", "desc");
 
   const sorted = useMemo(() => {
     return [...coins].sort((a, b) => {
@@ -61,9 +52,9 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
       const cmp = sortKey === "currentDeviationBps"
         ? Math.abs(bRaw as number) - Math.abs(aRaw as number)
         : (bRaw as number) - (aRaw as number);
-      return sortDir === "desc" ? cmp : -cmp;
+      return sortDirection === "desc" ? cmp : -cmp;
     });
-  }, [coins, sortKey, sortDir]);
+  }, [coins, sortKey, sortDirection]);
 
   const columns: { key: SortKey; label: string }[] = [
     { key: "pegScore", label: "Peg Score" },
@@ -97,27 +88,17 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                     Stablecoin
                   </TableHead>
                   {columns.map((col) => (
-                    <TableHead
+                    <SortableTableHead
                       key={col.key}
-                      className="cursor-pointer select-none whitespace-nowrap hover:bg-muted/50 transition-colors"
-                      onClick={() => handleSort(col.key)}
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort(col.key); } }}
-                      aria-sort={sortKey === col.key ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-                    >
-                      <div className="flex items-center gap-1">
-                        {col.label}
-                        {sortKey === col.key ? (
-                          sortDir === "asc" ? (
-                            <ArrowUp className="h-3.5 w-3.5 text-foreground" />
-                          ) : (
-                            <ArrowDown className="h-3.5 w-3.5 text-foreground" />
-                          )
-                        ) : (
-                          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-                        )}
-                      </div>
-                    </TableHead>
+                      sortKey={col.key}
+                      currentSortKey={sortKey}
+                      sortDirection={sortDirection}
+                      label={col.label}
+                      toggleSort={toggleSort}
+                      getAriaSortValue={getAriaSortValue}
+                      handleSortKeyDown={handleSortKeyDown}
+                      className="select-none whitespace-nowrap"
+                    />
                   ))}
                 </TableRow>
               </TableHeader>
@@ -166,7 +147,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                     <TableCell>
                       {coin.worstDeviationBps !== null ? (
                         <span className={`font-mono text-sm ${deviationColorClass(Math.abs(coin.worstDeviationBps))}`}>
-                          {formatWorstDeviation(coin.worstDeviationBps)}
+                          {formatBps(coin.worstDeviationBps)}
                         </span>
                       ) : (
                         <span className="text-xs text-muted-foreground">&mdash;</span>

@@ -25,33 +25,8 @@ export const USER_AGENT = "Pharos/1.0 (stablecoin analytics)";
 
 export const RUB_FALLBACK = 0.011;
 
-/** CoinGecko ID overrides for coins with missing or wrong geckoId in DefiLlama */
-export const GECKO_ID_OVERRIDES: Record<string, string> = {
-  // DefiLlama-listed coins with missing/wrong geckoId
-  "226": "frankencoin",              // ZCHF — DL price intermittently returns 0
-  "269": "liquity-bold-2",           // BOLD — no geckoId in DL stablecoins API
-  "255": "aegis-yusd",               // YUSD — no geckoId in DL stablecoins API
-  "275": "quantoz-usdq",             // USDQ — no geckoId in DL stablecoins API
-  "302": "hylo-usd",                 // HYUSD — no geckoId in DL stablecoins API
-  "342": "megausd",                  // USDM (MegaUSD) — no geckoId in DL stablecoins API
-  "185": "gyroscope-gyd",            // GYD — no geckoId in DL stablecoins API
-  // Gold tokens — no DL stablecoin entry, need geckoId for price chart backfill
-  "gold-xaut": "tether-gold",
-  "gold-paxg": "pax-gold",
-  "gold-kau":  "kinesis-gold",
-  "gold-xaum": "matrixdock-gold",
-  "gold-vro":  "veraone",
-  "gold-cgo":  "comtech-gold",
-  "gold-dgld": "gold-token-sa-dgld-tokenized-gold",
-  // Silver tokens
-  "silver-kag": "kinesis-silver",
-  // CoinGecko-only fiat tokens — no DL stablecoin entry
-  "cg-jpyc":  "jpy-coin",
-  "cg-idrt":  "rupiah-token",
-  "cg-eurq":  "quantoz-eurq",
-  "cg-zarp":  "zarp-stablecoin",
-  "cg-deuro": "decentralized-euro",
-};
+/** @deprecated All geckoId overrides consolidated into StablecoinMeta.geckoId — kept as empty map for backward compat */
+export const GECKO_ID_OVERRIDES: Record<string, string> = {};
 
 /** Minimum number of assets expected from DefiLlama to consider sync valid */
 export const MIN_VALID_ASSET_COUNT = 50;
@@ -66,6 +41,16 @@ export const TRON_BURN_ADDRESS = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";
 export const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
   { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
 ];
+
+/** Standard Cache-Control header profiles for API responses */
+export const CACHE_PROFILES = {
+  /** ~realtime data: stablecoins, blacklist, depeg-events, peg-summary */
+  realtime: "public, s-maxage=60, max-age=10",
+  /** Standard refresh: stablecoin-charts, dex-liquidity, usds-status */
+  standard: "public, s-maxage=300, max-age=60",
+  /** Slow-changing data: dex-liquidity-history, supply-history, daily-digest, bluechip-ratings */
+  slow: "public, s-maxage=3600, max-age=300",
+} as const;
 
 /** Maximum cache age (in seconds) per cache key — used by both /health and /status endpoints */
 export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {

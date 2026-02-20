@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { formatEventDate, formatWorstDeviation } from "@/lib/format";
+import { formatEventDate, formatBps } from "@/lib/format";
 import { deviationColorHex } from "@/lib/severity-colors";
 import type { DepegEvent } from "@/lib/types";
 
@@ -226,7 +226,7 @@ export function DepegTimeline({ events, logos }: DepegTimelineProps) {
                         : " \u2014 ongoing"}
                     </p>
                     <p className="font-mono">
-                      Peak: {formatWorstDeviation(hoveredEvent.peakDeviationBps)}
+                      Peak: {formatBps(hoveredEvent.peakDeviationBps)}
                     </p>
                     <p className="text-muted-foreground">
                       {hoveredEvent.direction === "above" ? "Above" : "Below"} peg

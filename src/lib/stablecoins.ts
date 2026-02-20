@@ -7,7 +7,9 @@ interface StablecoinOpts {
   navToken?: boolean;
   collateral?: string;
   pegMechanism?: string;
-  goldOunces?: number;
+  commodityOunces?: number;
+  geckoId?: string;
+  protocolSlug?: string;
   proofOfReserves?: import("./types").ProofOfReserves;
   links?: import("./types").StablecoinLink[];
   jurisdiction?: import("./types").Jurisdiction;
@@ -16,13 +18,13 @@ interface StablecoinOpts {
 }
 
 function usd(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency: "USD", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
+  return { id, name, symbol, flags: { backing, pegCurrency: "USD", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, geckoId: opts?.geckoId, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 function eur(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency: "EUR", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
+  return { id, name, symbol, flags: { backing, pegCurrency: "EUR", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, geckoId: opts?.geckoId, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 function other(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, goldOunces: opts?.goldOunces, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 
 /**
@@ -622,7 +624,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/PleasingGolden" },
     ],
     contracts: [
-      { chain: "ethereum", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6 },
+      { chain: "arbitrum", address: "0xc8fb643d18f1e53698cfda5c8fdf0cdc03c1dbec", decimals: 18 },
     ],
   }),
   usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
@@ -805,6 +807,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // BUSD (id 4) removed — regulatory shutdown Feb 2023 (see cemetery)
   usd("275", "Quantoz USDQ", "USDQ", "rwa-backed", "centralized", {
+    geckoId: "quantoz-usdq",
     collateral: "Euro/USD reserves held in regulated accounts",
     pegMechanism: "Direct 1:1 redemption through Quantoz",
     links: [
@@ -904,6 +907,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("255", "Aegis YUSD", "YUSD", "rwa-backed", "centralized", {
+    geckoId: "aegis-yusd",
     collateral: "U.S. dollar reserves",
     pegMechanism: "Direct 1:1 redemption through Aegis",
     proofOfReserves: { type: "real-time", url: "https://aegis.accountable.capital/", provider: "Accountable" },
@@ -929,6 +933,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
+    geckoId: "liquity-bold-2",
     collateral: "ETH and ETH liquid staking tokens (wstETH, rETH) only",
     pegMechanism: "Overcollateralized CDPs with on-chain redemption for $1 of ETH collateral",
     links: [
@@ -941,6 +946,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "centralized-dependent", {
+    geckoId: "hylo-usd",
     collateral: "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
     pegMechanism: "Overcollateralization (160%+) with companion leveraged token (xSOL) absorbing SOL volatility; operates on Solana (not Ethereum or a Stage 1 L2)",
     links: [
@@ -1014,6 +1020,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("226", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
+    geckoId: "frankencoin",
     collateral: "WBTC and ETH in oracle-free overcollateralized positions (~230%)",
     pegMechanism: "Auction-based collateral valuation with veto governance; no price oracle dependency",
     links: [
@@ -1066,6 +1073,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
+    geckoId: "gyroscope-gyd",
     collateral: "Diversified reserve of sDAI, USDC, LUSD, and crvUSD in yield-generating vaults",
     pegMechanism: "Primary-market AMM (PAMM) adjusts redemption prices based on reserve ratio",
     links: [
@@ -1196,7 +1204,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("342", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
-    rwa: true,
+    rwa: true, geckoId: "megausd",
     collateral: "USDtb (BlackRock BUIDL tokenized Treasuries via Ethena/Securitize) with liquid stablecoins for redemptions",
     pegMechanism: "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
     links: [
@@ -1472,6 +1480,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
+    geckoId: "jpy-coin",
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
     pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. (FSA-registered Fund Transfer Service Provider)",
     links: [
@@ -1483,6 +1492,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("cg-idrt", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "IDR", {
+    geckoId: "rupiah-token",
     collateral: "Indonesian rupiah reserves held 1:1 in Indonesian bank accounts",
     pegMechanism: "Direct 1:1 redemption for IDR through PT Rupiah Token Indonesia",
     links: [
@@ -1495,9 +1505,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
-  // goldOunces: troy ounces of gold per token (used for peg deviation normalization)
+  // commodityOunces: troy ounces per token (used for peg deviation normalization)
   other("gold-xaut", "Tether Gold", "XAUT", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1,
+    rwa: true, commodityOunces: 1, geckoId: "tether-gold", protocolSlug: "tether-gold",
     collateral: "Physical gold bars held in Swiss vaults by Tether",
     pegMechanism: "Direct redemption for physical gold through Tether",
     proofOfReserves: { type: "independent-audit", url: "https://gold.tether.to/reports", provider: "BDO" },
@@ -1511,7 +1521,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-paxg", "PAX Gold", "PAXG", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1,
+    rwa: true, commodityOunces: 1, geckoId: "pax-gold", protocolSlug: "paxos-gold",
     collateral: "Physical gold bars held in London Brink's vaults by Paxos (NYDFS-regulated)",
     pegMechanism: "Direct redemption for physical gold through Paxos",
     proofOfReserves: { type: "independent-audit", url: "https://www.paxos.com/paxg-transparency", provider: "KPMG" },
@@ -1525,7 +1535,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-kau", "Kinesis Gold", "KAU", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1 / 31.1035,
+    rwa: true, commodityOunces: 1 / 31.1035, geckoId: "kinesis-gold",
     collateral: "Investment-grade physical gold bullion (1 KAU = 1 gram)",
     pegMechanism: "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
     proofOfReserves: { type: "independent-audit", url: "https://kinesis.money/trust-security/", provider: "Inspectorate International" },
@@ -1536,7 +1546,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Cayman Islands", regulator: "CIMA", license: "VASP Registration" },
   }),
   other("gold-xaum", "Matrixdock Gold", "XAUm", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1,
+    rwa: true, commodityOunces: 1, geckoId: "matrixdock-gold",
     collateral: "LBMA-certified 99.99% pure gold bars held in Asian vaults",
     pegMechanism: "Direct redemption for physical gold through Matrixdock (Matrixport)",
     proofOfReserves: { type: "independent-audit", url: "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold", provider: "Independent physical audit" },
@@ -1550,7 +1560,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-vro", "VeraOne", "VRO", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1 / 31.1035,
+    rwa: true, commodityOunces: 1 / 31.1035, geckoId: "veraone",
     collateral: "Physical gold stored in secure zones in France (1 VRO = 1 gram of gold)",
     pegMechanism: "Direct redemption for physical gold through VeraCash",
     links: [
@@ -1562,7 +1572,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1 / 31.1035,
+    rwa: true, commodityOunces: 1 / 31.1035, geckoId: "comtech-gold",
     collateral: "Physical gold stored with Transguard in UAE (1 CGO = 1 gram of pure gold), Shariah-compliant",
     pegMechanism: "Direct redemption for physical gold through Comtech Gold (DMCC-endorsed)",
     links: [
@@ -1571,7 +1581,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United Arab Emirates" },
   }),
   other("gold-dgld", "DGLD Tokenized Gold", "DGLD", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, goldOunces: 1,
+    rwa: true, commodityOunces: 1, geckoId: "gold-token-sa-dgld-tokenized-gold",
     collateral: "LBMA-certified PAMP gold bars stored in Swiss vaults (1 DGLD = 1 troy ounce)",
     pegMechanism: "Direct redemption for physical gold through Gold Token SA (MKS PAMP subsidiary)",
     links: [
@@ -1585,7 +1595,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Silver-Pegged (data via DefiLlama coins API) ──────────────────────
   other("silver-kag", "Kinesis Silver", "KAG", "rwa-backed", "centralized", "SILVER", {
-    rwa: true, goldOunces: 1, // 1 troy ounce per token (reuse field — normalization math is identical)
+    rwa: true, commodityOunces: 1, geckoId: "kinesis-silver", // 1 troy ounce per token
     collateral: "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
     pegMechanism: "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
     proofOfReserves: { type: "independent-audit", url: "https://kinesis.money/trust-security/", provider: "Inspectorate International" },
@@ -1663,6 +1673,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("cg-eurq", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {
+    geckoId: "quantoz-eurq",
     collateral: "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
     pegMechanism: "Direct 1:1 redemption through Quantoz Payments",
     links: [
@@ -1686,6 +1697,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("cg-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
+    geckoId: "decentralized-euro",
     collateral: "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
     pegMechanism: "Overcollateralized CDP with automated liquidation; no oracle dependency (same architecture as Frankencoin ZCHF)",
     links: [
@@ -1741,6 +1753,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional non-USD/non-EUR pegs ──────────────────────────────────
   other("cg-zarp", "ZARP Stablecoin", "ZARP", "rwa-backed", "centralized", "ZAR", {
+    geckoId: "zarp-stablecoin",
     collateral: "South African rand reserves (treasury managed by Old Mutual Wealth)",
     pegMechanism: "Direct 1:1 redemption for ZAR through ZARP",
     links: [

@@ -51,8 +51,8 @@ export function CompareClient() {
   useEffect(() => {
     const symbols = selectedIds
       .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
-      .filter(Boolean)
-      .map((c) => c!.symbol.toLowerCase());
+      .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
+      .map((c) => c.symbol.toLowerCase());
     const paramStr = symbols.join(",");
     const newUrl = paramStr ? `/compare/?coins=${paramStr}` : "/compare/";
     router.replace(newUrl, { scroll: false });
