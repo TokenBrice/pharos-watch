@@ -1,4 +1,4 @@
-import { setCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db";
 import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 
 /**
@@ -74,9 +74,22 @@ export async function syncFxRates(db: D1Database): Promise<void> {
       // Fall through to hardcoded fallback
     }
 
-    // Fallback: RUB if secondary API also failed
+    // Fallback: RUB if secondary API also failed — use last-cached rate from D1, else hardcoded constant
     if (!rates["peggedRUB"]) {
-      rates["peggedRUB"] = RUB_FALLBACK;
+      const cached = await getCache(db, "fx-rates");
+      if (cached) {
+        try {
+          const prev = JSON.parse(cached.value) as Record<string, number>;
+          if (typeof prev["peggedRUB"] === "number" && prev["peggedRUB"] > 0) {
+            rates["peggedRUB"] = prev["peggedRUB"];
+            console.log(`[sync-fx-rates] Using cached RUB rate: ${rates["peggedRUB"]}`);
+          }
+        } catch { /* ignore parse errors */ }
+      }
+      if (!rates["peggedRUB"]) {
+        rates["peggedRUB"] = RUB_FALLBACK;
+        console.log(`[sync-fx-rates] Using hardcoded RUB fallback: ${RUB_FALLBACK}`);
+      }
     }
 
     // Silver spot price (USD per troy ounce) from DefiLlama coins API

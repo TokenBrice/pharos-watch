@@ -9,6 +9,7 @@ import { syncFxRates } from "./cron/sync-fx-rates";
 import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { syncOnchainSupply } from "./cron/sync-onchain-supply";
 import { snapshotSupply } from "./cron/snapshot-supply";
+import { initChainRpcs } from "./lib/chain-rpcs";
 
 interface Env {
   DB: D1Database;
@@ -16,6 +17,7 @@ interface Env {
   ETHERSCAN_API_KEY?: string;
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;
+  ALCHEMY_API_KEY?: string;
   ADMIN_KEY?: string;
   GRAPH_API_KEY?: string;
 }
@@ -95,6 +97,7 @@ const worker = {
   },
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
     const db = env.DB;
     const cron = event.cron;
 
@@ -103,7 +106,8 @@ const worker = {
         ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db)));
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
         const scheduled = new Date(event.scheduledTime);
-        if (scheduled.getUTCHours() === 0 && scheduled.getUTCMinutes() === 0) {
+        const hour = scheduled.getUTCHours();
+        if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() === 0) {
           ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
         }
         break;

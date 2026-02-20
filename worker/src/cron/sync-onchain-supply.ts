@@ -75,27 +75,33 @@ async function runEvmBatch(
   return failed;
 }
 
+/** Batch size for keyed RPC providers (Alchemy — no batch limit) */
+const BATCH_CHUNK_KEYED = 50;
+/** Batch size for public RPCs (conservative — many enforce 25-request limits) */
+const BATCH_CHUNK_PUBLIC = 20;
+
 /** Fetch totalSupply for a batch of EVM contracts, with optional fallback RPC */
 async function fetchEvmTotalSupply(
   rpcUrl: string,
   queries: ContractQuery[],
-  fallbackRpcUrl?: string
+  fallbackRpcUrl?: string,
+  keyedPrimary?: boolean
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
-  const BATCH_CHUNK = 20;
+  const primaryChunk = keyedPrimary ? BATCH_CHUNK_KEYED : BATCH_CHUNK_PUBLIC;
 
   // Chunk primary RPC requests to stay under batch size limits
   let allFailed: ContractQuery[] = [];
-  for (let i = 0; i < queries.length; i += BATCH_CHUNK) {
-    const chunk = queries.slice(i, i + BATCH_CHUNK);
+  for (let i = 0; i < queries.length; i += primaryChunk) {
+    const chunk = queries.slice(i, i + primaryChunk);
     const failed = await runEvmBatch(rpcUrl, chunk, results);
     allFailed.push(...failed);
   }
 
   if (allFailed.length > 0 && fallbackRpcUrl) {
     console.log(`[onchain-supply] Retrying ${allFailed.length} failed queries on fallback RPC`);
-    for (let i = 0; i < allFailed.length; i += BATCH_CHUNK) {
-      const chunk = allFailed.slice(i, i + BATCH_CHUNK);
+    for (let i = 0; i < allFailed.length; i += BATCH_CHUNK_PUBLIC) {
+      const chunk = allFailed.slice(i, i + BATCH_CHUNK_PUBLIC);
       await runEvmBatch(fallbackRpcUrl, chunk, results);
     }
   }
@@ -187,7 +193,7 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey: string | nul
       (async () => {
         let results: Map<string, number>;
         if (rpc.type === "evm") {
-          results = await fetchEvmTotalSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl);
+          results = await fetchEvmTotalSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl, rpc.alchemyPrimary);
         } else {
           results = await fetchTronTotalSupply(rpc.rpcUrl, queries, tronApiKey);
         }
