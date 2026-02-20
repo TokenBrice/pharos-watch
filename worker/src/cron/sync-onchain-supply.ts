@@ -41,7 +41,9 @@ async function runEvmBatch(
 
     const responses = (await res.json()) as { id: number; result?: string; error?: unknown }[];
 
+    const seen = new Set<number>();
     for (const resp of responses) {
+      seen.add(resp.id);
       const query = queries[resp.id];
       if (!query) continue;
       if (!resp.result || resp.result === "0x" || resp.error) {
@@ -60,6 +62,11 @@ async function runEvmBatch(
         failed.push(query);
       }
     }
+
+    // Detect queries that received no response at all (RPC dropped them)
+    for (let i = 0; i < queries.length; i++) {
+      if (!seen.has(i)) failed.push(queries[i]);
+    }
   } catch (err) {
     console.error(`[onchain-supply] RPC request failed for ${rpcUrl}:`, err);
     return queries; // all failed
@@ -75,11 +82,22 @@ async function fetchEvmTotalSupply(
   fallbackRpcUrl?: string
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
-  const failed = await runEvmBatch(rpcUrl, queries, results);
+  const BATCH_CHUNK = 20;
 
-  if (failed.length > 0 && fallbackRpcUrl) {
-    console.log(`[onchain-supply] Retrying ${failed.length} failed queries on fallback RPC`);
-    await runEvmBatch(fallbackRpcUrl, failed, results);
+  // Chunk primary RPC requests to stay under batch size limits
+  let allFailed: ContractQuery[] = [];
+  for (let i = 0; i < queries.length; i += BATCH_CHUNK) {
+    const chunk = queries.slice(i, i + BATCH_CHUNK);
+    const failed = await runEvmBatch(rpcUrl, chunk, results);
+    allFailed.push(...failed);
+  }
+
+  if (allFailed.length > 0 && fallbackRpcUrl) {
+    console.log(`[onchain-supply] Retrying ${allFailed.length} failed queries on fallback RPC`);
+    for (let i = 0; i < allFailed.length; i += BATCH_CHUNK) {
+      const chunk = allFailed.slice(i, i + BATCH_CHUNK);
+      await runEvmBatch(fallbackRpcUrl, chunk, results);
+    }
   }
 
   return results;

@@ -286,8 +286,10 @@ async function fetchCoinGeckoMarketData(): Promise<CoinGeckoMcapData> {
   return (await res.json()) as CoinGeckoMcapData;
 }
 
-async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcapData): Promise<void> {
-  if (SUPPLY_OVERRIDE_COINS.length === 0) return;
+/** Returns CG mcap fallback data for force-override coins (used as safety net after on-chain pass) */
+async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcapData): Promise<Map<string, { mcap: number; pegKey: string }>> {
+  const forcedMcaps = new Map<string, { mcap: number; pegKey: string }>();
+  if (SUPPLY_OVERRIDE_COINS.length === 0) return forcedMcaps;
 
   try {
     for (const override of SUPPLY_OVERRIDE_COINS) {
@@ -299,9 +301,12 @@ async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcap
       const mcap = geckoData.usd_market_cap;
       if (!price || price <= 0) continue;
 
-      // Force mode: only override price from CoinGecko, let on-chain override handle supply
+      // Force mode: override price from CoinGecko, stash mcap as fallback for post-on-chain check
       if (override.force) {
         asset.price = price;
+        if (mcap && mcap > 0) {
+          forcedMcaps.set(override.llamaId, { mcap, pegKey: override.pegKey });
+        }
         console.log(`[sync-stablecoins] Price-only override for ${asset.symbol}: price $${price.toFixed(6)} (supply deferred to on-chain)`);
         continue;
       }
@@ -328,6 +333,7 @@ async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcap
   } catch (err) {
     console.warn("[sync-stablecoins] Supply override fetch failed:", err);
   }
+  return forcedMcaps;
 }
 
 export async function syncStablecoins(db: D1Database): Promise<void> {
@@ -372,7 +378,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   }
 
   // Patch corrupted supply data from DefiLlama using CoinGecko
-  await patchSupplyOverrides(llamaData.peggedAssets, cgData);
+  const forcedMcaps = await patchSupplyOverrides(llamaData.peggedAssets, cgData);
 
   // Patch known missing/wrong geckoIds so enrichMissingPrices can resolve them
   // GECKO_ID_OVERRIDES imported from ../lib/constants
@@ -566,6 +572,91 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     }
   } catch (err) {
     console.error("[sync-stablecoins] On-chain supply override failed:", err);
+  }
+
+  // --- CoinGecko mcap safety net for forced coins ---
+  // If on-chain override didn't fire (missing data), fall back to CG mcap
+  if (forcedMcaps.size > 0) {
+    for (const [llamaId, { mcap, pegKey }] of forcedMcaps) {
+      const asset = llamaData.peggedAssets.find((a) => String(a.id) === llamaId);
+      if (!asset) continue;
+
+      const circ = asset.circulating as Record<string, number> | undefined;
+      const currentMcap = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
+
+      // If current mcap is tiny but CG says it should be large, apply CG mcap
+      if (currentMcap < 1000 && mcap > 1_000_000) {
+        asset.circulating = { [pegKey]: mcap };
+        (asset as Record<string, unknown>).circulatingPrevDay = null;
+        (asset as Record<string, unknown>).circulatingPrevWeek = null;
+        (asset as Record<string, unknown>).circulatingPrevMonth = null;
+        console.log(
+          `[sync-stablecoins] CG mcap safety-net for ${asset.symbol} (id=${llamaId}): ` +
+          `broken DL mcap $${currentMcap.toFixed(0)} → CG mcap $${mcap.toFixed(0)}`
+        );
+      }
+    }
+  }
+
+  // --- Fill missing circulatingPrev* from supply_history snapshots ---
+  try {
+    const nowMs = Date.now();
+    const utcMidnight = (daysAgo: number) => {
+      const d = new Date(nowMs);
+      d.setUTCDate(d.getUTCDate() - daysAgo);
+      return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000);
+    };
+    const date1d = utcMidnight(1);
+    const date7d = utcMidnight(7);
+    const date30d = utcMidnight(30);
+
+    const histRows = await db
+      .prepare(
+        "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE snapshot_date IN (?, ?, ?)"
+      )
+      .bind(date1d, date7d, date30d)
+      .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+
+    if (histRows.results.length > 0) {
+      const histMap = new Map<string, { day?: number; week?: number; month?: number }>();
+      for (const row of histRows.results) {
+        const entry = histMap.get(row.stablecoin_id) ?? {};
+        if (row.snapshot_date === date1d) entry.day = row.circulating_usd;
+        else if (row.snapshot_date === date7d) entry.week = row.circulating_usd;
+        else if (row.snapshot_date === date30d) entry.month = row.circulating_usd;
+        histMap.set(row.stablecoin_id, entry);
+      }
+
+      let fillCount = 0;
+      for (const asset of llamaData.peggedAssets) {
+        const hist = histMap.get(String(asset.id));
+        if (!hist) continue;
+
+        const circ = asset.circulating as Record<string, number> | undefined;
+        if (!circ) continue;
+        const pegKey = Object.keys(circ)[0];
+        if (!pegKey) continue;
+
+        if (asset.circulatingPrevDay == null && hist.day != null) {
+          asset.circulatingPrevDay = { [pegKey]: hist.day };
+          fillCount++;
+        }
+        if (asset.circulatingPrevWeek == null && hist.week != null) {
+          asset.circulatingPrevWeek = { [pegKey]: hist.week };
+          fillCount++;
+        }
+        if (asset.circulatingPrevMonth == null && hist.month != null) {
+          asset.circulatingPrevMonth = { [pegKey]: hist.month };
+          fillCount++;
+        }
+      }
+
+      if (fillCount > 0) {
+        console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
+      }
+    }
+  } catch (err) {
+    console.warn("[sync-stablecoins] supply_history fallback failed:", err);
   }
 
   // Post-override sanity check: re-validate total supply after on-chain overrides
