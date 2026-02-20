@@ -1,4 +1,5 @@
 import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD } from "../lib/constants";
+import { fetchWithRetry } from "../lib/fetch-retry";
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -99,8 +100,8 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
 
     if (withAddress.length > 0) {
       const coinIds = withAddress.map((m) => m.coinId).join(",");
-      const res = await fetch(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-      if (res.ok) {
+      const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+      if (res && res.ok) {
         const data = (await res.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
         for (const m of withAddress) {
           const priceInfo = data.coins[m.coinId];
@@ -135,8 +136,8 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
 
       if (altLookups.length > 0) {
         const coinIds = altLookups.map((m) => m.coinId).join(",");
-        const res = await fetch(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-        if (res.ok) {
+        const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+        if (res && res.ok) {
           const data = (await res.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
           const resolved = new Set<number>(); // avoid double-count
           for (const m of altLookups) {
@@ -172,8 +173,8 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
     const afterPass2: { index: number; geckoId: string }[] = [];
     if (geckoPass.length > 0) {
       const geckoIds = geckoPass.map((m) => `coingecko:${m.geckoId}`).join(",");
-      const geckoRes = await fetch(`${DEFILLAMA_COINS}/prices/current/${geckoIds}`);
-      if (geckoRes.ok) {
+      const geckoRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${geckoIds}`);
+      if (geckoRes && geckoRes.ok) {
         const geckoData = (await geckoRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
         for (const m of geckoPass) {
           const priceInfo = geckoData.coins[`coingecko:${m.geckoId}`];
@@ -201,7 +202,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
       if (cgRes.ok) {
         const cgData = (await cgRes.json()) as Record<string, { usd?: number }>;
         for (const m of afterPass2) {
-          if (cgData[m.geckoId]?.usd != null) {
+          if (cgData[m.geckoId]?.usd != null && cgData[m.geckoId].usd! > 0) {
             assets[m.index].price = cgData[m.geckoId].usd!;
             pass3Count++;
           }
@@ -220,7 +221,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
       try {
         const res = await fetch(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-          { headers: { "User-Agent": USER_AGENT } }
+          { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
         );
         if (!res.ok) {
           console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);

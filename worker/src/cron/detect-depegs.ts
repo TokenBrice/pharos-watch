@@ -9,7 +9,8 @@ import type { StablecoinData } from "../../../src/lib/types";
 export async function detectDepegEvents(db: D1Database, assets: StablecoinData[], fxFallbackRates?: Record<string, number>): Promise<void> {
   const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const pegRates = derivePegRates(assets, metaById, fxFallbackRates);
-  const now = Math.floor(Date.now() / 1000);
+  const syncStart = Math.floor(Date.now() / 1000);
+  const now = syncStart;
 
   // Load DEX-implied prices for cross-validation
   // Wrapped in try/catch for resilience if migration 0011 hasn't been applied yet
@@ -195,7 +196,7 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
     // Skip events we know are legitimately still open
     if (seen.has(row.id)) continue;
     // Skip events just created in this run (their IDs weren't known during the loop)
-    if (row.started_at === now) continue;
+    if (row.started_at >= syncStart) continue;
     // This event is orphaned — close it
     orphanStmts.push(
       db.prepare(

@@ -178,12 +178,14 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
       if (stablecoinsCache) {
         try {
           const cacheData = JSON.parse(stablecoinsCache.value) as {
-            peggedAssets?: { id: unknown; circulating?: Record<string, number> }[];
+            peggedAssets?: { id: unknown; price?: number | null; circulating?: Record<string, number> }[];
           };
           const cachedAsset = cacheData.peggedAssets?.find((a) => String(a.id) === id);
           if (cachedAsset?.circulating) {
             const correctedMcap = Object.values(cachedAsset.circulating).reduce((s, v) => s + (v ?? 0), 0);
             if (correctedMcap > 0) {
+              const assetPrice = typeof cachedAsset.price === "number" && cachedAsset.price > 0
+                ? cachedAsset.price : null;
               // Patch last 7 entries (covers ~1 week of daily data points)
               const patchCount = Math.min(7, parsed.tokens.length);
               for (let i = parsed.tokens.length - patchCount; i < parsed.tokens.length; i++) {
@@ -192,7 +194,11 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
                   entry.totalCirculatingUSD = { [forceOverride.pegKey]: correctedMcap };
                 }
                 if (entry.totalCirculating) {
-                  entry.totalCirculating = { [forceOverride.pegKey]: correctedMcap };
+                  // Compute supply in token units: mcap / price
+                  // (totalCirculatingUSD / totalCirculating = price for PriceChart)
+                  entry.totalCirculating = {
+                    [forceOverride.pegKey]: assetPrice ? correctedMcap / assetPrice : correctedMcap,
+                  };
                 }
               }
               console.log(`[detail] Patched ${patchCount} recent entries for ${id} with corrected mcap $${correctedMcap.toFixed(0)}`);

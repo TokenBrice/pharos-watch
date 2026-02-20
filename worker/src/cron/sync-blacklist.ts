@@ -312,7 +312,9 @@ async function fetchEvmLogsForTopic(
 
   budget.count++;
   const json = await rateLimit(async () => {
-    const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`);
+    const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, {
+      signal: AbortSignal.timeout(15_000),
+    });
     if (!res.ok) {
       console.warn(`[blacklist] Etherscan v2 (chain ${evmChainId}) API error: ${res.status}`);
       await res.body?.cancel();
@@ -378,6 +380,10 @@ function parseEvmLogs(
         : log.data.length > 66 ? decodeUint256("0x" + log.data.slice(66), config.decimals) : null
       : null;
 
+    const blockNumber = parseInt(log.blockNumber, 16);
+    const timestamp = parseInt(log.timeStamp, 16);
+    if (isNaN(blockNumber) || isNaN(timestamp)) return null;
+
     return {
       id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}`,
       stablecoin: config.stablecoin,
@@ -387,12 +393,12 @@ function parseEvmLogs(
       address: affectedAddress,
       amount,
       tx_hash: log.transactionHash,
-      block_number: parseInt(log.blockNumber, 16),
-      timestamp: parseInt(log.timeStamp, 16),
+      block_number: blockNumber,
+      timestamp,
       explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
       explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
     };
-  });
+  }).filter((r): r is NonNullable<typeof r> => r !== null) as BlacklistRow[];
 }
 
 async function fetchEvmEventsIncremental(

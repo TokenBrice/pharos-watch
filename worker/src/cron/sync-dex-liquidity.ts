@@ -1114,7 +1114,7 @@ async function writeHistoricalSnapshots(
         snapStmts.push(
           db
             .prepare(
-              `INSERT INTO dex_liquidity_history
+              `INSERT OR IGNORE INTO dex_liquidity_history
                 (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date)
               VALUES (?, ?, ?, ?, ?)`
             )

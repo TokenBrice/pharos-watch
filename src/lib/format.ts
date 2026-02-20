@@ -45,6 +45,7 @@ export function formatPegDeviation(price: number | null | undefined, pegValue = 
   // Deviation as basis points relative to peg: ((price / pegValue) - 1) * 10000
   const ratio = price / pegValue;
   const bps = Math.round((ratio - 1) * 10000);
+  if (!Number.isFinite(bps)) return "N/A";
   const sign = bps >= 0 ? "+" : "";
   return `${sign}${bps} bps`;
 }
@@ -57,6 +58,7 @@ export function formatPercentChange(current: number, previous: number): string {
 }
 
 export function formatSupply(value: number): string {
+  if (!Number.isFinite(value)) return "N/A";
   if (value >= 1e12) return `${(value / 1e12).toFixed(2)}T`;
   if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;

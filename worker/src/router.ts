@@ -79,10 +79,17 @@ export function route(
     return handleStatus(db, adminKey, request);
   }
 
-  // /api/stablecoin/:id
+  // /api/stablecoin/:id — validate ID format to prevent cache pollution
   const detailMatch = path.match(/^\/api\/stablecoin\/(.+)$/);
   if (detailMatch) {
-    return handleStablecoinDetail(db, decodeURIComponent(detailMatch[1]), ctx);
+    const id = decodeURIComponent(detailMatch[1]);
+    if (!/^\d+$/.test(id) && !/^(?:gold|silver|cg)-/.test(id)) {
+      return Promise.resolve(new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }));
+    }
+    return handleStablecoinDetail(db, id, ctx);
   }
 
   return null;

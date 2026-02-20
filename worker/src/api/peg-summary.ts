@@ -120,10 +120,11 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
         : 0;
       if (pegRef > 0) {
         const dexBps = Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000);
-        const primaryAbsBps = currentBps != null ? Math.abs(currentBps) : 0;
-        const dexAbsBps = Math.abs(dexBps);
-        // "agrees" = both sources within 50bps of each other on peg deviation assessment
-        const agrees = Math.abs(primaryAbsBps - dexAbsBps) < 50;
+        // "agrees" = both sources within 50bps of each other (signed comparison
+        // catches opposite-direction disagreements, e.g. +200bps vs -200bps)
+        const agrees = currentBps != null
+          ? Math.abs(currentBps - dexBps) < 50
+          : Math.abs(dexBps) < 50;
         dexPriceCheck = {
           dexPrice: dexRow.dex_price_usd,
           dexDeviationBps: dexBps,

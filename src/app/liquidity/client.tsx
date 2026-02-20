@@ -59,8 +59,8 @@ export function LiquidityClient() {
     let scoreSum = 0;
     let scoreCount = 0;
     let withLiquidity = 0;
-    let tvlChangeWeighted = 0;
-    let tvlChangeCount = 0;
+    let tvlForChange = 0;    // current TVL only for coins with 7d change data
+    let totalPrevTvl = 0;    // previous TVL for those same coins
     let totalBalance = 0;
     let balanceWeight = 0;
     let totalOrganic = 0;
@@ -77,10 +77,9 @@ export function LiquidityClient() {
         withLiquidity++;
       }
       if (liq.tvlChange7d != null && liq.totalTvlUsd > 0) {
-        // Weight the % change by TVL to get aggregate trend
         const prevTvl = liq.totalTvlUsd / (1 + liq.tvlChange7d / 100);
-        tvlChangeWeighted += prevTvl;
-        tvlChangeCount++;
+        tvlForChange += liq.totalTvlUsd;
+        totalPrevTvl += prevTvl;
       }
       if (liq.weightedBalanceRatio != null) {
         totalBalance += liq.weightedBalanceRatio * liq.totalTvlUsd;
@@ -92,9 +91,8 @@ export function LiquidityClient() {
       }
     }
 
-    // Compute aggregate 7d change from TVL-weighted average
-    const totalPrevTvl = tvlChangeCount > 0 ? tvlChangeWeighted : 0;
-    const agg7dChange = totalPrevTvl > 0 ? ((totalTvl - totalPrevTvl) / totalPrevTvl) * 100 : null;
+    // Compute aggregate 7d change using matched totals (only coins with 7d data)
+    const agg7dChange = totalPrevTvl > 0 ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100 : null;
 
     return {
       totalTvl,

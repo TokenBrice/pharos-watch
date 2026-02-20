@@ -14,7 +14,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { SupplyChart } from "@/components/supply-chart";
 
-import { ChainDistribution } from "@/components/chain-distribution";
 import { DepegHistory } from "@/components/depeg-history";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
@@ -459,7 +458,6 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
 
       <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
 
-      <ChainDistribution coin={coinData} />
     </div>
   );
 }

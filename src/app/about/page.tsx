@@ -250,6 +250,8 @@ export default function AboutPage() {
             Peg reference rates for non-USD stablecoins (EUR, GBP, CHF, gold, etc.) are derived from the median price
             of stablecoins in each peg group with over $1M supply. For thin groups with fewer than 3 coins, rates are validated against
             live FX data from the European Central Bank (refreshed every 2 hours) to prevent a single depegged coin from skewing the reference.
+            The depeg threshold for USD-pegged stablecoins is <span className="font-mono">100 bps</span> (1%); for non-USD pegs it
+            is <span className="font-mono">150 bps</span> (1.5%) to account for additional FX rate noise and thinner liquidity.
           </p>
         </CardContent>
       </Card>
@@ -285,7 +287,7 @@ export default function AboutPage() {
             <li className="flex gap-2">
               <span className="text-foreground font-medium shrink-0">Confirmation Gate</span>
               <span>
-                When the primary price suggests a depeg (&ge;1% deviation), the system checks whether the DEX price
+                When the primary price suggests a depeg (deviation exceeding the peg threshold), the system checks whether the DEX price
                 agrees. If the DEX price is fresh (under 20 minutes old) and shows the coin at peg, the depeg event
                 is <span className="text-foreground font-medium">suppressed</span> — likely a false positive from
                 a single-source glitch. If both sources agree on the depeg, the event opens normally.

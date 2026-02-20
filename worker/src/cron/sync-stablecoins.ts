@@ -44,9 +44,9 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> 
   try {
     // Fetch prices from DefiLlama coins API
     const coinIds = SILVER_TOKENS.map((t) => `coingecko:${t.geckoId}`).join(",");
-    const priceRes = await fetch(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-    if (!priceRes.ok) {
-      console.error(`[silver] Price fetch failed: ${priceRes.status}`);
+    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+    if (!priceRes || !priceRes.ok) {
+      console.error(`[silver] Price fetch failed: ${priceRes?.status ?? "no response"}`);
       return [];
     }
     const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
@@ -97,9 +97,9 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
   try {
     // Fetch prices from DefiLlama coins API
     const coinIds = GOLD_TOKENS.map((t) => `coingecko:${t.geckoId}`).join(",");
-    const priceRes = await fetch(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-    if (!priceRes.ok) {
-      console.error(`[gold] Price fetch failed: ${priceRes.status}`);
+    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+    if (!priceRes || !priceRes.ok) {
+      console.error(`[gold] Price fetch failed: ${priceRes?.status ?? "no response"}`);
       return [];
     }
     const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
@@ -213,9 +213,9 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData): Promise<unkn
   try {
     // Fetch prices from DefiLlama coins API
     const coinIds = FIAT_COINGECKO_TOKENS.map((t) => `coingecko:${t.geckoId}`).join(",");
-    const priceRes = await fetch(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-    if (!priceRes.ok) {
-      console.error(`[fiat-cg] Price fetch failed: ${priceRes.status}`);
+    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+    if (!priceRes || !priceRes.ok) {
+      console.error(`[fiat-cg] Price fetch failed: ${priceRes?.status ?? "no response"}`);
       return [];
     }
     const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
@@ -451,7 +451,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     let fallbackCount = 0;
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
-      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL) {
+      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePrice(cached.price, asset.pegType as string | undefined)) {
         asset.price = cached.price;
         fallbackCount++;
       }

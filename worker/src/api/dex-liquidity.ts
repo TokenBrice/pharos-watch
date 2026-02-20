@@ -1,5 +1,11 @@
 import { withErrorHandler } from "../lib/api-utils";
 
+/** Safely parse JSON, returning fallback on failure */
+function safeParse<T>(json: string | null | undefined, fallback: T): T {
+  if (json == null) return fallback;
+  try { return JSON.parse(json) as T; } catch { return fallback; }
+}
+
 interface DexLiquidityRow {
   stablecoin_id: string;
   total_tvl_usd: number;
@@ -103,9 +109,9 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       poolCount: row.pool_count,
       pairCount: row.pair_count,
       chainCount: row.chain_count,
-      protocolTvl: row.protocol_tvl_json ? JSON.parse(row.protocol_tvl_json) : {},
-      chainTvl: row.chain_tvl_json ? JSON.parse(row.chain_tvl_json) : {},
-      topPools: row.top_pools_json ? JSON.parse(row.top_pools_json) : [],
+      protocolTvl: safeParse<Record<string, number>>(row.protocol_tvl_json, {}),
+      chainTvl: safeParse<Record<string, number>>(row.chain_tvl_json, {}),
+      topPools: safeParse<unknown[]>(row.top_pools_json, []),
       liquidityScore: row.liquidity_score,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
@@ -116,16 +122,14 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: dexPrice?.price_sources_json ? JSON.parse(dexPrice.price_sources_json) : null,
+      priceSources: safeParse<unknown[] | null>(dexPrice?.price_sources_json, null),
       // v2 fields
       effectiveTvlUsd: row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,
       weightedBalanceRatio: row.weighted_balance_ratio ?? null,
       organicFraction: row.organic_fraction ?? null,
       durabilityScore: row.durability_score ?? null,
-      scoreComponents: row.score_components_json
-        ? (() => { try { return JSON.parse(row.score_components_json); } catch { return null; } })()
-        : null,
+      scoreComponents: safeParse<unknown>(row.score_components_json, null),
     };
   }
 

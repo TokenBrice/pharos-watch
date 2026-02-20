@@ -17,6 +17,8 @@ const FRESHNESS_THRESHOLDS: Record<string, number> = {
   stablecoins: 600,
   "stablecoin-charts": 600,
   "usds-status": 86400,
+  "fx-rates": 14400,           // 4 hours (runs every 2h)
+  "bluechip-ratings": 43200,   // 12 hours (runs every 6h)
 };
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
@@ -60,6 +62,21 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     }
   } catch (err) {
     console.error("[health] Failed to query blacklist counts:", err);
+  }
+
+  // Check dex_liquidity table freshness (runs every 6h)
+  try {
+    const dexAge = await db
+      .prepare("SELECT MIN(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0")
+      .bind(now)
+      .first<{ age: number | null }>();
+    const dexMaxAge = 43200; // 12 hours
+    const dexAgeSeconds = dexAge?.age ?? null;
+    const dexRatio = dexAgeSeconds != null ? dexAgeSeconds / dexMaxAge : Infinity;
+    if (dexRatio > worstRatio) worstRatio = dexRatio;
+    caches["dex-liquidity"] = { ageSeconds: dexAgeSeconds, maxAge: dexMaxAge, healthy: dexRatio <= 1.5 };
+  } catch {
+    // dex_liquidity table may not exist yet
   }
 
   const status: HealthResponse["status"] =

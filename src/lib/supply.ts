@@ -1,5 +1,9 @@
 import type { StablecoinData } from "./types";
 
+/** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */
+const safeNum = (v: number | null | undefined): number =>
+  typeof v === "number" && Number.isFinite(v) ? v : 0;
+
 /**
  * Sum circulating values across all peg buckets.
  * DefiLlama stores all circulating values in USD regardless of pegType key,
@@ -7,20 +11,20 @@ import type { StablecoinData } from "./types";
  */
 export function getCirculatingRaw(c: StablecoinData): number {
   if (!c.circulating) return 0;
-  return Object.values(c.circulating).reduce((s, v) => s + (v ?? 0), 0);
+  return Object.values(c.circulating).reduce((s, v) => s + safeNum(v), 0);
 }
 
 export function getPrevDayRaw(c: StablecoinData): number {
   if (!c.circulatingPrevDay) return 0;
-  return Object.values(c.circulatingPrevDay).reduce((s, v) => s + (v ?? 0), 0);
+  return Object.values(c.circulatingPrevDay).reduce((s, v) => s + safeNum(v), 0);
 }
 
 export function getPrevWeekRaw(c: StablecoinData): number {
   if (!c.circulatingPrevWeek) return 0;
-  return Object.values(c.circulatingPrevWeek).reduce((s, v) => s + (v ?? 0), 0);
+  return Object.values(c.circulatingPrevWeek).reduce((s, v) => s + safeNum(v), 0);
 }
 
 export function getPrevMonthRaw(c: StablecoinData): number {
   if (!c.circulatingPrevMonth) return 0;
-  return Object.values(c.circulatingPrevMonth).reduce((s, v) => s + (v ?? 0), 0);
+  return Object.values(c.circulatingPrevMonth).reduce((s, v) => s + safeNum(v), 0);
 }
