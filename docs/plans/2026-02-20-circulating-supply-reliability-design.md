@@ -1,7 +1,7 @@
 # Circulating Supply Reliability — Design
 
 **Date:** 2026-02-20
-**Status:** Approved
+**Status:** Implemented
 
 ## Problem
 
@@ -49,14 +49,14 @@ interface SupplyMethodConfig {
 }
 ```
 
-### Token Configurations
+### Token Configurations (Updated After Verification)
 
 | Token | Method | Details |
 |-------|--------|---------|
-| crvUSD | `custom-contract` | `StablecoinLens.circulating_supply()` at `0xe24e2db9f6bb40bbe7c1c025bc87104f5401ecd7` (Ethereum only) |
-| MIM | `totalSupply-minus-addresses` | Subtract `balanceOf(DegenBox: 0xd96f48665a1410C0CD669A88898ecA36B9Fc2cce)` on Ethereum |
-| USDT | `totalSupply-minus-addresses` | Subtract `balanceOf(Treasury: 0x5754284f345afc66a98fbB0a0Afe71e0f007b949)` on Ethereum |
-| USDC | `totalSupply-minus-addresses` | Subtract `balanceOf(Reserve: 0x55FE002aEFF02F77364de339a1292923A15844B8)` on Ethereum |
+| crvUSD | `exclude` | StablecoinLens is outdated (only tracks legacy factory ~25M of ~276M). DefiLlama aggregates debt across all factories. |
+| MIM | `exclude` | DegenBox holds only ~4M of ~142M non-circulating MIM. Remaining spread across 45+ Cauldrons. DefiLlama tracks actual debt. |
+| USDT | `totalSupply-minus-addresses` | Subtract `balanceOf(Treasury: 0x5754284f345afc66a98fbB0a0Afe71e0f007b949)` on Ethereum (~$2.3B) |
+| USDC | `totalSupply-minus-addresses` | Subtract `balanceOf(Reserve: 0x55FE002aEFF02F77364de339a1292923A15844B8)` on Ethereum (~$107M) |
 | All CDP stables | `totalSupply` (default) | LUSD, BOLD, GHO, FRAX, cUSD, etc. — minted = circulating |
 
 Tokens without a `supplyMethod` field default to `totalSupply`.

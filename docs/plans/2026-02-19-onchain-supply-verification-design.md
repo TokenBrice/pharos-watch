@@ -1,7 +1,7 @@
 # On-Chain Supply Verification — Design
 
 **Date:** 2026-02-19
-**Status:** Draft
+**Status:** Superseded by 2026-02-20-circulating-supply-reliability-design.md
 
 ## Problem
 

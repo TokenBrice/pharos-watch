@@ -12,16 +12,17 @@ interface StablecoinOpts {
   links?: import("./types").StablecoinLink[];
   jurisdiction?: import("./types").Jurisdiction;
   contracts?: import("./types").ContractDeployment[];
+  supplyMethod?: import("./types").SupplyMethodConfig;
 }
 
 function usd(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency: "USD", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts };
+  return { id, name, symbol, flags: { backing, pegCurrency: "USD", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 function eur(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency: "EUR", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts };
+  return { id, name, symbol, flags: { backing, pegCurrency: "EUR", governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 function other(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, goldOunces: opts?.goldOunces, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, goldOunces: opts?.goldOunces, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 
 /**
@@ -55,6 +56,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
       { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
     ],
+    supplyMethod: {
+      type: "totalSupply-minus-addresses",
+      subtractAddresses: [
+        { chain: "ethereum", address: "0x5754284f345afc66a98fbB0a0Afe71e0f007b949" }, // Tether Treasury
+      ],
+    },
   }),
   usd("2", "USD Coin", "USDC", "rwa-backed", "centralized", {
     collateral: "Cash and short-term U.S. Treasury securities in segregated accounts",
@@ -74,6 +81,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon", address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6 },
       { chain: "avalanche", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6 },
     ],
+    supplyMethod: {
+      type: "totalSupply-minus-addresses",
+      subtractAddresses: [
+        { chain: "ethereum", address: "0x55FE002aEFF02F77364de339a1292923A15844B8" }, // Circle Reserve
+      ],
+    },
   }),
   usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
@@ -416,6 +429,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", decimals: 18 },
     ],
+    supplyMethod: {
+      type: "exclude", // totalSupply() includes pre-minted lending capacity; DefiLlama aggregates debt across all factories
+    },
   }),
   usd("310", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
     collateral: "Delta-neutral positions in BTC, ETH, SOL plus USDC/USDT and tokenized treasuries",
@@ -971,6 +987,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", decimals: 18 },
     ],
+    supplyMethod: {
+      type: "exclude", // totalSupply() includes unborrowed MIM across 45+ Cauldron contracts; DefiLlama tracks actual debt
+    },
   }),
   usd("307", "USD CoinVertible", "USDCV", "rwa-backed", "centralized", {
     collateral: "U.S. dollar reserves via Societe Generale FORGE",

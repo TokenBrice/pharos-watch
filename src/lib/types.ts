@@ -43,6 +43,26 @@ export interface ContractDeployment {
   decimals: number;   // Token decimals
 }
 
+/** Configures how on-chain circulating supply is computed for a stablecoin */
+export interface SupplyMethodConfig {
+  type:
+    | "totalSupply"                  // Default: raw totalSupply() is circulating
+    | "totalSupply-minus-addresses"  // totalSupply() - sum(balanceOf(addr)) per chain
+    | "custom-contract"             // Call a dedicated circulating supply contract
+    | "exclude";                    // Skip on-chain supply for this token
+
+  /** For totalSupply-minus-addresses: addresses whose balanceOf() to subtract */
+  subtractAddresses?: { chain: string; address: string }[];
+
+  /** For custom-contract: dedicated contract returning circulating supply */
+  customContract?: {
+    chain: string;     // Chain where the contract lives
+    address: string;   // Contract address
+    selector: string;  // Function selector (e.g., "0x9e2bf22c")
+    decimals: number;  // Decimals for the return value
+  };
+}
+
 export interface StablecoinMeta {
   id: string; // DefiLlama numeric ID
   name: string;
@@ -55,6 +75,7 @@ export interface StablecoinMeta {
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
   contracts?: ContractDeployment[];  // On-chain contract deployments per chain
+  supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---

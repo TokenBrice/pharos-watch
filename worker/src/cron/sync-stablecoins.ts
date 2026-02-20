@@ -541,13 +541,22 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
         }
 
         // Guard: never override if on-chain total is dramatically HIGHER than DefiLlama.
-        // Some contracts return max/premined supply rather than circulating (e.g. commodity tokens).
-        if (!isForced && llamaSupply > 0 && onchainTotal > llamaSupply * 10) {
+        // If on-chain is >3x DL, likely includes non-circulating tokens (treasury, pre-minted capacity).
+        if (!isForced && llamaSupply > 0 && onchainTotal > llamaSupply * 3) {
           console.warn(
             `[sync-stablecoins] Rejecting on-chain override for ${asset.symbol}: ` +
-            `on-chain ${onchainTotal.toFixed(0)} is >10x DL ${llamaSupply.toFixed(0)} — likely max supply, not circulating`
+            `on-chain ${onchainTotal.toFixed(0)} is >3x DL ${llamaSupply.toFixed(0)} — likely includes non-circulating tokens`
           );
           continue;
+        }
+
+        // Warning: flag large absolute overrides for monitoring
+        const overrideAmountUsd = Math.abs(onchainTotal * (price ?? 0) - llamaMcap);
+        if (overrideAmountUsd > 500_000_000) {
+          console.warn(
+            `[sync-stablecoins] LARGE OVERRIDE for ${asset.symbol}: ` +
+            `mcap change $${(overrideAmountUsd / 1e6).toFixed(0)}M — verify data quality`
+          );
         }
 
         // Override: recompute circulating in USD (DefiLlama convention)

@@ -40,16 +40,31 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 
 ## On-Chain Supply Verification
 
-`syncOnchainSupply()` in `worker/src/cron/sync-onchain-supply.ts` runs every 30 minutes (piggybacks on the `*/10` cron at :00 and :30, to stay within Cloudflare's 4-cron-trigger limit) and queries `totalSupply()` on-chain for stablecoins that have contract addresses configured in `src/lib/stablecoins.ts`.
+`syncOnchainSupply()` in `worker/src/cron/sync-onchain-supply.ts` runs every 30 minutes (piggybacks on the `*/10` cron at :00 and :30, to stay within Cloudflare's 4-cron-trigger limit) and queries on-chain supply for stablecoins that have contract addresses configured in `src/lib/stablecoins.ts`.
+
+### Per-Token Supply Methods
+
+Not all tokens can use raw `totalSupply()` — some include non-circulating tokens (treasury reserves, pre-minted lending capacity). Each token can configure a `supplyMethod` in `StablecoinMeta`:
+
+| Method | How it works | Example tokens |
+|--------|-------------|----------------|
+| `totalSupply` (default) | Raw `totalSupply()` is circulating | LUSD, BOLD, GHO, DAI |
+| `totalSupply-minus-addresses` | `totalSupply() - sum(balanceOf(addr))` | USDT (minus Tether Treasury), USDC (minus Circle Reserve) |
+| `custom-contract` | Call a dedicated circulating supply contract | (available for future use) |
+| `exclude` | Skip on-chain supply, rely on DefiLlama | crvUSD, MIM (complex multi-contract supply) |
 
 ### How It Works
 
-1. Iterates `TRACKED_STABLECOINS`, collects all entries with `contracts` defined
+1. Iterates `TRACKED_STABLECOINS`, collects all entries with `contracts` defined (skips `exclude` tokens)
 2. Groups contracts by chain ID
-3. For EVM chains: sends a **JSON-RPC batch** of `eth_call` requests for `totalSupply()` (selector `0x18160ddd`) — one HTTP POST per chain
-4. For Tron: calls `triggerConstantContract` sequentially per contract (excludes `TRON_BURN_ADDRESS` from supply)
-5. Parses `BigInt` results via `bigIntToDecimal()` (from `worker/src/lib/bigint.ts`) to get human-readable supply
-6. Writes per-chain supply to D1 `onchain_supply` table via `INSERT OR REPLACE`
+3. For each EVM chain, builds a single JSON-RPC batch containing:
+   - `totalSupply()` (selector `0x18160ddd`) for each contract
+   - `decimals()` (selector `0x313ce567`) for on-chain verification of configured decimals
+   - `balanceOf(address)` (selector `0x70a08231`) for each treasury/reserve address to subtract
+4. For Tron: calls `triggerConstantContract` sequentially per contract with the same call types
+5. **Decimals verification**: if on-chain decimals differ from configured value, the contract is skipped and an error is logged
+6. **Supply computation**: for `totalSupply-minus-addresses` tokens, subtracts all configured balances from totalSupply before storing
+7. Writes per-chain **circulating** supply (after adjustments) to D1 `onchain_supply` table via `INSERT OR REPLACE`
 
 All chains are queried in parallel. Individual contract/chain failures are logged and skipped without blocking others.
 
@@ -61,18 +76,27 @@ In `sync-stablecoins.ts`, after DefiLlama data is fetched and prices are enriche
 2. For each stablecoin with on-chain data, compares on-chain total supply (token units) with DefiLlama supply (`llamaMcap / price`)
 3. If divergence exceeds **5%**: overrides `circulating` with `onchainTotal × price` (USD, matching DefiLlama convention), and overwrites `chainCirculating` and `chains`
 4. If divergence is within 5%, keeps DefiLlama data (small differences are normal — DefiLlama may exclude burned tokens, lock contracts, etc.)
+5. **Upper guard**: rejects overrides where on-chain is >3x DefiLlama (likely non-circulating tokens)
+6. **Lower guard**: rejects overrides where on-chain is <50% of DefiLlama (likely RPC failure)
+7. **Large override warning**: logs critical warning for overrides changing mcap by >$500M
 
 The override is wrapped in `try/catch` so failures never block the main sync.
 
 ### Contract Address Registry
 
-Contract addresses are stored in the `contracts` field of `StablecoinMeta` in `src/lib/stablecoins.ts`:
+Contract addresses and supply methods are stored in `StablecoinMeta` in `src/lib/stablecoins.ts`:
 
 ```typescript
 interface ContractDeployment {
   chain: string;      // Chain ID matching CHAIN_RPCS (e.g., "ethereum", "tron")
   address: string;    // Contract address (0x... for EVM, T... for Tron)
-  decimals: number;   // Token decimals
+  decimals: number;   // Token decimals (verified against on-chain decimals())
+}
+
+interface SupplyMethodConfig {
+  type: "totalSupply" | "totalSupply-minus-addresses" | "custom-contract" | "exclude";
+  subtractAddresses?: { chain: string; address: string }[];
+  customContract?: { chain: string; address: string; selector: string; decimals: number };
 }
 ```
 
