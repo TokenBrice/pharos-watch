@@ -67,6 +67,9 @@ export const PEG_LABELS: Record<PegCurrency, string> = {
   OTHER: "Other",
 };
 
+/** Number of distinct peg currencies (excludes the "Other" catch-all). */
+export const PEG_CURRENCY_COUNT = Object.keys(PEG_LABELS).length - 1; // exclude OTHER
+
 /** Labels without article, for metadata and keywords. */
 export const PEG_LABELS_SHORT: Record<PegCurrency, string> = {
   USD: "US Dollar",

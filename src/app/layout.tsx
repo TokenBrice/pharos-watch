@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
+import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,7 +19,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteDescription = `Track ${TRACKED_STABLECOINS.length} stablecoins across 15 peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOINS.length} dead stablecoins — updated every 5 minutes.`;
+const siteDescription = `Track ${TRACKED_STABLECOINS.length} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOINS.length} dead stablecoins — updated every 5 minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",

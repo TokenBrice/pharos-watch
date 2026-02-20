@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { HomepageClient } from "@/components/homepage-client";
 
 export default function HomePage() {
@@ -43,7 +44,7 @@ export default function HomePage() {
           Tracking {total} stablecoins. Every chain. Every freeze.
         </p>
         <p className="text-sm text-muted-foreground">
-          Pharos tracks {total} stablecoins across 15 peg currencies — USD, EUR, GBP,
+          Pharos tracks {total} stablecoins across {PEG_CURRENCY_COUNT} peg currencies — USD, EUR, GBP,
           gold, silver, and more — with honest governance classification: {centralized} CeFi,
           {" "}{cefiDep} CeFi-Dependent, and {decentralized} DeFi. Live market caps, peg
           deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
