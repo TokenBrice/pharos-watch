@@ -1,5 +1,5 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
-import { DEFILLAMA_BASE, USER_AGENT } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
 import { timingSafeEqual } from "../lib/auth";
@@ -13,6 +13,87 @@ interface TokenEntry {
 
 interface StablecoinDetail {
   tokens?: TokenEntry[];
+}
+
+// Commodity tokens: backfill from DefiLlama protocol TVL + coins price APIs
+const COMMODITY_BACKFILL: Record<string, { geckoId: string; protocolSlug: string }> = {
+  "gold-xaut": { geckoId: "tether-gold", protocolSlug: "tether-gold" },
+  "gold-paxg": { geckoId: "pax-gold", protocolSlug: "paxos-gold" },
+};
+
+async function backfillCommodity(
+  db: D1Database,
+  id: string,
+  config: { geckoId: string; protocolSlug: string },
+): Promise<{ rows: number; error?: string }> {
+  const [protocolRes, priceRes] = await Promise.all([
+    fetch(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
+      headers: { "User-Agent": USER_AGENT },
+    }),
+    fetch(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=0&span=2000`, {
+      headers: { "User-Agent": USER_AGENT },
+    }),
+  ]);
+
+  if (!protocolRes.ok) {
+    return { rows: 0, error: `protocol API returned ${protocolRes.status}` };
+  }
+
+  const protocolData = (await protocolRes.json()) as {
+    tvl?: { date: number; totalLiquidityUSD: number }[];
+  };
+  const tvlHistory = protocolData.tvl ?? [];
+  if (tvlHistory.length === 0) {
+    return { rows: 0, error: "no TVL history" };
+  }
+
+  // Build price lookup for converting mcap → price
+  let prices: { timestamp: number; price: number }[] = [];
+  if (priceRes.ok) {
+    const priceData = (await priceRes.json()) as {
+      coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
+    };
+    prices = priceData.coins?.[`coingecko:${config.geckoId}`]?.prices ?? [];
+    prices.sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  function findPrice(date: number): number | null {
+    if (prices.length === 0) return null;
+    let lo = 0, hi = prices.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (prices[mid].timestamp < date) lo = mid + 1;
+      else hi = mid;
+    }
+    if (lo > 0) {
+      const prev = prices[lo - 1];
+      const curr = prices[lo];
+      if (Math.abs(prev.timestamp - date) < Math.abs(curr.timestamp - date)) {
+        return prev.price;
+      }
+    }
+    return prices[lo].price;
+  }
+
+  const stmts: D1PreparedStatement[] = [];
+  for (const point of tvlHistory) {
+    const mcap = point.totalLiquidityUSD;
+    if (mcap <= 0) continue;
+    const snapshotDate = Math.floor(point.date / 86400) * 86400;
+    const price = findPrice(point.date);
+    stmts.push(
+      db
+        .prepare(
+          "INSERT OR IGNORE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+        )
+        .bind(id, snapshotDate, mcap, price),
+    );
+  }
+
+  if (stmts.length > 0) {
+    await batchExecute(db, stmts);
+  }
+  return { rows: stmts.length };
 }
 
 export const handleBackfillSupplyHistory = withErrorHandler(
@@ -69,7 +150,23 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     const skipped: string[] = [];
 
     for (const meta of coins) {
-      // Skip non-DefiLlama coins (no historical data available)
+      // Commodity tokens: backfill from protocol TVL API
+      const commodityConfig = COMMODITY_BACKFILL[meta.id];
+      if (commodityConfig) {
+        try {
+          const result = await backfillCommodity(db, meta.id, commodityConfig);
+          if (result.error) {
+            errors.push(`${meta.symbol}: ${result.error}`);
+          } else {
+            totalRows += result.rows;
+          }
+        } catch (err) {
+          errors.push(`${meta.symbol}: commodity backfill failed — ${err}`);
+        }
+        continue;
+      }
+
+      // Skip other non-DefiLlama coins (no historical data available)
       if (/^(gold-|silver-|cg-)/.test(meta.id)) {
         skipped.push(meta.symbol);
         continue;

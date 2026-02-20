@@ -41,8 +41,10 @@ export function useSupplyHistory(id: string) {
     { enabled: !!id }
   );
 
-  // Fallback: DefiLlama detail proxy (for stablecoins not yet backfilled)
-  const needsFallback = primary.isSuccess && (!primary.data || primary.data.length === 0);
+  // Fallback: DefiLlama detail proxy when supply_history is empty or too sparse
+  // (commodity tokens like gold/silver aren't backfilled, so they may have only
+  // a handful of daily snapshots instead of years of historical data)
+  const needsFallback = primary.isSuccess && (!primary.data || primary.data.length < 30);
   const fallback = useApiQuery<StablecoinDetail>(
     ["stablecoin-detail", id],
     `/api/stablecoin/${encodeURIComponent(id)}`,
@@ -60,9 +62,12 @@ export function useSupplyHistory(id: string) {
       .filter((d) => d.circulatingUsd > 0);
   }, [needsFallback, fallback.data]);
 
+  // Use fallback if it has more data than primary
+  const useFallback = needsFallback && fallbackData && fallbackData.length > (primary.data?.length ?? 0);
+
   return {
-    data: needsFallback ? fallbackData : primary.data,
+    data: useFallback ? fallbackData : primary.data,
     isLoading: primary.isLoading || (needsFallback && fallback.isLoading),
-    isError: needsFallback ? fallback.isError : primary.isError,
+    isError: useFallback ? fallback.isError : primary.isError,
   };
 }
