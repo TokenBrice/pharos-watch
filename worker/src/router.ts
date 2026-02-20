@@ -21,7 +21,8 @@ export function route(
   db: D1Database,
   ctx: ExecutionContext,
   request?: Request,
-  adminKey?: string
+  adminKey?: string,
+  metalsApiKey?: string,
 ): Promise<Response> | null {
   const path = url.pathname;
 
@@ -42,7 +43,7 @@ export function route(
   }
 
   if (path === "/api/backfill-depegs") {
-    return handleBackfillDepegs(db, url, adminKey, request);
+    return handleBackfillDepegs(db, url, adminKey, request, metalsApiKey);
   }
 
   if (path === "/api/backfill-supply-history") {

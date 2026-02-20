@@ -114,6 +114,32 @@ CREATE TABLE onchain_supply (
 );
 ```
 
+## Gold & Silver Spot Prices (metals.dev)
+
+`syncFxRates()` in `worker/src/cron/sync-fx-rates.ts` fetches gold and silver spot prices from the [metals.dev](https://metals.dev) API for commodity-pegged stablecoin peg validation (XAUT, PAXG, KAU, KAG, etc.).
+
+### Why metals.dev?
+
+The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events.
+
+### Live Sync (sync-fx-rates.ts)
+
+- **Endpoint**: `GET /v1/latest?api_key=KEY&currency=USD&unit=toz`
+- **Rate limiting**: Once per day (free tier = 100 requests/month). The cron runs every 2 hours but checks if the cached metals rates are <24h old before making an API call. Peer median handles intra-day peg validation.
+- **Validation**: Same `isValidRate()` bounds + delta checks as FX rates (gold: $500-$10,000/oz, silver: $5-$500/oz, max 20% change from previous value).
+- **Fallback**: If no API key is configured, metals are skipped and peer median is the sole reference.
+
+### Backfill (backfill-depegs.ts)
+
+- **Endpoint**: `GET /v1/timeseries?api_key=KEY&start_date=...&end_date=...&currency=USD&unit=toz`
+- **Windowing**: The 4-year backfill range is split into 30-day windows (API limit), all fetched in parallel (~49 requests, one-time).
+- **Output**: Returns both gold and silver daily series in `{ GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }` format, used by `buildFxLookup()` for time-varying peg references.
+- **Fallback**: If no API key is provided, commodity series are empty and the backfill uses current peg rates as static fallback.
+
+### Budget
+
+Free tier = 100 requests/month. Monthly usage: ~30 live (1/day) + 49 backfill (one-time) = 79 requests.
+
 ## Blacklist Sync State Semantics
 
 The `blacklist_sync_state.last_block` column has different semantics per chain type:

@@ -31,11 +31,8 @@ const OTHER_COIN_FX: Record<string, string> = {
   "165": "AUD",  // AUDD
 };
 
-/** Maps pegCurrency → DefiLlama coins API identifier for commodity spot prices */
-const COMMODITY_SPOT_IDS: Record<string, string> = {
-  GOLD: "coingecko:gold",
-  SILVER: "coingecko:silver",
-};
+/** Commodity peg currencies that need spot price history */
+const COMMODITY_PEGS = new Set(["GOLD", "SILVER"]);
 
 
 interface FxTimeSeries {
@@ -100,33 +97,75 @@ async function fetchHistoricalFxRates(
 }
 
 /**
- * Fetch historical commodity spot prices from DefiLlama coins chart API.
- * Returns a time series of USD-per-unit (e.g. USD per troy ounce of gold).
- * Reuses fetchPriceChart which returns { timestamp, price } points.
+ * Fetch historical gold & silver spot prices from metals.dev /v1/timeseries.
+ * Splits the date range into 30-day windows (API limit) and fetches all in parallel.
+ * Returns { GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }.
  */
-async function fetchCommoditySpotHistory(
-  coinId: string, // e.g. "coingecko:gold"
-  startSec: number,
-): Promise<FxTimeSeries[]> {
+async function fetchCommoditySpotHistoryMetals(
+  apiKey: string,
+  startDate: string, // "YYYY-MM-DD"
+  endDate: string,
+): Promise<Record<string, FxTimeSeries[]>> {
+  const result: Record<string, FxTimeSeries[]> = { GOLD: [], SILVER: [] };
   try {
-    const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
-    const [older, recent] = await Promise.all([
-      fetchPriceChart(coinId, startSec),
-      fetchPriceChart(coinId, twoYearsAgo),
-    ]);
-
-    // Deduplicate by timestamp
-    const map = new Map<number, number>();
-    for (const p of [...older, ...recent]) {
-      map.set(p.timestamp, p.price);
+    // Build 30-day windows
+    const windows: { start: string; end: string }[] = [];
+    let cursor = new Date(startDate + "T00:00:00Z");
+    const end = new Date(endDate + "T00:00:00Z");
+    while (cursor < end) {
+      const windowEnd = new Date(cursor);
+      windowEnd.setUTCDate(windowEnd.getUTCDate() + 29);
+      const clampedEnd = windowEnd > end ? end : windowEnd;
+      windows.push({
+        start: cursor.toISOString().slice(0, 10),
+        end: clampedEnd.toISOString().slice(0, 10),
+      });
+      cursor = new Date(clampedEnd);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
-    return Array.from(map.entries())
-      .map(([timestamp, rate]) => ({ timestamp, rate }))
-      .sort((a, b) => a.timestamp - b.timestamp);
+
+    console.log(`[backfill-depegs] Fetching metals.dev timeseries: ${windows.length} windows`);
+
+    const responses = await Promise.all(
+      windows.map(async (w) => {
+        const url = `https://api.metals.dev/v1/timeseries?api_key=${apiKey}&start_date=${w.start}&end_date=${w.end}&currency=USD&unit=toz`;
+        const res = await fetch(url, {
+          headers: { "User-Agent": USER_AGENT },
+        });
+        if (!res.ok) {
+          console.warn(`[backfill-depegs] metals.dev ${w.start}..${w.end} returned ${res.status}`);
+          return null;
+        }
+        return (await res.json()) as {
+          rates?: Record<string, { metals?: { gold?: number; silver?: number } }>;
+        };
+      }),
+    );
+
+    for (const data of responses) {
+      if (!data?.rates) continue;
+      for (const [dateStr, dayData] of Object.entries(data.rates)) {
+        const ts = Math.floor(new Date(dateStr + "T00:00:00Z").getTime() / 1000);
+        const gold = dayData?.metals?.gold;
+        const silver = dayData?.metals?.silver;
+        if (typeof gold === "number" && gold > 0) {
+          result.GOLD.push({ timestamp: ts, rate: gold });
+        }
+        if (typeof silver === "number" && silver > 0) {
+          result.SILVER.push({ timestamp: ts, rate: silver });
+        }
+      }
+    }
+
+    // Sort each series
+    result.GOLD.sort((a, b) => a.timestamp - b.timestamp);
+    result.SILVER.sort((a, b) => a.timestamp - b.timestamp);
+
+    console.log(`[backfill-depegs] metals.dev: ${result.GOLD.length} gold, ${result.SILVER.length} silver data points`);
   } catch (err) {
-    console.error(`[backfill-depegs] Commodity spot fetch failed for ${coinId}:`, err);
-    return [];
+    console.error(`[backfill-depegs] metals.dev timeseries fetch failed:`, err);
   }
+  return result;
 }
 
 /**
@@ -173,7 +212,7 @@ interface CoinDetail {
   tokens?: SupplyPoint[];
 }
 
-export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
+export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request, metalsApiKey?: string): Promise<Response> => {
   const authError = await requireAdmin(request, adminSecret);
   if (authError) return authError;
 
@@ -228,13 +267,12 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
 
   // Collect FX currencies needed by this batch
   const neededFxCurrencies = new Set<string>();
-  const neededCommodities = new Set<string>();
+  let needsCommodities = false;
   for (const meta of processable) {
     const peg = meta.flags.pegCurrency;
     if (peg === "USD") continue;
-    const commodityId = COMMODITY_SPOT_IDS[peg];
-    if (commodityId) {
-      neededCommodities.add(peg);
+    if (COMMODITY_PEGS.has(peg)) {
+      needsCommodities = true;
     } else {
       const fx = PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
       if (fx) neededFxCurrencies.add(fx);
@@ -243,7 +281,6 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
 
   // Fetch historical FX rates for the full 4-year backfill window
   const fourYearsAgoMs = Date.now() - 4 * 365 * 86400 * 1000;
-  const fourYearsAgoSec = Math.floor(fourYearsAgoMs / 1000);
   const startDate = new Date(fourYearsAgoMs).toISOString().slice(0, 10);
   const endDate = new Date().toISOString().slice(0, 10);
 
@@ -252,19 +289,11 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     ? fetchHistoricalFxRates([...neededFxCurrencies], startDate, endDate)
     : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
-  const commodityPromises: Promise<[string, FxTimeSeries[]]>[] = [];
-  for (const peg of neededCommodities) {
-    const coinId = COMMODITY_SPOT_IDS[peg];
-    commodityPromises.push(
-      fetchCommoditySpotHistory(coinId, fourYearsAgoSec).then((series) => [peg, series])
-    );
-  }
+  const commodityPromise = needsCommodities && metalsApiKey
+    ? fetchCommoditySpotHistoryMetals(metalsApiKey, startDate, endDate)
+    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
-  const [fxSeries, ...commodityResults] = await Promise.all([fxPromise, ...commodityPromises]);
-  const commoditySeries: Record<string, FxTimeSeries[]> = {};
-  for (const [peg, series] of commodityResults) {
-    commoditySeries[peg] = series;
-  }
+  const [fxSeries, commoditySeries] = await Promise.all([fxPromise, commodityPromise]);
 
   // Process coins sequentially — each needs detail fetch + 2 price chart fetches.
   // Serializing avoids memory pressure from parsing multiple large JSON responses.
@@ -308,7 +337,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       getPegRef = () => 1;
     } else if (peg === "RUB") {
       getPegRef = () => RUB_FALLBACK;
-    } else if (COMMODITY_SPOT_IDS[peg]) {
+    } else if (COMMODITY_PEGS.has(peg)) {
       // Commodity peg (gold/silver): use historical spot price series
       const series = commoditySeries[peg] ?? [];
       const fallback = currentPegRef > 0 ? currentPegRef : 1;

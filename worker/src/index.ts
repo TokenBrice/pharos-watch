@@ -24,6 +24,7 @@ interface Env {
   GRAPH_API_KEY?: string;
   ALERT_WEBHOOK_URL?: string;
   ANTHROPIC_API_KEY?: string;
+  METALS_API_KEY?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -80,7 +81,7 @@ const worker = {
       }
     }
 
-    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY);
+    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY, env.METALS_API_KEY);
 
     if (!response) {
       return addCorsHeaders(
@@ -145,7 +146,7 @@ const worker = {
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
         break;
       case "0 */2 * * *":
-        ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
+        ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db, env.METALS_API_KEY)));
         ctx.waitUntil(logCronRun(db, "daily-digest", () =>
           generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null)
         ));

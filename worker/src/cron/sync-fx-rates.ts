@@ -74,7 +74,7 @@ interface FrankfurterResponse {
   rates: Record<string, number>;
 }
 
-export async function syncFxRates(db: D1Database): Promise<CronResult> {
+export async function syncFxRates(db: D1Database, metalsApiKey?: string | null): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   try {
     // Load previous rates for delta validation
@@ -150,46 +150,52 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
       }
     }
 
-    // Silver spot price (USD per troy ounce) from DefiLlama coins API
-    // Used as FX fallback for peggedSILVER thin-group validation
-    try {
-      const silverRes = await fetchWithRetry("https://coins.llama.fi/prices/current/coingecko:silver", {
-        headers: { "User-Agent": USER_AGENT },
-      });
-      if (silverRes && silverRes.ok) {
-        const silverData = (await silverRes.json()) as { coins?: Record<string, { price?: number }> };
-        const silverPrice = silverData?.coins?.["coingecko:silver"]?.price;
-        if (typeof silverPrice === "number" && silverPrice > 0) {
-          if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
-            rates["peggedSILVER"] = silverPrice;
-          } else if (prevRates["peggedSILVER"]) {
-            rates["peggedSILVER"] = prevRates["peggedSILVER"];
-          }
-        }
-      }
-    } catch {
-      // Silver spot fetch failed — peg-rates will rely on median only
-    }
+    // Gold & silver spot prices (USD per troy ounce) from metals.dev API
+    // Rate-limited to once per day (free tier = 100 req/month); peer median handles intra-day
+    let metalsSource: "metals.dev" | "cached" | "skipped" = "skipped";
+    if (metalsApiKey) {
+      // Check if cached rates are fresh enough (<24h) to skip the API call
+      const cachedAge = prevCache
+        ? Math.floor(Date.now() / 1000) - prevCache.updatedAt
+        : Infinity;
+      const hasCachedMetals = prevRates["peggedGOLD"] != null && prevRates["peggedSILVER"] != null;
 
-    // Gold spot price (USD per troy ounce) from DefiLlama coins API
-    // Used as FX fallback for peggedGOLD — commodity spot is the definitive reference
-    try {
-      const goldRes = await fetchWithRetry("https://coins.llama.fi/prices/current/coingecko:gold", {
-        headers: { "User-Agent": USER_AGENT },
-      });
-      if (goldRes && goldRes.ok) {
-        const goldData = (await goldRes.json()) as { coins?: Record<string, { price?: number }> };
-        const goldPrice = goldData?.coins?.["coingecko:gold"]?.price;
-        if (typeof goldPrice === "number" && goldPrice > 0) {
-          if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
-            rates["peggedGOLD"] = goldPrice;
-          } else if (prevRates["peggedGOLD"]) {
-            rates["peggedGOLD"] = prevRates["peggedGOLD"];
+      if (hasCachedMetals && cachedAge < 86400) {
+        // Reuse cached values — no API call needed
+        rates["peggedGOLD"] = prevRates["peggedGOLD"];
+        rates["peggedSILVER"] = prevRates["peggedSILVER"];
+        metalsSource = "cached";
+        console.log(`[sync-fx-rates] Reusing cached metals prices (age ${Math.round(cachedAge / 3600)}h)`);
+      } else {
+        try {
+          const metalsRes = await fetchWithRetry(
+            `https://api.metals.dev/v1/latest?api_key=${metalsApiKey}&currency=USD&unit=toz`,
+            { headers: { "User-Agent": USER_AGENT } },
+          );
+          if (metalsRes && metalsRes.ok) {
+            const metalsData = (await metalsRes.json()) as { metals?: { gold?: number; silver?: number } };
+            const goldPrice = metalsData?.metals?.gold;
+            const silverPrice = metalsData?.metals?.silver;
+            if (typeof goldPrice === "number" && goldPrice > 0) {
+              if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
+                rates["peggedGOLD"] = goldPrice;
+              } else if (prevRates["peggedGOLD"]) {
+                rates["peggedGOLD"] = prevRates["peggedGOLD"];
+              }
+            }
+            if (typeof silverPrice === "number" && silverPrice > 0) {
+              if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
+                rates["peggedSILVER"] = silverPrice;
+              } else if (prevRates["peggedSILVER"]) {
+                rates["peggedSILVER"] = prevRates["peggedSILVER"];
+              }
+            }
+            metalsSource = "metals.dev";
           }
+        } catch {
+          // metals.dev fetch failed — peg-rates will rely on peer median
         }
       }
-    } catch {
-      // Gold spot fetch failed — peg-rates will rely on median only
     }
 
     // Sanity check: we should have rates for all mapped currencies
@@ -208,8 +214,7 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
       sources: {
         frankfurter: "ok",
         erApi: rates["peggedRUB"] !== RUB_FALLBACK ? "ok" : "fallback",
-        silver: rates["peggedSILVER"] ? "ok" : "missing",
-        gold: rates["peggedGOLD"] ? "ok" : "missing",
+        metals: metalsSource,
       },
     };
     return { itemCount: Object.keys(rates).length, metadata: JSON.stringify(metadata) };

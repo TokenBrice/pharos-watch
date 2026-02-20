@@ -78,7 +78,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, and Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB.",
+                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
                 },
               },
             ],
@@ -499,6 +499,13 @@ export default function AboutPage() {
               Refreshed every <span className="font-mono">2 hours</span> via{" "}
               <a href="https://open.er-api.com" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
                 open.er-api.com<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+              </a>.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">metals.dev</span> — gold and silver spot prices (USD per troy ounce) for commodity-pegged stablecoin peg validation (XAUT, PAXG, KAU, etc.).
+              Refreshed daily via{" "}
+              <a href="https://metals.dev" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
+                metals.dev<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>.
             </li>
             <li>

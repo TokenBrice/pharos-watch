@@ -138,6 +138,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */10 cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
+    │   ├── sync-fx-rates.ts      # ECB + metals.dev → D1 FX/commodity rates (2h, metals daily)
     │   ├── sync-bluechip.ts     # Bluechip safety ratings → D1 (6h cache)
     │   └── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (10min)
     ├── api/
