@@ -23,3 +23,22 @@ export function withErrorHandler<T extends unknown[]>(
     }
   };
 }
+
+/**
+ * Adds data freshness headers to a cache-passthrough response.
+ * - X-Data-Age: seconds since cache was last updated
+ * - Warning: RFC 7234 stale-data warning when data exceeds maxAgeSec
+ * Purely additive — never changes response body or status.
+ */
+export function addFreshnessHeaders(
+  headers: Record<string, string>,
+  updatedAt: number,
+  maxAgeSec: number,
+): Record<string, string> {
+  const age = Math.floor(Date.now() / 1000) - updatedAt;
+  const result: Record<string, string> = { ...headers, "X-Data-Age": String(age) };
+  if (age > maxAgeSec) {
+    result["Warning"] = `110 - "Response is stale (${age}s old, max ${maxAgeSec}s)"`;
+  }
+  return result;
+}

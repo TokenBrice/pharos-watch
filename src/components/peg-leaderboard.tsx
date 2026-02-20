@@ -50,11 +50,15 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
 
   const sorted = useMemo(() => {
     return [...coins].sort((a, b) => {
-      const av = a[sortKey] ?? -Infinity;
-      const bv = b[sortKey] ?? -Infinity;
+      const aRaw = a[sortKey];
+      const bRaw = b[sortKey];
+      // Null values always sort last regardless of direction
+      if (aRaw == null && bRaw == null) return 0;
+      if (aRaw == null) return 1;
+      if (bRaw == null) return -1;
       const cmp = sortKey === "currentDeviationBps"
-        ? Math.abs(bv as number) - Math.abs(av as number)
-        : (bv as number) - (av as number);
+        ? Math.abs(bRaw as number) - Math.abs(aRaw as number)
+        : (bRaw as number) - (aRaw as number);
       return sortDir === "desc" ? cmp : -cmp;
     });
   }, [coins, sortKey, sortDir]);

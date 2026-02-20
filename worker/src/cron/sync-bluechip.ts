@@ -43,34 +43,44 @@ export async function syncBluechip(db: D1Database): Promise<void> {
   }
 
   const entries = Object.entries(BLUECHIP_SLUG_MAP);
-  const results = await Promise.allSettled(
-    entries.map(async ([slug, pharosId]) => {
-      const res = await fetchWithRetry(
-        `${API_BASE}/${slug}`,
-        { headers: { "User-Agent": USER_AGENT } },
-        2,
-        { passthrough404: true }
-      );
-      if (!res || !res.ok) return null;
-      const json = (await res.json()) as { data?: Record<string, unknown>[] };
-      if (!json.data || json.data.length === 0) return null;
 
-      const coin = json.data[0];
-      const grade = coin.grade as string | undefined;
-      if (!grade) return null;
+  // Process in batches of 3 with 500ms delay to avoid flooding backend.bluechip.org
+  const BATCH_SIZE = 3;
+  const results: PromiseSettledResult<{ pharosId: string; rating: BluechipRating } | null>[] = [];
 
-      const rating: BluechipRating = {
-        grade,
-        slug,
-        collateralization: (coin.collateralization as number) ?? 0,
-        smartContractAudit: (coin.smart_contract_audit as boolean) ?? false,
-        dateOfRating: (coin.date_of_rating as string) ?? "",
-        dateLastChange: (coin.date_last_change as string) ?? null,
-        smidge: extractSmidge(coin),
-      };
-      return { pharosId, rating };
-    })
-  );
+  for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 500));
+    const batch = entries.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.allSettled(
+      batch.map(async ([slug, pharosId]) => {
+        const res = await fetchWithRetry(
+          `${API_BASE}/${slug}`,
+          { headers: { "User-Agent": USER_AGENT } },
+          2,
+          { passthrough404: true }
+        );
+        if (!res || !res.ok) return null;
+        const json = (await res.json()) as { data?: Record<string, unknown>[] };
+        if (!json.data || json.data.length === 0) return null;
+
+        const coin = json.data[0];
+        const grade = coin.grade as string | undefined;
+        if (!grade) return null;
+
+        const rating: BluechipRating = {
+          grade,
+          slug,
+          collateralization: (coin.collateralization as number) ?? 0,
+          smartContractAudit: (coin.smart_contract_audit as boolean) ?? false,
+          dateOfRating: (coin.date_of_rating as string) ?? "",
+          dateLastChange: (coin.date_last_change as string) ?? null,
+          smidge: extractSmidge(coin),
+        };
+        return { pharosId, rating };
+      })
+    );
+    results.push(...batchResults);
+  }
 
   const ratingsMap: Record<string, BluechipRating> = {};
   let count = 0;

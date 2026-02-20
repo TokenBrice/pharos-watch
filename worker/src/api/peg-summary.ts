@@ -18,9 +18,10 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   }
   const { peggedAssets, fxFallbackRates } = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
 
-  // 2. Load ALL depeg events and DEX prices from DB
+  // 2. Load depeg events (4-year window matching peg score computation) and DEX prices from DB
+  const fourYearsAgoSec = Math.floor(Date.now() / 1000) - Math.ceil(4 * 365.25 * 86400);
   const [eventsResult, dexPriceResult] = await Promise.all([
-    db.prepare("SELECT * FROM depeg_events ORDER BY started_at DESC LIMIT 10000").all<DepegRow>(),
+    db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC").bind(fourYearsAgoSec).all<DepegRow>(),
     db.prepare("SELECT * FROM dex_prices").all<{
       stablecoin_id: string;
       dex_price_usd: number;

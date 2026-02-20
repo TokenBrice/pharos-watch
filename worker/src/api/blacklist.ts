@@ -29,35 +29,22 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     conditions, bindings: filterBindings, limit, offset,
   });
 
-  // Get total count for the current filter
-  const countResult = await db
-    .prepare(`SELECT COUNT(*) as total FROM blacklist_events${where}`)
-    .bind(...filterBindings)
-    .first<{ total: number }>();
-  const total = countResult?.total ?? 0;
-
+  // Batch COUNT + SELECT for transactional consistency
   const sql = `SELECT * FROM blacklist_events${where} ORDER BY timestamp DESC${limitClause}${offsetClause}`;
 
-  const result = await db
-    .prepare(sql)
-    .bind(...filterBindings, ...paginationBindings)
-    .all<{
-      id: string;
-      stablecoin: string;
-      chain_id: string;
-      chain_name: string;
-      event_type: string;
-      address: string;
-      amount: number | null;
-      tx_hash: string;
-      block_number: number;
-      timestamp: number;
-      explorer_tx_url: string;
-      explorer_address_url: string;
-    }>();
+  const [countBatch, dataBatch] = await db.batch([
+    db.prepare(`SELECT COUNT(*) as total FROM blacklist_events${where}`).bind(...filterBindings),
+    db.prepare(sql).bind(...filterBindings, ...paginationBindings),
+  ]);
+  const total = (countBatch.results as { total: number }[])?.[0]?.total ?? 0;
 
   // Map snake_case DB columns to camelCase to match BlacklistEvent interface
-  const events = (result.results ?? []).map((row) => ({
+  type BlacklistRow = {
+    id: string; stablecoin: string; chain_id: string; chain_name: string;
+    event_type: string; address: string; amount: number | null; tx_hash: string;
+    block_number: number; timestamp: number; explorer_tx_url: string; explorer_address_url: string;
+  };
+  const events = ((dataBatch.results ?? []) as BlacklistRow[]).map((row) => ({
     id: row.id,
     stablecoin: row.stablecoin,
     chainId: row.chain_id,

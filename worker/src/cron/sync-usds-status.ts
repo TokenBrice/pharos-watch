@@ -1,5 +1,6 @@
 import { ETHERSCAN_V2_BASE } from "../../../src/lib/blacklist-contracts";
 import { getCache, setCache } from "../lib/db";
+import { fetchWithRetry } from "../lib/fetch-retry";
 
 const CACHE_KEY = "usds-status";
 const STALE_HOURS = 20;
@@ -33,8 +34,8 @@ async function readImplementationSlot(apiKey: string | null): Promise<string | n
   if (apiKey) params.set("apikey", apiKey);
 
   try {
-    const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`);
-    if (!res.ok) return null;
+    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`);
+    if (!res || !res.ok) return null;
     const json = (await res.json()) as { result?: string };
     if (!json.result || json.result === "0x") return null;
     // Result is a 32-byte hex — extract the address from the last 20 bytes
@@ -59,8 +60,8 @@ async function probeFreeze(implAddress: string, apiKey: string | null): Promise<
   if (apiKey) params.set("apikey", apiKey);
 
   try {
-    const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`);
-    if (!res.ok) return null;
+    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`);
+    if (!res || !res.ok) return null;
     const json = (await res.json()) as { result?: string };
     // A successful call returns at least 66 chars (0x + 32 bytes)
     return !!json.result && json.result.length >= 66;

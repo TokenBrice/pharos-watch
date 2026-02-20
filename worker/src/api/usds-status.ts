@@ -1,5 +1,5 @@
 import { getCache } from "../lib/db";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 
 export const handleUsdsStatus = withErrorHandler("usds-status", async (db: D1Database): Promise<Response> => {
   const cached = await getCache(db, "usds-status");
@@ -11,9 +11,9 @@ export const handleUsdsStatus = withErrorHandler("usds-status", async (db: D1Dat
   }
 
   return new Response(cached.value, {
-    headers: {
+    headers: addFreshnessHeaders({
       "Content-Type": "application/json",
       "Cache-Control": "public, s-maxage=300, max-age=60",
-    },
+    }, cached.updatedAt, 86400),
   });
 });

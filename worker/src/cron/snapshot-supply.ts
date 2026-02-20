@@ -9,6 +9,13 @@ export async function snapshotSupply(db: D1Database): Promise<CronResult> {
     return { itemCount: 0 };
   }
 
+  // Verify cache freshness — skip if stale (>10 min) to avoid snapshotting outdated data
+  const cacheAge = Math.floor(Date.now() / 1000) - cached.updatedAt;
+  if (cacheAge > 600) {
+    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), skipping snapshot`);
+    return { itemCount: 0 };
+  }
+
   const data = JSON.parse(cached.value) as {
     peggedAssets: { id: string; price?: number | null; circulating?: Record<string, number> }[];
   };

@@ -1,4 +1,5 @@
 import { D1_BATCH_SIZE } from "./constants";
+import { sendAlert } from "./alerts";
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
 export async function batchExecute(db: D1Database, stmts: D1PreparedStatement[], chunkSize = D1_BATCH_SIZE): Promise<void> {
@@ -166,6 +167,8 @@ export async function logCronRun(
       )
       .bind(job, startSec, Date.now() - startMs, "error", String(e))
       .run();
+    // Alert on cron failure (non-blocking)
+    sendAlert(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`).catch(() => {});
     throw e;
   }
   // Prune rows older than 7 days
@@ -176,5 +179,13 @@ export async function logCronRun(
       .run();
   } catch (e) {
     console.error("[db] Failed to prune old cron runs:", e);
+    // Safety valve: if time-based prune fails, keep only most recent 5000 rows
+    try {
+      await db
+        .prepare("DELETE FROM cron_runs WHERE rowid NOT IN (SELECT rowid FROM cron_runs ORDER BY started_at DESC LIMIT 5000)")
+        .run();
+    } catch (e2) {
+      console.error("[db] Safety valve prune also failed:", e2);
+    }
   }
 }

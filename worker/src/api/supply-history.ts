@@ -17,6 +17,13 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
+  // Validate ID format to prevent edge cache pollution
+  if (!/^\d+$/.test(stablecoinId) && !/^(?:gold|silver|cg)-/.test(stablecoinId)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid stablecoin ID" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const days = Math.min(1825, Math.max(1, parseInt(url.searchParams.get("days") ?? "365", 10) || 365));
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;

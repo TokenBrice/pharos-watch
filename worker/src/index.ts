@@ -1,5 +1,5 @@
 import { route } from "./router";
-import { logCronRun } from "./lib/db";
+import { logCronRun, getCache } from "./lib/db";
 import { syncStablecoins } from "./cron/sync-stablecoins";
 import { syncStablecoinCharts } from "./cron/sync-stablecoin-charts";
 import { syncBlacklist } from "./cron/sync-blacklist";
@@ -10,6 +10,7 @@ import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { syncOnchainSupply } from "./cron/sync-onchain-supply";
 import { snapshotSupply } from "./cron/snapshot-supply";
 import { initChainRpcs } from "./lib/chain-rpcs";
+import { initAlerts, sendAlert } from "./lib/alerts";
 
 interface Env {
   DB: D1Database;
@@ -20,6 +21,7 @@ interface Env {
   ALCHEMY_API_KEY?: string;
   ADMIN_KEY?: string;
   GRAPH_API_KEY?: string;
+  ALERT_WEBHOOK_URL?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -98,6 +100,7 @@ const worker = {
 
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
+    initAlerts(env.ALERT_WEBHOOK_URL);
     const db = env.DB;
     const cron = event.cron;
 
@@ -110,6 +113,18 @@ const worker = {
         if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() === 0) {
           ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
         }
+        // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
+        ctx.waitUntil((async () => {
+          try {
+            const cached = await getCache(db, "stablecoins");
+            if (cached) {
+              const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
+              if (age > 1800) {
+                await sendAlert("Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <10min)`);
+              }
+            }
+          } catch { /* non-blocking */ }
+        })());
         break;
       }
       case "*/10 * * * *":

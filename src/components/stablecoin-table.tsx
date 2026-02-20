@@ -20,7 +20,6 @@ import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@/lib/stablecoins";
 import type { StablecoinData, FilterTag, PegSummaryCoin, BluechipRating, DexLiquidityMap } from "@/lib/types";
 import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
-import { GRADE_ORDER } from "@/lib/bluechip";
 import { GRADE_COLORS, BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -65,7 +64,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 
 
 export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, bluechipRatings, dexLiquidity, onClearSearch, onClearFilters }: StablecoinTableProps) {
-  type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "safety" | "liquidity";
+  type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "liquidity";
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("mcap", "desc");
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const [page, setPage] = useState(0);
@@ -137,19 +136,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
           bVal = bScore;
           break;
         }
-        case "safety": {
-          const aGrade = bluechipRatings?.[a.id]?.grade;
-          const bGrade = bluechipRatings?.[b.id]?.grade;
-          const aOrder = aGrade ? (GRADE_ORDER[aGrade] ?? 0) : -1;
-          const bOrder = bGrade ? (GRADE_ORDER[bGrade] ?? 0) : -1;
-          // Unrated coins sort to bottom regardless of direction
-          if (aOrder === -1 && bOrder === -1) return 0;
-          if (aOrder === -1) return 1;
-          if (bOrder === -1) return -1;
-          aVal = aOrder;
-          bVal = bOrder;
-          break;
-        }
         case "liquidity": {
           const aLiq = dexLiquidity?.[a.id]?.liquidityScore ?? null;
           const bLiq = dexLiquidity?.[b.id]?.liquidityScore ?? null;
@@ -166,7 +152,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
-  }, [filtered, sort, pegScores, bluechipRatings, dexLiquidity]);
+  }, [filtered, sort, pegScores, dexLiquidity]);
 
   // Reset page when filters, search, or sort change (adjusting state during render)
   const [prev, setPrev] = useState({ filtered, sort });
@@ -264,15 +250,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               Peg Score <SortIcon columnKey="stability" sortKey={sortKey} sortDirection={sortDirection} />
             </TableHead>
             <TableHead
-              className="hidden sm:table-cell cursor-pointer text-center hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("safety")}
-              aria-sort={getAriaSortValue("safety")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "safety")}
-            >
-              Safety <SortIcon columnKey="safety" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
               className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
               onClick={() => toggleSort("liquidity")}
               aria-sort={getAriaSortValue("liquidity")}
@@ -316,6 +293,16 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={24} />
                     <span className="truncate max-w-[180px] inline-block align-bottom">{coin.name}</span>
                     <span className="text-xs text-muted-foreground">{coin.symbol}</span>
+                    {(() => {
+                      const rating = bluechipRatings?.[coin.id];
+                      if (!rating) return null;
+                      const colorCls = GRADE_COLORS[rating.grade] ?? "";
+                      return (
+                        <Badge variant="outline" className={`text-xs font-mono px-1 py-0 ${colorCls}`} title={`Bluechip safety rating: ${rating.grade}`}>
+                          {rating.grade}
+                        </Badge>
+                      );
+                    })()}
                   </Link>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
@@ -376,18 +363,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     }
                     const score = pegCoin.pegScore;
                     return <span className={pegScoreColor(score)}>{score}</span>;
-                  })()}
-                </TableCell>
-                <TableCell className="hidden sm:table-cell text-center">
-                  {(() => {
-                    const rating = bluechipRatings?.[coin.id];
-                    if (!rating) return <span className="text-muted-foreground">—</span>;
-                    const colorCls = GRADE_COLORS[rating.grade] ?? "";
-                    return (
-                      <Badge variant="outline" className={`text-xs font-mono ${colorCls}`}>
-                        {rating.grade}
-                      </Badge>
-                    );
                   })()}
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">

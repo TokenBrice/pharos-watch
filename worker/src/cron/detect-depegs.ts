@@ -140,6 +140,38 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
               ).bind(bps, price, existing.id)
             );
           }
+
+          // DEX cross-validation for ongoing events
+          const dexRow = dexPrices.get(asset.id);
+          const dexFresh = dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC;
+          if (dexFresh) {
+            const dexAbsBps = Math.abs(Math.round(
+              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
+            ));
+            if (dexAbsBps < threshold) {
+              // DEX disagrees with ongoing depeg
+              const eventAge = now - existing.started_at;
+              if (eventAge >= 1800 && dexRow.source_total_tvl >= 1_000_000) {
+                // Event open 30+ min AND DEX has >=$1M TVL — auto-close
+                console.warn(
+                  `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
+                  `primary=${bps}bps but DEX=${dexAbsBps}bps for ${Math.round(eventAge / 60)}min ` +
+                  `(${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+                );
+                stmts.push(
+                  db.prepare(
+                    "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
+                  ).bind(now, dexRow.dex_price_usd, existing.id)
+                );
+                seen.delete(existing.id); // Remove from seen since we're closing it
+              } else {
+                console.warn(
+                  `[depeg] DEX disagrees with ongoing event for ${asset.symbol}: ` +
+                  `primary=${bps}bps vs DEX=${dexAbsBps}bps (event age ${Math.round(eventAge / 60)}min)`
+                );
+              }
+            }
+          }
         }
       } else {
         // Open new event — check DEX price cross-validation first

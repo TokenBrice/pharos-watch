@@ -3,7 +3,8 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import type { StablecoinData } from "../../../src/lib/types";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enrich-prices";
-import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
+import type { PeggedAsset, DefiLlamaCoinPrice, EnrichmentStats } from "./enrich-prices";
+import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, GECKO_ID_OVERRIDES, USER_AGENT, MIN_VALID_ASSET_COUNT, SUPPLY_OVERRIDE_COINS } from "../lib/constants";
@@ -336,7 +337,7 @@ async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcap
   return forcedMcaps;
 }
 
-export async function syncStablecoins(db: D1Database): Promise<void> {
+export async function syncStablecoins(db: D1Database): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   const cgData = await fetchCoinGeckoMarketData();
@@ -350,14 +351,14 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
 
   if (!llamaRes || !llamaRes.ok) {
     console.error(`[sync-stablecoins] DefiLlama API error: ${llamaRes?.status ?? "no response"}`);
-    return;
+    return {};
   }
 
   const llamaData = await llamaRes.json() as { peggedAssets: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
 
   if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
-    return;
+    return {};
   }
 
   // Structural validation: ensure assets have required fields
@@ -366,7 +367,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   );
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
-    return;
+    return {};
   }
   if (validAssets.length < llamaData.peggedAssets.length) {
     console.warn(`[sync-stablecoins] Dropped ${llamaData.peggedAssets.length - validAssets.length} malformed assets`);
@@ -414,7 +415,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   const missingBefore = new Set(
     llamaData.peggedAssets.filter(hasMissingPrice).map((a) => a.id)
   );
-  await enrichMissingPrices(llamaData.peggedAssets);
+  const enrichStats = await enrichMissingPrices(llamaData.peggedAssets);
 
   // --- Reject unreasonable prices BEFORE caching ---
   // Must run before savePriceCache so bad prices don't persist for 24h
@@ -428,6 +429,53 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   }
   if (rejectedCount > 0) {
     console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
+  }
+
+  // --- DEX price cross-validation ---
+  let dexOverrides = 0;
+  try {
+    const dexResult = await db
+      .prepare("SELECT stablecoin_id, dex_price_usd, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
+      .all<{
+        stablecoin_id: string;
+        dex_price_usd: number;
+        source_pool_count: number;
+        source_total_tvl: number;
+        updated_at: number;
+      }>();
+    const dexMap = new Map((dexResult.results ?? []).map((r) => [r.stablecoin_id, r]));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const DEX_FRESH_SEC = 1200; // 20 minutes
+
+    for (const asset of llamaData.peggedAssets) {
+      if (asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
+      const dexRow = dexMap.get(String(asset.id));
+      if (!dexRow || (nowSec - dexRow.updated_at) >= DEX_FRESH_SEC) continue;
+
+      const divergenceBps = Math.abs(Math.round(((asset.price / dexRow.dex_price_usd) - 1) * 10000));
+      if (divergenceBps >= 50) {
+        console.warn(
+          `[sync-stablecoins] DEX divergence for ${asset.symbol} (id=${asset.id}): ` +
+          `primary=$${asset.price} vs DEX=$${dexRow.dex_price_usd} (${divergenceBps}bps, ` +
+          `${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+        );
+      }
+      // Override primary with DEX price at 200bps divergence IF DEX has >= $5M TVL and >= 3 pools
+      if (
+        divergenceBps >= 200 &&
+        dexRow.source_total_tvl >= 5_000_000 &&
+        dexRow.source_pool_count >= 3
+      ) {
+        console.warn(
+          `[sync-stablecoins] OVERRIDING primary price for ${asset.symbol}: ` +
+          `$${asset.price} → $${dexRow.dex_price_usd} (DEX, ${divergenceBps}bps divergence)`
+        );
+        asset.price = dexRow.dex_price_usd;
+        dexOverrides++;
+      }
+    }
+  } catch (err) {
+    console.warn("[sync-stablecoins] DEX cross-validation failed (non-blocking):", err);
   }
 
   // --- Price cache: save successes, apply fallbacks ---
@@ -471,7 +519,7 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
     }, 0);
   if (totalSupply < 100_000_000_000) {
     console.error(`[sync-stablecoins] Total supply $${(totalSupply / 1e9).toFixed(1)}B is below $100B floor, skipping cache write`);
-    return;
+    return {};
   }
 
   // --- On-chain supply override ---
@@ -690,7 +738,42 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
       `[sync-stablecoins] Post-override total supply $${(postOverrideSupply / 1e9).toFixed(1)}B ` +
       `is below $100B floor (pre-override was $${(totalSupply / 1e9).toFixed(1)}B), skipping cache write`
     );
-    return;
+    return {};
+  }
+
+  // --- Staleness detection: compare prices against previous cache ---
+  let stalenessWarning = false;
+  try {
+    const prevCache = await getCache(db, "stablecoins");
+    if (prevCache) {
+      const prevData = JSON.parse(prevCache.value) as { peggedAssets?: PeggedAsset[] };
+      if (prevData.peggedAssets) {
+        const prevPrices = new Map(
+          prevData.peggedAssets
+            .filter((a) => a.price != null && typeof a.price === "number" && a.price > 0)
+            .map((a) => [a.id, a.price as number])
+        );
+        let identical = 0;
+        let compared = 0;
+        for (const asset of llamaData.peggedAssets) {
+          const prevPrice = prevPrices.get(asset.id);
+          if (prevPrice == null || asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
+          compared++;
+          if (Math.abs(asset.price - prevPrice) / prevPrice < 0.0001) {
+            identical++;
+          }
+        }
+        if (compared >= 50 && identical / compared > 0.95) {
+          stalenessWarning = true;
+          console.warn(
+            `[sync-stablecoins] STALENESS WARNING: ${identical}/${compared} prices ` +
+            `(${(identical / compared * 100).toFixed(1)}%) are identical to previous cache — possible upstream stale data`
+          );
+        }
+      }
+    }
+  } catch {
+    // Non-blocking — never prevent cache write
   }
 
   // Embed live FX fallback rates if available
@@ -710,4 +793,18 @@ export async function syncStablecoins(db: D1Database): Promise<void> {
   } catch (err) {
     console.error("[sync-stablecoins] Depeg detection failed:", err);
   }
+
+  // Build metadata for cron_runs observability
+  const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
+  const metadata: Record<string, unknown> = {
+    assetCount: llamaData.peggedAssets.length,
+    totalSupplyB: Math.round(postOverrideSupply / 1e9 * 10) / 10,
+    enrichment: enrichStats,
+    rejectedPrices: rejectedCount,
+    missingPrices: finalMissing,
+  };
+  if (stalenessWarning) metadata.stalenessWarning = true;
+  if (dexOverrides > 0) metadata.dexPriceOverrides = dexOverrides;
+
+  return { itemCount: llamaData.peggedAssets.length, metadata: JSON.stringify(metadata) };
 }

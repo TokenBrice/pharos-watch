@@ -1,4 +1,5 @@
-import { getCache, setCache } from "../lib/db";
+import { getCache, setCacheIfNewer } from "../lib/db";
+import type { CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 
@@ -73,7 +74,8 @@ interface FrankfurterResponse {
   rates: Record<string, number>;
 }
 
-export async function syncFxRates(db: D1Database): Promise<void> {
+export async function syncFxRates(db: D1Database): Promise<CronResult> {
+  const syncStartSec = Math.floor(Date.now() / 1000);
   try {
     // Load previous rates for delta validation
     let prevRates: Record<string, number> = {};
@@ -89,7 +91,7 @@ export async function syncFxRates(db: D1Database): Promise<void> {
 
     if (!res || !res.ok) {
       console.error(`[sync-fx-rates] frankfurter.app returned ${res?.status ?? "no response"}`);
-      return;
+      return {};
     }
 
     const data: FrankfurterResponse = await res.json();
@@ -197,9 +199,22 @@ export async function syncFxRates(db: D1Database): Promise<void> {
       console.warn(`[sync-fx-rates] Missing rates for: ${missing.join(", ")}`);
     }
 
-    await setCache(db, "fx-rates", JSON.stringify(rates));
+    await setCacheIfNewer(db, "fx-rates", JSON.stringify(rates), syncStartSec);
     console.log(`[sync-fx-rates] Cached FX rates: ${JSON.stringify(rates)}`);
+
+    const metadata = {
+      rateCount: Object.keys(rates).length,
+      missing: missing.length > 0 ? missing : undefined,
+      sources: {
+        frankfurter: "ok",
+        erApi: rates["peggedRUB"] !== RUB_FALLBACK ? "ok" : "fallback",
+        silver: rates["peggedSILVER"] ? "ok" : "missing",
+        gold: rates["peggedGOLD"] ? "ok" : "missing",
+      },
+    };
+    return { itemCount: Object.keys(rates).length, metadata: JSON.stringify(metadata) };
   } catch (err) {
     console.error(`[sync-fx-rates] Failed:`, err);
+    return {};
   }
 }

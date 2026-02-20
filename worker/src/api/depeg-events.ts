@@ -24,20 +24,15 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
     conditions, bindings: filterBindings, limit, offset,
   });
 
-  const countResult = await db
-    .prepare(`SELECT COUNT(*) as total FROM depeg_events${where}`)
-    .bind(...filterBindings)
-    .first<{ total: number }>();
-  const total = countResult?.total ?? 0;
-
+  // Batch COUNT + SELECT for transactional consistency
   const sql = `SELECT * FROM depeg_events${where} ORDER BY started_at DESC${limitClause}${offsetClause}`;
 
-  const result = await db
-    .prepare(sql)
-    .bind(...filterBindings, ...paginationBindings)
-    .all<DepegRow>();
-
-  const events = (result.results ?? []).map(rowToDepegEvent);
+  const [countBatch, dataBatch] = await db.batch([
+    db.prepare(`SELECT COUNT(*) as total FROM depeg_events${where}`).bind(...filterBindings),
+    db.prepare(sql).bind(...filterBindings, ...paginationBindings),
+  ]);
+  const total = (countBatch.results as { total: number }[])?.[0]?.total ?? 0;
+  const events = ((dataBatch.results ?? []) as DepegRow[]).map(rowToDepegEvent);
 
   return new Response(JSON.stringify({ events, total }), {
     headers: {

@@ -79,9 +79,19 @@ interface DexScreenerPair {
  *   3. CoinGecko direct API
  *   4. DexScreener search API (best-effort fallback)
  */
-export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> {
+export interface EnrichmentStats {
+  totalMissing: number;
+  pass1: number;
+  pass1b: number;
+  pass2: number;
+  pass3: number;
+  pass4: number;
+  finalMissing: number;
+}
+
+export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<EnrichmentStats> {
   const totalMissing = assets.filter(hasMissingPrice).length;
-  if (totalMissing === 0) return;
+  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, pass4: 0, finalMissing: 0 };
 
   let pass1Count = 0;
   let pass1bCount = 0;
@@ -195,11 +205,11 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
     // ── Pass 3: CoinGecko direct API ──
     if (afterPass2.length > 0) {
       const ids = afterPass2.map((m) => m.geckoId).join(",");
-      const cgRes = await fetch(
+      const cgRes = await fetchWithRetry(
         `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
         { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
       );
-      if (cgRes.ok) {
+      if (cgRes && cgRes.ok) {
         const cgData = (await cgRes.json()) as Record<string, { usd?: number }>;
         for (const m of afterPass2) {
           if (cgData[m.geckoId]?.usd != null && cgData[m.geckoId].usd! > 0) {
@@ -208,7 +218,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
           }
         }
       } else {
-        console.warn(`[enrich] CoinGecko API returned ${cgRes.status}`);
+        console.warn(`[enrich] CoinGecko API returned ${cgRes?.status ?? "no response"}`);
       }
     }
 
@@ -217,8 +227,18 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
       .map((a, i) => ({ asset: a, index: i }))
       .filter((m) => hasMissingPrice(m.asset));
 
-    for (const m of stillMissing) {
+    // Cap at 30 searches — if more are missing, something is fundamentally broken upstream
+    const DEXSCREENER_MAX_SEARCHES = 30;
+    if (stillMissing.length > DEXSCREENER_MAX_SEARCHES) {
+      console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_SEARCHES}`);
+    }
+
+    for (const m of stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES)) {
       try {
+        // Rate limit: 200ms between DexScreener calls
+        if (pass4Count > 0 || stillMissing.indexOf(m) > 0) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
         const res = await fetch(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
           { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
@@ -244,9 +264,7 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
         candidates.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
         const price = parseFloat(candidates[0].priceUsd);
         // Sanity check: peg-type-aware range
-        const isGold = (m.asset.pegType as string | undefined)?.includes("GOLD");
-        const maxPrice = isGold ? 100_000 : 1000;
-        if (!isNaN(price) && price > 0.01 && price < maxPrice) {
+        if (!isNaN(price) && isReasonablePrice(price, m.asset.pegType as string | undefined)) {
           assets[m.index].price = price;
           pass4Count++;
         }
@@ -269,7 +287,9 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<void> 
     if (totalEnriched > 0) {
       console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
     }
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, pass4: pass4Count, finalMissing };
   } catch (err) {
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, pass4: pass4Count, finalMissing: totalMissing };
   }
 }

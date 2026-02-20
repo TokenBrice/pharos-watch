@@ -18,6 +18,13 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
+  // Validate ID format to prevent edge cache pollution
+  if (!/^\d+$/.test(stablecoinId) && !/^(?:gold|silver|cg)-/.test(stablecoinId)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid stablecoin ID" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get("days") ?? "90", 10) || 90));
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;

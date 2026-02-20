@@ -16,6 +16,7 @@ interface CronRun {
   status: string;
   error?: string;
   itemCount?: number;
+  metadata?: Record<string, unknown>;
 }
 
 interface CronStatus {
@@ -102,7 +103,7 @@ export const handleStatus = withErrorHandler(
     const cronJobs = Object.keys(CRON_INTERVALS);
     const cronRows = await db
       .prepare(
-        `SELECT job, started_at, duration_ms, status, error, item_count
+        `SELECT job, started_at, duration_ms, status, error, item_count, metadata
          FROM cron_runs
          WHERE job IN (${cronJobs.map(() => '?').join(',')})
          ORDER BY started_at DESC`
@@ -115,6 +116,7 @@ export const handleStatus = withErrorHandler(
         status: string;
         error: string | null;
         item_count: number | null;
+        metadata: string | null;
       }>();
 
     // Group by job, keeping only the 10 most recent per job
@@ -122,12 +124,17 @@ export const handleStatus = withErrorHandler(
     for (const r of cronRows.results ?? []) {
       const runs = cronByJob.get(r.job) ?? [];
       if (runs.length < 10) {
+        let parsedMeta: Record<string, unknown> | undefined;
+        if (r.metadata) {
+          try { parsedMeta = JSON.parse(r.metadata); } catch { /* ignore */ }
+        }
         runs.push({
           startedAt: r.started_at,
           durationMs: r.duration_ms,
           status: r.status,
           ...(r.error ? { error: r.error } : {}),
           ...(r.item_count != null ? { itemCount: r.item_count } : {}),
+          ...(parsedMeta ? { metadata: parsedMeta } : {}),
         });
         cronByJob.set(r.job, runs);
       }
