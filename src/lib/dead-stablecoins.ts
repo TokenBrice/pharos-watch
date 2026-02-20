@@ -538,6 +538,19 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "DL News",
   },
   {
+    name: "Bean",
+    symbol: "BEAN",
+    llamaId: "67",
+    pegCurrency: "USD",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2024-05",
+    peakMcap: 50_493_989,
+    obituary:
+      "The original Beanstalk was drained of $182M in a flash-loan governance attack in April 2022. Undeterred, the team relaunched on Arbitrum with a credit-based model where soil demand and adjustable interest rates (Temperature) were supposed to keep BEAN at $1. It didn't. BEAN slipped below peg in mid-2024 and never came back, proving the design flaw was in the algorithm, not the security. Even Pinto, the community fork that tried the same model on Base, met the same fate.",
+    sourceUrl: "https://defillama.com/stablecoin/bean",
+    sourceLabel: "DefiLlama",
+  },
+  {
     name: "Lybra eUSD",
     symbol: "eUSD",
     logo: "eusd.png",
@@ -981,6 +994,19 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
       "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 77% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
     sourceUrl: "https://finance.yahoo.com/news/stream-finance-loses-93-million-225557903.html",
     sourceLabel: "Yahoo Finance",
+  },
+  {
+    name: "YU",
+    symbol: "YU",
+    llamaId: "268",
+    pegCurrency: "USD",
+    causeOfDeath: "counterparty-failure",
+    deathDate: "2025-11",
+    peakMcap: 153_465_803,
+    obituary:
+      "Yala's BTC-backed stablecoin survived its first death in September 2025 when a security breach minted 120 million unauthorized YU tokens, draining $7.6M. The team injected $5.5M and clawed back the peg. Two months later, runaway borrowing drained all liquidity pools and YU collapsed again to $0.44. This time, nobody came to resuscitate.",
+    sourceUrl: "https://unchainedcrypto.com/yala-protocols-bitcoin-stablecoin-depegs/",
+    sourceLabel: "Unchained",
   },
   {
     name: "Reservoir rUSD",
