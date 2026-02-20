@@ -14,41 +14,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
+import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
 interface SupplyChartProps {
-  data: Record<string, unknown>[];
-  pegType?: string;
+  data: SupplyHistoryPoint[];
 }
 
-function extractSupply(point: Record<string, unknown>, pegType: string): number {
-  // Try all possible field names from DefiLlama APIs
-  for (const key of ["totalCirculatingUSD", "totalCirculating", "circulating"]) {
-    const obj = point[key];
-    if (obj && typeof obj === "object" && pegType in (obj as Record<string, unknown>)) {
-      const val = (obj as Record<string, number>)[pegType];
-      if (typeof val === "number" && val > 0) return val;
-    }
-  }
-  return 0;
-}
-
-export function SupplyChart({ data, pegType = "peggedUSD" }: SupplyChartProps) {
+export function SupplyChart({ data }: SupplyChartProps) {
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
     return data
-      .map((point) => {
-        const rawDate = point.date;
-        const ts = typeof rawDate === "number" ? rawDate * 1000 : typeof rawDate === "string" ? new Date(rawDate).getTime() : NaN;
-        const supply = extractSupply(point, pegType);
-        return { ts, supply };
-      })
-      .filter((d) => d.supply > 0 && !isNaN(d.ts))
+      .filter((d) => d.circulatingUsd > 0)
       .map((d) => ({
-        ts: d.ts,
-        supply: d.supply,
+        ts: d.date * 1000,
+        supply: d.circulatingUsd,
       }));
-  }, [data, pegType]);
+  }, [data]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 

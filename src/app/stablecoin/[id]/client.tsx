@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Globe } from "lucide-react";
-import { useStablecoinDetail, useStablecoins } from "@/hooks/use-stablecoins";
+import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { findStablecoinMeta, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
@@ -285,7 +285,7 @@ function computePegScoreWithWindow(isNavToken: boolean, events: import("@/lib/ty
 }
 
 export default function StablecoinDetailClient({ id }: { id: string }) {
-  const { data: detailData, isLoading: detailLoading, isError: detailError } = useStablecoinDetail(id);
+  const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
   const { data: ratingsMap } = useBluechipRatings();
@@ -296,7 +296,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
   );
   const isNavToken = meta?.flags.navToken ?? false;
 
-  const isLoading = detailLoading || listLoading;
+  const isLoading = supplyLoading || listLoading;
 
   if (isLoading) {
     return (
@@ -344,15 +344,15 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
   const pegRates = derivePegRates(listData?.peggedAssets ?? [], metaById, listData?.fxFallbackRates);
   const pegRef = getPegReference(coinData.pegType, pegRates, meta?.goldOunces);
 
-  const chartHistory = detailData?.tokens ?? [];
-  const earliestTrackingDate = chartHistory.length > 0 ? (chartHistory[0] as Record<string, unknown>).date as string : null;
+  const supplyHistory = supplyData ?? [];
+  const earliestTrackingDate = supplyHistory.length > 0 ? String(supplyHistory[0].date) : null;
   const pegScoreResult = computePegScoreWithWindow(isNavToken, depegData?.events ?? null, earliestTrackingDate);
 
   return (
     <div className="space-y-6">
-      {detailError && (
+      {supplyError && (
         <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-600 dark:text-amber-400">
-          Detailed chart data is temporarily unavailable. Showing summary data only.
+          Supply history is temporarily unavailable.
         </div>
       )}
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -440,7 +440,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
         <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
       </div>
 
-      <SupplyChart data={chartHistory} pegType={coinData.pegType} />
+      <SupplyChart data={supplyHistory} />
 
 
       {meta && (
