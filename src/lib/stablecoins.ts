@@ -1307,6 +1307,106 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://mudigital.net/" },
     ],
   }),
+  usd("266", "Plume USD", "pUSD", "rwa-backed", "centralized", {
+    collateral: "USDC held 1:1 in a BoringVault on Plume Chain",
+    pegMechanism: "Direct 1:1 redemption for USDC through Plume Network",
+    links: [
+      { label: "Website", url: "https://plume.org/pusd" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6 },
+    ],
+  }),
+  usd("234", "Worldwide USD", "WUSD", "rwa-backed", "centralized", {
+    collateral: "USD fiat reserves including cash equivalents and short-term treasury bills",
+    pegMechanism: "Direct 1:1 redemption through WSPN",
+    links: [
+      { label: "Website", url: "https://wspn.io/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18 },
+      { chain: "polygon", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18 },
+    ],
+  }),
+  usd("324", "Brale SBC", "SBC", "rwa-backed", "centralized", {
+    collateral: "Cash, cash equivalents, and U.S. Treasuries held at regulated financial institutions",
+    pegMechanism: "Direct 1:1 redemption through Brale (licensed money transmitter)",
+    links: [
+      { label: "Website", url: "https://brale.xyz/stablecoins/SBC" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16", decimals: 18 },
+      { chain: "polygon", address: "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798", decimals: 18 },
+      { chain: "base", address: "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798", decimals: 18 },
+    ],
+  }),
+  usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    collateral: "USDC, USDT, and USDS deployed into DeFi strategies (Morpho, Curve/Convex, Sky)",
+    pegMechanism: "1:1 minting/redemption backed by stablecoins; yield distributed via rebasing",
+    links: [
+      { label: "Website", url: "https://www.ousd.com/" },
+      { label: "Twitter", url: "https://x.com/OriginProtocol" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86", decimals: 18 },
+    ],
+  }),
+  usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "centralized-dependent", {
+    collateral: "Overcollateralized Bitcoin (WBTC, BTCB) via CDP vaults",
+    pegMechanism: "Overcollateralized CDP with liquidation mechanisms",
+    links: [
+      { label: "Website", url: "https://www.btcfi.one/" },
+    ],
+    contracts: [
+      { chain: "base", address: "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4", decimals: 18 },
+    ],
+  }),
+  usd("253", "Bima USBD", "USBD", "crypto-backed", "centralized-dependent", {
+    collateral: "Overcollateralized BTC derivatives (WBTC, iBTC, LBTC) at 160% minimum ratio",
+    pegMechanism: "Overcollateralized CDP (Liquity-style TroveManager) with automated liquidation",
+    links: [
+      { label: "Website", url: "https://bima.money/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18 },
+      { chain: "bsc", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18 },
+    ],
+  }),
+  usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true, navToken: true,
+    collateral: "USDC and USDT deposits deployed into yield strategies (FX arbitrage, DeFi lending)",
+    pegMechanism: "Backed 1:1 by stablecoins; token value appreciates as yield accrues",
+    links: [
+      { label: "Website", url: "https://piku.co/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6", decimals: 18 },
+    ],
+  }),
+  usd("240", "StablR USD", "USDR", "rwa-backed", "centralized", {
+    collateral: "Cash and short-term government bonds held with regulated European financial institutions",
+    pegMechanism: "Direct 1:1 redemption through StablR (MFSA-supervised EMI)",
+    proofOfReserves: { type: "independent-audit", url: "https://www.stablr.com/proof-of-reserve", provider: "Grant Thornton" },
+    links: [
+      { label: "Website", url: "https://www.stablr.com/usdr" },
+      { label: "Twitter", url: "https://x.com/StablREuro" },
+    ],
+    jurisdiction: { country: "Malta", regulator: "MFSA", license: "EMI (MiCA)" },
+    contracts: [
+      { chain: "ethereum", address: "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8", decimals: 6 },
+    ],
+  }),
+  usd("304", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
+    collateral: "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
+    pegMechanism: "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
+    links: [
+      { label: "Website", url: "https://usdu.finance/" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xdde3ec717f220fc6a29d6a4be73f91da5b718e55", decimals: 18 },
+    ],
+  }),
 
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
