@@ -13,6 +13,7 @@ import { handleDexLiquidity } from "./api/dex-liquidity";
 import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
 import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
+import { handleDailyDigest } from "./api/daily-digest";
 
 export function route(
   url: URL,
@@ -77,6 +78,10 @@ export function route(
 
   if (path === "/api/status") {
     return handleStatus(db, adminKey, request);
+  }
+
+  if (path === "/api/daily-digest") {
+    return handleDailyDigest(db);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution

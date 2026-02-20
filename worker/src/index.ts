@@ -9,6 +9,7 @@ import { syncFxRates } from "./cron/sync-fx-rates";
 import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { syncOnchainSupply } from "./cron/sync-onchain-supply";
 import { snapshotSupply } from "./cron/snapshot-supply";
+import { generateDailyDigest } from "./cron/daily-digest";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 
@@ -22,6 +23,7 @@ interface Env {
   ADMIN_KEY?: string;
   GRAPH_API_KEY?: string;
   ALERT_WEBHOOK_URL?: string;
+  ANTHROPIC_API_KEY?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -144,6 +146,9 @@ const worker = {
         break;
       case "0 */2 * * *":
         ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
+        ctx.waitUntil(logCronRun(db, "daily-digest", () =>
+          generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null)
+        ));
         break;
     }
   },
