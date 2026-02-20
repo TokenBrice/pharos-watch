@@ -1757,7 +1757,3 @@ export const TRACKED_META_BY_ID = new Map(TRACKED_STABLECOINS.map((s) => [s.id, 
 
 /** Set of all tracked stablecoin IDs. */
 export const TRACKED_IDS = new Set(TRACKED_STABLECOINS.map((s) => s.id));
-
-export function findStablecoinMeta(id: string): StablecoinMeta | undefined {
-  return TRACKED_META_BY_ID.get(id);
-}

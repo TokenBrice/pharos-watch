@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeftRight } from "lucide-react";
-import { TRACKED_STABLECOINS, findStablecoinMeta } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
@@ -20,7 +20,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const coin = findStablecoinMeta(id);
+  const coin = TRACKED_META_BY_ID.get(id);
 
   if (!coin) {
     return { title: "Stablecoin Not Found" };
@@ -47,7 +47,7 @@ export async function generateMetadata({
 
 
 function getRelatedStablecoins(coinId: string, limit = 6) {
-  const coin = findStablecoinMeta(coinId);
+  const coin = TRACKED_META_BY_ID.get(coinId);
   if (!coin) return [];
 
   const others = TRACKED_STABLECOINS.filter((s) => s.id !== coinId);
@@ -70,7 +70,7 @@ function getRelatedStablecoins(coinId: string, limit = 6) {
 
 export default async function StablecoinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const coin = findStablecoinMeta(id);
+  const coin = TRACKED_META_BY_ID.get(id);
   const tags = coin ? getFilterTags(coin) : [];
   const related = getRelatedStablecoins(id);
   const typedLogos = logos as Record<string, string>;

@@ -16,7 +16,7 @@ import { formatAddress, formatEventDate, formatCurrency } from "@/lib/format";
 import { isGoldStablecoin } from "@/lib/blacklist-helpers";
 import type { BlacklistEvent } from "@/lib/types";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@/lib/classification";
-import { SortIcon } from "@/components/sort-icon";
+import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSort } from "@/hooks/use-sort";
 
 interface BlacklistTableProps {
@@ -87,18 +87,42 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("date")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "date")} aria-sort={getAriaSortValue("date")}>
-              Date <SortIcon columnKey="date" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("stablecoin")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "stablecoin")} aria-sort={getAriaSortValue("stablecoin")}>
-              Stablecoin <SortIcon columnKey="stablecoin" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("chain")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "chain")} aria-sort={getAriaSortValue("chain")}>
-              Chain <SortIcon columnKey="chain" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => toggleSort("event")} tabIndex={0} onKeyDown={(e) => handleSortKeyDown(e, "event")} aria-sort={getAriaSortValue("event")}>
-              Event <SortIcon columnKey="event" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
+            <SortableTableHead
+              sortKey="date"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Date"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <SortableTableHead
+              sortKey="stablecoin"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Stablecoin"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <SortableTableHead
+              sortKey="chain"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Chain"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <SortableTableHead
+              sortKey="event"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Event"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
             <TableHead>Address</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead className="text-center">Tx</TableHead>

@@ -195,27 +195,6 @@ export interface StablecoinListResponse {
   fxFallbackRates?: Record<string, number>;
 }
 
-export interface ChartDataPoint {
-  date: string;
-  totalCirculating: Record<string, number>;
-  totalCirculatingUSD: Record<string, number>;
-}
-
-export interface StablecoinChartResponse {
-  [key: string]: ChartDataPoint[];
-}
-
-export interface StablecoinHistoryPoint {
-  date: string;
-  totalCirculating: Record<string, number>;
-  totalCirculatingUSD: Record<string, number>;
-}
-
-export interface SortConfig {
-  key: string;
-  direction: "asc" | "desc";
-}
-
 // --- Stablecoin Cemetery types ---
 
 export type CauseOfDeath =
@@ -383,8 +362,6 @@ export interface StatusResponse {
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
 }
-
-// --- Blacklist/Freeze tracker types ---
 
 // --- Depeg event types ---
 

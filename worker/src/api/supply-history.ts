@@ -1,4 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, isValidStablecoinId } from "../lib/api-utils";
 
 interface SupplyHistoryRow {
   snapshot_date: number;
@@ -18,7 +18,7 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
     );
   }
   // Validate ID format to prevent edge cache pollution
-  if (!/^\d+$/.test(stablecoinId) && !/^(?:gold|silver|cg)-/.test(stablecoinId)) {
+  if (!isValidStablecoinId(stablecoinId)) {
     return new Response(
       JSON.stringify({ error: "Invalid stablecoin ID" }),
       { status: 400, headers: { "Content-Type": "application/json" } }

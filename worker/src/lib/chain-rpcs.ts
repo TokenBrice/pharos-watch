@@ -1,3 +1,5 @@
+import { CHAIN_META } from "../../../src/lib/chains";
+
 export interface ChainRpcConfig {
   chainId: string;
   chainName: string;
@@ -41,34 +43,6 @@ const PUBLIC_RPCS: Record<string, string> = {
   celo: "https://forno.celo.org",
 };
 
-const EXPLORER_URLS: Record<string, string> = {
-  ethereum: "https://etherscan.io",
-  arbitrum: "https://arbiscan.io",
-  base: "https://basescan.org",
-  optimism: "https://optimistic.etherscan.io",
-  polygon: "https://polygonscan.com",
-  avalanche: "https://snowscan.xyz",
-  bsc: "https://bscscan.com",
-  gnosis: "https://gnosisscan.io",
-  fantom: "https://ftmscan.com",
-  celo: "https://celoscan.io",
-  tron: "https://tronscan.org",
-};
-
-const CHAIN_NAMES: Record<string, string> = {
-  ethereum: "Ethereum",
-  arbitrum: "Arbitrum",
-  base: "Base",
-  optimism: "Optimism",
-  polygon: "Polygon",
-  avalanche: "Avalanche",
-  bsc: "BSC",
-  gnosis: "Gnosis",
-  fantom: "Fantom",
-  celo: "Celo",
-  tron: "Tron",
-};
-
 /**
  * Build chain RPC configs using Alchemy/dRPC as primary when API keys are available,
  * falling back to public RPCs. Public RPCs become fallbacks when a keyed provider is used.
@@ -82,21 +56,21 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Cha
     if (alchemyApiKey) {
       configs.push({
         chainId,
-        chainName: CHAIN_NAMES[chainId]!,
+        chainName: CHAIN_META[chainId]!.name,
         type: "evm",
         rpcUrl: `https://${slug}.g.alchemy.com/v2/${alchemyApiKey}`,
         fallbackRpcUrl: publicRpc,
         alchemyPrimary: true,
-        explorerUrl: EXPLORER_URLS[chainId]!,
+        explorerUrl: CHAIN_META[chainId]!.explorerUrl,
       });
     } else {
       configs.push({
         chainId,
-        chainName: CHAIN_NAMES[chainId]!,
+        chainName: CHAIN_META[chainId]!.name,
         type: "evm",
         rpcUrl: publicRpc,
         fallbackRpcUrl: chainId === "ethereum" ? "https://eth.llamarpc.com" : undefined,
-        explorerUrl: EXPLORER_URLS[chainId]!,
+        explorerUrl: CHAIN_META[chainId]!.explorerUrl,
       });
     }
   }
@@ -107,19 +81,19 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Cha
     if (drpcApiKey) {
       configs.push({
         chainId,
-        chainName: CHAIN_NAMES[chainId]!,
+        chainName: CHAIN_META[chainId]!.name,
         type: "evm",
         rpcUrl: `https://lb.drpc.org/ogrpc?network=${slug}&dkey=${drpcApiKey}`,
         fallbackRpcUrl: publicRpc,
-        explorerUrl: EXPLORER_URLS[chainId]!,
+        explorerUrl: CHAIN_META[chainId]!.explorerUrl,
       });
     } else {
       configs.push({
         chainId,
-        chainName: CHAIN_NAMES[chainId]!,
+        chainName: CHAIN_META[chainId]!.name,
         type: "evm",
         rpcUrl: publicRpc,
-        explorerUrl: EXPLORER_URLS[chainId]!,
+        explorerUrl: CHAIN_META[chainId]!.explorerUrl,
       });
     }
   }
@@ -128,19 +102,19 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Cha
   if (alchemyApiKey) {
     configs.push({
       chainId: "tron",
-      chainName: "Tron",
+      chainName: CHAIN_META.tron.name,
       type: "tron",
       rpcUrl: `https://tron-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
       fallbackRpcUrl: "https://api.trongrid.io",
-      explorerUrl: "https://tronscan.org",
+      explorerUrl: CHAIN_META.tron.explorerUrl,
     });
   } else {
     configs.push({
       chainId: "tron",
-      chainName: "Tron",
+      chainName: CHAIN_META.tron.name,
       type: "tron",
       rpcUrl: "https://api.trongrid.io",
-      explorerUrl: "https://tronscan.org",
+      explorerUrl: CHAIN_META.tron.explorerUrl,
     });
   }
 

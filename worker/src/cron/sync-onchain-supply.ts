@@ -94,13 +94,16 @@ async function runEvmBatch(
   return failed;
 }
 
-/** Shared counter for decimal mismatches across all chains */
-let _decimalMismatches = 0;
+/** Mutable context passed through the call chain (avoids module-level state) */
+interface SupplyContext {
+  decimalMismatches: number;
+}
 
 /** Fetch supply for a batch of EVM contracts, with optional fallback RPC */
 async function fetchEvmSupply(
   rpcUrl: string,
   queries: ContractQuery[],
+  ctx: SupplyContext,
   fallbackRpcUrl?: string,
   keyedPrimary?: boolean
 ): Promise<Map<string, number>> {
@@ -185,7 +188,7 @@ async function fetchEvmSupply(
     if (decimalsRaw !== undefined) {
       const onchainDecimals = Number(decimalsRaw);
       if (onchainDecimals !== q.contract.decimals) {
-        _decimalMismatches++;
+        ctx.decimalMismatches++;
         console.error(
           `[onchain-supply] DECIMAL MISMATCH: ${meta?.symbol ?? q.stablecoinId} on ${q.contract.chain} — ` +
           `configured=${q.contract.decimals} on-chain=${onchainDecimals}. Skipping.`
@@ -274,6 +277,7 @@ async function fetchSingleTronSupply(
   rpcUrl: string,
   query: ContractQuery,
   results: Map<string, number>,
+  ctx: SupplyContext,
   apiKey?: string | null
 ): Promise<boolean> {
   const meta = TRACKED_META_BY_ID.get(query.stablecoinId);
@@ -286,7 +290,7 @@ async function fetchSingleTronSupply(
   if (decimalsHex) {
     const onchainDecimals = Number(BigInt("0x" + decimalsHex));
     if (onchainDecimals !== query.contract.decimals) {
-      _decimalMismatches++;
+      ctx.decimalMismatches++;
       console.error(
         `[onchain-supply] DECIMAL MISMATCH (Tron): ${meta?.symbol ?? query.stablecoinId} — ` +
         `configured=${query.contract.decimals} on-chain=${onchainDecimals}. Skipping.`
@@ -316,6 +320,7 @@ async function fetchSingleTronSupply(
 async function fetchTronSupply(
   rpcUrl: string,
   queries: ContractQuery[],
+  ctx: SupplyContext,
   fallbackRpcUrl?: string,
   tronApiKey?: string | null
 ): Promise<Map<string, number>> {
@@ -323,14 +328,14 @@ async function fetchTronSupply(
   const failed: ContractQuery[] = [];
 
   for (const query of queries) {
-    const ok = await fetchSingleTronSupply(rpcUrl, query, results, tronApiKey);
+    const ok = await fetchSingleTronSupply(rpcUrl, query, results, ctx, tronApiKey);
     if (!ok) failed.push(query);
   }
 
   if (failed.length > 0 && fallbackRpcUrl) {
     console.log(`[onchain-supply] Retrying ${failed.length} failed Tron queries on fallback RPC`);
     for (const query of failed) {
-      await fetchSingleTronSupply(fallbackRpcUrl, query, results, tronApiKey);
+      await fetchSingleTronSupply(fallbackRpcUrl, query, results, ctx, tronApiKey);
     }
   }
 
@@ -338,7 +343,7 @@ async function fetchTronSupply(
 }
 
 export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | null): Promise<{ itemCount: number; metadata: string }> {
-  _decimalMismatches = 0;
+  const ctx: SupplyContext = { decimalMismatches: 0 };
 
   const allQueries: ContractQuery[] = [];
   for (const meta of TRACKED_STABLECOINS) {
@@ -377,9 +382,9 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | nu
       (async () => {
         let chainResults: Map<string, number>;
         if (rpc.type === "evm") {
-          chainResults = await fetchEvmSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl, rpc.alchemyPrimary);
+          chainResults = await fetchEvmSupply(rpc.rpcUrl, queries, ctx, rpc.fallbackRpcUrl, rpc.alchemyPrimary);
         } else {
-          chainResults = await fetchTronSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl, tronApiKey);
+          chainResults = await fetchTronSupply(rpc.rpcUrl, queries, ctx, rpc.fallbackRpcUrl, tronApiKey);
         }
         for (const [key, supply] of chainResults) {
           supplyMap.set(key, supply);
@@ -403,12 +408,12 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | nu
     console.warn("[onchain-supply] No supply data retrieved");
   }
 
-  if (_decimalMismatches > 0) {
-    console.warn(`[onchain-supply] ${_decimalMismatches} decimal mismatch(es) detected`);
+  if (ctx.decimalMismatches > 0) {
+    console.warn(`[onchain-supply] ${ctx.decimalMismatches} decimal mismatch(es) detected`);
   }
 
   return {
     itemCount: rows.length,
-    metadata: JSON.stringify({ decimalMismatches: _decimalMismatches, chainsQueried: byChain.size }),
+    metadata: JSON.stringify({ decimalMismatches: ctx.decimalMismatches, chainsQueried: byChain.size }),
   };
 }

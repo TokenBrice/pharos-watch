@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
-import { PEG_META } from "@/lib/peg-config";
+import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
 import { getCirculatingRaw } from "@/lib/supply";
 import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";

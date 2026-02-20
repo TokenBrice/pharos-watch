@@ -16,6 +16,7 @@ import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
 import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol } from "@/lib/dex-constants";
 import { getScoreTier, TIER_TEXT } from "@/lib/severity-colors";
+import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@/lib/types";
 
 function TrendArrow({ value }: { value: number | null }) {
@@ -268,20 +269,6 @@ function DurabilityBadge({ score }: { score: number | null }) {
   const label = score >= 70 ? "Durable" : score >= 40 ? "Moderate" : "Fragile";
   const color = score >= 70 ? "text-emerald-500" : score >= 40 ? "text-amber-500" : "text-red-500";
   return <span className={`text-xs font-medium ${color}`}>{label} ({score})</span>;
-}
-
-function BalanceBar({ ratio }: { ratio: number }) {
-  const pct = Math.round(ratio * 100);
-  const bgColor = ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.5 ? "bg-amber-500" : "bg-red-500";
-  const textColor = ratio >= 0.8 ? "text-emerald-500" : ratio >= 0.5 ? "text-amber-500" : "text-red-500";
-  return (
-    <div className="flex items-center gap-1.5">
-      <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full ${bgColor}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className={`font-mono tabular-nums text-xs ${textColor}`}>{pct}%</span>
-    </div>
-  );
 }
 
 function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined; maturityDays?: number }) {

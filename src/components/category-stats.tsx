@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatPercentChange } from "@/lib/format";
-import { PEG_META } from "@/lib/peg-config";
+import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
 import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS, TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData } from "@/lib/types";
@@ -12,10 +12,9 @@ import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
 interface CategoryStatsProps {
   data: StablecoinData[] | undefined;
-  pegRates?: Record<string, number>;
 }
 
-export function CategoryStats({ data, pegRates }: CategoryStatsProps) {
+export function CategoryStats({ data }: CategoryStatsProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 

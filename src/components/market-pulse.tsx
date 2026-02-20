@@ -14,7 +14,6 @@ interface MarketPulseProps {
   pegRates?: Record<string, number>;
   pegSummary?: { coins: PegSummaryCoin[]; summary: PegSummaryStats | null };
   blacklistEvents?: { events: BlacklistEvent[]; total: number };
-  logos?: Record<string, string>;
 }
 
 function timeAgo(epochSec: number): string {

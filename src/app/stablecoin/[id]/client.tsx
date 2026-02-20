@@ -1,287 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Globe } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
-import { findStablecoinMeta, TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRaw } from "@/lib/supply";
-import { computePegScore } from "@/lib/peg-score";
+import { computePegScoreWithWindow } from "@/lib/peg-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { SupplyChart } from "@/components/supply-chart";
-
 import { DepegHistory } from "@/components/depeg-history";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
+import { MechanismCard } from "@/components/mechanism-card";
+import { IssuerInfoCard } from "@/components/issuer-info-card";
+import { ContractAddresses } from "@/components/contract-addresses";
+import { BluechipBox } from "@/components/bluechip-box";
+import { LiquidityBox } from "@/components/liquidity-box";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
-import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
-import type { StablecoinData, StablecoinMeta } from "@/lib/types";
-import {
-  GOVERNANCE_BADGE_STYLES,
-  BACKING_BADGE_STYLES,
-  PEG_BADGE_STYLES,
-  POR_BADGE_STYLES,
-} from "@/lib/classification";
-import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
-
-function MechanismCard({ meta }: { meta: StablecoinMeta }) {
-  const gov = GOVERNANCE_BADGE_STYLES[meta.flags.governance];
-  const backing = BACKING_BADGE_STYLES[meta.flags.backing];
-  const peg = PEG_BADGE_STYLES[meta.flags.pegCurrency];
-  const hasDescription = meta.collateral || meta.pegMechanism;
-
-  return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Classification & Mechanism</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          {gov && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${gov.cls}`}>{gov.label}</span>}
-          {backing && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${backing.cls}`}>{backing.label}</span>}
-          {peg && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}>{peg.label}</span>}
-          {meta.flags.yieldBearing && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Yield-Bearing</span>}
-          {meta.flags.rwa && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-500 border-sky-500/20">RWA</span>}
-          {meta.flags.governance !== "decentralized" && (
-            meta.proofOfReserves ? (
-              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}>
-                {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-              </span>
-            ) : (
-              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-500 border-red-500/20">
-                No PoR
-              </span>
-            )
-          )}
-        </div>
-
-        {hasDescription && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {meta.collateral && (
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Collateral</p>
-                <p className="text-sm leading-relaxed">{meta.collateral}</p>
-              </div>
-            )}
-            {meta.pegMechanism && (
-              <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Peg Stability</p>
-                <p className="text-sm leading-relaxed">{meta.pegMechanism}</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {meta.flags.governance !== "decentralized" && (
-          <div className="rounded-xl bg-muted/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Proof of Reserves</p>
-            {meta.proofOfReserves ? (
-              <div className="space-y-1">
-                <p className="text-sm leading-relaxed">
-                  {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-                  {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
-                </p>
-                <a
-                  href={meta.proofOfReserves.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline"
-                >
-                  View reserves <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No proof of reserves published</p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function IssuerInfoCard({ meta }: { meta: StablecoinMeta }) {
-  const isDecentralized = meta.flags.governance === "decentralized";
-  const hasLinks = meta.links && meta.links.length > 0;
-  const hasJurisdiction = !isDecentralized && meta.jurisdiction;
-
-  if (!hasLinks && !hasJurisdiction) return null;
-
-  return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Issuer Info</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {hasJurisdiction && meta.jurisdiction && (
-          <div className="rounded-xl bg-muted/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Jurisdiction</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
-              {meta.jurisdiction.regulator && (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-500 border-blue-500/20">
-                  {meta.jurisdiction.regulator}
-                </span>
-              )}
-              {meta.jurisdiction.license && (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-500 border-violet-500/20">
-                  {meta.jurisdiction.license}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {hasLinks && (
-          <div className="flex flex-wrap gap-3">
-            {meta.links!.map((link) => (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
-              >
-                {link.label === "Website" ? (
-                  <Globe className="h-3.5 w-3.5" />
-                ) : (
-                  <ExternalLink className="h-3.5 w-3.5" />
-                )}
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
-  if (!meta.contracts || meta.contracts.length === 0) return null;
-
-  // Explorer URL mapping (matching chain-rpcs.ts chain IDs)
-  const EXPLORER_URLS: Record<string, { name: string; url: string }> = {
-    ethereum:  { name: "Ethereum",  url: "https://etherscan.io" },
-    arbitrum:  { name: "Arbitrum",  url: "https://arbiscan.io" },
-    base:      { name: "Base",      url: "https://basescan.org" },
-    optimism:  { name: "Optimism",  url: "https://optimistic.etherscan.io" },
-    polygon:   { name: "Polygon",   url: "https://polygonscan.com" },
-    avalanche: { name: "Avalanche", url: "https://snowscan.xyz" },
-    bsc:       { name: "BSC",       url: "https://bscscan.com" },
-    gnosis:    { name: "Gnosis",    url: "https://gnosisscan.io" },
-    fantom:    { name: "Fantom",    url: "https://ftmscan.com" },
-    celo:      { name: "Celo",      url: "https://celoscan.io" },
-    tron:      { name: "Tron",      url: "https://tronscan.org" },
-  };
-
-  return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contract Addresses</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {meta.contracts.map((c) => {
-            const explorer = EXPLORER_URLS[c.chain];
-            const addressUrl = c.chain === "tron"
-              ? `${explorer?.url}/#/contract/${c.address}`
-              : `${explorer?.url}/address/${c.address}`;
-
-            return (
-              <div key={`${c.chain}-${c.address}`} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
-                <span className="text-sm font-medium text-muted-foreground">{explorer?.name ?? c.chain}</span>
-                <a
-                  href={addressUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono text-xs text-blue-500 hover:underline"
-                >
-                  {c.address.slice(0, 6)}...{c.address.slice(-4)}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function BluechipBox({ stablecoinId, ratingsMap }: { stablecoinId: string; ratingsMap: import("@/lib/types").BluechipRatingsMap | undefined | null }) {
-  const rating = ratingsMap?.[stablecoinId];
-  if (!rating) return null;
-
-  const order = GRADE_ORDER[rating.grade] ?? 0;
-  const textColor = order >= 10 ? "text-emerald-500" : order >= 7 ? "text-blue-500" : order >= 4 ? "text-amber-500" : "text-red-500";
-
-  return (
-    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
-      <CardHeader className="pb-1">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bluechip Rating</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className={`text-3xl font-bold font-mono tracking-tight ${textColor}`}>
-          {rating.grade}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {rating.collateralization}% collateralized
-        </p>
-        <a
-          href={`${BLUECHIP_REPORT_BASE}/${rating.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
-        >
-          Full report <ExternalLink className="h-3 w-3" />
-        </a>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LiquidityBox({ stablecoinId, liquidityMap }: { stablecoinId: string; liquidityMap: import("@/lib/types").DexLiquidityMap | undefined }) {
-  const liq = liquidityMap?.[stablecoinId];
-  if (!liq || (liq.liquidityScore === null && liq.poolCount === 0)) return null;
-
-  const score = liq.liquidityScore ?? 0;
-  const textColor = getScoreColor(score);
-
-  return (
-    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
-      <CardHeader className="pb-1">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidity Score</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className={`text-3xl font-bold font-mono tracking-tight ${textColor}`}>
-          {Math.round(score)}<span className="text-lg text-muted-foreground">/100</span>
-        </div>
-        <p className="text-sm text-muted-foreground font-mono">
-          {formatCurrency(liq.totalTvlUsd)} TVL
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {liq.poolCount} pool{liq.poolCount !== 1 ? "s" : ""} &middot; {liq.chainCount} chain{liq.chainCount !== 1 ? "s" : ""}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function computePegScoreWithWindow(isNavToken: boolean, events: import("@/lib/types").DepegEvent[] | null, earliestTrackingDate: string | null) {
-  if (isNavToken || !events) return null;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const fourYearsAgo = nowSec - 4 * 365.25 * 86400;
-  const rawTrackingStart = earliestTrackingDate ? Math.floor(Number(earliestTrackingDate)) : null;
-  const trackingStartSec = rawTrackingStart != null
-    ? Math.min(rawTrackingStart, fourYearsAgo)
-    : fourYearsAgo;
-  return computePegScore(events, trackingStartSec, nowSec);
-}
+import type { StablecoinData } from "@/lib/types";
+import { pegScoreColor } from "@/lib/severity-colors";
 
 export default function StablecoinDetailClient({ id }: { id: string }) {
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
@@ -289,7 +31,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
   const { data: depegData } = useDepegEvents(id);
   const { data: ratingsMap } = useBluechipRatings();
   const { data: liquidityMap } = useDexLiquidity();
-  const meta = findStablecoinMeta(id);
+  const meta = TRACKED_META_BY_ID.get(id);
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
   );

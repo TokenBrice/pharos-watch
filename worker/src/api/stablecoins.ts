@@ -1,20 +1,3 @@
-import { getCache } from "../lib/db";
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { createCacheHandler } from "../lib/api-utils";
 
-export const handleStablecoins = withErrorHandler("stablecoins", async (db: D1Database): Promise<Response> => {
-  const cached = await getCache(db, "stablecoins");
-  if (!cached) {
-    return new Response(JSON.stringify({ error: "Data not yet available" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  return new Response(cached.value, {
-    headers: addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=60, max-age=10",
-      "X-Data-Updated-At": String(cached.updatedAt),
-    }, cached.updatedAt, 600),
-  });
-});
+export const handleStablecoins = createCacheHandler("stablecoins", "stablecoins", "public, s-maxage=60, max-age=10", 600);

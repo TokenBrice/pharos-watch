@@ -100,6 +100,19 @@ export function ComparisonChart({
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>
+        {series.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
+            {processedSeries.map((s) => (
+              <div key={s.id} className="flex items-center gap-1.5 text-sm">
+                <span
+                  className="inline-block h-0.5 w-4 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="text-muted-foreground">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {filteredData.length > 0 ? (
           <div
             className="h-[300px] sm:h-[400px]"

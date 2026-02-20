@@ -3,7 +3,7 @@ import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
 import { withErrorHandler } from "../lib/api-utils";
-import { timingSafeEqual } from "../lib/auth";
+import { requireAdmin } from "../lib/auth";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
 
@@ -169,14 +169,8 @@ interface CoinDetail {
 }
 
 export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
-  // Admin-only endpoint: require X-Admin-Key header matching ADMIN_KEY secret
-  const adminKey = request?.headers.get("X-Admin-Key");
-  if (!adminSecret || !adminKey || !(await timingSafeEqual(adminKey, adminSecret))) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const authError = await requireAdmin(request, adminSecret);
+  if (authError) return authError;
 
   const singleId = url.searchParams.get("stablecoin");
 

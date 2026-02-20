@@ -1,4 +1,4 @@
-import type { StablecoinData, PegSummaryResponse } from "../../../src/lib/types";
+import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { TRACKED_IDS } from "../../../src/lib/stablecoins";
 import { getCache } from "../lib/db";
@@ -122,17 +122,21 @@ export async function generateDailyDigest(
     }
   }
 
-  // 2. Active depeg count + worst deviation from peg-summary cache
+  // 2. Active depeg count + worst deviation from depeg_events table
   let activeDepegCount = 0;
   let worstDepeg: DigestInputData["worstDepeg"] = null;
 
-  const pegCache = await getCache(db, "peg-summary");
-  if (pegCache) {
-    const pegData = JSON.parse(pegCache.value) as PegSummaryResponse;
-    if (pegData.summary) {
-      activeDepegCount = pegData.summary.activeDepegCount;
-      worstDepeg = pegData.summary.worstCurrent;
+  try {
+    const activeDepegs = await db
+      .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL ORDER BY peak_deviation_bps DESC")
+      .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>();
+    const rows = activeDepegs.results ?? [];
+    activeDepegCount = rows.length;
+    if (rows.length > 0) {
+      worstDepeg = { id: rows[0].stablecoin_id, symbol: rows[0].symbol, bps: rows[0].peak_deviation_bps };
     }
+  } catch (e) {
+    console.error("[daily-digest] Failed to query active depegs:", e);
   }
 
   // 3. Freeze count in last 24h

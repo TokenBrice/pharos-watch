@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { API_BASE } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 /** Cron interval constants — staleTime = cron interval, refetchInterval = 2x. */
 export const CRON_5MIN = 5 * 60_000;
@@ -22,11 +22,7 @@ export function useApiQuery<T>(
 ): UseQueryResult<T, Error> {
   return useQuery<T, Error>({
     queryKey: key,
-    queryFn: async () => {
-      const res = await fetch(`${API_BASE}${path}`);
-      if (!res.ok) throw new Error(`Failed to fetch ${path}`);
-      return res.json() as Promise<T>;
-    },
+    queryFn: () => apiFetch<T>(path),
     staleTime: cronInterval,
     refetchInterval: 2 * cronInterval,
     retry: 2,

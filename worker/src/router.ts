@@ -14,6 +14,7 @@ import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
 import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 import { handleDailyDigest } from "./api/daily-digest";
+import { isValidStablecoinId } from "./lib/api-utils";
 
 export function route(
   url: URL,
@@ -88,7 +89,7 @@ export function route(
   const detailMatch = path.match(/^\/api\/stablecoin\/(.+)$/);
   if (detailMatch) {
     const id = decodeURIComponent(detailMatch[1]);
-    if (!/^\d+$/.test(id) && !/^(?:gold|silver|cg)-/.test(id)) {
+    if (!isValidStablecoinId(id)) {
       return Promise.resolve(new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },

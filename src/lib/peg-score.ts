@@ -1,6 +1,25 @@
 import type { DepegEvent } from "./types";
 import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 
+/**
+ * Wrapper around computePegScore that applies a 4-year lookback window.
+ * Used by the detail page to score a single coin from its depeg events.
+ */
+export function computePegScoreWithWindow(
+  isNavToken: boolean,
+  events: DepegEvent[] | null,
+  earliestTrackingDate: string | null,
+): PegScoreResult | null {
+  if (isNavToken || !events) return null;
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fourYearsAgo = nowSec - 4 * 365.25 * 86400;
+  const rawTrackingStart = earliestTrackingDate ? Math.floor(Number(earliestTrackingDate)) : null;
+  const trackingStartSec = rawTrackingStart != null
+    ? Math.min(rawTrackingStart, fourYearsAgo)
+    : fourYearsAgo;
+  return computePegScore(events, trackingStartSec, nowSec);
+}
+
 export interface PegScoreResult {
   /** Composite score 0-100, or null if insufficient data (<30 days tracking) */
   pegScore: number | null;

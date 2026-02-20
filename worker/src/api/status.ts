@@ -1,6 +1,7 @@
 import { getCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { timingSafeEqual } from "../lib/auth";
+import { requireAdmin } from "../lib/auth";
+import { CACHE_FRESHNESS_THRESHOLDS } from "../lib/constants";
 
 // --- Types ---
 
@@ -46,14 +47,6 @@ interface StatusResponse {
 
 // --- Config ---
 
-const CACHE_THRESHOLDS: Record<string, number> = {
-  stablecoins: 600,
-  "stablecoin-charts": 600,
-  "usds-status": 86400,
-  "bluechip-ratings": 43200,
-  "fx-rates": 14400,
-};
-
 const CRON_INTERVALS: Record<string, number> = {
   "sync-stablecoins": 300,
   "sync-stablecoin-charts": 300,
@@ -70,19 +63,13 @@ const CRON_INTERVALS: Record<string, number> = {
 export const handleStatus = withErrorHandler(
   "status",
   async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
-    // Admin key auth
-    const provided = request?.headers.get("X-Admin-Key");
-    if (!adminKey || !provided || !(await timingSafeEqual(provided, adminKey))) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authError = await requireAdmin(request, adminKey);
+    if (authError) return authError;
 
     const now = Math.floor(Date.now() / 1000);
 
     // 1. Cache freshness (batch query)
-    const cacheKeys = Object.keys(CACHE_THRESHOLDS);
+    const cacheKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS);
     const cacheRows = await db
       .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
       .bind(...cacheKeys)
@@ -91,7 +78,7 @@ export const handleStatus = withErrorHandler(
 
     const caches: Record<string, CacheStatus> = {};
     let worstCacheRatio = 0;
-    for (const [key, maxAge] of Object.entries(CACHE_THRESHOLDS)) {
+    for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
       const cached = cacheMap.get(key);
       const ageSeconds = cached ? now - cached.updatedAt : null;
       const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;

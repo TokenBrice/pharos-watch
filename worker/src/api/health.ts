@@ -1,4 +1,5 @@
 import { withErrorHandler } from "../lib/api-utils";
+import { CACHE_FRESHNESS_THRESHOLDS } from "../lib/constants";
 
 interface CacheStatus {
   ageSeconds: number | null;
@@ -13,18 +14,10 @@ interface HealthResponse {
   blacklist: { totalEvents: number; missingAmounts: number };
 }
 
-const FRESHNESS_THRESHOLDS: Record<string, number> = {
-  stablecoins: 600,
-  "stablecoin-charts": 600,
-  "usds-status": 86400,
-  "fx-rates": 14400,           // 4 hours (runs every 2h)
-  "bluechip-ratings": 43200,   // 12 hours (runs every 6h)
-};
-
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
   // Batch query all cache keys at once
-  const cacheKeys = Object.keys(FRESHNESS_THRESHOLDS);
+  const cacheKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS);
   const cacheRows = await db
     .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
     .bind(...cacheKeys)
@@ -34,7 +27,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
   const caches: Record<string, CacheStatus> = {};
   let worstRatio = 0;
 
-  for (const [key, maxAge] of Object.entries(FRESHNESS_THRESHOLDS)) {
+  for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
     const cached = cacheMap.get(key);
     const ageSeconds = cached ? now - cached.updatedAt : null;
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;

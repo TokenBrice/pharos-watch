@@ -2,7 +2,7 @@ import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { timingSafeEqual } from "../lib/auth";
+import { requireAdmin } from "../lib/auth";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -104,17 +104,8 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     adminSecret?: string,
     request?: Request,
   ): Promise<Response> => {
-    const adminKey = request?.headers.get("X-Admin-Key");
-    if (
-      !adminSecret ||
-      !adminKey ||
-      !(await timingSafeEqual(adminKey, adminSecret))
-    ) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authError = await requireAdmin(request, adminSecret);
+    if (authError) return authError;
 
     const singleId = url.searchParams.get("stablecoin");
 

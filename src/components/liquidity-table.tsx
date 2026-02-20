@@ -9,9 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SortIcon } from "@/components/sort-icon";
+import { SortableTableHead } from "@/components/sortable-table-head";
+import { TablePagination } from "@/components/table-pagination";
+import { BalanceBar } from "@/components/balance-bar";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
@@ -22,19 +23,6 @@ import type { StablecoinMeta, DexLiquidityData } from "@/lib/types";
 const PAGE_SIZE = 25;
 
 type SortKey = "score" | "tvl" | "effectiveTvl" | "tvlTrend" | "volume" | "volume7d" | "vtRatio" | "pools" | "chains" | "balance" | "organic" | "durability";
-
-function BalanceBar({ ratio }: { ratio: number }) {
-  const pct = Math.round(ratio * 100);
-  const color = ratio >= 0.8 ? "bg-emerald-500" : ratio >= 0.5 ? "bg-amber-500" : "bg-red-500";
-  return (
-    <div className="flex items-center gap-1.5 justify-end">
-      <div className="w-10 h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="font-mono tabular-nums text-xs w-7 text-right">{pct}%</span>
-    </div>
-  );
-}
 
 export interface LiquidityRow {
   meta: StablecoinMeta;
@@ -133,115 +121,127 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
             <TableHead className="w-[200px]">Name</TableHead>
-            <TableHead
-              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("score")}
-              aria-sort={getAriaSortValue("score")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "score")}
-            >
-              Score <SortIcon columnKey="score" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("tvl")}
-              aria-sort={getAriaSortValue("tvl")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "tvl")}
-            >
-              DEX TVL <SortIcon columnKey="tvl" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden lg:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("tvlTrend")}
-              aria-sort={getAriaSortValue("tvlTrend")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "tvlTrend")}
-            >
-              7d Trend <SortIcon columnKey="tvlTrend" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("volume")}
-              aria-sort={getAriaSortValue("volume")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "volume")}
-            >
-              24h Vol <SortIcon columnKey="volume" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden lg:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("volume7d")}
-              aria-sort={getAriaSortValue("volume7d")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "volume7d")}
-            >
-              7d Vol <SortIcon columnKey="volume7d" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("vtRatio")}
-              aria-sort={getAriaSortValue("vtRatio")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "vtRatio")}
-            >
-              Vol/TVL <SortIcon columnKey="vtRatio" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("pools")}
-              aria-sort={getAriaSortValue("pools")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "pools")}
-            >
-              Pools <SortIcon columnKey="pools" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("chains")}
-              aria-sort={getAriaSortValue("chains")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "chains")}
-            >
-              Chains <SortIcon columnKey="chains" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
+            <SortableTableHead
+              sortKey="score"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Score"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
+            <SortableTableHead
+              sortKey="tvl"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="DEX TVL"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
+            <SortableTableHead
+              sortKey="tvlTrend"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="7d Trend"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden lg:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="volume"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="24h Vol"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
+            <SortableTableHead
+              sortKey="volume7d"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="7d Vol"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden lg:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="vtRatio"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Vol/TVL"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden sm:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="pools"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Pools"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden sm:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="chains"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Chains"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden sm:table-cell text-right"
+            />
             <TableHead className="hidden md:table-cell text-left">Top Protocol</TableHead>
-            <TableHead
-              className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("effectiveTvl")}
-              aria-sort={getAriaSortValue("effectiveTvl")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "effectiveTvl")}
-            >
-              Eff. TVL <SortIcon columnKey="effectiveTvl" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("balance")}
-              aria-sort={getAriaSortValue("balance")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "balance")}
-            >
-              Balance <SortIcon columnKey="balance" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("organic")}
-              aria-sort={getAriaSortValue("organic")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "organic")}
-            >
-              Organic <SortIcon columnKey="organic" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden xl:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("durability")}
-              aria-sort={getAriaSortValue("durability")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "durability")}
-            >
-              Durability <SortIcon columnKey="durability" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
+            <SortableTableHead
+              sortKey="effectiveTvl"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Eff. TVL"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden xl:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="balance"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Balance"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden xl:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="organic"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Organic"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden xl:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="durability"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Durability"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden xl:table-cell text-right"
+            />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -330,29 +330,16 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
         </TableBody>
       </Table>
       {sorted.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <span className="text-sm text-muted-foreground" aria-live="polite">
-            Showing {sorted.length === 0 ? 0 : page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of {sorted.length}
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          rangeStart={sorted.length === 0 ? 0 : page * PAGE_SIZE + 1}
+          rangeEnd={Math.min((page + 1) * PAGE_SIZE, sorted.length)}
+          total={sorted.length}
+          onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+          onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          noun="pools"
+        />
       )}
     </div>
   );

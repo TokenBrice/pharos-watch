@@ -1,3 +1,5 @@
+import { getCache } from "./db";
+
 /**
  * Wraps an API handler with standardized error handling.
  * Catches unhandled exceptions, logs them with the endpoint name, and returns a 500 JSON response.
@@ -22,6 +24,39 @@ export function withErrorHandler<T extends unknown[]>(
       );
     }
   };
+}
+
+/** Validates a stablecoin ID: numeric DefiLlama IDs or prefixed commodity/CG IDs */
+export function isValidStablecoinId(id: string): boolean {
+  return /^\d+$/.test(id) || /^(?:gold|silver|cg)-/.test(id);
+}
+
+/**
+ * Creates a cache-passthrough API handler that reads from the cache table
+ * and returns the cached JSON with freshness headers.
+ */
+export function createCacheHandler(
+  endpoint: string,
+  cacheKey: string,
+  cacheControl: string,
+  maxAgeSec: number,
+): (db: D1Database) => Promise<Response> {
+  return withErrorHandler(endpoint, async (db: D1Database): Promise<Response> => {
+    const cached = await getCache(db, cacheKey);
+    if (!cached) {
+      return new Response(JSON.stringify({ error: "Data not yet available" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(cached.value, {
+      headers: addFreshnessHeaders({
+        "Content-Type": "application/json",
+        "Cache-Control": cacheControl,
+      }, cached.updatedAt, maxAgeSec),
+    });
+  });
 }
 
 /**

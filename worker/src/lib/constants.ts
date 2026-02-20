@@ -49,3 +49,12 @@ export const TRON_BURN_ADDRESS = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";
 export const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
   { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
 ];
+
+/** Maximum cache age (in seconds) per cache key — used by both /health and /status endpoints */
+export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
+  stablecoins: 600,
+  "stablecoin-charts": 600,
+  "usds-status": 86400,
+  "fx-rates": 14400,
+  "bluechip-ratings": 43200,
+};

@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@/lib/format";
 import { getPegReference } from "@/lib/peg-rates";
@@ -23,7 +22,8 @@ import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
 import { GRADE_COLORS, BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { SortIcon } from "@/components/sort-icon";
+import { SortableTableHead } from "@/components/sortable-table-head";
+import { TablePagination } from "@/components/table-pagination";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 
@@ -196,71 +196,78 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead
-              className="w-[200px] cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("name")}
-              aria-sort={getAriaSortValue("name")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "name")}
-            >
-              Name <SortIcon columnKey="name" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("price")}
-              aria-sort={getAriaSortValue("price")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "price")}
-            >
-              Price <SortIcon columnKey="price" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
+            <SortableTableHead
+              sortKey="name"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Name"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="w-[200px]"
+            />
+            <SortableTableHead
+              sortKey="price"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Price"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
             <TableHead className="text-right">Peg</TableHead>
-            <TableHead
-              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("mcap")}
-              aria-sort={getAriaSortValue("mcap")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "mcap")}
-            >
-              Market Cap <SortIcon columnKey="mcap" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("change24h")}
-              aria-sort={getAriaSortValue("change24h")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "change24h")}
-            >
-              24h <SortIcon columnKey="change24h" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("change7d")}
-              aria-sort={getAriaSortValue("change7d")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "change7d")}
-            >
-              7d <SortIcon columnKey="change7d" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("stability")}
-              aria-sort={getAriaSortValue("stability")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "stability")}
-            >
-              Peg Score <SortIcon columnKey="stability" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
-            <TableHead
-              className="hidden sm:table-cell cursor-pointer text-right hover:bg-muted/50 transition-colors"
-              onClick={() => toggleSort("liquidity")}
-              aria-sort={getAriaSortValue("liquidity")}
-              tabIndex={0}
-              onKeyDown={(e) => handleSortKeyDown(e, "liquidity")}
+            <SortableTableHead
+              sortKey="mcap"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Market Cap"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
+            <SortableTableHead
+              sortKey="change24h"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="24h"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
+            <SortableTableHead
+              sortKey="change7d"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="7d"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden sm:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="stability"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Peg Score"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden sm:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="liquidity"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Liq"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden sm:table-cell text-right"
               title="DEX Liquidity Score — measures pool depth, volume, and diversity across decentralized exchanges"
-            >
-              Liq <SortIcon columnKey="liquidity" sortKey={sortKey} sortDirection={sortDirection} />
-            </TableHead>
+            />
             <TableHead className="hidden md:table-cell text-center">Backing</TableHead>
             <TableHead className="hidden md:table-cell text-center">Type</TableHead>
             <TableHead className="hidden md:table-cell text-center">Flags</TableHead>
@@ -442,31 +449,15 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
         </TableBody>
       </Table>
       {sorted.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t">
-          <span className="text-sm text-muted-foreground" aria-live="polite">
-            Showing {rangeStart}–{rangeEnd} of {sorted.length} stablecoins
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 min-w-10 sm:h-8 sm:min-w-8"
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10 min-w-10 sm:h-8 sm:min-w-8"
-              onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-              disabled={page >= totalPages - 1}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          page={page}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={sorted.length}
+          onPrevious={() => setPage((p) => Math.max(0, p - 1))}
+          onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+        />
       )}
     </div>
   );
