@@ -270,7 +270,7 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
 
         for (const row of onchainRows.results) {
           const asset = assetMap.get(row.stablecoin_id);
-          if (!asset?.price || !asset.circulating) continue;
+          if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
           // DefiLlama circulating values are in USD
           const llamaValues = Object.values(asset.circulating);
           const llamaTotal = llamaValues.reduce((s, v) => s + (v ?? 0), 0);

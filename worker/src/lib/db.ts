@@ -45,18 +45,16 @@ export async function setCache(db: D1Database, key: string, value: string): Prom
  * Prevents a slow cron run from overwriting a newer run's data.
  */
 export async function setCacheIfNewer(db: D1Database, key: string, value: string, syncStartSec: number): Promise<void> {
-  const now = Math.floor(Date.now() / 1000);
-  // Try UPDATE first (only if existing row is older)
   const result = await db
-    .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND updated_at <= ?")
-    .bind(value, now, key, syncStartSec)
+    .prepare(
+      `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+       WHERE cache.updated_at <= excluded.updated_at`
+    )
+    .bind(key, value, syncStartSec)
     .run();
-  // If no row was updated (either no row exists or existing is newer), INSERT if missing
   if (result.meta.changes === 0) {
-    await db
-      .prepare("INSERT OR IGNORE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(key, value, now)
-      .run();
+    console.log(`[cache] Skipped write for "${key}" — existing data is newer (started_at > ${syncStartSec})`);
   }
 }
 

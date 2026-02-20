@@ -56,6 +56,11 @@ export async function snapshotSupply(db: D1Database): Promise<CronResult> {
     );
   }
 
+  const expectedCount = trackedIds.size;
+  if (stmts.length < expectedCount * 0.8) {
+    console.warn(`[snapshot-supply] Only ${stmts.length}/${expectedCount} coins have valid data — possible upstream issue`);
+  }
+
   if (stmts.length > 0) {
     await batchExecute(db, stmts);
   }

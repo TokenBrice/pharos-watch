@@ -214,6 +214,18 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     ctx.waitUntil(setCache(db, cacheKey, body));
   } catch {
     console.warn(`[detail] Invalid JSON response for ${id}, skipping cache write`);
+    if (cached) {
+      return new Response(cached.value, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, s-maxage=60, max-age=10",
+        },
+      });
+    }
+    return new Response(
+      JSON.stringify({ error: `Invalid upstream data for stablecoin ${id}` }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   return new Response(body, {
