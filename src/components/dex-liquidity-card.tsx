@@ -354,7 +354,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <div>
-            <p className="text-xs text-muted-foreground">Total TVL</p>
+            <p className="text-xs text-muted-foreground">Total AMM Liquidity TVL</p>
             <p className="text-lg font-bold font-mono tabular-nums">
               {formatCurrency(liq.totalTvlUsd)}
             </p>

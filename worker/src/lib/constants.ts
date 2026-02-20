@@ -1,6 +1,14 @@
 /** Minimum peg deviation (in basis points) to trigger a depeg event */
 export const DEPEG_THRESHOLD_BPS = 100;
 
+/** Higher threshold for non-USD pegs — FX rate noise + thin liquidity cause more false positives */
+export const DEPEG_THRESHOLD_BPS_NON_USD = 150;
+
+/** Returns the appropriate depeg threshold for a given peg type */
+export function getDepegThresholdBps(pegType: string | undefined): number {
+  return pegType === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
+}
+
 /** Maximum age (in seconds) for a DEX price observation to be considered fresh */
 export const DEX_FRESHNESS_SEC = 1200;
 

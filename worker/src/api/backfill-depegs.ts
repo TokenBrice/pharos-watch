@@ -1,7 +1,7 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
-import { DEPEG_THRESHOLD_BPS, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
+import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, GECKO_ID_OVERRIDES, USER_AGENT } from "../lib/constants";
 import { withErrorHandler } from "../lib/api-utils";
 import { timingSafeEqual } from "../lib/auth";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
@@ -391,6 +391,7 @@ function extractDepegEvents(
   pegType: string,
   supplyByDate: Map<number, number>
 ): BackfillEvent[] {
+  const threshold = getDepegThresholdBps(pegType);
   const events: BackfillEvent[] = [];
   let current: BackfillEvent | null = null;
 
@@ -410,8 +411,24 @@ function extractDepegEvents(
     const absBps = Math.abs(bps);
     const direction = bps >= 0 ? "above" : "below";
 
-    if (absBps >= DEPEG_THRESHOLD_BPS) {
+    if (absBps >= threshold) {
       if (!current) {
+        current = {
+          pegType,
+          direction,
+          peakDeviationBps: bps,
+          startedAt: timestamp,
+          endedAt: null,
+          startPrice: price,
+          peakPrice: price,
+          recoveryPrice: null,
+          pegRef,
+        };
+      } else if (current.direction !== direction) {
+        // Direction change: close current event, open new one
+        current.endedAt = timestamp;
+        current.recoveryPrice = price;
+        events.push(current);
         current = {
           pegType,
           direction,

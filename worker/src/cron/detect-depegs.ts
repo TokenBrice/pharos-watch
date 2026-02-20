@@ -1,4 +1,4 @@
-import { DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC } from "../lib/constants";
+import { getDepegThresholdBps, DEX_FRESHNESS_SEC } from "../lib/constants";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
@@ -109,8 +109,9 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
     const absBps = Math.abs(bps);
     const direction = bps >= 0 ? "above" : "below";
     const existing = openEvents.get(asset.id);
+    const threshold = getDepegThresholdBps(asset.pegType);
 
-    if (absBps >= DEPEG_THRESHOLD_BPS) {
+    if (absBps >= threshold) {
       if (existing) {
         // Direction change: close old event and open a new one
         if (existing.direction !== direction) {
@@ -147,7 +148,7 @@ export async function detectDepegEvents(db: D1Database, assets: StablecoinData[]
           const dexBps = Math.abs(Math.round(
             ((dexRow.dex_price_usd / pegRef) - 1) * 10000
           ));
-          if (dexBps < DEPEG_THRESHOLD_BPS) {
+          if (dexBps < threshold) {
             // DEX contradicts primary — likely false positive, suppress opening
             console.log(
               `[depeg] Suppressed new event for ${asset.symbol}: ` +
