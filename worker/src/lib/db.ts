@@ -11,7 +11,6 @@ export async function batchExecute(db: D1Database, stmts: D1PreparedStatement[],
 /** Build WHERE, LIMIT, and OFFSET clauses for paginated SQL queries */
 export function buildPaginatedQuery(opts: {
   conditions: string[];
-  bindings: (string | number)[];
   limit: number;
   offset: number;
 }): { where: string; limitClause: string; offsetClause: string; paginationBindings: number[] } {
@@ -159,12 +158,16 @@ export async function logCronRun(
       )
       .run();
   } catch (e) {
-    await db
-      .prepare(
-        "INSERT INTO cron_runs (job, started_at, duration_ms, status, error) VALUES (?, ?, ?, ?, ?)"
-      )
-      .bind(job, startSec, Date.now() - startMs, "error", String(e))
-      .run();
+    try {
+      await db
+        .prepare(
+          "INSERT INTO cron_runs (job, started_at, duration_ms, status, error) VALUES (?, ?, ?, ?, ?)"
+        )
+        .bind(job, startSec, Date.now() - startMs, "error", String(e))
+        .run();
+    } catch (logErr) {
+      console.error(`[db] Failed to log cron error for ${job}:`, logErr);
+    }
     // Alert on cron failure (non-blocking)
     sendAlert(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`).catch(() => {});
     throw e;

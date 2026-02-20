@@ -1,5 +1,6 @@
 import { getCache, batchExecute } from "../lib/db";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { sumPegBuckets } from "../../../src/lib/supply";
 import type { CronResult } from "../lib/db";
 
 export async function snapshotSupply(db: D1Database): Promise<CronResult> {
@@ -42,7 +43,7 @@ export async function snapshotSupply(db: D1Database): Promise<CronResult> {
 
     const circ = asset.circulating;
     if (!circ) continue;
-    const circulatingUsd = Object.values(circ).reduce((sum, v) => sum + (v ?? 0), 0);
+    const circulatingUsd = sumPegBuckets(circ);
     if (circulatingUsd <= 0) continue;
 
     const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;

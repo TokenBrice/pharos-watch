@@ -1,6 +1,7 @@
 import type { PegAssetBase, StablecoinMeta } from "./types";
+import { sumPegBuckets } from "./supply";
 
-export type PegRateSource = "median" | "fallback";
+type PegRateSource = "median" | "fallback";
 
 export interface PegRatesResult {
   rates: Record<string, number>;
@@ -26,19 +27,7 @@ export function derivePegRates(
   assets: PegAssetBase[],
   metaById?: Map<string, StablecoinMeta>,
   fallbackRates?: Record<string, number>,
-): Record<string, number>;
-export function derivePegRates(
-  assets: PegAssetBase[],
-  metaById: Map<string, StablecoinMeta> | undefined,
-  fallbackRates: Record<string, number> | undefined,
-  returnSources: true,
-): PegRatesResult;
-export function derivePegRates(
-  assets: PegAssetBase[],
-  metaById?: Map<string, StablecoinMeta>,
-  fallbackRates?: Record<string, number>,
-  returnSources?: boolean,
-): Record<string, number> | PegRatesResult {
+): PegRatesResult {
   const groups: Record<string, number[]> = {};
 
   for (const a of assets) {
@@ -47,9 +36,7 @@ export function derivePegRates(
     if (!peg || price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
 
     // Only use coins with meaningful supply to avoid garbage data
-    const supply = a.circulating
-      ? Object.values(a.circulating).reduce((s, v) => s + (v ?? 0), 0)
-      : 0;
+    const supply = sumPegBuckets(a.circulating);
     if (supply < 1_000_000) continue;
 
     // For gold/silver tokens, normalize price to "per troy ounce"
@@ -101,8 +88,7 @@ export function derivePegRates(
   if (!rates["peggedUSD"]) rates["peggedUSD"] = 1;
   if (!sources["peggedUSD"]) sources["peggedUSD"] = "median";
 
-  if (returnSources) return { rates, sources };
-  return rates;
+  return { rates, sources };
 }
 
 /**

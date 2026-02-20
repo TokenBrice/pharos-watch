@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 
 interface SeriesData {
   id: string;
@@ -152,16 +153,7 @@ export function ComparisonChart({
                       year: "numeric",
                     })
                   }
-                  contentStyle={{
-                    backgroundColor: "var(--color-card)",
-                    borderColor: "var(--color-border)",
-                    borderRadius: "0.5rem",
-                  }}
-                  labelStyle={{
-                    fontWeight: "bold",
-                    color: "var(--color-card-foreground)",
-                  }}
-                  itemStyle={{ color: "var(--color-card-foreground)" }}
+                  {...RECHARTS_TOOLTIP_STYLES}
                 />
                 {referenceLine !== undefined && (
                   <ReferenceLine

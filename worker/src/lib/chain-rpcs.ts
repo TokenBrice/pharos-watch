@@ -134,7 +134,3 @@ export function getChainRpc(chainId: string): ChainRpcConfig | undefined {
   return chainRpcs.find((c) => c.chainId === chainId);
 }
 
-/** Get all configured chain RPCs */
-export function getAllChainRpcs(): ChainRpcConfig[] {
-  return chainRpcs;
-}

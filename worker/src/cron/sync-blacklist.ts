@@ -1,9 +1,9 @@
 import {
   CONTRACT_CONFIGS,
-  ETHERSCAN_V2_BASE,
   type ContractEventConfig,
   type ChainConfig,
 } from "../lib/blacklist-contracts";
+import { ETHERSCAN_V2_BASE } from "../lib/constants";
 import type { BlacklistEventType } from "../../../src/lib/types";
 import { bigIntToDecimal } from "../lib/bigint";
 import { getLastBlock, setLastBlock, batchExecute } from "../lib/db";

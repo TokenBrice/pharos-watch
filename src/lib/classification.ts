@@ -5,7 +5,7 @@
  * Tailwind class strings are always complete static literals (never constructed dynamically).
  */
 
-import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType } from "./types";
+import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin } from "./types";
 
 // ---------------------------------------------------------------------------
 // Governance (Type) labels
@@ -112,7 +112,7 @@ export const BACKING_COLORS: Record<BackingType, string> = {
 // Combined label+class style maps (for detail page pill badges)
 // ---------------------------------------------------------------------------
 
-export interface BadgeStyle {
+interface BadgeStyle {
   label: string;
   cls: string;
 }
@@ -162,7 +162,7 @@ export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
 // Governance chart/stat card colors (text + bg pairs for bar segments & legends)
 // ---------------------------------------------------------------------------
 
-export interface TierColors {
+interface TierColors {
   text: string;
   bg: string;
 }
@@ -177,7 +177,7 @@ export const GOVERNANCE_TIER_COLORS: Record<GovernanceType, TierColors> = {
 // Bluechip safety grade colors
 // ---------------------------------------------------------------------------
 
-export const GRADE_COLORS: Record<string, string> = {
+export const GRADE_COLORS: Record<BluechipGrade, string> = {
   "A+": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   A: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
   "A-": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
@@ -230,7 +230,7 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
 };
 
 /** Chart hex colors for blacklist stablecoin breakdown */
-export const BLACKLIST_CHART_COLORS: Record<string, string> = {
+export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDT: "#06b6d4",
   USDC: "#3b82f6",
   PAXG: "#eab308",

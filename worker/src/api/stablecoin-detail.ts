@@ -3,6 +3,7 @@ import { withErrorHandler } from "../lib/api-utils";
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS, CACHE_PROFILES } from "../lib/constants";
 import { binarySearchNearest } from "../lib/binary-search";
 import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
+import { sumPegBuckets } from "../../../src/lib/supply";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
@@ -163,7 +164,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
           };
           const cachedAsset = cacheData.peggedAssets?.find((a) => String(a.id) === id);
           if (cachedAsset?.circulating) {
-            const correctedMcap = Object.values(cachedAsset.circulating).reduce((s, v) => s + (v ?? 0), 0);
+            const correctedMcap = sumPegBuckets(cachedAsset.circulating);
             if (correctedMcap > 0) {
               const assetPrice = typeof cachedAsset.price === "number" && cachedAsset.price > 0
                 ? cachedAsset.price : null;

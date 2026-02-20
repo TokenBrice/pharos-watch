@@ -25,12 +25,12 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 8. **Depeg interval merge**: `computePegScore()` and `computePegStability()` merge overlapping depeg intervals before summing duration
 9. **Depeg direction handling**: If a coin flips from below-peg to above-peg (or vice versa) without recovering, the old event is closed and a new one opened with the correct direction
 10. **Peg score consistency**: Both the detail page and peg-summary API use the same tracking window: `Math.min(dataStart, fourYearsAgo)`
-11. **Backfill atomicity**: `backfill-depegs.ts` runs DELETE + INSERT in a single `db.batch()` call (D1 batch is transactional)
+11. **Backfill atomicity**: `backfill-depegs.ts` runs DELETE + INSERT via `batchExecute()` (auto-chunks to D1's 100-statement batch limit while maintaining transactional semantics per chunk)
 12. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 13. **Freshness header**: `/api/stablecoins` returns `X-Data-Updated-At` header from the cache timestamp
 14. **On-chain supply override**: `syncOnchainSupply()` writes to `onchain_supply` table; main sync reads it and overrides DefiLlama data when on-chain diverges >5%. 2-hour freshness guard prevents stale on-chain data from being used. Wrapped in try/catch so failures don't block the main sync. BigInt-to-number conversion uses shared `bigIntToDecimal()` from `worker/src/lib/bigint.ts` (handles >15 decimal tokens safely)
-15. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) use `crypto.subtle.timingSafeEqual()` for key comparison, preventing timing side-channel attacks
-16. **Pagination caps**: `/api/blacklist` and `/api/depeg-events` cap `limit` to `Math.min(limit, 1000)` to prevent unbounded result sets
+15. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) hash both keys with SHA-256 before `crypto.subtle.timingSafeEqual()`, preventing both timing side-channel attacks and length-leak attacks
+16. **Pagination defaults**: `/api/blacklist` and `/api/depeg-events` default `limit` to 100 and cap at 1000 (`Math.min(Math.max(parsed || 100, 1), 1000)`) to prevent unbounded result sets
 17. **Unbounded query guard**: `/api/peg-summary` adds `LIMIT 10000` to depeg_events query
 18. **Cache-empty 503**: `/api/peg-summary` returns HTTP 503 (not 200) when cache is empty, signaling data unavailability
 19. **Orphan depeg cleanup**: `detectDepegEvents()` closes open depeg events whose stablecoin was not processed during the current run (removed from tracked list, failed validation, etc.)

@@ -5,7 +5,7 @@
  * Tailwind classes are static string literals for purge safety.
  */
 
-export const PROTOCOL_NAMES: Record<string, string> = {
+const PROTOCOL_NAMES: Record<string, string> = {
   curve: "Curve",
   "uniswap-v3": "Uniswap V3",
   uniswap: "Uniswap",

@@ -2,7 +2,7 @@ import { THIRTY_DAYS_SECONDS } from "@/lib/constants";
 import type { BlacklistEvent, StablecoinData } from "@/lib/types";
 
 /** Returns true if the symbol is a gold-pegged stablecoin (XAUT or PAXG). */
-export function isGoldStablecoin(symbol: string): boolean {
+export function isGoldStablecoin(symbol: string): symbol is "PAXG" | "XAUT" {
   return symbol === "PAXG" || symbol === "XAUT";
 }
 
@@ -17,7 +17,7 @@ export function extractGoldPrices(peggedAssets: StablecoinData[]): Record<string
   return prices;
 }
 
-export interface BlacklistStatsResult {
+interface BlacklistStatsResult {
   usdcBlacklisted: number;
   usdtBlacklisted: number;
   goldBlacklisted: number;
@@ -35,7 +35,7 @@ export function computeBlacklistStats(
   events: BlacklistEvent[],
   goldPrices: Record<string, number>,
 ): BlacklistStatsResult {
-  const nowSeconds = Date.now() / 1000;
+  const nowSeconds = Math.floor(Date.now() / 1000);
   const thirtyDaysAgo = nowSeconds - THIRTY_DAYS_SECONDS;
 
   const usdcAddresses = new Map<string, number>();

@@ -82,7 +82,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
   const prevWeek = getPrevWeekRaw(coinData);
   const prevMonth = getPrevMonthRaw(coinData);
   const metaById = TRACKED_META_BY_ID;
-  const pegRates = derivePegRates(listData?.peggedAssets ?? [], metaById, listData?.fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(listData?.peggedAssets ?? [], metaById, listData?.fxFallbackRates);
   const pegRef = getPegReference(coinData.pegType, pegRates, meta?.commodityOunces);
 
   const supplyHistory = supplyData ?? [];

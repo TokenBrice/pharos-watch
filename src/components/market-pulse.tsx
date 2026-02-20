@@ -11,7 +11,6 @@ import type { StablecoinData, PegSummaryCoin, PegSummaryStats, BlacklistEvent, G
 
 interface MarketPulseProps {
   data: StablecoinData[] | undefined;
-  pegRates?: Record<string, number>;
   pegSummary?: { coins: PegSummaryCoin[]; summary: PegSummaryStats | null };
   blacklistEvents?: { events: BlacklistEvent[]; total: number };
 }

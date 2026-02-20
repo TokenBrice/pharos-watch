@@ -1,13 +1,8 @@
 import { getCache } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
+import type { CacheStatus } from "../../../src/lib/types";
 
-// --- Shared types ---
-
-export interface CacheStatus {
-  ageSeconds: number | null;
-  maxAge: number;
-  healthy: boolean;
-}
+export type { CacheStatus };
 
 // --- Shared cache freshness logic ---
 

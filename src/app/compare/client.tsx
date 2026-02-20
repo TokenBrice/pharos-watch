@@ -11,8 +11,9 @@ import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates } from "@/lib/peg-rates";
 import { formatCurrency } from "@/lib/format";
-import { API_BASE } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { CRON_1H } from "@/hooks/use-api-query";
+import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
@@ -87,7 +88,7 @@ export function CompareClient() {
   // Derive peg rates from stablecoin list
   const pegRates = useMemo(() => {
     if (!listData?.peggedAssets) return {};
-    return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates);
+    return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates;
   }, [listData]);
 
   // Per-coin supply history using useQueries
@@ -95,15 +96,14 @@ export function CompareClient() {
     queries: selectedIds.map((id) => ({
       queryKey: ["supply-history", id],
       queryFn: () =>
-        fetch(`${API_BASE}/api/supply-history?stablecoin=${encodeURIComponent(id)}&days=1825`)
-          .then((r) => r.json()) as Promise<SupplyHistoryPoint[]>,
+        apiFetch<SupplyHistoryPoint[]>(`/api/supply-history?stablecoin=${encodeURIComponent(id)}&days=1825`),
       staleTime: CRON_1H,
       enabled: !!id,
     })),
   });
 
-  // Color palette for chart series
-  const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b"];
+  // Color palette for chart series (first 3 from shared palette)
+  const CHART_COLORS = CHART_PALETTE.slice(0, 3);
 
   // Build enriched coin objects for ComparisonTable
   const comparisonCoins = useMemo(() => {

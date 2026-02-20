@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { BLUECHIP_REPORT_BASE, GRADE_ORDER } from "@/lib/bluechip";
 import { TIER_TEXT, TIER_BORDER, type ScoreTier } from "@/lib/severity-colors";
+import type { BluechipGrade } from "@/lib/types";
 
 const SMIDGE_LABELS = [
   { key: "stability", short: "S", full: "Stability" },
@@ -16,7 +17,7 @@ const SMIDGE_LABELS = [
   { key: "externals", short: "E", full: "Externals" },
 ] as const;
 
-function getGradeTier(grade: string): ScoreTier {
+function getGradeTier(grade: BluechipGrade): ScoreTier {
   const order = GRADE_ORDER[grade] ?? 0;
   if (order >= 10) return "green";
   if (order >= 7) return "blue";

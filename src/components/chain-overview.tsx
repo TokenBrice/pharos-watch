@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { CHART_PALETTE } from "@/lib/chart-colors";
+import { CHART_PALETTE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import type { StablecoinData } from "@/lib/types";
 
 interface ChainOverviewProps {
@@ -92,9 +92,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
             />
             <Tooltip
               formatter={(value) => [formatCurrency(Number(value)), "TVL"]}
-              contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "var(--radius-lg, 0.5rem)" }}
-              labelStyle={{ color: "var(--color-card-foreground)" }}
-              itemStyle={{ color: "var(--color-card-foreground)" }}
+              {...RECHARTS_TOOLTIP_STYLES}
             />
             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
               {chartData.map((_, index) => (

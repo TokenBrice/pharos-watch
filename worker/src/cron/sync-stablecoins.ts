@@ -94,8 +94,8 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
       .filter((t) => t.protocolSlug)
       .map(async (t) => {
         try {
-          const res = await fetch(`${DEFILLAMA_API}/protocol/${t.protocolSlug}`);
-          if (!res.ok) return;
+          const res = await fetchWithRetry(`${DEFILLAMA_API}/protocol/${t.protocolSlug}`, { headers: { "User-Agent": USER_AGENT } });
+          if (!res) return;
           const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
           if (data.mcap) mcapMap[t.id] = data.mcap;
           if (data.tvl) tvlHistoryMap[t.id] = data.tvl;

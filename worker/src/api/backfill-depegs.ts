@@ -6,6 +6,7 @@ import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
+import { sumPegBuckets } from "../../../src/lib/supply";
 const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
 
 // ── Historical FX rate support ──────────────────────────────────────
@@ -234,7 +235,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     try {
       const data = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
       const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
-      pegRates = derivePegRates(data.peggedAssets, metaById, data.fxFallbackRates);
+      ({ rates: pegRates } = derivePegRates(data.peggedAssets, metaById, data.fxFallbackRates));
     } catch (err) {
       console.error("[backfill-depegs] Failed to parse peg rates from cache:", err);
     }
@@ -442,9 +443,7 @@ function parseSupplyData(tokens: SupplyPoint[]): Map<number, number> {
   for (const point of tokens) {
     const ts = parseInt(point.date, 10);
     if (isNaN(ts)) continue;
-    const supply = point.circulating
-      ? Object.values(point.circulating).reduce((s, v) => s + (v ?? 0), 0)
-      : 0;
+    const supply = sumPegBuckets(point.circulating);
     map.set(ts, supply);
   }
   return map;

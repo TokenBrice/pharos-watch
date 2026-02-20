@@ -19,7 +19,7 @@ import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
 import { BLACKLIST_CHART_COLORS } from "@/lib/classification";
 import type { BlacklistEvent } from "@/lib/types";
 
-const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"];
+const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"] as const;
 
 function quarterToSortKey(timestamp: number): number {
   const d = new Date(timestamp * 1000);

@@ -1,6 +1,7 @@
 import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { TRACKED_IDS } from "../../../src/lib/stablecoins";
+import { formatCurrency } from "../../../src/lib/format";
 import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
 
@@ -26,17 +27,10 @@ interface DigestInputData {
   } | null;
 }
 
-function formatUsd(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (abs >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-  return `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-}
-
 function buildUserPrompt(data: DigestInputData): string {
   const lines: string[] = [
-    `Total stablecoin market cap: ${formatUsd(data.totalMcapUsd)}`,
-    `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatUsd(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
+    `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
+    `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
     `Active depeg events: ${data.activeDepegCount}`,
   ];
 
@@ -52,7 +46,7 @@ function buildUserPrompt(data: DigestInputData): string {
     const { symbol, changeUsd, currentMcap } = data.biggestSupplyChange;
     const direction = changeUsd >= 0 ? "increase" : "decrease";
     lines.push(
-      `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatUsd(changeUsd)} (now ${formatUsd(currentMcap)})`,
+      `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`,
     );
   }
 
@@ -174,6 +168,7 @@ export async function generateDailyDigest(
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPromptContent }],
     }),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!response.ok) {

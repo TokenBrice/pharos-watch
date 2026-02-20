@@ -17,7 +17,7 @@ export function formatCurrency(value: number, decimals = 2): string {
 const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
   IDR: "Rp", SGD: "S$", TRY: "₺", AUD: "A$", ZAR: "R",
-  GOLD: "$", VAR: "$", OTHER: "$",
+  GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 
 function formatPrice(price: number | null | undefined, symbol = "$"): string {
@@ -98,6 +98,7 @@ export function formatPegStability(pct: number): string {
 export function formatDuration(startSec: number, endSec: number | null): string {
   if (endSec === null) return "Ongoing";
   const totalSeconds = endSec - startSec;
+  if (totalSeconds < 0) return "N/A";
   if (totalSeconds < 60) return "< 1m";
 
   const days = Math.floor(totalSeconds / 86400);

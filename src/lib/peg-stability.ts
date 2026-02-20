@@ -1,7 +1,7 @@
 import type { DepegEvent } from "./types";
 import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 
-export interface PegStabilityMetrics {
+interface PegStabilityMetrics {
   /** Percentage of tracked history at peg (0–100) */
   pegPct: number;
   /** Human-readable tracking span (e.g. "3y 8m") */

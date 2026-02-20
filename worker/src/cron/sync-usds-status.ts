@@ -1,5 +1,5 @@
-import { ETHERSCAN_V2_BASE } from "../lib/blacklist-contracts";
-import { getCache, setCache } from "../lib/db";
+import { ETHERSCAN_V2_BASE } from "../lib/constants";
+import { getCache, setCacheIfNewer } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 
 const CACHE_KEY = "usds-status";
@@ -74,6 +74,8 @@ export async function syncUsdsStatus(
   db: D1Database,
   etherscanApiKey: string | null
 ): Promise<void> {
+  const syncStartSec = Math.floor(Date.now() / 1000);
+
   // Check if cache is still fresh
   const cached = await getCache(db, CACHE_KEY);
   if (cached) {
@@ -110,6 +112,6 @@ export async function syncUsdsStatus(
     lastChecked: Math.floor(Date.now() / 1000),
   };
 
-  await setCache(db, CACHE_KEY, JSON.stringify(status));
+  await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
   console.log("[usds-status] Cache updated");
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { StablecoinData, StablecoinMeta } from "@/lib/types";
+import type { StablecoinData, StablecoinMeta, BluechipGrade } from "@/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
 import { formatCurrency, formatNativePrice } from "@/lib/format";
 import { getPegReference } from "@/lib/peg-rates";
@@ -25,7 +25,7 @@ interface ComparisonCoin {
   meta: StablecoinMeta;
   pegScore: number | null;
   liquidityScore: number | null;
-  bluechipGrade: string | null;
+  bluechipGrade: BluechipGrade | null;
 }
 
 interface ComparisonTableProps {
@@ -72,7 +72,7 @@ function bestHighestIndex(values: (number | null)[]): number | null {
 }
 
 /** Find index of coin with best bluechip grade (highest GRADE_ORDER value). */
-function bestGradeIndex(grades: (string | null)[]): number | null {
+function bestGradeIndex(grades: (BluechipGrade | null)[]): number | null {
   let bestIdx: number | null = null;
   let bestOrder = -1;
   for (let i = 0; i < grades.length; i++) {

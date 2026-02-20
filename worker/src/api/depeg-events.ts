@@ -22,7 +22,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   }
 
   const { where, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({
-    conditions, bindings: filterBindings, limit, offset,
+    conditions, limit, offset,
   });
 
   // Batch COUNT + SELECT for transactional consistency

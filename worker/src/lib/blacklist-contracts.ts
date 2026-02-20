@@ -22,12 +22,6 @@ export interface ContractEventConfig {
   }[];
 }
 
-// --- Etherscan v2 unified API ---
-// Single base URL + chainid param covers all EVM chains with one API key
-// https://docs.etherscan.io/etherscan-v2
-
-export const ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api";
-
 // --- Chain configurations (derived from shared CHAIN_META) ---
 
 function chainConfig(chainId: string): ChainConfig {

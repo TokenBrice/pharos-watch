@@ -1,4 +1,4 @@
-export interface ChainMeta {
+interface ChainMeta {
   name: string;
   explorerUrl: string;
   evmChainId: number | null;

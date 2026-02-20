@@ -1,8 +1,8 @@
 /** Minimum peg deviation (in basis points) to trigger a depeg event */
-export const DEPEG_THRESHOLD_BPS = 100;
+const DEPEG_THRESHOLD_BPS = 100;
 
 /** Higher threshold for non-USD pegs — FX rate noise + thin liquidity cause more false positives */
-export const DEPEG_THRESHOLD_BPS_NON_USD = 150;
+const DEPEG_THRESHOLD_BPS_NON_USD = 150;
 
 /** Returns the appropriate depeg threshold for a given peg type */
 export function getDepegThresholdBps(pegType: string | undefined): number {
@@ -17,6 +17,8 @@ export const D1_BATCH_SIZE = 100;
 
 // --- External API base URLs ---
 
+export const ETHERSCAN_V2_BASE = "https://api.etherscan.io/v2/api";
+
 export const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
 export const DEFILLAMA_COINS = "https://coins.llama.fi";
 export const DEFILLAMA_API = "https://api.llama.fi";
@@ -24,9 +26,6 @@ export const DEFILLAMA_API = "https://api.llama.fi";
 export const USER_AGENT = "Pharos/1.0 (stablecoin analytics)";
 
 export const RUB_FALLBACK = 0.011;
-
-/** @deprecated All geckoId overrides consolidated into StablecoinMeta.geckoId — kept as empty map for backward compat */
-export const GECKO_ID_OVERRIDES: Record<string, string> = {};
 
 /** Minimum number of assets expected from DefiLlama to consider sync valid */
 export const MIN_VALID_ASSET_COUNT = 50;

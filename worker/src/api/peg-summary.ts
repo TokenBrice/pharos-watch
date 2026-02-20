@@ -5,6 +5,7 @@ import { computePegScore } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { StablecoinData, DepegEvent } from "../../../src/lib/types";
+import { sumPegBuckets } from "../../../src/lib/supply";
 import { withErrorHandler } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
@@ -50,7 +51,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   // 3. Build lookup maps
   const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-  const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, metaById, fxFallbackRates, true);
+  const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
   const now = Math.floor(Date.now() / 1000);
 
   // 4-year-ago fallback for tracking start
@@ -98,7 +99,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     let currentBps: number | null = null;
     if (asset?.price != null && typeof asset.price === "number" && !isNaN(asset.price)) {
       const supply = asset.circulating
-        ? Object.values(asset.circulating).reduce((s, v) => s + (v ?? 0), 0)
+        ? sumPegBuckets(asset.circulating)
         : 0;
       if (supply >= 1_000_000) {
         const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
@@ -118,7 +119,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
     const dexRow = dexPrices.get(meta.id);
     const supply = asset?.circulating
-      ? Object.values(asset.circulating).reduce((s, v) => s + (v ?? 0), 0)
+      ? sumPegBuckets(asset.circulating)
       : 0;
     if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC) {
       const pegRef = asset?.price != null && typeof asset.price === "number"

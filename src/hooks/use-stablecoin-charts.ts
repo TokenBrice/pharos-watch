@@ -2,7 +2,7 @@
 
 import { useApiQuery, CRON_5MIN } from "./use-api-query";
 
-export interface ChartPoint {
+interface ChartPoint {
   date: number; // unix seconds
   totalCirculatingUSD: Record<string, number>;
 }

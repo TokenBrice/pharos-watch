@@ -1,6 +1,6 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
-import type { BluechipRating, BluechipSmidge } from "../../../src/lib/types";
-import { getCache, setCache } from "../lib/db";
+import type { BluechipGrade, BluechipRating, BluechipSmidge } from "../../../src/lib/types";
+import { getCache, setCacheIfNewer } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { USER_AGENT } from "../lib/constants";
 
@@ -39,6 +39,8 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
 }
 
 export async function syncBluechip(db: D1Database): Promise<void> {
+  const syncStartSec = Math.floor(Date.now() / 1000);
+
   // Check cache freshness
   const cached = await getCache(db, CACHE_KEY);
   if (cached) {
@@ -71,7 +73,7 @@ export async function syncBluechip(db: D1Database): Promise<void> {
         if (!json.data || json.data.length === 0) return null;
 
         const coin = json.data[0];
-        const grade = coin.grade as string | undefined;
+        const grade = coin.grade as BluechipGrade | undefined;
         if (!grade) return null;
 
         const rating: BluechipRating = {
@@ -103,6 +105,6 @@ export async function syncBluechip(db: D1Database): Promise<void> {
     return;
   }
 
-  await setCache(db, CACHE_KEY, JSON.stringify(ratingsMap));
+  await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
   console.log(`[bluechip] Cache updated with ${count} ratings`);
 }

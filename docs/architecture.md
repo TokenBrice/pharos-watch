@@ -34,10 +34,17 @@ src/                              # Next.js frontend (static export)
 │   ├── liquidity/               # DEX liquidity scores & leaderboard
 │   │   ├── page.tsx              # Server component (metadata)
 │   │   └── client.tsx            # Interactive client component
-│   ├── about/page.tsx            # About & methodology
+│   ├── compare/                  # Side-by-side stablecoin comparison
+│   │   ├── page.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
+│   ├── about/                    # About & methodology
+│   │   ├── page.tsx
+│   │   └── error.tsx
 │   ├── status/                   # Admin status dashboard (not in nav)
 │   │   ├── page.tsx
-│   │   └── client.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
 │   ├── stablecoin/[id]/          # Detail page: price chart, supply chart, chains
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -105,13 +112,12 @@ src/                              # Next.js frontend (static export)
 │   └── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
 └── lib/
     ├── api.ts                    # API_BASE URL config (from NEXT_PUBLIC_API_BASE env var)
-    ├── bluechip.ts               # Bluechip slug map, grade order, report URL base
+    ├── bluechip.ts               # Bluechip grade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system (includes ContractDeployment)
-    ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags + contract addresses
+    ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── dead-stablecoins.ts       # 74 dead stablecoins with cause of death, peak mcap, obituaries
-    ├── blacklist-contracts.ts    # Contract addresses + event configs (shared with worker)
-    ├── format.ts                 # Currency, price, peg deviation, percent change formatters
-    ├── supply.ts                 # Shared supply helpers: getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD
+    ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo formatters
+    ├── supply.ts                 # Shared supply helpers: getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
     ├── chart-colors.ts           # Shared CHART_PALETTE for Recharts charts
     ├── peg-config.ts             # PEG_META: labels + Tailwind colors per peg currency
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
@@ -121,7 +127,8 @@ src/                              # Next.js frontend (static export)
     ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin(), extractGoldPrices(), computeBlacklistStats()
     ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors, chart hex colors (PEG_CHART_COLORS, BLACKLIST_CHART_COLORS)
-    ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red)
+    ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red) + getDurabilityColor/getDurabilityBgColor
+    ├── chains.ts                 # CHAIN_META: chain names, explorer URLs, evmChainId, type (single source of truth)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
 worker/                           # Cloudflare Worker (API + cron jobs)
@@ -158,11 +165,14 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply, logCronRun)
         ├── chain-rpcs.ts         # Chain RPC endpoint config for on-chain supply queries (11 chains: EVM + Tron)
-        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, DEXSCREENER_MIN_LIQUIDITY_USD, TRON_BURN_ADDRESS, GECKO_ID_OVERRIDES)
-        ├── auth.ts               # Timing-safe admin key comparison (crypto.subtle.timingSafeEqual)
+        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES)
+        ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion
+        ├── binary-search.ts      # Generic binarySearchNearest<T>() for sorted array lookups
+        ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
+        ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
-        ├── api-utils.ts          # withErrorHandler() wrapper for standardized API error handling
+        ├── api-utils.ts          # withErrorHandler(), CacheStatus, buildCacheStatuses() for standardized API error/cache handling
         └── fetch-retry.ts        # Fetch with retry + exponential backoff (configurable 404 handling)
 
 data/

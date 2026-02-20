@@ -111,9 +111,12 @@ const worker = {
       case "*/5 * * * *": {
         ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db)));
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
+        // Snapshot twice daily (midnight + noon UTC). Runs on every */5 tick near
+        // those hours so a delayed cron still captures the snapshot. INSERT OR IGNORE
+        // in snapshotSupply prevents duplicates for the same UTC date.
         const scheduled = new Date(event.scheduledTime);
         const hour = scheduled.getUTCHours();
-        if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() === 0) {
+        if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() <= 10) {
           ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
         }
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes

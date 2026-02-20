@@ -4,12 +4,13 @@ import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { PegAssetBase } from "../../../src/lib/types";
+import { sumPegBuckets } from "../../../src/lib/supply";
 
 // --- Depeg event detection ---
 
 export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], fxFallbackRates?: Record<string, number>): Promise<void> {
   const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
-  const pegRates = derivePegRates(assets, metaById, fxFallbackRates);
+  const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
 
@@ -99,9 +100,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     const price = asset.price;
     if (price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
 
-    const supply = asset.circulating
-      ? Object.values(asset.circulating).reduce((s, v) => s + (v ?? 0), 0)
-      : 0;
+    const supply = sumPegBuckets(asset.circulating);
     if (supply < 1_000_000) continue;
 
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);

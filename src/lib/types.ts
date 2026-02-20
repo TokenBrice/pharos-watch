@@ -234,6 +234,8 @@ export interface DeadStablecoin {
 
 // --- Bluechip safety rating types ---
 
+export type BluechipGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F";
+
 export interface BluechipSmidge {
   stability: string | null;
   management: string | null;
@@ -244,7 +246,7 @@ export interface BluechipSmidge {
 }
 
 export interface BluechipRating {
-  grade: string;               // "A+", "B-", "D", etc.
+  grade: BluechipGrade;        // "A+", "B-", "D", etc.
   slug: string;                // "usdc" — for building report URL
   collateralization: number;   // e.g. 100
   smartContractAudit: boolean;

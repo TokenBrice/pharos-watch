@@ -38,7 +38,7 @@ export function HomepageClient() {
     }
     return map;
   }, [pegSummaryData]);
-  const pegRates = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
+  const { rates: pegRates } = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
   const filters = useHomepageFilters();
 
   return (

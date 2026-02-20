@@ -6,7 +6,7 @@ const safeNum = (v: number | null | undefined): number =>
   typeof v === "number" && Number.isFinite(v) ? v : 0;
 
 /** Sum all values in a peg-bucket record, treating missing/invalid entries as 0. */
-function sumPegBuckets(obj: Record<string, number> | undefined): number {
+export function sumPegBuckets(obj: Record<string, number> | undefined): number {
   if (!obj) return 0;
   return Object.values(obj).reduce((s, v) => s + safeNum(v), 0);
 }

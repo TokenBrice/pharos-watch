@@ -38,7 +38,9 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
-- `goldOunces?: number` — troy ounces of gold per token (for gold-pegged stablecoins)
+- `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)
+- `geckoId?: string` — CoinGecko coin ID for price/mcap lookups (commodity and non-DefiLlama tokens)
+- `protocolSlug?: string` — DefiLlama protocol slug for TVL/mcap data (commodity tokens)
 - `proofOfReserves?: ProofOfReserves` — proof of reserves configuration
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
@@ -52,10 +54,10 @@ For thin peg groups (GBP, CHF, BRL, RUB, JPY — often <3 qualifying coins), a `
 
 Live FX rates are fetched every 2 hours by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD. RUB uses a secondary API (`open.er-api.com`) since ECB doesn't publish ruble rates.
 
-## Gold Stablecoins (XAUT, PAXG)
+## Commodity & Non-DefiLlama Stablecoins
 
-These use synthetic IDs (`gold-xaut`, `gold-paxg`) since they're not in DefiLlama's stablecoin API. Data comes from CoinGecko, shaped into DefiLlama-compatible format by the Worker's `sync-stablecoins` cron, and merged into the `peggedAssets` array before caching. Gold token price normalization handles both 1-gram and 1-troy-ounce tokens via the `goldOunces` field. Historical TVL is fetched from the DefiLlama protocol API to populate `circulatingPrevDay/Week/Month` with actual values (instead of copying current mcap). When historical data is unavailable, these fields are `null` and the frontend shows "N/A" rather than a misleading 0%.
+Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These are identified by their `geckoId` and/or `protocolSlug` fields in `StablecoinMeta` (in `src/lib/stablecoins.ts`), and use synthetic IDs (e.g., `gold-xaut`, `cg-jpyc`).
 
-## Non-DefiLlama Fiat Stablecoins (JPYC, IDRT)
+The Worker's `sync-stablecoins` cron derives the list of commodity and CoinGecko-only tokens directly from `TRACKED_STABLECOINS` by filtering on `geckoId` and `pegType`. Data is fetched from CoinGecko, shaped into DefiLlama-compatible format, and merged into the `peggedAssets` array before caching.
 
-These use synthetic IDs (`cg-jpyc`, `cg-idrt`) and are fetched from CoinGecko via the `FIAT_COINGECKO_TOKENS` config in `sync-stablecoins.ts`. Same pattern as gold tokens — data is shaped into DefiLlama-compatible format and merged into `peggedAssets` before caching.
+Gold/silver token price normalization handles both 1-gram and 1-troy-ounce tokens via the `commodityOunces` field. Historical TVL is fetched from the DefiLlama protocol API (using `protocolSlug`) to populate `circulatingPrevDay/Week/Month` with actual values (instead of copying current mcap). When historical data is unavailable, these fields are `null` and the frontend shows "N/A" rather than a misleading 0%.

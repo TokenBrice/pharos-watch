@@ -27,7 +27,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   }
 
   const { where, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({
-    conditions, bindings: filterBindings, limit, offset,
+    conditions, limit, offset,
   });
 
   // Batch COUNT + SELECT for transactional consistency

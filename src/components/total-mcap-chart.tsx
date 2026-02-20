@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
+import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
 
 export function TotalMcapChart() {
@@ -30,10 +31,6 @@ export function TotalMcapChart() {
       );
       return {
         ts: point.date * 1000,
-        date: new Date(point.date * 1000).toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        }),
         total,
       };
     });
@@ -67,8 +64,8 @@ export function TotalMcapChart() {
             <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
               <defs>
                 <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -102,14 +99,12 @@ export function TotalMcapChart() {
                     year: "numeric",
                   })
                 }
-                contentStyle={{ backgroundColor: "var(--color-card)", borderColor: "var(--color-border)", borderRadius: "var(--radius-lg, 0.5rem)" }}
-                labelStyle={{ fontWeight: "bold", color: "var(--color-card-foreground)" }}
-                itemStyle={{ color: "var(--color-card-foreground)" }}
+                {...RECHARTS_TOOLTIP_STYLES}
               />
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="#3b82f6"
+                stroke={CHART_BLUE}
                 fill="url(#mcapGradient)"
                 strokeWidth={2}
               />
