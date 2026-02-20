@@ -976,18 +976,19 @@ async function computeStablecoinScores(
   const results = new Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>();
 
   for (const [id, m] of metrics) {
-    // Compute HHI from full pool list BEFORE truncation
+    // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
+    m.topPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
+    m.topPools.length = Math.min(m.topPools.length, 10);
+
+    // Compute HHI from visible (truncated) pools
     let hhi = 0;
-    if (m.totalTvlUsd > 0) {
+    const visibleTvl = m.topPools.reduce((s, p) => s + p.tvlUsd, 0);
+    if (visibleTvl > 0) {
       for (const p of m.topPools) {
-        const share = p.tvlUsd / m.totalTvlUsd;
+        const share = p.tvlUsd / visibleTvl;
         hhi += share * share;
       }
     }
-
-    // Sort and trim top pools to 10
-    m.topPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
-    m.topPools.length = Math.min(m.topPools.length, 10);
 
     // v2: Compute durability score
     const tvlStab = stabilityMap.get(id) ?? null;

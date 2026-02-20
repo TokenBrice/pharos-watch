@@ -433,6 +433,7 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
 
   // --- DEX price cross-validation ---
   let dexOverrides = 0;
+  let dexDivergenceWarnings = 0;
   try {
     const dexResult = await db
       .prepare("SELECT stablecoin_id, dex_price_usd, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
@@ -454,6 +455,7 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
 
       const divergenceBps = Math.abs(Math.round(((asset.price / dexRow.dex_price_usd) - 1) * 10000));
       if (divergenceBps >= 50) {
+        dexDivergenceWarnings++;
         console.warn(
           `[sync-stablecoins] DEX divergence for ${asset.symbol} (id=${asset.id}): ` +
           `primary=$${asset.price} vs DEX=$${dexRow.dex_price_usd} (${divergenceBps}bps, ` +
@@ -805,6 +807,7 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (dexOverrides > 0) metadata.dexPriceOverrides = dexOverrides;
+  if (dexDivergenceWarnings > 0) metadata.dexDivergenceWarnings = dexDivergenceWarnings;
 
   return { itemCount: llamaData.peggedAssets.length, metadata: JSON.stringify(metadata) };
 }

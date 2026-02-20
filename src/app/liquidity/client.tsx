@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_10MIN } from "@/hooks/use-api-query";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
@@ -25,7 +27,7 @@ const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
 ];
 
 export function LiquidityClient() {
-  const { data: liquidityMap, isLoading } = useDexLiquidity();
+  const { data: liquidityMap, isLoading, isError, error, dataUpdatedAt } = useDexLiquidity();
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
   const pegFilter = (getParam("peg", "all")) as PegCurrency | "all";
@@ -128,6 +130,17 @@ export function LiquidityClient() {
 
   return (
     <div className="space-y-6">
+      {isError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          Failed to load liquidity data. {error instanceof Error ? error.message : "Please check your connection."}
+        </div>
+      )}
+      {!isError && (
+        <StaleDataBanner
+          queries={[{ label: "Liquidity", dataUpdatedAt, staleTime: CRON_10MIN }]}
+        />
+      )}
+
       {summaryStats && liquidityMap && (
         <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />
       )}

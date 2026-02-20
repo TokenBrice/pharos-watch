@@ -2,6 +2,8 @@
 
 import { useCallback } from "react";
 import { usePegSummary } from "@/hooks/use-peg-summary";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_5MIN } from "@/hooks/use-api-query";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
@@ -16,7 +18,7 @@ const VALID_PEG_FILTERS = new Set(["all", "USD", "EUR", "GOLD"]);
 const VALID_TYPE_FILTERS = new Set(["all", "centralized", "centralized-dependent", "decentralized"]);
 
 export function PegTrackerClient() {
-  const { data: pegData, isLoading } = usePegSummary();
+  const { data: pegData, isLoading, isError, error, dataUpdatedAt } = usePegSummary();
   const { data: eventsData } = useDepegEvents();
   const { data: logos } = useLogos();
 
@@ -44,6 +46,17 @@ export function PegTrackerClient() {
 
   return (
     <div className="space-y-6">
+      {isError && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          Failed to load peg data. {error instanceof Error ? error.message : "Please check your connection."}
+        </div>
+      )}
+      {!isError && (
+        <StaleDataBanner
+          queries={[{ label: "Peg data", dataUpdatedAt, staleTime: CRON_5MIN }]}
+        />
+      )}
+
       <PegTrackerStats summary={pegData?.summary ?? null} isLoading={isLoading} />
 
       <PegHeatmap

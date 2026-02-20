@@ -25,7 +25,7 @@ export function hasMissingPrice(a: PeggedAsset): boolean {
 /** Guard against corrupted API prices that would break peg deviation calculations */
 export function isReasonablePrice(price: number, pegType: string | undefined): boolean {
   if (!pegType) return price > 0 && price < 100_000;
-  if (pegType.includes("USD") || pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL")) {
+  if (pegType.includes("USD") || pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL") || pegType.includes("REAL")) {
     return price > 0.01 && price < 50;
   }
   if (pegType.includes("JPY")) return price > 0.001 && price < 0.05;
@@ -263,8 +263,12 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<Enrich
         // Take price from highest-liquidity pair
         candidates.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
         const price = parseFloat(candidates[0].priceUsd);
+        if (isNaN(price)) {
+          console.warn(`[enrich] DexScreener returned unparseable price for ${m.asset.symbol}: "${candidates[0].priceUsd}"`);
+          continue;
+        }
         // Sanity check: peg-type-aware range
-        if (!isNaN(price) && isReasonablePrice(price, m.asset.pegType as string | undefined)) {
+        if (isReasonablePrice(price, m.asset.pegType as string | undefined)) {
           assets[m.index].price = price;
           pass4Count++;
         }

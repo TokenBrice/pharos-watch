@@ -1,5 +1,12 @@
 import type { StablecoinData, StablecoinMeta } from "./types";
 
+export type PegRateSource = "median" | "fallback";
+
+export interface PegRatesResult {
+  rates: Record<string, number>;
+  sources: Record<string, PegRateSource>;
+}
+
 /**
  * Derive peg reference rates from the DefiLlama data itself.
  * For each pegType, compute the median price of coins with mcap > $1M.
@@ -19,7 +26,19 @@ export function derivePegRates(
   assets: StablecoinData[],
   metaById?: Map<string, StablecoinMeta>,
   fallbackRates?: Record<string, number>,
-): Record<string, number> {
+): Record<string, number>;
+export function derivePegRates(
+  assets: StablecoinData[],
+  metaById: Map<string, StablecoinMeta> | undefined,
+  fallbackRates: Record<string, number> | undefined,
+  returnSources: true,
+): PegRatesResult;
+export function derivePegRates(
+  assets: StablecoinData[],
+  metaById?: Map<string, StablecoinMeta>,
+  fallbackRates?: Record<string, number>,
+  returnSources?: boolean,
+): Record<string, number> | PegRatesResult {
   const groups: Record<string, number[]> = {};
 
   for (const a of assets) {
@@ -52,6 +71,7 @@ export function derivePegRates(
   const mergedFallbacks = fallbackRates ?? {};
 
   const rates: Record<string, number> = {};
+  const sources: Record<string, PegRateSource> = {};
   for (const [peg, prices] of Object.entries(groups)) {
     prices.sort((a, b) => a - b);
     const mid = Math.floor(prices.length / 2);
@@ -69,15 +89,19 @@ export function derivePegRates(
     const isCommodity = peg === "peggedGOLD" || peg === "peggedSILVER";
     if (fallback && (isCommodity || prices.length < 3)) {
       rates[peg] = fallback;
+      sources[peg] = "fallback";
       continue;
     }
 
     rates[peg] = median;
+    sources[peg] = "median";
   }
 
   // Fallback: USD is always 1
   if (!rates["peggedUSD"]) rates["peggedUSD"] = 1;
+  if (!sources["peggedUSD"]) sources["peggedUSD"] = "median";
 
+  if (returnSources) return { rates, sources };
   return rates;
 }
 

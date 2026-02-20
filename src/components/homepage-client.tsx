@@ -17,6 +17,8 @@ import { BlacklistSummary } from "@/components/blacklist-summary";
 import { CemeterySummary } from "@/components/cemetery-summary";
 import { PegTrackerSummary } from "@/components/peg-tracker-summary";
 import { LiquiditySummary } from "@/components/liquidity-summary";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_5MIN } from "@/hooks/use-api-query";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
@@ -127,6 +129,11 @@ export function HomepageClient() {
             Retry
           </button>
         </div>
+      )}
+      {!error && (
+        <StaleDataBanner
+          queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_5MIN }]}
+        />
       )}
 
       <CategoryStats data={data?.peggedAssets} pegRates={pegRates} />

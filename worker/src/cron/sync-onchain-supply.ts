@@ -94,6 +94,9 @@ async function runEvmBatch(
   return failed;
 }
 
+/** Shared counter for decimal mismatches across all chains */
+let _decimalMismatches = 0;
+
 /** Fetch supply for a batch of EVM contracts, with optional fallback RPC */
 async function fetchEvmSupply(
   rpcUrl: string,
@@ -182,6 +185,7 @@ async function fetchEvmSupply(
     if (decimalsRaw !== undefined) {
       const onchainDecimals = Number(decimalsRaw);
       if (onchainDecimals !== q.contract.decimals) {
+        _decimalMismatches++;
         console.error(
           `[onchain-supply] DECIMAL MISMATCH: ${meta?.symbol ?? q.stablecoinId} on ${q.contract.chain} — ` +
           `configured=${q.contract.decimals} on-chain=${onchainDecimals}. Skipping.`
@@ -216,7 +220,11 @@ async function fetchEvmSupply(
         }
 
         if (netSupply <= 0n) {
-          console.warn(`[onchain-supply] Net supply ${netSupply} for ${meta?.symbol ?? q.stablecoinId} on ${q.contract.chain} after subtraction, skipping`);
+          console.warn(
+            `[onchain-supply] Net supply ${netSupply} for ${meta?.symbol ?? q.stablecoinId} on ${q.contract.chain} ` +
+            `after subtracting ${method.subtractAddresses!.filter(s => s.chain === q.contract.chain).length} address(es) ` +
+            `(raw totalSupply=${supplyRaw}), skipping`
+          );
           continue;
         }
       }
@@ -278,6 +286,7 @@ async function fetchSingleTronSupply(
   if (decimalsHex) {
     const onchainDecimals = Number(BigInt("0x" + decimalsHex));
     if (onchainDecimals !== query.contract.decimals) {
+      _decimalMismatches++;
       console.error(
         `[onchain-supply] DECIMAL MISMATCH (Tron): ${meta?.symbol ?? query.stablecoinId} — ` +
         `configured=${query.contract.decimals} on-chain=${onchainDecimals}. Skipping.`
@@ -328,7 +337,9 @@ async function fetchTronSupply(
   return results;
 }
 
-export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | null): Promise<void> {
+export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | null): Promise<{ itemCount: number; metadata: string }> {
+  _decimalMismatches = 0;
+
   const allQueries: ContractQuery[] = [];
   for (const meta of TRACKED_STABLECOINS) {
     if (!meta.contracts) continue;
@@ -340,7 +351,7 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | nu
 
   if (allQueries.length === 0) {
     console.log("[onchain-supply] No contracts configured, skipping");
-    return;
+    return { itemCount: 0, metadata: JSON.stringify({ decimalMismatches: 0 }) };
   }
 
   // Group by chain
@@ -391,4 +402,13 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey?: string | nu
   } else {
     console.warn("[onchain-supply] No supply data retrieved");
   }
+
+  if (_decimalMismatches > 0) {
+    console.warn(`[onchain-supply] ${_decimalMismatches} decimal mismatch(es) detected`);
+  }
+
+  return {
+    itemCount: rows.length,
+    metadata: JSON.stringify({ decimalMismatches: _decimalMismatches, chainsQueried: byChain.size }),
+  };
 }

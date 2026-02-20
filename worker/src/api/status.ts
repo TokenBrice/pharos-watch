@@ -51,7 +51,7 @@ const CACHE_THRESHOLDS: Record<string, number> = {
   "stablecoin-charts": 600,
   "usds-status": 86400,
   "bluechip-ratings": 43200,
-  "fx-rates": 7200,
+  "fx-rates": 14400,
 };
 
 const CRON_INTERVALS: Record<string, number> = {

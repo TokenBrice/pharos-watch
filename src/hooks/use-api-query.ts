@@ -29,7 +29,8 @@ export function useApiQuery<T>(
     },
     staleTime: cronInterval,
     refetchInterval: 2 * cronInterval,
-    retry: 1,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
     ...opts,
   });
 }

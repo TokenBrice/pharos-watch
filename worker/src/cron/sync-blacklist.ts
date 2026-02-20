@@ -735,10 +735,12 @@ export async function syncBlacklist(
   etherscanApiKey: string | null,
   trongridApiKey: string | null,
   drpcApiKey: string | null
-): Promise<void> {
+): Promise<{ itemCount: number; metadata: string }> {
   const etherscanLimiter = createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
   const budget = createBudget(900);
+  let totalNewEvents = 0;
+  let contractsSkipped = 0;
 
   const configStates = await Promise.all(
     CONTRACT_CONFIGS.map(async (config) => {
@@ -763,9 +765,11 @@ export async function syncBlacklist(
   // Cache current block per EVM chain to avoid redundant API calls
   const chainHeadCache = new Map<number, number>();
 
-  for (const { config, configKey, lastBlock } of configStates) {
+  for (let ci = 0; ci < configStates.length; ci++) {
+    const { config, configKey, lastBlock } = configStates[ci];
     if (budgetExhausted(budget)) {
-      console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping remaining contracts`);
+      contractsSkipped = configStates.length - ci;
+      console.log(`[sync-blacklist] Budget exhausted (${budget.count}/${budget.limit}), skipping ${contractsSkipped} remaining contracts`);
       break;
     }
 
@@ -814,6 +818,7 @@ export async function syncBlacklist(
         }
       }
 
+      totalNewEvents += result.rows.length;
       const syncLabel = config.chain.type === "tron" ? "ts" : "block";
       console.log(
         `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.maxBlock}`
@@ -824,4 +829,8 @@ export async function syncBlacklist(
   }
 
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
+  return {
+    itemCount: totalNewEvents,
+    metadata: JSON.stringify({ contractsSkipped, budgetUsed: budget.count, budgetLimit: budget.limit }),
+  };
 }

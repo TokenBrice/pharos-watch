@@ -49,7 +49,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   // 3. Build lookup maps
   const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-  const pegRates = derivePegRates(peggedAssets, metaById, fxFallbackRates);
+  const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, metaById, fxFallbackRates, true);
   const now = Math.floor(Date.now() / 1000);
 
   // 4-year-ago fallback for tracking start
@@ -113,10 +113,13 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       : fourYearsAgo;
     const scoreResult = computePegScore(events, trackingStart, now);
 
-    // Build DEX price check if available
+    // Build DEX price check if available (only for coins with meaningful supply)
     let dexPriceCheck: typeof coins[number]["dexPriceCheck"] = null;
     const dexRow = dexPrices.get(meta.id);
-    if (dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC) {
+    const supply = asset?.circulating
+      ? Object.values(asset.circulating).reduce((s, v) => s + (v ?? 0), 0)
+      : 0;
+    if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC) {
       const pegRef = asset?.price != null && typeof asset.price === "number"
         ? getPegReference(asset.pegType, pegRates, meta.goldOunces)
         : 0;
@@ -177,6 +180,11 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       : allAbsBps[Math.floor(allAbsBps.length / 2)]
     : 0;
 
+  // Flag peg types using fallback rates so frontend can signal stale data
+  const fallbackPegTypes = Object.entries(pegRateSources)
+    .filter(([, src]) => src === "fallback")
+    .map(([peg]) => peg);
+
   return new Response(
     JSON.stringify({
       coins,
@@ -186,6 +194,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
         worstCurrent,
         coinsAtPeg,
         totalTracked: coins.length,
+        ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
       },
     }),
     {
