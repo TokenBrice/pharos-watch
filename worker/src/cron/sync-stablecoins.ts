@@ -161,10 +161,23 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
           console.warn(`[gold] No mcap for ${token.symbol}, including with mcap=0`);
         }
 
+        // TVL history is only usable when TVL ≈ mcap. For some protocols (e.g. Tether Gold)
+        // TVL includes multi-chain reserves that far exceed the token's market cap, so using
+        // TVL history for supply change % would produce wildly wrong numbers.
         const history = tvlHistoryMap[token.internalId];
-        const prevDay = history ? findNearestTvl(history, dayAgo) : null;
-        const prevWeek = history ? findNearestTvl(history, weekAgo) : null;
-        const prevMonth = history ? findNearestTvl(history, monthAgo) : null;
+        let usableHistory: typeof history | undefined = undefined;
+        if (history && history.length > 0 && mcap > 0) {
+          const latestTvl = history[history.length - 1].totalLiquidityUSD;
+          const ratio = mcap / latestTvl;
+          if (ratio > 0.85 && ratio < 1.15) {
+            usableHistory = history;
+          } else {
+            console.warn(`[gold] ${token.symbol}: mcap/tvl divergence (ratio=${ratio.toFixed(3)}), skipping TVL history`);
+          }
+        }
+        const prevDay = usableHistory ? findNearestTvl(usableHistory, dayAgo) : null;
+        const prevWeek = usableHistory ? findNearestTvl(usableHistory, weekAgo) : null;
+        const prevMonth = usableHistory ? findNearestTvl(usableHistory, monthAgo) : null;
 
         return {
           id: token.internalId,
