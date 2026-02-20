@@ -566,6 +566,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://multipli.fi/" },
       { label: "Dashboard", url: "https://app.multipli.fi/dashboard" },
+      { label: "PoR", url: "https://verification.afiprotocol.xyz/multipli" },
     ],
     contracts: [
       { chain: "ethereum", address: "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4", decimals: 18 },

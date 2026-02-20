@@ -4,12 +4,14 @@ import { handleStablecoinCharts } from "./api/stablecoin-charts";
 import { handleBlacklist } from "./api/blacklist";
 import { handleDepegEvents } from "./api/depeg-events";
 import { handleBackfillDepegs } from "./api/backfill-depegs";
+import { handleBackfillSupplyHistory } from "./api/backfill-supply-history";
 import { handlePegSummary } from "./api/peg-summary";
 import { handleHealth } from "./api/health";
 import { handleUsdsStatus } from "./api/usds-status";
 import { handleBluechipRatings } from "./api/bluechip";
 import { handleDexLiquidity } from "./api/dex-liquidity";
 import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
+import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 
 export function route(
@@ -41,6 +43,10 @@ export function route(
     return handleBackfillDepegs(db, url, adminKey, request);
   }
 
+  if (path === "/api/backfill-supply-history") {
+    return handleBackfillSupplyHistory(db, url, adminKey, request);
+  }
+
   if (path === "/api/peg-summary") {
     return handlePegSummary(db);
   }
@@ -63,6 +69,10 @@ export function route(
 
   if (path === "/api/dex-liquidity-history") {
     return handleDexLiquidityHistory(db, url);
+  }
+
+  if (path === "/api/supply-history") {
+    return handleSupplyHistory(db, url);
   }
 
   if (path === "/api/status") {

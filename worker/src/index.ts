@@ -8,6 +8,7 @@ import { syncBluechip } from "./cron/sync-bluechip";
 import { syncFxRates } from "./cron/sync-fx-rates";
 import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { syncOnchainSupply } from "./cron/sync-onchain-supply";
+import { snapshotSupply } from "./cron/snapshot-supply";
 
 interface Env {
   DB: D1Database;
@@ -61,7 +62,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs";
+    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history";
 
     // Check edge cache first
     const cache = caches.default;
@@ -98,10 +99,15 @@ const worker = {
     const cron = event.cron;
 
     switch (cron) {
-      case "*/5 * * * *":
+      case "*/5 * * * *": {
         ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db)));
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
+        const scheduled = new Date(event.scheduledTime);
+        if (scheduled.getUTCHours() === 0 && scheduled.getUTCMinutes() === 0) {
+          ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
+        }
         break;
+      }
       case "*/10 * * * *":
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
         if (new Date(event.scheduledTime).getMinutes() % 30 === 0) {
