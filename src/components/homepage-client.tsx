@@ -140,17 +140,6 @@ export function HomepageClient() {
 
       <TotalMcapChart />
 
-      <PegDiversityChart />
-
-      <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <PegTrackerSummary />
-        <LiquiditySummary />
-        <BlacklistSummary />
-        <CemeterySummary />
-      </div>
-
       <div id="filter-bar" className="space-y-3 border-t pt-4 sticky top-14 z-40 bg-background pb-3">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -232,6 +221,17 @@ export function HomepageClient() {
         onClearSearch={() => setSearchQuery("")}
         onClearFilters={clearAll}
       />
+
+      <PegDiversityChart />
+
+      <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <PegTrackerSummary />
+        <LiquiditySummary />
+        <BlacklistSummary />
+        <CemeterySummary />
+      </div>
 
       {dataUpdatedAt > 0 && (
         <p className="text-xs text-muted-foreground text-center">

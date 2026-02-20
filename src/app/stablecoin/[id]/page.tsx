@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowLeftRight } from "lucide-react";
 import { TRACKED_STABLECOINS, findStablecoinMeta } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
@@ -87,12 +88,19 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
       ) : (
         <>
           <div className="space-y-6">
-            <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
                 <span>/</span>
                 <span className="text-foreground">{coin.name}</span>
               </nav>
+              <Link
+                href={`/compare/?coins=${coin.symbol.toLowerCase()}`}
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+                Compare
+              </Link>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">

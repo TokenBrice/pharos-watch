@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -86,6 +87,7 @@ export function PegHeatmap({
   searchQuery,
   onSearchChange,
 }: PegHeatmapProps) {
+  const prefetch = usePrefetchStablecoin();
   const sorted = useMemo(() => {
     return [...coins]
       .filter((c) => c.currentDeviationBps !== null)
@@ -93,7 +95,7 @@ export function PegHeatmap({
   }, [coins]);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -151,6 +153,7 @@ export function PegHeatmap({
                     title={dexDisagrees
                       ? `DEX price disagrees: $${dex.dexPrice.toFixed(4)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
                       : undefined}
+                    onMouseEnter={() => prefetch(coin.id)}
                   >
                     {dexDisagrees && (
                       <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white" aria-label="DEX price disagrees">!</span>

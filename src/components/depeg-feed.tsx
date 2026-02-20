@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ interface DepegFeedProps {
 const PAGE_SIZE = 20;
 
 export function DepegFeed({ events, logos }: DepegFeedProps) {
+  const prefetch = usePrefetchStablecoin();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const sorted = useMemo(
@@ -44,6 +46,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
               key={evt.id}
               href={`/stablecoin/${evt.stablecoinId}`}
               className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
+              onMouseEnter={() => prefetch(evt.stablecoinId)}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <StablecoinLogo src={logos?.[evt.stablecoinId]} name={evt.symbol} size={20} />

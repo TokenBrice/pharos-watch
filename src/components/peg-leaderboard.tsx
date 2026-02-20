@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import {
   Table,
   TableBody,
@@ -36,6 +37,7 @@ function formatSpan(days: number): string {
 }
 
 export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps) {
+  const prefetch = usePrefetchStablecoin();
   const [sortKey, setSortKey] = useState<SortKey>("pegScore");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -73,7 +75,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
   ];
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="pb-3">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Peg Score Leaderboard
@@ -128,6 +130,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
                       <Link
                         href={`/stablecoin/${coin.id}`}
                         className="flex items-center gap-2 group"
+                        onMouseEnter={() => prefetch(coin.id)}
                       >
                         <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
                         <div className="min-w-0">

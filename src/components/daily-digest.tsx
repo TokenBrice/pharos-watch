@@ -33,7 +33,7 @@ export function DailyDigest() {
   }
 
   return (
-    <Card className="rounded-2xl border-dashed">
+    <Card className="rounded-2xl border-dashed animate-in fade-in duration-300">
       <CardContent className="py-5">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

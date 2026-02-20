@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import Image from "next/image";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
+import { CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@/lib/format";
 import type { DeadStablecoin, CauseOfDeath } from "@/lib/types";
 
@@ -263,61 +262,47 @@ function Tombstone({
   );
 }
 
-export function CemeteryTombstones() {
-  const handleSelect = useCallback((symbol: string) => {
-    const el = document.getElementById(`obituary-${symbol}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-primary/50");
-      setTimeout(
-        () => el.classList.remove("ring-2", "ring-primary/50"),
-        2000
-      );
-    }
-  }, []);
+interface CemeteryTombstonesProps {
+  coins: DeadStablecoin[];
+  onSelect: (symbol: string) => void;
+}
 
+export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps) {
   return (
-    <Card className="rounded-2xl">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          The Cemetery
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="relative pb-8">
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-x-3 gap-y-6 justify-items-center pt-16 pb-4">
-            {DEAD_STABLECOINS.map((coin, i) => (
-              <Tombstone
-                key={coin.symbol}
-                coin={coin}
-                index={i}
-                onSelect={handleSelect}
-              />
-            ))}
-          </div>
-
-          {/* Ground gradient */}
-          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-emerald-950/15 dark:from-emerald-950/25 to-transparent pointer-events-none" />
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap gap-3 pt-3 border-t mt-2">
-          {Object.entries(CAUSE_META).map(([key, meta]) => (
-            <div key={key} className="flex items-center gap-1.5">
-              <div
-                className="h-2.5 w-2.5 rounded-sm"
-                style={{ backgroundColor: CAUSE_HEX[key as CauseOfDeath] }}
-              />
-              <span className="text-xs text-muted-foreground">
-                {meta.label}
-              </span>
-            </div>
+    <div>
+      <div className="relative pb-8">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-x-3 gap-y-6 justify-items-center pt-6 pb-4">
+          {coins.map((coin, i) => (
+            <Tombstone
+              key={coin.symbol}
+              coin={coin}
+              index={i}
+              onSelect={onSelect}
+            />
           ))}
-          <span className="ml-auto text-[10px] text-muted-foreground/50 italic">
-            Tombstone size reflects peak market cap
-          </span>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Ground gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-emerald-950/15 dark:from-emerald-950/25 to-transparent pointer-events-none" />
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 pt-3 border-t mt-2">
+        {Object.entries(CAUSE_META).map(([key, meta]) => (
+          <div key={key} className="flex items-center gap-1.5">
+            <div
+              className="h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: CAUSE_HEX[key as CauseOfDeath] }}
+            />
+            <span className="text-xs text-muted-foreground">
+              {meta.label}
+            </span>
+          </div>
+        ))}
+        <span className="ml-auto text-[10px] text-muted-foreground/50 italic">
+          Tombstone size reflects peak market cap
+        </span>
+      </div>
+    </div>
   );
 }

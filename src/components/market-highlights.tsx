@@ -252,7 +252,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid gap-5 lg:grid-cols-2 animate-in fade-in duration-300">
       <BiggestDepegs data={data} logos={logos} pegRates={pegRates} />
       <FastestMovers data={data} logos={logos} />
     </div>

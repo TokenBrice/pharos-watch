@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortIcon } from "@/components/sort-icon";
 import { useSort } from "@/hooks/use-sort";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
 import { prettifyProtocol } from "@/lib/dex-constants";
 import { getScoreColor } from "@/lib/severity-colors";
@@ -51,6 +52,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("score", "desc");
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const [page, setPage] = useState(0);
+  const prefetch = usePrefetchStablecoin();
 
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
@@ -253,6 +255,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 key={row.meta.id}
                 className="hover:bg-muted/70 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                 onClick={() => onRowClick(row.meta.id)}
+                onMouseEnter={() => prefetch(row.meta.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row.meta.id); } }}
                 tabIndex={0}
               >

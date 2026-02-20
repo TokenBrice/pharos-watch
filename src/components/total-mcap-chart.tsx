@@ -55,7 +55,7 @@ export function TotalMcapChart() {
   }
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Total Stablecoin Market Cap</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />

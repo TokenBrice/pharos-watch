@@ -390,7 +390,7 @@ export function MarketPulse({
   }
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardContent>
         <div className="grid gap-6 lg:grid-cols-3 lg:divide-x lg:divide-border">
           <div className="lg:pr-6">

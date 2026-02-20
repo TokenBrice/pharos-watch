@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
+import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
-import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 
 const cemeteryDescription = `A memorial to ${DEAD_STABLECOINS.length} fallen stablecoins. From TerraUSD to HUSD — what went wrong, when, and why.`;
@@ -58,11 +57,9 @@ export default function CemeteryPage() {
         </p>
       </div>
 
-      <CemeteryTombstones />
+      <CemeteryClient />
 
       <CemeteryCharts />
-
-      <StablecoinCemetery />
     </div>
   );
 }

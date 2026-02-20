@@ -25,6 +25,7 @@ import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severit
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortIcon } from "@/components/sort-icon";
 import { useSort } from "@/hooks/use-sort";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 
 const PAGE_SIZE = 25;
 
@@ -69,6 +70,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const [page, setPage] = useState(0);
   const router = useRouter();
+  const prefetch = usePrefetchStablecoin();
   const metaById = TRACKED_META_BY_ID;
 
   const trackedIds = useMemo(() => {
@@ -189,7 +191,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   }
 
   return (
-    <div className="rounded-xl border overflow-x-auto table-striped scroll-shadow">
+    <div className="rounded-xl border overflow-x-auto table-striped scroll-shadow animate-in fade-in duration-300">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>
@@ -278,6 +280,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                 key={coin.id}
                 className="hover:bg-muted/70 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                 onClick={() => router.push(`/stablecoin/${coin.id}`)}
+                onMouseEnter={() => prefetch(coin.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/stablecoin/${coin.id}`); } }}
                 tabIndex={0}
               >
@@ -289,6 +292,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     href={`/stablecoin/${coin.id}`}
                     className="flex items-center gap-2 font-medium hover:underline"
                     onClick={(e) => e.stopPropagation()}
+                    onMouseEnter={() => prefetch(coin.id)}
                   >
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={24} />
                     <span className="truncate max-w-[180px] inline-block align-bottom">{coin.name}</span>
