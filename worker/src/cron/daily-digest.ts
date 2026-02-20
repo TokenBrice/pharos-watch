@@ -62,26 +62,29 @@ function buildUserPrompt(data: DigestInputData): string {
 export async function generateDailyDigest(
   db: D1Database,
   anthropicApiKey: string | null,
+  force = false,
 ): Promise<CronResult> {
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
     return { metadata: "skipped: no API key" };
   }
 
-  // Check if latest digest is <1h old
-  const latest = await db
-    .prepare(
-      "SELECT generated_at FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
-    )
-    .first<{ generated_at: number }>();
+  // Check if latest digest is <1h old (skip check if force=true)
+  if (!force) {
+    const latest = await db
+      .prepare(
+        "SELECT generated_at FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
+      )
+      .first<{ generated_at: number }>();
 
-  if (latest) {
-    const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
-    if (ageSec < 3600) {
-      console.log(
-        `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
-      );
-      return { metadata: "skipped: recent digest exists" };
+    if (latest) {
+      const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
+      if (ageSec < 3600) {
+        console.log(
+          `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
+        );
+        return { metadata: "skipped: recent digest exists" };
+      }
     }
   }
 

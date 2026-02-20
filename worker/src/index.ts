@@ -68,7 +68,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history";
+    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history" || url.pathname === "/api/trigger-digest";
 
     // Check edge cache first
     const cache = caches.default;
@@ -80,7 +80,7 @@ const worker = {
       }
     }
 
-    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY);
+    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY, env.ANTHROPIC_API_KEY);
 
     if (!response) {
       return addCorsHeaders(

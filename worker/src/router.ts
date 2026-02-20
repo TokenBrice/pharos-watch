@@ -13,14 +13,15 @@ import { handleDexLiquidity } from "./api/dex-liquidity";
 import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
 import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
-import { handleDailyDigest } from "./api/daily-digest";
+import { handleDailyDigest, handleTriggerDigest } from "./api/daily-digest";
 
 export function route(
   url: URL,
   db: D1Database,
   ctx: ExecutionContext,
   request?: Request,
-  adminKey?: string
+  adminKey?: string,
+  anthropicApiKey?: string,
 ): Promise<Response> | null {
   const path = url.pathname;
 
@@ -82,6 +83,10 @@ export function route(
 
   if (path === "/api/daily-digest") {
     return handleDailyDigest(db);
+  }
+
+  if (path === "/api/trigger-digest") {
+    return handleTriggerDigest(db, adminKey, anthropicApiKey, request);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution
