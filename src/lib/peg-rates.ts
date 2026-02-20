@@ -60,14 +60,15 @@ export function derivePegRates(
         ? (prices[mid - 1] + prices[mid]) / 2
         : prices[mid];
 
-    // For thin groups (<3 coins), validate against fallback to catch depegged references
+    // For thin groups (<3 coins), always use the FX fallback rate.
+    // Median of 1-2 coins is unreliable:
+    //   - 1 coin: median = own price → always 0 bps (hides real deviations)
+    //   - 2 coins: median = average → perfect mirror deviations (hides asymmetry)
+    // The ECB FX rate is a far more reliable reference for these groups.
     const fallback = mergedFallbacks[peg];
     if (prices.length < 3 && fallback) {
-      const deviation = Math.abs(median - fallback) / fallback;
-      if (deviation > 0.10) {
-        rates[peg] = fallback;
-        continue;
-      }
+      rates[peg] = fallback;
+      continue;
     }
 
     rates[peg] = median;

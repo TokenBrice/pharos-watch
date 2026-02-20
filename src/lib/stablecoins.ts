@@ -564,7 +564,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Tokenized real-world assets (treasuries and fixed-income instruments)",
     pegMechanism: "NAV-based pricing with centralized RWA custodian backing",
     links: [
-      { label: "Website", url: "https://afiprotocol.xyz/" },
+      { label: "Website", url: "https://multipli.fi/" },
+      { label: "Dashboard", url: "https://app.multipli.fi/dashboard" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4", decimals: 18 },
+      { chain: "base", address: "0xd74FB32112b1eF5b4C428Fead8dA8d85A0019009", decimals: 18 },
     ],
   }),
   usd("271", "Avant USD", "avUSD", "rwa-backed", "centralized", {

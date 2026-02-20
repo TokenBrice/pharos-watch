@@ -18,7 +18,7 @@ const CURRENCY_TO_PEG: Record<string, string> = {
   EUR: "peggedEUR",
   GBP: "peggedGBP",
   CHF: "peggedCHF",
-  BRL: "peggedBRL",
+  BRL: "peggedREAL", // DefiLlama uses "peggedREAL" (not "peggedBRL") for BRL stablecoins
   JPY: "peggedJPY",
   IDR: "peggedIDR",
   SGD: "peggedSGD",
