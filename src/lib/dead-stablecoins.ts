@@ -207,6 +207,19 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "The Block",
   },
   {
+    name: "Fantom USD",
+    symbol: "FUSD",
+    llamaId: "63",
+    pegCurrency: "USD",
+    causeOfDeath: "algorithmic-failure",
+    deathDate: "2022-06",
+    peakMcap: 61_000_000,
+    obituary:
+      "Fantom's native overcollateralized stablecoin required 300-500% FTM collateral ratios, but collapsed alongside the broader DeFi crisis in 2022. Traders exploited the gap between its market price and collateral value, devastating protocols like Scream. The peg broke to $0.50-$0.70 and never recovered, sliding to under $0.10. With the Fantom network itself migrating to Sonic, fUSD became a zombie token — still in wallets, but functionally dead.",
+    sourceUrl: "https://www.reddit.com/r/FantomFoundation/comments/vl97k6/what_has_happened_to_fantom/",
+    sourceLabel: "Reddit",
+  },
+  {
     name: "VOLT Protocol",
     symbol: "VOLT",
     logo: "volt.png",

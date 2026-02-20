@@ -262,6 +262,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Switzerland" },
     contracts: [
       { chain: "ethereum", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
+      { chain: "optimism", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
+      { chain: "arbitrum", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
     ],
   }),
   usd("336", "United Stables", "U", "rwa-backed", "centralized", {
@@ -1136,13 +1138,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   // USD+ (id 46) removed — protocol abandoned 2025 (see cemetery)
-  usd("63", "Fantom USD", "FUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "Staked FTM tokens only; 300-500% overcollateralization ratio",
-    pegMechanism: "Overcollateralized CDP with FTM-only collateral and liquidation auctions; operates on Fantom/Sonic (not Ethereum or a Stage 1 L2)",
-    contracts: [
-      { chain: "fantom", address: "0xad84341756bf337f5a0164515b1f6f993d194e1f", decimals: 18 },
-    ],
-  }),
+  // FUSD removed — Fantom USD de-pegged 2022, zombie stablecoin (see cemetery)
   usd("326", "Metronome Synth USD", "MSUSD", "crypto-backed", "centralized-dependent", {
     collateral: "USDC, FRAX, DAI, ETH, WBTC, and yield-bearing versions (vaUSDC, vaFRAX)",
     pegMechanism: "Inter-synth arbitrage swaps with mintage caps tied to stablecoin deposit limits",
@@ -1280,6 +1276,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
     collateral: "1:1 USD reserves custodied by Norwegian Block Exchange (NBX)",
     pegMechanism: "Direct 1:1 redemption through Moneta",
+    proofOfReserves: { type: "self-reported", url: "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet", provider: "Charli3" },
     links: [
       { label: "Website", url: "https://moneta.global/" },
     ],
