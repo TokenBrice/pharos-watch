@@ -27,6 +27,7 @@ export const RUB_FALLBACK = 0.011;
 
 /** CoinGecko ID overrides for coins with missing or wrong geckoId in DefiLlama */
 export const GECKO_ID_OVERRIDES: Record<string, string> = {
+  // DefiLlama-listed coins with missing/wrong geckoId
   "226": "frankencoin",              // ZCHF — DL price intermittently returns 0
   "269": "liquity-bold-2",           // BOLD — no geckoId in DL stablecoins API
   "255": "aegis-yusd",               // YUSD — no geckoId in DL stablecoins API
@@ -34,6 +35,22 @@ export const GECKO_ID_OVERRIDES: Record<string, string> = {
   "302": "hylo-usd",                 // HYUSD — no geckoId in DL stablecoins API
   "342": "megausd",                  // USDM (MegaUSD) — no geckoId in DL stablecoins API
   "185": "gyroscope-gyd",            // GYD — no geckoId in DL stablecoins API
+  // Gold tokens — no DL stablecoin entry, need geckoId for price chart backfill
+  "gold-xaut": "tether-gold",
+  "gold-paxg": "pax-gold",
+  "gold-kau":  "kinesis-gold",
+  "gold-xaum": "matrixdock-gold",
+  "gold-vro":  "veraone",
+  "gold-cgo":  "comtech-gold",
+  "gold-dgld": "gold-token-sa-dgld-tokenized-gold",
+  // Silver tokens
+  "silver-kag": "kinesis-silver",
+  // CoinGecko-only fiat tokens — no DL stablecoin entry
+  "cg-jpyc":  "jpy-coin",
+  "cg-idrt":  "rupiah-token",
+  "cg-eurq":  "quantoz-eurq",
+  "cg-zarp":  "zarp-stablecoin",
+  "cg-deuro": "decentralized-euro",
 };
 
 /** Minimum number of assets expected from DefiLlama to consider sync valid */

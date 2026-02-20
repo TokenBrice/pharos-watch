@@ -16,6 +16,11 @@ const PEG_TO_FX: Record<string, string> = {
   CHF: "CHF",
   BRL: "BRL",
   JPY: "JPY",
+  IDR: "IDR",
+  SGD: "SGD",
+  TRY: "TRY",
+  AUD: "AUD",
+  ZAR: "ZAR",
 };
 
 /** Maps coin ID → frankfurter currency code for OTHER-pegged coins */
