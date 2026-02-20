@@ -124,14 +124,25 @@ export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): Cha
     }
   }
 
-  // Tron (unchanged — uses TronGrid API key separately)
-  configs.push({
-    chainId: "tron",
-    chainName: "Tron",
-    type: "tron",
-    rpcUrl: "https://api.trongrid.io",
-    explorerUrl: "https://tronscan.org",
-  });
+  // Tron — Alchemy primary when key available, TronGrid fallback
+  if (alchemyApiKey) {
+    configs.push({
+      chainId: "tron",
+      chainName: "Tron",
+      type: "tron",
+      rpcUrl: `https://tron-mainnet.g.alchemy.com/v2/${alchemyApiKey}`,
+      fallbackRpcUrl: "https://api.trongrid.io",
+      explorerUrl: "https://tronscan.org",
+    });
+  } else {
+    configs.push({
+      chainId: "tron",
+      chainName: "Tron",
+      type: "tron",
+      rpcUrl: "https://api.trongrid.io",
+      explorerUrl: "https://tronscan.org",
+    });
+  }
 
   return configs;
 }

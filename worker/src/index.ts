@@ -115,7 +115,7 @@ const worker = {
       case "*/10 * * * *":
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
         if (new Date(event.scheduledTime).getMinutes() % 30 === 0) {
-          ctx.waitUntil(logCronRun(db, "sync-onchain-supply", () => syncOnchainSupply(db, env.TRONGRID_API_KEY ?? null)));
+          ctx.waitUntil(logCronRun(db, "sync-onchain-supply", () => syncOnchainSupply(db)));
         }
         break;
       case "*/15 * * * *":

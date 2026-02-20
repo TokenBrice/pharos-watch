@@ -109,54 +109,67 @@ async function fetchEvmTotalSupply(
   return results;
 }
 
-/** Fetch totalSupply for Tron contracts via triggerConstantContract */
+/** Query a single Tron contract's totalSupply, returns true on success */
+async function queryTronSupply(
+  rpcUrl: string,
+  query: ContractQuery,
+  results: Map<string, number>
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${rpcUrl}/wallet/triggerConstantContract`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+      body: JSON.stringify({
+        owner_address: TRON_BURN_ADDRESS,
+        contract_address: query.contract.address,
+        function_selector: "totalSupply()",
+        parameter: "",
+        visible: true,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) return false;
+
+    const data = (await res.json()) as { constant_result?: string[] };
+    const hex = data.constant_result?.[0];
+    if (!hex) return false;
+
+    const supply = bigIntToDecimal(BigInt("0x" + hex), query.contract.decimals);
+    if (supply > 0) {
+      results.set(`${query.stablecoinId}:${query.contract.chain}`, supply);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Fetch totalSupply for Tron contracts via triggerConstantContract, with optional fallback */
 async function fetchTronTotalSupply(
   rpcUrl: string,
   queries: ContractQuery[],
-  apiKey: string | null
+  fallbackRpcUrl?: string
 ): Promise<Map<string, number>> {
   const results = new Map<string, number>();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "User-Agent": USER_AGENT,
-  };
-  if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
+  const failed: ContractQuery[] = [];
 
   for (const query of queries) {
-    try {
-      const res = await fetch(`${rpcUrl}/wallet/triggerConstantContract`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          owner_address: TRON_BURN_ADDRESS,
-          contract_address: query.contract.address,
-          function_selector: "totalSupply()",
-          parameter: "",
-          visible: true,
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
+    const ok = await queryTronSupply(rpcUrl, query, results);
+    if (!ok) failed.push(query);
+  }
 
-      if (!res.ok) continue;
-
-      const data = (await res.json()) as { constant_result?: string[] };
-      const hex = data.constant_result?.[0];
-      if (!hex) continue;
-
-      const supply = bigIntToDecimal(BigInt("0x" + hex), query.contract.decimals);
-      if (supply > 0) {
-        const key = `${query.stablecoinId}:${query.contract.chain}`;
-        results.set(key, supply);
-      }
-    } catch {
-      console.warn(`[onchain-supply] Tron query failed for ${query.stablecoinId}`);
+  if (failed.length > 0 && fallbackRpcUrl) {
+    console.log(`[onchain-supply] Retrying ${failed.length} failed Tron queries on fallback RPC`);
+    for (const query of failed) {
+      await queryTronSupply(fallbackRpcUrl, query, results);
     }
   }
 
   return results;
 }
 
-export async function syncOnchainSupply(db: D1Database, tronApiKey: string | null): Promise<void> {
+export async function syncOnchainSupply(db: D1Database): Promise<void> {
   const allQueries: ContractQuery[] = [];
   for (const meta of TRACKED_STABLECOINS) {
     if (!meta.contracts) continue;
@@ -195,7 +208,7 @@ export async function syncOnchainSupply(db: D1Database, tronApiKey: string | nul
         if (rpc.type === "evm") {
           results = await fetchEvmTotalSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl, rpc.alchemyPrimary);
         } else {
-          results = await fetchTronTotalSupply(rpc.rpcUrl, queries, tronApiKey);
+          results = await fetchTronTotalSupply(rpc.rpcUrl, queries, rpc.fallbackRpcUrl);
         }
         for (const [key, supply] of results) {
           supplyMap.set(key, supply);

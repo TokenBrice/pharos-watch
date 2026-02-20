@@ -27,7 +27,7 @@ export function formatNativePrice(
 ): string {
   if (usdPrice == null || typeof usdPrice !== "number" || isNaN(usdPrice)) return "N/A";
   const symbol = PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
-  if (pegCurrency === "USD" || pegCurrency === "GOLD" || pegCurrency === "VAR" || pegCurrency === "OTHER") {
+  if (pegCurrency === "USD" || pegCurrency === "GOLD" || pegCurrency === "SILVER" || pegCurrency === "VAR" || pegCurrency === "OTHER") {
     return formatPrice(usdPrice);
   }
   if (!pegRef || pegRef <= 0) return formatPrice(usdPrice);
