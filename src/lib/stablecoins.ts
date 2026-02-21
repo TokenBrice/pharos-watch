@@ -1771,7 +1771,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Canada", regulator: "FINTRAC" },
   }),
-  other("299", "PHT Stablecoin", "PHT", "crypto-backed", "cefi-dependent", "PHP", {
+  other("299", "PHT Stablecoin", "PHT", "crypto-backed", "centralized-dependent", "PHP", {
     geckoId: "pht-stablecoin",
     collateral: "Overcollateralized USDC/USDT vaults (MakerDAO MCD fork)",
     pegMechanism: "Overcollateralized crypto-backed PHP stablecoin for remittances and on-chain payments",
