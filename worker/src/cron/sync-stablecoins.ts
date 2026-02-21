@@ -590,10 +590,11 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
         const asset = llamaData.peggedAssets.find((a) => String(a.id) === stablecoinId);
         if (!asset) continue;
 
-        // Skip override if we don't have on-chain data for ALL configured chains
-        // (partial data would produce a wrong, lower total)
-        // Exception: force-override coins always use whatever on-chain data we have
+        // Only override DL supply for coins that explicitly opt in via supplyMethod
+        const meta = TRACKED_META_BY_ID.get(stablecoinId);
+        const hasSupplyMethod = meta?.supplyMethod != null && meta.supplyMethod.type !== "exclude";
         const isForced = SUPPLY_OVERRIDE_COINS.some((c) => c.llamaId === stablecoinId && c.force);
+        if (!hasSupplyMethod && !isForced) continue;
 
         // Per-coin freshness: non-forced coins require data within 2 hours;
         // forced coins accept any age (stale on-chain data is still better than broken DL data)
@@ -605,7 +606,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
           }
         }
 
-        const meta = TRACKED_META_BY_ID.get(stablecoinId);
         if (!isForced && meta?.contracts) {
           const configuredChains = new Set(meta.contracts.map((c) => c.chain));
           const dataChains = new Set(chainSupplies.map((cs) => cs.chain));
