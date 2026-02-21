@@ -4,7 +4,7 @@
 export type BackingType = "rwa-backed" | "crypto-backed" | "algorithmic";
 
 /** Peg currency */
-export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "JPY" | "IDR" | "SGD" | "TRY" | "AUD" | "ZAR" | "GOLD" | "SILVER" | "VAR" | "OTHER";
+export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "JPY" | "IDR" | "SGD" | "TRY" | "AUD" | "ZAR" | "CAD" | "CNY" | "PHP" | "MXN" | "UAH" | "ARS" | "GOLD" | "SILVER" | "VAR" | "OTHER";
 
 /** Governance model */
 export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
@@ -96,6 +96,12 @@ export type FilterTag =
   | "try-peg"
   | "aud-peg"
   | "zar-peg"
+  | "cad-peg"
+  | "cny-peg"
+  | "php-peg"
+  | "mxn-peg"
+  | "uah-peg"
+  | "ars-peg"
   | "silver-peg"
   | "var-peg"
   | "other-peg"
@@ -107,7 +113,7 @@ export type FilterTag =
   | "algorithmic";
 
 /** Tags that fall under the "Other Peg" umbrella filter on the homepage */
-export const OTHER_PEG_TAGS: FilterTag[] = ["brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "zar-peg", "silver-peg", "var-peg", "other-peg"];
+export const OTHER_PEG_TAGS: FilterTag[] = ["brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "zar-peg", "cad-peg", "cny-peg", "php-peg", "mxn-peg", "uah-peg", "ars-peg", "silver-peg", "var-peg", "other-peg"];
 
 export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "usd-peg": "USD",
@@ -123,6 +129,12 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "try-peg": "TRY",
   "aud-peg": "AUD",
   "zar-peg": "ZAR",
+  "cad-peg": "CAD",
+  "cny-peg": "CNY",
+  "php-peg": "PHP",
+  "mxn-peg": "MXN",
+  "uah-peg": "UAH",
+  "ars-peg": "ARS",
   "silver-peg": "Silver",
   "var-peg": "CPI",
   "other-peg": "Other",
@@ -149,6 +161,12 @@ function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
     case "TRY": return "try-peg";
     case "AUD": return "aud-peg";
     case "ZAR": return "zar-peg";
+    case "CAD": return "cad-peg";
+    case "CNY": return "cny-peg";
+    case "PHP": return "php-peg";
+    case "MXN": return "mxn-peg";
+    case "UAH": return "uah-peg";
+    case "ARS": return "ars-peg";
     case "SILVER": return "silver-peg";
     case "VAR": return "var-peg";
     default: return "other-peg";

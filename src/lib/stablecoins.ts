@@ -30,7 +30,7 @@ const other = (id: string, name: string, symbol: string, backing: StablecoinMeta
  *
  * Classification flags:
  *   backing:      rwa-backed | crypto-backed | algorithmic
- *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | IDR | SGD | TRY | AUD | GOLD | VAR | OTHER
+ *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | IDR | SGD | TRY | AUD | ZAR | CAD | CNY | PHP | MXN | UAH | ARS | GOLD | SILVER | VAR | OTHER
  *   governance:   centralized | centralized-dependent | decentralized
  *   yieldBearing: token itself accrues yield
  *   rwa:          backed by real-world assets (treasuries, bonds, etc.)
@@ -1769,6 +1769,58 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.isc.money/" },
     ],
   }), // no EVM contract — Solana-only
+
+  // ── CAD / CNY / PHP / MXN / UAH / ARS pegs ───────────────────────────
+  other("145", "CAD Coin", "CADC", "rwa-backed", "centralized", "CAD", {
+    geckoId: "cad-coin",
+    collateral: "Canadian dollar reserves held 1:1 in a regulated Canadian bank account",
+    pegMechanism: "Direct 1:1 redemption for CAD through PayTrie (FINTRAC-registered MSB)",
+    links: [
+      { label: "Website", url: "https://paytrie.com/cadc" },
+    ],
+    jurisdiction: { country: "Canada", regulator: "FINTRAC" },
+  }),
+  other("280", "Tether CNH", "CNHT", "rwa-backed", "centralized", "CNY", {
+    geckoId: "cnh-tether",
+    collateral: "Offshore Chinese yuan (CNH) reserves held by Tether",
+    pegMechanism: "Direct 1:1 redemption for CNH through Tether",
+    links: [
+      { label: "Website", url: "https://tether.to/" },
+    ],
+  }),
+  other("127", "Alternity CNY", "LCNY", "crypto-backed", "decentralized", "CNY", {
+    collateral: "Crypto-collateralized positions",
+    pegMechanism: "Overcollateralized crypto-backed CNY stablecoin",
+  }),
+  other("299", "PHT Stablecoin", "PHT", "crypto-backed", "decentralized", "PHP", {
+    geckoId: "pht-stablecoin",
+    collateral: "Overcollateralized crypto positions",
+    pegMechanism: "Overcollateralized crypto-backed PHP stablecoin for remittances and on-chain payments",
+    links: [
+      { label: "Website", url: "https://www.apacx.io/PHT" },
+    ],
+  }),
+  other("281", "Mexican Peso Tether", "MXNT", "rwa-backed", "centralized", "MXN", {
+    geckoId: "mexican-peso-tether",
+    collateral: "Mexican peso reserves held by Tether",
+    pegMechanism: "Direct 1:1 redemption for MXN through Tether",
+    links: [
+      { label: "Website", url: "https://tether.to/" },
+    ],
+  }),
+  other("131", "UAHT", "UAHT", "rwa-backed", "centralized", "UAH", {
+    collateral: "Ukrainian hryvnia reserves",
+    pegMechanism: "Direct 1:1 redemption for UAH through issuer",
+  }),
+  other("133", "NARS", "NARS", "rwa-backed", "centralized", "ARS", {
+    geckoId: "num-ars",
+    collateral: "Argentine peso reserves held by Num Finance",
+    pegMechanism: "Direct 1:1 redemption for ARS through Num Finance",
+    links: [
+      { label: "Website", url: "https://num.finance/" },
+    ],
+    jurisdiction: { country: "Argentina" },
+  }),
 ];
 
 // --- Pre-computed lookups (static data, computed once at module level) ---
