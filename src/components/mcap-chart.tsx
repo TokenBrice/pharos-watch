@@ -47,7 +47,7 @@ export function McapChart({ data }: McapChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
               <defs>
-                <linearGradient id="supplyGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.4} />
                   <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
                 </linearGradient>
@@ -90,7 +90,7 @@ export function McapChart({ data }: McapChartProps) {
                 type="monotone"
                 dataKey="mcap"
                 stroke={CHART_BLUE}
-                fill="url(#supplyGradient)"
+                fill="url(#mcapGradient)"
                 strokeWidth={2}
               />
             </AreaChart>

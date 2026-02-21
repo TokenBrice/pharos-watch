@@ -24,7 +24,7 @@
 - [x] Skip-to-content link in layout
 - [x] `id="main-content"` on main element
 
-### D. Chart Improvements (`price-chart.tsx`, `supply-chart.tsx`, `total-mcap-chart.tsx`)
+### D. Chart Improvements (`price-chart.tsx`, `mcap-chart.tsx`, `total-mcap-chart.tsx`)
 - [x] Time range selector (7D / 30D / 90D / 1Y / All)
 - [x] Empty states when data is empty
 - [x] Consistent tooltip formatting

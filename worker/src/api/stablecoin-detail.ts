@@ -72,6 +72,38 @@ async function fetchCommodityDetail(config: {
     });
   }
 
+  // Fallback: no protocol TVL → use CoinGecko market_chart directly
+  if (tokens.length === 0) {
+    const cgRes = await fetch(
+      `https://api.coingecko.com/api/v3/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`,
+      { headers: { "User-Agent": USER_AGENT } }
+    );
+    if (cgRes.ok) {
+      const cgData = (await cgRes.json()) as {
+        market_caps: [number, number][];
+        prices?: [number, number][];
+      };
+      const priceMap = new Map<string, number>();
+      if (cgData.prices) {
+        for (const [ts, p] of cgData.prices) {
+          priceMap.set(new Date(ts).toISOString().slice(0, 10), p);
+        }
+      }
+      tokens = (cgData.market_caps ?? [])
+        .filter(([, mcap]) => mcap > 0)
+        .map(([ts, mcap]) => {
+          const date = Math.floor(ts / 1000);
+          const dateKey = new Date(ts).toISOString().slice(0, 10);
+          const price = priceMap.get(dateKey) ?? 0;
+          return {
+            date,
+            totalCirculatingUSD: { [config.pegType]: mcap },
+            totalCirculating: { [config.pegType]: price > 0 ? mcap / price : 0 },
+          };
+        });
+    }
+  }
+
   return JSON.stringify({ tokens });
 }
 
