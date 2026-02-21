@@ -313,7 +313,7 @@ async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcap
   return forcedMcaps;
 }
 
-export async function syncStablecoins(db: D1Database): Promise<CronResult> {
+export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   const cgData = await fetchCoinGeckoMarketData();
@@ -368,6 +368,9 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
     if (meta?.geckoId && (!asset.geckoId || (asset.geckoId as string).includes("wrong"))) {
       asset.geckoId = meta.geckoId;
     }
+    if (meta?.cmcSlug && !asset.cmcSlug) {
+      asset.cmcSlug = meta.cmcSlug;
+    }
     if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
       asset.address = ADDRESS_OVERRIDES[asset.id];
     }
@@ -390,7 +393,7 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
   const missingBefore = new Set(
     llamaData.peggedAssets.filter(hasMissingPrice).map((a) => a.id)
   );
-  const enrichStats = await enrichMissingPrices(llamaData.peggedAssets);
+  const enrichStats = await enrichMissingPrices(llamaData.peggedAssets, cmcApiKey, db);
 
   // --- Reject unreasonable prices BEFORE caching ---
   // Must run before savePriceCache so bad prices don't persist for 24h
@@ -482,6 +485,35 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
     if (fallbackCount > 0) {
       console.log(`[sync-stablecoins] Applied ${fallbackCount} cached fallback prices`);
     }
+  }
+
+  // --- CMC supply override: use CMC market cap for coins where DL reports near-zero supply ---
+  let cmcSupplyOverrides = 0;
+  for (const asset of llamaData.peggedAssets) {
+    const cmcMcap = (asset as Record<string, unknown>)._cmcMarketCap as number | undefined;
+    if (!cmcMcap || cmcMcap <= 10_000) continue;
+
+    const circ = asset.circulating as Record<string, number> | undefined;
+    const dlMcap = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
+    if (dlMcap >= 1_000) continue; // DL has meaningful data, skip
+
+    const pegKey = asset.pegType ?? "peggedUSD";
+    asset.circulating = { [pegKey]: cmcMcap };
+    (asset as Record<string, unknown>).circulatingPrevDay = null;
+    (asset as Record<string, unknown>).circulatingPrevWeek = null;
+    (asset as Record<string, unknown>).circulatingPrevMonth = null;
+    cmcSupplyOverrides++;
+    console.log(
+      `[sync-stablecoins] CMC supply override for ${asset.symbol} (id=${asset.id}): ` +
+      `DL mcap $${dlMcap.toFixed(0)} → CMC mcap $${cmcMcap.toFixed(0)}`
+    );
+  }
+  if (cmcSupplyOverrides > 0) {
+    console.log(`[sync-stablecoins] Applied ${cmcSupplyOverrides} CMC supply overrides`);
+  }
+  // Clean up temp _cmcMarketCap property
+  for (const asset of llamaData.peggedAssets) {
+    delete (asset as Record<string, unknown>)._cmcMarketCap;
   }
 
   // Supply sanity check: skip cache write if total supply is implausibly low
@@ -781,6 +813,7 @@ export async function syncStablecoins(db: D1Database): Promise<CronResult> {
   if (stalenessWarning) metadata.stalenessWarning = true;
   if (dexOverrides > 0) metadata.dexPriceOverrides = dexOverrides;
   if (dexDivergenceWarnings > 0) metadata.dexDivergenceWarnings = dexDivergenceWarnings;
+  if (cmcSupplyOverrides > 0) metadata.cmcSupplyOverrides = cmcSupplyOverrides;
 
   return { itemCount: llamaData.peggedAssets.length, metadata: JSON.stringify(metadata) };
 }

@@ -7,7 +7,8 @@
 1. **Pass 1:** Contract address -> DefiLlama coins API (with multi-chain fallback)
 2. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
 3. **Pass 3:** CoinGecko ID -> CoinGecko direct API
-4. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold)
+4. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp, also stashes market cap for supply override downstream)
+5. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold)
 
 **Price validation ordering:** `isReasonablePrice()` runs **before** `savePriceCache()` so that unreasonable enriched prices never enter the 24-hour cache. This prevents a single bad API response from poisoning the cache across multiple sync cycles.
 

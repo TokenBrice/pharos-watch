@@ -25,6 +25,7 @@ interface Env {
   ALERT_WEBHOOK_URL?: string;
   ANTHROPIC_API_KEY?: string;
   METALS_API_KEY?: string;
+  CMC_API_KEY?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -109,7 +110,7 @@ const worker = {
 
     switch (cron) {
       case "*/5 * * * *": {
-        ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db)));
+        ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db, env.CMC_API_KEY)));
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
         // Snapshot twice daily (midnight + noon UTC). Runs on every */5 tick near
         // those hours so a delayed cron still captures the snapshot. INSERT OR IGNORE

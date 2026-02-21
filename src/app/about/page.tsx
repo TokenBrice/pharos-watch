@@ -78,7 +78,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
+                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, CoinMarketCap as a fallback for price and market cap data not covered by DefiLlama or CoinGecko, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
                 },
               },
             ],
@@ -466,6 +466,10 @@ export default function AboutPage() {
             <li>
               <span className="text-foreground font-medium">CoinGecko</span> — stablecoin logos, gold-pegged token data (XAUT, PAXG are not in DefiLlama&apos;s stablecoin API), fallback price enrichment for assets DefiLlama misses, and supply overrides for coins with corrupted upstream data.
               Logos refresh every <span className="font-mono">6 hours</span>.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">CoinMarketCap</span> — fallback price and market cap for stablecoins not covered by DefiLlama or CoinGecko (e.g. MXNT).
+              Rate-limited to 1 call/hour.
             </li>
             <li>
               <span className="text-foreground font-medium">Etherscan v2</span> — USDC, USDT, PAXG, and XAUT freeze/blacklist events across EVM chains (Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC).

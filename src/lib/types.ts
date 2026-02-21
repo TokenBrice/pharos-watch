@@ -72,6 +72,7 @@ export interface StablecoinMeta {
   pegMechanism?: string;
   commodityOunces?: number; // troy ounces per token (for gold- and silver-pegged stablecoins)
   geckoId?: string;        // CoinGecko coin ID (for price/mcap lookups when DefiLlama lacks it)
+  cmcSlug?: string;        // CoinMarketCap slug (fallback price/mcap when DL + CG both miss)
   protocolSlug?: string;   // DefiLlama protocol slug (for TVL/mcap data via /protocol/ API)
   proofOfReserves?: ProofOfReserves;
   links?: StablecoinLink[];

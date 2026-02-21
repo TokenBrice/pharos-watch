@@ -14,6 +14,7 @@ export interface PeggedAsset {
   symbol: string;
   address?: string;
   geckoId?: string;
+  cmcSlug?: string;
   price?: number | null;
   pegType?: string;
   circulating?: Record<string, number>;
@@ -39,6 +40,12 @@ export function isReasonablePrice(price: number, pegType: string | undefined): b
     return price > 0.005 && price < 50; // RUB ~$0.0127, lower bound allows for further weakening
   }
   if (pegType.includes("ZAR")) return price > 0.01 && price < 0.5;
+  if (pegType.includes("CAD")) return price > 0.30 && price < 2;
+  if (pegType.includes("CNY")) return price > 0.01 && price < 0.50;
+  if (pegType.includes("PHP")) return price > 0.002 && price < 0.10;
+  if (pegType.includes("MXN")) return price > 0.005 && price < 0.20;
+  if (pegType.includes("UAH")) return price > 0.002 && price < 0.15;
+  if (pegType.includes("ARS")) return price > 0.000001 && price < 0.05;
   if (pegType.includes("GOLD")) return price > 100 && price < 100_000;
   if (pegType.includes("SILVER")) return price > 5 && price < 500;
   return price > 0 && price < 100_000;
@@ -87,18 +94,24 @@ export interface EnrichmentStats {
   pass1b: number;
   pass2: number;
   pass3: number;
+  passCmc: number;
   pass4: number;
   finalMissing: number;
 }
 
-export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<EnrichmentStats> {
+export async function enrichMissingPrices(
+  assets: PeggedAsset[],
+  cmcApiKey?: string,
+  db?: D1Database,
+): Promise<EnrichmentStats> {
   const totalMissing = assets.filter(hasMissingPrice).length;
-  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, pass4: 0, finalMissing: 0 };
+  if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0 };
 
   let pass1Count = 0;
   let pass1bCount = 0;
   let pass2Count = 0;
   let pass3Count = 0;
+  let passCmcCount = 0;
   let pass4Count = 0;
 
   try {
@@ -224,6 +237,93 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<Enrich
       }
     }
 
+    // ── Pass 3.5: CoinMarketCap API (fallback for assets with cmcSlug) ──
+    if (cmcApiKey) {
+      const cmcCandidates = assets
+        .map((a, i) => ({ asset: a, index: i }))
+        .filter((m) => hasMissingPrice(m.asset) && m.asset.cmcSlug);
+
+      if (cmcCandidates.length > 0) {
+        // Rate limit: max 1 CMC call per hour, tracked via cache table
+        let shouldCall = true;
+        if (db) {
+          try {
+            const row = await db
+              .prepare("SELECT updated_at FROM cache WHERE key = 'cmc_last_fetch'")
+              .first<{ updated_at: number }>();
+            if (row && (Math.floor(Date.now() / 1000) - row.updated_at) < 3600) {
+              shouldCall = false;
+            }
+          } catch {
+            // Rate-limit check failed — proceed with call (safe fallback)
+          }
+        }
+
+        if (shouldCall) {
+          try {
+            const slugs = cmcCandidates.map((m) => m.asset.cmcSlug!).join(",");
+            const cmcRes = await fetch(
+              `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?slug=${slugs}`,
+              {
+                headers: {
+                  "X-CMC_PRO_API_KEY": cmcApiKey,
+                  "Accept": "application/json",
+                  "User-Agent": USER_AGENT,
+                },
+                signal: AbortSignal.timeout(10_000),
+              }
+            );
+
+            if (cmcRes.ok) {
+              const cmcData = (await cmcRes.json()) as {
+                data: Record<string, {
+                  slug: string;
+                  quote: { USD: { price: number; market_cap: number } };
+                }>;
+              };
+
+              // Build slug → CMC entry map (response is keyed by numeric CMC ID)
+              const bySlug = new Map<string, { price: number; marketCap: number }>();
+              for (const entry of Object.values(cmcData.data)) {
+                const usd = entry.quote?.USD;
+                if (usd?.price != null) {
+                  bySlug.set(entry.slug, { price: usd.price, marketCap: usd.market_cap ?? 0 });
+                }
+              }
+
+              for (const m of cmcCandidates) {
+                const cmcEntry = bySlug.get(m.asset.cmcSlug!);
+                if (!cmcEntry) continue;
+                if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined)) {
+                  assets[m.index].price = cmcEntry.price;
+                  if (cmcEntry.marketCap > 0) {
+                    (assets[m.index] as Record<string, unknown>)._cmcMarketCap = cmcEntry.marketCap;
+                  }
+                  passCmcCount++;
+                }
+              }
+
+              // Update rate-limit timestamp
+              if (db) {
+                try {
+                  await db
+                    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('cmc_last_fetch', '1', ?)")
+                    .bind(Math.floor(Date.now() / 1000))
+                    .run();
+                } catch {
+                  // Non-blocking
+                }
+              }
+            } else {
+              console.warn(`[enrich] CMC API returned ${cmcRes.status}`);
+            }
+          } catch (err) {
+            console.warn("[enrich] CMC API call failed:", err);
+          }
+        }
+      }
+    }
+
     // ── Pass 4: DexScreener search API (best-effort fallback) ──
     const stillMissing = assets
       .map((a, i) => ({ asset: a, index: i }))
@@ -281,21 +381,22 @@ export async function enrichMissingPrices(assets: PeggedAsset[]): Promise<Enrich
 
     // ── Summary log ──
     const finalMissing = assets.filter(hasMissingPrice).length;
-    const totalEnriched = pass1Count + pass1bCount + pass2Count + pass3Count + pass4Count;
+    const totalEnriched = pass1Count + pass1bCount + pass2Count + pass3Count + passCmcCount + pass4Count;
     if (totalMissing > 0) {
       console.log(
         `[enrich] ${totalMissing} assets missing prices → ` +
         `Pass 1: +${pass1Count}, Pass 1b (multi-chain): +${pass1bCount}, ` +
         `Pass 2: +${pass2Count}, Pass 3: +${pass3Count}, ` +
+        `Pass CMC: +${passCmcCount}, ` +
         `Pass 4 (DexScreener): +${pass4Count}, still missing: ${finalMissing}`
       );
     }
     if (totalEnriched > 0) {
       console.log(`[sync-stablecoins] Enriched prices for ${totalEnriched} assets`);
     }
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, pass4: pass4Count, finalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, passCmc: passCmcCount, pass4: pass4Count, finalMissing };
   } catch (err) {
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
-    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, pass4: pass4Count, finalMissing: totalMissing };
+    return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, passCmc: passCmcCount, pass4: pass4Count, finalMissing: totalMissing };
   }
 }

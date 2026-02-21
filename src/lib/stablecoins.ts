@@ -9,6 +9,7 @@ interface StablecoinOpts {
   pegMechanism?: string;
   commodityOunces?: number;
   geckoId?: string;
+  cmcSlug?: string;
   protocolSlug?: string;
   proofOfReserves?: import("./types").ProofOfReserves;
   links?: import("./types").StablecoinLink[];
@@ -18,7 +19,7 @@ interface StablecoinOpts {
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -1800,26 +1801,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.apacx.io/PHT" },
     ],
   }),
-  other("281", "Mexican Peso Tether", "MXNT", "rwa-backed", "centralized", "MXN", {
-    geckoId: "mexican-peso-tether",
-    collateral: "Mexican peso reserves held by Tether",
+  other("116", "Tether MXNt", "MXNT", "rwa-backed", "centralized", "MXN", {
+    cmcSlug: "tether-mxnt",
+    collateral: "Mexican peso reserves held 1:1",
     pegMechanism: "Direct 1:1 redemption for MXN through Tether",
     links: [
-      { label: "Website", url: "https://tether.to/" },
+      { label: "Website", url: "https://tether.to/en/currencies/mxnt/" },
     ],
   }),
   other("131", "UAHT", "UAHT", "rwa-backed", "centralized", "UAH", {
     collateral: "Ukrainian hryvnia reserves",
     pegMechanism: "Direct 1:1 redemption for UAH through issuer",
-  }),
-  other("133", "NARS", "NARS", "rwa-backed", "centralized", "ARS", {
-    geckoId: "num-ars",
-    collateral: "Argentine peso reserves held by Num Finance",
-    pegMechanism: "Direct 1:1 redemption for ARS through Num Finance",
-    links: [
-      { label: "Website", url: "https://num.finance/" },
-    ],
-    jurisdiction: { country: "Argentina" },
   }),
 ];
 
