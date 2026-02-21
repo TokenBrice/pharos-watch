@@ -49,6 +49,8 @@ const CRON_INTERVALS: Record<string, number> = {
   "sync-usds-status": 900,
   "sync-bluechip": 900,
   "sync-fx-rates": 7200,
+  "daily-digest": 7200,
+  "snapshot-supply": 300,
 };
 
 // --- Handler ---
