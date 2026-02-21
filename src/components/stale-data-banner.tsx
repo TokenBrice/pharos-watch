@@ -2,7 +2,7 @@
 
 /**
  * Warns users when data from any critical query exceeds 2x its staleTime.
- * Usage: <StaleDataBanner queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_5MIN }]} />
+ * Usage: <StaleDataBanner queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]} />
  */
 export interface StaleQuery {
   label: string;

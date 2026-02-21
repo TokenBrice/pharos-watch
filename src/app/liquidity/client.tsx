@@ -9,7 +9,7 @@ import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { CRON_10MIN } from "@/hooks/use-api-query";
+import { CRON_15MIN } from "@/hooks/use-api-query";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
@@ -137,7 +137,7 @@ export function LiquidityClient() {
       )}
       {!isError && (
         <StaleDataBanner
-          queries={[{ label: "Liquidity", dataUpdatedAt, staleTime: CRON_10MIN }]}
+          queries={[{ label: "Liquidity", dataUpdatedAt, staleTime: CRON_15MIN }]}
         />
       )}
 

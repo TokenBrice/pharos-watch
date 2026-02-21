@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteDescription = `Track ${TRACKED_STABLECOINS.length} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOINS.length} dead stablecoins — updated every 5 minutes.`;
+const siteDescription = `Track ${TRACKED_STABLECOINS.length} stablecoins across ${PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP, gold, silver & more). Market caps, peg deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of ${DEAD_STABLECOINS.length} dead stablecoins — updated every 15 minutes.`;
 
 export const viewport: Viewport = {
   width: "device-width",

@@ -109,16 +109,26 @@ const worker = {
     const cron = event.cron;
 
     switch (cron) {
-      case "*/5 * * * *": {
+      case "*/15 * * * *": {
         ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db, env.CMC_API_KEY)));
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
-        // Snapshot twice daily (midnight + noon UTC). Runs on every */5 tick near
-        // those hours so a delayed cron still captures the snapshot. INSERT OR IGNORE
-        // in snapshotSupply prevents duplicates for the same UTC date.
+        ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
+        ctx.waitUntil(
+          logCronRun(db, "sync-blacklist", () =>
+            syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
+          )
+        );
+        ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
+        ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
+        // Snapshot twice daily (midnight + noon UTC). On */15, only :00 hits
+        // those hours. INSERT OR IGNORE in snapshotSupply prevents duplicates.
         const scheduled = new Date(event.scheduledTime);
         const hour = scheduled.getUTCHours();
-        if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() <= 10) {
+        if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() === 0) {
           ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
+        }
+        if (scheduled.getMinutes() % 30 === 0) {
+          ctx.waitUntil(logCronRun(db, "sync-onchain-supply", () => syncOnchainSupply(db, env.TRONGRID_API_KEY ?? null)));
         }
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {
@@ -127,28 +137,13 @@ const worker = {
             if (cached) {
               const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
               if (age > 1800) {
-                await sendAlert("Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <10min)`);
+                await sendAlert("Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <20min)`);
               }
             }
           } catch { /* non-blocking */ }
         })());
         break;
       }
-      case "*/10 * * * *":
-        ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
-        if (new Date(event.scheduledTime).getMinutes() % 30 === 0) {
-          ctx.waitUntil(logCronRun(db, "sync-onchain-supply", () => syncOnchainSupply(db, env.TRONGRID_API_KEY ?? null)));
-        }
-        break;
-      case "*/15 * * * *":
-        ctx.waitUntil(
-          logCronRun(db, "sync-blacklist", () =>
-            syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
-          )
-        );
-        ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
-        ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
-        break;
       case "0 */2 * * *":
         ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db, env.METALS_API_KEY)));
         ctx.waitUntil(logCronRun(db, "daily-digest", () =>

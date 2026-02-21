@@ -1,8 +1,8 @@
 "use client";
 
 import type { DexLiquidityMap } from "@/lib/types";
-import { useApiQuery, CRON_10MIN } from "./use-api-query";
+import { useApiQuery, CRON_15MIN } from "./use-api-query";
 
 export function useDexLiquidity() {
-  return useApiQuery<DexLiquidityMap>(["dex-liquidity"], "/api/dex-liquidity", CRON_10MIN);
+  return useApiQuery<DexLiquidityMap>(["dex-liquidity"], "/api/dex-liquidity", CRON_15MIN);
 }

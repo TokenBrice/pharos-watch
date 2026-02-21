@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { CRON_5MIN } from "@/hooks/use-api-query";
+import { CRON_15MIN } from "@/hooks/use-api-query";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
@@ -56,7 +56,7 @@ export function PegTrackerClient() {
       )}
       {!isError && (
         <StaleDataBanner
-          queries={[{ label: "Peg data", dataUpdatedAt, staleTime: CRON_5MIN }]}
+          queries={[{ label: "Peg data", dataUpdatedAt, staleTime: CRON_15MIN }]}
         />
       )}
 

@@ -18,7 +18,7 @@ import { PegTrackerSummary } from "@/components/peg-tracker-summary";
 import { LiquiditySummary } from "@/components/liquidity-summary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
-import { CRON_5MIN } from "@/hooks/use-api-query";
+import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { derivePegRates } from "@/lib/peg-rates";
@@ -57,7 +57,7 @@ export function HomepageClient() {
       )}
       {!error && (
         <StaleDataBanner
-          queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_5MIN }]}
+          queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]}
         />
       )}
 
@@ -97,7 +97,7 @@ export function HomepageClient() {
         gold, silver, and more — with honest governance classification: {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,
         {" "}{TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
         deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
-        fallen stablecoins — updated every 5 minutes.
+        fallen stablecoins — updated every 15 minutes.
       </p>
       {dataUpdatedAt > 0 && (
         <p className="text-xs text-muted-foreground text-center">

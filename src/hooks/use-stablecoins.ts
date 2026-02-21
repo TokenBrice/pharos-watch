@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { StablecoinListResponse } from "@/lib/types";
-import { useApiQuery, CRON_5MIN, CRON_1H } from "./use-api-query";
+import { useApiQuery, CRON_15MIN, CRON_1H } from "./use-api-query";
 
 export interface SupplyHistoryPoint {
   date: number;
@@ -11,7 +11,7 @@ export interface SupplyHistoryPoint {
 }
 
 export function useStablecoins() {
-  return useApiQuery<StablecoinListResponse>(["stablecoins"], "/api/stablecoins", CRON_5MIN);
+  return useApiQuery<StablecoinListResponse>(["stablecoins"], "/api/stablecoins", CRON_15MIN);
 }
 
 /** DefiLlama stablecoin detail shape (tokens array) */

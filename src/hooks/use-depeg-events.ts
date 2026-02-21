@@ -1,7 +1,7 @@
 "use client";
 
 import type { DepegEvent } from "@/lib/types";
-import { useApiQuery, CRON_5MIN } from "./use-api-query";
+import { useApiQuery, CRON_15MIN } from "./use-api-query";
 
 interface DepegEventsResponse {
   events: DepegEvent[];
@@ -13,6 +13,6 @@ export function useDepegEvents(stablecoinId?: string) {
   return useApiQuery<DepegEventsResponse>(
     ["depeg-events", stablecoinId],
     `/api/depeg-events${params}`,
-    CRON_5MIN
+    CRON_15MIN
   );
 }

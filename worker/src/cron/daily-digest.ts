@@ -10,13 +10,13 @@ const SYSTEM_PROMPT =
   "Your voice is dry, sharp, and memorable — like a financial columnist who's seen too many death spirals to be impressed. " +
   "Think sardonic wit meets hard data. You can be funny, but the humor comes from precision, not clowning. " +
   "You write 2-4 sentences max. Every sentence must contain a specific number or coin name from the data. " +
-  "No emojis, no clickbait, no hedging, no exclamation marks. " +
+  "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
   "Examples of good tone: " +
   "\"$311B in stablecoins and JPYC is still 16% off peg like it's a lifestyle choice.\" " +
   "\"Thirty-four addresses got frozen today. Compliance never sleeps, and neither does Tether's blacklist bot.\" " +
-  "\"The sector added $2B this week. Quiet growth, no casualties — enjoy it while it lasts.\"";
+  "\"The sector added $2B this week. Quiet growth, no casualties. Enjoy it while it lasts.\"";
 
 interface DigestInputData {
   totalMcapUsd: number;

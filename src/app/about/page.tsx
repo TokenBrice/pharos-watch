@@ -78,7 +78,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 5 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, CoinMarketCap as a fallback for price and market cap data not covered by DefiLlama or CoinGecko, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
+                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 15 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, CoinMarketCap as a fallback for price and market cap data not covered by DefiLlama or CoinGecko, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
                 },
               },
             ],
@@ -267,7 +267,7 @@ export default function AboutPage() {
             To reduce false depeg alerts from single-source API glitches, Pharos cross-validates primary prices
             (from DefiLlama) against <span className="text-foreground font-medium">DEX-implied prices</span> derived
             from Curve StableSwap pools. This data comes at zero additional API cost — Curve pool data is already
-            fetched every <span className="font-mono">10 minutes</span> for the liquidity score, and each pool
+            fetched every <span className="font-mono">15 minutes</span> for the liquidity score, and each pool
             response includes per-token USD prices.
           </p>
           <p className="text-foreground font-medium pt-2">How It Works</p>
@@ -461,7 +461,7 @@ export default function AboutPage() {
           <ul className="space-y-3">
             <li>
               <span className="text-foreground font-medium">DefiLlama</span> — primary source for stablecoin supply, price, chain distribution, and historical data.
-              Refreshed every <span className="font-mono">5 minutes</span>.
+              Refreshed every <span className="font-mono">15 minutes</span>.
             </li>
             <li>
               <span className="text-foreground font-medium">CoinGecko</span> — stablecoin logos, gold-pegged token data (XAUT, PAXG are not in DefiLlama&apos;s stablecoin API), fallback price enrichment for assets DefiLlama misses, and supply overrides for coins with corrupted upstream data.
@@ -515,11 +515,11 @@ export default function AboutPage() {
               <Link href="/liquidity" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
                 Liquidity Score
               </Link>.
-              Refreshed every <span className="font-mono">10 minutes</span>.
+              Refreshed every <span className="font-mono">15 minutes</span>.
             </li>
             <li>
               <span className="text-foreground font-medium">Curve Finance API</span> — pool-level amplification coefficients (A-factor) and per-token balances for quality-adjusted TVL weighting and imbalance detection.
-              Refreshed every <span className="font-mono">10 minutes</span>.
+              Refreshed every <span className="font-mono">15 minutes</span>.
             </li>
           </ul>
           <p className="pt-1">

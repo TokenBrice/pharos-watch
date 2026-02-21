@@ -4,8 +4,6 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
 /** Cron interval constants — staleTime = cron interval, refetchInterval = 2x. */
-export const CRON_5MIN = 5 * 60_000;
-export const CRON_10MIN = 10 * 60_000;
 export const CRON_15MIN = 15 * 60_000;
 export const CRON_1H = 60 * 60_000;
 export const CRON_2H = 2 * 60 * 60_000;

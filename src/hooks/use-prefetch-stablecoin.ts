@@ -3,7 +3,7 @@
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { CRON_5MIN, CRON_1H } from "@/hooks/use-api-query";
+import { CRON_15MIN, CRON_1H } from "@/hooks/use-api-query";
 
 const DEBOUNCE_MS = 100;
 
@@ -30,7 +30,7 @@ export function usePrefetchStablecoin() {
             apiFetch(
               `/api/depeg-events?stablecoin=${encodeURIComponent(coinId)}`
             ),
-          staleTime: CRON_5MIN,
+          staleTime: CRON_15MIN,
         });
 
         queryClient.prefetchQuery({

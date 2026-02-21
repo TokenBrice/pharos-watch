@@ -41,16 +41,16 @@ interface StatusResponse {
 // --- Config ---
 
 const CRON_INTERVALS: Record<string, number> = {
-  "sync-stablecoins": 300,
-  "sync-stablecoin-charts": 300,
+  "sync-stablecoins": 900,
+  "sync-stablecoin-charts": 900,
   "sync-blacklist": 900,
-  "sync-dex-liquidity": 600,
+  "sync-dex-liquidity": 900,
   "sync-onchain-supply": 1800,
   "sync-usds-status": 900,
   "sync-bluechip": 900,
   "sync-fx-rates": 7200,
   "daily-digest": 7200,
-  "snapshot-supply": 300,
+  "snapshot-supply": 900,
 };
 
 // --- Handler ---
