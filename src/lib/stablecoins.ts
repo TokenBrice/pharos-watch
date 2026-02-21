@@ -153,6 +153,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x6c3ea9036406852006290770bedfcaba0e23a0e8", decimals: 6 },
     ],
+    supplyMethod: { type: "exclude" }, // Significant Solana/Arbitrum supply not coverable on-chain — use DefiLlama
   }),
   usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
     collateral: "Delta-neutral positions using BTC, ETH, and stablecoins via institutional custody",

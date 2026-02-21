@@ -2,6 +2,7 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stable
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache, setCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
@@ -528,6 +529,7 @@ function extractDepegEvents(
   for (const point of prices) {
     const { timestamp, price } = point;
     if (price <= 0) continue;
+    if (!isReasonablePrice(price, pegType)) continue;
 
     if (supplyByDate.size > 0) {
       const supply = findNearestSupply(supplyByDate, timestamp);
