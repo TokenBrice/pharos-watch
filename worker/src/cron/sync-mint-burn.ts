@@ -127,6 +127,7 @@ export async function syncMintBurn(
   db: D1Database,
   etherscanApiKey: string | null
 ): Promise<{ itemCount: number; metadata: string }> {
+  console.log(`[sync-mint-burn] Starting sync (${MINT_BURN_CONFIGS.length} configs)`);
   const rateLimit = createRateLimiter(4);
   const budget = createBudget(900);
   let totalNewEvents = 0;
@@ -149,9 +150,14 @@ export async function syncMintBurn(
   const uniqueChainIds = new Set(MINT_BURN_CONFIGS.map((c) => c.chain.evmChainId).filter((id): id is number => id != null));
   for (const evmChainId of uniqueChainIds) {
     if (budgetExhausted(budget)) break;
-    const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, rateLimit, budget);
-    if (head) chainHeadCache.set(evmChainId, head);
+    try {
+      const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, rateLimit, budget);
+      if (head) chainHeadCache.set(evmChainId, head);
+    } catch (err) {
+      console.warn(`[sync-mint-burn] Failed to get head for chain ${evmChainId}:`, err);
+    }
   }
+  console.log(`[sync-mint-burn] Chain heads: ${JSON.stringify(Object.fromEntries(chainHeadCache))}`);
 
   for (let i = 0; i < configStates.length; i++) {
     const { config, configKey, lastBlock } = configStates[i];

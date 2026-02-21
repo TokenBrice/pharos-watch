@@ -87,12 +87,13 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
   // USDC — 6 native chains (Circle mints directly via CCTP)
   // Deploy blocks are the block where the first Mint/Burn event occurs (not contract creation)
   { chain: ETHEREUM,  stablecoin: "USDC", contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6, events: USDC_EVENTS, deployBlock: 6_082_465 },
-  { chain: ARBITRUM,  stablecoin: "USDC", contractAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6, events: USDC_EVENTS, deployBlock: 101_000_000 },
-  // Base and Optimism require paid Etherscan API plan — re-enable when available
+  // Arbitrum: too many blocks to backfill with free API tier — re-enable when caught up or with paid plan
+  // { chain: ARBITRUM,  stablecoin: "USDC", contractAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6, events: USDC_EVENTS, deployBlock: 101_000_000 },
+  // Base, Optimism, Polygon, Avalanche require paid Etherscan API plan — re-enable when available
   // { chain: BASE,      stablecoin: "USDC", contractAddress: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6, events: USDC_EVENTS, deployBlock: 3_040_000 },
   // { chain: OPTIMISM,  stablecoin: "USDC", contractAddress: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6, events: USDC_EVENTS, deployBlock: 105_000_000 },
-  { chain: POLYGON,   stablecoin: "USDC", contractAddress: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6, events: USDC_EVENTS, deployBlock: 47_000_000 },
-  { chain: AVALANCHE, stablecoin: "USDC", contractAddress: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6, events: USDC_EVENTS, deployBlock: 6_700_000 },
+  // { chain: POLYGON,   stablecoin: "USDC", contractAddress: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6, events: USDC_EVENTS, deployBlock: 47_000_000 },
+  // { chain: AVALANCHE, stablecoin: "USDC", contractAddress: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6, events: USDC_EVENTS, deployBlock: 6_700_000 },
 
   // USDT — Ethereum only (L2 USDT is bridged, not natively issued)
   { chain: ETHEREUM, stablecoin: "USDT", contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6, events: USDT_EVENTS, deployBlock: 4_634_748 },

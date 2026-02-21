@@ -15,7 +15,8 @@
 | `GET /api/dex-liquidity` | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID) |
 | `GET /api/dex-liquidity-history` | Per-coin historical liquidity data (`?stablecoin=ID&days=90`) |
 | `GET /api/supply-history` | Per-coin supply history (`?stablecoin=ID&days=N`) |
-| `GET /api/daily-digest` | AI-generated daily market summary |
+| `GET /api/daily-digest` | AI-generated daily market summary (latest) |
+| `GET /api/digest-archive` | All daily digests, newest-first |
 | `GET /api/health` | Worker health check |
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
@@ -41,6 +42,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
+│   ├── digest/page.tsx           # Daily digest archive
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
 │   │   └── error.tsx
@@ -71,7 +73,8 @@ src/                              # Next.js frontend (static export)
 │   ├── chain-overview.tsx        # Horizontal bar chart (homepage)
 │   ├── market-highlights.tsx     # Biggest depegs + fastest movers
 │   ├── market-pulse.tsx          # AI daily digest display
-│   ├── daily-digest.tsx          # Daily digest card component
+│   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
+│   ├── digest-archive-client.tsx # Digest archive list (client component)
 │   ├── price-chart.tsx           # TradingView LW chart (detail page)
 │   ├── supply-chart.tsx          # Recharts area chart (detail page)
 │   ├── chain-distribution.tsx    # Recharts pie chart (detail page)
@@ -131,6 +134,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-dex-liquidity-history.ts # GET /api/dex-liquidity-history
 │   ├── use-usds-status.ts        # GET /api/usds-status
 │   ├── use-daily-digest.ts       # GET /api/daily-digest
+│   ├── use-digest-archive.ts    # GET /api/digest-archive
 │   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
@@ -177,7 +181,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-fx-rates.ts      # ECB + metals.dev → D1 FX/commodity rates (2h, metals daily)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
     │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (15min)
-    │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (2h)
+    │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (2h, accumulates indefinitely)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
@@ -189,6 +193,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── usds-status.ts        # GET /api/usds-status
     │   ├── bluechip.ts           # GET /api/bluechip-ratings
     │   ├── daily-digest.ts       # GET /api/daily-digest
+    │   ├── digest-archive.ts    # GET /api/digest-archive
     │   ├── dex-liquidity.ts      # GET /api/dex-liquidity (includes HHI, trends)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health

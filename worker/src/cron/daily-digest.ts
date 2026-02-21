@@ -10,6 +10,8 @@ const SYSTEM_PROMPT =
   "Your voice is dry, sharp, and memorable — like a financial columnist who's seen too many death spirals to be impressed. " +
   "Think sardonic wit meets hard data. You can be funny, but the humor comes from precision, not clowning. " +
   "You write 2-4 sentences max. Every sentence must contain a specific number or coin name from the data. " +
+  "Prioritize by market impact: a 50 bps wobble on USDT matters more than a 2500 bps depeg on an $18M coin. " +
+  "Small coins can be mentioned for color, but lead with what moves money. " +
   "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
@@ -59,7 +61,7 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
   if (recentDigests.length > 0) {
     lines.push(
       "",
-      "Recent digests (do NOT repeat these angles or phrasings):",
+      "Recent digests (use fresh phrasing, but DO keep covering ongoing stories — a depeg entering day 3 is bigger news, not old news):",
       ...recentDigests.map((d) => `- "${d}"`),
     );
   }

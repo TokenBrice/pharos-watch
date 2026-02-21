@@ -124,7 +124,7 @@ export async function fetchEvmLogsForTopic(
   budget.count++;
   const json = await rateLimit(async () => {
     const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, {
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) {
       console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${res.status}`);
