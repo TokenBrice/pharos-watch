@@ -4,7 +4,8 @@ import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = Math.min(Math.max(parseInt(params.get("limit") ?? "") || 100, 1), 1000);
+  const rawLimit = params.get("limit");
+  const limit = rawLimit !== null ? Math.max(parseInt(rawLimit, 10) || 0, 0) : 0;
   const offset = Math.max(parseInt(params.get("offset") ?? "0", 10) || 0, 0);
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");

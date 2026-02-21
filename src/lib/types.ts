@@ -104,38 +104,34 @@ export type FilterTag =
   | "decentralized"
   | "rwa-backed"
   | "crypto-backed"
-  | "algorithmic"
-  | "yield-bearing"
-  | "rwa";
+  | "algorithmic";
 
 /** Tags that fall under the "Other Peg" umbrella filter on the homepage */
-export const OTHER_PEG_TAGS: FilterTag[] = ["chf-peg", "gbp-peg", "brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "zar-peg", "silver-peg", "var-peg", "other-peg"];
+export const OTHER_PEG_TAGS: FilterTag[] = ["brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "zar-peg", "silver-peg", "var-peg", "other-peg"];
 
 export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
-  "usd-peg": "USD Peg",
-  "eur-peg": "EUR Peg",
-  "gold-peg": "Gold Peg",
-  "chf-peg": "CHF Peg",
-  "gbp-peg": "GBP Peg",
-  "brl-peg": "BRL Peg",
-  "rub-peg": "RUB Peg",
-  "jpy-peg": "JPY Peg",
-  "idr-peg": "IDR Peg",
-  "sgd-peg": "SGD Peg",
-  "try-peg": "TRY Peg",
-  "aud-peg": "AUD Peg",
-  "zar-peg": "ZAR Peg",
-  "silver-peg": "Silver Peg",
-  "var-peg": "CPI Peg",
-  "other-peg": "Other Peg",
+  "usd-peg": "USD",
+  "eur-peg": "EUR",
+  "gold-peg": "Gold",
+  "chf-peg": "CHF",
+  "gbp-peg": "GBP",
+  "brl-peg": "BRL",
+  "rub-peg": "RUB",
+  "jpy-peg": "JPY",
+  "idr-peg": "IDR",
+  "sgd-peg": "SGD",
+  "try-peg": "TRY",
+  "aud-peg": "AUD",
+  "zar-peg": "ZAR",
+  "silver-peg": "Silver",
+  "var-peg": "CPI",
+  "other-peg": "Other",
   centralized: "Centralized",
   "centralized-dependent": "CeFi-Dependent",
   decentralized: "Decentralized",
   "rwa-backed": "RWA-Backed",
   "crypto-backed": "Crypto-Backed",
   algorithmic: "Algorithmic",
-  "yield-bearing": "Yield-Bearing",
-  rwa: "RWA",
 };
 
 function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
@@ -164,8 +160,6 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   tags.push(pegCurrencyToFilterTag(meta.flags.pegCurrency));
   tags.push(meta.flags.governance);
   tags.push(meta.flags.backing);
-  if (meta.flags.yieldBearing) tags.push("yield-bearing");
-  if (meta.flags.rwa) tags.push("rwa");
   return tags;
 }
 

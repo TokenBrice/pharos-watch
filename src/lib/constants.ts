@@ -8,5 +8,4 @@ export const CATEGORY_LINKS = [
   { href: "/?backing=crypto-backed", param: "backing", value: "crypto-backed", label: "Crypto-Backed" },
   { href: "/?peg=eur-peg", param: "peg", value: "eur-peg", label: "EUR Stablecoins" },
   { href: "/?peg=gold-peg", param: "peg", value: "gold-peg", label: "Gold-Backed" },
-  { href: "/?features=yield-bearing", param: "features", value: "yield-bearing", label: "Yield-Bearing" },
 ];

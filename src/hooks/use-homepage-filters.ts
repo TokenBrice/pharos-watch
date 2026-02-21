@@ -12,7 +12,7 @@ interface FilterGroup {
 export const FILTER_GROUPS: FilterGroup[] = [
   {
     label: "Peg",
-    options: ["usd-peg", "eur-peg", "gold-peg", "other-peg"],
+    options: ["usd-peg", "eur-peg", "gold-peg", "chf-peg", "gbp-peg", "other-peg"],
   },
   {
     label: "Type",
@@ -21,10 +21,6 @@ export const FILTER_GROUPS: FilterGroup[] = [
   {
     label: "Backing",
     options: ["rwa-backed", "crypto-backed", "algorithmic"],
-  },
-  {
-    label: "Features",
-    options: ["yield-bearing", "rwa"],
   },
 ];
 
