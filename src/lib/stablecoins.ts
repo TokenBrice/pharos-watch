@@ -343,17 +343,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "tron", address: "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ", decimals: 6 },
     ],
   }),
-  other("351", "Tetris Money", "RUBT", "rwa-backed", "centralized", "RUB", {
-    collateral: "Russian ruble-denominated reserves",
-    pegMechanism: "Fiat-backed RUB stablecoin",
-    links: [
-      { label: "Website", url: "https://tetris.money/en/" },
-    ],
-    jurisdiction: { country: "Russia" },
-    contracts: [
-      { chain: "ethereum", address: "0xe103f85c23577675f82438a2866c7ee3bbc9c8c8", decimals: 6 },
-    ],
-  }),
   usd("7", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
     collateral: "U.S. dollars held in escrow accounts with independent attestation",
     pegMechanism: "Direct 1:1 redemption through TrueToken/Archblock",
@@ -1781,10 +1770,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://paytrie.com/cadc" },
     ],
     jurisdiction: { country: "Canada", regulator: "FINTRAC" },
-  }),
-  other("127", "Alternity CNY", "LCNY", "crypto-backed", "decentralized", "CNY", {
-    collateral: "Crypto-collateralized positions",
-    pegMechanism: "Overcollateralized crypto-backed CNY stablecoin",
   }),
   other("299", "PHT Stablecoin", "PHT", "crypto-backed", "decentralized", "PHP", {
     geckoId: "pht-stablecoin",
