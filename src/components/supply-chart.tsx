@@ -13,15 +13,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { formatCurrency, formatSupply } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
-interface SupplyChartProps {
+interface McapChartProps {
   data: SupplyHistoryPoint[];
 }
 
-export function SupplyChart({ data }: SupplyChartProps) {
+export function McapChart({ data }: McapChartProps) {
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
@@ -29,10 +29,7 @@ export function SupplyChart({ data }: SupplyChartProps) {
       .filter((d) => d.circulatingUsd > 0)
       .map((d) => ({
         ts: d.date * 1000,
-        supply:
-          typeof d.price === "number" && d.price > 0
-            ? d.circulatingUsd / d.price
-            : d.circulatingUsd,
+        mcap: d.circulatingUsd,
       }));
   }, [data]);
 
@@ -41,12 +38,12 @@ export function SupplyChart({ data }: SupplyChartProps) {
   return (
     <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle as="h2">Circulating Supply</CardTitle>
+        <CardTitle as="h2">Market Cap</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
-          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Circulating supply chart showing ${filteredData.length} data points`}>
+          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Market cap chart showing ${filteredData.length} data points`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
               <defs>
@@ -76,10 +73,10 @@ export function SupplyChart({ data }: SupplyChartProps) {
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val: number) => formatSupply(val)}
+                tickFormatter={(val: number) => formatCurrency(val)}
               />
               <Tooltip
-                formatter={(value) => [formatSupply(Number(value)), "Supply"]}
+                formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
                 labelFormatter={(label) =>
                   new Date(Number(label)).toLocaleDateString("en-US", {
                     month: "short",
@@ -91,7 +88,7 @@ export function SupplyChart({ data }: SupplyChartProps) {
               />
               <Area
                 type="monotone"
-                dataKey="supply"
+                dataKey="mcap"
                 stroke={CHART_BLUE}
                 fill="url(#supplyGradient)"
                 strokeWidth={2}
@@ -101,7 +98,7 @@ export function SupplyChart({ data }: SupplyChartProps) {
           </div>
         ) : (
           <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
-            No supply data available
+            No market cap data available
           </div>
         )}
       </CardContent>

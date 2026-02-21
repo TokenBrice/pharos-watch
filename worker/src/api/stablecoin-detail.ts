@@ -52,7 +52,7 @@ async function fetchCommodityDetail(config: {
 
   // Merge TVL history with price data to produce chart-compatible tokens array.
   // totalCirculatingUSD / totalCirculating = price (used by PriceChart)
-  // totalCirculatingUSD = market cap in USD (used by SupplyChart)
+  // totalCirculatingUSD = market cap in USD (used by McapChart)
   let tokens: Record<string, unknown>[] = [];
 
   if (tvlHistory.length > 0 && prices.length > 0) {

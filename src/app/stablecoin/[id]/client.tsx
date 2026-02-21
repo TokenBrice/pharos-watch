@@ -12,7 +12,7 @@ import { computePegScoreWithWindow } from "@/lib/peg-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { SupplyChart } from "@/components/supply-chart";
+import { McapChart } from "@/components/supply-chart";
 import { DepegHistory } from "@/components/depeg-history";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { MechanismCard } from "@/components/mechanism-card";
@@ -181,7 +181,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
         <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
       </div>
 
-      <SupplyChart data={supplyHistory} />
+      <McapChart data={supplyHistory} />
 
 
       {meta && (
