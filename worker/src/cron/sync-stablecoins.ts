@@ -409,6 +409,45 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
   }
 
+  // --- Convert non-USD DefiLlama values from native currency to USD ---
+  // DL stores circulating values for non-USD pegs in native denomination
+  // (e.g., peggedRUB: 39B means 39B RUB tokens, not $39B USD).
+  // Convert to USD by multiplying by the validated price.
+  let nativeCurrencyConversions = 0;
+  for (const asset of llamaData.peggedAssets) {
+    const pegType = (asset.pegType as string) ?? "";
+    if (pegType === "peggedUSD" || pegType === "") continue;
+    // Only convert DL-sourced assets (numeric IDs); CG/commodity tokens already in USD
+    if (!/^\d+$/.test(String(asset.id))) continue;
+
+    const price = typeof asset.price === "number" && asset.price > 0 ? asset.price : null;
+    if (!price) continue;
+
+    const circ = asset.circulating as Record<string, number> | undefined;
+    if (circ) {
+      for (const key of Object.keys(circ)) {
+        if (typeof circ[key] === "number" && circ[key] > 0) {
+          circ[key] = circ[key] * price;
+        }
+      }
+    }
+
+    for (const field of ["circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"]) {
+      const prev = (asset as Record<string, unknown>)[field] as Record<string, number> | undefined;
+      if (prev) {
+        for (const key of Object.keys(prev)) {
+          if (typeof prev[key] === "number" && prev[key] > 0) {
+            prev[key] = prev[key] * price;
+          }
+        }
+      }
+    }
+    nativeCurrencyConversions++;
+  }
+  if (nativeCurrencyConversions > 0) {
+    console.log(`[sync-stablecoins] Converted ${nativeCurrencyConversions} non-USD DL coins from native currency to USD`);
+  }
+
   // --- DEX price cross-validation ---
   let dexOverrides = 0;
   let dexDivergenceWarnings = 0;
