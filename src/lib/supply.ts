@@ -13,8 +13,9 @@ export function sumPegBuckets(obj: Record<string, number> | undefined): number {
 
 /**
  * Sum circulating values across all peg buckets.
- * DefiLlama stores all circulating values in USD regardless of pegType key,
- * so no FX conversion is needed — the raw sum IS the USD market cap.
+ * DefiLlama's raw API returns native-currency amounts for non-USD coins,
+ * but sync-stablecoins.ts converts them to USD before caching, so the
+ * values we receive here are already in USD — no FX conversion needed.
  */
 export function getCirculatingRaw(c: StablecoinData): number {
   return sumPegBuckets(c.circulating);

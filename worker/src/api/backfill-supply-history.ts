@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
@@ -13,6 +13,7 @@ interface TokenEntry {
 }
 
 interface StablecoinDetail {
+  price?: number;
   tokens?: TokenEntry[];
 }
 
@@ -146,17 +147,45 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         continue;
       }
 
-      let detail: StablecoinDetail | null = null;
-      try {
-        const res = await fetch(
+      // Determine if this coin needs native→USD conversion
+      const isUsd = meta.flags.pegCurrency === "USD";
+      const needsConversion = !isUsd;
+      const geckoId = meta.geckoId ?? TRACKED_META_BY_ID.get(meta.id)?.geckoId;
+
+      // Fetch DL detail + historical prices (for non-USD coins) in parallel
+      const fetches: Promise<Response>[] = [
+        fetch(
           `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(meta.id)}`,
           { headers: { "User-Agent": USER_AGENT } },
+        ),
+      ];
+      if (needsConversion && geckoId) {
+        fetches.push(
+          fetch(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=2000`, {
+            headers: { "User-Agent": USER_AGENT },
+          }),
         );
-        if (!res.ok) {
-          errors.push(`${meta.symbol}: DL returned ${res.status}`);
+      }
+
+      let detail: StablecoinDetail | null = null;
+      let historicalPrices: { timestamp: number; price: number }[] = [];
+      try {
+        const responses = await Promise.all(fetches);
+        const detailRes = responses[0];
+        if (!detailRes.ok) {
+          errors.push(`${meta.symbol}: DL returned ${detailRes.status}`);
           continue;
         }
-        detail = (await res.json()) as StablecoinDetail;
+        detail = (await detailRes.json()) as StablecoinDetail;
+
+        // Parse historical prices if fetched
+        if (responses[1]?.ok) {
+          const priceData = (await responses[1].json()) as {
+            coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
+          };
+          historicalPrices = priceData.coins?.[`coingecko:${geckoId}`]?.prices ?? [];
+          historicalPrices.sort((a, b) => a.timestamp - b.timestamp);
+        }
       } catch (err) {
         errors.push(`${meta.symbol}: fetch failed — ${err}`);
         continue;
@@ -168,28 +197,56 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         continue;
       }
 
+      // For non-USD coins without geckoId, fall back to DL's current price
+      const fallbackPrice = (needsConversion && !geckoId && detail?.price) ? detail.price : null;
+      if (needsConversion && !geckoId) {
+        if (fallbackPrice) {
+          console.warn(`[backfill] ${meta.symbol}: no geckoId, using DL current price $${fallbackPrice} as constant`);
+        } else {
+          errors.push(`${meta.symbol}: non-USD coin with no geckoId and no DL price — skipping`);
+          continue;
+        }
+      }
+
+      function findHistoricalPrice(date: number): number | null {
+        return binarySearchNearest(historicalPrices, date, (p) => p.timestamp)?.price ?? null;
+      }
+
       const stmts: D1PreparedStatement[] = [];
 
       for (const entry of tokens) {
         const circ = entry.circulating;
         if (!circ) continue;
 
-        const circulatingUsd = Object.values(circ).reduce(
+        // Sum across all peg buckets (native currency for non-USD, USD for USD coins)
+        const rawSum = Object.values(circ).reduce(
           (sum, v) => sum + (v ?? 0),
           0,
         );
-        if (circulatingUsd <= 0) continue;
+        if (rawSum <= 0) continue;
+
+        let marketCapUsd: number;
+        let price: number | null = null;
+
+        if (needsConversion) {
+          // Non-USD: multiply native supply by USD price to get market cap
+          price = findHistoricalPrice(entry.date) ?? fallbackPrice;
+          if (!price || price <= 0) continue;
+          marketCapUsd = rawSum * price;
+        } else {
+          // USD: rawSum is already in USD
+          marketCapUsd = rawSum;
+        }
 
         // Floor to UTC midnight
-        const snapshotDate =
-          Math.floor(entry.date / 86400) * 86400;
+        const snapshotDate = Math.floor(entry.date / 86400) * 86400;
 
         stmts.push(
           db
             .prepare(
-              "INSERT OR IGNORE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+              "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
             )
-            .bind(meta.id, snapshotDate, circulatingUsd, null),
+            .bind(meta.id, snapshotDate, marketCapUsd, price),
         );
       }
 

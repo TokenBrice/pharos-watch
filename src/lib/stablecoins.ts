@@ -333,6 +333,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 21-30 ───────────────────────────────────────────────────────
   other("258", "A7A5", "A7A5", "rwa-backed", "centralized", "RUB", {
+    geckoId: "a7a5",
     collateral: "Russian ruble-denominated reserves",
     pegMechanism: "Direct redemption for RUB through issuer",
     links: [
@@ -384,6 +385,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
   eur("50", "EURC", "EURC", "rwa-backed", "centralized", {
+    geckoId: "euro-coin",
     collateral: "Euro-denominated reserves held in regulated financial institutions",
     pegMechanism: "Direct 1:1 redemption through Circle",
     proofOfReserves: { type: "independent-audit", url: "https://www.circle.com/transparency", provider: "Deloitte" },
@@ -547,6 +549,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 41-50 ───────────────────────────────────────────────────────
   other("249", "Brazilian Digital", "BRZ", "rwa-backed", "centralized", "BRL", {
+    geckoId: "brz",
     collateral: "Brazilian real-denominated reserves",
     pegMechanism: "Direct redemption for BRL through Transfero",
     links: [
@@ -694,6 +697,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
+    geckoId: "frax-price-index",
     navToken: true,
     collateral: "FRAX and algorithmic mechanisms via Frax Finance",
     pegMechanism: "Algorithmic adjustment tied to CPI; depends on FRAX which depends on USDC",
@@ -768,6 +772,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 61-70 ───────────────────────────────────────────────────────
   eur("254", "EUR CoinVertible", "EURCV", "rwa-backed", "centralized", {
+    geckoId: "societe-generale-forge-eurcv",
     collateral: "Euro-denominated bank deposits at Societe Generale",
     pegMechanism: "Direct 1:1 redemption through SG-FORGE",
     proofOfReserves: { type: "self-reported", url: "https://www.sgforge.com/product/coinvertible/", provider: "SG-FORGE" },
@@ -782,6 +787,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // USP (id 97) removed — Platypus exploited in 2023, protocol defunct (see cemetery)
   eur("147", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
+    geckoId: "anchored-coins-eur",
     collateral: "Euro-denominated reserves held in Swiss bank accounts",
     pegMechanism: "Direct 1:1 redemption through Anchored Coins",
     links: [
@@ -819,6 +825,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("325", "Eurite", "EURI", "rwa-backed", "centralized", {
+    geckoId: "eurite",
     collateral: "Euro-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through Eurite (Binance)",
     proofOfReserves: { type: "independent-audit", url: "https://www.eurite.com/" },
@@ -1041,6 +1048,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Cayman Islands" },
   }),
   eur("101", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
+    geckoId: "monerium-eur-money",
     collateral: "Euro-denominated bank deposits in licensed European institutions",
     pegMechanism: "Direct 1:1 redemption through Monerium",
     links: [
@@ -1103,6 +1111,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
+    geckoId: "ageur",
     collateral: "Crypto assets and over-collateralized positions via Angle Protocol",
     pegMechanism: "Hedging agents and standard LPs maintain EUR peg; depends on USDC/DAI liquidity",
     links: [
@@ -1140,6 +1149,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("51", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
+    geckoId: "stasis-eurs",
     collateral: "Euro-denominated reserves verified by independent auditors",
     pegMechanism: "Direct 1:1 redemption through Stasis",
     proofOfReserves: { type: "independent-audit", url: "https://stasis.net/transparency", provider: "BDO Malta" },
@@ -1417,6 +1427,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
+    geckoId: "xsgd",
     collateral: "Singapore dollar cash reserves held at DBS and Standard Chartered banks",
     pegMechanism: "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution)",
     proofOfReserves: { type: "independent-audit", url: "https://www.straitsx.com/xsgd" },
@@ -1430,6 +1441,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
+    geckoId: "gyen",
     collateral: "Japanese yen reserves held at FDIC-insured banks",
     pegMechanism: "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
     proofOfReserves: { type: "independent-audit", url: "https://stablecoin.z.com/attestation/" },
@@ -1456,6 +1468,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
+    geckoId: "novatti-australian-digital-dollar",
     collateral: "Australian dollar cash and cash equivalents held at Australian deposit-taking institutions",
     pegMechanism: "Direct 1:1 redemption for AUD through AUDC (Novatti subsidiary)",
     proofOfReserves: { type: "independent-audit", url: "https://www.audd.digital/", provider: "William Buck Audit" },
@@ -1601,6 +1614,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Additional EUR-pegged ────────────────────────────────────────────
   // EURT removed — discontinued by Tether
   eur("52", "Celo Euro", "CEUR", "algorithmic", "centralized-dependent", {
+    geckoId: "celo-euro",
     collateral: "Mento reserve containing USDC, DAI, USDT, plus BTC, ETH, and CELO (110%+ ratio)",
     pegMechanism: "Constant-product market maker arbitrage against reserve assets including centralized stablecoins",
     jurisdiction: { country: "Germany" },
@@ -1611,6 +1625,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
   // IBEUR removed — liquidity drain Dec 2023 (see cemetery)
   eur("98", "EUROe", "EUROe", "rwa-backed", "centralized", {
+    geckoId: "euroe-stablecoin",
     collateral: "Euro-denominated reserves held in regulated European institutions",
     pegMechanism: "Direct 1:1 redemption through Membrane Finance (now Paxos-backed)",
     proofOfReserves: { type: "independent-audit", url: "https://www.euroe.com/transparency-and-regulation", provider: "KPMG" },
@@ -1623,6 +1638,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("158", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
+    geckoId: "vnx-euro",
     collateral: "Euro-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through VNX",
     proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/" },
@@ -1636,6 +1652,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("239", "StablR Euro", "EURR", "rwa-backed", "centralized", {
+    geckoId: "stablr-euro",
     collateral: "Euro-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through StablR",
     proofOfReserves: { type: "real-time", url: "https://www.stablr.com/proof-of-reserve", provider: "The Network Firm" },
@@ -1649,6 +1666,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("247", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
+    geckoId: "schuman-europ",
     collateral: "Euro-denominated reserves under French regulatory oversight",
     pegMechanism: "Direct 1:1 redemption through Schuman Financial",
     proofOfReserves: { type: "independent-audit", url: "https://schuman.io/reserve-audits/", provider: "KPMG" },
@@ -1674,6 +1692,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("319", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
+    geckoId: "allunity-eur",
     collateral: "Euro-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through AllUnity",
     links: [
@@ -1701,6 +1720,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional CHF-pegged ────────────────────────────────────────────
   other("157", "VNX Swiss Franc", "VCHF", "rwa-backed", "centralized", "CHF", {
+    geckoId: "vnx-swiss-franc",
     collateral: "CHF-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through VNX",
     proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/" },
@@ -1716,6 +1736,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── GBP-pegged ───────────────────────────────────────────────────────
   other("292", "VNX British Pound", "VGBP", "rwa-backed", "centralized", "GBP", {
+    geckoId: "vnx-british-pound",
     collateral: "GBP-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through VNX",
     proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/" },
@@ -1729,6 +1750,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("317", "Tokenised GBP", "tGBP", "rwa-backed", "centralized", "GBP", {
+    geckoId: "tokenised-gbp",
     collateral: "GBP-denominated reserves",
     pegMechanism: "Direct 1:1 redemption through issuer",
     links: [
@@ -1754,6 +1776,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
+    geckoId: "international-stable-currency",
     navToken: true,
     collateral: "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
     pegMechanism: "RWA-indexed basket tracking purchasing power; price appreciates over time",

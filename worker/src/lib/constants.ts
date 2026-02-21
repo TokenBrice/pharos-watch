@@ -38,7 +38,6 @@ export const TRON_BURN_ADDRESS = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";
 
 /** Coins whose supply must be overridden from on-chain data (DL list endpoint is broken) */
 export const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
-  { llamaId: "258", geckoId: "a7a5", pegKey: "peggedRUB", force: true }, // DL data unreliable — CG price only, supply from on-chain
   { llamaId: "280", geckoId: "cnh-tether", pegKey: "peggedCNY" }, // DL list API reports 0 circulating
 ];
 
