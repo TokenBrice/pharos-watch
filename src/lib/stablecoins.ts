@@ -1453,6 +1453,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("300", "BiLira", "TRYB", "rwa-backed", "centralized", "TRY", {
+    geckoId: "bilira",
     collateral: "Turkish lira reserves held in Turkish bank accounts",
     pegMechanism: "Direct 1:1 redemption for TRY through BiLira",
     links: [
@@ -1802,7 +1803,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.apacx.io/PHT" },
     ],
   }),
-  other("116", "Tether MXNt", "MXNT", "rwa-backed", "centralized", "MXN", {
+  other("281", "Tether MXNt", "MXNT", "rwa-backed", "centralized", "MXN", {
     cmcSlug: "tether-mxnt",
     collateral: "Mexican peso reserves held 1:1",
     pegMechanism: "Direct 1:1 redemption for MXN through Tether",
