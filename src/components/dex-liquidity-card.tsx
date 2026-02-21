@@ -213,7 +213,8 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
               width={60}
             />
             <Tooltip
-              contentStyle={{ fontSize: 12 }}
+              contentStyle={{ fontSize: 12, backgroundColor: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-card-foreground)" }}
+              labelStyle={{ color: "var(--color-card-foreground)" }}
               formatter={(value: number | undefined) => [formatCurrency(value ?? 0), "TVL"]}
             />
             <Area

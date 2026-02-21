@@ -28,7 +28,7 @@ async function backfillCommodity(
     fetch(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
       headers: { "User-Agent": USER_AGENT },
     }),
-    fetch(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=0&span=2000`, {
+    fetch(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=0&span=500`, {
       headers: { "User-Agent": USER_AGENT },
     }),
   ]);
@@ -161,7 +161,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       ];
       if (needsConversion && geckoId) {
         fetches.push(
-          fetch(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=2000`, {
+          fetch(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=500`, {
             headers: { "User-Agent": USER_AGENT },
           }),
         );
@@ -197,13 +197,15 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         continue;
       }
 
-      // For non-USD coins without geckoId, fall back to DL's current price
-      const fallbackPrice = (needsConversion && !geckoId && detail?.price) ? detail.price : null;
-      if (needsConversion && !geckoId) {
+      // For non-USD coins: fall back to DL's current price when historical prices unavailable
+      const hasHistoricalPrices = historicalPrices.length > 0;
+      const fallbackPrice = (needsConversion && detail?.price) ? detail.price : null;
+      if (needsConversion && !hasHistoricalPrices) {
         if (fallbackPrice) {
-          console.warn(`[backfill] ${meta.symbol}: no geckoId, using DL current price $${fallbackPrice} as constant`);
+          const reason = !geckoId ? "no geckoId" : "price API returned no data";
+          console.warn(`[backfill] ${meta.symbol}: ${reason}, using DL current price $${fallbackPrice} as constant`);
         } else {
-          errors.push(`${meta.symbol}: non-USD coin with no geckoId and no DL price — skipping`);
+          errors.push(`${meta.symbol}: non-USD coin with no price data available — skipping`);
           continue;
         }
       }
