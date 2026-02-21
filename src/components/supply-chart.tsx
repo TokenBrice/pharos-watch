@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatSupply } from "@/lib/format";
 import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
@@ -29,7 +29,10 @@ export function SupplyChart({ data }: SupplyChartProps) {
       .filter((d) => d.circulatingUsd > 0)
       .map((d) => ({
         ts: d.date * 1000,
-        supply: d.circulatingUsd,
+        supply:
+          typeof d.price === "number" && d.price > 0
+            ? d.circulatingUsd / d.price
+            : d.circulatingUsd,
       }));
   }, [data]);
 
@@ -73,10 +76,10 @@ export function SupplyChart({ data }: SupplyChartProps) {
                 tick={{ fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val: number) => formatCurrency(val, 0)}
+                tickFormatter={(val: number) => formatSupply(val)}
               />
               <Tooltip
-                formatter={(value) => [formatCurrency(Number(value)), "Supply"]}
+                formatter={(value) => [formatSupply(Number(value)), "Supply"]}
                 labelFormatter={(label) =>
                   new Date(Number(label)).toLocaleDateString("en-US", {
                     month: "short",

@@ -12,7 +12,7 @@ interface FilterGroup {
 export const FILTER_GROUPS: FilterGroup[] = [
   {
     label: "Peg",
-    options: ["usd-peg", "eur-peg", "gold-peg", "chf-peg", "gbp-peg", "other-peg"],
+    options: ["usd-peg", "gold-peg", "eur-peg", "chf-peg", "gbp-peg", "other-peg"],
   },
   {
     label: "Type",
