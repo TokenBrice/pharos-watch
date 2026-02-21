@@ -52,7 +52,9 @@ export default function HomePage() {
           fallen stablecoins — updated every 5 minutes.
         </p>
       </div>
-      <DailyDigest />
+      <div className="mb-6">
+        <DailyDigest />
+      </div>
       <Suspense fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
           <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />

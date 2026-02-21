@@ -1783,6 +1783,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   other("280", "Tether CNH", "CNHT", "rwa-backed", "centralized", "CNY", {
     geckoId: "cnh-tether",
+    cmcSlug: "tether-cnh",
     collateral: "Offshore Chinese yuan (CNH) reserves held by Tether",
     pegMechanism: "Direct 1:1 redemption for CNH through Tether",
     links: [
