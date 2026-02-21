@@ -284,6 +284,11 @@ async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcap
         if (mcap && mcap > 0) {
           forcedMcaps.set(override.llamaId, { mcap, pegKey: override.pegKey });
         }
+        // Clear DL's historical supply (unreliable for force-override coins)
+        // so supply_history fill-in provides correct values
+        (asset as Record<string, unknown>).circulatingPrevDay = null;
+        (asset as Record<string, unknown>).circulatingPrevWeek = null;
+        (asset as Record<string, unknown>).circulatingPrevMonth = null;
         console.log(`[sync-stablecoins] Price-only override for ${asset.symbol}: price $${price.toFixed(6)} (supply deferred to on-chain)`);
         continue;
       }
