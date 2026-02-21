@@ -1782,15 +1782,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Canada", regulator: "FINTRAC" },
   }),
-  other("280", "Tether CNH", "CNHT", "rwa-backed", "centralized", "CNY", {
-    geckoId: "cnh-tether",
-    cmcSlug: "tether-cnh",
-    collateral: "Offshore Chinese yuan (CNH) reserves held by Tether",
-    pegMechanism: "Direct 1:1 redemption for CNH through Tether",
-    links: [
-      { label: "Website", url: "https://tether.to/" },
-    ],
-  }),
   other("127", "Alternity CNY", "LCNY", "crypto-backed", "decentralized", "CNY", {
     collateral: "Crypto-collateralized positions",
     pegMechanism: "Overcollateralized crypto-backed CNY stablecoin",
@@ -1802,18 +1793,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.apacx.io/PHT" },
     ],
-  }),
-  other("281", "Tether MXNt", "MXNT", "rwa-backed", "centralized", "MXN", {
-    cmcSlug: "tether-mxnt",
-    collateral: "Mexican peso reserves held 1:1",
-    pegMechanism: "Direct 1:1 redemption for MXN through Tether",
-    links: [
-      { label: "Website", url: "https://tether.to/en/currencies/mxnt/" },
-    ],
-  }),
-  other("131", "UAHT", "UAHT", "rwa-backed", "centralized", "UAH", {
-    collateral: "Ukrainian hryvnia reserves",
-    pegMechanism: "Direct 1:1 redemption for UAH through issuer",
   }),
 ];
 
