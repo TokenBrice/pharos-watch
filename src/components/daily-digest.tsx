@@ -1,13 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/use-daily-digest";
 
-function formatDateline(ts: number): string {
-  return new Date(ts * 1000).toLocaleDateString("en-US", {
+export function formatDateline(ts: number): string {
+  return new Date(ts * 1000).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
@@ -37,6 +40,12 @@ export function DailyDigest() {
       <p className="text-[1.1rem] leading-relaxed text-foreground/90" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
         {data!.digest}
       </p>
+      <Link
+        href="/digest/"
+        className="inline-block mt-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+      >
+        Read all previous recaps &rarr;
+      </Link>
     </div>
   );
 }

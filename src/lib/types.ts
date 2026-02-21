@@ -472,3 +472,22 @@ export interface BlacklistEvent {
   explorerTxUrl: string;
   explorerAddressUrl: string;
 }
+
+// --- Mint/Burn tracker types ---
+
+export type MintBurnStablecoin = "USDC" | "USDT";
+export type MintBurnEventType = "mint" | "burn";
+
+export interface MintBurnEvent {
+  id: string;
+  stablecoin: MintBurnStablecoin;
+  chainId: string;
+  chainName: string;
+  eventType: MintBurnEventType;
+  amount: number;
+  address: string | null;          // Minter/burner address (null for USDT Issue/Redeem)
+  txHash: string;
+  blockNumber: number;
+  timestamp: number;               // Unix seconds
+  explorerTxUrl: string;
+}

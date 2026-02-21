@@ -1,0 +1,190 @@
+"use client";
+
+import { useMemo } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExternalLink } from "lucide-react";
+import { formatAddress, formatEventDate, formatCurrency } from "@/lib/format";
+import type { MintBurnEvent } from "@/lib/types";
+import { MINT_BURN_BADGE_STYLES, MINT_BURN_LABELS } from "@/lib/classification";
+import { SortableTableHead } from "@/components/sortable-table-head";
+import { useSort } from "@/hooks/use-sort";
+
+interface MintBurnTableProps {
+  events: MintBurnEvent[];
+  isLoading: boolean;
+  page: number;
+  pageSize: number;
+}
+
+export function MintBurnTable({ events, isLoading, page, pageSize }: MintBurnTableProps) {
+  type SortKey = "date" | "stablecoin" | "chain" | "event" | "amount";
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("date", "desc");
+  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
+
+  const sorted = useMemo(() => {
+    return [...events].sort((a, b) => {
+      let cmp = 0;
+      switch (sort.key) {
+        case "date":
+          cmp = a.timestamp - b.timestamp;
+          break;
+        case "stablecoin":
+          cmp = a.stablecoin.localeCompare(b.stablecoin);
+          break;
+        case "chain":
+          cmp = a.chainName.localeCompare(b.chainName);
+          break;
+        case "event":
+          cmp = a.eventType.localeCompare(b.eventType);
+          break;
+        case "amount":
+          cmp = a.amount - b.amount;
+          break;
+        default:
+          cmp = a.timestamp - b.timestamp;
+      }
+      return sort.direction === "asc" ? cmp : -cmp;
+    });
+  }, [events, sort]);
+
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, page, pageSize]);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-xl border overflow-hidden">
+        <div className="bg-muted/50 h-10" />
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
+            <Skeleton className="h-4 w-8 shrink-0" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-14" />
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="h-4 w-24" />
+            <div className="flex-1" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-4 shrink-0" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border table-header-sticky table-striped overflow-x-auto scroll-shadow">
+      <Table>
+        <TableHeader className="bg-muted/50">
+          <TableRow>
+            <TableHead className="w-[50px] text-right">#</TableHead>
+            <SortableTableHead
+              sortKey="date"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Date"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <SortableTableHead
+              sortKey="stablecoin"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Stablecoin"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <SortableTableHead
+              sortKey="chain"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Chain"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <SortableTableHead
+              sortKey="event"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Event"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+            />
+            <TableHead>Address</TableHead>
+            <SortableTableHead
+              sortKey="amount"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Amount"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="text-right"
+            />
+            <TableHead className="text-center">Tx</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {paged.map((evt, index) => (
+            <TableRow key={evt.id} className="hover:bg-muted/70">
+              <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
+                {(page - 1) * pageSize + index + 1}
+              </TableCell>
+              <TableCell className="whitespace-nowrap font-mono text-xs">{formatEventDate(evt.timestamp)}</TableCell>
+              <TableCell className="font-medium">{evt.stablecoin}</TableCell>
+              <TableCell>{evt.chainName}</TableCell>
+              <TableCell>
+                <Badge variant="outline" className={MINT_BURN_BADGE_STYLES[evt.eventType] ?? ""}>
+                  {MINT_BURN_LABELS[evt.eventType] ?? evt.eventType}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {evt.address ? (
+                  <span className="font-mono text-xs">
+                    {formatAddress(evt.address)}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">&mdash;</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right font-mono">
+                {formatCurrency(evt.amount)}
+              </TableCell>
+              <TableCell className="text-center">
+                <a
+                  href={evt.explorerTxUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </TableCell>
+            </TableRow>
+          ))}
+          {paged.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                No mint/burn events found
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}

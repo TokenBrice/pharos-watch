@@ -41,7 +41,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 
 ## On-Chain Supply Verification
 
-`syncOnchainSupply()` in `worker/src/cron/sync-onchain-supply.ts` runs every 30 minutes (piggybacks on the `*/10` cron at :00 and :30, to stay within Cloudflare's 4-cron-trigger limit) and queries on-chain supply for stablecoins that have contract addresses configured in `src/lib/stablecoins.ts`.
+`syncOnchainSupply()` in `worker/src/cron/sync-onchain-supply.ts` runs every 30 minutes (piggybacks on the `*/15` cron at :00 and :30) and queries on-chain supply for stablecoins that have contract addresses configured in `src/lib/stablecoins.ts`.
 
 ### Per-Token Supply Methods
 

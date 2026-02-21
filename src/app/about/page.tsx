@@ -484,7 +484,7 @@ export default function AboutPage() {
             </li>
             <li>
               <span className="text-foreground font-medium">Bluechip</span> — independent stablecoin safety ratings using the SMIDGE framework.
-              Ratings refreshed every <span className="font-mono">6 hours</span>.{" "}
+              Ratings refreshed <span className="font-mono">daily</span>.{" "}
               <a href="https://bluechip.org" target="_blank" rel="noopener noreferrer" className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
                 bluechip.org<ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>

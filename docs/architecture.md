@@ -170,13 +170,13 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
-    │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */10 cron)
-    │   ├── snapshot-supply.ts    # Periodic per-coin supply snapshots → D1 (12h, piggybacks on */10 cron)
+    │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */15 cron)
+    │   ├── snapshot-supply.ts    # Periodic per-coin supply snapshots → D1 (12h, piggybacks on */15 cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
     │   ├── sync-fx-rates.ts      # ECB + metals.dev → D1 FX/commodity rates (2h, metals daily)
-    │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (6h cache)
-    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (10min)
+    │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
+    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (15min)
     │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (2h)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins

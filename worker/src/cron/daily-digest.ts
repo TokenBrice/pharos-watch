@@ -33,7 +33,7 @@ interface DigestInputData {
   } | null;
 }
 
-function buildUserPrompt(data: DigestInputData): string {
+function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): string {
   const lines: string[] = [
     `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
     `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
@@ -53,6 +53,14 @@ function buildUserPrompt(data: DigestInputData): string {
     const direction = changeUsd >= 0 ? "increase" : "decrease";
     lines.push(
       `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`,
+    );
+  }
+
+  if (recentDigests.length > 0) {
+    lines.push(
+      "",
+      "Recent digests (do NOT repeat these angles or phrasings):",
+      ...recentDigests.map((d) => `- "${d}"`),
     );
   }
 
@@ -84,6 +92,12 @@ export async function generateDailyDigest(
       return { metadata: "skipped: recent digest exists" };
     }
   }
+
+  // Fetch last 3 digests for context-aware generation
+  const recentRows = await db
+    .prepare("SELECT digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 3")
+    .all<{ digest_text: string }>();
+  const recentDigests = (recentRows.results ?? []).map((r) => r.digest_text);
 
   // --- Collect data ---
 
@@ -157,7 +171,7 @@ export async function generateDailyDigest(
     biggestSupplyChange,
   };
 
-  const userPromptContent = buildUserPrompt(inputData);
+  const userPromptContent = buildUserPrompt(inputData, recentDigests);
   console.log("[daily-digest] Calling Claude API with data:\n" + userPromptContent);
 
   // --- Call Claude API ---
@@ -200,12 +214,6 @@ export async function generateDailyDigest(
       "INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, ?, ?)",
     )
     .bind(now, digestText, JSON.stringify(inputData))
-    .run();
-
-  // --- Clean up rows older than 7 days ---
-  await db
-    .prepare("DELETE FROM daily_digest WHERE generated_at < ?")
-    .bind(now - 604800)
     .run();
 
   console.log(`[daily-digest] Generated and stored digest (${digestText.length} chars)`);

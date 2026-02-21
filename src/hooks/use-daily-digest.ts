@@ -1,6 +1,6 @@
 "use client";
 
-import { useApiQuery, CRON_2H } from "@/hooks/use-api-query";
+import { useApiQuery, CRON_24H } from "@/hooks/use-api-query";
 
 interface DailyDigestData {
   digest: string | null;
@@ -11,6 +11,6 @@ export function useDailyDigest() {
   return useApiQuery<DailyDigestData>(
     ["daily-digest"],
     "/api/daily-digest",
-    CRON_2H,
+    CRON_24H,
   );
 }
