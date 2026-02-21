@@ -15,7 +15,6 @@ import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
-import { handleMintBurn } from "./api/mint-burn";
 import { isValidStablecoinId } from "./lib/api-utils";
 
 export function route(
@@ -90,10 +89,6 @@ export function route(
 
   if (path === "/api/digest-archive") {
     return handleDigestArchive(db);
-  }
-
-  if (path === "/api/mint-burn") {
-    return handleMintBurn(db, url);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution

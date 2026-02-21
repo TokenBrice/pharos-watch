@@ -5,7 +5,7 @@
  * Tailwind class strings are always complete static literals (never constructed dynamically).
  */
 
-import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin, MintBurnEventType, MintBurnStablecoin } from "./types";
+import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin } from "./types";
 import { TRACKED_STABLECOINS } from "./stablecoins";
 
 // ---------------------------------------------------------------------------
@@ -260,24 +260,4 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDC: "#3b82f6",
   PAXG: "#eab308",
   XAUT: "#f59e0b",
-};
-
-// ---------------------------------------------------------------------------
-// Mint/Burn event badge styles
-// ---------------------------------------------------------------------------
-
-export const MINT_BURN_BADGE_STYLES: Record<MintBurnEventType, string> = {
-  mint: "bg-emerald-500/15 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
-  burn: "bg-red-500/15 text-red-600 border-red-500/30 dark:text-red-400",
-};
-
-export const MINT_BURN_LABELS: Record<MintBurnEventType, string> = {
-  mint: "Mint",
-  burn: "Burn",
-};
-
-/** Chart hex colors for mint/burn stablecoin breakdown */
-export const MINT_BURN_CHART_COLORS: Record<MintBurnStablecoin, string> = {
-  USDC: "#3b82f6",
-  USDT: "#06b6d4",
 };

@@ -10,7 +10,6 @@ import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { syncOnchainSupply } from "./cron/sync-onchain-supply";
 import { snapshotSupply } from "./cron/snapshot-supply";
 import { generateDailyDigest } from "./cron/daily-digest";
-import { syncMintBurn } from "./cron/sync-mint-burn";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 
@@ -146,7 +145,6 @@ const worker = {
       }
       case "0 */2 * * *":
         ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db, env.METALS_API_KEY)));
-        ctx.waitUntil(logCronRun(db, "sync-mint-burn", () => syncMintBurn(db, env.ETHERSCAN_API_KEY ?? null)));
         break;
       case "0 8 * * *":
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
