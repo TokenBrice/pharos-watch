@@ -14,15 +14,15 @@ export function useStablecoins() {
   return useApiQuery<StablecoinListResponse>(["stablecoins"], "/api/stablecoins", CRON_15MIN);
 }
 
-/** DefiLlama stablecoin detail shape (tokens array) */
-interface DetailToken {
+/** Stablecoin detail shape (tokens array from DL, CG, or commodity paths) */
+export interface DetailToken {
   date: number;
   totalCirculatingUSD?: Record<string, number>;
   totalCirculating?: Record<string, number>;
   circulating?: Record<string, number>;
 }
 
-interface StablecoinDetail {
+export interface StablecoinDetail {
   tokens?: DetailToken[];
 }
 
@@ -32,42 +32,30 @@ function sumCirculating(obj: Record<string, number> | undefined): number {
   return Object.values(obj).reduce((s, v) => s + (v ?? 0), 0);
 }
 
+/** Transform detail tokens into SupplyHistoryPoint array. */
+export function detailToSupplyHistory(detail: StablecoinDetail | undefined): SupplyHistoryPoint[] {
+  if (!detail?.tokens) return [];
+  return detail.tokens
+    .map((t) => {
+      const usd = sumCirculating(t.totalCirculatingUSD) || sumCirculating(t.circulating);
+      return { date: t.date, circulatingUsd: usd, price: null as number | null };
+    })
+    .filter((d) => d.circulatingUsd > 0);
+}
+
 export function useSupplyHistory(id: string) {
-  // Primary: our own supply_history table
-  const primary = useApiQuery<SupplyHistoryPoint[]>(
-    ["supply-history", id],
-    `/api/supply-history?stablecoin=${encodeURIComponent(id)}&days=1825`,
+  const query = useApiQuery<StablecoinDetail>(
+    ["stablecoin-detail", id],
+    `/api/stablecoin/${encodeURIComponent(id)}`,
     CRON_1H,
     { enabled: !!id }
   );
 
-  // Fallback: DefiLlama detail proxy when supply_history is empty or too sparse
-  // (commodity tokens like gold/silver aren't backfilled, so they may have only
-  // a handful of daily snapshots instead of years of historical data)
-  const needsFallback = primary.isSuccess && (!primary.data || primary.data.length < 30);
-  const fallback = useApiQuery<StablecoinDetail>(
-    ["stablecoin-detail", id],
-    `/api/stablecoin/${encodeURIComponent(id)}`,
-    CRON_1H,
-    { enabled: !!id && needsFallback }
-  );
-
-  const fallbackData = useMemo(() => {
-    if (!needsFallback || !fallback.data?.tokens) return undefined;
-    return fallback.data.tokens
-      .map((t) => {
-        const usd = sumCirculating(t.totalCirculatingUSD) || sumCirculating(t.circulating);
-        return { date: t.date, circulatingUsd: usd, price: null as number | null };
-      })
-      .filter((d) => d.circulatingUsd > 0);
-  }, [needsFallback, fallback.data]);
-
-  // Use fallback if it has more data than primary
-  const useFallback = needsFallback && fallbackData && fallbackData.length > (primary.data?.length ?? 0);
+  const data = useMemo(() => detailToSupplyHistory(query.data), [query.data]);
 
   return {
-    data: useFallback ? fallbackData : primary.data,
-    isLoading: primary.isLoading || (needsFallback && fallback.isLoading),
-    isError: useFallback ? fallback.isError : primary.isError,
+    data,
+    isLoading: query.isLoading,
+    isError: query.isError,
   };
 }

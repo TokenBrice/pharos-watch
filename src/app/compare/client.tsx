@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
-import { useStablecoins } from "@/hooks/use-stablecoins";
+import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
@@ -19,7 +19,7 @@ import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { CoinOption } from "@/components/coin-selector";
-import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import type { SupplyHistoryPoint, StablecoinDetail } from "@/hooks/use-stablecoins";
 
 const MAX_COINS = 3;
 
@@ -91,14 +91,15 @@ export function CompareClient() {
     return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates;
   }, [listData]);
 
-  // Per-coin supply history using useQueries
+  // Per-coin supply history using useQueries (via stablecoin-detail endpoint)
   const supplyQueries = useQueries({
     queries: selectedIds.map((id) => ({
-      queryKey: ["supply-history", id],
+      queryKey: ["stablecoin-detail", id],
       queryFn: () =>
-        apiFetch<SupplyHistoryPoint[]>(`/api/supply-history?stablecoin=${encodeURIComponent(id)}&days=1825`),
+        apiFetch<StablecoinDetail>(`/api/stablecoin/${encodeURIComponent(id)}`),
       staleTime: CRON_1H,
       enabled: !!id,
+      select: detailToSupplyHistory,
     })),
   });
 

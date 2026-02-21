@@ -1,6 +1,6 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS, CACHE_PROFILES } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS, CACHE_PROFILES, USER_AGENT } from "../lib/constants";
 import { binarySearchNearest } from "../lib/binary-search";
 import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { sumPegBuckets } from "../../../src/lib/supply";
@@ -129,6 +129,67 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     }
   }
 
+  // CoinGecko-only coins: fetch from CoinGecko market_chart API
+  const isCgOnly = id.startsWith("cg-") && meta?.geckoId;
+  if (isCgOnly) {
+    const geckoId = meta.geckoId!;
+    const pegType = `pegged${meta.flags.pegCurrency}`;
+    try {
+      const cgRes = await fetch(
+        `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=max`,
+        { headers: { "User-Agent": USER_AGENT } }
+      );
+      if (!cgRes.ok) throw new Error(`CoinGecko ${cgRes.status}`);
+      const cgData = (await cgRes.json()) as {
+        market_caps: [number, number][];
+        prices?: [number, number][];
+      };
+
+      // Build price lookup for computing totalCirculating (supply in token units)
+      const priceMap = new Map<string, number>();
+      if (cgData.prices) {
+        for (const [ts, price] of cgData.prices) {
+          priceMap.set(new Date(ts).toISOString().slice(0, 10), price);
+        }
+      }
+
+      const tokens = (cgData.market_caps ?? [])
+        .filter(([, mcap]) => mcap > 0)
+        .map(([ts, mcap]) => {
+          const date = Math.floor(ts / 1000);
+          const dateKey = new Date(ts).toISOString().slice(0, 10);
+          const price = priceMap.get(dateKey) ?? 0;
+          return {
+            date,
+            totalCirculatingUSD: { [pegType]: mcap },
+            totalCirculating: { [pegType]: price > 0 ? mcap / price : 0 },
+          };
+        });
+
+      const body = JSON.stringify({ tokens });
+      ctx.waitUntil(setCache(db, cacheKey, body));
+      return new Response(body, {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`,
+        },
+      });
+    } catch {
+      if (cached) {
+        return new Response(cached.value, {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": CACHE_PROFILES.realtime,
+          },
+        });
+      }
+      return new Response(
+        JSON.stringify({ error: "Failed to fetch CoinGecko data" }),
+        { status: 502, headers: { "Content-Type": "application/json" } }
+      );
+    }
+  }
+
   // Regular stablecoins: fetch from DefiLlama stablecoin API
   const res = await fetch(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(id)}`);
   if (!res.ok) {
@@ -188,6 +249,34 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
           }
         } catch {
           // Stablecoins cache parse failed — continue with unpatched data
+        }
+      }
+      body = JSON.stringify(parsed);
+    }
+
+    // Convert non-USD circulating values from native currency to USD.
+    // DefiLlama stores non-USD values (BRL, RUB, JPY, etc.) in native units,
+    // not USD — multiply by token price to get actual USD market cap.
+    const isNonUSD = meta &&
+      meta.flags.pegCurrency !== "USD" &&
+      meta.flags.pegCurrency !== "GOLD" &&
+      meta.flags.pegCurrency !== "SILVER";
+    if (isNonUSD && typeof parsed.price === "number" && parsed.price > 0 && Array.isArray(parsed.tokens)) {
+      const price = parsed.price;
+      for (const entry of parsed.tokens) {
+        if (entry.totalCirculatingUSD) {
+          for (const key of Object.keys(entry.totalCirculatingUSD)) {
+            if (key !== "peggedUSD") {
+              entry.totalCirculatingUSD[key] *= price;
+            }
+          }
+        }
+        if (entry.circulating) {
+          for (const key of Object.keys(entry.circulating)) {
+            if (key !== "peggedUSD") {
+              entry.circulating[key] *= price;
+            }
+          }
         }
       }
       body = JSON.stringify(parsed);

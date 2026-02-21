@@ -16,10 +16,10 @@ export function usePrefetchStablecoin() {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         queryClient.prefetchQuery({
-          queryKey: ["supply-history", coinId],
+          queryKey: ["stablecoin-detail", coinId],
           queryFn: () =>
             apiFetch(
-              `/api/supply-history?stablecoin=${encodeURIComponent(coinId)}&days=1825`
+              `/api/stablecoin/${encodeURIComponent(coinId)}`
             ),
           staleTime: CRON_1H,
         });

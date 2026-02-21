@@ -25,25 +25,12 @@ export function McapChart({ data }: McapChartProps) {
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
-    const points = data
+    return data
       .filter((d) => d.circulatingUsd > 0)
       .map((d) => ({
         ts: d.date * 1000,
         mcap: d.circulatingUsd,
       }));
-
-    // Trim pre-correction data: DefiLlama historically stored non-USD circulating
-    // values in native currency (RUB, BRL, etc.) instead of USD. When corrected,
-    // this appears as a >3x single-day drop. Discard data before the correction.
-    if (points.length >= 2) {
-      for (let i = points.length - 2; i >= 0; i--) {
-        if (points[i].mcap > points[i + 1].mcap * 3) {
-          return points.slice(i + 1);
-        }
-      }
-    }
-
-    return points;
   }, [data]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
