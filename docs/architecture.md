@@ -14,9 +14,12 @@
 | `GET /api/bluechip-ratings` | Bluechip safety ratings (keyed by Pharos ID) |
 | `GET /api/dex-liquidity` | DEX liquidity scores, pool data, protocol/chain breakdowns, HHI, trends (keyed by Pharos ID) |
 | `GET /api/dex-liquidity-history` | Per-coin historical liquidity data (`?stablecoin=ID&days=90`) |
+| `GET /api/supply-history` | Per-coin supply history (`?stablecoin=ID&days=N`) |
+| `GET /api/daily-digest` | AI-generated daily market summary |
 | `GET /api/health` | Worker health check |
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
+| `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
 
 ## Full File Tree
 
@@ -59,16 +62,24 @@ src/                              # Next.js frontend (static export)
 │   ├── providers.tsx             # TanStack Query + theme providers
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
 │   ├── stablecoin-table.tsx      # Sortable table with filters
+│   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
 │   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
 │   ├── governance-chart.tsx      # "Stablecoin by Type" breakdown card
 │   ├── peg-type-chart.tsx        # "Alternative Peg Dominance" card
+│   ├── peg-diversity-chart.tsx   # Non-USD peg supply stacked area chart
 │   ├── total-mcap-chart.tsx      # Full-width market cap area chart
 │   ├── chain-overview.tsx        # Horizontal bar chart (homepage)
 │   ├── market-highlights.tsx     # Biggest depegs + fastest movers
+│   ├── market-pulse.tsx          # AI daily digest display
+│   ├── daily-digest.tsx          # Daily digest card component
 │   ├── price-chart.tsx           # TradingView LW chart (detail page)
 │   ├── supply-chart.tsx          # Recharts area chart (detail page)
 │   ├── chain-distribution.tsx    # Recharts pie chart (detail page)
+│   ├── mechanism-card.tsx        # Peg mechanism info card (detail page)
+│   ├── issuer-info-card.tsx      # Issuer information card (detail page)
+│   ├── contract-addresses.tsx    # Contract address display (detail page)
 │   ├── peg-tracker-stats.tsx     # Peg tracker summary statistics
+│   ├── peg-tracker-summary.tsx   # Peg tracker homepage summary card
 │   ├── peg-heatmap.tsx           # Real-time peg deviation heatmap
 │   ├── peg-leaderboard.tsx       # Ranked coins by peg score
 │   ├── depeg-timeline.tsx        # 4-year depeg event timeline
@@ -79,23 +90,37 @@ src/                              # Next.js frontend (static export)
 │   ├── blacklist-stats.tsx       # Blacklist summary stats
 │   ├── blacklist-filters.tsx     # Blacklist page filters
 │   ├── blacklist-summary.tsx     # Homepage blacklist summary card
+│   ├── eurc-blacklist-card.tsx   # EURC-specific blacklist card
 │   ├── stablecoin-cemetery.tsx   # Cemetery obituary list
+│   ├── cemetery-client.tsx       # Cemetery interactive client wrapper
 │   ├── cemetery-tombstones.tsx   # Cemetery tombstone cards
 │   ├── cemetery-timeline.tsx     # Horizontal timeline with logos
 │   ├── cemetery-charts.tsx       # Cemetery statistics charts
 │   ├── cemetery-summary.tsx      # Homepage cemetery summary card
 │   ├── stablecoin-logo.tsx       # Logo component with fallback
-│   ├── bluechip-rating-card.tsx   # Bluechip safety rating card (detail page)
-│   ├── dex-liquidity-card.tsx     # DEX liquidity card with trend chart (detail page)
-│   ├── usds-status-card.tsx      # USDS protocol status card
+│   ├── bluechip-rating-card.tsx  # Bluechip safety rating card (detail page)
+│   ├── bluechip-box.tsx          # Bluechip rating box (homepage)
+│   ├── dex-liquidity-card.tsx    # DEX liquidity card with trend chart (detail page)
+│   ├── liquidity-box.tsx         # Liquidity box (homepage)
 │   ├── liquidity-stats.tsx       # Liquidity page summary stat cards + protocol/chain breakdown bars
 │   ├── liquidity-table.tsx       # Liquidity page sortable leaderboard table with pagination
-│   ├── sort-icon.tsx             # Shared sort direction arrow icon (used by 3 tables)
-│   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons (used by 2 charts)
+│   ├── liquidity-summary.tsx     # Liquidity homepage summary card
+│   ├── usds-status-card.tsx      # USDS protocol status card
+│   ├── coin-selector.tsx         # Coin selector dropdown (compare page)
+│   ├── comparison-chart.tsx      # Multi-series comparison line chart
+│   ├── comparison-table.tsx      # Side-by-side comparison table
+│   ├── page-error.tsx            # Shared error boundary component
+│   ├── stale-data-banner.tsx     # Stale data warning banner
+│   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
+│   ├── sortable-table-head.tsx   # Shared sortable table header
+│   ├── table-pagination.tsx      # Shared pagination component
+│   ├── balance-bar.tsx           # Balance ratio visualization bar
+│   ├── sort-icon.tsx             # Shared sort direction arrow icon
+│   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons
 │   ├── theme-toggle.tsx          # Dark/light mode toggle
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
-│   ├── use-stablecoins.ts        # GET /api/stablecoins
+│   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (GET /api/supply-history with fallback)
 │   ├── use-logos.ts              # Static logos from data/logos.json
 │   ├── use-stablecoin-charts.ts  # GET /api/stablecoin-charts
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
@@ -105,28 +130,31 @@ src/                              # Next.js frontend (static export)
 │   ├── use-dex-liquidity.ts      # GET /api/dex-liquidity
 │   ├── use-dex-liquidity-history.ts # GET /api/dex-liquidity-history
 │   ├── use-usds-status.ts        # GET /api/usds-status
+│   ├── use-daily-digest.ts       # GET /api/daily-digest
 │   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
-│   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 9 data hooks)
+│   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
+│   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
+│   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 10 data hooks)
 │   └── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
 └── lib/
-    ├── api.ts                    # API_BASE URL config (from NEXT_PUBLIC_API_BASE env var)
-    ├── bluechip.ts               # Bluechip grade order, report URL base (slug map moved to worker)
-    ├── types.ts                  # All TypeScript types, filter tag system (includes ContractDeployment)
+    ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
+    ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
+    ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, CacheStatus (shared with worker)
     ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── dead-stablecoins.ts       # 74 dead stablecoins with cause of death, peak mcap, obituaries
-    ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo formatters
-    ├── supply.ts                 # Shared supply helpers: getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
-    ├── chart-colors.ts           # Shared CHART_PALETTE for Recharts charts
-    ├── peg-config.ts             # PEG_META: labels + Tailwind colors per peg currency
+    ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
+    ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
+    ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
+    ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
-    ├── peg-rates.ts              # Derives FX reference rates from median prices in data
+    ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
-    ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin(), extractGoldPrices(), computeBlacklistStats()
-    ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors, chart hex colors (PEG_CHART_COLORS, BLACKLIST_CHART_COLORS)
+    ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()
+    ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors, chart hex colors (PEG_CHART_COLORS, BLACKLIST_CHART_COLORS, GRADE_COLORS)
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red) + getDurabilityColor/getDurabilityBgColor
     ├── chains.ts                 # CHAIN_META: chain names, explorer URLs, evmChainId, type (single source of truth)
     └── utils.ts                  # cn() helper for Tailwind class merging
@@ -143,37 +171,43 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */10 cron)
+    │   ├── snapshot-supply.ts    # Periodic per-coin supply snapshots → D1 (12h, piggybacks on */10 cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
     │   ├── sync-fx-rates.ts      # ECB + metals.dev → D1 FX/commodity rates (2h, metals daily)
-    │   ├── sync-bluechip.ts     # Bluechip safety ratings → D1 (6h cache)
-    │   └── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (10min)
+    │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (6h cache)
+    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (10min)
+    │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (2h)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
     │   ├── stablecoin-charts.ts  # GET /api/stablecoin-charts
+    │   ├── supply-history.ts     # GET /api/supply-history
     │   ├── blacklist.ts          # GET /api/blacklist
     │   ├── depeg-events.ts       # GET /api/depeg-events
     │   ├── peg-summary.ts        # GET /api/peg-summary
     │   ├── usds-status.ts        # GET /api/usds-status
     │   ├── bluechip.ts           # GET /api/bluechip-ratings
-    │   ├── dex-liquidity.ts     # GET /api/dex-liquidity (includes HHI, trends)
+    │   ├── daily-digest.ts       # GET /api/daily-digest
+    │   ├── dex-liquidity.ts      # GET /api/dex-liquidity (includes HHI, trends)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
     │   ├── status.ts             # GET /api/status (admin)
-    │   └── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
+    │   ├── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
+    │   └── backfill-supply-history.ts # GET /api/backfill-supply-history (admin)
     └── lib/
-        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply, logCronRun)
+        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config for on-chain supply queries (11 chains: EVM + Tron)
-        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES)
+        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, ETHERSCAN_V2_BASE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
+        ├── alerts.ts             # Alert sending (ntfy push notifications on cron failures)
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion
         ├── binary-search.ts      # Generic binarySearchNearest<T>() for sorted array lookups
         ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
-        ├── api-utils.ts          # withErrorHandler(), CacheStatus, buildCacheStatuses() for standardized API error/cache handling
-        └── fetch-retry.ts        # Fetch with retry + exponential backoff (configurable 404 handling)
+        ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
+        └── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
 
 data/
 └── logos.json                    # Static stablecoin logo URLs (from CoinGecko)

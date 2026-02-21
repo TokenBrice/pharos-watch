@@ -346,7 +346,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Russian ruble-denominated reserves",
     pegMechanism: "Fiat-backed RUB stablecoin",
     links: [
-      { label: "Website", url: "https://rubt.org/" },
+      { label: "Website", url: "https://tetris.money/en/" },
     ],
     jurisdiction: { country: "Russia" },
     contracts: [

@@ -46,9 +46,13 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
 - `contracts?: ContractDeployment[]` — on-chain contract addresses per chain (used for supply verification and displayed on detail page)
 
+### Bluechip Grade
+
+`BluechipGrade` is a union type in `types.ts`: `"A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F"`. Used by `GRADE_COLORS` in `classification.ts` and `GRADE_ORDER` in `bluechip.ts` for compile-time completeness checking.
+
 ## Non-USD Peg Handling
 
-Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `src/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` (from DefiLlama data) with >$1M supply. This avoids hardcoding FX rates. The deviation is then `((price / pegRef) - 1) * 10000` basis points.
+Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `src/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` (from DefiLlama data) with >$1M supply. This avoids hardcoding FX rates. The function always returns a `PegRatesResult` containing both `rates` (the numeric lookup) and `sources` (which source was used per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
 
 For thin peg groups (GBP, CHF, BRL, RUB, JPY — often <3 qualifying coins), a `FALLBACK_RATES` map provides approximate FX rates. If the median from <3 coins deviates >10% from the fallback, the fallback is used instead. This prevents a single depegged coin from becoming its own reference rate (which would always show 0 bps deviation).
 
