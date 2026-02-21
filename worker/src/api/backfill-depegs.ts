@@ -1,6 +1,6 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { getCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
@@ -98,16 +98,33 @@ async function fetchHistoricalFxRates(
   }
 }
 
+const COMMODITY_CACHE_KEY = "commodity-history";
+const COMMODITY_CACHE_MAX_AGE_SEC = 30 * 86400; // 30 days
+
 /**
  * Fetch historical gold & silver spot prices from metals.dev /v1/timeseries.
- * Splits the date range into 30-day windows (API limit) and fetches all in parallel.
- * Returns { GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }.
+ * Splits the date range into 30-day windows (API limit) and fetches sequentially
+ * to avoid hitting Worker subrequest limits. Results are cached in D1 for 30 days
+ * to avoid burning the 100/month free-tier quota on repeated backfills.
  */
 async function fetchCommoditySpotHistoryMetals(
+  db: D1Database,
   apiKey: string,
   startDate: string, // "YYYY-MM-DD"
   endDate: string,
-): Promise<Record<string, FxTimeSeries[]>> {
+): Promise<{ data: Record<string, FxTimeSeries[]>; source: "cache" | "api"; goldPoints: number; silverPoints: number }> {
+  // Check D1 cache first
+  const cached = await getCache(db, COMMODITY_CACHE_KEY);
+  if (cached && (Math.floor(Date.now() / 1000) - cached.updatedAt) < COMMODITY_CACHE_MAX_AGE_SEC) {
+    try {
+      const data = JSON.parse(cached.value) as Record<string, FxTimeSeries[]>;
+      console.log(`[backfill-depegs] Using cached commodity history (age: ${Math.floor((Date.now() / 1000 - cached.updatedAt) / 86400)}d)`);
+      return { data, source: "cache", goldPoints: data.GOLD?.length ?? 0, silverPoints: data.SILVER?.length ?? 0 };
+    } catch {
+      console.warn("[backfill-depegs] Failed to parse commodity cache, refetching");
+    }
+  }
+
   const result: Record<string, FxTimeSeries[]> = { GOLD: [], SILVER: [] };
   try {
     // Build 30-day windows
@@ -126,48 +143,76 @@ async function fetchCommoditySpotHistoryMetals(
       cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
 
-    console.log(`[backfill-depegs] Fetching metals.dev timeseries: ${windows.length} windows`);
+    console.log(`[backfill-depegs] Fetching metals.dev timeseries: ${windows.length} windows (sequential)`);
 
-    const responses = await Promise.all(
-      windows.map(async (w) => {
-        const url = `https://api.metals.dev/v1/timeseries?api_key=${apiKey}&start_date=${w.start}&end_date=${w.end}&currency=USD&unit=toz`;
-        const res = await fetch(url, {
-          headers: { "User-Agent": USER_AGENT },
-        });
-        if (!res.ok) {
-          console.warn(`[backfill-depegs] metals.dev ${w.start}..${w.end} returned ${res.status}`);
-          return null;
+    // Fetch sequentially to avoid Worker subrequest limits
+    let failCount = 0;
+    for (const w of windows) {
+      const url = `https://api.metals.dev/v1/timeseries?api_key=${apiKey}&start_date=${w.start}&end_date=${w.end}&currency=USD&unit=toz`;
+      const res = await fetch(url, {
+        headers: { "User-Agent": USER_AGENT },
+      });
+      if (!res.ok) {
+        if (res.status === 429) {
+          const retryAfter = parseInt(res.headers.get("Retry-After") ?? "5", 10);
+          console.warn(`[backfill-depegs] metals.dev 429, waiting ${retryAfter}s`);
+          await new Promise((r) => setTimeout(r, retryAfter * 1000));
+          // Retry once
+          const retry = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+          if (!retry.ok) { failCount++; continue; }
+          const retryData = (await retry.json()) as {
+            rates?: Record<string, { metals?: { gold?: number; silver?: number } }>;
+          };
+          if (retryData?.rates) parseCommodityRates(retryData.rates, result);
+          continue;
         }
-        return (await res.json()) as {
-          rates?: Record<string, { metals?: { gold?: number; silver?: number } }>;
-        };
-      }),
-    );
-
-    for (const data of responses) {
-      if (!data?.rates) continue;
-      for (const [dateStr, dayData] of Object.entries(data.rates)) {
-        const ts = Math.floor(new Date(dateStr + "T00:00:00Z").getTime() / 1000);
-        const gold = dayData?.metals?.gold;
-        const silver = dayData?.metals?.silver;
-        if (typeof gold === "number" && gold > 0) {
-          result.GOLD.push({ timestamp: ts, rate: gold });
-        }
-        if (typeof silver === "number" && silver > 0) {
-          result.SILVER.push({ timestamp: ts, rate: silver });
-        }
+        console.warn(`[backfill-depegs] metals.dev ${w.start}..${w.end} returned ${res.status}`);
+        failCount++;
+        continue;
       }
+      const data = (await res.json()) as {
+        rates?: Record<string, { metals?: { gold?: number; silver?: number } }>;
+      };
+      if (data?.rates) parseCommodityRates(data.rates, result);
     }
 
     // Sort each series
     result.GOLD.sort((a, b) => a.timestamp - b.timestamp);
     result.SILVER.sort((a, b) => a.timestamp - b.timestamp);
 
-    console.log(`[backfill-depegs] metals.dev: ${result.GOLD.length} gold, ${result.SILVER.length} silver data points`);
+    console.log(`[backfill-depegs] metals.dev: ${result.GOLD.length} gold, ${result.SILVER.length} silver data points (${failCount} failures)`);
+
+    // Cache in D1 if we got meaningful data (>100 gold points guards against mostly-failed fetch)
+    if (result.GOLD.length > 100) {
+      try {
+        await setCache(db, COMMODITY_CACHE_KEY, JSON.stringify(result));
+        console.log("[backfill-depegs] Cached commodity history in D1");
+      } catch (err) {
+        console.warn("[backfill-depegs] Failed to cache commodity history:", err);
+      }
+    }
   } catch (err) {
     console.error(`[backfill-depegs] metals.dev timeseries fetch failed:`, err);
   }
-  return result;
+  return { data: result, source: "api", goldPoints: result.GOLD.length, silverPoints: result.SILVER.length };
+}
+
+/** Parse metals.dev rates into GOLD/SILVER time series arrays */
+function parseCommodityRates(
+  rates: Record<string, { metals?: { gold?: number; silver?: number } }>,
+  result: Record<string, FxTimeSeries[]>,
+): void {
+  for (const [dateStr, dayData] of Object.entries(rates)) {
+    const ts = Math.floor(new Date(dateStr + "T00:00:00Z").getTime() / 1000);
+    const gold = dayData?.metals?.gold;
+    const silver = dayData?.metals?.silver;
+    if (typeof gold === "number" && gold > 0) {
+      result.GOLD.push({ timestamp: ts, rate: gold });
+    }
+    if (typeof silver === "number" && silver > 0) {
+      result.SILVER.push({ timestamp: ts, rate: silver });
+    }
+  }
 }
 
 /**
@@ -277,10 +322,11 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
   const commodityPromise = needsCommodities && metalsApiKey
-    ? fetchCommoditySpotHistoryMetals(metalsApiKey, startDate, endDate)
-    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
+    ? fetchCommoditySpotHistoryMetals(db, metalsApiKey, startDate, endDate)
+    : Promise.resolve({ data: {} as Record<string, FxTimeSeries[]>, source: "api" as const, goldPoints: 0, silverPoints: 0 });
 
-  const [fxSeries, commoditySeries] = await Promise.all([fxPromise, commodityPromise]);
+  const [fxSeries, commodityResult] = await Promise.all([fxPromise, commodityPromise]);
+  const commoditySeries = commodityResult.data;
 
   // Process coins sequentially — each needs detail fetch + 2 price chart fetches.
   // Serializing avoids memory pressure from parsing multiple large JSON responses.
@@ -375,6 +421,11 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       eventsCreated: totalEvents,
       skipped: skipped.length > 0 ? skipped : undefined,
       errors: errors.length > 0 ? errors : undefined,
+      commodities: needsCommodities ? {
+        source: commodityResult.source,
+        goldDataPoints: commodityResult.goldPoints,
+        silverDataPoints: commodityResult.silverPoints,
+      } : undefined,
     }),
     { headers: { "Content-Type": "application/json" } }
   );
