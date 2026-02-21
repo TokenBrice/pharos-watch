@@ -19,7 +19,8 @@ import { LiquiditySummary } from "@/components/liquidity-summary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { CRON_5MIN } from "@/hooks/use-api-query";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { derivePegRates } from "@/lib/peg-rates";
 import type { PegSummaryCoin } from "@/lib/types";
 
@@ -91,6 +92,13 @@ export function HomepageClient() {
         <CemeterySummary />
       </div>
 
+      <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
+        Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies — USD, EUR, GBP,
+        gold, silver, and more — with honest governance classification: {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,
+        {" "}{TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
+        deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
+        fallen stablecoins — updated every 5 minutes.
+      </p>
       {dataUpdatedAt > 0 && (
         <p className="text-xs text-muted-foreground text-center">
           Last updated: {new Date(dataUpdatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })}

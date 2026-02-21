@@ -6,6 +6,7 @@
  */
 
 import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin } from "./types";
+import { TRACKED_STABLECOINS } from "./stablecoins";
 
 // ---------------------------------------------------------------------------
 // Governance (Type) labels
@@ -73,8 +74,8 @@ export const PEG_LABELS: Record<PegCurrency, string> = {
   OTHER: "Other",
 };
 
-/** Number of distinct peg currencies (excludes the "Other" catch-all). */
-export const PEG_CURRENCY_COUNT = Object.keys(PEG_LABELS).length - 1; // exclude OTHER
+/** Number of distinct peg currencies actually tracked (with at least one stablecoin). */
+export const PEG_CURRENCY_COUNT = new Set(TRACKED_STABLECOINS.map((s) => s.flags.pegCurrency)).size;
 
 /** Labels without article, for metadata and keywords. */
 export const PEG_LABELS_SHORT: Record<PegCurrency, string> = {

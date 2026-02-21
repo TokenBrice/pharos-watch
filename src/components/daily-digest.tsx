@@ -34,7 +34,7 @@ export function DailyDigest() {
           <span className="font-normal tracking-wide"> · {formatDateline(data!.generatedAt)}</span>
         )}
       </p>
-      <p className="text-sm leading-relaxed text-foreground/90" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+      <p className="text-[1.1rem] leading-relaxed text-foreground/90" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
         {data!.digest}
       </p>
     </div>

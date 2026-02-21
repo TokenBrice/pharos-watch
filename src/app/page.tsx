@@ -6,15 +6,6 @@ import { DailyDigest } from "@/components/daily-digest";
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
-  const decentralized = TRACKED_STABLECOINS.filter(
-    (s) => s.flags.governance === "decentralized"
-  ).length;
-  const cefiDep = TRACKED_STABLECOINS.filter(
-    (s) => s.flags.governance === "centralized-dependent"
-  ).length;
-  const centralized = TRACKED_STABLECOINS.filter(
-    (s) => s.flags.governance === "centralized"
-  ).length;
 
   // Top 20 stablecoins for ItemList schema
   const itemListElements = TRACKED_STABLECOINS.slice(0, 20).map((coin, i) => ({
@@ -42,14 +33,7 @@ export default function HomePage() {
       <div className="space-y-2 mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Stablecoin Analytics Dashboard</h1>
         <p className="text-muted-foreground">
-          Tracking {total} stablecoins. Every chain. Every freeze.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Pharos tracks {total} stablecoins across {PEG_CURRENCY_COUNT} peg currencies — USD, EUR, GBP,
-          gold, silver, and more — with honest governance classification: {centralized} CeFi,
-          {" "}{cefiDep} CeFi-Dependent, and {decentralized} DeFi. Live market caps, peg
-          deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
-          fallen stablecoins — updated every 5 minutes.
+          Track {total} stablecoins, across {PEG_CURRENCY_COUNT} pegs. Freezes, liquidity, depegs: all is watched.
         </p>
       </div>
       <div className="mb-6">
