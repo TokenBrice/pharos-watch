@@ -8,7 +8,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
@@ -26,38 +25,18 @@ interface ComparisonChartProps {
   title: string;
   series: SeriesData[];
   formatValue?: (v: number) => string;
-  normalized?: boolean;
-  referenceLine?: number;
 }
 
 export function ComparisonChart({
   title,
   series,
   formatValue,
-  normalized,
-  referenceLine,
 }: ComparisonChartProps) {
-  // Normalize series if requested (first data point = 100)
-  const processedSeries = useMemo(() => {
-    if (!normalized) return series;
-    return series.map((s) => {
-      const baseValue = s.data[0]?.value;
-      if (!baseValue || baseValue === 0) return s;
-      return {
-        ...s,
-        data: s.data.map((d) => ({
-          ts: d.ts,
-          value: (d.value / baseValue) * 100,
-        })),
-      };
-    });
-  }, [series, normalized]);
-
   // Merge all series into a single array keyed by timestamp
   const mergedData = useMemo(() => {
     const tsMap = new Map<number, Record<string, number>>();
 
-    for (const s of processedSeries) {
+    for (const s of series) {
       for (const d of s.data) {
         let entry = tsMap.get(d.ts);
         if (!entry) {
@@ -69,7 +48,7 @@ export function ComparisonChart({
     }
 
     return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
-  }, [processedSeries]);
+  }, [series]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(
     mergedData,
@@ -103,7 +82,7 @@ export function ComparisonChart({
       <CardContent>
         {series.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1">
-            {processedSeries.map((s) => (
+            {series.map((s) => (
               <div key={s.id} className="flex items-center gap-1.5 text-sm">
                 <span
                   className="inline-block h-0.5 w-4 rounded-full"
@@ -143,7 +122,7 @@ export function ComparisonChart({
                 />
                 <Tooltip
                   formatter={(value: number | string | (number | string)[] | undefined, name: string | number | undefined) => {
-                    const match = processedSeries.find((s) => s.id === name);
+                    const match = series.find((s) => s.id === name);
                     return [valueFormatter(Number(value)), match?.label ?? String(name ?? "")];
                   }}
                   labelFormatter={(label) =>
@@ -155,15 +134,7 @@ export function ComparisonChart({
                   }
                   {...RECHARTS_TOOLTIP_STYLES}
                 />
-                {referenceLine !== undefined && (
-                  <ReferenceLine
-                    y={referenceLine}
-                    stroke="var(--color-muted-foreground)"
-                    strokeDasharray="3 3"
-                    strokeOpacity={0.5}
-                  />
-                )}
-                {processedSeries.map((s) => (
+                {series.map((s) => (
                   <Line
                     key={s.id}
                     type="monotone"

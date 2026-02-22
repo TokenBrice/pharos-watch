@@ -159,7 +159,7 @@ export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="min-w-[140px]">Metric</TableHead>
+          <TableHead className="min-w-[80px]">Metric</TableHead>
           {coins.map((coin) => (
             <TableHead key={coin.id} className="text-center min-w-[120px]">
               <div className="flex flex-col items-center gap-1">

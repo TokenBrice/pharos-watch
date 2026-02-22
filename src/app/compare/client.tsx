@@ -217,15 +217,6 @@ export function CompareClient() {
             />
           ) : null}
 
-          {supplySeries.length >= 2 && !supplyLoading && (
-            <ComparisonChart
-              title="Market Cap (Normalized)"
-              series={supplySeries}
-              formatValue={(v) => `${v.toFixed(0)}`}
-              normalized
-              referenceLine={100}
-            />
-          )}
         </div>
       )}
     </div>
