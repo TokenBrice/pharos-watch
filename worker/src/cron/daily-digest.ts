@@ -4,6 +4,7 @@ import { TRACKED_IDS } from "../../../src/lib/stablecoins";
 import { formatCurrency } from "../../../src/lib/format";
 import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
+import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -72,6 +73,7 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
 export async function generateDailyDigest(
   db: D1Database,
   anthropicApiKey: string | null,
+  twitterCreds: TwitterCreds | null = null,
 ): Promise<CronResult> {
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
@@ -217,6 +219,15 @@ export async function generateDailyDigest(
     )
     .bind(now, digestText, JSON.stringify(inputData))
     .run();
+
+  // Post to Twitter if credentials are available
+  if (twitterCreds) {
+    try {
+      await postDigestTweet(digestText, twitterCreds);
+    } catch (err) {
+      console.error("[daily-digest] Failed to post tweet (non-fatal):", err);
+    }
+  }
 
   console.log(`[daily-digest] Generated and stored digest (${digestText.length} chars)`);
   return { itemCount: 1, metadata: `${digestText.length} chars` };
