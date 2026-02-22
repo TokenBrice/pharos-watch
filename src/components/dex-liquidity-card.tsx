@@ -427,7 +427,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           </div>
         )}
 
-        {/* DEX-Implied Price (from Curve pools) */}
+        {/* DEX-Implied Price */}
         {liq.dexPriceUsd != null && (
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DEX-Implied Price</p>
@@ -444,7 +444,13 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               )}
               {liq.priceSourceCount != null && (
                 <span className="text-xs text-muted-foreground">
-                  from {liq.priceSourceCount} Curve {liq.priceSourceCount === 1 ? "pool" : "pools"}
+                  {(() => {
+                    const protocols = liq.priceSources && liq.priceSources.length > 0
+                      ? [...new Set(liq.priceSources.map((s) => prettifyProtocol(s.protocol)))]
+                      : null;
+                    const protocolLabel = protocols ? protocols.join(" / ") : "DEX";
+                    return `from ${liq.priceSourceCount} ${protocolLabel} ${liq.priceSourceCount === 1 ? "pool" : "pools"}`;
+                  })()}
                   {liq.priceSourceTvl != null && ` (${formatCurrency(liq.priceSourceTvl)} TVL)`}
                 </span>
               )}
