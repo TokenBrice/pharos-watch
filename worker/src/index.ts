@@ -25,6 +25,10 @@ interface Env {
   ANTHROPIC_API_KEY?: string;
   METALS_API_KEY?: string;
   CMC_API_KEY?: string;
+  TWITTER_API_KEY?: string;
+  TWITTER_API_SECRET?: string;
+  TWITTER_ACCESS_TOKEN?: string;
+  TWITTER_ACCESS_TOKEN_SECRET?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -144,9 +148,21 @@ const worker = {
         break;
       case "0 8 * * *":
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
-        ctx.waitUntil(logCronRun(db, "daily-digest", () =>
-          generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null)
-        ));
+        ctx.waitUntil(logCronRun(db, "daily-digest", () => {
+          const twitterCreds =
+            env.TWITTER_API_KEY &&
+            env.TWITTER_API_SECRET &&
+            env.TWITTER_ACCESS_TOKEN &&
+            env.TWITTER_ACCESS_TOKEN_SECRET
+              ? {
+                  apiKey: env.TWITTER_API_KEY,
+                  apiSecret: env.TWITTER_API_SECRET,
+                  accessToken: env.TWITTER_ACCESS_TOKEN,
+                  accessTokenSecret: env.TWITTER_ACCESS_TOKEN_SECRET,
+                }
+              : null;
+          return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds);
+        }));
         break;
     }
   },
