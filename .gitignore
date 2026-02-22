@@ -37,7 +37,7 @@ yarn-error.log*
 .vercel
 
 # claude code
-.claude/
+.claude/settings.local.json
 .mcp.json
 
 # shell/editor config
