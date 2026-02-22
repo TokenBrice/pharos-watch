@@ -43,7 +43,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
@@ -96,13 +96,13 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
           Supply history is temporarily unavailable.
         </div>
       )}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
+            <div className="text-2xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
             <p className="text-sm text-muted-foreground font-mono">{formatPegDeviation(coinData.price, pegRef)}</p>
           </CardContent>
         </Card>
@@ -112,7 +112,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</div>
+            <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</div>
             <p className="text-sm text-muted-foreground">
               {coinData.chains?.length ?? 0} chains
             </p>
@@ -124,7 +124,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight">{formatSupply(supply)}</div>
+            <div className="text-2xl font-bold font-mono tracking-tight">{formatSupply(supply)}</div>
             <p className={`text-sm font-mono ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
               {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}
             </p>
@@ -160,7 +160,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
             <CardContent>
               {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
                 <>
-                  <div className={`text-3xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
+                  <div className={`text-2xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
                     {pegScoreResult.pegScore}<span className="text-lg text-muted-foreground">/100</span>
                   </div>
                   <p className="text-sm text-muted-foreground font-mono">
@@ -171,7 +171,7 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
                   </p>
                 </>
               ) : (
-                <div className="text-3xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+                <div className="text-2xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
               )}
             </CardContent>
           </Card>
