@@ -85,7 +85,7 @@ export function HomepageClient() {
 
       <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5">
         <PegTrackerSummary />
         <LiquiditySummary />
         <BlacklistSummary />
