@@ -84,7 +84,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="sticky left-0 bg-background z-10 min-w-[160px]">
+                  <TableHead className="sticky left-0 bg-background z-10 sm:min-w-[160px]">
                     Stablecoin
                   </TableHead>
                   {columns.map((col) => (

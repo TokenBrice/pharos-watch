@@ -204,7 +204,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="w-[200px]"
+              className="xl:w-[200px]"
             />
             <SortableTableHead
               sortKey="price"
