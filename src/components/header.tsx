@@ -62,7 +62,7 @@ export function Header() {
 
           {/* Mobile hamburger */}
           <div className="sm:hidden">
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">
                   <Menu className="h-4 w-4" />
