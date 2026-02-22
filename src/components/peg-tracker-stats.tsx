@@ -13,7 +13,7 @@ interface PegTrackerStatsProps {
 export function PegTrackerStats({ summary, isLoading }: PegTrackerStatsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} className="rounded-2xl">
             <CardContent className="pt-6 space-y-2">
@@ -29,7 +29,7 @@ export function PegTrackerStats({ summary, isLoading }: PegTrackerStatsProps) {
   if (!summary) return null;
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
       {/* Active Depegs */}
       <Card className="rounded-2xl border-l-[3px] border-l-red-500">
         <CardHeader className="pb-1">

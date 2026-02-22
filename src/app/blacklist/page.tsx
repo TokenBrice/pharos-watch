@@ -84,11 +84,6 @@ function BlacklistPageInner() {
         </div>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <UsdsStatusCard />
-        <EurcBlacklistCard />
-      </div>
-
       <BlacklistStats events={events} isLoading={isLoading} />
 
       <BlacklistChart events={events} isLoading={isLoading} />
@@ -147,6 +142,11 @@ function BlacklistPageInner() {
           </div>
         </div>
       )}
+
+      <div className="grid grid-cols-2 gap-5">
+        <UsdsStatusCard />
+        <EurcBlacklistCard />
+      </div>
     </div>
   );
 }

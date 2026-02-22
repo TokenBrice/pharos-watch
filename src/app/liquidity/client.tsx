@@ -115,7 +115,7 @@ export function LiquidityClient() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="rounded-2xl">
               <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
