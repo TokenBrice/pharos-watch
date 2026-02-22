@@ -58,7 +58,7 @@ export default function AboutPage() {
                 name: "Why does Pharos exist?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Pharos is a personal project by TokenBrice, built with the help of Claude. It puts the stablecoin data you want to monitor in one place — honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+                  text: "Pharos is a project by TokenBrice and Claude. It puts the stablecoin data you want to monitor in one place — honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
                 },
               },
               {
@@ -108,16 +108,25 @@ export default function AboutPage() {
           <CardTitle as="h2">Why Pharos?</CardTitle>
         </CardHeader>
         <CardContent className="flex gap-5 text-sm text-muted-foreground leading-relaxed">
-          <Image
-            src="/tokenbrice.png"
-            alt="TokenBrice"
-            width={80}
-            height={80}
-            className="rounded-xl shrink-0 h-20 w-20"
-          />
+          <div className="flex sm:flex-col gap-3 shrink-0">
+            <Image
+              src="/tokenbrice.png"
+              alt="TokenBrice"
+              width={80}
+              height={80}
+              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
+            />
+            <Image
+              src="/claude.png"
+              alt="Claude"
+              width={80}
+              height={80}
+              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
+            />
+          </div>
           <div className="space-y-3">
             <p>
-              Pharos is a personal project by{" "}
+              Pharos is a project by{" "}
               <a
                 href="https://tokenbrice.xyz/"
                 target="_blank"
@@ -127,7 +136,7 @@ export default function AboutPage() {
                 TokenBrice
                 <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>
-              , built with the help of{" "}
+              {" "}and{" "}
               <a
                 href="https://www.anthropic.com/claude-code"
                 target="_blank"
@@ -139,7 +148,6 @@ export default function AboutPage() {
               </a>
               . It puts the stablecoin data you want to monitor in one place — honest
               classification, freeze tracking, and a graveyard for the ones that didn&apos;t make it.
-              I figured others might find it useful too, so here it is.
             </p>
           </div>
         </CardContent>
