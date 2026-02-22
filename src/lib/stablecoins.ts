@@ -820,12 +820,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("256", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "crvUSD lending positions and Curve LP tokens",
-    pegMechanism: "Depends on crvUSD ecosystem which relies on centralized stablecoin peg keepers",
+    geckoId: "resupply-usd",
+    collateral: "crvUSD and frxUSD lending vault tokens from Curve Lend and Fraxlend",
+    pegMechanism: "Communal redemption model with 1% fee establishing a price floor; borrow rate is the higher of half the lending rate, half the sfrxUSD rate, or 2%; underlying collateral depends on crvUSD/frxUSD ecosystems which rely on centralized stablecoin peg keepers",
     links: [
       { label: "Website", url: "https://resupply.fi/" },
       { label: "Twitter", url: "https://x.com/ResupplyFi" },
       { label: "Docs", url: "https://docs.resupply.fi/" },
+      { label: "GitHub", url: "https://github.com/resupplyfi/resupply" },
     ],
     contracts: [
       { chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 },
