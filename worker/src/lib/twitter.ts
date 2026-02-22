@@ -84,14 +84,15 @@ export function extractCashtags(text: string): string[] {
   return found.sort((a, b) => a.pos - b.pos).map((f) => f.sym);
 }
 
-/** Build final tweet text: digest + cashtags if it fits in 280 chars. */
-export function buildTweetText(digestText: string): string {
+/** Build final tweet text: title + digest + cashtags if it fits in 280 chars. */
+export function buildTweetText(digestTitle: string, digestText: string): string {
   const MAX = 280;
+  const base = digestTitle ? `${digestTitle}\n\n${digestText}` : digestText;
   const tags = extractCashtags(digestText);
-  if (tags.length === 0) return digestText;
+  if (tags.length === 0) return base;
 
-  const withTags = `${digestText}\n\n${tags.map((s) => `$${s}`).join(" ")}`;
-  return withTags.length <= MAX ? withTags : digestText;
+  const withTags = `${base}\n\n${tags.map((s) => `$${s}`).join(" ")}`;
+  return withTags.length <= MAX ? withTags : base;
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws on API error. */
@@ -120,10 +121,11 @@ async function postTweet(text: string, creds: TwitterCreds): Promise<void> {
  * The caller is responsible for catching errors.
  */
 export async function postDigestTweet(
+  digestTitle: string,
   digestText: string,
   creds: TwitterCreds,
 ): Promise<void> {
-  const tweetText = buildTweetText(digestText);
+  const tweetText = buildTweetText(digestTitle, digestText);
   await postTweet(tweetText, creds);
   console.log(`[twitter] Posted digest tweet (${tweetText.length} chars)`);
 }

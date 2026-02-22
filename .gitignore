@@ -53,11 +53,11 @@ yarn-error.log*
 .vscode
 
 # sandbox artifacts
-HEAD
-config
-hooks
-objects
-refs
+/HEAD
+/config
+/hooks
+/objects
+/refs
 
 # internal planning docs
 improvement.plan.md

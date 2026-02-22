@@ -32,7 +32,7 @@ export function DailyDigest() {
   return (
     <div className="border-t border-b border-border/50 py-5 animate-in fade-in duration-300">
       <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-        Signal &amp; Noise
+        {data!.digestTitle || "Signal & Noise"}
         {data!.generatedAt && (
           <span className="font-normal tracking-wide"> · {formatDateline(data!.generatedAt)}</span>
         )}

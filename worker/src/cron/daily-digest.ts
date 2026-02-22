@@ -16,6 +16,10 @@ const SYSTEM_PROMPT =
   "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
+  "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\"}. " +
+  "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
+  "Examples of good titles: \"Calm Before the Storm\", \"Peg Watch\", \"Money Printer Goes Quiet\", \"Frozen Assets, Warm Markets\". " +
+  "CRITICAL: title + text combined must be UNDER 260 characters (this goes in a tweet). " +
   "Examples of good tone: " +
   "\"$311B in stablecoins and JPYC is still 16% off peg like it's a lifestyle choice.\" " +
   "\"Thirty-four addresses got frozen today. Compliance never sleeps, and neither does Tether's blacklist bot.\" " +
@@ -99,9 +103,11 @@ export async function generateDailyDigest(
 
   // Fetch last 3 digests for context-aware generation
   const recentRows = await db
-    .prepare("SELECT digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 3")
-    .all<{ digest_text: string }>();
-  const recentDigests = (recentRows.results ?? []).map((r) => r.digest_text);
+    .prepare("SELECT digest_title, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 3")
+    .all<{ digest_title: string | null; digest_text: string }>();
+  const recentDigests = (recentRows.results ?? []).map((r) =>
+    r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text
+  );
 
   // --- Collect data ---
 
@@ -205,30 +211,45 @@ export async function generateDailyDigest(
   const result = (await response.json()) as {
     content?: { type: string; text: string }[];
   };
-  const digestText = result.content?.[0]?.text ?? "";
+  const rawText = result.content?.[0]?.text ?? "";
 
-  if (!digestText) {
+  if (!rawText) {
     throw new Error("Claude API returned empty digest text");
+  }
+
+  // Parse JSON response for title + text
+  let digestTitle: string;
+  let digestText: string;
+  try {
+    const parsed = JSON.parse(rawText) as { title?: string; text?: string };
+    digestTitle = (parsed.title ?? "").trim();
+    digestText = (parsed.text ?? "").trim();
+    if (!digestText) throw new Error("empty text field");
+  } catch {
+    // Fallback: treat entire response as text with no title
+    console.warn("[daily-digest] Failed to parse JSON response, using raw text");
+    digestTitle = "";
+    digestText = rawText.trim();
   }
 
   // --- Store result ---
   const now = Math.floor(Date.now() / 1000);
   await db
     .prepare(
-      "INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, ?, ?)",
+      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data) VALUES (?, ?, ?, ?)",
     )
-    .bind(now, digestText, JSON.stringify(inputData))
+    .bind(now, digestText, digestTitle || null, JSON.stringify(inputData))
     .run();
 
   // Post to Twitter if credentials are available
   if (twitterCreds) {
     try {
-      await postDigestTweet(digestText, twitterCreds);
+      await postDigestTweet(digestTitle, digestText, twitterCreds);
     } catch (err) {
       console.error("[daily-digest] Failed to post tweet (non-fatal):", err);
     }
   }
 
-  console.log(`[daily-digest] Generated and stored digest (${digestText.length} chars)`);
+  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars)`);
   return { itemCount: 1, metadata: `${digestText.length} chars` };
 }

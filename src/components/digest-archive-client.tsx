@@ -33,11 +33,12 @@ export function DigestArchiveClient() {
     <div className="space-y-0">
       {data.digests.map((d) => (
         <div key={d.generatedAt} className="border-b border-border/50 py-5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-            {formatDateline(d.generatedAt)}
+          <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+            {d.digestTitle || "Signal & Noise"}
+            <span className="font-normal tracking-wide"> · {formatDateline(d.generatedAt)}</span>
           </p>
           <p
-            className="text-[1.1rem] leading-relaxed text-foreground/90"
+            className="text-[1.1rem] leading-relaxed text-foreground/90 italic"
             style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
             {d.digestText}

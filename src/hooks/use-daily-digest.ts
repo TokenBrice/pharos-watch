@@ -4,6 +4,7 @@ import { useApiQuery, CRON_24H } from "@/hooks/use-api-query";
 
 interface DailyDigestData {
   digest: string | null;
+  digestTitle: string | null;
   generatedAt: number | null;
 }
 
