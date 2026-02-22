@@ -619,15 +619,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "Crypto assets deposited in vaults managed via crvUSD and Curve ecosystem",
-    pegMechanism: "Depends on crvUSD peg stability which itself relies on centralized stablecoin peg keepers",
+    yieldBearing: true, navToken: true,
+    collateral: "USDC, USDe, and sUSDe deployed into fully collateralized quota-share reinsurance contracts and delta-neutral ETH basis / short-duration T-bill strategies",
+    pegMechanism: "NAV-based pricing recalculated daily at UTC 00:00; yield accrues from reinsurance underwriting spread and basis trade; guardrails limit max single-day price moves",
+    proofOfReserves: { type: "real-time", url: "https://app.re.xyz/transparency", provider: "The Network Firm / Chainlink" },
     links: [
       { label: "Website", url: "https://re.xyz/" },
+      { label: "Twitter", url: "https://x.com/re_protocol" },
       { label: "Docs", url: "https://docs.re.xyz" },
     ],
-    jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0x5086bf358635b81d8c47c66d1c8b9e567db70c72", decimals: 18 },
+      { chain: "avalanche", address: "0x180af87b47bf272b2df59dccf2d76a6eafa625bf", decimals: 18 },
+      { chain: "arbitrum", address: "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609", decimals: 18 },
+      { chain: "base", address: "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea", decimals: 18 },
+      { chain: "bsc", address: "0xba9425ec55ee0e72216d18e0ad8bbba2553bfb60", decimals: 18 },
+      { chain: "ink", address: "0x5bcf6b008bf80b9296238546bace1797657b05d6", decimals: 18 },
     ],
   }),
   usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized-dependent", {
