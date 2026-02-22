@@ -11,13 +11,12 @@ Public-facing analytics dashboard tracking ~130 stablecoins across multiple peg 
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, EURC, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, diversity, and cross-chain coverage with 10-minute refresh
-- **DEX Price Cross-Validation** — DEX-implied prices from Curve StableSwap pools provide a confirmation gate that suppresses false-positive depeg events
 - **Stablecoin Cemetery** — 62 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
 - **Backing type breakdown** — RWA-backed, crypto-backed, and algorithmic
 - **Yield-bearing & NAV token filters** — identify tokens that accrue yield natively
-- **Research-grade data pipeline** — structural validation, supply sanity checks, concurrent write protection, depeg deduplication, and price validation guardrails
+- **Research-grade data pipeline** — structural validation, concurrent write protection, depeg deduplication, and price validation guardrails
 - **Dark/light mode**
 
 ## Tech Stack
@@ -36,7 +35,7 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | Source | Purpose | Refresh |
 |--------|---------|---------|
 | [DefiLlama](https://defillama.com/) | Stablecoin supply, price, chain distribution, history | 5 min |
-| [CoinGecko](https://www.coingecko.com/) | Gold-pegged token data (XAUT, PAXG), fallback price enrichment, supply overrides | 5 min (as fallback) |
+| [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 5 min (as fallback) |
 | [DexScreener](https://dexscreener.com/) | Best-effort price fallback via on-chain DEX pair data | On demand |
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, EURC, PAXG, XAUT freeze/blacklist events (EVM chains) | 15 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 15 min |
@@ -106,7 +105,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 ```
 Cloudflare Worker (API layer)
   ├── Cron: */5 * * * *    → sync stablecoin data (DefiLlama + CoinGecko gold) + price enrichment + depeg detection + chart history
-  ├── Cron: */10 * * * *   → sync DEX liquidity (DeFiLlama Yields + Curve API) + DEX price cross-validation
+  ├── Cron: */10 * * * *   → sync DEX liquidity (DeFiLlama Yields + Curve API)
   ├── Cron: */15 * * * *   → sync blacklist events (Etherscan/TronGrid/dRPC) + USDS status
   └── Cron: 0 */2 * * *   → sync FX rates + Bluechip safety ratings
 
@@ -117,8 +116,7 @@ Cloudflare D1 (SQLite database)
   ├── depeg_events         → peg deviation events with unique constraint + direction tracking
   ├── price_cache          → historical price snapshots for depeg detection
   ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
-  ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
-  └── dex_prices           → DEX-implied prices from Curve pools for cross-validation
+  └── dex_liquidity_history → daily TVL/score snapshots for trend analysis
 
 Cloudflare Pages
   └── Static export from Next.js
@@ -129,7 +127,6 @@ Cloudflare Pages
 The data pipeline includes multiple guardrails designed for research-grade accuracy:
 
 - **Structural validation** — API responses are validated for required fields before caching; malformed objects are dropped
-- **Supply sanity floor** — cache writes are skipped if total tracked supply falls below $100B, preventing partial outages from showing $0 market cap
 - **Price validation ordering** — unreasonable prices are rejected before entering the 24-hour price cache, not after
 - **Concurrent write protection** — compare-and-swap cache writes prevent slow sync runs from overwriting newer data
 - **Depeg deduplication** — unique constraint on `(stablecoin_id, started_at, source)` prevents duplicate events; overlapping intervals are merged when computing peg scores

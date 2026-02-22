@@ -172,9 +172,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
     │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
-    │   ├── detect-depegs.ts      # Depeg event detection with DEX price cross-validation + orphan event cleanup
+    │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
-    │   ├── sync-onchain-supply.ts # On-chain totalSupply queries → D1 (30min, piggybacks on */15 cron)
     │   ├── snapshot-supply.ts    # Periodic per-coin supply snapshots → D1 (12h, piggybacks on */15 cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1
@@ -201,12 +200,12 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
     │   └── backfill-supply-history.ts # GET /api/backfill-supply-history (admin)
     └── lib/
-        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, onchain supply, logCronRun with protected catch)
-        ├── chain-rpcs.ts         # Chain RPC endpoint config for on-chain supply queries (11 chains: EVM + Tron)
+        ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
+        ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, ETHERSCAN_V2_BASE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
         ├── alerts.ts             # Alert sending (ntfy push notifications on cron failures)
-        ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion
+        ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)
         ├── binary-search.ts      # Generic binarySearchNearest<T>() for sorted array lookups
         ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)

@@ -42,9 +42,11 @@ cd worker && npx tsc --noEmit      # Worker type-check
 
 - **Tailwind classes must be static strings** — never construct dynamically (purge won't find them)
 - **Classification labels/colors**: all in `src/lib/classification.ts` — never define locally
-- **Supply helpers**: use `getCirculatingRaw/USD()` from `src/lib/supply.ts`; USD variants for cross-currency totals
+- **Supply helpers**: use `getCirculatingRaw/USD()` from `src/lib/supply.ts`; all values are in USD
 - **Hook timing**: `staleTime = cron interval`, `refetchInterval = 2× cron interval`
 - **Worker imports `src/lib/`** — root tsconfig excludes `worker/` to avoid D1 type conflicts
+- **DL list vs detail API**: The list endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values already in USD for all peg types. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs. Do NOT multiply list endpoint values by price — that double-converts.
+- **No supply overrides**: Supply data comes from DefiLlama only. No on-chain, CMC, or DEX overrides. Prices fall back to CG → CMC → DexScreener when DL has no price.
 
 ## Topic References
 
@@ -52,5 +54,5 @@ Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
-- **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers, DEX price cross-validation
-- **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync, on-chain supply verification
+- **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
+- **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync

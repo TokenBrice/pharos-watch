@@ -38,6 +38,26 @@ yarn-error.log*
 
 # claude code
 .claude/
+.mcp.json
+
+# shell/editor config
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.ripgreprc
+.idea
+.vscode
+
+# sandbox artifacts
+HEAD
+config
+hooks
+objects
+refs
 
 # internal planning docs
 improvement.plan.md

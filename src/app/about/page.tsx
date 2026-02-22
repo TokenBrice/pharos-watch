@@ -8,14 +8,14 @@ import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 
 export const metadata: Metadata = {
-  title: "About Pharos — Stablecoin Analytics & On-Chain Tracking",
+  title: "About Pharos — Stablecoin Analytics Dashboard",
   description:
     "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   alternates: {
     canonical: "/about/",
   },
   openGraph: {
-    title: "About Pharos — Stablecoin Analytics & On-Chain Tracking",
+    title: "About Pharos — Stablecoin Analytics Dashboard",
     description:
       "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
@@ -78,7 +78,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 15 minutes), CoinGecko for logos, gold-pegged tokens, and supply overrides for coins with corrupted upstream data, CoinMarketCap as a fallback for price and market cap data not covered by DefiLlama or CoinGecko, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
+                  text: "All data is fetched server-side by a Cloudflare Worker. Primary sources include DefiLlama for supply, price, and chain distribution (refreshed every 15 minutes), CoinGecko for logos, gold/silver/fiat token supply (tokens not tracked by DefiLlama), and fallback price enrichment, CoinMarketCap as a fallback for price data not covered by DefiLlama or CoinGecko, Etherscan v2 for EVM freeze events, TronGrid for Tron freeze events, DexScreener as a last-resort price fallback, Bluechip for independent safety ratings, the European Central Bank (via frankfurter.app) for live FX rates used in non-USD peg validation, Exchange Rate API (open.er-api.com) for RUB/USD rates not published by the ECB, and metals.dev for gold and silver spot prices used in commodity-pegged stablecoin peg validation.",
                 },
               },
             ],
@@ -258,52 +258,6 @@ export default function AboutPage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl border-l-[3px] border-l-orange-500">
-        <CardHeader>
-          <CardTitle as="h2">DEX Price Cross-Validation</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
-          <p>
-            To reduce false depeg alerts from single-source API glitches, Pharos cross-validates primary prices
-            (from DefiLlama) against <span className="text-foreground font-medium">DEX-implied prices</span> derived
-            from Curve StableSwap pools. This data comes at zero additional API cost — Curve pool data is already
-            fetched every <span className="font-mono">15 minutes</span> for the liquidity score, and each pool
-            response includes per-token USD prices.
-          </p>
-          <p className="text-foreground font-medium pt-2">How It Works</p>
-          <ul className="space-y-3">
-            <li className="flex gap-2">
-              <span className="text-foreground font-medium shrink-0">Price Extraction</span>
-              <span>
-                For each Curve pool with at least $50K TVL and a balance ratio above 0.3, the on-chain USD price
-                of each tracked stablecoin is recorded along with the pool&apos;s TVL.
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-foreground font-medium shrink-0">TVL-Weighted Median</span>
-              <span>
-                Multiple price observations per stablecoin are aggregated using a TVL-weighted median — more robust
-                than a weighted mean, since a single high-TVL pool with a distorted price won&apos;t skew the result.
-              </span>
-            </li>
-            <li className="flex gap-2">
-              <span className="text-foreground font-medium shrink-0">Confirmation Gate</span>
-              <span>
-                When the primary price suggests a depeg (deviation exceeding the peg threshold), the system checks whether the DEX price
-                agrees. If the DEX price is fresh (under 20 minutes old) and shows the coin at peg, the depeg event
-                is <span className="text-foreground font-medium">suppressed</span> — likely a false positive from
-                a single-source glitch. If both sources agree on the depeg, the event opens normally.
-              </span>
-            </li>
-          </ul>
-          <p>
-            Stablecoins without Curve pool presence (~80 of {TRACKED_STABLECOINS.length}) are unaffected — the system
-            falls back to primary-price-only detection. The DEX-implied price, deviation, and contributing pools are
-            visible on each stablecoin&apos;s detail page and in the peg heatmap.
-          </p>
-        </CardContent>
-      </Card>
-
       <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
         <CardHeader>
           <CardTitle as="h2">Liquidity Score Methodology</CardTitle>
@@ -464,11 +418,11 @@ export default function AboutPage() {
               Refreshed every <span className="font-mono">15 minutes</span>.
             </li>
             <li>
-              <span className="text-foreground font-medium">CoinGecko</span> — stablecoin logos, gold-pegged token data (XAUT, PAXG are not in DefiLlama&apos;s stablecoin API), fallback price enrichment for assets DefiLlama misses, and supply overrides for coins with corrupted upstream data.
+              <span className="text-foreground font-medium">CoinGecko</span> — stablecoin logos, gold/silver/fiat token supply data (tokens not tracked by DefiLlama&apos;s stablecoin API, e.g. XAUT, PAXG), and fallback price enrichment for assets DefiLlama misses.
               Logos refresh every <span className="font-mono">6 hours</span>.
             </li>
             <li>
-              <span className="text-foreground font-medium">CoinMarketCap</span> — fallback price and market cap for stablecoins not covered by DefiLlama or CoinGecko (e.g. MXNT).
+              <span className="text-foreground font-medium">CoinMarketCap</span> — fallback price for stablecoins not covered by DefiLlama or CoinGecko (e.g. MXNT).
               Rate-limited to 1 call/hour.
             </li>
             <li>

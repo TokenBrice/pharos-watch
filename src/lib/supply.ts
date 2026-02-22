@@ -13,9 +13,8 @@ export function sumPegBuckets(obj: Record<string, number> | undefined): number {
 
 /**
  * Sum circulating values across all peg buckets.
- * DefiLlama's raw API returns native-currency amounts for non-USD coins,
- * but sync-stablecoins.ts converts them to USD before caching, so the
- * values we receive here are already in USD — no FX conversion needed.
+ * DefiLlama's list API returns values already in USD for all peg types,
+ * so the values we receive here are always in USD — no FX conversion needed.
  */
 export function getCirculatingRaw(c: StablecoinData): number {
   return sumPegBuckets(c.circulating);
