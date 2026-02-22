@@ -352,6 +352,16 @@ export default function AboutPage() {
         <p>
           Questions, corrections, or stablecoins we should add? Reach out on{" "}
           <a
+            href="https://x.com/PharosWatch"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+          >
+            @PharosWatch
+            <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+          </a>
+          {" "}or{" "}
+          <a
             href="https://tokenbrice.xyz/"
             target="_blank"
             rel="noopener noreferrer"

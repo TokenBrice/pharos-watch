@@ -121,6 +121,10 @@ export default function RootLayout({
                 url: "https://pharos.watch",
                 logo: "https://pharos.watch/pharos-icon.png",
                 description: siteDescription,
+                sameAs: [
+                  "https://x.com/PharosWatch",
+                  "https://github.com/TokenBrice/stablecoin-dashboard",
+                ],
                 founder: {
                   "@type": "Person",
                   name: "TokenBrice",
