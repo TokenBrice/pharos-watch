@@ -7,7 +7,6 @@ import { syncUsdsStatus } from "./cron/sync-usds-status";
 import { syncBluechip } from "./cron/sync-bluechip";
 import { syncFxRates } from "./cron/sync-fx-rates";
 import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
-import { syncOnchainSupply } from "./cron/sync-onchain-supply";
 import { snapshotSupply } from "./cron/snapshot-supply";
 import { generateDailyDigest } from "./cron/daily-digest";
 import { initChainRpcs } from "./lib/chain-rpcs";
@@ -125,9 +124,6 @@ const worker = {
         const hour = scheduled.getUTCHours();
         if ((hour === 0 || hour === 12) && scheduled.getUTCMinutes() === 0) {
           ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
-        }
-        if (scheduled.getMinutes() % 30 === 0) {
-          ctx.waitUntil(logCronRun(db, "sync-onchain-supply", () => syncOnchainSupply(db, env.TRONGRID_API_KEY ?? null)));
         }
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {

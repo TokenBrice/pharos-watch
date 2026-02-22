@@ -296,9 +296,6 @@ export async function enrichMissingPrices(
                 if (!cmcEntry) continue;
                 if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined)) {
                   assets[m.index].price = cmcEntry.price;
-                  if (cmcEntry.marketCap > 0) {
-                    (assets[m.index] as Record<string, unknown>)._cmcMarketCap = cmcEntry.marketCap;
-                  }
                   passCmcCount++;
                 }
               }

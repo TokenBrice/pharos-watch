@@ -1,4 +1,4 @@
-import { setCacheIfNewer, getCache, getPriceCache, savePriceCache, getOnchainSupply } from "../lib/db";
+import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enrich-prices";
@@ -6,7 +6,7 @@ import type { PeggedAsset, DefiLlamaCoinPrice, EnrichmentStats } from "./enrich-
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT, SUPPLY_OVERRIDE_COINS, DEX_FRESHNESS_SEC } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT } from "../lib/constants";
 import type { StablecoinMeta } from "../../../src/lib/types";
 
 // Derive commodity + CG-only fiat token lists from the central registry
@@ -248,7 +248,6 @@ async function fetchCoinGeckoMarketData(): Promise<CoinGeckoMcapData> {
   const ids = [
     ...COMMODITY_TOKENS.filter((t) => !t.protocolSlug).map((t) => t.geckoId).filter(Boolean),
     ...FIAT_CG_METAS.map((t) => t.geckoId).filter(Boolean),
-    ...SUPPLY_OVERRIDE_COINS.map((c) => c.geckoId),
   ].join(",");
   if (!ids) return {};
 
@@ -261,61 +260,6 @@ async function fetchCoinGeckoMarketData(): Promise<CoinGeckoMcapData> {
     return {};
   }
   return (await res.json()) as CoinGeckoMcapData;
-}
-
-/** Returns CG mcap fallback data for force-override coins (used as safety net after on-chain pass) */
-async function patchSupplyOverrides(assets: PeggedAsset[], cgData: CoinGeckoMcapData): Promise<Map<string, { mcap: number; pegKey: string }>> {
-  const forcedMcaps = new Map<string, { mcap: number; pegKey: string }>();
-  if (SUPPLY_OVERRIDE_COINS.length === 0) return forcedMcaps;
-
-  try {
-    for (const override of SUPPLY_OVERRIDE_COINS) {
-      const asset = assets.find((a) => String(a.id) === override.llamaId);
-      const geckoData = cgData[override.geckoId];
-      if (!asset || !geckoData) continue;
-
-      const price = geckoData.usd;
-      const mcap = geckoData.usd_market_cap;
-      if (!price || price <= 0) continue;
-
-      // Force mode: override price from CoinGecko, stash mcap as fallback for post-on-chain check
-      if (override.force) {
-        asset.price = price;
-        if (mcap && mcap > 0) {
-          forcedMcaps.set(override.llamaId, { mcap, pegKey: override.pegKey });
-        }
-        // Clear DL's historical supply (unreliable for force-override coins)
-        // so supply_history fill-in provides correct values
-        (asset as Record<string, unknown>).circulatingPrevDay = null;
-        (asset as Record<string, unknown>).circulatingPrevWeek = null;
-        (asset as Record<string, unknown>).circulatingPrevMonth = null;
-        console.log(`[sync-stablecoins] Price-only override for ${asset.symbol}: price $${price.toFixed(6)} (supply deferred to on-chain)`);
-        continue;
-      }
-
-      if (!mcap) continue;
-
-      // DefiLlama stores circulating values in USD — store mcap directly
-      const circ = asset.circulating as Record<string, number> | undefined;
-      const oldSupply = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
-
-      // Skip override if DL is close enough
-      if (oldSupply > 0 && mcap / oldSupply < 10) continue;
-
-      asset.circulating = { [override.pegKey]: mcap };
-      asset.price = price;
-      // Clear historical supply (DL data unreliable) — shows "N/A" for changes
-      (asset as Record<string, unknown>).circulatingPrevDay = null;
-      (asset as Record<string, unknown>).circulatingPrevWeek = null;
-      (asset as Record<string, unknown>).circulatingPrevMonth = null;
-      console.log(
-        `[sync-stablecoins] Supply override for ${asset.symbol}: ${oldSupply.toFixed(0)} → ${mcap.toFixed(0)} USD, price $${price.toFixed(6)}`
-      );
-    }
-  } catch (err) {
-    console.warn("[sync-stablecoins] Supply override fetch failed:", err);
-  }
-  return forcedMcaps;
 }
 
 export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promise<CronResult> {
@@ -358,9 +302,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...silverTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
   }
-
-  // Patch corrupted supply data from DefiLlama using CoinGecko
-  const forcedMcaps = await patchSupplyOverrides(llamaData.peggedAssets, cgData);
 
   // Patch known missing/wrong geckoIds from StablecoinMeta so enrichMissingPrices can resolve them
   // Patch known missing contract addresses for Pass 1 resolution
@@ -453,53 +394,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     console.log(`[sync-stablecoins] Converted ${nativeCurrencyConversions} non-USD DL coins from native currency to USD`);
   }
 
-  // --- DEX price cross-validation ---
-  let dexOverrides = 0;
-  let dexDivergenceWarnings = 0;
-  try {
-    const dexResult = await db
-      .prepare("SELECT stablecoin_id, dex_price_usd, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
-      .all<{
-        stablecoin_id: string;
-        dex_price_usd: number;
-        source_pool_count: number;
-        source_total_tvl: number;
-        updated_at: number;
-      }>();
-    const dexMap = new Map((dexResult.results ?? []).map((r) => [r.stablecoin_id, r]));
-    const nowSec = Math.floor(Date.now() / 1000);
-    for (const asset of llamaData.peggedAssets) {
-      if (asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
-      const dexRow = dexMap.get(String(asset.id));
-      if (!dexRow || (nowSec - dexRow.updated_at) >= DEX_FRESHNESS_SEC) continue;
-
-      const divergenceBps = Math.abs(Math.round(((asset.price / dexRow.dex_price_usd) - 1) * 10000));
-      if (divergenceBps >= 50) {
-        dexDivergenceWarnings++;
-        console.warn(
-          `[sync-stablecoins] DEX divergence for ${asset.symbol} (id=${asset.id}): ` +
-          `primary=$${asset.price} vs DEX=$${dexRow.dex_price_usd} (${divergenceBps}bps, ` +
-          `${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
-        );
-      }
-      // Override primary with DEX price at 200bps divergence IF DEX has >= $5M TVL and >= 3 pools
-      if (
-        divergenceBps >= 200 &&
-        dexRow.source_total_tvl >= 5_000_000 &&
-        dexRow.source_pool_count >= 3
-      ) {
-        console.warn(
-          `[sync-stablecoins] OVERRIDING primary price for ${asset.symbol}: ` +
-          `$${asset.price} → $${dexRow.dex_price_usd} (DEX, ${divergenceBps}bps divergence)`
-        );
-        asset.price = dexRow.dex_price_usd;
-        dexOverrides++;
-      }
-    }
-  } catch (err) {
-    console.warn("[sync-stablecoins] DEX cross-validation failed (non-blocking):", err);
-  }
-
   // --- Price cache: save successes, apply fallbacks ---
   const PRICE_CACHE_TTL = 24 * 60 * 60; // 24 hours
   const now = Math.floor(Date.now() / 1000);
@@ -528,191 +422,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     }
     if (fallbackCount > 0) {
       console.log(`[sync-stablecoins] Applied ${fallbackCount} cached fallback prices`);
-    }
-  }
-
-  // --- CMC supply override: use CMC market cap for coins where DL reports near-zero supply ---
-  let cmcSupplyOverrides = 0;
-  for (const asset of llamaData.peggedAssets) {
-    const cmcMcap = (asset as Record<string, unknown>)._cmcMarketCap as number | undefined;
-    if (!cmcMcap || cmcMcap <= 10_000) continue;
-
-    const circ = asset.circulating as Record<string, number> | undefined;
-    const dlMcap = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
-    if (dlMcap >= 1_000) continue; // DL has meaningful data, skip
-
-    const pegKey = asset.pegType ?? "peggedUSD";
-    asset.circulating = { [pegKey]: cmcMcap };
-    (asset as Record<string, unknown>).circulatingPrevDay = null;
-    (asset as Record<string, unknown>).circulatingPrevWeek = null;
-    (asset as Record<string, unknown>).circulatingPrevMonth = null;
-    cmcSupplyOverrides++;
-    console.log(
-      `[sync-stablecoins] CMC supply override for ${asset.symbol} (id=${asset.id}): ` +
-      `DL mcap $${dlMcap.toFixed(0)} → CMC mcap $${cmcMcap.toFixed(0)}`
-    );
-  }
-  if (cmcSupplyOverrides > 0) {
-    console.log(`[sync-stablecoins] Applied ${cmcSupplyOverrides} CMC supply overrides`);
-  }
-  // Clean up temp _cmcMarketCap property
-  for (const asset of llamaData.peggedAssets) {
-    delete (asset as Record<string, unknown>)._cmcMarketCap;
-  }
-
-  // Supply sanity check: skip cache write if total supply is implausibly low
-  const trackedIds = new Set(TRACKED_STABLECOINS.map((s) => s.id));
-  const totalSupply = llamaData.peggedAssets
-    .filter((a) => trackedIds.has(a.id))
-    .reduce((sum, a) => {
-      const circ = a.circulating as Record<string, number> | undefined;
-      return sum + (circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0);
-    }, 0);
-  if (totalSupply < 100_000_000_000) {
-    console.error(`[sync-stablecoins] Total supply $${(totalSupply / 1e9).toFixed(1)}B is below $100B floor, skipping cache write`);
-    return {};
-  }
-
-  // --- On-chain supply override ---
-  try {
-    const onchainRows = await getOnchainSupply(db, 30 * 24 * 3600); // 30-day window — per-coin freshness checked below
-    if (onchainRows.length > 0) {
-      // Group by stablecoin ID
-      const byStablecoin = new Map<string, { chain: string; supply: number; updated_at: number }[]>();
-      for (const row of onchainRows) {
-        const list = byStablecoin.get(row.stablecoin_id) ?? [];
-        list.push({ chain: row.chain, supply: row.supply, updated_at: row.updated_at });
-        byStablecoin.set(row.stablecoin_id, list);
-      }
-
-      let overrideCount = 0;
-      for (const [stablecoinId, chainSupplies] of byStablecoin) {
-        const asset = llamaData.peggedAssets.find((a) => String(a.id) === stablecoinId);
-        if (!asset) continue;
-
-        // Only override DL supply for coins that explicitly opt in via supplyMethod
-        const meta = TRACKED_META_BY_ID.get(stablecoinId);
-        const hasSupplyMethod = meta?.supplyMethod != null && meta.supplyMethod.type !== "exclude";
-        const isForced = SUPPLY_OVERRIDE_COINS.some((c) => c.llamaId === stablecoinId && c.force);
-        if (!hasSupplyMethod && !isForced) continue;
-
-        // Per-coin freshness: non-forced coins require data within 2 hours;
-        // forced coins accept any age (stale on-chain data is still better than broken DL data)
-        if (!isForced) {
-          const newestAt = Math.max(...chainSupplies.map((cs) => cs.updated_at));
-          const age = Math.floor(Date.now() / 1000) - newestAt;
-          if (age > 7200) {
-            continue; // Stale for regular coins — skip
-          }
-        }
-
-        if (!isForced && meta?.contracts) {
-          const configuredChains = new Set(meta.contracts.map((c) => c.chain));
-          const dataChains = new Set(chainSupplies.map((cs) => cs.chain));
-          const missing = [...configuredChains].filter((c) => !dataChains.has(c));
-          if (missing.length > 0) {
-            console.warn(`[sync-stablecoins] Skipping on-chain override for ${asset.symbol}: missing chains ${missing.join(", ")}`);
-            continue;
-          }
-        }
-
-        const onchainTotal = chainSupplies.reduce((s, c) => s + c.supply, 0);
-        const price = asset.price as number | null;
-        if (!price || price <= 0 || onchainTotal <= 0) continue;
-
-        // Compare on-chain supply (token units) with DefiLlama supply (token units)
-        const circ = asset.circulating as Record<string, number> | undefined;
-        const llamaMcap = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
-        const llamaSupply = llamaMcap / price;
-
-        const divergence = Math.abs(onchainTotal - llamaSupply) / Math.max(llamaSupply, 1);
-        if (divergence <= 0.05) continue; // Within 5%, keep DefiLlama
-
-        // Guard: never override if on-chain total is dramatically LOWER than DefiLlama.
-        // RPC glitches returning low/partial values are far more likely than DL over-reporting.
-        // Exception: force-override coins trust on-chain unconditionally
-        if (!isForced && onchainTotal < llamaSupply * 0.5) {
-          console.warn(
-            `[sync-stablecoins] Rejecting on-chain override for ${asset.symbol}: ` +
-            `on-chain ${onchainTotal.toFixed(0)} is <50% of DL ${llamaSupply.toFixed(0)} — likely RPC issue`
-          );
-          continue;
-        }
-
-        // Guard: never override if on-chain total is dramatically HIGHER than DefiLlama.
-        // If on-chain is >3x DL, likely includes non-circulating tokens (treasury, pre-minted capacity).
-        if (!isForced && llamaSupply > 0 && onchainTotal > llamaSupply * 3) {
-          console.warn(
-            `[sync-stablecoins] Rejecting on-chain override for ${asset.symbol}: ` +
-            `on-chain ${onchainTotal.toFixed(0)} is >3x DL ${llamaSupply.toFixed(0)} — likely includes non-circulating tokens`
-          );
-          continue;
-        }
-
-        // Warning: flag large absolute overrides for monitoring
-        const overrideAmountUsd = Math.abs(onchainTotal * (price ?? 0) - llamaMcap);
-        if (overrideAmountUsd > 500_000_000) {
-          console.warn(
-            `[sync-stablecoins] LARGE OVERRIDE for ${asset.symbol}: ` +
-            `mcap change $${(overrideAmountUsd / 1e6).toFixed(0)}M — verify data quality`
-          );
-        }
-
-        // Override: recompute circulating in USD (DefiLlama convention)
-        const pegKey = Object.keys(circ ?? {})[0] ?? asset.pegType ?? "peggedUSD";
-        const newMcap = onchainTotal * price;
-        asset.circulating = { [pegKey]: newMcap };
-
-        // Override chainCirculating with per-chain data
-        const chainCirc: Record<string, { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number }> = {};
-        for (const cs of chainSupplies) {
-          const chainMcap = cs.supply * price;
-          chainCirc[cs.chain] = {
-            current: chainMcap,
-            circulatingPrevDay: 0,
-            circulatingPrevWeek: 0,
-            circulatingPrevMonth: 0,
-          };
-        }
-        asset.chainCirculating = chainCirc;
-        asset.chains = chainSupplies.map((cs) => cs.chain);
-
-        overrideCount++;
-        console.log(
-          `[sync-stablecoins] On-chain override for ${asset.symbol} (id=${stablecoinId}): ` +
-          `DL=${llamaSupply.toFixed(0)} → OnChain=${onchainTotal.toFixed(0)} tokens, mcap $${newMcap.toFixed(0)}`
-        );
-      }
-
-      if (overrideCount > 0) {
-        console.log(`[sync-stablecoins] Applied ${overrideCount} on-chain supply overrides`);
-      }
-    }
-  } catch (err) {
-    console.error("[sync-stablecoins] On-chain supply override failed:", err);
-  }
-
-  // --- CoinGecko mcap safety net for forced coins ---
-  // If on-chain override didn't fire (missing data), fall back to CG mcap
-  if (forcedMcaps.size > 0) {
-    for (const [llamaId, { mcap, pegKey }] of forcedMcaps) {
-      const asset = llamaData.peggedAssets.find((a) => String(a.id) === llamaId);
-      if (!asset) continue;
-
-      const circ = asset.circulating as Record<string, number> | undefined;
-      const currentMcap = circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0;
-
-      // If current mcap is tiny but CG says it should be large, apply CG mcap
-      if (currentMcap < 1000 && mcap > 1_000_000) {
-        asset.circulating = { [pegKey]: mcap };
-        (asset as Record<string, unknown>).circulatingPrevDay = null;
-        (asset as Record<string, unknown>).circulatingPrevWeek = null;
-        (asset as Record<string, unknown>).circulatingPrevMonth = null;
-        console.log(
-          `[sync-stablecoins] CG mcap safety-net for ${asset.symbol} (id=${llamaId}): ` +
-          `broken DL mcap $${currentMcap.toFixed(0)} → CG mcap $${mcap.toFixed(0)}`
-        );
-      }
     }
   }
 
@@ -777,21 +486,6 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     console.warn("[sync-stablecoins] supply_history fallback failed:", err);
   }
 
-  // Post-override sanity check: re-validate total supply after on-chain overrides
-  const postOverrideSupply = llamaData.peggedAssets
-    .filter((a) => trackedIds.has(a.id))
-    .reduce((sum, a) => {
-      const circ = a.circulating as Record<string, number> | undefined;
-      return sum + (circ ? Object.values(circ).reduce((s, v) => s + (v ?? 0), 0) : 0);
-    }, 0);
-  if (postOverrideSupply < 100_000_000_000) {
-    console.error(
-      `[sync-stablecoins] Post-override total supply $${(postOverrideSupply / 1e9).toFixed(1)}B ` +
-      `is below $100B floor (pre-override was $${(totalSupply / 1e9).toFixed(1)}B), skipping cache write`
-    );
-    return {};
-  }
-
   // --- Staleness detection: compare prices against previous cache ---
   let stalenessWarning = false;
   try {
@@ -836,7 +530,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   }
 
   await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
-  console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets (total supply: $${(totalSupply / 1e9).toFixed(1)}B)`);
+  console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
   // Detect depeg events from current price data
   try {
@@ -849,15 +543,11 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
   const metadata: Record<string, unknown> = {
     assetCount: llamaData.peggedAssets.length,
-    totalSupplyB: Math.round(postOverrideSupply / 1e9 * 10) / 10,
     enrichment: enrichStats,
     rejectedPrices: rejectedCount,
     missingPrices: finalMissing,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
-  if (dexOverrides > 0) metadata.dexPriceOverrides = dexOverrides;
-  if (dexDivergenceWarnings > 0) metadata.dexDivergenceWarnings = dexDivergenceWarnings;
-  if (cmcSupplyOverrides > 0) metadata.cmcSupplyOverrides = cmcSupplyOverrides;
 
   return { itemCount: llamaData.peggedAssets.length, metadata: JSON.stringify(metadata) };
 }

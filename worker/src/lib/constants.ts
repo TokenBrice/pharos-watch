@@ -36,11 +36,6 @@ export const DEXSCREENER_MIN_LIQUIDITY_USD = 50_000;
 /** Tron burn address (used to exclude from supply calculations) */
 export const TRON_BURN_ADDRESS = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb";
 
-/** Coins whose supply must be overridden from on-chain data (DL list endpoint is broken) */
-export const SUPPLY_OVERRIDE_COINS: { llamaId: string; geckoId: string; pegKey: string; force?: boolean }[] = [
-  { llamaId: "280", geckoId: "cnh-tether", pegKey: "peggedCNY" }, // DL list API reports 0 circulating
-];
-
 /** Standard Cache-Control header profiles for API responses */
 export const CACHE_PROFILES = {
   /** ~realtime data: stablecoins, blacklist, depeg-events, peg-summary */

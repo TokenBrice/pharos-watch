@@ -1,9 +1,8 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, SUPPLY_OVERRIDE_COINS, CACHE_PROFILES, USER_AGENT } from "../lib/constants";
+import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, CACHE_PROFILES, USER_AGENT } from "../lib/constants";
 import { binarySearchNearest } from "../lib/binary-search";
 import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
-import { sumPegBuckets } from "../../../src/lib/supply";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
@@ -245,46 +244,6 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
   // Validate JSON structure before caching — skip cache on parse failure
   try {
     const parsed = JSON.parse(body);
-
-    // For force-override coins, patch recent token entries with corrected supply from cache
-    const forceOverride = SUPPLY_OVERRIDE_COINS.find((c) => c.llamaId === id && c.force);
-    if (forceOverride && parsed.tokens && Array.isArray(parsed.tokens)) {
-      const stablecoinsCache = await getCache(db, "stablecoins");
-      if (stablecoinsCache) {
-        try {
-          const cacheData = JSON.parse(stablecoinsCache.value) as {
-            peggedAssets?: { id: unknown; price?: number | null; circulating?: Record<string, number> }[];
-          };
-          const cachedAsset = cacheData.peggedAssets?.find((a) => String(a.id) === id);
-          if (cachedAsset?.circulating) {
-            const correctedMcap = sumPegBuckets(cachedAsset.circulating);
-            if (correctedMcap > 0) {
-              const assetPrice = typeof cachedAsset.price === "number" && cachedAsset.price > 0
-                ? cachedAsset.price : null;
-              // Patch last 7 entries (covers ~1 week of daily data points)
-              const patchCount = Math.min(7, parsed.tokens.length);
-              for (let i = parsed.tokens.length - patchCount; i < parsed.tokens.length; i++) {
-                const entry = parsed.tokens[i];
-                if (entry.totalCirculatingUSD) {
-                  entry.totalCirculatingUSD = { [forceOverride.pegKey]: correctedMcap };
-                }
-                if (entry.totalCirculating) {
-                  // Compute supply in token units: mcap / price
-                  // (totalCirculatingUSD / totalCirculating = price for PriceChart)
-                  entry.totalCirculating = {
-                    [forceOverride.pegKey]: assetPrice ? correctedMcap / assetPrice : correctedMcap,
-                  };
-                }
-              }
-              console.log(`[detail] Patched ${patchCount} recent entries for ${id} with corrected mcap $${correctedMcap.toFixed(0)}`);
-            }
-          }
-        } catch {
-          // Stablecoins cache parse failed — continue with unpatched data
-        }
-      }
-      body = JSON.stringify(parsed);
-    }
 
     // Convert non-USD circulating values from native currency to USD.
     // DefiLlama stores non-USD values (BRL, RUB, JPY, etc.) in native units,
