@@ -9,94 +9,14 @@
     "text": "Circle's USDC is what happens when you build a stablecoin for compliance officers. Full monthly attestations from Deloitte, SEC registration, and a BlackRock-managed reserve fund make it the institutional darling of the space. The March 2023 SVB depeg briefly shattered its reputation for safety — and its market cap still hasn't fully recovered to pre-crisis levels. For anyone who needs a stablecoin their legal team won't flinch at, USDC remains the default.",
     "updatedAt": "2026-02-22"
   },
-  "146": {
-    "title": "The Basis Trade, Tokenized",
-    "text": "Ethena's USDe pioneered the delta-neutral stablecoin: hold spot crypto, short the perps, pocket the funding rate. It works beautifully in bull markets when longs pay shorts handsomely for leverage. The catch? When funding flips negative — as it inevitably does — the insurance fund becomes the only thing between USDe and a death spiral. It's a sophisticated yield product wearing a stablecoin's clothing.",
-    "updatedAt": "2026-02-22"
-  },
-  "209": {
-    "title": "The Artist Formerly Known as DAI",
-    "text": "Sky Dollar is MakerDAO's rebranded stablecoin, the culmination of Rune Christensen's \"Endgame\" vision to make the protocol more normie-friendly. Under the hood it's the same overcollateralized vaults and PSM modules — just with a fresh coat of paint and a governance structure that's still figuring itself out. Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement.",
-    "updatedAt": "2026-02-22"
-  },
-  "262": {
-    "title": "The Presidential Stablecoin",
-    "text": "World Liberty Financial's USD1 is backed by the Trump family brand and entered the market with all the subtlety you'd expect. It launched with RWA backing and centralized governance, positioning itself somewhere between a political statement and a financial product. The reserves are real, but the regulatory questions write themselves.",
-    "updatedAt": "2026-02-22"
-  },
   "5": {
     "title": "The OG Decentralized Dollar",
     "text": "The stablecoin that proved crypto could create a synthetic dollar without a bank account. DAI survived the March 2020 crash, navigated the USDC depeg contagion, and maintained its peg through sheer overcollateralization. Now overshadowed by its own rebrand (USDS) and increasingly backed by RWAs rather than pure crypto collateral, DAI remains the philosophical North Star that most \"decentralized\" stablecoins claim to be inspired by.",
     "updatedAt": "2026-02-22"
   },
-  "120": {
-    "title": "Big Fintech's Entry Ticket",
-    "text": "PayPal's stablecoin proves that when a payments giant with 400 million users issues a dollar token, people notice. Paxos-issued and fully reserved in treasuries and cash, PYUSD's regulatory credentials are impeccable. Its challenge isn't trust — it's utility. Until DeFi and PayPal's walled garden meaningfully converge, it risks being the best-credentialed stablecoin nobody uses on-chain.",
-    "updatedAt": "2026-02-22"
-  },
-  "246": {
-    "title": "The Falcon Play",
-    "text": "Falcon Finance's USDf enters the delta-neutral arena alongside Ethena, offering yield through basis-trade strategies with a centralized-dependent governance model. Its crypto-backed structure means the peg relies on market dynamics rather than reserve transparency. In the crowded yield-bearing stablecoin space, differentiation is a question of execution speed and risk management.",
-    "updatedAt": "2026-02-22"
-  },
-  "237": {
-    "title": "Treasury Yields On-Chain",
-    "text": "Hashnote's USYC is a tokenized money market fund that passes T-bill yields directly to holders. It's RWA-backed, yield-bearing, and about as exciting as its underlying asset — which is precisely the point. In a world of exotic DeFi yields, sometimes the most radical product is just a savings account with an ERC-20 wrapper.",
-    "updatedAt": "2026-02-22"
-  },
-  "286": {
-    "title": "The Paxos Sequel",
-    "text": "Global Dollar is Paxos's second act after BUSD, built to avoid the regulatory friction that killed its Binance partnership. Singapore-regulated and reserve-backed, USDG targets the institutional corridor that doesn't want Tether's opacity or Circle's SVB memories. Whether the market needs another compliant stablecoin is a question USDG is determined to answer anyway.",
-    "updatedAt": "2026-02-22"
-  },
-  "250": {
-    "title": "Ripple's Dollar Bet",
-    "text": "After years of fighting the SEC over XRP, Ripple launched its own stablecoin with NYDFS approval — a plot twist even Ripple skeptics didn't see coming. RLUSD is built for Ripple's payments network, aiming to be the bridge asset that XRP never became for institutional transfers. Fully reserved and centrally managed, it's less a DeFi primitive and more a cross-border payments tool.",
-    "updatedAt": "2026-02-22"
-  },
-  "129": {
-    "title": "Ondo's Yield Machine",
-    "text": "Ondo Finance's USDY offers tokenized US Treasury exposure to everyone outside the US, neatly sidestepping domestic securities law. It's RWA-backed, yield-bearing, and has become the poster child of the \"tokenized treasuries\" narrative. The irony of a product that democratizes US government debt by excluding US persons is apparently lost on no one.",
-    "updatedAt": "2026-02-22"
-  },
-  "173": {
-    "title": "When BlackRock Calls It a Token",
-    "text": "BlackRock's tokenized money market fund is what happens when the world's largest asset manager decides blockchain isn't a meme. BUIDL doesn't try to be a DeFi building block — it's institutional plumbing with an ERC-20 wrapper. When Larry Fink's firm validates tokenization, the rest of TradFi starts returning phone calls.",
-    "updatedAt": "2026-02-22"
-  },
-  "14": {
-    "title": "Justin Sun's Undying Dollar",
-    "text": "USDD 2.0 emerged from its rocky algorithmic era with crypto collateral and a fresh governance model, though the centralized-dependent tag tells you Justin Sun still has the keys. It persistently trades above peg, which sounds good until you realize the premium reflects illiquidity as much as demand. The TRON ecosystem keeps it alive; whether that's a feature or a risk depends on your priors about its founder.",
-    "updatedAt": "2026-02-22"
-  },
-  "221": {
-    "title": "Ethena's Safe Side",
-    "text": "If USDe is the exciting sibling, USDtb is the responsible one — backed by BlackRock's BUIDL fund rather than delta-neutral trades. Ethena built it for users who want the ecosystem without the basis-trade risk, creating a safety valve that also serves as USDe's backstop. It's the stablecoin equivalent of keeping a boring index fund alongside your options portfolio.",
-    "updatedAt": "2026-02-22"
-  },
-  "213": {
-    "title": "The Middleman's Stablecoin",
-    "text": "M0's M token is a middleware play: rather than competing with USDC or USDT directly, it provides infrastructure for other stablecoins and fintechs to build on. Its RWA-backed reserves and centralized-dependent governance aim for a middle ground between Tether's opacity and Circle's centralization. The \"protocol for stablecoins\" pitch is elegant in theory — the question is whether the market wants a meta-stablecoin layer.",
-    "updatedAt": "2026-02-22"
-  },
-  "336": {
-    "title": "The Aggregator Dollar",
-    "text": "United Stables takes the yield-aggregation approach, pooling reserves across multiple strategies and passing the returns to holders. It's a bet that diversification of stablecoin backing is itself a feature worth tokenizing. Simple concept, hard execution.",
-    "updatedAt": "2026-02-22"
-  },
-  "309": {
-    "title": "AI Meets RWA",
-    "text": "USD.AI blends the two hottest crypto narratives — artificial intelligence and real-world assets — into a single stablecoin product. Its centralized-dependent governance suggests human oversight where it counts, while the AI branding does the marketing work. Whether the \"AI\" label reflects genuine innovation or narrative arbitrage is left as an exercise for the reader.",
-    "updatedAt": "2026-02-22"
-  },
-  "195": {
-    "title": "The Usual Suspect",
-    "text": "Usual's USD0 burst onto the scene promising a stablecoin where revenue flows back to tokenholders via the USUAL governance token. The RWA-backed reserves provide the peg stability, while the protocol's token economics provide the sizzle. It's an interesting governance experiment, though the December 2024 USD0++ depeg reminded everyone that innovative doesn't mean risk-free.",
-    "updatedAt": "2026-02-22"
-  },
-  "118": {
-    "title": "Aave's Dollar",
-    "text": "GHO is what happens when the largest lending protocol decides to mint its own stablecoin. Borrowers on Aave can mint GHO at favorable rates, creating a dollar tightly coupled to Aave's ecosystem health. The peg has been stable since the rocky first months, and stkAAVE discounts give governance participants a reason to borrow. It's DeFi-native in a way that few stablecoins genuinely are.",
+  "6": {
+    "title": "The Identity Crisis",
+    "text": "Frax started life as crypto's boldest algorithmic experiment -- a fractional-reserve stablecoin that actually worked. Then it quietly abandoned the algorithm, went 100% USDC-collateralized, and launched frxUSD backed by BlackRock's BUIDL fund. The original FRAX is now labeled \"Legacy Frax Dollar\" with a shrinking supply, while frxUSD chases institutional credibility. It's a remarkable pivot from \"trust the math\" to \"trust BlackRock,\" and the market cap of both combined still barely registers against USDC.",
     "updatedAt": "2026-02-22"
   },
   "7": {
@@ -104,14 +24,54 @@
     "text": "Once positioned as the transparent alternative to Tether, TrueUSD has fallen from grace with a market cap that's a fraction of its peak. Regulatory issues, questions about its Prime Trust relationship, and a depeg incident in 2023 eroded the trust its name once implied. It persists more as a cautionary tale about counterparty risk than as a competitive stablecoin.",
     "updatedAt": "2026-02-22"
   },
-  "119": {
-    "title": "Binance's Current Favorite",
-    "text": "First Digital USD rose to prominence as Binance's preferred stablecoin after BUSD's regulatory demise. Hong Kong-based and reserve-backed, it serves as the default trading pair on the world's largest exchange. Its fate is tied to Binance's continued endorsement — a single point of dependency that the market has apparently accepted.",
+  "8": {
+    "title": "Decentralization's Last Stand",
+    "text": "LUSD is one of the few stablecoins that can genuinely claim decentralization -- immutable contracts, ETH-only collateral, no governance keys, no admin functions. The trade-off is a modest market cap that makes it a rounding error in the stablecoin landscape. Liquity V2 launched BOLD as the successor with user-set interest rates and multi-collateral support. LUSD remains the philosophical benchmark against which every \"decentralized\" stablecoin should be measured, even as the market has clearly decided it prefers convenience over purity.",
     "updatedAt": "2026-02-22"
   },
-  "296": {
-    "title": "Cap's Yield Play",
-    "text": "Cap Protocol's cUSD offers an RWA-backed stablecoin with a centralized-dependent governance model that routes yield back to holders. It operates in the increasingly crowded space of yield-bearing stablecoins, competing on distribution and integration rather than novelty. The protocol's bet is that a well-executed yield product can carve out space between the giants.",
+  "10": {
+    "title": "Scandal-Proof Somehow",
+    "text": "Multiple hacks, a founder whose Wonderland treasury manager turned out to be a convicted fraudster from the QuadrigaCX collapse, and a governance token down 99% from its all-time high -- yet MIM still trades near peg. Abracadabra's model of lending against yield-bearing collateral remains clever in theory, but the protocol's security record reads like a cautionary tale for smart contract auditors. At this point, holding MIM requires less trust in the math and more faith in Daniele Sestagalli's ability to keep rebuilding after each crisis.",
+    "updatedAt": "2026-02-22"
+  },
+  "11": {
+    "title": "The Quiet Regulator's Pet",
+    "text": "Paxos's original stablecoin is the definition of doing everything right and getting ignored for it. NYDFS-regulated since 2018, KPMG-audited, reserves in bankruptcy-remote accounts, monthly attestations -- and a market cap that barely moves the needle. Paxos's real business is issuing stablecoins for others (PayPal's PYUSD, formerly Binance's BUSD). USDP is less a product and more a proof of concept that Paxos can be trusted with your brand.",
+    "updatedAt": "2026-02-22"
+  },
+  "14": {
+    "title": "Justin Sun's Undying Dollar",
+    "text": "USDD 2.0 emerged from its rocky algorithmic era with crypto collateral and a fresh governance model, though the centralized-dependent tag tells you Justin Sun still has the keys. It persistently trades above peg, which sounds good until you realize the premium reflects illiquidity as much as demand. The TRON ecosystem keeps it alive; whether that's a feature or a risk depends on your priors about its founder.",
+    "updatedAt": "2026-02-22"
+  },
+  "15": {
+    "title": "The Comeback CDP",
+    "text": "Inverse Finance lost $24M across two oracle manipulation exploits in 2022, accumulating bad debt that would have buried most protocols. Instead, the DAO spent years clawing its way back -- selling tokens to investors, building the FiRM fixed-rate lending protocol, and launching a PSM backed by Sky's sUSDS. The sDOLA yield-bearing wrapper earning organic lending revenue is the kind of unsexy, sustainable DeFi that rarely makes headlines but actually works.",
+    "updatedAt": "2026-02-22"
+  },
+  "19": {
+    "title": "The Ghost Dollar",
+    "text": "Gemini Dollar was one of the first NYDFS-regulated stablecoins, launched in 2018 with the Winklevoss seal of approval and State Street Bank custody. Years later it has a minimal market cap, near-zero DeFi presence, and exchange delistings that keep shrinking its already thin liquidity. Without aggressive exchange partnerships, GUSD is a museum piece: historically significant, technically sound, and gathering dust.",
+    "updatedAt": "2026-02-22"
+  },
+  "20": {
+    "title": "Time Pays Your Debt",
+    "text": "Alchemix's self-repaying loans remain one of DeFi's most elegant ideas: deposit stablecoins, borrow up to 50%, and let yield gradually erase your debt. No liquidations, no interest payments -- just the slow passage of time converting future yield into present liquidity. The V3 upgrade nearly doubled capital efficiency, but the governance token trades at a fraction of its peak. alUSD is a stablecoin for patient DeFi users who've read the docs, which may explain why the broader market hasn't noticed.",
+    "updatedAt": "2026-02-22"
+  },
+  "22": {
+    "title": "The Longest Depeg",
+    "text": "Synthetix's sUSD spent much of 2025 below peg after SIP-420 slashed the collateralization ratio from 750% to 200% and forgave staker debt. The structural incentive for stakers to buy discounted sUSD to repay their own debt -- the reflexive mechanism that maintained the peg for years -- was simply removed. Recovery plans involving exchange-fee buybacks and basis-trade vaults may work, but sUSD is now a case study in how upgrading peg mechanics mid-flight can go sideways.",
+    "updatedAt": "2026-02-22"
+  },
+  "23": {
+    "title": "The Passive Yield Play",
+    "text": "Origin Dollar is the stablecoin that pays you to hold it -- no staking, no locking, just a rebasing balance that grows as the protocol deploys USDC into Morpho and Curve strategies. The clever twist is that smart contracts must explicitly opt in to receive yield, so OUSD held in non-opted AMM pools effectively subsidizes everyone else's returns. It's a well-engineered product for the small cohort of users who want DeFi yield without the DeFi homework.",
+    "updatedAt": "2026-02-22"
+  },
+  "24": {
+    "title": "The Mobile-First Dollar",
+    "text": "Celo Dollar is what happens when you build a stablecoin around phone numbers instead of wallet addresses. The Mento reserve backing it holds USDC, DAI, BTC, ETH, and CELO at a reported 393% overcollateralization ratio -- impressive until you remember that a crypto-heavy reserve can evaporate fast in a downturn. Celo's migration to an Ethereum L2 gives cUSD access to a broader ecosystem, and validators like Google Cloud and Deutsche Telekom lend institutional credibility. With its current market cap, cUSD remains a niche stablecoin for emerging-market payments rather than a DeFi building block.",
     "updatedAt": "2026-02-22"
   },
   "50": {
@@ -119,24 +79,19 @@
     "text": "Circle's euro stablecoin brings the same reserve transparency and regulatory posture as USDC to the eurozone. MiCA-compliant and fully backed, EURC is positioning itself as the default EUR stablecoin before regulations force weaker competitors out. The euro stablecoin market is nascent enough that first-mover advantage still matters — and Circle is determined to be the name that sticks.",
     "updatedAt": "2026-02-22"
   },
-  "197": {
-    "title": "Resolving the Yield Question",
-    "text": "Resolv's USR takes the delta-neutral approach with crypto backing, offering an alternative to Ethena's USDe for users who want basis-trade yields with a different risk profile. Its insurance pool and risk management framework attempt to address the perennial \"what happens when funding goes negative\" problem. In the basis-trade stablecoin niche, USR competes on risk structure rather than brand recognition.",
+  "51": {
+    "title": "MiCA's Biggest Winner",
+    "text": "Stasis Euro went from afterthought to contender largely because MiCA regulation cleared the field and EURS was already compliant. Malta-based, BDO-audited, and holding an EMI license since 2022, EURS was positioned for exactly this regulatory moment. The irony is that its explosive growth happened not because the product changed, but because competitors got disqualified. The looming threat is a consortium of European banks planning their own MiCA-compliant euro stablecoin, which would bring the kind of distribution that Stasis cannot match.",
     "updatedAt": "2026-02-22"
   },
-  "272": {
-    "title": "The SEC-Registered Yield Coin",
-    "text": "YLDS stands alone as one of the few yield-bearing stablecoins registered with the SEC as a security. This means actual regulatory clarity rather than the \"move fast and hope for the best\" approach most competitors take. The trade-off is operational constraints and restricted availability, but for institutions requiring regulatory certainty, YLDS is the rare stablecoin that comes with a blessing from Washington.",
+  "52": {
+    "title": "The Other Mento Euro",
+    "text": "Celo Euro shares the same Mento reserve and algorithmic stability mechanism as cUSD, just pegged to the euro instead. With a small market cap and trading volumes that barely register outside of Celo-native DEXs, cEUR exists primarily to serve Celo's vision of region-specific stablecoins for mobile payments. The 393% overcollateralization ratio provides a generous buffer, but the crypto-heavy reserve composition means cEUR's stability in a severe downturn remains untested at any meaningful scale.",
     "updatedAt": "2026-02-22"
   },
-  "258": {
-    "title": "The Ruble's Digital Shadow",
-    "text": "A7A5 is a ruble-pegged stablecoin that appeared seemingly from nowhere to claim a massive market cap. Its centralized governance and RWA backing make it structurally conventional, but the geopolitical context makes it anything but. In a sanctions-heavy environment, a large ruble stablecoin raises more questions than its sparse documentation answers.",
-    "updatedAt": "2026-02-22"
-  },
-  "249": {
-    "title": "Latin America's Bridge",
-    "text": "Brazilian Digital's BRZ gives Brazil's crypto traders a real-denominated on-ramp without the volatility of converting through USD pairs. RWA-backed and centrally managed, it serves a practical need in one of crypto's most active retail markets. Its success is less about innovation and more about understanding that sometimes the simplest product wins.",
+  "55": {
+    "title": "Angle's DeFi Euro",
+    "text": "Angle Protocol's EURA is one of the few crypto-backed euro stablecoins — an overcollateralized design in a market dominated by RWA-backed issuers. Its centralized-dependent governance means community involvement with practical guardrails. For DeFi purists who want a euro without bank dependencies, EURA is one of the few options on the menu.",
     "updatedAt": "2026-02-22"
   },
   "66": {
@@ -144,24 +99,19 @@
     "text": "Frax Price Index is pegged not to a currency but to the CPI — a stablecoin that tries to preserve purchasing power rather than nominal value. It's algorithmic, experimental, and philosophically interesting: why peg to a dollar that loses value annually when you can peg to the cost of living? The execution challenges of maintaining a CPI peg are considerable, but the concept alone makes FPI the most intellectually honest \"stable\" coin in the market.",
     "updatedAt": "2026-02-22"
   },
-  "254": {
-    "title": "SocGen's Blockchain Experiment",
-    "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of French banking giant Société Générale. It's a fully regulated, MiCA-compliant euro stablecoin from a systemically important bank — which is either the future of tokenized money or a corporate innovation lab's pet project. Either way, when a bank with over a trillion euros in assets issues a stablecoin, the industry takes notes.",
+  "75": {
+    "title": "Tezos's Quiet Giant",
+    "text": "Youves' uUSD commands a dominant share of Tezos DeFi TVL, making it the largest protocol on a chain most people have forgotten about. The 300% overcollateralization in XTZ provides a generous safety margin. The catch is near-zero trading volume on major aggregators, reflecting the reality that uUSD is deeply liquid within its own ecosystem and essentially invisible outside it. It's a functioning, well-designed CDP stablecoin stranded on an island that the broader crypto market stopped visiting.",
     "updatedAt": "2026-02-22"
   },
-  "147": {
-    "title": "The Swiss Euro",
-    "text": "Anchored Coins' AEUR offers a Swiss-regulated, reserve-backed euro stablecoin that targets the intersection of European money and Swiss financial infrastructure. Its smaller market cap belies a clean regulatory setup. In the euro stablecoin race, AEUR competes on jurisdiction prestige rather than distribution scale.",
+  "79": {
+    "title": "BNB Chain's CDP Bet",
+    "text": "Lista DAO's lisUSD borrows MakerDAO's CDP playbook and transplants it to BNB Chain, where Binance's gravitational pull does the marketing. Collateral includes BNB, ETH, and liquid staking tokens, with a PSM accepting USDT, USDC, and FDUSD for peg stability. The plan to transition from MakerDAO's codebase to Liquity's is ambitious, and whether lisUSD can grow beyond Binance-subsidized adoption remains the central question.",
     "updatedAt": "2026-02-22"
   },
-  "325": {
-    "title": "Binance's Euro",
-    "text": "Eurite is the euro stablecoin endorsed by Binance, giving it instant distribution to the world's largest exchange. Issued by Banking Circle and regulated in the EU, it's MiCA-ready from day one. Whether Binance's distribution muscle can make a euro stablecoin stick where others have struggled remains the open question.",
-    "updatedAt": "2026-02-22"
-  },
-  "226": {
-    "title": "Swiss Stubbornness, Tokenized",
-    "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin — no foundation, no team tokens, no VC backing. Its auction-based liquidation mechanism and minimalist governance are a throwback to crypto's original ethos. The Swiss franc peg serves a niche audience, but Frankencoin proves that small, well-designed protocols can survive without a marketing budget.",
+  "98": {
+    "title": "Paxos's EU Passport",
+    "text": "EUROe started as a Finnish EMI-regulated euro stablecoin from Membrane Finance, KPMG-audited and quietly competent. Then Paxos acquired Membrane Finance specifically to gain MiCA compliance across 30 European countries -- making EUROe less a standalone product and more Paxos's entry ticket to the EU market. Its future depends entirely on whether Paxos decides to scale EUROe as-is or rebrand it into its broader institutional stablecoin platform alongside USDP, PYUSD, and USDG.",
     "updatedAt": "2026-02-22"
   },
   "101": {
@@ -169,9 +119,154 @@
     "text": "Monerium's EURe is one of the few stablecoins licensed as electronic money in the EEA, meaning it's legally equivalent to a bank balance. It connects directly to IBAN accounts, making fiat on/off-ramps seamless in a way most stablecoins only promise. Its small scale belies its regulatory significance: EURe is what euro stablecoins look like when they actually comply with European financial law.",
     "updatedAt": "2026-02-22"
   },
-  "55": {
-    "title": "Angle's DeFi Euro",
-    "text": "Angle Protocol's EURA is one of the few crypto-backed euro stablecoins — an overcollateralized design in a market dominated by RWA-backed issuers. Its centralized-dependent governance means community involvement with practical guardrails. For DeFi purists who want a euro without bank dependencies, EURA is one of the few options on the menu.",
+  "106": {
+    "title": "The Yield Mirage",
+    "text": "Lybra Finance promised high APY just for holding eUSD, funded by ETH liquid staking yields flowing through to stablecoin holders. The protocol peaked at $400M TVL in 2023, then collapsed as yields compressed and attention moved elsewhere. eUSD now trades below peg with near-zero social activity, and the protocol offers USDC redemptions for eUSD holders -- the clearest possible signal of a wind-down. A cautionary tale about building a stablecoin around a yield narrative that couldn't survive a single market cycle.",
+    "updatedAt": "2026-02-22"
+  },
+  "110": {
+    "title": "Curve's Own Medicine",
+    "text": "When the protocol that handles more stablecoin volume than anyone else launches its own stablecoin, the design better be interesting -- and crvUSD delivers. The LLAMMA mechanism replaces hard liquidations with gradual, continuous rebalancing through price bands, letting collateral be automatically rebought if prices recover. PegKeepers using USDC, USDT, and USDP manage the peg algorithmically, while the savings vault (scrvUSD) creates a self-correcting feedback loop where depeg pressure increases yields, attracting buyers back. It's the most technically sophisticated CDP stablecoin operating today.",
+    "updatedAt": "2026-02-22"
+  },
+  "118": {
+    "title": "Aave's Dollar",
+    "text": "GHO is what happens when the largest lending protocol decides to mint its own stablecoin. Borrowers on Aave can mint GHO at favorable rates, creating a dollar tightly coupled to Aave's ecosystem health. The peg has been stable since the rocky first months, and stkAAVE discounts give governance participants a reason to borrow. It's DeFi-native in a way that few stablecoins genuinely are.",
+    "updatedAt": "2026-02-22"
+  },
+  "119": {
+    "title": "Binance's Current Favorite",
+    "text": "First Digital USD rose to prominence as Binance's preferred stablecoin after BUSD's regulatory demise. Hong Kong-based and reserve-backed, it serves as the default trading pair on the world's largest exchange. Its fate is tied to Binance's continued endorsement — a single point of dependency that the market has apparently accepted.",
+    "updatedAt": "2026-02-22"
+  },
+  "120": {
+    "title": "Big Fintech's Entry Ticket",
+    "text": "PayPal's stablecoin proves that when a payments giant with 400 million users issues a dollar token, people notice. Paxos-issued and fully reserved in treasuries and cash, PYUSD's regulatory credentials are impeccable. Its challenge isn't trust — it's utility. Until DeFi and PayPal's walled garden meaningfully converge, it risks being the best-credentialed stablecoin nobody uses on-chain.",
+    "updatedAt": "2026-02-22"
+  },
+  "122": {
+    "title": "The Yen's Only Option",
+    "text": "GYEN is the world's first and essentially only regulated JPY-pegged stablecoin, issued by GMO Trust under a NYDFS trust charter with reserves at FDIC-insured banks. The market for a yen stablecoin is inherently niche -- Japan's own regulatory framework for stablecoins remains restrictive, and the JPY's persistent weakness against the dollar limits demand from non-Japanese users. GYEN's value proposition is less about competing with dollar stablecoins and more about being the only credible digital yen when someone finally needs one.",
+    "updatedAt": "2026-02-22"
+  },
+  "129": {
+    "title": "Ondo's Yield Machine",
+    "text": "Ondo Finance's USDY offers tokenized US Treasury exposure to everyone outside the US, neatly sidestepping domestic securities law. It's RWA-backed, yield-bearing, and has become the poster child of the \"tokenized treasuries\" narrative. The irony of a product that democratizes US government debt by excluding US persons is apparently lost on no one.",
+    "updatedAt": "2026-02-22"
+  },
+  "145": {
+    "title": "Canada's Lonely Loonie",
+    "text": "CADC is a 1:1 Canadian dollar stablecoin from PayTrie, backed by reserves at a tier-1 Canadian bank and registered with FINTRAC as a money services business. It's now on Ethereum, Polygon, Arbitrum, Base, and Solana. The Canadian stablecoin market is wide open -- the Bank of Canada has urged federal regulation -- and CADC's bet is that being the first compliant CAD stablecoin matters more than being the biggest.",
+    "updatedAt": "2026-02-22"
+  },
+  "146": {
+    "title": "The Basis Trade, Tokenized",
+    "text": "Ethena's USDe pioneered the delta-neutral stablecoin: hold spot crypto, short the perps, pocket the funding rate. It works beautifully in bull markets when longs pay shorts handsomely for leverage. The catch? When funding flips negative — as it inevitably does — the insurance fund becomes the only thing between USDe and a death spiral. It's a sophisticated yield product wearing a stablecoin's clothing.",
+    "updatedAt": "2026-02-22"
+  },
+  "147": {
+    "title": "The Swiss Euro",
+    "text": "Anchored Coins' AEUR offers a Swiss-regulated, reserve-backed euro stablecoin that targets the intersection of European money and Swiss financial infrastructure. Its smaller market cap belies a clean regulatory setup. In the euro stablecoin race, AEUR competes on jurisdiction prestige rather than distribution scale.",
+    "updatedAt": "2026-02-22"
+  },
+  "173": {
+    "title": "When BlackRock Calls It a Token",
+    "text": "BlackRock's tokenized money market fund is what happens when the world's largest asset manager decides blockchain isn't a meme. BUIDL doesn't try to be a DeFi building block — it's institutional plumbing with an ERC-20 wrapper. When Larry Fink's firm validates tokenization, the rest of TradFi starts returning phone calls.",
+    "updatedAt": "2026-02-22"
+  },
+  "195": {
+    "title": "The Usual Suspect",
+    "text": "Usual's USD0 burst onto the scene promising a stablecoin where revenue flows back to tokenholders via the USUAL governance token. The RWA-backed reserves provide the peg stability, while the protocol's token economics provide the sizzle. It's an interesting governance experiment, though the December 2024 USD0++ depeg reminded everyone that innovative doesn't mean risk-free.",
+    "updatedAt": "2026-02-22"
+  },
+  "197": {
+    "title": "Resolving the Yield Question",
+    "text": "Resolv's USR takes the delta-neutral approach with crypto backing, offering an alternative to Ethena's USDe for users who want basis-trade yields with a different risk profile. Its insurance pool and risk management framework attempt to address the perennial \"what happens when funding goes negative\" problem. In the basis-trade stablecoin niche, USR competes on risk structure rather than brand recognition.",
+    "updatedAt": "2026-02-22"
+  },
+  "209": {
+    "title": "The Artist Formerly Known as DAI",
+    "text": "Sky Dollar is MakerDAO's rebranded stablecoin, the culmination of Rune Christensen's \"Endgame\" vision to make the protocol more normie-friendly. Under the hood it's the same overcollateralized vaults and PSM modules — just with a fresh coat of paint and a governance structure that's still figuring itself out. Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement.",
+    "updatedAt": "2026-02-22"
+  },
+  "213": {
+    "title": "The Middleman's Stablecoin",
+    "text": "M0's M token is a middleware play: rather than competing with USDC or USDT directly, it provides infrastructure for other stablecoins and fintechs to build on. Its RWA-backed reserves and centralized-dependent governance aim for a middle ground between Tether's opacity and Circle's centralization. The \"protocol for stablecoins\" pitch is elegant in theory — the question is whether the market wants a meta-stablecoin layer.",
+    "updatedAt": "2026-02-22"
+  },
+  "221": {
+    "title": "Ethena's Safe Side",
+    "text": "If USDe is the exciting sibling, USDtb is the responsible one — backed by BlackRock's BUIDL fund rather than delta-neutral trades. Ethena built it for users who want the ecosystem without the basis-trade risk, creating a safety valve that also serves as USDe's backstop. It's the stablecoin equivalent of keeping a boring index fund alongside your options portfolio.",
+    "updatedAt": "2026-02-22"
+  },
+  "226": {
+    "title": "Swiss Stubbornness, Tokenized",
+    "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin — no foundation, no team tokens, no VC backing. Its auction-based liquidation mechanism and minimalist governance are a throwback to crypto's original ethos. The Swiss franc peg serves a niche audience, but Frankencoin proves that small, well-designed protocols can survive without a marketing budget.",
+    "updatedAt": "2026-02-22"
+  },
+  "237": {
+    "title": "Treasury Yields On-Chain",
+    "text": "Hashnote's USYC is a tokenized money market fund that passes T-bill yields directly to holders. It's RWA-backed, yield-bearing, and about as exciting as its underlying asset — which is precisely the point. In a world of exotic DeFi yields, sometimes the most radical product is just a savings account with an ERC-20 wrapper.",
+    "updatedAt": "2026-02-22"
+  },
+  "246": {
+    "title": "The Falcon Play",
+    "text": "Falcon Finance's USDf enters the delta-neutral arena alongside Ethena, offering yield through basis-trade strategies with a centralized-dependent governance model. Its crypto-backed structure means the peg relies on market dynamics rather than reserve transparency. In the crowded yield-bearing stablecoin space, differentiation is a question of execution speed and risk management.",
+    "updatedAt": "2026-02-22"
+  },
+  "249": {
+    "title": "Latin America's Bridge",
+    "text": "Brazilian Digital's BRZ gives Brazil's crypto traders a real-denominated on-ramp without the volatility of converting through USD pairs. RWA-backed and centrally managed, it serves a practical need in one of crypto's most active retail markets. Its success is less about innovation and more about understanding that sometimes the simplest product wins.",
+    "updatedAt": "2026-02-22"
+  },
+  "250": {
+    "title": "Ripple's Dollar Bet",
+    "text": "After years of fighting the SEC over XRP, Ripple launched its own stablecoin with NYDFS approval — a plot twist even Ripple skeptics didn't see coming. RLUSD is built for Ripple's payments network, aiming to be the bridge asset that XRP never became for institutional transfers. Fully reserved and centrally managed, it's less a DeFi primitive and more a cross-border payments tool.",
+    "updatedAt": "2026-02-22"
+  },
+  "254": {
+    "title": "SocGen's Blockchain Experiment",
+    "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of French banking giant Société Générale. It's a fully regulated, MiCA-compliant euro stablecoin from a systemically important bank — which is either the future of tokenized money or a corporate innovation lab's pet project. Either way, when a bank with over a trillion euros in assets issues a stablecoin, the industry takes notes.",
+    "updatedAt": "2026-02-22"
+  },
+  "258": {
+    "title": "The Ruble's Digital Shadow",
+    "text": "A7A5 is a ruble-pegged stablecoin that appeared seemingly from nowhere to claim a massive market cap. Its centralized governance and RWA backing make it structurally conventional, but the geopolitical context makes it anything but. In a sanctions-heavy environment, a large ruble stablecoin raises more questions than its sparse documentation answers.",
+    "updatedAt": "2026-02-22"
+  },
+  "262": {
+    "title": "The Presidential Stablecoin",
+    "text": "World Liberty Financial's USD1 is backed by the Trump family brand and entered the market with all the subtlety you'd expect. It launched with RWA backing and centralized governance, positioning itself somewhere between a political statement and a financial product. The reserves are real, but the regulatory questions write themselves.",
+    "updatedAt": "2026-02-22"
+  },
+  "272": {
+    "title": "The SEC-Registered Yield Coin",
+    "text": "YLDS stands alone as one of the few yield-bearing stablecoins registered with the SEC as a security. This means actual regulatory clarity rather than the \"move fast and hope for the best\" approach most competitors take. The trade-off is operational constraints and restricted availability, but for institutions requiring regulatory certainty, YLDS is the rare stablecoin that comes with a blessing from Washington.",
+    "updatedAt": "2026-02-22"
+  },
+  "286": {
+    "title": "The Paxos Sequel",
+    "text": "Global Dollar is Paxos's second act after BUSD, built to avoid the regulatory friction that killed its Binance partnership. Singapore-regulated and reserve-backed, USDG targets the institutional corridor that doesn't want Tether's opacity or Circle's SVB memories. Whether the market needs another compliant stablecoin is a question USDG is determined to answer anyway.",
+    "updatedAt": "2026-02-22"
+  },
+  "296": {
+    "title": "Cap's Yield Play",
+    "text": "Cap Protocol's cUSD offers an RWA-backed stablecoin with a centralized-dependent governance model that routes yield back to holders. It operates in the increasingly crowded space of yield-bearing stablecoins, competing on distribution and integration rather than novelty. The protocol's bet is that a well-executed yield product can carve out space between the giants.",
+    "updatedAt": "2026-02-22"
+  },
+  "309": {
+    "title": "AI Meets RWA",
+    "text": "USD.AI blends the two hottest crypto narratives — artificial intelligence and real-world assets — into a single stablecoin product. Its centralized-dependent governance suggests human oversight where it counts, while the AI branding does the marketing work. Whether the \"AI\" label reflects genuine innovation or narrative arbitrage is left as an exercise for the reader.",
+    "updatedAt": "2026-02-22"
+  },
+  "325": {
+    "title": "Binance's Euro",
+    "text": "Eurite is the euro stablecoin endorsed by Binance, giving it instant distribution to the world's largest exchange. Issued by Banking Circle and regulated in the EU, it's MiCA-ready from day one. Whether Binance's distribution muscle can make a euro stablecoin stick where others have struggled remains the open question.",
+    "updatedAt": "2026-02-22"
+  },
+  "336": {
+    "title": "The Aggregator Dollar",
+    "text": "United Stables takes the yield-aggregation approach, pooling reserves across multiple strategies and passing the returns to holders. It's a bet that diversification of stablecoin backing is itself a feature worth tokenizing. Simple concept, hard execution.",
     "updatedAt": "2026-02-22"
   }
 }
