@@ -28,14 +28,14 @@ function PipelineSources() {
 }
 
 export const metadata: Metadata = {
-  title: "About Pharos — Stablecoin Analytics Dashboard",
+  title: "About Pharos — Light on Every Peg",
   description:
     "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   alternates: {
     canonical: "/about/",
   },
   openGraph: {
-    title: "About Pharos — Stablecoin Analytics Dashboard",
+    title: "About Pharos — Light on Every Peg",
     description:
       "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",

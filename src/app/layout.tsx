@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://pharos.watch"),
   title: {
     template: "%s | Pharos",
-    default: "Stablecoin Analytics Dashboard | Pharos",
+    default: "Light on Every Peg | Pharos",
   },
   description: siteDescription,
   robots: {
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     siteName: "Pharos",
     locale: "en_US",
     url: "https://pharos.watch/",
-    title: "Stablecoin Analytics Dashboard | Pharos",
+    title: "Light on Every Peg | Pharos",
     description: siteDescription,
     images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 630 }],
   },

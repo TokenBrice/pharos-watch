@@ -31,7 +31,7 @@ export default function HomePage() {
         }}
       />
       <div className="space-y-2 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Stablecoin Analytics Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Light on Every Peg</h1>
         <p className="text-muted-foreground">
           Track {total} stablecoins, across {PEG_CURRENCY_COUNT} pegs. Freezes, liquidity, depegs: all is watched.
         </p>
