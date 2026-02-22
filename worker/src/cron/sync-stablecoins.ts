@@ -424,16 +424,22 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
         if (!circ) continue;
         const pegKey = Object.keys(circ)[0];
         if (!pegKey) continue;
+        const currentVal = circ[pegKey] ?? 0;
 
-        if (asset.circulatingPrevDay == null && hist.day != null) {
+        // Guard: skip historical values that diverge >30% from current circulating.
+        // Catches bad data (e.g. TVL-based backfill for tokens where TVL ≠ mcap).
+        const isReasonable = (v: number) =>
+          currentVal > 0 && Math.abs(v - currentVal) / currentVal <= 0.30;
+
+        if (asset.circulatingPrevDay == null && hist.day != null && isReasonable(hist.day)) {
           asset.circulatingPrevDay = { [pegKey]: hist.day };
           fillCount++;
         }
-        if (asset.circulatingPrevWeek == null && hist.week != null) {
+        if (asset.circulatingPrevWeek == null && hist.week != null && isReasonable(hist.week)) {
           asset.circulatingPrevWeek = { [pegKey]: hist.week };
           fillCount++;
         }
-        if (asset.circulatingPrevMonth == null && hist.month != null) {
+        if (asset.circulatingPrevMonth == null && hist.month != null && isReasonable(hist.month)) {
           asset.circulatingPrevMonth = { [pegKey]: hist.month };
           fillCount++;
         }

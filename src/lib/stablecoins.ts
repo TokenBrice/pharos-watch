@@ -1493,18 +1493,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb", decimals: 18 },
     ],
   }),
-  other("cg-idrt", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "IDR", {
-    geckoId: "rupiah-token",
-    collateral: "Indonesian rupiah reserves held 1:1 in Indonesian bank accounts",
-    pegMechanism: "Direct 1:1 redemption for IDR through PT Rupiah Token Indonesia",
-    links: [
-      { label: "Website", url: "https://rupiahtoken.com/" },
-    ],
-    jurisdiction: { country: "Indonesia" },
-    contracts: [
-      { chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 },
-    ],
-  }),
 
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
   // commodityOunces: troy ounces per token (used for peg deviation normalization)

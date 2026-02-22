@@ -6,6 +6,33 @@ import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
 
+/** Fallback: build tokens array from D1 supply_history when external APIs have no data. */
+async function fetchSupplyHistoryFallback(
+  db: D1Database,
+  id: string,
+  pegType: string,
+): Promise<Record<string, unknown>[]> {
+  const result = await db
+    .prepare(
+      `SELECT snapshot_date, circulating_usd, price
+       FROM supply_history
+       WHERE stablecoin_id = ?
+       ORDER BY snapshot_date ASC`
+    )
+    .bind(id)
+    .all<{ snapshot_date: number; circulating_usd: number; price: number | null }>();
+
+  return (result.results ?? [])
+    .filter((row) => row.circulating_usd > 0)
+    .map((row) => ({
+      date: row.snapshot_date,
+      totalCirculatingUSD: { [pegType]: row.circulating_usd },
+      totalCirculating: {
+        [pegType]: row.price && row.price > 0 ? row.circulating_usd / row.price : 0,
+      },
+    }));
+}
+
 function findNearestPrice(
   sortedPrices: { timestamp: number; price: number }[],
   date: number,
@@ -136,7 +163,17 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
       pegType: `pegged${meta.flags.pegCurrency}`,
     };
     try {
-      const body = await fetchCommodityDetail(commodityConfig);
+      let body = await fetchCommodityDetail(commodityConfig);
+
+      // Fallback to D1 supply_history if external APIs returned no tokens
+      const parsed = JSON.parse(body) as { tokens: unknown[] };
+      if (!parsed.tokens || parsed.tokens.length === 0) {
+        const fallbackTokens = await fetchSupplyHistoryFallback(db, id, commodityConfig.pegType);
+        if (fallbackTokens.length > 0) {
+          body = JSON.stringify({ tokens: fallbackTokens });
+        }
+      }
+
       ctx.waitUntil(setCache(db, cacheKey, body));
       return new Response(body, {
         headers: {
@@ -166,36 +203,44 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     const geckoId = meta.geckoId!;
     const pegType = `pegged${meta.flags.pegCurrency}`;
     try {
+      let tokens: Record<string, unknown>[] = [];
+
       const cgRes = await fetch(
         `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=max`,
         { headers: { "User-Agent": USER_AGENT } }
       );
-      if (!cgRes.ok) throw new Error(`CoinGecko ${cgRes.status}`);
-      const cgData = (await cgRes.json()) as {
-        market_caps: [number, number][];
-        prices?: [number, number][];
-      };
+      if (cgRes.ok) {
+        const cgData = (await cgRes.json()) as {
+          market_caps: [number, number][];
+          prices?: [number, number][];
+        };
 
-      // Build price lookup for computing totalCirculating (supply in token units)
-      const priceMap = new Map<string, number>();
-      if (cgData.prices) {
-        for (const [ts, price] of cgData.prices) {
-          priceMap.set(new Date(ts).toISOString().slice(0, 10), price);
+        // Build price lookup for computing totalCirculating (supply in token units)
+        const priceMap = new Map<string, number>();
+        if (cgData.prices) {
+          for (const [ts, price] of cgData.prices) {
+            priceMap.set(new Date(ts).toISOString().slice(0, 10), price);
+          }
         }
+
+        tokens = (cgData.market_caps ?? [])
+          .filter(([, mcap]) => mcap > 0)
+          .map(([ts, mcap]) => {
+            const date = Math.floor(ts / 1000);
+            const dateKey = new Date(ts).toISOString().slice(0, 10);
+            const price = priceMap.get(dateKey) ?? 0;
+            return {
+              date,
+              totalCirculatingUSD: { [pegType]: mcap },
+              totalCirculating: { [pegType]: price > 0 ? mcap / price : 0 },
+            };
+          });
       }
 
-      const tokens = (cgData.market_caps ?? [])
-        .filter(([, mcap]) => mcap > 0)
-        .map(([ts, mcap]) => {
-          const date = Math.floor(ts / 1000);
-          const dateKey = new Date(ts).toISOString().slice(0, 10);
-          const price = priceMap.get(dateKey) ?? 0;
-          return {
-            date,
-            totalCirculatingUSD: { [pegType]: mcap },
-            totalCirculating: { [pegType]: price > 0 ? mcap / price : 0 },
-          };
-        });
+      // Fallback to D1 supply_history if CoinGecko returned no data
+      if (tokens.length === 0) {
+        tokens = await fetchSupplyHistoryFallback(db, id, pegType);
+      }
 
       const body = JSON.stringify({ tokens });
       ctx.waitUntil(setCache(db, cacheKey, body));

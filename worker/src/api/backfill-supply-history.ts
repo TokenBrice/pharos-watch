@@ -17,13 +17,63 @@ interface StablecoinDetail {
   tokens?: TokenEntry[];
 }
 
-// Commodity tokens eligible for backfill: must have both geckoId and protocolSlug (for TVL history)
+// Commodity tokens: use CoinGecko market_chart (historical market caps) as primary source.
+// Protocol TVL from DefiLlama can diverge from token market cap (e.g. XAUT TVL includes
+// multi-chain reserves that far exceed the token's market cap).
 
 async function backfillCommodity(
   db: D1Database,
   id: string,
-  config: { geckoId: string; protocolSlug: string },
+  config: { geckoId: string; protocolSlug?: string },
 ): Promise<{ rows: number; error?: string }> {
+  // Try CoinGecko market_chart first — provides actual historical market caps
+  const cgRes = await fetch(
+    `https://api.coingecko.com/api/v3/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`,
+    { headers: { "User-Agent": USER_AGENT } },
+  );
+
+  if (cgRes.ok) {
+    const cgData = (await cgRes.json()) as {
+      market_caps: [number, number][];
+      prices?: [number, number][];
+    };
+
+    const mcaps = cgData.market_caps ?? [];
+    if (mcaps.length > 0) {
+      const priceMap = new Map<number, number>();
+      if (cgData.prices) {
+        for (const [ts, p] of cgData.prices) {
+          const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
+          priceMap.set(snapshotDate, p);
+        }
+      }
+
+      const stmts: D1PreparedStatement[] = [];
+      for (const [ts, mcap] of mcaps) {
+        if (mcap <= 0) continue;
+        const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
+        const price = priceMap.get(snapshotDate) ?? null;
+        stmts.push(
+          db
+            .prepare(
+              "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+            )
+            .bind(id, snapshotDate, mcap, price),
+        );
+      }
+
+      if (stmts.length > 0) {
+        await batchExecute(db, stmts);
+      }
+      return { rows: stmts.length };
+    }
+  }
+
+  // Fallback: protocol TVL (only if TVL ≈ mcap)
+  if (!config.protocolSlug) {
+    return { rows: 0, error: "CoinGecko unavailable and no protocolSlug for TVL fallback" };
+  }
+
   const [protocolRes, priceRes] = await Promise.all([
     fetch(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
       headers: { "User-Agent": USER_AGENT },
@@ -38,14 +88,24 @@ async function backfillCommodity(
   }
 
   const protocolData = (await protocolRes.json()) as {
+    mcap?: number;
     tvl?: { date: number; totalLiquidityUSD: number }[];
   };
   const tvlHistory = protocolData.tvl ?? [];
   if (tvlHistory.length === 0) {
-    return { rows: 0, error: "no TVL history" };
+    return { rows: 0, error: "no TVL history and CoinGecko unavailable" };
   }
 
-  // Build price lookup for converting mcap → price
+  // Skip TVL if it diverges from mcap (same 15% threshold as sync code)
+  const currentMcap = protocolData.mcap;
+  if (currentMcap && tvlHistory.length > 0) {
+    const latestTvl = tvlHistory[tvlHistory.length - 1].totalLiquidityUSD;
+    const ratio = currentMcap / latestTvl;
+    if (ratio < 0.85 || ratio > 1.15) {
+      return { rows: 0, error: `TVL/mcap divergence (ratio=${ratio.toFixed(3)}), CoinGecko also unavailable` };
+    }
+  }
+
   let prices: { timestamp: number; price: number }[] = [];
   if (priceRes.ok) {
     const priceData = (await priceRes.json()) as {
@@ -68,7 +128,7 @@ async function backfillCommodity(
     stmts.push(
       db
         .prepare(
-          "INSERT OR IGNORE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
+          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
         )
         .bind(id, snapshotDate, mcap, price),
     );
@@ -125,11 +185,11 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     const skipped: string[] = [];
 
     for (const meta of coins) {
-      // Commodity tokens with protocolSlug: backfill from protocol TVL API
+      // Commodity tokens: backfill from CoinGecko market_chart (primary) or protocol TVL (fallback)
       const isCommodity = meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER";
-      if (isCommodity && meta.geckoId && meta.protocolSlug) {
+      if (isCommodity && meta.geckoId) {
         try {
-          const result = await backfillCommodity(db, meta.id, { geckoId: meta.geckoId, protocolSlug: meta.protocolSlug });
+          const result = await backfillCommodity(db, meta.id, { geckoId: meta.geckoId, protocolSlug: meta.protocolSlug ?? undefined });
           if (result.error) {
             errors.push(`${meta.symbol}: ${result.error}`);
           } else {
