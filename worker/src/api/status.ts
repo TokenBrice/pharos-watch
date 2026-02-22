@@ -45,12 +45,11 @@ const CRON_INTERVALS: Record<string, number> = {
   "sync-stablecoin-charts": 900,
   "sync-blacklist": 900,
   "sync-dex-liquidity": 900,
-  "sync-onchain-supply": 1800,
   "sync-usds-status": 900,
   "sync-bluechip": 86400,
   "sync-fx-rates": 7200,
   "daily-digest": 86400,
-  "snapshot-supply": 900,
+  "snapshot-supply": 43200,
 };
 
 // --- Handler ---

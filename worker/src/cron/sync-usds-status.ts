@@ -73,7 +73,7 @@ async function probeFreeze(implAddress: string, apiKey: string | null): Promise<
 export async function syncUsdsStatus(
   db: D1Database,
   etherscanApiKey: string | null
-): Promise<void> {
+): Promise<{ itemCount: number } | void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   // Check if cache is still fresh
@@ -114,4 +114,5 @@ export async function syncUsdsStatus(
 
   await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
   console.log("[usds-status] Cache updated");
+  return { itemCount: 1 };
 }
