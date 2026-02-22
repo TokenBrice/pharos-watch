@@ -108,7 +108,7 @@ export default function AboutPage() {
           <CardTitle as="h2">Why Pharos?</CardTitle>
         </CardHeader>
         <CardContent className="flex gap-5 text-sm text-muted-foreground leading-relaxed">
-          <div className="flex sm:flex-col gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
             <Image
               src="/tokenbrice.png"
               alt="TokenBrice"
