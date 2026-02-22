@@ -434,9 +434,34 @@
     "text": "Noble's USDN is built on M0's stablecoin extension engine, making it a white-labeled version of M0's treasury-backed M token designed specifically for the Cosmos ecosystem. The yield-distribution model passes T-bill returns to holders, validators, and supporting platforms, creating incentive alignment that most stablecoins ignore entirely. Noble has already facilitated billions in stablecoin transfers across Cosmos, so the distribution infrastructure is proven. Whether the IBC-native approach can compete beyond Cosmos is the strategic gamble.",
     "updatedAt": "2026-02-22"
   },
+  "283": {
+    "title": "The JLP Hedge Fund",
+    "text": "Unitas routes your USDC deposits into Jupiter LP tokens and hedges the spot exposure with CEX perpetual shorts -- a delta-neutral strategy that sounds like a hedge fund pitch deck because it basically is one. Custody sits with Ceffu and Copper via off-exchange settlement, which limits exchange counterparty risk but doesn't eliminate it. When funding rates flip negative for an extended period, the entire yield thesis inverts. Still, the zero-knowledge solvency proofs are a genuine transparency upgrade over the \"trust us\" school of crypto yield products.",
+    "updatedAt": "2026-02-22"
+  },
+  "284": {
+    "title": "BSV's Dollar Envoy",
+    "text": "MNEE is a fiat-backed stablecoin issued under an Antigua and Barbuda FSRC digital asset license -- a jurisdiction that doesn't exactly scream regulatory gravitas. Originally launched on BSV (yes, that BSV), it has since expanded to ERC-20, suggesting the team recognized that ecosystem size matters more than block size ideology. Backed by US Treasury bills, cash, and stablecoin equivalents with regular attestations. The regulatory framework is real, even if Antigua's FSRC ranks somewhere below the SEC and MAS in the global credibility hierarchy.",
+    "updatedAt": "2026-02-22"
+  },
   "286": {
     "title": "The Paxos Sequel",
     "text": "Global Dollar is Paxos's second act after BUSD, built to avoid the regulatory friction that killed its Binance partnership. Singapore-regulated and reserve-backed, USDG targets the institutional corridor that doesn't want Tether's opacity or Circle's SVB memories. Whether the market needs another compliant stablecoin is a question USDG is determined to answer anyway.",
+    "updatedAt": "2026-02-22"
+  },
+  "289": {
+    "title": "Singapore's DeFi On-Ramp",
+    "text": "XSGD is one of the few non-USD stablecoins with genuine regulatory credentials, operating under Singapore's MAS Major Payment Institution framework with reserves at DBS and Standard Chartered. Five years in, it has processed billions in combined on-chain volume with XUSD and expanded to seven-plus chains. The Grab partnership and OKX Pay integration signal that StraitsX is building for real-world payments, not just DeFi yield farming. A rare case of a non-dollar stablecoin that might actually matter.",
+    "updatedAt": "2026-02-22"
+  },
+  "290": {
+    "title": "Singapore's Dollar Export",
+    "text": "XUSD is StraitsX's USD-pegged sibling to XSGD, sharing the same MAS regulatory framework and Tier-1 banking reserves. The infrastructure story is compelling: bimonthly independent attestations, multi-chain deployment, and planned cross-currency pairing with XSGD for Southeast Asian payment corridors. The real differentiator isn't the backing -- it's the same as every other compliant USD stablecoin -- but the regional focus on SGD-USD forex flows.",
+    "updatedAt": "2026-02-22"
+  },
+  "292": {
+    "title": "Sterling on the Blockchain",
+    "text": "VNX's VGBP is one of vanishingly few GBP-pegged stablecoins on the market, issued under Liechtenstein's Blockchain Act with reserves in Swiss and Liechtenstein banks. The fourth most-traded fiat currency in the world has surprisingly little on-chain representation, giving VGBP an open field with almost no competition. Available on Solana, Base, and Celo, though liquidity remains thin.",
     "updatedAt": "2026-02-22"
   },
   "296": {
@@ -444,9 +469,79 @@
     "text": "Cap Protocol's cUSD offers an RWA-backed stablecoin with a centralized-dependent governance model that routes yield back to holders. It operates in the increasingly crowded space of yield-bearing stablecoins, competing on distribution and integration rather than novelty. The protocol's bet is that a well-executed yield product can carve out space between the giants.",
     "updatedAt": "2026-02-22"
   },
+  "297": {
+    "title": "Volatility Arbitrage in a Wrapper",
+    "text": "Main Street USD takes the Ethena playbook and swaps basis trades for options volatility arbitrage -- betting that machine learning models can consistently identify mispriced implied volatility. The claimed high APY would be extraordinary in tradfi, which should calibrate your skepticism accordingly. For a product marketing institutional-grade strategies, the broad owner upgrade authority on the proxy contract means the trust assumptions are decidedly retail-grade.",
+    "updatedAt": "2026-02-22"
+  },
+  "298": {
+    "title": "Fractional Reserve, On Purpose",
+    "text": "InfiniFi openly replicates traditional banking's fractional reserve model on-chain, deploying your USDC across Aave, Pendle, and Ethena while offering tiered yields based on lock-up duration. The transparency is refreshing -- most DeFi protocols do this implicitly while pretending they don't. The hack of related entity Infini in February 2025, caused by a developer who retained admin keys, is a sobering reminder that access control failures don't care about your yield curves.",
+    "updatedAt": "2026-02-22"
+  },
+  "299": {
+    "title": "Peso Stablecoin Pioneer",
+    "text": "PHT is a Philippine peso-pegged stablecoin built on a MakerDAO MCD fork, overcollateralized by USDC and USDT vaults. It's targeting the $38 billion Filipino remittance corridor where traditional fees eat 6%+ of every transfer. The technical architecture is sound -- MCD is battle-tested -- but adoption for local-currency stablecoins requires merchant integration and fiat off-ramps that raw DeFi infrastructure doesn't provide. A worthy experiment in local-currency stablecoins for a market that desperately needs cheaper money movement.",
+    "updatedAt": "2026-02-22"
+  },
+  "300": {
+    "title": "Lira's Digital Mirror",
+    "text": "BiLira's TRYB has the distinction of being one of the largest non-USD-pegged stablecoins, pegged to a currency that has lost roughly 80% of its value against the dollar since 2021. Fully backed by Turkish lira reserves in Turkish bank accounts, TRYB faithfully tracks the lira -- including its depreciation. Whether holding a depreciating currency in tokenized form constitutes a compelling product is a question the Turkish crypto community has apparently answered in the affirmative.",
+    "updatedAt": "2026-02-22"
+  },
+  "302": {
+    "title": "Solana's Native Stable",
+    "text": "Hylo's hyUSD is backed entirely by yield-bearing Solana liquid staking tokens -- mSOL, jitoSOL, and bSOL -- with no fiat reserves, no RWAs, and no centralized dependencies. The dual-token design uses xSOL to absorb volatility, maintaining 160%+ overcollateralization while offering leveraged SOL exposure without liquidation risk. The oracle-free design is elegant in theory, but the entire system inherits validator slashing risk and LST depeg risk from its collateral basket.",
+    "updatedAt": "2026-02-22"
+  },
+  "303": {
+    "title": "Bitcoin's Debt Position",
+    "text": "Mezo's meUSD is what happens when Bitcoin maximalists discover CDPs. Backed exclusively by BTC with a minimum 110% collateral ratio, it's the purest expression of Bitcoin-native DeFi -- no ETH, no stablecoins, just sats in a vault. Built on Mezo's Bitcoin L2 with EVM compatibility and tBTC bridging, the protocol leverages Liquity-style redemption mechanics to maintain peg stability. The 110% minimum collateral ratio is aggressive for an asset as volatile as Bitcoin, though typical user ratios hover higher.",
+    "updatedAt": "2026-02-22"
+  },
+  "304": {
+    "title": "The Adapter Stablecoin",
+    "text": "USDU Finance takes a modular approach to stablecoin design, where protocol-minted tokens can only be created through DAO-approved adapters connected to Curve, Morpho, and TermMax vaults. All backing is held as adapter-owned LP tokens and vault shares, not user balances -- a meaningful structural distinction from most stablecoins. The Curve adapter dynamically adds or removes liquidity based on pool imbalance, while TermMax enables fixed-rate lending for RWA collateral.",
+    "updatedAt": "2026-02-22"
+  },
+  "305": {
+    "title": "Avalanche's Ethena",
+    "text": "XSY's Unity (UTY) applies the delta-neutral playbook to AVAX: long spot, short perps, collect the spread. Founded by veterans from Algorand, Paxos, and Floating Point Group, it's the highest-pedigree attempt to build a synthetic dollar native to Avalanche. Whether the AVAX perpetual futures market has sufficient depth and consistent positive funding to sustain this model long-term remains the central question.",
+    "updatedAt": "2026-02-22"
+  },
+  "306": {
+    "title": "Exchange Scrip, RWA Edition",
+    "text": "Gate's GUSD is a yield-bearing stablecoin that functions more like an investment certificate than a medium of exchange. Backed by US Treasuries, exchange revenue, and stablecoin yield strategies, it offers annualized returns that accrue silently until redemption. The platform promises to \"gradually disclose reserve proofs\" -- a phrase that inspires exactly as much confidence as it should. Useful within Gate's walled garden, less so as a general-purpose stablecoin.",
+    "updatedAt": "2026-02-22"
+  },
+  "307": {
+    "title": "A Bank's Stablecoin",
+    "text": "SG-FORGE's USDCV is the first USD stablecoin issued by a major European bank, with BNY as reserve custodian and full MiCA compliance from day one. Licensed as an EMI by France's ACPR, it represents what happens when a 160-year-old bank decides to issue tokens on Ethereum. Daily reserve disclosure and institutional-grade custody make it arguably the most regulated stablecoin in existence. The catch: US persons are explicitly excluded, making it a European product that denominates in dollars it can't sell to Americans.",
+    "updatedAt": "2026-02-22"
+  },
   "309": {
     "title": "AI Meets RWA",
     "text": "USD.AI blends the two hottest crypto narratives — artificial intelligence and real-world assets — into a single stablecoin product. Its centralized-dependent governance suggests human oversight where it counts, while the AI branding does the marketing work. Whether the \"AI\" label reflects genuine innovation or narrative arbitrage is left as an exercise for the reader.",
+    "updatedAt": "2026-02-22"
+  },
+  "310": {
+    "title": "The Swiss Yield Vault",
+    "text": "Solstice's USX combines delta-neutral strategies across BTC, ETH, and SOL with tokenized treasuries and fiat stablecoin reserves, all verified by Chainlink Proof of Reserve. Run by Solstice Labs AG out of Zug, Switzerland, with custody via Ceffu and Copper, it launched with significant TVL and backing from Galaxy Digital and Susquehanna. The strong track record with zero negative months is the kind of performance that makes allocators salivate and risk managers nervous.",
+    "updatedAt": "2026-02-22"
+  },
+  "312": {
+    "title": "Polkadot's Home Dollar",
+    "text": "HOLLAR is Hydration's overcollateralized stablecoin, backed by DOT, ETH, WBTC, USDT, USDC, and LSTs on Polkadot's largest DeFi protocol. The Stability Module draws inspiration from Aave's GHO, and partial liquidations at the protocol level are a thoughtful design choice. With a conservative initial supply cap and controlled borrow rate, Hydration is clearly prioritizing controlled growth over aggressive expansion -- a rare display of restraint in DeFi.",
+    "updatedAt": "2026-02-22"
+  },
+  "313": {
+    "title": "The Wallet Becomes the Bank",
+    "text": "MetaMask's mUSD is what happens when the world's most popular self-custodial wallet decides 30 million monthly users should have their own stablecoin. Issued by Stripe's Bridge using M0 protocol, with Blackstone managing treasury reserves in bankruptcy-remote accounts holding T-bills. The distribution advantage is enormous -- mUSD is native to the wallet where most DeFi users already live. Plans for yield sharing and MetaMask Card spending at Mastercard merchants signal ambitions well beyond DeFi.",
+    "updatedAt": "2026-02-22"
+  },
+  "316": {
+    "title": "Yield Rebase on Polygon",
+    "text": "Stabl.fi's CASH is a yield-generating stable indexcoin on Polygon that mints against USDC, USDT, and DAI deposits, then deploys those assets across chains and protocols to generate organic yield distributed via rebases. The concept is sound -- automated yield aggregation with a stable denomination. The execution has been less encouraging: thin trading volume and persistent below-peg pricing suggest the peg mechanism isn't exactly thriving. CASH reads like a DeFi experiment that never quite found its audience.",
     "updatedAt": "2026-02-22"
   },
   "325": {
