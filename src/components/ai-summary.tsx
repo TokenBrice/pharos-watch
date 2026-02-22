@@ -12,12 +12,12 @@ export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
 
   return (
     <div className="border-t border-b border-border/50 py-5">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
         {title}
         <span className="font-normal tracking-wide"> · Last updated {dateline}</span>
       </p>
       <p
-        className="text-[1.1rem] leading-relaxed text-foreground/90"
+        className="text-[1.1rem] leading-relaxed text-foreground/90 italic"
         style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
       >
         {text}
