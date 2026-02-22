@@ -30,7 +30,7 @@ export function StablecoinLogo({ src, name, size = 24 }: StablecoinLogoProps) {
       width={size}
       height={size}
       className="flex-shrink-0 rounded-full"
-      unoptimized // external URLs, skip Next.js optimization
+      unoptimized
     />
   );
 }
