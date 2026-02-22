@@ -265,8 +265,8 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={24} />
-                    <span className="font-medium truncate max-w-[140px]">{row.meta.name}</span>
-                    <span className="text-xs text-muted-foreground">{row.meta.symbol}</span>
+                    <span className="font-medium">{row.meta.symbol}</span>
+                    <span className="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline">{row.meta.name}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">

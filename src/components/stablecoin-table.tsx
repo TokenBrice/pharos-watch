@@ -302,8 +302,8 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     onMouseEnter={() => prefetch(coin.id)}
                   >
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={24} />
-                    <span className="truncate max-w-[180px] inline-block align-bottom">{coin.name}</span>
-                    <span className="text-xs text-muted-foreground">{coin.symbol}</span>
+                    <span className="font-medium">{coin.symbol}</span>
+                    <span className="truncate max-w-[180px] inline-block align-bottom text-xs text-muted-foreground hidden xl:inline">{coin.name}</span>
                     {(() => {
                       const rating = bluechipRatings?.[coin.id];
                       if (!rating) return null;

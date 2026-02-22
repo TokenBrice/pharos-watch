@@ -27,7 +27,7 @@ export function FilterBar({
   hasFilters,
 }: FilterBarProps) {
   return (
-    <div id="filter-bar" className="space-y-3 border-t pt-4 sticky top-14 z-40 bg-background pb-3">
+    <div id="filter-bar" className="space-y-3 border-t pt-4 pb-3">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

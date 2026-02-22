@@ -81,10 +81,10 @@ export function UsdsStatusCard() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left sm:gap-4">
           <UsdsLogo
             active={status.freezeActive}
-            className={`size-12 shrink-0 ${status.freezeActive ? "" : "opacity-60 saturate-50"}`}
+            className={`size-10 sm:size-12 shrink-0 ${status.freezeActive ? "" : "opacity-60 saturate-50"}`}
           />
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">
