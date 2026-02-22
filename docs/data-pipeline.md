@@ -19,7 +19,7 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 
 ## Price Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 4-pass system for assets with missing or zero prices:
+`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 5-pass system for assets with missing or zero prices:
 
 1. **Pass 1:** Contract address -> DefiLlama coins API (with multi-chain fallback)
 2. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy

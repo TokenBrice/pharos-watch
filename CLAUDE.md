@@ -1,6 +1,6 @@
 # Stablecoin Dashboard (Pharos)
 
-Analytics dashboard tracking ~130 stablecoins. Static Next.js 16 export → Cloudflare Pages. API: Cloudflare Worker + D1.
+Analytics dashboard tracking ~142 stablecoins. Static Next.js 16 export → Cloudflare Pages. API: Cloudflare Worker + D1.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -15,17 +15,17 @@ Analytics dashboard tracking ~130 stablecoins. Static Next.js 16 export → Clou
 
 ## Tech Stack
 
-Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn/ui, TanStack Query, Recharts, TradingView LW Charts, Cloudflare Workers + D1.
+Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn/ui, TanStack Query, Recharts, Cloudflare Workers + D1.
 
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, peg-tracker, blacklist, cemetery, liquidity, about, stablecoin/[id])
+src/app/         — Pages (homepage, peg-tracker, blacklist, cemetery, liquidity, compare, digest, status, about, stablecoin/[id])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
 worker/src/cron/ — Data sync crons
-worker/src/api/  — REST API handlers (12 endpoints)
+worker/src/api/  — REST API handlers (17 endpoints)
 worker/src/lib/  — DB helpers, constants, shared utilities
 ```
 

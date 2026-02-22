@@ -55,6 +55,9 @@ src/                              # Next.js frontend (static export)
 │   │   └── client.tsx
 │   ├── layout.tsx                # Root layout (header, footer, providers)
 │   ├── error.tsx                 # Root error boundary
+│   ├── loading.tsx               # Root loading skeleton
+│   ├── not-found.tsx             # 404 page
+│   ├── globals.css               # Global styles (Tailwind v4)
 │   ├── sitemap.ts                # Dynamic sitemap generation
 │   └── robots.ts                 # robots.txt
 ├── components/
@@ -75,9 +78,7 @@ src/                              # Next.js frontend (static export)
 │   ├── market-pulse.tsx          # AI daily digest display
 │   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
 │   ├── digest-archive-client.tsx # Digest archive list (client component)
-│   ├── price-chart.tsx           # TradingView LW chart (detail page)
 │   ├── mcap-chart.tsx            # Market cap area chart (detail page)
-│   ├── chain-distribution.tsx    # Recharts pie chart (detail page)
 │   ├── mechanism-card.tsx        # Peg mechanism info card (detail page)
 │   ├── issuer-info-card.tsx      # Issuer information card (detail page)
 │   ├── contract-addresses.tsx    # Contract address display (detail page)
@@ -146,8 +147,8 @@ src/                              # Next.js frontend (static export)
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, CacheStatus (shared with worker)
-    ├── stablecoins.ts            # Master list of ~130 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
-    ├── dead-stablecoins.ts       # 74 dead stablecoins with cause of death, peak mcap, obituaries
+    ├── stablecoins.ts            # Master list of ~142 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── dead-stablecoins.ts       # 77 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
     ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
@@ -165,7 +166,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (14 total)
+├── migrations/                   # D1 SQL migrations (20 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -180,7 +181,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-fx-rates.ts      # ECB + metals.dev → D1 FX/commodity rates (2h, metals daily)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
     │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (15min)
-    │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (2h, accumulates indefinitely)
+    │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
@@ -210,6 +211,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
+        ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
         └── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
 

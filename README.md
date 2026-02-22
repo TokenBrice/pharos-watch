@@ -27,7 +27,7 @@ Public-facing analytics dashboard tracking 142 stablecoins across multiple peg c
 
 - **Frontend:** Next.js 16 (App Router, static export), React 19, TypeScript (strict)
 - **Styling:** Tailwind CSS v4, shadcn/ui (Radix primitives)
-- **Charts:** TanStack Query, Recharts, TradingView Lightweight Charts
+- **Charts:** TanStack Query, Recharts
 - **API:** Cloudflare Worker (cron-based data fetching + REST endpoints)
 - **Database:** Cloudflare D1 (SQLite — caches stablecoin data, logos, blacklist events, depeg events)
 - **Hosting:** Cloudflare Pages
@@ -48,8 +48,8 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, EURC, PAXG, XAUT freeze/blacklist events (EVM chains) | 15 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 15 min |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Archive RPC for L2 balance lookups at historical block heights | 15 min |
-| [frankfurter.dev](https://frankfurter.dev/) | ECB FX rates for EUR, GBP, CHF, BRL and other fiat peg validation | 2 hours |
-| [Exchange Rate API](https://open.er-api.com/) | Live RUB/USD rate (ECB doesn't publish RUB) | 2 hours |
+| [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 2 hours |
+| [Exchange Rate API](https://open.er-api.com/) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 2 hours |
 | [metals.dev](https://metals.dev/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | Daily |
 | [Bluechip](https://bluechip.org/) | Independent stablecoin safety ratings (SMIDGE framework) | Daily |
 | [Anthropic](https://anthropic.com/) | AI-generated daily market digest | Daily |
