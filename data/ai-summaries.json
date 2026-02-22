@@ -544,14 +544,109 @@
     "text": "Stabl.fi's CASH is a yield-generating stable indexcoin on Polygon that mints against USDC, USDT, and DAI deposits, then deploys those assets across chains and protocols to generate organic yield distributed via rebases. The concept is sound -- automated yield aggregation with a stable denomination. The execution has been less encouraging: thin trading volume and persistent below-peg pricing suggest the peg mechanism isn't exactly thriving. CASH reads like a DeFi experiment that never quite found its audience.",
     "updatedAt": "2026-02-22"
   },
+  "317": {
+    "title": "Sterling's Lone Ranger",
+    "text": "BCP Technologies' tGBP holds the distinction of being the UK's first FCA-registered GBP stablecoin, having graduated from the regulatory sandbox. With a small market cap, it's less a dominant force and more a proof of concept for sterling on-chain. The Wirex integration brought it to millions of potential users, but GBP stablecoins collectively remain a rounding error in a dollar-dominated market. Its real significance lies in being the regulatory template that every subsequent UK stablecoin issuer will be measured against.",
+    "updatedAt": "2026-02-22"
+  },
+  "319": {
+    "title": "Deutsche Boerse's Euro Bet",
+    "text": "AllUnity's EURAU is what happens when DWS, Galaxy, and Flow Traders decide Europe needs a proper MiCA-compliant euro stablecoin. Licensed by BaFin as an electronic money institution and already integrated into Deutsche Boerse's Clearstream infrastructure, it carries more institutional credibility than most euro stablecoins combined. The problem is the denominator: euro stablecoins represent roughly 0.2% of the global stablecoin market, making EURAU both a success story and a reminder of how thoroughly the dollar dominates this space.",
+    "updatedAt": "2026-02-22"
+  },
+  "321": {
+    "title": "Hyperliquid's Chosen One",
+    "text": "Native Markets beat Paxos, Ethena, and Frax in a validator vote to become Hyperliquid's native stablecoin issuer, despite offering a less generous revenue split. The win was about ecosystem alignment over financial incentives -- validators preferred a builder who understood the platform over incumbents waving larger checks. With reserves managed by BlackRock and custody via Anchorage, the backing is institutional-grade, but the real play is capturing the yield from Hyperliquid's USDC deposits that currently flows to Circle.",
+    "updatedAt": "2026-02-22"
+  },
+  "324": {
+    "title": "The Plumber's Stablecoin",
+    "text": "Brale's SBC is less a consumer-facing stablecoin and more a demonstration of what Brale's stablecoin-as-a-service platform can do. Built by Dwolla's founder and backed by straightforward cash and treasuries under US money transmitter licenses, it optimizes for boring reliability over yield. The real product is Brale itself -- the infrastructure layer that lets other companies issue their own compliant stablecoins across 20-plus chains. SBC is the reference implementation; the clients are the business.",
+    "updatedAt": "2026-02-22"
+  },
   "325": {
     "title": "Binance's Euro",
     "text": "Eurite is the euro stablecoin endorsed by Binance, giving it instant distribution to the world's largest exchange. Issued by Banking Circle and regulated in the EU, it's MiCA-ready from day one. Whether Binance's distribution muscle can make a euro stablecoin stick where others have struggled remains the open question.",
     "updatedAt": "2026-02-22"
   },
+  "326": {
+    "title": "Synths Still Standing",
+    "text": "Metronome's msUSD is a synthetic dollar from the pre-yield-farming era that somehow kept its peg and its users. Minted against productive collateral like Vesper pool tokens, it offers zero-slippage swaps against other Metronome synths -- a neat trick in a market where synthetic assets have largely fallen out of fashion. The 18% liquidation penalty ensures borrowers stay overcollateralized, which is another way of saying the protocol learned from 2022.",
+    "updatedAt": "2026-02-22"
+  },
+  "327": {
+    "title": "Asia Credit Goes On-Chain",
+    "text": "Mu Digital's AZND tokenizes senior-tranche Asian credit instruments to offer 6-7% native yield, targeting a market that has historically been reserved for institutional desks and private banks. The dual-tranche structure with muBOND absorbing first losses to protect AZND holders is sound credit engineering. The question is whether DeFi users accustomed to double-digit yields will find single-digit returns from Asian corporates compelling enough to bridge the trust gap.",
+    "updatedAt": "2026-02-22"
+  },
+  "329": {
+    "title": "Berachain's Liquity Fork",
+    "text": "BeraBorrow's NECT is a Liquity-style CDP stablecoin purpose-built for Berachain, accepting the chain's native menagerie of liquid staking derivatives as collateral. With an exclusive license to deploy Liquity V2 on Berachain, it has positioned itself as the chain's foundational lending primitive. The auto-compounding dens that reinvest rewards into collateral are a clever twist on the CDP model, reducing liquidation risk while keeping users engaged. Whether NECT becomes Berachain's canonical dollar depends entirely on whether Berachain itself achieves escape velocity.",
+    "updatedAt": "2026-02-22"
+  },
+  "331": {
+    "title": "Turkish Carry Trade, Tokenized",
+    "text": "PikuDAO's USP is a yield-bearing stablecoin that appreciates over time rather than maintaining a fixed peg, with half its backing deployed into a Turkish lira FX arbitrage strategy. The logic is simple: Turkey's high inflation creates persistent demand for dollar-denominated assets, and Balsa Technologies captures the spread through delta-neutral TRY-USD trades. It's a genuinely novel yield source for DeFi -- uncorrelated with crypto markets -- but also one that concentrates geopolitical and counterparty risk in a single emerging market.",
+    "updatedAt": "2026-02-22"
+  },
+  "332": {
+    "title": "Gold-Backed With Extra Steps",
+    "text": "RAAC's pmUSD routes tokenized gold from I-ON Digital through overcollateralized CDPs to produce a dollar-pegged stablecoin with precious metal backing. Chainlink Proof of Reserves and Instruxi attestations add transparency layers. The gap between announced gold tokenization capacity and actual circulating supply is the kind of detail that separates press releases from products.",
+    "updatedAt": "2026-02-22"
+  },
+  "335": {
+    "title": "Jupiter's BlackRock Dollar",
+    "text": "JupUSD is Jupiter's bid to own the dollar layer on Solana, backed 90% by Ethena's USDtb -- which itself holds BlackRock's BUIDL fund shares. The plan to convert hundreds of millions of JLP's USDC holdings into JupUSD is as much a revenue play as a product launch: every dollar moved from USDC to JupUSD is yield redirected from Circle to Jupiter's ecosystem. Anchorage Digital handles custody, Ethena manages reserves, and Jupiter gets to call it native. It's a well-executed supply-chain integration disguised as a stablecoin.",
+    "updatedAt": "2026-02-22"
+  },
   "336": {
     "title": "The Aggregator Dollar",
     "text": "United Stables takes the yield-aggregation approach, pooling reserves across multiple strategies and passing the returns to holders. It's a bet that diversification of stablecoin backing is itself a feature worth tokenizing. Simple concept, hard execution.",
+    "updatedAt": "2026-02-22"
+  },
+  "339": {
+    "title": "Reinsurance Meets DeFi",
+    "text": "Re Protocol's reUSD channels stablecoin deposits into actual quota-share reinsurance contracts, generating yield from insurance premiums rather than trading or lending. The principal-protected structure targets risk-free-rate-plus-250-basis-points, which sounds pedestrian until you consider the yield is uncorrelated with crypto markets. It's the rare DeFi product where \"real yield\" actually means real yield.",
+    "updatedAt": "2026-02-22"
+  },
+  "340": {
+    "title": "The RWA Middleware Layer",
+    "text": "Multipli.fi's rwaUSDi attempts to solve DeFi's fragmentation problem for tokenized real-world assets by creating a unified collateral token that wraps treasuries, gold, and other RWAs into a single mintable unit. The pitch is that lending protocols like Aave and Morpho can't individually underwrite thousands of tokenized assets, so rwaUSDi does the due diligence for them. It's an elegant abstraction layer, though one that adds another trust assumption between the user and the underlying assets.",
+    "updatedAt": "2026-02-22"
+  },
+  "341": {
+    "title": "Hong Kong Gold, Arbitrum Rails",
+    "text": "Pleasing International's PUSD is a synthetic dollar backed by USDT reserves with tokenized gold exposure through PGOLD, deployed on Arbitrum. The Hong Kong-based precious metals firm is targeting the Asia-Middle East gold corridor. But PUSD's hybrid reserve structure -- part stablecoin collateral, part commodity exposure -- means it's neither a pure dollar peg nor a gold-backed token, occupying an awkward middle ground that may confuse more than it attracts.",
+    "updatedAt": "2026-02-22"
+  },
+  "342": {
+    "title": "Funding the Sequencer",
+    "text": "MegaETH's USDm flips the L2 business model: instead of extracting sequencer fees from users, it uses reserve yield from Ethena's USDtb to subsidize network operations. It's a clever alignment trick -- the chain literally gets cheaper as more people hold its native stablecoin. Backed by BlackRock's BUIDL via the USDtb stack, the reserves are institutional-grade, though the dependency on Ethena's infrastructure adds a layer of counterparty risk. The economics reveal a flywheel where stablecoin adoption drives token value drives adoption.",
+    "updatedAt": "2026-02-22"
+  },
+  "343": {
+    "title": "Tether Comes Home",
+    "text": "After years of operating from the British Virgin Islands, Tether launched a US-regulated stablecoin through Anchorage Digital Bank under the GENIUS Act. USA-T is the clearest signal yet that Tether views domestic regulation as a market to capture rather than a threat to avoid. The dual-product strategy -- USAT for US compliance, USDT for global liquidity -- is Tether's answer to Circle's home-turf advantage, backed by billions in annual revenue and an explicit goal of massive scale.",
+    "updatedAt": "2026-02-22"
+  },
+  "344": {
+    "title": "Yield Vault in Stable Clothing",
+    "text": "Yuzu Money's yzUSD packages curated DeFi yield strategies into an overcollateralized stablecoin, with Accountable providing real-time proof of solvency and Hypernative handling threat detection. The strict KYC gating -- only accredited, qualified, or institutional investors can mint and redeem -- makes it one of the most access-restricted stablecoins in DeFi. It's a yield aggregator that happens to maintain a dollar peg rather than a stablecoin that happens to generate yield. The distinction matters when things go wrong.",
+    "updatedAt": "2026-02-22"
+  },
+  "346": {
+    "title": "OTC Discounts, Tokenized",
+    "text": "Neutrl's NUSD monetizes the gap between OTC-discounted locked tokens and their spot market value, hedging directional exposure with perpetual futures shorts. Through its relationship with STIX, it accesses venture token allocations at 30-70% discounts -- a trade that hedge funds have run for years but DeFi users couldn't access. The strategy's capacity is inherently limited by OTC deal flow, but Neutrl is betting that the massive token unlock overhang provides years of raw material.",
+    "updatedAt": "2026-02-22"
+  },
+  "347": {
+    "title": "Asia's On-Ramp Dollar",
+    "text": "OSL Group's USDGO pairs a Hong Kong-listed company's distribution network with Anchorage Digital's US federal bank charter, creating a stablecoin built for the Asia-to-US institutional corridor. GENIUS Act compliance and the Anchorage relationship give it solid regulatory credentials, though OSL's focus on e-commerce, gaming, and trade settlement targets a narrower but potentially more defensible niche than general-purpose competitors.",
+    "updatedAt": "2026-02-22"
+  },
+  "348": {
+    "title": "Fidelity's Trillion-Dollar Entrance",
+    "text": "When the third-largest asset manager on earth launches a stablecoin, the signal matters more than the product. FIDD is textbook institutional: reserves at BNY Mellon, PwC attestations, OCC national trust charter, daily NAV disclosure that exceeds Circle's monthly cadence. Fidelity's distribution moat -- retail through Fidelity Crypto, institutional through Fidelity Digital Assets, and advisors through its wealth platform -- gives FIDD access to channels that crypto-native issuers can only dream about. Underestimating Fidelity's distribution muscle would be unwise.",
     "updatedAt": "2026-02-22"
   }
 }
