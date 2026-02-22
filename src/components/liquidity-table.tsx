@@ -120,7 +120,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
         <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
-            <TableHead className="xl:w-[200px]">Name</TableHead>
+            <TableHead className="w-[90px] xl:w-[200px]">Name</TableHead>
             <SortableTableHead
               sortKey="score"
               currentSortKey={sortKey}

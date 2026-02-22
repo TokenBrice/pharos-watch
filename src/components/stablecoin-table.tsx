@@ -204,7 +204,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="xl:w-[200px]"
+              className="w-[90px] xl:w-[200px]"
             />
             <SortableTableHead
               sortKey="price"
@@ -309,7 +309,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                       if (!rating) return null;
                       const colorCls = GRADE_COLORS[rating.grade] ?? "";
                       return (
-                        <Badge variant="outline" className={`text-xs font-mono px-1 py-0 ${colorCls}`} title={`Bluechip safety rating: ${rating.grade}`}>
+                        <Badge variant="outline" className={`text-xs font-mono px-1 py-0 hidden sm:inline-flex ${colorCls}`} title={`Bluechip safety rating: ${rating.grade}`}>
                           {rating.grade}
                         </Badge>
                       );
