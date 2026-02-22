@@ -13,7 +13,7 @@
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain->15, 2->40, 3->60, 5->80, 8+->100 |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + DexScreener Batch Token API (5 chains).
 
 ### Quality Multipliers (v2)
 
@@ -26,6 +26,8 @@ Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve F
 | Uniswap V3 5bp | 0.85x | fee tier <= 500 |
 | Uniswap V3 30bp+ | 0.4x | fee tier > 500 |
 | Fluid DEX | 0.85x | project contains `fluid` |
+| Aerodrome Stable (sAMM) | 0.85x | project contains `aerodrome` + `isStable` flag |
+| Aerodrome Volatile (vAMM) | 0.4x | project contains `aerodrome`, non-stable |
 | Balancer Stable | 0.85x | project contains `balancer` + stable pattern |
 | Balancer Weighted | 0.4x | project contains `balancer`, non-stable |
 | Generic AMM | 0.3x | fallback |
@@ -67,20 +69,30 @@ Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin a
 
 ## DEX Price Cross-Validation
 
-`dex_prices` table (migration 0011) stores DEX-implied USD prices extracted from Curve StableSwap pools. Updated every 15 minutes during `syncDexLiquidity()` at zero additional API cost.
+`dex_prices` table (migration 0011) stores DEX-implied USD prices extracted from multiple DEX sources. Updated every 15 minutes during `syncDexLiquidity()`.
+
+**Price observation sources:**
+
+| Source | Chains | Method | Filter |
+|--------|--------|--------|--------|
+| **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin | TVL >= $50K, balance ratio >= 0.3 |
+| **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. |
+| **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3 |
+| **DexScreener** | Ethereum, Base, Arbitrum, Polygon, Solana | Batch token API `priceUsd` | Pair liquidity >= $50K |
 
 **Price extraction pipeline:**
-1. During Curve API parsing, collect price observations for each tracked stablecoin from pools with TVL >= `DEXSCREENER_MIN_LIQUIDITY_USD` ($50K) and balance ratio >= 0.3
-2. Compute TVL-weighted median per stablecoin (robust against single distorted pool)
-3. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
-4. Store in `dex_prices` with top 5 source pools as JSON
+1. Collect price observations from all four sources during data fetching phase
+2. Merge all observations into a single map keyed by stablecoin ID
+3. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
+4. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
+5. Store in `dex_prices` with top 5 source pools as JSON (shows mixed protocols)
 
 **Confirmation gate in `detectDepegEvents()`:**
 - When primary price shows depeg (>=100bps), check DEX price
 - If DEX price is fresh (<20 min) and shows coin at peg (<100bps): **suppress** new depeg event (likely false positive)
 - If DEX unavailable, stale, or confirms depeg: open event normally
 - Only affects **opening new** events — existing event updates/closures unchanged
-- ~30-40 stablecoins covered by Curve; ~80 fall through to primary-only detection
+- ~80-100 stablecoins covered by multi-source observations; remainder fall through to primary-only detection
 
 **API exposure:**
 - `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`

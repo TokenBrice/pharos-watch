@@ -12,6 +12,8 @@ const CURVE_CHAINS = ["ethereum", "base", "arbitrum", "polygon"] as const;
 const UNIV3_SUBGRAPHS: Record<string, string> = {
   ethereum: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
   base: "FUbEPQw1oMghy39fwWBFY5fE6MXPXZQtjncQy2cXdrNS",
+  arbitrum: "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aJM",
+  polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
 };
 
 const UNIV3_POOL_QUERY = `{
@@ -27,8 +29,15 @@ const UNIV3_POOL_QUERY = `{
     feeTier
     totalValueLockedUSD
     volumeUSD
+    token0Price
+    token1Price
+    totalValueLockedToken0
+    totalValueLockedToken1
   }
 }`;
+
+/** Well-known USD-pegged tokens used as reference prices in Uni V3 pool observations */
+const USD_REFERENCE_SYMBOLS = new Set(["USDC", "USDT", "DAI", "BUSD", "TUSD", "USDP", "GUSD", "LUSD", "FRAX"]);
 
 // Well-known composite pool names → constituent symbols
 const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
@@ -48,6 +57,8 @@ const QUALITY_MULTIPLIERS: Record<string, number> = {
   "uniswap-v3-5bp": 0.85,
   "uniswap-v3-30bp": 0.4,
   "fluid-dex": 0.85,
+  "aerodrome-stable": 0.85,
+  "aerodrome-volatile": 0.4,
   "balancer-stable": 0.85,
   "balancer-weighted": 0.4,
   "generic": 0.3,
@@ -174,6 +185,7 @@ function classifyPoolType(project: string): string {
   const proj = project.toLowerCase();
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
+  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined later via isStable flag if available
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
   if (proj.includes("uniswap-v3") || proj === "uniswap-v3") return "uniswap-v3-5bp";
@@ -419,12 +431,13 @@ interface DataSources {
 
 interface CurveLookups {
   curvePoolMap: Map<string, CurvePoolEntry>;
-  curvePriceObs: Map<string, DexPriceObs[]>;
+  priceObservations: Map<string, DexPriceObs[]>;
 }
 
 interface UniV3Lookups {
   uniV3PoolFees: Map<string, number>;
   uniV3SymbolFees: Map<string, number>;
+  uniV3PriceObs: Map<string, DexPriceObs[]>;
 }
 
 interface ScoreResult {
@@ -522,7 +535,7 @@ async function buildCurveLookups(
   addressToId: Map<string, string>,
 ): Promise<CurveLookups> {
   const curvePoolMap = new Map<string, CurvePoolEntry>();
-  const curvePriceObs = new Map<string, DexPriceObs[]>();
+  const priceObservations = new Map<string, DexPriceObs[]>();
 
   for (let i = 0; i < CURVE_CHAINS.length; i++) {
     const res = curveResponses[i];
@@ -625,14 +638,14 @@ async function buildCurveLookups(
             }
             if (!resolvedIds) continue;
             for (const id of resolvedIds) {
-              const obs = curvePriceObs.get(id) ?? [];
+              const obs = priceObservations.get(id) ?? [];
               obs.push({
                 price: coin.usdPrice,
                 tvl: metapoolAdjustedTvl,
                 chain: CURVE_CHAINS[i],
                 protocol: "curve",
               });
-              curvePriceObs.set(id, obs);
+              priceObservations.set(id, obs);
             }
           }
         }
@@ -641,12 +654,12 @@ async function buildCurveLookups(
       console.warn(`[dex-liquidity] Failed to parse Curve ${CURVE_CHAINS[i]}:`, err);
     }
   }
-  console.log(`[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${curvePriceObs.size} coins with price obs`);
+  console.log(`[dex-liquidity] Indexed ${curvePoolMap.size} Curve pools, ${priceObservations.size} coins with Curve price obs`);
 
-  return { curvePoolMap, curvePriceObs };
+  return { curvePoolMap, priceObservations };
 }
 
-/** Fetch Uniswap V3 subgraph data for fee tier enrichment. Mutates addressToId with learned addresses. */
+/** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. Mutates addressToId with learned addresses. */
 async function fetchUniV3Data(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
@@ -654,10 +667,11 @@ async function fetchUniV3Data(
 ): Promise<UniV3Lookups> {
   const uniV3PoolFees = new Map<string, number>(); // "chain:address" → feeTier
   const uniV3SymbolFees = new Map<string, number>(); // "chain:SYM0:SYM1" → lowest feeTier
+  const uniV3PriceObs = new Map<string, DexPriceObs[]>();
 
   if (!graphApiKey) {
     console.log("[dex-liquidity] No GRAPH_API_KEY, skipping Uni V3 subgraph enrichment");
-    return { uniV3PoolFees, uniV3SymbolFees };
+    return { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs };
   }
 
   for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
@@ -681,13 +695,19 @@ async function fetchUniV3Data(
             feeTier: string;
             totalValueLockedUSD: string;
             volumeUSD: string;
+            token0Price: string;
+            token1Price: string;
+            totalValueLockedToken0: string;
+            totalValueLockedToken1: string;
           }[];
         };
       };
       const subPools = json.data?.pools ?? [];
+      let priceObsCount = 0;
       for (const p of subPools) {
         const feeTier = parseInt(p.feeTier, 10);
         if (isNaN(feeTier)) continue;
+        const tvl = parseFloat(p.totalValueLockedUSD);
         // Address-based lookup
         uniV3PoolFees.set(`${chain}:${p.id.toLowerCase()}`, feeTier);
         // Symbol-based fallback (keep lowest fee tier per pair = most optimized for stables)
@@ -705,14 +725,302 @@ async function fetchUniV3Data(
             addressToId.set(tok.id.toLowerCase(), ids[0]);
           }
         }
+
+        // --- Price observations from Uni V3 pools ---
+        // Only for pools with TVL >= $50K
+        if (isNaN(tvl) || tvl < 50_000) continue;
+
+        const token0Price = parseFloat(p.token0Price); // token0 per token1
+        const token1Price = parseFloat(p.token1Price); // token1 per token0
+        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) continue;
+
+        const sym0 = p.token0.symbol.toUpperCase();
+        const sym1 = p.token1.symbol.toUpperCase();
+        const isRef0 = USD_REFERENCE_SYMBOLS.has(sym0);
+        const isRef1 = USD_REFERENCE_SYMBOLS.has(sym1);
+
+        // If neither side is a known USD reference, skip (can't derive USD price reliably)
+        if (!isRef0 && !isRef1) continue;
+
+        // Derive USD prices: if token1 is a USD ref (~$1), token0's USD price ≈ token1Price (units of token1 per token0) × $1
+        // token0Price = how many token0 you get per token1
+        // token1Price = how many token1 you get per token0
+        // So: token0 USD price = token1Price × $1 (when token1 is USD ref)
+        //     token1 USD price = token0Price × $1 (when token0 is USD ref)
+        const pairs: { symbol: string; address: string; usdPrice: number }[] = [];
+        if (isRef1) {
+          // token1 is a USD reference, so token0's price = token1Price × ~$1
+          pairs.push({ symbol: sym0, address: p.token0.id, usdPrice: token1Price });
+        }
+        if (isRef0) {
+          // token0 is a USD reference, so token1's price = token0Price × ~$1
+          pairs.push({ symbol: sym1, address: p.token1.id, usdPrice: token0Price });
+        }
+
+        for (const { symbol, address, usdPrice } of pairs) {
+          // Resolve to tracked stablecoin ID
+          let resolvedIds: string[] | undefined;
+          const addrId = addressToId.get(address.toLowerCase());
+          if (addrId) resolvedIds = [addrId];
+          if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
+          if (!resolvedIds) continue;
+
+          // Basic sanity check: USD-pegged stablecoins should be near $1
+          if (usdPrice < 0.5 || usdPrice > 2.0) continue;
+
+          for (const id of resolvedIds) {
+            const obs = uniV3PriceObs.get(id) ?? [];
+            obs.push({ price: usdPrice, tvl, chain, protocol: "uniswap-v3" });
+            uniV3PriceObs.set(id, obs);
+            priceObsCount++;
+          }
+        }
       }
-      console.log(`[dex-liquidity] Indexed ${subPools.length} Uni V3 pools from ${chain} subgraph`);
+      console.log(`[dex-liquidity] Indexed ${subPools.length} Uni V3 pools from ${chain} subgraph (${priceObsCount} price obs)`);
     } catch (err) {
       console.warn(`[dex-liquidity] Uni V3 subgraph error for ${chain}:`, err);
     }
   }
 
-  return { uniV3PoolFees, uniV3SymbolFees };
+  console.log(`[dex-liquidity] Collected ${uniV3PriceObs.size} coins with Uni V3 price observations`);
+  return { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs };
+}
+
+// ---------------------------------------------------------------------------
+// Aerodrome subgraph
+// ---------------------------------------------------------------------------
+
+const AERODROME_SUBGRAPHS: Record<string, string> = {
+  base: "GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM",
+};
+
+const AERODROME_PAIR_QUERY = `{
+  pairs(
+    first: 500,
+    orderBy: reserveUSD,
+    orderDirection: desc,
+    where: { reserveUSD_gt: "10000" }
+  ) {
+    id
+    token0 { id symbol }
+    token1 { id symbol }
+    reserve0
+    reserve1
+    reserveUSD
+    token0Price
+    token1Price
+    isStable
+  }
+}`;
+
+/** Fetch Aerodrome subgraph data for price observations. */
+async function fetchAerodromePriceObs(
+  graphApiKey: string | null,
+  symbolToIds: Map<string, string[]>,
+  addressToId: Map<string, string>,
+): Promise<Map<string, DexPriceObs[]>> {
+  const priceObs = new Map<string, DexPriceObs[]>();
+
+  if (!graphApiKey) return priceObs;
+
+  for (const [chain, subgraphId] of Object.entries(AERODROME_SUBGRAPHS)) {
+    try {
+      const url = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
+      const res = await fetchWithRetry(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        body: JSON.stringify({ query: AERODROME_PAIR_QUERY }),
+      });
+      if (!res?.ok) {
+        console.warn(`[dex-liquidity] Aerodrome subgraph failed for ${chain}: ${res?.status}`);
+        continue;
+      }
+      const json = (await res.json()) as {
+        data?: {
+          pairs?: {
+            id: string;
+            token0: { id: string; symbol: string };
+            token1: { id: string; symbol: string };
+            reserve0: string;
+            reserve1: string;
+            reserveUSD: string;
+            token0Price: string;
+            token1Price: string;
+            isStable: boolean;
+          }[];
+        };
+      };
+      const pairs = json.data?.pairs ?? [];
+      let obsCount = 0;
+      for (const pair of pairs) {
+        const reserveUSD = parseFloat(pair.reserveUSD);
+        if (isNaN(reserveUSD) || reserveUSD < 50_000) continue;
+
+        // Compute balance ratio from reserves in USD terms
+        const reserve0 = parseFloat(pair.reserve0);
+        const reserve1 = parseFloat(pair.reserve1);
+        const token0Price = parseFloat(pair.token0Price); // token0 per token1
+        const token1Price = parseFloat(pair.token1Price); // token1 per token0
+        if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) continue;
+        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) continue;
+
+        // Approximate USD values: each reserve is half of reserveUSD in a balanced pool
+        // More precisely: reserveUSD = reserve0 × price0_usd + reserve1 × price1_usd
+        // We can infer: price0_usd = token1Price × price1_usd, and reserveUSD = reserve0 × token1Price × price1_usd + reserve1 × price1_usd
+        // => price1_usd = reserveUSD / (reserve0 × token1Price + reserve1)
+        const denom = reserve0 * token1Price + reserve1;
+        if (denom <= 0) continue;
+        const price1Usd = reserveUSD / denom;
+        const price0Usd = token1Price * price1Usd;
+        const reserve0Usd = reserve0 * price0Usd;
+        const reserve1Usd = reserve1 * price1Usd;
+
+        // Balance ratio filter
+        const minReserve = Math.min(reserve0Usd, reserve1Usd);
+        const maxReserve = Math.max(reserve0Usd, reserve1Usd);
+        const balanceRatio = maxReserve > 0 ? minReserve / maxReserve : 0;
+        if (balanceRatio < 0.3) continue;
+
+        const sym0 = pair.token0.symbol.toUpperCase();
+        const sym1 = pair.token1.symbol.toUpperCase();
+
+        // Extract price observations for tracked stablecoins
+        const tokens = [
+          { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd },
+          { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
+        ];
+        for (const { symbol, address, usdPrice } of tokens) {
+          if (usdPrice < 0.5 || usdPrice > 2.0) continue; // sanity for USD pegs
+          let resolvedIds: string[] | undefined;
+          const addrId = addressToId.get(address.toLowerCase());
+          if (addrId) resolvedIds = [addrId];
+          if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
+          if (!resolvedIds) continue;
+
+          for (const id of resolvedIds) {
+            const obs = priceObs.get(id) ?? [];
+            obs.push({ price: usdPrice, tvl: reserveUSD, chain, protocol: "aerodrome" });
+            priceObs.set(id, obs);
+            obsCount++;
+          }
+        }
+      }
+      console.log(`[dex-liquidity] Indexed ${pairs.length} Aerodrome pairs from ${chain} subgraph (${obsCount} price obs)`);
+    } catch (err) {
+      console.warn(`[dex-liquidity] Aerodrome subgraph error for ${chain}:`, err);
+    }
+  }
+
+  console.log(`[dex-liquidity] Collected ${priceObs.size} coins with Aerodrome price observations`);
+  return priceObs;
+}
+
+// ---------------------------------------------------------------------------
+// DexScreener batch token API
+// ---------------------------------------------------------------------------
+
+/** DexScreener chain IDs that map to our chain names */
+const DEXSCREENER_CHAINS = ["ethereum", "base", "arbitrum", "polygon", "solana"] as const;
+
+/** Build chain → (address → stablecoinId) map from TRACKED_STABLECOINS contracts */
+function buildChainAddressMap(): Map<string, Map<string, string>> {
+  const chainAddrs = new Map<string, Map<string, string>>();
+  for (const meta of TRACKED_STABLECOINS) {
+    if (!meta.contracts) continue;
+    for (const c of meta.contracts) {
+      const chain = c.chain.toLowerCase();
+      if (!chainAddrs.has(chain)) chainAddrs.set(chain, new Map());
+      chainAddrs.get(chain)!.set(c.address.toLowerCase(), meta.id);
+    }
+  }
+  return chainAddrs;
+}
+
+interface DexScreenerTokenPair {
+  chainId: string;
+  dexId: string;
+  pairAddress: string;
+  baseToken: { address: string; symbol: string };
+  quoteToken: { address: string; symbol: string };
+  priceUsd: string;
+  liquidity: { usd: number; base: number; quote: number };
+}
+
+/** Fetch price observations from DexScreener batch token API. */
+async function fetchDexScreenerPriceObs(
+  addressToId: Map<string, string>,
+): Promise<Map<string, DexPriceObs[]>> {
+  const priceObs = new Map<string, DexPriceObs[]>();
+  const chainAddrs = buildChainAddressMap();
+  let totalObsCount = 0;
+  let totalRequests = 0;
+
+  for (const chain of DEXSCREENER_CHAINS) {
+    const addrMap = chainAddrs.get(chain);
+    if (!addrMap || addrMap.size === 0) continue;
+
+    // Merge with addressToId learned from other sources
+    const mergedMap = new Map(addrMap);
+    for (const [addr, id] of addressToId) {
+      if (!mergedMap.has(addr)) mergedMap.set(addr, id);
+    }
+
+    const addresses = [...mergedMap.keys()];
+
+    // Batch into groups of 30
+    for (let i = 0; i < addresses.length; i += 30) {
+      const batch = addresses.slice(i, i + 30);
+      try {
+        // Rate limit: 200ms between requests
+        if (totalRequests > 0) {
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        totalRequests++;
+
+        const url = `https://api.dexscreener.com/tokens/v1/${chain}/${batch.join(",")}`;
+        const res = await fetchWithRetry(url, {
+          headers: { "User-Agent": USER_AGENT },
+        });
+        if (!res?.ok) {
+          console.warn(`[dex-liquidity] DexScreener batch failed for ${chain}: ${res?.status}`);
+          continue;
+        }
+        const pairs = (await res.json()) as DexScreenerTokenPair[];
+        if (!Array.isArray(pairs)) continue;
+
+        for (const pair of pairs) {
+          if (!pair.liquidity?.usd || pair.liquidity.usd < 50_000) continue;
+          if (!pair.priceUsd) continue;
+
+          const price = parseFloat(pair.priceUsd);
+          if (isNaN(price) || price <= 0) continue;
+
+          // Sanity check for USD stablecoins
+          if (price < 0.5 || price > 2.0) continue;
+
+          // Resolve baseToken to a tracked stablecoin — this is the token whose price we're observing
+          const baseAddr = pair.baseToken.address.toLowerCase();
+          const stablecoinId = mergedMap.get(baseAddr) ?? addressToId.get(baseAddr);
+          if (!stablecoinId) continue;
+
+          const obs = priceObs.get(stablecoinId) ?? [];
+          obs.push({
+            price,
+            tvl: pair.liquidity.usd,
+            chain: pair.chainId,
+            protocol: pair.dexId,
+          });
+          priceObs.set(stablecoinId, obs);
+          totalObsCount++;
+        }
+      } catch (err) {
+        console.warn(`[dex-liquidity] DexScreener batch error for ${chain}:`, err);
+      }
+    }
+  }
+
+  console.log(`[dex-liquidity] Collected ${priceObs.size} coins with DexScreener price observations (${totalObsCount} total obs across ${totalRequests} requests)`);
+  return priceObs;
 }
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
@@ -1189,14 +1497,14 @@ async function computeDepthStability(db: D1Database): Promise<void> {
   }
 }
 
-/** Compute DEX-implied prices from Curve observations (TVL-weighted median) and persist to dex_prices. */
+/** Compute DEX-implied prices from all observations (TVL-weighted median) and persist to dex_prices. */
 async function computeDexPrices(
   db: D1Database,
-  curvePriceObs: Map<string, DexPriceObs[]>,
+  priceObservations: Map<string, DexPriceObs[]>,
   nowSec: number,
 ): Promise<void> {
   try {
-    if (curvePriceObs.size === 0) return;
+    if (priceObservations.size === 0) return;
 
     // Load primary prices from stablecoins cache for comparison
     const primaryPrices = new Map<string, number>();
@@ -1213,7 +1521,7 @@ async function computeDexPrices(
     }
 
     const priceStmts: D1PreparedStatement[] = [];
-    for (const [id, observations] of curvePriceObs) {
+    for (const [id, observations] of priceObservations) {
       if (observations.length === 0) continue;
 
       // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
@@ -1292,17 +1600,51 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   const { symbolToIds, addressToId } = buildSymbolLookups();
 
   // 3. Parse Curve data into pool lookups and price observations
-  const { curvePoolMap, curvePriceObs } = await buildCurveLookups(
+  const { curvePoolMap, priceObservations } = await buildCurveLookups(
     dataSources.curveResponses, symbolToIds, addressToId,
   );
 
-  // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment
-  const { uniV3PoolFees, uniV3SymbolFees } = await fetchUniV3Data(
+  // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
+  const { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs } = await fetchUniV3Data(
     graphApiKey, symbolToIds, addressToId,
   );
   if (addressToId.size > 0) {
     console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
   }
+
+  // 4b. Fetch Aerodrome subgraph data for price observations
+  let aerodromePriceObs = new Map<string, DexPriceObs[]>();
+  try {
+    aerodromePriceObs = await fetchAerodromePriceObs(graphApiKey, symbolToIds, addressToId);
+  } catch (err) {
+    console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
+  }
+
+  // 4c. Fetch DexScreener batch token data for price observations
+  let dexScreenerPriceObs = new Map<string, DexPriceObs[]>();
+  try {
+    dexScreenerPriceObs = await fetchDexScreenerPriceObs(addressToId);
+  } catch (err) {
+    console.warn("[dex-liquidity] DexScreener fetch failed (non-fatal):", err);
+  }
+
+  // Merge all price observations into a single map
+  for (const [id, obs] of uniV3PriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
+  for (const [id, obs] of aerodromePriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
+  for (const [id, obs] of dexScreenerPriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
+  console.log(`[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
   // 5. Match pools to stablecoins and compute per-pool metrics
   const metrics = processPoolMetrics(
@@ -1323,6 +1665,6 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   // 9. Compute and persist depth stability from 30-day history
   await computeDepthStability(db);
 
-  // 10. Compute and persist DEX-implied prices from Curve observations
-  await computeDexPrices(db, curvePriceObs, nowSec);
+  // 10. Compute and persist DEX-implied prices from ALL observations
+  await computeDexPrices(db, priceObservations, nowSec);
 }
