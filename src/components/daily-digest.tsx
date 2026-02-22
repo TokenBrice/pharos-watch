@@ -31,18 +31,18 @@ export function DailyDigest() {
 
   return (
     <div className="border-t border-b border-border/50 py-5 animate-in fade-in duration-300">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-        Daily Digest
+      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+        Signal &amp; Noise
         {data!.generatedAt && (
           <span className="font-normal tracking-wide"> · {formatDateline(data!.generatedAt)}</span>
         )}
       </p>
-      <p className="text-[1.1rem] leading-relaxed text-foreground/90" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+      <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
         {data!.digest}
       </p>
       <Link
         href="/digest/"
-        className="inline-block mt-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
       >
         Read all previous recaps &rarr;
       </Link>
