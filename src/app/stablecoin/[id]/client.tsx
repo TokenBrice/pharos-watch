@@ -20,12 +20,19 @@ import { IssuerInfoCard } from "@/components/issuer-info-card";
 import { ContractAddresses } from "@/components/contract-addresses";
 import { BluechipBox } from "@/components/bluechip-box";
 import { LiquidityBox } from "@/components/liquidity-box";
+import { AiSummary } from "@/components/ai-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import type { StablecoinData } from "@/lib/types";
 import { pegScoreColor } from "@/lib/severity-colors";
 
-export default function StablecoinDetailClient({ id }: { id: string }) {
+interface SummaryData {
+  title: string;
+  text: string;
+  updatedAt: string;
+}
+
+export default function StablecoinDetailClient({ id, summary }: { id: string; summary: SummaryData | null }) {
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
@@ -180,6 +187,8 @@ export default function StablecoinDetailClient({ id }: { id: string }) {
         <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
         <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
       </div>
+
+      {summary && <AiSummary {...summary} />}
 
       <McapChart data={supplyHistory} />
 

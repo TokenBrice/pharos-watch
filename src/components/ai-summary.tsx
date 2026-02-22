@@ -11,7 +11,7 @@ export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
   });
 
   return (
-    <div className="border-t border-b border-border/50 py-5 mt-6">
+    <div className="border-t border-b border-border/50 py-5">
       <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
         {title}
         <span className="font-normal tracking-wide"> · Last updated {dateline}</span>

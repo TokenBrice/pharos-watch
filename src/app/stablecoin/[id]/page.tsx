@@ -7,7 +7,6 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
 import { Badge } from "@/components/ui/badge";
-import { AiSummary } from "@/components/ai-summary";
 import StablecoinDetailClient from "./client";
 import logos from "../../../../data/logos.json";
 import aiSummaries from "../../../../data/ai-summaries.json";
@@ -139,12 +138,9 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               {coin.collateral && ` Backed by: ${coin.collateral}.`}
               {coin.pegMechanism && ` Peg mechanism: ${coin.pegMechanism}.`}
             </p>
-            {typedSummaries[id] && (
-              <AiSummary {...typedSummaries[id]} />
-            )}
           </div>
           <div className="mt-4">
-            <StablecoinDetailClient id={id} />
+            <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} />
           </div>
           {related.length > 0 && (
             <section className="mt-8 space-y-3">
