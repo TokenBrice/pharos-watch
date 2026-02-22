@@ -26,9 +26,10 @@ async function backfillCommodity(
   id: string,
   config: { geckoId: string; protocolSlug?: string },
 ): Promise<{ rows: number; error?: string }> {
-  // Try CoinGecko market_chart first — provides actual historical market caps
+  // Try CoinGecko market_chart first — provides actual historical market caps.
+  // Use days=365 (not max) to avoid CG free-tier rate limits on large responses.
   const cgRes = await fetch(
-    `https://api.coingecko.com/api/v3/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`,
+    `https://api.coingecko.com/api/v3/coins/${config.geckoId}/market_chart?vs_currency=usd&days=365`,
     { headers: { "User-Agent": USER_AGENT } },
   );
 
