@@ -169,9 +169,59 @@
     "text": "Anchored Coins' AEUR offers a Swiss-regulated, reserve-backed euro stablecoin that targets the intersection of European money and Swiss financial infrastructure. Its smaller market cap belies a clean regulatory setup. In the euro stablecoin race, AEUR competes on jurisdiction prestige rather than distribution scale.",
     "updatedAt": "2026-02-22"
   },
+  "154": {
+    "title": "Sui's CDP Experiment",
+    "text": "Bucket Protocol brings the MakerDAO playbook to the Sui ecosystem: deposit SUI, BTC, ETH, or LSTs, mint a dollar stablecoin at zero interest, get liquidated at 110% collateral ratio. The PSM module accepts USDC and USDT for peg stability, which is a polite way of saying the decentralized stablecoin ultimately leans on centralized ones when it matters. It's a competent CDP implementation searching for scale on a chain still searching for DeFi depth.",
+    "updatedAt": "2026-02-22"
+  },
+  "157": {
+    "title": "The Swiss Franc, Tokenized",
+    "text": "VNX's VCHF is one of the first licensed Swiss franc stablecoins, issued out of Liechtenstein under FMA licenses. At modest market cap and daily volume measured in tens of thousands, VCHF is less a liquid trading instrument and more a proof-of-concept that CHF can exist on-chain. For the small audience that specifically needs a regulated Swiss franc token, it's one of the only games in town.",
+    "updatedAt": "2026-02-22"
+  },
+  "158": {
+    "title": "Liechtenstein's Quiet Euro",
+    "text": "VNX Euro shares its sibling VCHF's regulatory pedigree under Liechtenstein's FMA. At thin liquidity, VEUR is dwarfed by Circle's EURC and the MiCA-compliant competition. Its multi-chain availability across Ethereum, Polygon, Avalanche, and Solana is a nice touch for a token that very few people are currently moving.",
+    "updatedAt": "2026-02-22"
+  },
+  "165": {
+    "title": "Australia's Dollar On-Chain",
+    "text": "AUDD is one of those rare stablecoins that actually makes geographic sense: an Australian dollar token from an ASX-listed parent company (Novatti), audited by William Buck, and regulated under ASIC/AFSL. More interesting is its selection for the Reserve Bank of Australia's Project Acacia, testing tokenized asset settlement. Whether Australia's stablecoin market can sustain a domestic alternative to USD-denominated tokens is the macro question AUDD is quietly answering.",
+    "updatedAt": "2026-02-22"
+  },
+  "166": {
+    "title": "Base's Treasury Wrapper",
+    "text": "Cygnus Finance's cgUSD is a yield-bearing stablecoin on Base backed by short-term US Treasury Bills, rebasing daily to reflect net asset value. It's the familiar RWA-stablecoin formula -- deposit USDC, get T-bill exposure -- dressed up with Chainlink price feeds and a subsidiary structure under ARKS Labs Foundation. The real test is whether Base users want yet another treasury-yield wrapper when the chain already hosts the issuer of the underlying USDC.",
+    "updatedAt": "2026-02-22"
+  },
+  "168": {
+    "title": "Volatility, Redistributed",
+    "text": "f(x) Protocol's fxUSD takes a genuinely novel approach: split crypto collateral into a stable component (fxUSD) and a leveraged component (xPOSITION), shifting all volatility to the degens who want it. The V2 upgrade introduced up to 10x leverage positions, a delta-neutral Stability Pool, and fxSAVE for passive yield. The catch is that fxUSD's stability is only as good as the supply of leverage-hungry counterparties willing to absorb the volatility -- a dependency that works until it doesn't.",
+    "updatedAt": "2026-02-22"
+  },
+  "172": {
+    "title": "Blast's Yield Mirage",
+    "text": "USDB was Blast L2's headline feature: bridge your stablecoins, get an auto-rebasing dollar token earning yield from MakerDAO's T-bill protocol. In theory, a stablecoin that grows while you hold it. In practice, Blast's TVL collapsed from its peak, and USDB's circulating supply shrank dramatically. The yield mechanics work as advertised; the problem is that the chain built around them failed to retain users after the airdrop farming ended. USDB is now a technically sound product on a chain the market has largely moved on from.",
+    "updatedAt": "2026-02-22"
+  },
   "173": {
     "title": "When BlackRock Calls It a Token",
     "text": "BlackRock's tokenized money market fund is what happens when the world's largest asset manager decides blockchain isn't a meme. BUIDL doesn't try to be a DeFi building block — it's institutional plumbing with an ERC-20 wrapper. When Larry Fink's firm validates tokenization, the rest of TradFi starts returning phone calls.",
+    "updatedAt": "2026-02-22"
+  },
+  "183": {
+    "title": "Bitcoin's CDP Outpost",
+    "text": "BtcUSD is a Bitcoin-collateralized stablecoin that leverages cross-chain capabilities to exist across multiple EVM networks. Users deposit WBTC or BTCB into overcollateralized vaults to mint dollars -- a familiar CDP model applied specifically to Bitcoin holders who want liquidity without selling. At its current modest scale, the question is whether BTC holders will trust yet another wrapping layer when established CDPs like MakerDAO already accept wrapped Bitcoin.",
+    "updatedAt": "2026-02-22"
+  },
+  "185": {
+    "title": "The All-Weather Dollar",
+    "text": "Gyroscope's GYD is an exercise in paranoid stablecoin design: a diversified reserve of sDAI, USDC, LUSD, and crvUSD, a primary-market AMM that algorithmically adjusts redemption prices during crises, and secondary-market AMMs that concentrate liquidity near the peg. The PAMM's circuit-breaker mechanism -- which reduces redemption rates during bank-run scenarios to preserve solvency -- is elegant game theory. GYD's thesis is that stablecoin design should optimize for surviving tail risks, not maximizing yield.",
+    "updatedAt": "2026-02-22"
+  },
+  "186": {
+    "title": "The Anti-Dollar Experiment",
+    "text": "ISC deliberately rejects the USD peg in favor of tracking purchasing power through a basket of gold, bonds, T-bills, equities, and cash. The result is a flatcoin that appreciates over time rather than losing value to inflation -- a concept Brian Armstrong has championed but few have actually shipped. At minimal market cap on Solana, ISC is about as niche as stablecoins get. The variable peg and NAV-based pricing make it harder to use as a medium of exchange than a conventional dollar token.",
     "updatedAt": "2026-02-22"
   },
   "195": {
@@ -184,6 +234,16 @@
     "text": "Resolv's USR takes the delta-neutral approach with crypto backing, offering an alternative to Ethena's USDe for users who want basis-trade yields with a different risk profile. Its insurance pool and risk management framework attempt to address the perennial \"what happens when funding goes negative\" problem. In the basis-trade stablecoin niche, USR competes on risk structure rather than brand recognition.",
     "updatedAt": "2026-02-22"
   },
+  "202": {
+    "title": "Private Credit Meets DeFi",
+    "text": "Anzen's USDz is backed by a private credit portfolio rather than the usual T-bills and cash, tapping into a market that crypto has barely touched. The yield is real, but so is the illiquidity risk inherent in private credit assets. The question every private-credit-backed stablecoin must answer: what happens during a credit crunch when those underlying loans stop performing?",
+    "updatedAt": "2026-02-22"
+  },
+  "205": {
+    "title": "The VanEck-Managed Dollar",
+    "text": "Agora's AUSD has the resume that makes compliance departments swoon: VanEck manages the reserves, State Street provides custody, and Chaos Labs delivers real-time proof of reserves with on-chain attestations every 15 minutes. Its revenue-sharing model with distribution partners is the closest thing to a \"Stablecoin 3.0\" business model anyone has actually shipped. At growing circulation across multiple chains via LayerZero, AUSD is positioning itself as the institutional-grade alternative that doesn't sacrifice DeFi composability.",
+    "updatedAt": "2026-02-22"
+  },
   "209": {
     "title": "The Artist Formerly Known as DAI",
     "text": "Sky Dollar is MakerDAO's rebranded stablecoin, the culmination of Rune Christensen's \"Endgame\" vision to make the protocol more normie-friendly. Under the hood it's the same overcollateralized vaults and PSM modules — just with a fresh coat of paint and a governance structure that's still figuring itself out. Whether the rebrand was genius marketing or unnecessary complexity remains the market's most polite disagreement.",
@@ -194,14 +254,49 @@
     "text": "M0's M token is a middleware play: rather than competing with USDC or USDT directly, it provides infrastructure for other stablecoins and fintechs to build on. Its RWA-backed reserves and centralized-dependent governance aim for a middle ground between Tether's opacity and Circle's centralization. The \"protocol for stablecoins\" pitch is elegant in theory — the question is whether the market wants a meta-stablecoin layer.",
     "updatedAt": "2026-02-22"
   },
+  "215": {
+    "title": "Cardano's Dollar Anchor",
+    "text": "Moneta's USDM is the premier fiat-backed stablecoin on Cardano, co-issued by Norwegian Block Exchange under an EU e-money license for MiCA compliance. The Charli3 oracle verifying 1:1 reserves before each mint is a thoughtful on-chain guardrail that most stablecoins skip. It's a well-structured product constrained by Cardano's DeFi ecosystem size -- proving once again that the hardest part of launching a stablecoin isn't the backing, it's finding users.",
+    "updatedAt": "2026-02-22"
+  },
+  "218": {
+    "title": "The Purist's CDP",
+    "text": "River's satUSD makes a deliberate choice: no centralized stablecoin collateral accepted, only BTC, ETH, BNB, and LSTs. Its Omni-CDP lets you deposit collateral on one chain and mint on another via LayerZero, eliminating bridge risk. The bull case writes itself -- a pure crypto-collateral CDP with cross-chain reach. The bear case is whether concentrated ecosystem dependencies and the absence of stablecoin collateral create fragility during sharp downturns.",
+    "updatedAt": "2026-02-22"
+  },
+  "219": {
+    "title": "Binance's Shadow Dollar",
+    "text": "USDF, now under the Aster DEX rebrand, is a yield-bearing stablecoin whose USDT backing is deployed exclusively in delta-neutral strategies on Binance. The yields are attractive, but so is the concentration risk: every dollar of backing runs through Binance infrastructure with Ceffu holding the keys. It's a potent yield machine with a single, very large point of failure.",
+    "updatedAt": "2026-02-22"
+  },
+  "220": {
+    "title": "Bitcoin Banking, On-Chain",
+    "text": "Avalon's USDa has quietly become one of the largest CDP projects by TVL, backed by BTC and Bitcoin LSTs with institutional credit lines from Asian conglomerates. The fixed 8% borrowing rate and 1:1 USDT redemption guarantee via institutional liquidity make it structurally distinct from typical CDPs. The CEX-based HFT liquidation engine is clever but means your stablecoin's stability ultimately depends on centralized exchange infrastructure.",
+    "updatedAt": "2026-02-22"
+  },
   "221": {
     "title": "Ethena's Safe Side",
     "text": "If USDe is the exciting sibling, USDtb is the responsible one — backed by BlackRock's BUIDL fund rather than delta-neutral trades. Ethena built it for users who want the ecosystem without the basis-trade risk, creating a safety valve that also serves as USDe's backstop. It's the stablecoin equivalent of keeping a boring index fund alongside your options portfolio.",
     "updatedAt": "2026-02-22"
   },
+  "225": {
+    "title": "RWA Restaking's First Bet",
+    "text": "Zoth's ZeUSD bills itself as the first RWA restaking layer -- a CDP stable token minted against tokenized treasuries, ETFs, and money market funds that can then be restaked across DeFi for additional yield. The dual-yield model (off-chain T-bill interest plus on-chain restaking rewards) targets higher returns than vanilla stablecoin staking. Whether \"restaking your restaked treasury token\" is financial innovation or unnecessary complexity depends on your tolerance for recursive yield engineering.",
+    "updatedAt": "2026-02-22"
+  },
   "226": {
     "title": "Swiss Stubbornness, Tokenized",
     "text": "Frankencoin is a genuinely decentralized Swiss franc stablecoin — no foundation, no team tokens, no VC backing. Its auction-based liquidation mechanism and minimalist governance are a throwback to crypto's original ethos. The Swiss franc peg serves a niche audience, but Frankencoin proves that small, well-designed protocols can survive without a marketing budget.",
+    "updatedAt": "2026-02-22"
+  },
+  "230": {
+    "title": "The Rotating Yield Engine",
+    "text": "Noon's USN is a delta-neutral stablecoin that rotates between funding-rate arbitrage and T-bill strategies based on market conditions. The \"intelligent allocation\" pitch is a more honest framing than most competitors offer -- acknowledging that no single yield source works in all market regimes. Transparent proof of solvency and zero VC pre-allocation is either genuinely aligned or a clever marketing angle; time will tell.",
+    "updatedAt": "2026-02-22"
+  },
+  "231": {
+    "title": "Berachain's Basket Dollar",
+    "text": "HONEY is Berachain's native stablecoin, minted by depositing USDC, USDT0, pyUSD, or USDe into per-collateral vaults governed by BGT holders. It's less a novel stablecoin design and more a liquidity unification layer -- aggregating the chain's imported dollars into a single token that serves as Berachain's unit of account. HONEY's fate is entirely coupled to Berachain's success: if the chain's Proof-of-Liquidity model attracts sustained TVL, HONEY thrives as the default dollar; if not, it's just another wrapper nobody asked for.",
     "updatedAt": "2026-02-22"
   },
   "237": {
