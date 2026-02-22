@@ -299,14 +299,49 @@
     "text": "HONEY is Berachain's native stablecoin, minted by depositing USDC, USDT0, pyUSD, or USDe into per-collateral vaults governed by BGT holders. It's less a novel stablecoin design and more a liquidity unification layer -- aggregating the chain's imported dollars into a single token that serves as Berachain's unit of account. HONEY's fate is entirely coupled to Berachain's success: if the chain's Proof-of-Liquidity model attracts sustained TVL, HONEY thrives as the default dollar; if not, it's just another wrapper nobody asked for.",
     "updatedAt": "2026-02-22"
   },
+  "234": {
+    "title": "The Payments Play",
+    "text": "WSPN's Worldwide USD aspires to be the stablecoin for actual commerce, targeting trade finance and cross-border settlements rather than DeFi degens. Its white-label infrastructure lets enterprises issue their own branded stablecoins, which is either a clever platform play or an admission that WUSD itself lacks distribution. The market cap remains modest despite partnerships spanning Philippines exchanges to Australian commodity exporters, suggesting the \"stablecoin payment network\" thesis is still more pitch deck than protocol.",
+    "updatedAt": "2026-02-22"
+  },
+  "235": {
+    "title": "Frax Grows Up",
+    "text": "After years of algorithmic experimentation that made regulators nervous and degens rich, Frax Finance went full TradFi with frxUSD -- a fully-backed stablecoin whose reserves sit in BlackRock's BUIDL fund, tokenized by Securitize. The DAO voted unanimously for the pivot, which tells you everything about where crypto's risk appetite has shifted. Sam Kazemian's stated ambition of applying for a Federal Reserve Master Account is either visionary or delusional, but the BlackRock backing lends it more credibility than most stablecoin founders' dreams.",
+    "updatedAt": "2026-02-22"
+  },
   "237": {
     "title": "Treasury Yields On-Chain",
     "text": "Hashnote's USYC is a tokenized money market fund that passes T-bill yields directly to holders. It's RWA-backed, yield-bearing, and about as exciting as its underlying asset — which is precisely the point. In a world of exotic DeFi yields, sometimes the most radical product is just a savings account with an ERC-20 wrapper.",
     "updatedAt": "2026-02-22"
   },
+  "239": {
+    "title": "Malta's Euro Bet",
+    "text": "StablR's EURR is one of the early MiCA-compliant euro stablecoins, licensed through Malta's MFSA and backed by Tether's strategic investment -- a move that lets Tether maintain European presence without doing the compliance work itself. Grant Thornton audits and The Network Firm proof-of-reserves add credibility layers, though the real question is whether a Tether-backed entity can win institutional trust in a market built on regulatory purity.",
+    "updatedAt": "2026-02-22"
+  },
+  "240": {
+    "title": "The Dollar Sibling",
+    "text": "StablR's USDR rides the same Malta EMI license and MiCA compliance infrastructure as its euro sibling EURR, offering a dollar-denominated option for European users who want regulatory certainty. Reserves sit with European financial institutions in cash and short-term government bonds, audited by Grant Thornton. It is a competent, regulation-first product in a market that increasingly rewards exactly that -- though differentiating a compliant USD stablecoin in a field of dozens remains the core challenge.",
+    "updatedAt": "2026-02-22"
+  },
+  "241": {
+    "title": "Treasury Yield, Repackaged",
+    "text": "OpenEden's USDO is a regulated yield-bearing stablecoin with a Bermuda BMA license and TBILL-token backing that gives it genuine substance. The rebasing mechanism distributes T-bill yield daily by increasing holder balances -- elegant for retail, awkward for DeFi protocols that don't handle rebasing tokens, hence the cUSDO wrapper. Crossing $100M TVL within months of launch suggests the market has an appetite for transparent, tokenized-treasury stablecoins that aren't just institutional playthings.",
+    "updatedAt": "2026-02-22"
+  },
+  "245": {
+    "title": "Cardano's Dollar, Finally",
+    "text": "USDA has been the stablecoin Cardano needed but couldn't quite ship, delayed by regulatory headwinds and operational handoffs. It finally went live with BitGo custody and no mint/burn fees. For a blockchain ecosystem that has long been criticized for lacking stablecoin infrastructure, USDA is a necessary step -- though limited U.S. state availability at launch suggests the regulatory path is far from complete.",
+    "updatedAt": "2026-02-22"
+  },
   "246": {
     "title": "The Falcon Play",
     "text": "Falcon Finance's USDf enters the delta-neutral arena alongside Ethena, offering yield through basis-trade strategies with a centralized-dependent governance model. Its crypto-backed structure means the peg relies on market dynamics rather than reserve transparency. In the crowded yield-bearing stablecoin space, differentiation is a question of execution speed and risk management.",
+    "updatedAt": "2026-02-22"
+  },
+  "247": {
+    "title": "France's MiCA Pioneer",
+    "text": "Schuman Financial's EUROP is what happens when you build a euro stablecoin with the Banque de France looking over your shoulder. ACPR-licensed, KPMG-audited, and reserves held at Societe Generale, it checks every institutional box that MiCA demands -- plus an extra 2% reserve buffer beyond the 1:1 requirement. With euro stablecoins representing barely a fraction of the global stablecoin float, even the best-credentialed entrant faces a market that simply hasn't arrived yet.",
     "updatedAt": "2026-02-22"
   },
   "249": {
@@ -319,9 +354,39 @@
     "text": "After years of fighting the SEC over XRP, Ripple launched its own stablecoin with NYDFS approval — a plot twist even Ripple skeptics didn't see coming. RLUSD is built for Ripple's payments network, aiming to be the bridge asset that XRP never became for institutional transfers. Fully reserved and centrally managed, it's less a DeFi primitive and more a cross-border payments tool.",
     "updatedAt": "2026-02-22"
   },
+  "251": {
+    "title": "Hyperliquid's Lending Layer",
+    "text": "Felix Protocol forked Liquity V2 and deployed it on Hyperliquid L1, creating a CDP-based stablecoin that lets traders mint feUSD against HYPE, WBTC, ETH, and LSTs to use as margin. Growth from zero to substantial deposits within months is impressive, though much of it is inseparable from Hyperliquid's own ecosystem momentum. The Liquity-derived architecture adds proven liquidation mechanics, but the addition of centralized admin controls -- mint caps, emergency pausing -- means this is very much a modified fork, not a philosophical successor.",
+    "updatedAt": "2026-02-22"
+  },
+  "252": {
+    "title": "Delta-Neutral via CeFi",
+    "text": "StandX's DUSD takes the Ethena playbook -- spot long, perps short, pocket the spread -- and runs it through centralized custodians and its own perpetual futures DEX. The team's Binance Futures and Goldman Sachs pedigree explains the institutional architecture: off-chain collateral management with exchange-provided leverage and strict margin controls. Any delta-neutral stablecoin is ultimately a bet that funding rates remain favorable more often than not.",
+    "updatedAt": "2026-02-22"
+  },
+  "253": {
+    "title": "Bitcoin's Borrowing Layer",
+    "text": "BIMA's USBD lets Bitcoin holders access liquidity without selling their bags, using wrapped BTC derivatives as collateral in overcollateralized vaults with a 160-225% minimum ratio. The Liquity-style TroveManager architecture is battle-tested, though applying it to BTC derivatives rather than ETH introduces additional bridge and wrapper risk. The fundamental tension remains: the people most likely to hold BTC are often the least likely to lever it.",
+    "updatedAt": "2026-02-22"
+  },
   "254": {
     "title": "SocGen's Blockchain Experiment",
     "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of French banking giant Société Générale. It's a fully regulated, MiCA-compliant euro stablecoin from a systemically important bank — which is either the future of tokenized money or a corporate innovation lab's pet project. Either way, when a bank with over a trillion euros in assets issues a stablecoin, the industry takes notes.",
+    "updatedAt": "2026-02-22"
+  },
+  "255": {
+    "title": "Bitcoin-Margined Stability",
+    "text": "Aegis's YUSD markets itself as a bitcoin-backed stablecoin independent from fiat banking, which is a bold framing for what is essentially a delta-neutral strategy using BTC-margined perpetual contracts. The real-time proof-of-reserves through Accountable's verification network is genuinely differentiated -- you can watch the custodial vaults and open positions in real time, which is more than most competitors offer. Its survival depends on the same funding-rate dynamics that govern every delta-neutral stablecoin.",
+    "updatedAt": "2026-02-22"
+  },
+  "256": {
+    "title": "Curve's Recursive Dollar",
+    "text": "Resupply's reUSD, built by the Convex and Yearn teams, is a stablecoin for crvUSD power users who want to leverage their lending positions further. Deposit crvUSD into Curve Lend, use the position as collateral, mint reUSD, sell it for more crvUSD, repeat. It pushed crvUSD to all-time-high supply -- a testament to recursive DeFi appetite. The composability that makes reUSD powerful is the same composability that makes it fragile.",
+    "updatedAt": "2026-02-22"
+  },
+  "257": {
+    "title": "The Original T-Bill Token",
+    "text": "OpenEden's TBILL is a tokenized money market fund with institutional-grade ratings, managed by BNY Investments. Access is restricted to KYC'd professional investors, which limits retail appeal but is precisely the point. At competitive APY on short-dated treasuries, TBILL is less a stablecoin and more a regulated fund that happens to be an ERC-20 -- and for its target audience, that distinction matters.",
     "updatedAt": "2026-02-22"
   },
   "258": {
@@ -334,9 +399,39 @@
     "text": "World Liberty Financial's USD1 is backed by the Trump family brand and entered the market with all the subtlety you'd expect. It launched with RWA backing and centralized governance, positioning itself somewhere between a political statement and a financial product. The reserves are real, but the regulatory questions write themselves.",
     "updatedAt": "2026-02-22"
   },
+  "263": {
+    "title": "Hong Kong's Quiet Dollar",
+    "text": "Hex Trust's USDX is built by one of Asia's most established digital asset custodians, licensed under Hong Kong's TCSP regime with reserves in short-term Treasury Bills. Its primary home is the Flare blockchain and the newer Ozean chain, where it doubles as the native gas token -- an unusual dual role for a stablecoin. With 270+ institutional clients and offices across five countries, Hex Trust has the distribution network; whether USDX can translate custodial relationships into stablecoin adoption is the open question.",
+    "updatedAt": "2026-02-22"
+  },
+  "266": {
+    "title": "Plume's Wrapped Dollar",
+    "text": "pUSD is a straightforward USDC wrapper on Plume Chain, held 1:1 in a BoringVault with zero minting or redemption fees. It exists to give Plume's RWAfi ecosystem a canonical stablecoin without building reserve infrastructure from scratch -- pragmatic if unambitious. The integration of World Liberty Financial's USD1 as an additional reserve asset adds political flavor to what is otherwise a utilitarian design.",
+    "updatedAt": "2026-02-22"
+  },
+  "269": {
+    "title": "Decentralization, Immutable",
+    "text": "Liquity V2's BOLD is the stablecoin for people who mean it when they say decentralized. No governance, no upgrades, no RWA exposure -- just ETH and liquid staking tokens in overcollateralized vaults with user-set interest rates. The immutability is a feature and a constraint: any bug discovered post-deployment requires a full redeployment. The yield amplification mechanic, where stability pool depositors can earn more than borrowers pay, is clever game theory that sets BOLD apart from the lending-market stablecoin crowd.",
+    "updatedAt": "2026-02-22"
+  },
+  "271": {
+    "title": "Avalanche's Quiet Contender",
+    "text": "Avant's avUSD is a USDC-backed stable-value token on Avalanche that pairs with savUSD, its yield-bearing counterpart running DeFi-native strategies including cash-and-carry trades. Growing to significant value within its first year with zero management fees suggests competent execution, even if the value proposition -- deposit USDC, get a wrapped version, optionally earn yield -- isn't going to set anyone's imagination on fire. In the Avalanche ecosystem, being the default stable-value token is a defensible position, if a modest one.",
+    "updatedAt": "2026-02-22"
+  },
   "272": {
     "title": "The SEC-Registered Yield Coin",
     "text": "YLDS stands alone as one of the few yield-bearing stablecoins registered with the SEC as a security. This means actual regulatory clarity rather than the \"move fast and hope for the best\" approach most competitors take. The trade-off is operational constraints and restricted availability, but for institutions requiring regulatory certainty, YLDS is the rare stablecoin that comes with a blessing from Washington.",
+    "updatedAt": "2026-02-22"
+  },
+  "275": {
+    "title": "The Dutch Compliance Standard",
+    "text": "Quantoz's USDQ holds the distinction of being issued from the only MiCA-licensed stablecoin jurisdiction with a AAA credit rating, supervised by De Nederlandsche Bank itself. Backed by Tether, Kraken, and Fabric Ventures, it combines institutional credibility with the pragmatic observation that European crypto users need dollar-denominated stablecoins too. The Visa principal membership for stablecoin-linked debit cards is the kind of distribution play that turns compliance into competitive advantage.",
+    "updatedAt": "2026-02-22"
+  },
+  "282": {
+    "title": "The Interchain Dollar",
+    "text": "Noble's USDN is built on M0's stablecoin extension engine, making it a white-labeled version of M0's treasury-backed M token designed specifically for the Cosmos ecosystem. The yield-distribution model passes T-bill returns to holders, validators, and supporting platforms, creating incentive alignment that most stablecoins ignore entirely. Noble has already facilitated billions in stablecoin transfers across Cosmos, so the distribution infrastructure is proven. Whether the IBC-native approach can compete beyond Cosmos is the strategic gamble.",
     "updatedAt": "2026-02-22"
   },
   "286": {
