@@ -79,6 +79,7 @@ export async function generateDailyDigest(
   db: D1Database,
   anthropicApiKey: string | null,
   twitterCreds: TwitterCreds | null = null,
+  force = false,
 ): Promise<CronResult> {
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
@@ -95,7 +96,7 @@ export async function generateDailyDigest(
   if (latest) {
     const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
     const isBroken = latest.digest_text.trimStart().startsWith("```");
-    if (ageSec < 3600 && !isBroken) {
+    if (ageSec < 3600 && !isBroken && !force) {
       console.log(
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );

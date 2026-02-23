@@ -83,7 +83,7 @@ const worker = {
           ? { apiKey: env.TWITTER_API_KEY, apiSecret: env.TWITTER_API_SECRET, accessToken: env.TWITTER_ACCESS_TOKEN, accessTokenSecret: env.TWITTER_ACCESS_TOKEN_SECRET }
           : null;
       try {
-        const result = await generateDailyDigest(env.DB, env.ANTHROPIC_API_KEY ?? null, twitterCreds);
+        const result = await generateDailyDigest(env.DB, env.ANTHROPIC_API_KEY ?? null, twitterCreds, true);
         return addCorsHeaders(new Response(JSON.stringify({ ok: true, result }), { headers: { "Content-Type": "application/json" } }), origin);
       } catch (err) {
         return addCorsHeaders(new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { "Content-Type": "application/json" } }), origin);
