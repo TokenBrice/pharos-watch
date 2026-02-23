@@ -161,7 +161,7 @@ const worker = {
         break;
       }
       case "0 */2 * * *":
-        ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db, env.METALS_API_KEY)));
+        ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
         break;
       case "0 8 * * *":
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));

@@ -84,7 +84,7 @@ interface FrankfurterResponse {
   rates: Record<string, number>;
 }
 
-export async function syncFxRates(db: D1Database, metalsApiKey?: string | null): Promise<CronResult> {
+export async function syncFxRates(db: D1Database): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   try {
     // Load previous rates for delta validation
@@ -167,52 +167,43 @@ export async function syncFxRates(db: D1Database, metalsApiKey?: string | null):
       }
     }
 
-    // Gold & silver spot prices (USD per troy ounce) from metals.dev API
-    // Rate-limited to once per day (free tier = 100 req/month); peer median handles intra-day
-    let metalsSource: "metals.dev" | "cached" | "skipped" = "skipped";
-    if (metalsApiKey) {
-      // Check if cached rates are fresh enough (<24h) to skip the API call
-      const cachedAge = prevCache
-        ? Math.floor(Date.now() / 1000) - prevCache.updatedAt
-        : Infinity;
-      const hasCachedMetals = prevRates["peggedGOLD"] != null && prevRates["peggedSILVER"] != null;
+    // Gold & silver spot prices (USD per troy ounce) from gold-api.com
+    // No API key required, no rate limit — fetch every sync run (every 2h).
+    let metalsSource: "gold-api.com" | "cached" = "cached";
+    try {
+      const [goldRes, silverRes] = await Promise.all([
+        fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT } }),
+        fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT } }),
+      ]);
+      const goldData = goldRes?.ok ? (await goldRes.json()) as { price?: number } : null;
+      const silverData = silverRes?.ok ? (await silverRes.json()) as { price?: number } : null;
+      const goldPrice = goldData?.price;
+      const silverPrice = silverData?.price;
 
-      if (hasCachedMetals && cachedAge < 86400) {
-        // Reuse cached values — no API call needed
-        rates["peggedGOLD"] = prevRates["peggedGOLD"];
-        rates["peggedSILVER"] = prevRates["peggedSILVER"];
-        metalsSource = "cached";
-        console.log(`[sync-fx-rates] Reusing cached metals prices (age ${Math.round(cachedAge / 3600)}h)`);
-      } else {
-        try {
-          const metalsRes = await fetchWithRetry(
-            `https://api.metals.dev/v1/latest?api_key=${metalsApiKey}&currency=USD&unit=toz`,
-            { headers: { "User-Agent": USER_AGENT } },
-          );
-          if (metalsRes && metalsRes.ok) {
-            const metalsData = (await metalsRes.json()) as { metals?: { gold?: number; silver?: number } };
-            const goldPrice = metalsData?.metals?.gold;
-            const silverPrice = metalsData?.metals?.silver;
-            if (typeof goldPrice === "number" && goldPrice > 0) {
-              if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
-                rates["peggedGOLD"] = goldPrice;
-              } else if (prevRates["peggedGOLD"]) {
-                rates["peggedGOLD"] = prevRates["peggedGOLD"];
-              }
-            }
-            if (typeof silverPrice === "number" && silverPrice > 0) {
-              if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
-                rates["peggedSILVER"] = silverPrice;
-              } else if (prevRates["peggedSILVER"]) {
-                rates["peggedSILVER"] = prevRates["peggedSILVER"];
-              }
-            }
-            metalsSource = "metals.dev";
-          }
-        } catch {
-          // metals.dev fetch failed — peg-rates will rely on peer median
+      if (typeof goldPrice === "number" && goldPrice > 0) {
+        if (isValidRate("peggedGOLD", goldPrice, prevRates["peggedGOLD"])) {
+          rates["peggedGOLD"] = goldPrice;
+          metalsSource = "gold-api.com";
+        } else if (prevRates["peggedGOLD"]) {
+          rates["peggedGOLD"] = prevRates["peggedGOLD"];
         }
+      } else if (prevRates["peggedGOLD"]) {
+        rates["peggedGOLD"] = prevRates["peggedGOLD"];
       }
+
+      if (typeof silverPrice === "number" && silverPrice > 0) {
+        if (isValidRate("peggedSILVER", silverPrice, prevRates["peggedSILVER"])) {
+          rates["peggedSILVER"] = silverPrice;
+        } else if (prevRates["peggedSILVER"]) {
+          rates["peggedSILVER"] = prevRates["peggedSILVER"];
+        }
+      } else if (prevRates["peggedSILVER"]) {
+        rates["peggedSILVER"] = prevRates["peggedSILVER"];
+      }
+    } catch {
+      // fetch failed — fall back to previously cached values
+      if (prevRates["peggedGOLD"]) rates["peggedGOLD"] = prevRates["peggedGOLD"];
+      if (prevRates["peggedSILVER"]) rates["peggedSILVER"] = prevRates["peggedSILVER"];
     }
 
     // Sanity check: we should have rates for all mapped currencies
@@ -231,7 +222,7 @@ export async function syncFxRates(db: D1Database, metalsApiKey?: string | null):
       sources: {
         frankfurter: "ok",
         erApi: rates["peggedRUB"] !== RUB_FALLBACK ? "ok" : "fallback",
-        metals: metalsSource,
+        "gold-api.com": metalsSource,
       },
     };
     return { itemCount: Object.keys(rates).length, metadata: JSON.stringify(metadata) };
