@@ -38,6 +38,15 @@ export function TotalMcapChart() {
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
+  const yDomain = useMemo((): [number, number | string] => {
+    if (range === "all" || filteredData.length === 0) return [0, "auto"];
+    const values = filteredData.map((d) => d.total);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const padding = (max - min) * 0.15 || max * 0.05;
+    return [Math.max(0, min - padding), max + padding];
+  }, [range, filteredData]);
+
   if (isLoading) {
     return (
       <Card className="rounded-2xl">
@@ -89,6 +98,7 @@ export function TotalMcapChart() {
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(val: number) => formatCurrency(val, 0)}
+                domain={yDomain}
               />
               <Tooltip
                 formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
