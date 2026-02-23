@@ -70,3 +70,9 @@ improvement.plan.md
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.claude/agents
+
+.claude/commands
+
+.claude/settings.json

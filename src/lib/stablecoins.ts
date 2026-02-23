@@ -940,7 +940,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
     geckoId: "liquity-bold-2",
     collateral: "ETH and ETH liquid staking tokens (wstETH, rETH) only",
-    pegMechanism: "Overcollateralized CDPs with on-chain redemption for $1 of ETH collateral",
+    pegMechanism: "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",
     links: [
       { label: "Website", url: "https://www.liquity.org/bold" },
       { label: "Twitter", url: "https://x.com/LiquityProtocol" },
@@ -948,6 +948,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0x6440f144b7e50d6a8439336510312d2f54beb01d", decimals: 18 },
+      { chain: "arbitrum", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
+      { chain: "base", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
+      { chain: "optimism", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
+      { chain: "avalanche", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
     ],
   }),
   usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "centralized-dependent", {
