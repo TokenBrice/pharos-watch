@@ -1,3 +1,5 @@
+import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+
 export interface TwitterCreds {
   apiKey: string;
   apiSecret: string;
@@ -65,6 +67,16 @@ async function buildOAuthHeader(
   );
 }
 
+/** Inject $ cashtag prefix on the first mention of each tracked ticker in text. */
+function injectCashtags(text: string): string {
+  const symbols = [...new Set(TRACKED_STABLECOINS.map((s) => s.symbol))];
+  let result = text;
+  for (const sym of symbols) {
+    result = result.replace(new RegExp(`\\b${sym}\\b`, "i"), `$${sym}`);
+  }
+  return result;
+}
+
 /** Truncate text to fit within maxLen chars, breaking at a word boundary. */
 function truncateToFit(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
@@ -72,12 +84,12 @@ function truncateToFit(text: string, maxLen: number): string {
   return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLen - 1)) + "…";
 }
 
-/** Build final tweet text: title + digest. Cashtags are already inline in digestText ($USDC etc). */
+/** Build final tweet text: title + digest with inline cashtags injected on first ticker mention. */
 export function buildTweetText(digestTitle: string, digestText: string): string {
   const MAX = 280;
   const titlePrefix = digestTitle ? `${digestTitle}\n\n` : "";
   const available = MAX - titlePrefix.length;
-  const fittedText = truncateToFit(digestText, available);
+  const fittedText = truncateToFit(injectCashtags(digestText), available);
   return `${titlePrefix}${fittedText}`;
 }
 
