@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@/lib/chains";
 import type { StablecoinMeta } from "@/lib/types";
 
-function getExplorerUrl(chainKey: string, address: string): string {
+function getExplorerUrl(chainKey: string, address: string): string | null {
   const chain = CHAIN_META[chainKey];
+  if (!chain?.explorerUrl) return null;
   return chainKey === "tron"
-    ? `${chain?.explorerUrl}/#/contract/${address}`
-    : `${chain?.explorerUrl}/address/${address}`;
+    ? `${chain.explorerUrl}/#/contract/${address}`
+    : `${chain.explorerUrl}/address/${address}`;
 }
 
 export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
@@ -20,6 +21,40 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
   if (!meta.contracts || meta.contracts.length === 0) return null;
 
   const openContract = meta.contracts.find((c) => c.chain === openChain) ?? null;
+
+  const mobilePanel = openContract ? (() => {
+    const chain = CHAIN_META[openContract.chain];
+    const explorerUrl = getExplorerUrl(openContract.chain, openContract.address);
+    return (
+      <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2 space-y-1.5">
+        <div className="text-sm font-medium">{chain?.name ?? openContract.chain}</div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-xs text-muted-foreground truncate">
+            {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
+          </span>
+          <button
+            onClick={() => navigator.clipboard.writeText(openContract.address)}
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            title="Copy address"
+            aria-label="Copy address"
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {explorerUrl && (
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
+          >
+            View on {chain?.name ? `${chain.name} explorer` : "explorer"}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+      </div>
+    );
+  })() : null;
 
   return (
     <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
@@ -63,38 +98,7 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
               );
             })}
           </div>
-
-          {openContract && (() => {
-            const chain = CHAIN_META[openContract.chain];
-            const explorerUrl = getExplorerUrl(openContract.chain, openContract.address);
-            return (
-              <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2 space-y-1.5">
-                <div className="text-sm font-medium">{chain?.name ?? openContract.chain}</div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-muted-foreground truncate">
-                    {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
-                  </span>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(openContract.address)}
-                    className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-                    title="Copy address"
-                    aria-label="Copy address"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <a
-                  href={explorerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
-                >
-                  View on {chain?.name ? `${chain.name} explorer` : "explorer"}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            );
-          })()}
+          {mobilePanel}
         </div>
 
         {/* ── Desktop: existing text rows ─────────────────────── */}
@@ -105,15 +109,17 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
             return (
               <div key={`${c.chain}-${c.address}`} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
                 <span className="text-sm font-medium text-muted-foreground">{chain?.name ?? c.chain}</span>
-                <a
-                  href={explorerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono text-xs text-blue-500 hover:underline"
-                >
-                  {c.address.slice(0, 6)}...{c.address.slice(-4)}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                {explorerUrl && (
+                  <a
+                    href={explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-mono text-xs text-blue-500 hover:underline"
+                  >
+                    {c.address.slice(0, 6)}...{c.address.slice(-4)}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
               </div>
             );
           })}

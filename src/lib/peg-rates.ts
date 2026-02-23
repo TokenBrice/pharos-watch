@@ -67,14 +67,13 @@ export function derivePegRates(
         ? (prices[mid - 1] + prices[mid]) / 2
         : prices[mid];
 
-    // For commodity pegs (gold/silver), always prefer the spot price.
-    // Peer median is self-referential when 2 tokens dominate the group —
-    // commodity spot IS the definitive reference.
-    // For fiat pegs with thin groups (<3 coins), use ECB FX rate instead of
+    // For thin fiat peg groups (<3 coins), use ECB FX rate instead of
     // unreliable median (1 coin = own price, 2 coins = mirror deviations).
+    // Commodity pegs (gold/silver) use peer median — XAUT/PAXG are arbitraged
+    // against spot within seconds, so the median is a live reference. metals.dev
+    // spot is only fetched once per day and can be >1.5% stale, causing false depegs.
     const fallback = mergedFallbacks[peg];
-    const isCommodity = peg === "peggedGOLD" || peg === "peggedSILVER";
-    if (fallback && (isCommodity || prices.length < 3)) {
+    if (fallback && prices.length < 3) {
       rates[peg] = fallback;
       sources[peg] = "fallback";
       continue;
