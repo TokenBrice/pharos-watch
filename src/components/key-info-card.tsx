@@ -24,8 +24,8 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
       </CardHeader>
       <CardContent className="space-y-4">
 
-        {/* Classification badges */}
-        <div className="flex flex-wrap gap-2">
+        {/* Classification badges + links */}
+        <div className="flex flex-wrap items-center gap-2">
           {gov && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${gov.cls}`}>{gov.label}</span>}
           {backing && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${backing.cls}`}>{backing.label}</span>}
           {peg && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}>{peg.label}</span>}
@@ -42,6 +42,22 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
               </span>
             )
           )}
+          {hasLinks && meta.links!.map((link) => (
+            <a
+              key={link.url}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
+            >
+              {link.label === "Website" ? (
+                <Globe className="h-3.5 w-3.5" />
+              ) : (
+                <ExternalLink className="h-3.5 w-3.5" />
+              )}
+              {link.label}
+            </a>
+          ))}
         </div>
 
         {/* Collateral + Peg Stability */}
@@ -108,27 +124,6 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
           </div>
         )}
 
-        {/* Links */}
-        {hasLinks && (
-          <div className="flex flex-wrap gap-3">
-            {meta.links!.map((link) => (
-              <a
-                key={link.url}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
-              >
-                {link.label === "Website" ? (
-                  <Globe className="h-3.5 w-3.5" />
-                ) : (
-                  <ExternalLink className="h-3.5 w-3.5" />
-                )}
-                {link.label}
-              </a>
-            ))}
-          </div>
-        )}
 
       </CardContent>
     </Card>
