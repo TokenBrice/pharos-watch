@@ -20,7 +20,6 @@ const SYSTEM_PROMPT =
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
   "Examples of good titles: \"Calm Before the Storm\", \"Peg Watch\", \"Money Printer Goes Quiet\", \"Frozen Assets, Warm Markets\". " +
-  "CRITICAL: title + text combined must be UNDER 260 characters (this goes in a tweet). " +
   "Examples of good tone: " +
   "\"$311B in stablecoins and JPYC is still 16% off peg like it's a lifestyle choice.\" " +
   "\"Thirty-four addresses got frozen today. Compliance never sleeps, and neither does Tether's blacklist bot.\" " +
@@ -200,7 +199,7 @@ export async function generateDailyDigest(
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
+      max_tokens: 400,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPromptContent }],
     }),

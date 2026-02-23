@@ -84,15 +84,22 @@ export function extractCashtags(text: string): string[] {
   return found.sort((a, b) => a.pos - b.pos).map((f) => f.sym);
 }
 
-/** Build final tweet text: title + digest + cashtags if it fits in 280 chars. */
+/** Truncate text to fit within maxLen chars, breaking at a word boundary. */
+function truncateToFit(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const cut = text.lastIndexOf(" ", maxLen - 1);
+  return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLen - 1)) + "…";
+}
+
+/** Build final tweet text: title + digest + cashtags, truncating text to fit 280 chars. */
 export function buildTweetText(digestTitle: string, digestText: string): string {
   const MAX = 280;
-  const base = digestTitle ? `${digestTitle}\n\n${digestText}` : digestText;
   const tags = extractCashtags(digestText);
-  if (tags.length === 0) return base;
-
-  const withTags = `${base}\n\n${tags.map((s) => `$${s}`).join(" ")}`;
-  return withTags.length <= MAX ? withTags : base;
+  const tagStr = tags.length > 0 ? `\n\n${tags.map((s) => `$${s}`).join(" ")}` : "";
+  const titlePrefix = digestTitle ? `${digestTitle}\n\n` : "";
+  const available = MAX - titlePrefix.length - tagStr.length;
+  const fittedText = truncateToFit(digestText, available);
+  return `${titlePrefix}${fittedText}${tagStr}`;
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws on API error. */
