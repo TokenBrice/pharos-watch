@@ -8,6 +8,7 @@ import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
 import { Badge } from "@/components/ui/badge";
 import StablecoinDetailClient from "./client";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
 import logos from "../../../../data/logos.json";
 import aiSummaries from "../../../../data/ai-summaries.json";
 
@@ -152,8 +153,8 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
                     href={`/stablecoin/${r.id}/`}
                     className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent transition-colors"
                   >
-                    <span className="font-medium truncate">{r.name}</span>
-                    <span className="text-muted-foreground font-mono text-xs">{r.symbol}</span>
+                    <StablecoinLogo src={typedLogos[r.id]} name={r.name} size={20} />
+                    <span className="font-mono text-xs font-medium">{r.symbol}</span>
                   </Link>
                 ))}
               </div>
