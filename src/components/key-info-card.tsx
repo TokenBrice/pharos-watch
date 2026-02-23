@@ -62,48 +62,49 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
           </div>
         )}
 
-        {/* Proof of Reserves */}
+        {/* Proof of Reserves + Jurisdiction (2-col on desktop) */}
         {!isDecentralized && (
-          <div className="rounded-xl bg-muted/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Proof of Reserves</p>
-            {meta.proofOfReserves ? (
-              <div className="space-y-1">
-                <p className="text-sm leading-relaxed">
-                  {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-                  {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
-                </p>
-                <a
-                  href={meta.proofOfReserves.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline"
-                >
-                  View reserves <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No proof of reserves published</p>
-            )}
-          </div>
-        )}
-
-        {/* Jurisdiction */}
-        {hasJurisdiction && meta.jurisdiction && (
-          <div className="rounded-xl bg-muted/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Jurisdiction</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
-              {meta.jurisdiction.regulator && (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-500 border-blue-500/20">
-                  {meta.jurisdiction.regulator}
-                </span>
-              )}
-              {meta.jurisdiction.license && (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-500 border-violet-500/20">
-                  {meta.jurisdiction.license}
-                </span>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl bg-muted/50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Proof of Reserves</p>
+              {meta.proofOfReserves ? (
+                <div className="space-y-1">
+                  <p className="text-sm leading-relaxed">
+                    {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
+                    {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
+                  </p>
+                  <a
+                    href={meta.proofOfReserves.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline"
+                  >
+                    View reserves <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No proof of reserves published</p>
               )}
             </div>
+
+            {meta.jurisdiction && (
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Jurisdiction</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
+                  {meta.jurisdiction.regulator && (
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-500 border-blue-500/20">
+                      {meta.jurisdiction.regulator}
+                    </span>
+                  )}
+                  {meta.jurisdiction.license && (
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-500 border-violet-500/20">
+                      {meta.jurisdiction.license}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
