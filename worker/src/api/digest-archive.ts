@@ -15,7 +15,7 @@ export const handleDigestArchive = withErrorHandler("digest-archive", async (db:
   return new Response(JSON.stringify({ digests }), {
     headers: {
       "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.slow,
+      "Cache-Control": CACHE_PROFILES.standard,
     },
   });
 });
