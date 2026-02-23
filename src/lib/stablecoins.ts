@@ -724,6 +724,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://unitas.so/" },
       { label: "Twitter", url: "https://x.com/UnitasLabs" },
       { label: "Docs", url: "https://docs.unitas.so/" },
+      { label: "Proof of Reserve", url: "https://sol.unitas.so/transparency" },
     ],
     contracts: [
       { chain: "bsc", address: "0xea953ea6634d55dac6697c436b1e81a679db5882", decimals: 18 },
