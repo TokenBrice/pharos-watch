@@ -20,10 +20,25 @@ The user provides a stablecoin **name**, **symbol**, or **ID** (DefiLlama numeri
 | `pegMechanism` | Official docs > protocol analysis | How the peg is maintained (redemption, PSM, algo, delta-neutral, etc.) |
 | `jurisdiction` | Official docs > legal filings > news | `{ country, regulator?, license? }` — only for centralized / centralized-dependent |
 | `links` | Official site, Twitter, docs | Labels: `"Website"`, `"Twitter"`, `"Docs"`, `"Proof of Reserve"` |
-| `geckoId` | CoinGecko API search > CoinGecko site | Should be populated for every tracked coin when it exists on CoinGecko |
+| `geckoId` | CoinGecko API | Should be populated for every tracked coin when it exists on CoinGecko |
 | `cmcSlug` | CoinMarketCap | Fallback when both DL + CG miss price |
-| `contracts` | Official docs > CoinGecko > block explorers | `{ chain, address, decimals }` — chains from `src/lib/chains.ts` only |
+| `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `src/lib/chains.ts` only |
 | `proofOfReserves` | Official site | `{ type, url, provider? }` — types: `"independent-audit"` / `"real-time"` / `"self-reported"` |
+
+### Fetching strategy: APIs first, browser as fallback
+
+Many sites (CoinGecko, Etherscan, etc.) block plain HTTP requests with 403s. **Always prefer API endpoints over scraping web pages** — they're more reliable, structured, and rarely blocked.
+
+**API endpoints to use:**
+- **CoinGecko**: `https://api.coingecko.com/api/v3/coins/{geckoId}` — returns contract addresses (with decimals via `detail_platforms`), links, categories, description, all in structured JSON. Use `https://api.coingecko.com/api/v3/search?query={symbol}` to find the geckoId first
+- **Etherscan-family APIs** (for contract verification):
+  - Ethereum: `https://api.etherscan.io/api?module=token&action=tokeninfo&contractaddress={addr}`
+  - Arbiscan: `https://api.arbiscan.io/api?module=token&action=tokeninfo&contractaddress={addr}`
+  - BaseScan: `https://api.basescan.org/api?module=token&action=tokeninfo&contractaddress={addr}`
+  - (same pattern for other explorers — the API path is consistent across Etherscan-family explorers)
+- **DefiLlama**: `https://stablecoins.llama.fi/stablecoin/{id}` — chain-level supply breakdown, no auth needed
+
+**When APIs are insufficient** (official websites, docs pages, blog posts), use `WebFetch` normally. If a site returns 403, try `agent-browser` (headless browser) as a fallback if available.
 
 ### Process
 
@@ -38,16 +53,18 @@ The user provides a stablecoin **name**, **symbol**, or **ID** (DefiLlama numeri
 Run these searches **in parallel** to maximize efficiency:
 
 - **DefiLlama chain data**: `WebFetch` `https://stablecoins.llama.fi/stablecoin/{id}` (for numeric IDs) to get chain-level supply breakdown. If DL reports supply on a chain we don't have a contract for, that's a signal we're missing an address. This is the best discovery tool for multi-chain gaps
-- **CoinGecko API search**: `WebFetch` `https://api.coingecko.com/api/v3/search?query={symbol}` to find/confirm the geckoId programmatically (more reliable than guessing slugs). Then fetch the coin page for contract addresses and links
+- **CoinGecko API** (two calls):
+  1. `WebFetch` `https://api.coingecko.com/api/v3/search?query={symbol}` — find/confirm the geckoId by matching on name+symbol in the results
+  2. `WebFetch` `https://api.coingecko.com/api/v3/coins/{geckoId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false` — get contract addresses (use the `detail_platforms` field for chain + address + decimals), official links (`links.homepage`, `links.twitter_screen_name`, `links.repos_url`), and categories
 - **Official website**: `WebFetch` the coin's website (from existing links or search) for: collateral description, peg mechanism docs, jurisdiction/legal info, proof of reserves
 - **Web search**: `WebSearch` for `"{coin name}" stablecoin collateral mechanism jurisdiction` to find: regulatory filings, news articles, protocol docs
 - **Docs site**: If a docs link exists or is found, `WebFetch` it for technical details on collateral and peg mechanism. Also look for a "Deployed Contracts", "Contract Addresses", or "Technical Reference" page — many projects publish a full multi-chain address list in their docs
 
 For **contract addresses** specifically:
 - **Official docs first**: Many projects list contract addresses in their documentation (e.g. a "Deployed Contracts" or "Contract Addresses" page). Check the docs site for this — it's the most reliable and complete source, often listing all chains at once
-- **CoinGecko second**: Lists contracts per chain — cross-reference with existing entries and official docs
+- **CoinGecko API second**: The `detail_platforms` field from `/coins/{id}` returns chain → address + decimals mappings. Cross-reference with official docs
 - **DefiLlama chain data**: If DL reports supply on a supported chain we have no contract for, actively search for that chain's contract address
-- **Block explorers for verification**: For every contract address found from any source, verify on the chain's block explorer that the token name, symbol, and decimals match. This prevents adding a proxy admin, vault, or wrapper address instead of the actual token
+- **Block explorer APIs for verification**: For every contract address found from any source, verify via the explorer API that the token name, symbol, and decimals match. This prevents adding a proxy admin, vault, or wrapper address instead of the actual token. Use the Etherscan-family API pattern: `https://api.{explorer}/api?module=token&action=tokeninfo&contractaddress={addr}`
 - Only include chains defined in `src/lib/chains.ts`: ethereum, arbitrum, base, optimism, polygon, avalanche, bsc, gnosis, fantom, celo, tron
 - Note that the core protocol may only live on one chain (e.g. Ethereum) while the stablecoin token itself is bridged to many chains — look for both native and bridged deployments
 
@@ -57,7 +74,7 @@ Before presenting findings, run these checks on **existing** fields:
 
 - **Link liveness**: `WebFetch` each existing link (website, twitter, docs) to confirm it still resolves. Flag any dead URLs, redirects to different domains, or rebranded handles
 - **Proof of reserves liveness**: If a `proofOfReserves` entry exists, fetch the URL to confirm it's still live and the provider name is still correct. Attestation pages move or get replaced
-- **Contract address cross-validation**: For each existing contract address, verify on the block explorer that the token name and symbol still match (catches proxy migrations or token upgrades)
+- **Contract address cross-validation**: For each existing contract address, verify via block explorer API that the token name and symbol still match (catches proxy migrations or token upgrades)
 
 #### Step 3 — Present findings
 
@@ -106,7 +123,7 @@ After user approval:
 - **collateral**: Should name specific asset types, not vague descriptions. Bad: "U.S. dollar reserves". Good: "Cash, cash equivalents, and short-term U.S. Treasury bills in segregated accounts"
 - **pegMechanism**: Should explain HOW the peg is maintained. Bad: "Direct redemption through issuer". Good: "Direct 1:1 redemption through {issuer name} with daily settlement windows"
 - **jurisdiction**: Only populate for `centralized` or `centralized-dependent` governance. Include `regulator` and `license` when publicly documented
-- **contracts**: Include the **primary** deployment chain(s) where meaningful supply exists. Don't add chains with negligible or bridged supply. Cross-validate every address on a block explorer before proposing it
+- **contracts**: Include the **primary** deployment chain(s) where meaningful supply exists. Don't add chains with negligible or bridged supply. Cross-validate every address via block explorer API before proposing it
 - **links**: Use `x.com` (not `twitter.com`). Verify URLs actually resolve before proposing them
 - **geckoId**: Should be populated for every tracked coin that exists on CoinGecko. Use the CoinGecko search API (`api.coingecko.com/api/v3/search?query={symbol}`) to find the correct slug rather than guessing
 
@@ -125,3 +142,4 @@ After user approval:
 - Don't add contract addresses without verifying they are the canonical token contract (not a proxy admin, vault, or wrapper)
 - Don't populate jurisdiction for decentralized protocols (even if a DAO has a legal wrapper, the protocol itself may be jurisdiction-agnostic)
 - Don't change existing correct data just because a different source phrases it differently
+- Don't scrape web pages when a structured API endpoint exists — APIs are more reliable and less likely to 403

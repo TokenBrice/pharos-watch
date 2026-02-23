@@ -38,6 +38,11 @@ cd worker && npx wrangler dev      # Worker dev server (binds to localhost:8787)
 cd worker && npx tsc --noEmit      # Worker type-check
 ```
 
+## Web Fetching
+
+- **APIs first**: When fetching data from CoinGecko, Etherscan, DefiLlama, etc., always prefer their API endpoints over scraping web pages. APIs are structured, reliable, and rarely return 403s.
+- **agent-browser for everything else**: For websites, docs pages, and any URL that returns a 403 with `WebFetch`, use `agent-browser` (headless browser CLI, globally installed). It bypasses bot detection and renders JS-heavy pages.
+
 ## Key Gotchas
 
 - **Tailwind classes must be static strings** — never construct dynamically (purge won't find them)
