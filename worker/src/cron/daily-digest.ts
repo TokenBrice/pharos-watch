@@ -17,6 +17,7 @@ const SYSTEM_PROMPT =
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
   "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\"}. " +
+  "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
   "Examples of good titles: \"Calm Before the Storm\", \"Peg Watch\", \"Money Printer Goes Quiet\", \"Frozen Assets, Warm Markets\". " +
   "CRITICAL: title + text combined must be UNDER 260 characters (this goes in a tweet). " +
@@ -84,20 +85,24 @@ export async function generateDailyDigest(
     return { metadata: "skipped: no API key" };
   }
 
-  // Check if latest digest is <1h old
+  // Check if latest digest is <1h old and valid (not a broken code-block response)
   const latest = await db
     .prepare(
-      "SELECT generated_at FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
+      "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
     )
-    .first<{ generated_at: number }>();
+    .first<{ generated_at: number; digest_text: string }>();
 
   if (latest) {
     const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
-    if (ageSec < 3600) {
+    const isBroken = latest.digest_text.trimStart().startsWith("```");
+    if (ageSec < 3600 && !isBroken) {
       console.log(
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );
       return { metadata: "skipped: recent digest exists" };
+    }
+    if (isBroken) {
+      console.log("[daily-digest] Latest digest is malformed (code-block response), regenerating");
     }
   }
 
@@ -217,11 +222,14 @@ export async function generateDailyDigest(
     throw new Error("Claude API returned empty digest text");
   }
 
+  // Strip markdown code block wrapper if Claude added one (```json ... ```)
+  const jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+
   // Parse JSON response for title + text
   let digestTitle: string;
   let digestText: string;
   try {
-    const parsed = JSON.parse(rawText) as { title?: string; text?: string };
+    const parsed = JSON.parse(jsonText) as { title?: string; text?: string };
     digestTitle = (parsed.title ?? "").trim();
     digestText = (parsed.text ?? "").trim();
     if (!digestText) throw new Error("empty text field");
@@ -242,14 +250,17 @@ export async function generateDailyDigest(
     .run();
 
   // Post to Twitter if credentials are available
+  let tweetStatus = "no-creds";
   if (twitterCreds) {
     try {
       await postDigestTweet(digestTitle, digestText, twitterCreds);
+      tweetStatus = "ok";
     } catch (err) {
       console.error("[daily-digest] Failed to post tweet (non-fatal):", err);
+      tweetStatus = `failed: ${String(err).slice(0, 100)}`;
     }
   }
 
-  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars)`);
-  return { itemCount: 1, metadata: `${digestText.length} chars` };
+  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars), tweet: ${tweetStatus}`);
+  return { itemCount: 1, metadata: `${digestText.length} chars, tweet: ${tweetStatus}` };
 }

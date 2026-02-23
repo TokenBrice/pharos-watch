@@ -22,7 +22,7 @@ export const handleDailyDigest = withErrorHandler("daily-digest", async (db: D1D
   }), {
     headers: addFreshnessHeaders({
       "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.slow,
+      "Cache-Control": CACHE_PROFILES.standard,
     }, row.generated_at, 7200),
   });
 });

@@ -34,7 +34,7 @@ worker/src/lib/  — DB helpers, constants, shared utilities
 ```bash
 npm run dev                        # Frontend dev server
 npm run build                      # Build + type-check
-cd worker && npx wrangler dev      # Worker dev server
+cd worker && npx wrangler dev      # Worker dev server (binds to localhost:8787)
 cd worker && npx tsc --noEmit      # Worker type-check
 ```
 
@@ -56,3 +56,4 @@ Read these when working on related code:
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
+- **`docs/api-local-dev.md`** — Local worker dev server, admin auth (`X-Admin-Key`), curl examples
