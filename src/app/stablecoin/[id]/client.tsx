@@ -15,8 +15,7 @@ import { Button } from "@/components/ui/button";
 import { McapChart } from "@/components/mcap-chart";
 import { DepegHistory } from "@/components/depeg-history";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
-import { MechanismCard } from "@/components/mechanism-card";
-import { IssuerInfoCard } from "@/components/issuer-info-card";
+import { KeyInfoCard } from "@/components/key-info-card";
 import { ContractAddresses } from "@/components/contract-addresses";
 import { BluechipBox } from "@/components/bluechip-box";
 import { LiquidityBox } from "@/components/liquidity-box";
@@ -194,11 +193,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
 
 
       {meta && (
-        <MechanismCard meta={meta} />
-      )}
-
-      {meta && (
-        <IssuerInfoCard meta={meta} />
+        <KeyInfoCard meta={meta} />
       )}
 
       {meta && (
