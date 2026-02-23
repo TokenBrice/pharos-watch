@@ -11,7 +11,7 @@ import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
  * where the value is "USD per 1 unit of the currency".
  *
  * RUB is not published by ECB (sanctions) so we keep a hardcoded fallback.
- * Runs every 2 hours.
+ * Runs every 15 minutes.
  */
 
 const CURRENCIES = ["EUR", "GBP", "CHF", "BRL", "JPY", "IDR", "SGD", "TRY", "AUD", "ZAR", "CAD", "CNY", "PHP", "MXN"] as const;
@@ -57,7 +57,7 @@ const FX_RATE_BOUNDS: Record<string, [number, number]> = {
   peggedGOLD: [500, 10000],     // Gold ~$2900/oz
 };
 
-/** Max allowed change from previous cached value (no FX rate moves 20% in 2 hours) */
+/** Max allowed change from previous cached value (no FX rate moves 20% in 15 minutes) */
 const MAX_DELTA_PCT = 0.20;
 
 /** Validate a rate against bounds and delta from previous value */
@@ -121,20 +121,28 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
       }
     }
 
-    // Secondary: fetch RUB, UAH, ARS from exchangerate-api.com (ECB doesn't publish these)
+    // Secondary: fetch RUB, UAH, ARS from fawazahmed0/exchange-api (ECB doesn't publish these)
+    // CDN-backed, no rate limit. Response shape: { date: "...", usd: { rub: 76.5, ... } }
     try {
-      const erRes = await fetchWithRetry("https://open.er-api.com/v6/latest/USD", {
+      const PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
+      const FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
+      let erRes = await fetchWithRetry(PRIMARY_URL, {
         headers: { "User-Agent": USER_AGENT },
       });
+      if (!erRes || !erRes.ok) {
+        erRes = await fetchWithRetry(FALLBACK_URL, {
+          headers: { "User-Agent": USER_AGENT },
+        });
+      }
       if (erRes && erRes.ok) {
-        const erData = (await erRes.json()) as { rates?: Record<string, number> };
+        const erData = (await erRes.json()) as { usd?: Record<string, number> };
         const secondaryCurrencies: Array<[string, string]> = [
-          ["RUB", "peggedRUB"],
-          ["UAH", "peggedUAH"],
-          ["ARS", "peggedARS"],
+          ["rub", "peggedRUB"],
+          ["uah", "peggedUAH"],
+          ["ars", "peggedARS"],
         ];
         for (const [currency, pegKey] of secondaryCurrencies) {
-          const perUsd = erData?.rates?.[currency];
+          const perUsd = erData?.usd?.[currency];
           if (typeof perUsd === "number" && perUsd > 0) {
             const rate = Number((1 / perUsd).toFixed(6));
             if (isValidRate(pegKey, rate, prevRates[pegKey])) {
@@ -168,7 +176,7 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
     }
 
     // Gold & silver spot prices (USD per troy ounce) from gold-api.com
-    // No API key required, no rate limit — fetch every sync run (every 2h).
+    // No API key required, no rate limit — fetch every sync run (every 15min).
     let metalsSource: "gold-api.com" | "cached" = "cached";
     try {
       const [goldRes, silverRes] = await Promise.all([
@@ -221,7 +229,7 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
       missing: missing.length > 0 ? missing : undefined,
       sources: {
         frankfurter: "ok",
-        erApi: rates["peggedRUB"] !== RUB_FALLBACK ? "ok" : "fallback",
+        fawazahmed0: rates["peggedRUB"] !== RUB_FALLBACK ? "ok" : "fallback",
         "gold-api.com": metalsSource,
       },
     };

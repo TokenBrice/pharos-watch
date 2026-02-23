@@ -48,9 +48,9 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, EURC, PAXG, XAUT freeze/blacklist events (EVM chains) | 15 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 15 min |
 | [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Archive RPC for L2 balance lookups at historical block heights | 15 min |
-| [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 2 hours |
-| [Exchange Rate API](https://open.er-api.com/) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 2 hours |
-| [metals.dev](https://metals.dev/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | Daily |
+| [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 15 min |
+| [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 15 min |
+| [gold-api.com](https://gold-api.com/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | 15 min |
 | [Bluechip](https://bluechip.org/) | Independent stablecoin safety ratings (SMIDGE framework) | Daily |
 | [Anthropic](https://anthropic.com/) | AI-generated daily market digest | Daily |
 
@@ -116,8 +116,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *   → sync stablecoins + charts + DEX liquidity + blacklist + USDS status + supply snapshots
-  ├── Cron: 0 */2 * * *    → sync FX rates (ECB + metals.dev)
+  ├── Cron: */15 * * * *   → sync stablecoins + charts + DEX liquidity + blacklist + USDS status + FX rates + supply snapshots
   └── Cron: 0 8 * * *      → Bluechip safety ratings + daily digest
 
 Cloudflare D1 (SQLite database)

@@ -56,18 +56,18 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 19. **Security headers**: Worker adds `X-Content-Type-Options: nosniff` to all responses
 20. **Admin cache bypass**: `/api/backfill-depegs` skips the response cache (alongside `/api/health` and `/api/status`)
 
-## Gold & Silver Spot Prices (metals.dev)
+## Gold & Silver Spot Prices (gold-api.com)
 
-`syncFxRates()` in `worker/src/cron/sync-fx-rates.ts` fetches gold and silver spot prices from the [metals.dev](https://metals.dev) API for commodity-pegged stablecoin peg validation (XAUT, PAXG, KAU, KAG, etc.).
+`syncFxRates()` in `worker/src/cron/sync-fx-rates.ts` fetches gold and silver spot prices from the [gold-api.com](https://gold-api.com) API for commodity-pegged stablecoin peg validation (XAUT, PAXG, KAU, KAG, etc.).
 
-### Why metals.dev?
+### Why gold-api.com?
 
-The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events.
+The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events. gold-api.com requires no API key or rate limiting.
 
 ### Live Sync (sync-fx-rates.ts)
 
-- **Endpoint**: `GET /v1/latest?api_key=KEY&currency=USD&unit=toz`
-- **Rate limiting**: Once per day (free tier = 100 requests/month). The cron runs every 2 hours but checks if the cached metals rates are <24h old before making an API call. Peer median handles intra-day peg validation.
+- **Endpoint**: `GET https://api.gold-api.com/price/XAU` (gold), `GET https://api.gold-api.com/price/XAG` (silver)
+- **Rate limiting**: None — no API key required, fetched every 15-minute cron run.
 - **Validation**: Same `isValidRate()` bounds + delta checks as FX rates (gold: $500-$10,000/oz, silver: $5-$500/oz, max 20% change from previous value).
 - **Fallback**: If no API key is configured, metals are skipped and peer median is the sole reference.
 

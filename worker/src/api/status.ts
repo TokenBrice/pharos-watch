@@ -47,7 +47,7 @@ const CRON_INTERVALS: Record<string, number> = {
   "sync-dex-liquidity": 900,
   "sync-usds-status": 900,
   "sync-bluechip": 86400,
-  "sync-fx-rates": 7200,
+  "sync-fx-rates": 900,
   "daily-digest": 86400,
   "snapshot-supply": 43200,
 };

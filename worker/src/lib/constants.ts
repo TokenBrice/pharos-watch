@@ -51,6 +51,6 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   stablecoins: 600,
   "stablecoin-charts": 600,
   "usds-status": 86400,
-  "fx-rates": 14400,
+  "fx-rates": 1800,
   "bluechip-ratings": 43200,
 };

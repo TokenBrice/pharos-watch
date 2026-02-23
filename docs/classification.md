@@ -56,7 +56,7 @@ Peg deviation for non-USD stablecoins requires knowing the USD value of the peg 
 
 For thin peg groups (GBP, CHF, BRL, RUB, JPY — often <3 qualifying coins), a `FALLBACK_RATES` map provides approximate FX rates. If the median from <3 coins deviates >10% from the fallback, the fallback is used instead. This prevents a single depegged coin from becoming its own reference rate (which would always show 0 bps deviation).
 
-Live FX rates are fetched every 2 hours by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN. RUB, UAH, and ARS use a secondary API (`open.er-api.com`) since ECB doesn't publish these currencies.
+Live FX rates are fetched every 15 minutes by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN. RUB, UAH, and ARS use a secondary API (`fawazahmed0/exchange-api` via jsDelivr CDN) since ECB doesn't publish these currencies.
 
 ## Commodity & Non-DefiLlama Stablecoins
 
