@@ -394,11 +394,13 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     try {
       const events = await backfillCoin(meta, coinId, getPegRef, supplyByDate);
 
+      // Always DELETE existing events first — even when backfill finds 0 genuine depegs,
+      // we need to wipe stale live-cron events that may have been written with a bad reference.
+      const deleteStmt = db
+        .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ?")
+        .bind(meta.id);
       if (events.length > 0) {
         // Atomic: DELETE + INSERT in a single batch (D1 batch is transactional)
-        const deleteStmt = db
-          .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ?")
-          .bind(meta.id);
         const insertStmts = events.map((e) =>
           db.prepare(
             `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
@@ -410,6 +412,8 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
         );
         await db.batch([deleteStmt, ...insertStmts]);
         totalEvents += events.length;
+      } else {
+        await deleteStmt.run();
       }
     } catch (err) {
       errors.push(`${meta.symbol}: ${err}`);
