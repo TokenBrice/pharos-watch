@@ -20,7 +20,8 @@ const SYSTEM_PROMPT =
   "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\", \"extended\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
-  "The text field is 1-2 punchy sentences strictly under 220 characters total — this is the tweet, so it must fit as-is with no truncation needed. " +
+  "The text field is 1-2 punchy sentences strictly under 240 characters total — this is the tweet, so it must fit as-is with no truncation needed. " +
+  "CASHTAGS: in the text field, prefix each stablecoin ticker with $ the first time it appears (e.g. $USDC, $USDT, $JPYC). Dollar amounts like $1.2B stay as-is — only ticker symbols get the $ prefix. Do NOT add a separate cashtag line; they go inline in the sentence. " +
   "The extended field is 1-3 additional sentences for the website only — more analytical, can reference deeper context, no character limit.";
 
 interface DigestInputData {

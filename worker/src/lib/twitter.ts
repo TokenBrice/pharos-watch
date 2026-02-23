@@ -1,5 +1,3 @@
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
-
 export interface TwitterCreds {
   apiKey: string;
   apiSecret: string;
@@ -67,23 +65,6 @@ async function buildOAuthHeader(
   );
 }
 
-/** Extract tracked stablecoin symbols mentioned in text, in order of appearance. */
-export function extractCashtags(text: string): string[] {
-  const symbols = [...new Set(TRACKED_STABLECOINS.map((s) => s.symbol))];
-  const found: { sym: string; pos: number }[] = [];
-
-  for (const sym of symbols) {
-    // Whole-word, case-insensitive match
-    const match = text.match(new RegExp(`\\b${sym}\\b`, "i"));
-    if (match?.index != null) {
-      found.push({ sym, pos: match.index });
-    }
-  }
-
-  // Sort by position so cashtags appear in mention order
-  return found.sort((a, b) => a.pos - b.pos).map((f) => f.sym);
-}
-
 /** Truncate text to fit within maxLen chars, breaking at a word boundary. */
 function truncateToFit(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text;
@@ -91,15 +72,13 @@ function truncateToFit(text: string, maxLen: number): string {
   return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLen - 1)) + "…";
 }
 
-/** Build final tweet text: title + digest + cashtags, truncating text to fit 280 chars. */
+/** Build final tweet text: title + digest. Cashtags are already inline in digestText ($USDC etc). */
 export function buildTweetText(digestTitle: string, digestText: string): string {
   const MAX = 280;
-  const tags = extractCashtags(digestText);
-  const tagStr = tags.length > 0 ? `\n\n${tags.map((s) => `$${s}`).join(" ")}` : "";
   const titlePrefix = digestTitle ? `${digestTitle}\n\n` : "";
-  const available = MAX - titlePrefix.length - tagStr.length;
+  const available = MAX - titlePrefix.length;
   const fittedText = truncateToFit(digestText, available);
-  return `${titlePrefix}${fittedText}${tagStr}`;
+  return `${titlePrefix}${fittedText}`;
 }
 
 /** Post a single tweet using OAuth 1.0a. Throws on API error. */
