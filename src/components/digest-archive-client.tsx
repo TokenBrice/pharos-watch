@@ -43,6 +43,14 @@ export function DigestArchiveClient() {
           >
             {d.digestText}
           </p>
+          {d.digestExtended && (
+            <p
+              className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3"
+              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+            >
+              {d.digestExtended}
+            </p>
+          )}
         </div>
       ))}
     </div>

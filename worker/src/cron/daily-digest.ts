@@ -10,16 +10,18 @@ const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
   "Your voice is dry, sharp, and memorable — like a financial columnist who's seen too many death spirals to be impressed. " +
   "Think sardonic wit meets hard data. You can be funny, but the humor comes from precision, not clowning. " +
-  "Write 3-5 sentences. Every sentence must contain a specific number or coin name from the data. " +
+  "Every sentence must contain a specific number or coin name from the data. " +
   "CRITICAL — rank everything by market impact (deviation × market cap). " +
   "A 30 bps wobble on USDT is front-page news. A 2000 bps depeg on a $15M coin is a footnote at best — mention it only if nothing more interesting happened. " +
   "Do not lead with small illiquid coins that have been off-peg for weeks; that is not news. " +
   "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
-  "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\"}. " +
+  "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\", \"extended\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
-  "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header.";
+  "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
+  "The text field is 1-2 punchy sentences strictly under 220 characters total — this is the tweet, so it must fit as-is with no truncation needed. " +
+  "The extended field is 1-3 additional sentences for the website only — more analytical, can reference deeper context, no character limit.";
 
 interface DigestInputData {
   totalMcapUsd: number;
@@ -105,11 +107,12 @@ export async function generateDailyDigest(
 
   // Fetch last 3 digests for context-aware generation
   const recentRows = await db
-    .prepare("SELECT digest_title, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 3")
-    .all<{ digest_title: string | null; digest_text: string }>();
-  const recentDigests = (recentRows.results ?? []).map((r) =>
-    r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text
-  );
+    .prepare("SELECT digest_title, digest_text, digest_extended FROM daily_digest ORDER BY generated_at DESC LIMIT 3")
+    .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null }>();
+  const recentDigests = (recentRows.results ?? []).map((r) => {
+    const base = r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text;
+    return r.digest_extended ? `${base} ${r.digest_extended}` : base;
+  });
 
   // --- Collect data ---
 
@@ -209,7 +212,7 @@ export async function generateDailyDigest(
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 400,
+      max_tokens: 800,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPromptContent }],
     }),
@@ -235,28 +238,31 @@ export async function generateDailyDigest(
   // Strip markdown code block wrapper if Claude added one (```json ... ```)
   const jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
-  // Parse JSON response for title + text
+  // Parse JSON response for title + text + extended
   let digestTitle: string;
   let digestText: string;
+  let digestExtended: string;
   try {
-    const parsed = JSON.parse(jsonText) as { title?: string; text?: string };
+    const parsed = JSON.parse(jsonText) as { title?: string; text?: string; extended?: string };
     digestTitle = (parsed.title ?? "").trim();
     digestText = (parsed.text ?? "").trim();
+    digestExtended = (parsed.extended ?? "").trim();
     if (!digestText) throw new Error("empty text field");
   } catch {
-    // Fallback: treat entire response as text with no title
+    // Fallback: treat entire response as text with no title or extended
     console.warn("[daily-digest] Failed to parse JSON response, using raw text");
     digestTitle = "";
     digestText = rawText.trim();
+    digestExtended = "";
   }
 
   // --- Store result ---
   const now = Math.floor(Date.now() / 1000);
   await db
     .prepare(
-      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data) VALUES (?, ?, ?, ?)",
+      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended) VALUES (?, ?, ?, ?, ?)",
     )
-    .bind(now, digestText, digestTitle || null, JSON.stringify(inputData))
+    .bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null)
     .run();
 
   // Post to Twitter if credentials are available
@@ -271,6 +277,6 @@ export async function generateDailyDigest(
     }
   }
 
-  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars), tweet: ${tweetStatus}`);
+  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars + ${digestExtended.length} extended), tweet: ${tweetStatus}`);
   return { itemCount: 1, metadata: `${digestText.length} chars, tweet: ${tweetStatus}` };
 }

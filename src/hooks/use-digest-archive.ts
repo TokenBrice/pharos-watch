@@ -3,7 +3,7 @@
 import { useApiQuery, CRON_24H } from "@/hooks/use-api-query";
 
 interface DigestArchiveData {
-  digests: { digestText: string; digestTitle: string | null; generatedAt: number }[];
+  digests: { digestText: string; digestTitle: string | null; digestExtended: string | null; generatedAt: number }[];
 }
 
 export function useDigestArchive() {
