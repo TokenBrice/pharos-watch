@@ -90,7 +90,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             <div className="rounded-xl bg-muted/50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Proof of Reserves</p>
               {meta.proofOfReserves ? (
-                <div className="space-y-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm leading-relaxed">
                     {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
                     {meta.proofOfReserves.provider && ` by ${meta.proofOfReserves.provider}`}
@@ -99,7 +99,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     href={meta.proofOfReserves.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline"
+                    className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline shrink-0"
                   >
                     View reserves <ExternalLink className="h-3 w-3" />
                   </a>
