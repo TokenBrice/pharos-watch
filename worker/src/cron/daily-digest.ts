@@ -10,26 +10,22 @@ const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
   "Your voice is dry, sharp, and memorable — like a financial columnist who's seen too many death spirals to be impressed. " +
   "Think sardonic wit meets hard data. You can be funny, but the humor comes from precision, not clowning. " +
-  "You write 2-4 sentences max. Every sentence must contain a specific number or coin name from the data. " +
-  "Prioritize by market impact: a 50 bps wobble on USDT matters more than a 2500 bps depeg on an $18M coin. " +
-  "Small coins can be mentioned for color, but lead with what moves money. " +
+  "Write 3-5 sentences. Every sentence must contain a specific number or coin name from the data. " +
+  "CRITICAL — rank everything by market impact (deviation × market cap). " +
+  "A 30 bps wobble on USDT is front-page news. A 2000 bps depeg on a $15M coin is a footnote at best — mention it only if nothing more interesting happened. " +
+  "Do not lead with small illiquid coins that have been off-peg for weeks; that is not news. " +
   "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
   "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
-  "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
-  "Examples of good titles: \"Calm Before the Storm\", \"Peg Watch\", \"Money Printer Goes Quiet\", \"Frozen Assets, Warm Markets\". " +
-  "Examples of good tone: " +
-  "\"$311B in stablecoins and JPYC is still 16% off peg like it's a lifestyle choice.\" " +
-  "\"Thirty-four addresses got frozen today. Compliance never sleeps, and neither does Tether's blacklist bot.\" " +
-  "\"The sector added $2B this week. Quiet growth, no casualties. Enjoy it while it lasts.\"";
+  "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header.";
 
 interface DigestInputData {
   totalMcapUsd: number;
   mcap7dDelta: number;
   activeDepegCount: number;
-  worstDepeg: { id: string; symbol: string; bps: number } | null;
+  topDepegs: { symbol: string; bps: number; mcapUsd: number }[];
   freezeCount24h: number;
   biggestSupplyChange: {
     id: string;
@@ -47,10 +43,11 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
     `Active depeg events: ${data.activeDepegCount}`,
   ];
 
-  if (data.worstDepeg) {
-    lines.push(
-      `Worst current depeg: ${data.worstDepeg.symbol} at ${data.worstDepeg.bps} bps deviation`,
-    );
+  if (data.topDepegs.length > 0) {
+    lines.push("Active depegs by market impact (deviation × mcap):");
+    for (const d of data.topDepegs) {
+      lines.push(`  ${d.symbol}: ${d.bps} bps off-peg, mcap ${formatCurrency(d.mcapUsd)}`);
+    }
   }
 
   lines.push(`Freeze/blacklist events in last 24h: ${data.freezeCount24h}`);
@@ -151,19 +148,32 @@ export async function generateDailyDigest(
     }
   }
 
-  // 2. Active depeg count + worst deviation from depeg_events table
+  // 2. Active depeg count + top depegs ranked by market impact (bps × mcap)
   let activeDepegCount = 0;
-  let worstDepeg: DigestInputData["worstDepeg"] = null;
+  const topDepegs: DigestInputData["topDepegs"] = [];
 
   try {
     const activeDepegs = await db
-      .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL ORDER BY peak_deviation_bps DESC")
+      .prepare("SELECT stablecoin_id, symbol, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL")
       .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>();
     const rows = activeDepegs.results ?? [];
     activeDepegCount = rows.length;
-    if (rows.length > 0) {
-      worstDepeg = { id: rows[0].stablecoin_id, symbol: rows[0].symbol, bps: rows[0].peak_deviation_bps };
+
+    // Cross-reference with mcap from stablecoins cache to rank by impact
+    const mcapById = new Map<string, number>();
+    if (stablecoinsCache) {
+      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
+      for (const coin of parsed.peggedAssets) {
+        mcapById.set(coin.id, getCirculatingRaw(coin));
+      }
     }
+
+    const withImpact = rows.map((r) => {
+      const mcapUsd = mcapById.get(r.stablecoin_id) ?? 0;
+      return { symbol: r.symbol, bps: r.peak_deviation_bps, mcapUsd, impact: r.peak_deviation_bps * mcapUsd };
+    });
+    withImpact.sort((a, b) => b.impact - a.impact);
+    topDepegs.push(...withImpact.slice(0, 3).map(({ symbol, bps, mcapUsd }) => ({ symbol, bps, mcapUsd })));
   } catch (e) {
     console.error("[daily-digest] Failed to query active depegs:", e);
   }
@@ -181,7 +191,7 @@ export async function generateDailyDigest(
     totalMcapUsd,
     mcap7dDelta: totalMcapUsd - totalPrevWeek,
     activeDepegCount,
-    worstDepeg,
+    topDepegs,
     freezeCount24h,
     biggestSupplyChange,
   };
