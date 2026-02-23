@@ -39,14 +39,16 @@ const other = (id: string, name: string, symbol: string, backing: StablecoinMeta
 export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 1-10 ────────────────────────────────────────────────────────
   usd("1", "Tether", "USDT", "rwa-backed", "centralized", {
-    collateral: "Cash, cash equivalents, U.S. Treasury bills, and secured loans",
+    geckoId: "tether",
+    collateral: "U.S. Treasury bills and repurchase agreements (~92%), secured loans, gold, Bitcoin, and other investments; quarterly attestations by BDO Italia",
     pegMechanism: "Direct 1:1 redemption through Tether",
     proofOfReserves: { type: "independent-audit", url: "https://tether.to/en/transparency", provider: "BDO Italia" },
     links: [
       { label: "Website", url: "https://tether.to/" },
       { label: "Twitter", url: "https://x.com/Tether_to" },
+      { label: "Transparency", url: "https://tether.to/en/transparency" },
     ],
-    jurisdiction: { country: "El Salvador" },
+    jurisdiction: { country: "El Salvador", regulator: "CNAD", license: "Digital Asset Issuance / DASP" },
     contracts: [
       { chain: "ethereum", address: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6 },
       { chain: "tron", address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
@@ -55,6 +57,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon", address: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", decimals: 6 },
       { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
       { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
+      { chain: "celo", address: "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e", decimals: 6 },
     ],
     supplyMethod: {
       type: "totalSupply-minus-addresses",
@@ -64,7 +67,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     },
   }),
   usd("2", "USD Coin", "USDC", "rwa-backed", "centralized", {
-    collateral: "Cash and short-term U.S. Treasury securities in segregated accounts",
+    geckoId: "usd-coin",
+    collateral: "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
     pegMechanism: "Direct 1:1 redemption through Circle",
     proofOfReserves: { type: "independent-audit", url: "https://www.circle.com/transparency", provider: "Deloitte" },
     links: [
@@ -72,7 +76,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/circle" },
       { label: "Docs", url: "https://developers.circle.com/stablecoins/what-is-usdc" },
     ],
-    jurisdiction: { country: "United States", regulator: "NYDFS", license: "BitLicense" },
+    jurisdiction: { country: "United States", regulator: "NYDFS / 50-state MTL", license: "Virtual Currency License (BitLicense)" },
     contracts: [
       { chain: "ethereum", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6 },
       { chain: "arbitrum", address: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6 },
@@ -80,6 +84,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6 },
       { chain: "polygon", address: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6 },
       { chain: "avalanche", address: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6 },
+      { chain: "celo", address: "0xceba9300f2b948710d2653dd7b07f33a8b32118c", decimals: 6 },
+      { chain: "gnosis", address: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83", decimals: 6 },
     ],
     supplyMethod: {
       type: "totalSupply-minus-addresses",
@@ -90,9 +96,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
-    collateral: "ETH, BTC, and SOL in delta-neutral positions (spot long + short perpetual futures)",
-    pegMechanism: "Delta-neutral hedging on centralized exchanges (Binance, Bybit, OKX) via custodians",
-    proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink" },
+    geckoId: "ethena-usde",
+    collateral: "ETH (including stETH), BTC, and SOL in delta-neutral positions (spot long + short perpetual futures), plus liquid stablecoins (USDC, USDT, USDtb) as non-hedged backing",
+    pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
+    proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
     links: [
       { label: "Website", url: "https://ethena.fi/" },
       { label: "Twitter", url: "https://x.com/ethena_labs" },
@@ -101,31 +108,42 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3", decimals: 18 },
+      { chain: "arbitrum", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "base", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "optimism", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "bsc", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "polygon", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
     ],
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
+    geckoId: "usds",
     collateral: "Mix of crypto (ETH), RWA (U.S. Treasuries), and centralized stablecoins (USDC) via Sky vaults",
     pegMechanism: "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
     links: [
       { label: "Website", url: "https://sky.money/" },
       { label: "Twitter", url: "https://x.com/SkyEcosystem" },
+      { label: "Docs", url: "https://docs.sky.money/" },
     ],
-    jurisdiction: { country: "Denmark" },
+    jurisdiction: { country: "Cayman Islands" },
     contracts: [
       { chain: "ethereum", address: "0xdc035d45d973e3ec169d2276ddab16f1e407384f", decimals: 18 },
+      { chain: "arbitrum", address: "0x6491c05a82219b8d1479057361ff1654749b876b", decimals: 18 },
+      { chain: "base", address: "0x820c137fa70c8691f0e44dc420a5e53c168921dc", decimals: 18 },
     ],
   }),
   usd("262", "World Liberty Financial USD", "USD1", "rwa-backed", "centralized", {
-    collateral: "Short-term U.S. Treasury bills and cash equivalents",
-    pegMechanism: "Direct 1:1 redemption through World Liberty Financial",
+    geckoId: "usd1-wlfi",
+    collateral: "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
+    pegMechanism: "Direct 1:1 mint and redemption through BitGo Trust Company (issuer); arbitrage incentivizes peg maintenance",
     proofOfReserves: { type: "independent-audit", url: "https://www.bitgo.com/usd1/attestations/", provider: "BitGo" },
     links: [
       { label: "Website", url: "https://worldlibertyfinancial.com/usd1" },
       { label: "Twitter", url: "https://x.com/worldlibertyfi" },
     ],
-    jurisdiction: { country: "United States", regulator: "OCC", license: "South Dakota Trust Charter" },
+    jurisdiction: { country: "United States", regulator: "South Dakota Division of Banking", license: "South Dakota Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
+      { chain: "bsc", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
     ],
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
