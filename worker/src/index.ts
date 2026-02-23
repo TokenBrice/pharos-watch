@@ -73,6 +73,23 @@ const worker = {
     }
 
     const url = new URL(request.url);
+
+    // Admin-only: trigger digest regeneration on demand (bypasses 1h dedup check)
+    if (url.pathname === "/api/trigger-digest") {
+      const authError = await (await import("./lib/auth")).requireAdmin(request, env.ADMIN_KEY);
+      if (authError) return addCorsHeaders(authError, origin);
+      const twitterCreds =
+        env.TWITTER_API_KEY && env.TWITTER_API_SECRET && env.TWITTER_ACCESS_TOKEN && env.TWITTER_ACCESS_TOKEN_SECRET
+          ? { apiKey: env.TWITTER_API_KEY, apiSecret: env.TWITTER_API_SECRET, accessToken: env.TWITTER_ACCESS_TOKEN, accessTokenSecret: env.TWITTER_ACCESS_TOKEN_SECRET }
+          : null;
+      try {
+        const result = await generateDailyDigest(env.DB, env.ANTHROPIC_API_KEY ?? null, twitterCreds);
+        return addCorsHeaders(new Response(JSON.stringify({ ok: true, result }), { headers: { "Content-Type": "application/json" } }), origin);
+      } catch (err) {
+        return addCorsHeaders(new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { "Content-Type": "application/json" } }), origin);
+      }
+    }
+
     const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history";
 
     // Check edge cache first
