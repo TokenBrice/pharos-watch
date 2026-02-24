@@ -126,27 +126,27 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 - [ ] EURR (239) — StablR Euro <!-- In Progress -->
 - [ ] EUROP (247) — Schuman EUROP <!-- In Progress -->
 - [ ] EURCV (254) — EUR CoinVertible <!-- In Progress -->
-- [ ] ZCHF (226) — Frankencoin <!-- In Progress -->
-- [ ] DEURO (cg-deuro) — Decentralized Euro <!-- In Progress -->
-- [ ] EURQ (cg-eurq) — Quantoz EURQ <!-- In Progress -->
-- [ ] EURI (325) — Eurite <!-- In Progress -->
-- [ ] EURAU (319) — AllUnity EUR <!-- In Progress -->
+- [x] ZCHF (226) — Frankencoin
+- [x] DEURO (cg-deuro) — Decentralized Euro
+- [x] EURQ (cg-eurq) — Quantoz EURQ
+- [x] EURI (325) — Eurite
+- [x] EURAU (319) — AllUnity EUR
 
 ## Other Fiat Stablecoins
 
-- [ ] CEUR (52) — Celo Euro
-- [ ] GYEN (122) — GYEN
-- [ ] CADC (145) — CAD Coin
-- [ ] VCHF (157) — VNX Swiss Franc
-- [ ] AUDD (165) — AUDD
-- [ ] BRZ (249) — Brazilian Digital
-- [ ] XSGD (289) — StraitsX XSGD
-- [ ] VGBP (292) — VNX British Pound
-- [ ] PHT (299) — PHT Stablecoin
-- [ ] TRYB (300) — BiLira
-- [ ] tGBP (317) — Tokenised GBP
-- [ ] JPYC (cg-jpyc) — JPY Coin
-- [ ] ZARP (cg-zarp) — ZARP Stablecoin
+- [ ] CEUR (52) — Celo Euro <!-- In Progress -->
+- [ ] GYEN (122) — GYEN <!-- In Progress -->
+- [ ] CADC (145) — CAD Coin <!-- In Progress -->
+- [ ] VCHF (157) — VNX Swiss Franc <!-- In Progress -->
+- [ ] AUDD (165) — AUDD <!-- In Progress -->
+- [ ] BRZ (249) — Brazilian Digital <!-- In Progress -->
+- [ ] XSGD (289) — StraitsX XSGD <!-- In Progress -->
+- [ ] VGBP (292) — VNX British Pound <!-- In Progress -->
+- [ ] PHT (299) — PHT Stablecoin <!-- In Progress -->
+- [ ] TRYB (300) — BiLira <!-- In Progress -->
+- [ ] tGBP (317) — Tokenised GBP <!-- In Progress -->
+- [ ] JPYC (cg-jpyc) — JPY Coin <!-- In Progress -->
+- [ ] ZARP (cg-zarp) — ZARP Stablecoin <!-- In Progress -->
 
 ## Gold / Commodity Stablecoins
 

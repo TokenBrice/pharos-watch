@@ -899,15 +899,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("325", "Eurite", "EURI", "rwa-backed", "centralized", {
     geckoId: "eurite",
-    collateral: "Euro-denominated reserves",
-    pegMechanism: "Direct 1:1 redemption through Eurite (Binance)",
-    proofOfReserves: { type: "independent-audit", url: "https://www.eurite.com/" },
+    collateral: "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A.",
+    pegMechanism: "Direct 1:1 redemption at par (fee-free) by Banking Circle S.A.",
+    proofOfReserves: { type: "independent-audit", url: "https://www.eurite.com/", provider: "Ernst & Young" },
     links: [
       { label: "Website", url: "https://www.eurite.com/" },
+      { label: "Twitter", url: "https://x.com/Eurite_BC" },
     ],
     jurisdiction: { country: "Luxembourg", regulator: "CSSF", license: "Credit Institution (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18 },
+      { chain: "bsc", address: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18 },
     ],
   }),
   usd("19", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
@@ -1115,7 +1117,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   other("226", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
     geckoId: "frankencoin",
-    collateral: "WBTC and ETH in oracle-free overcollateralized positions (~230%)",
+    collateral: "WBTC, ETH, and other crypto assets in oracle-free overcollateralized positions (~230%); any collateral type can be proposed by governance",
     pegMechanism: "Auction-based collateral valuation with veto governance; no price oracle dependency",
     links: [
       { label: "Website", url: "https://www.frankencoin.com/" },
@@ -1123,7 +1125,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.frankencoin.com/" },
     ],
     contracts: [
-      { chain: "ethereum", address: "0xb58e61c3098d85632df34eecfb899a1ed26985bc", decimals: 18 },
+      { chain: "ethereum", address: "0xb58e61c3098d85632df34eecfb899a1ed80921cb", decimals: 18 },
+      { chain: "optimism", address: "0x4f8a84c442f9675610c680990eddb2ccddb8ab6f", decimals: 18 },
+      { chain: "gnosis", address: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553", decimals: 18 },
     ],
   }),
   usd("172", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
@@ -1804,24 +1808,31 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     pegMechanism: "Direct 1:1 redemption through Quantoz Payments",
     links: [
       { label: "Website", url: "https://www.quantoz.com/products/eurq-usdq" },
+      { label: "Twitter", url: "https://x.com/Quantoz" },
     ],
     jurisdiction: { country: "Netherlands", regulator: "DNB", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x8df723295214ea6f21026eeeb4382d475f146f9f", decimals: 6 },
     ],
+    proofOfReserves: { type: "self-reported", url: "https://quantoz.com/transparency" },
   }),
   eur("319", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
     geckoId: "allunity-eur",
-    collateral: "Euro-denominated reserves",
+    collateral: "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
     pegMechanism: "Direct 1:1 redemption through AllUnity",
     links: [
       { label: "Website", url: "https://allunity.com/eurau/" },
       { label: "Twitter", url: "https://x.com/AllUnityStable" },
+      { label: "Whitepaper", url: "https://allunity.com/whitepaper/" },
     ],
     jurisdiction: { country: "Germany", regulator: "BaFin", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
+      { chain: "arbitrum", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
+      { chain: "optimism", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
+      { chain: "base", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
     ],
+    proofOfReserves: { type: "self-reported", url: "https://allunity.com/trust-center/" },
   }),
   eur("cg-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
     geckoId: "decentralized-euro",
@@ -1831,9 +1842,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.deuro.com/" },
       { label: "Twitter", url: "https://x.com/dEURO_com" },
       { label: "Docs", url: "https://docs.deuro.com/" },
+      { label: "GitHub", url: "https://github.com/d-EURO" },
     ],
     contracts: [
       { chain: "ethereum", address: "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea", decimals: 18 },
+      { chain: "polygon", address: "0xc2ff25dd99e467d2589b2c26edd270f220f14e47", decimals: 18 },
+      { chain: "arbitrum", address: "0x5e85faf503621830ca857a5f38b982e0cc57d537", decimals: 18 },
+      { chain: "optimism", address: "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264", decimals: 18 },
+      { chain: "base", address: "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264", decimals: 18 },
     ],
   }),
 
