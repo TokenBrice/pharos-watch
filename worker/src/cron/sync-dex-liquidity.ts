@@ -1098,16 +1098,18 @@ async function fetchGtTokenBatch(
 
       try {
         const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses}`;
-        const res = await fetchWithRetry(url, {
+        let res = await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
         });
-        if (!res?.ok) {
-          if (res?.status === 429) {
-            console.warn(`[dex-liquidity] GT token batch rate-limited, backing off`);
-            await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
-          }
-          continue;
+        // Retry once after 429 backoff
+        if (res?.status === 429) {
+          console.warn(`[dex-liquidity] GT token batch rate-limited, backing off`);
+          await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
+          res = await fetchWithRetry(url, {
+            headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+          });
         }
+        if (!res?.ok) continue;
 
         const json = (await res.json()) as { data?: GtToken[] };
         if (!json.data) continue;
@@ -1188,17 +1190,19 @@ async function fetchGtPools(
 
       try {
         const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${address}/pools?page=1`;
-        const res = await fetchWithRetry(url, {
+        let res = await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
         });
 
-        if (!res?.ok) {
-          if (res?.status === 429) {
-            console.warn(`[dex-liquidity] GT pool crawl rate-limited at request ${stats.requests}, backing off`);
-            await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
-          }
-          continue;
+        // Retry once after 429 backoff
+        if (res?.status === 429) {
+          console.warn(`[dex-liquidity] GT pool crawl rate-limited at request ${stats.requests}, backing off`);
+          await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
+          res = await fetchWithRetry(url, {
+            headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+          });
         }
+        if (!res?.ok) continue;
 
         const json = (await res.json()) as { data?: GtPool[] };
         if (!json.data) continue;
@@ -1221,21 +1225,23 @@ async function fetchGtPools(
           // GT pool relationship IDs are formatted as "{network}_{address}"
           const baseAddr = pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "";
           const quoteAddr = pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "";
-          const isBase = baseAddr === address;
-          const isQuote = quoteAddr === address;
+          let isBase = baseAddr === address;
+          let isQuote = quoteAddr === address;
           if (!isBase && !isQuote) {
-            // Neither token matches — try addressToId
+            // Neither token matches directly — try addressToId fallback
             const baseId = addressToId.get(baseAddr);
             const quoteId = addressToId.get(quoteAddr);
-            if (baseId !== stablecoinId && quoteId !== stablecoinId) continue;
+            if (baseId === stablecoinId) isBase = true;
+            else if (quoteId === stablecoinId) isQuote = true;
+            else continue;
           }
 
-          // Extract price for our stablecoin
+          // Extract price for our stablecoin (use the side we resolved)
           const priceStr = isBase ? a.base_token_price_usd : a.quote_token_price_usd;
           const price = parseFloat(priceStr ?? "");
 
           // Price observation (from ALL non-Curve pools, even known ones)
-          if (price > 0 && price >= 0.5 && price <= 2.0 && tvl >= 50_000) {
+          if (price >= 0.5 && price <= 2.0 && tvl >= 50_000) {
             const obs = priceObs.get(stablecoinId) ?? [];
             obs.push({ price, tvl, chain: ourChain, protocol: dexId });
             priceObs.set(stablecoinId, obs);
@@ -1314,6 +1320,9 @@ function mergeGtPools(
     for (const pool of pools) {
       const organicFraction = 0.5; // neutral default for GT pools
       const balanceRatio = 1.0;    // no balance data from GT
+      // Note: GT pools intentionally excluded from balanceRatioWeightedSum and
+      // organicTvlWeightedSum to avoid diluting those signals with neutral defaults.
+      // Only Curve (balance) and DeFiLlama-APY (organic) pools contribute real data.
       const coinPairQuality = computePoolPairQuality(
         pool.symbol.split(/\s*\/\s*/).map((s) => s.trim()),
         meta.symbol,
@@ -1332,8 +1341,8 @@ function mergeGtPools(
       m.stressWeightedSum += pool.tvlUsd * stressIdx;
       m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
 
-      // Protocol and chain TVL
-      const protocol = pool.dexId.split("-").slice(0, -1).join("-") || pool.dexId; // strip chain suffix
+      // Protocol and chain TVL (use same normalizer as processPoolMetrics)
+      const protocol = normalizeProtocol(pool.dexId);
       m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
       m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
 
