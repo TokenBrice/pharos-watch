@@ -18,6 +18,7 @@ import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Link2, Check } from "lucide-react";
 import type { CoinOption } from "@/components/coin-selector";
 import type { SupplyHistoryPoint, StablecoinDetail } from "@/hooks/use-stablecoins";
@@ -49,6 +50,22 @@ export function CompareClient() {
       .map((c) => c.id);
   }, [searchParams]);
 
+  const range = (searchParams.get("range") as TimeRangeOption) || "all";
+
+  const setRange = useCallback(
+    (newRange: TimeRangeOption) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newRange === "all") {
+        params.delete("range");
+      } else {
+        params.set("range", newRange);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/compare/?${qs}` : "/compare/", { scroll: false });
+    },
+    [searchParams, router],
+  );
+
   // Write selected IDs to URL
   const setSelectedIds = useCallback(
     (updater: (prev: string[]) => string[]) => {
@@ -57,11 +74,14 @@ export function CompareClient() {
         .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
         .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
         .map((c) => c.symbol.toLowerCase());
-      const paramStr = symbols.join(",");
-      const newUrl = paramStr ? `/compare/?coins=${paramStr}` : "/compare/";
-      router.replace(newUrl, { scroll: false });
+      const params = new URLSearchParams();
+      if (symbols.length > 0) params.set("coins", symbols.join(","));
+      const currentRange = searchParams.get("range");
+      if (currentRange) params.set("range", currentRange);
+      const qs = params.toString();
+      router.replace(qs ? `/compare/?${qs}` : "/compare/", { scroll: false });
     },
-    [selectedIds, router],
+    [selectedIds, router, searchParams],
   );
 
   const coinOptions = useMemo<CoinOption[]>(
@@ -251,6 +271,8 @@ export function CompareClient() {
               title="Market Cap History"
               series={supplySeries}
               formatValue={formatCurrency}
+              range={range}
+              onRangeChange={setRange}
             />
           ) : null}
 

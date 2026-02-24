@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 
 interface SeriesData {
@@ -25,12 +26,16 @@ interface ComparisonChartProps {
   title: string;
   series: SeriesData[];
   formatValue?: (v: number) => string;
+  range?: TimeRangeOption;
+  onRangeChange?: (range: TimeRangeOption) => void;
 }
 
 export function ComparisonChart({
   title,
   series,
   formatValue,
+  range,
+  onRangeChange,
 }: ComparisonChartProps) {
   // Merge all series into a single array keyed by timestamp
   const mergedData = useMemo(() => {
@@ -50,15 +55,29 @@ export function ComparisonChart({
     return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
   }, [series]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(
+  const { range: localRange, setRange: setLocalRange, filteredData, options } = useTimeRangeFilter(
     mergedData,
     "ts"
   );
 
+  // Support controlled range from parent
+  const activeRange = range ?? localRange;
+  const handleRangeChange = useCallback((r: TimeRangeOption) => {
+    setLocalRange(r);
+    onRangeChange?.(r);
+  }, [setLocalRange, onRangeChange]);
+
+  // Sync external range prop into local state
+  useEffect(() => {
+    if (range != null && range !== localRange) {
+      setLocalRange(range);
+    }
+  }, [range]);
+
   // Determine XAxis date format based on selected range
   const formatTimestamp = (ts: number) => {
     const d = new Date(ts);
-    if (range === "7d" || range === "30d") {
+    if (activeRange === "7d" || activeRange === "30d") {
       return d.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -77,7 +96,7 @@ export function ComparisonChart({
     <Card className="rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">{title}</CardTitle>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        <TimeRangeButtons options={options} value={activeRange} onChange={handleRangeChange} />
       </CardHeader>
       <CardContent>
         {series.length > 0 && (
