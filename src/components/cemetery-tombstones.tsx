@@ -16,15 +16,15 @@ function getTombSize(peakMcap?: number): TombSize {
 }
 
 const SIZE = {
-  lg: { w: "w-[120px]", h: "h-[180px]", arch: "rounded-t-[60px]", logo: 36 },
-  md: { w: "w-[100px]", h: "h-[160px]", arch: "rounded-t-[50px]", logo: 32 },
-  sm: { w: "w-[88px]", h: "h-[140px]", arch: "rounded-t-[44px]", logo: 28 },
+  lg: { w: "w-[160px]", h: "h-[240px]", arch: "rounded-t-[80px]", logo: 48 },
+  md: { w: "w-[132px]", h: "h-[200px]", arch: "rounded-t-[66px]", logo: 40 },
+  sm: { w: "w-[112px]", h: "h-[172px]", arch: "rounded-t-[56px]", logo: 34 },
 } as const;
 
 const CROSS_SIZE = {
-  lg: { vw: 5, vh: 22, hw: 16, hh: 5, top: -20 },
-  md: { vw: 4, vh: 18, hw: 14, hh: 4, top: -16 },
-  sm: { vw: 4, vh: 16, hw: 12, hh: 4, top: -14 },
+  lg: { vw: 7, vh: 29, hw: 21, hh: 7, top: -26 },
+  md: { vw: 6, vh: 24, hw: 18, hh: 6, top: -22 },
+  sm: { vw: 5, vh: 21, hw: 16, hh: 5, top: -19 },
 } as const;
 
 // --- Shape variety ---
@@ -205,7 +205,7 @@ function Tombstone({
         {/* Hammer smashing into tombstone for regulatory kills */}
         {shape === "hammer" && <HammerStrike size={size} />}
 
-        <span className="text-[8px] text-muted-foreground/30 tracking-widest">
+        <span className="text-[9px] text-muted-foreground/30 tracking-widest">
           R.I.P.
         </span>
 
@@ -229,16 +229,16 @@ function Tombstone({
           )}
         </div>
 
-        <span className="text-xs font-semibold line-through decoration-muted-foreground/50 text-center leading-tight">
+        <span className="text-sm font-semibold line-through decoration-muted-foreground/50 text-center leading-tight">
           {coin.symbol}
         </span>
 
-        <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+        <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
           {formatDeathDate(coin.deathDate)}
         </span>
 
         {coin.epitaph && (
-          <span className="text-[9px] italic text-muted-foreground/70 text-center leading-tight px-1.5">
+          <span className="text-[10px] italic text-muted-foreground/70 text-center leading-tight px-1.5">
             {coin.epitaph}
           </span>
         )}
@@ -276,7 +276,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
   return (
     <div>
       <div className="relative pb-8">
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 gap-x-3 gap-y-6 justify-items-center pt-6 pb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-5 gap-y-8 justify-items-center pt-6 pb-4">
           {coins.map((coin, i) => (
             <Tombstone
               key={coin.symbol}
