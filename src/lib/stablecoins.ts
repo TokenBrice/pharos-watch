@@ -844,12 +844,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 61-70 ───────────────────────────────────────────────────────
   eur("254", "EUR CoinVertible", "EURCV", "rwa-backed", "centralized", {
     geckoId: "societe-generale-forge-eurcv",
-    collateral: "Euro-denominated bank deposits at Societe Generale",
+    collateral: "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
     pegMechanism: "Direct 1:1 redemption through SG-FORGE",
     proofOfReserves: { type: "self-reported", url: "https://www.sgforge.com/product/coinvertible/", provider: "SG-FORGE" },
     links: [
       { label: "Website", url: "https://www.sgforge.com/product/coinvertible/" },
-      { label: "Twitter", url: "https://x.com/sgforge" },
+      { label: "Twitter", url: "https://x.com/SG_Forge" },
     ],
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
     contracts: [
@@ -859,15 +859,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // USP (id 97) removed — Platypus exploited in 2023, protocol defunct (see cemetery)
   eur("147", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
     geckoId: "anchored-coins-eur",
-    collateral: "Euro-denominated reserves held in Swiss bank accounts",
+    collateral: "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
     pegMechanism: "Direct 1:1 redemption through Anchored Coins",
     links: [
-      { label: "Website", url: "https://www.anchoredcoins.com/en/landing/aeur" },
+      { label: "Website", url: "https://www.anchoredcoins.com/en/landing/aeur" }, // TODO: verify — domain may have been repurposed
       { label: "Twitter", url: "https://x.com/AnchoredCoins" },
     ],
-    jurisdiction: { country: "Switzerland", regulator: "FINMA (VQF)", license: "SRO Member" },
+    jurisdiction: { country: "Switzerland", regulator: "VQF (FINMA-recognized SRO)", license: "SRO Member" },
     contracts: [
       { chain: "ethereum", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18 },
+      { chain: "bsc", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18 },
     ],
   }),
   // BUSD (id 4) removed — regulatory shutdown Feb 2023 (see cemetery)
@@ -1762,23 +1763,28 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("158", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
     geckoId: "vnx-euro",
-    collateral: "Euro-denominated reserves",
-    pegMechanism: "Direct 1:1 redemption through VNX",
-    proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/" },
+    collateral: "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
+    pegMechanism: "Direct 1:1 redemption through VNX Commodities AG (registered KYC/AML customers only)",
+    proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/", provider: "AREVA General Auditing and Trust Company Limited" },
     links: [
-      { label: "Website", url: "https://vnx.li/veur/" },
+      { label: "Website", url: "https://vnx.li/" },
       { label: "Twitter", url: "https://x.com/VNX_Platform" },
     ],
     jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "Blockchain Act" },
     contracts: [
       { chain: "ethereum", address: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3", decimals: 18 },
+      { chain: "avalanche", address: "0x7678e162f38ec9ef2bfd1d0aaf9fd93355e5fa0b", decimals: 18 },
+      { chain: "arbitrum",  address: "0x4883c8f0529f37e40ebea870f3c13cdfad5d01f8", decimals: 18 },
+      { chain: "base",      address: "0x4ed9df25d38795a47f52614126e47f564d37f347", decimals: 18 },
+      { chain: "polygon",   address: "0xe4095d9372e68d108225c306a4491cacfb33b097", decimals: 18 },
+      { chain: "celo",      address: "0x9346f43c1588b6df1d52bdd6bf846064f92d9cba", decimals: 18 },
     ],
   }),
   eur("239", "StablR Euro", "EURR", "rwa-backed", "centralized", {
     geckoId: "stablr-euro",
-    collateral: "Euro-denominated reserves",
+    collateral: "Cash and cash equivalents held in segregated accounts at European financial institutions",
     pegMechanism: "Direct 1:1 redemption through StablR",
-    proofOfReserves: { type: "real-time", url: "https://www.stablr.com/proof-of-reserve", provider: "The Network Firm" },
+    proofOfReserves: { type: "independent-audit", url: "https://www.stablr.com/proof-of-reserve", provider: "Grant Thornton" },
     links: [
       { label: "Website", url: "https://www.stablr.com/eurr" },
       { label: "Twitter", url: "https://x.com/StablREuro" },
@@ -1790,16 +1796,18 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("247", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
     geckoId: "schuman-europ",
-    collateral: "Euro-denominated reserves under French regulatory oversight",
+    collateral: "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
     pegMechanism: "Direct 1:1 redemption through Schuman Financial",
     proofOfReserves: { type: "independent-audit", url: "https://schuman.io/reserve-audits/", provider: "KPMG" },
     links: [
       { label: "Website", url: "https://schuman.io/europ/" },
       { label: "Twitter", url: "https://x.com/Schuman_io" },
+      { label: "Whitepaper", url: "https://schuman.io/wp-content/uploads/2025/02/EUROP-White-Paper_1.3.pdf" },
     ],
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
+      { chain: "polygon", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
     ],
   }),
   eur("cg-eurq", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {

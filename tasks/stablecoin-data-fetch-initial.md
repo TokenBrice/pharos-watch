@@ -121,11 +121,11 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 - [ ] EURA (55) — EURA <!-- In Progress -->
 - [ ] EUROe (98) — EUROe <!-- In Progress -->
 - [ ] EURE (101) — Monerium EUR emoney <!-- In Progress -->
-- [ ] AEUR (147) — Anchored Coins AEUR <!-- In Progress -->
-- [ ] VEUR (158) — VNX EURO <!-- In Progress -->
-- [ ] EURR (239) — StablR Euro <!-- In Progress -->
-- [ ] EUROP (247) — Schuman EUROP <!-- In Progress -->
-- [ ] EURCV (254) — EUR CoinVertible <!-- In Progress -->
+- [x] AEUR (147) — Anchored Coins AEUR
+- [x] VEUR (158) — VNX EURO
+- [x] EURR (239) — StablR Euro
+- [x] EUROP (247) — Schuman EUROP
+- [x] EURCV (254) — EUR CoinVertible
 - [x] ZCHF (226) — Frankencoin
 - [x] DEURO (cg-deuro) — Decentralized Euro
 - [x] EURQ (cg-eurq) — Quantoz EURQ
