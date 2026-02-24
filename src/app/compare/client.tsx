@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
-import { useStablecoins, detailToSupplyHistory, detailToPriceHistory } from "@/hooks/use-stablecoins";
+import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
@@ -116,7 +116,7 @@ export function CompareClient() {
     return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates;
   }, [listData]);
 
-  // Per-coin detail data (raw, used for both supply and price history)
+  // Per-coin detail data for supply history chart
   const detailQueries = useQueries({
     queries: selectedIds.map((id) => ({
       queryKey: ["stablecoin-detail", id],
@@ -175,24 +175,6 @@ export function CompareClient() {
           id,
           label: meta?.name ?? id,
           data: history.map((d) => ({ ts: d.date * 1000, value: d.circulatingUsd })),
-          color: CHART_COLORS[i % CHART_COLORS.length],
-        };
-      })
-      .filter((s): s is NonNullable<typeof s> => s !== null);
-  }, [selectedIds, detailQueries]);
-
-  // Build price chart series
-  const priceSeries = useMemo(() => {
-    return selectedIds
-      .map((id, i) => {
-        const detail = detailQueries[i]?.data;
-        const history = detailToPriceHistory(detail);
-        if (history.length === 0) return null;
-        const meta = TRACKED_META_BY_ID.get(id);
-        return {
-          id,
-          label: meta?.name ?? id,
-          data: history.map((d) => ({ ts: d.date * 1000, value: d.price })),
           color: CHART_COLORS[i % CHART_COLORS.length],
         };
       })
@@ -300,15 +282,6 @@ export function CompareClient() {
                   range={range}
                   onRangeChange={setRange}
                   normalizable
-                />
-              )}
-              {priceSeries.length >= 2 && (
-                <ComparisonChart
-                  title="Price History"
-                  series={priceSeries}
-                  formatValue={(v) => `$${v.toFixed(4)}`}
-                  range={range}
-                  onRangeChange={setRange}
                 />
               )}
             </>
