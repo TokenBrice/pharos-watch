@@ -29,28 +29,28 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 - [x] crvUSD (110) — crvUSD
 - [x] GHO (118) — GHO
 - [x] FDUSD (119) — First Digital USD
-- [ ] PYUSD (120) — PayPal USD
-- [ ] USDY (129) — Ondo US Dollar Yield
+- [x] PYUSD (120) — PayPal USD
+- [x] USDY (129) — Ondo US Dollar Yield
 - [x] USDe (146) — Ethena USDe
-- [ ] BUCK (154) — Bucket Protocol BUCK
-- [ ] cgUSD (166) — Cygnus Finance Global USD
-- [ ] fxUSD (168) — fxUSD
-- [ ] USDB (172) — USDB Blast
-- [ ] BUIDL (173) — BlackRock USD
-- [ ] BtcUSD (183) — Bitcoin USD
-- [ ] GYD (185) — Gyroscope GYD
-- [ ] ISC (186) — International Stable Currency
-- [ ] USD0 (195) — Usual USD
-- [ ] USR (197) — Resolv USD
-- [ ] USDz (202) — Anzen USDz
-- [ ] AUSD (205) — Agora Dollar
+- [x] BUCK (154) — Bucket Protocol BUCK
+- [x] cgUSD (166) — Cygnus Finance Global USD
+- [x] fxUSD (168) — fxUSD
+- [x] USDB (172) — USDB Blast
+- [x] BUIDL (173) — BlackRock USD
+- [x] BtcUSD (183) — Bitcoin USD
+- [x] GYD (185) — Gyroscope GYD
+- [x] ISC (186) — International Stable Currency
+- [x] USD0 (195) — Usual USD
+- [x] USR (197) — Resolv USD
+- [x] USDz (202) — Anzen USDz
+- [x] AUSD (205) — Agora Dollar
 - [x] USDS (209) — Sky Dollar
-- [ ] M (213) — M by M0
-- [ ] USDM (215) — Moneta
-- [ ] satUSD (218) — River Stablecoin
-- [ ] USDF (219) — Astherus
-- [ ] USDA (220) — Avalon USDa
-- [ ] USDTB (221) — Ethena USDtb
+- [x] M (213) — M by M0
+- [x] USDM (215) — Moneta
+- [x] satUSD (218) — River Stablecoin
+- [x] USDF (219) — Astherus
+- [x] USDA (220) — Avalon USDa
+- [x] USDTB (221) — Ethena USDtb
 - [ ] ZeUSD (225) — Zoth ZeUSD
 - [ ] USN (230) — Noon USN
 - [ ] HONEY (231) — Honey

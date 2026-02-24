@@ -168,18 +168,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("120", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
+    geckoId: "paypal-usd",
     collateral: "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
     pegMechanism: "Direct 1:1 redemption through PayPal/Paxos",
     proofOfReserves: { type: "independent-audit", url: "https://www.paxos.com/pyusd-transparency", provider: "KPMG" },
     links: [
       { label: "Website", url: "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd" },
+      { label: "Twitter", url: "https://x.com/paypal" },
       { label: "Docs", url: "https://developer.paypal.com/dev-center/pyusd/" },
     ],
-    jurisdiction: { country: "United States", regulator: "NYDFS", license: "Limited Purpose Trust Company" },
+    jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0x6c3ea9036406852006290770bedfcaba0e23a0e8", decimals: 6 },
+      { chain: "arbitrum", address: "0x46850ad61c2b7d64d08c9c754f45254596696984", decimals: 6 },
     ],
-    supplyMethod: { type: "exclude" }, // Significant Solana/Arbitrum supply not coverable on-chain — use DefiLlama
+    supplyMethod: { type: "exclude" }, // Significant Solana supply not coverable on-chain — use DefiLlama
   }),
   usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
     collateral: "Delta-neutral positions using BTC, ETH, and stablecoins via institutional custody",
@@ -237,30 +240,40 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("129", "Ondo US Dollar Yield", "USDY", "rwa-backed", "centralized", {
+    geckoId: "ondo-us-dollar-yield",
     yieldBearing: true, rwa: true, navToken: true,
     collateral: "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
     pegMechanism: "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
-    proofOfReserves: { type: "self-reported", url: "https://ondo.finance/usdy", provider: "Ankura Trust" },
+    proofOfReserves: { type: "real-time", url: "https://ondo.finance/usdy", provider: "Ankura Trust" },
     links: [
       { label: "Website", url: "https://ondo.finance/usdy" },
       { label: "Twitter", url: "https://x.com/OndoFinance" },
       { label: "Docs", url: "https://docs.ondo.finance/" },
     ],
-    jurisdiction: { country: "United States", regulator: "FinCEN", license: "Money Services Business" },
+    jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0x96f6ef951840721adbf46ac996b59e0235cb985c", decimals: 18 },
+      { chain: "arbitrum", address: "0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d", decimals: 18 },
     ],
   }),
   usd("173", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true,
-    collateral: "Tokenized U.S. Treasury securities managed by BlackRock",
+    geckoId: "blackrock-usd-institutional-digital-liquidity-fund",
+    collateral: "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
     pegMechanism: "NAV-based pricing with institutional redemption through BlackRock/Securitize",
     links: [
       { label: "Website", url: "https://securitize.io/blackrock/buidl" },
+      { label: "Twitter", url: "https://x.com/BlackRock" },
     ],
     jurisdiction: { country: "British Virgin Islands", regulator: "SEC (Reg D)", license: "Regulation D Exemption" },
+    proofOfReserves: { type: "self-reported", url: "https://securitize.io/blackrock/buidl", provider: "Bank of New York Mellon" },
     contracts: [
-      { chain: "ethereum", address: "0x7712c34205737192402172409a8f7ccef8aa2aec", decimals: 6 },
+      { chain: "ethereum",  address: "0x7712c34205737192402172409a8f7ccef8aa2aec", decimals: 6 },
+      { chain: "bsc",       address: "0x2d5bdc96d9c8aabbdb38c9a27398513e7e5ef84f", decimals: 6 },
+      { chain: "optimism",  address: "0xa1cdab15bba75a80df4089cafba013e376957cf5", decimals: 6 },
+      { chain: "arbitrum",  address: "0xa6525ae43edcd03dc08e775774dcabd3bb925872", decimals: 6 },
+      { chain: "avalanche", address: "0x53fc82f14f009009b440a706e31c9021e1196a2f", decimals: 6 },
+      { chain: "polygon",   address: "0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99", decimals: 6 },
     ],
   }),
   usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
@@ -282,32 +295,40 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
     rwa: true,
-    collateral: "Tokenized U.S. Treasury bills via Securitize/BlackRock BUIDL fund",
-    pegMechanism: "NAV-based pricing backed by underlying Treasury securities",
-    proofOfReserves: { type: "self-reported", url: "https://usdtb.money/" },
+    geckoId: "usdtb",
+    collateral: "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in USDC stablecoin reserve for rapid redemptions; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
+    pegMechanism: "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
+    proofOfReserves: { type: "independent-audit", url: "https://www.anchorage.com/platform/usdtb-reserve-attestations", provider: "Big Four accounting firm via Anchorage Digital Bank" },
     links: [
       { label: "Website", url: "https://usdtb.money/" },
       { label: "Twitter", url: "https://x.com/ethena_labs" },
-      { label: "Docs", url: "https://docs.ethena.fi/usdtb" },
+      { label: "Docs", url: "https://docs.usdtb.money/" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
     contracts: [
       { chain: "ethereum", address: "0xc139190f447e929f090edeb554d95abb8b18ac1c", decimals: 18 },
+      { chain: "arbitrum", address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
+      { chain: "base",     address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
     ],
   }),
   usd("213", "M by M0", "M", "rwa-backed", "centralized-dependent", {
     rwa: true,
-    collateral: "U.S. Treasury bills held by approved Minters with on-chain verification",
-    pegMechanism: "Authorized minters earn yield; independent validators verify reserves on-chain",
+    geckoId: "m",
+    collateral: "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
+    pegMechanism: "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
+    proofOfReserves: { type: "self-reported", url: "https://dashboard.m0.org/", provider: "M0 Protocol (on-chain Validator attestations)" },
     links: [
       { label: "Website", url: "https://www.m0.org/" },
-      { label: "Twitter", url: "https://x.com/m0foundation" },
+      { label: "Twitter", url: "https://x.com/m0" },
+      { label: "Docs", url: "https://docs.m0.org/" },
+      { label: "GitHub", url: "https://github.com/m0-foundation" },
     ],
     jurisdiction: { country: "Switzerland" },
     contracts: [
       { chain: "ethereum", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
       { chain: "optimism", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
       { chain: "arbitrum", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
+      { chain: "base", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
     ],
   }),
   usd("336", "United Stables", "U", "rwa-backed", "centralized", {
@@ -335,8 +356,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("195", "Usual USD", "USD0", "rwa-backed", "centralized-dependent", {
     rwa: true,
-    collateral: "Short-term U.S. Treasury bills and money market instruments",
-    pegMechanism: "1:1 minting against approved RWA collateral with on-chain verification",
+    geckoId: "usual-usd",
+    collateral: "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
+    pegMechanism: "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
     links: [
       { label: "Website", url: "https://usual.money/" },
       { label: "Twitter", url: "https://x.com/usualmoney" },
@@ -345,6 +367,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "France" },
     contracts: [
       { chain: "ethereum", address: "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5", decimals: 18 },
+      { chain: "arbitrum", address: "0x35f1c5cb7fb977e669fd244c567da99d8a3a6850", decimals: 18 },
     ],
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
@@ -445,15 +468,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
-    collateral: "ETH, stETH, and BTC hedged with short perpetual futures",
-    pegMechanism: "Delta-neutral hedging on centralized exchanges (Binance, Hyperliquid, Deribit) via Fireblocks/Ceffu",
-    proofOfReserves: { type: "self-reported", url: "https://info.apostro.xyz/resolv-reserves", provider: "Apostro" },
+    geckoId: "resolv-usr",
+    collateral: "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
+    pegMechanism: "Delta-neutral portfolio: long spot ETH/BTC on-chain balanced by equal short perpetual futures on CEXs (Binance, Hyperliquid, Deribit) via Fireblocks Off-Exchange; USR redeemable 1:1 at any time; RLP (Resolv Liquidity Pool) absorbs negative funding-rate and liquidation risk",
+    proofOfReserves: { type: "real-time", url: "https://info.apostro.xyz/resolv-reserves", provider: "Apostro" },
     links: [
       { label: "Website", url: "https://resolv.xyz/" },
       { label: "Twitter", url: "https://x.com/ResolvLabs" },
+      { label: "Docs", url: "https://docs.resolv.xyz/" },
+      { label: "GitHub", url: "https://github.com/resolv-im/resolv-contracts-public" },
     ],
+    jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110", decimals: 18 },
+      { chain: "base", address: "0x35e5db674d8e93a03d814fa0ada70731efe8a4b9", decimals: 18 },
+      { chain: "bsc", address: "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9", decimals: 18 },
     ],
   }),
   usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
@@ -501,15 +530,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
   usd("220", "Avalon USDa", "USDA", "crypto-backed", "centralized-dependent", {
-    collateral: "BTC and BTC LSTs via CDP; pegged to USDT with $2B institutional credit lines",
-    pegMechanism: "1:1 USDT convertibility; CEX liquidation via HFT algorithms through Ceffu/Coinbase Prime custody",
+    geckoId: "usda-2",
+    collateral: "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
+    pegMechanism: "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
     links: [
       { label: "Website", url: "https://www.avalonfinance.xyz/" },
       { label: "Twitter", url: "https://x.com/avalonfinance_" },
       { label: "Docs", url: "https://docs.avalonfinance.xyz" },
     ],
     contracts: [
-      { chain: "ethereum", address: "0x0000206329b97db379d5e1bf586bbdb969c63274", decimals: 18 },
+      { chain: "ethereum", address: "0x8a60e489004ca22d775c5f2c657598278d17d9c2", decimals: 18 },
+      { chain: "bsc",      address: "0x9356086146be5158e98ad827e21b5cf944699894", decimals: 18 },
     ],
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
@@ -552,16 +583,24 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
-    collateral: "U.S. dollar deposits, U.S. Treasury bills, and overnight reverse repos",
-    pegMechanism: "Direct 1:1 redemption through Agora",
-    proofOfReserves: { type: "real-time", url: "https://developer.agora.finance/attestations", provider: "Chaos Labs" },
+    geckoId: "agora-dollar",
+    collateral: "Cash (USD deposits), short-dated U.S. Treasury bills, overnight reverse repurchase agreements, and stablecoins; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
+    pegMechanism: "Fiat-backed 1:1; users deposit USD and mint AUSD at par; direct redemption for USD through Agora; reserves held in bankruptcy-remote Delaware Statutory Trust administered by State Street",
+    proofOfReserves: { type: "real-time", url: "https://oracles.chaoslabs.xyz/por-feeds/agora", provider: "Chaos Labs" },
     links: [
       { label: "Website", url: "https://www.agora.finance/" },
       { label: "Twitter", url: "https://x.com/withAUSD" },
+      { label: "Docs", url: "https://docs.agora.finance/" },
+      { label: "GitHub", url: "https://github.com/agora-finance" },
     ],
-    jurisdiction: { country: "Cayman Islands" },
+    jurisdiction: { country: "Bermuda", regulator: "Bermuda Monetary Authority (SAC Act)" },
     contracts: [
       { chain: "ethereum", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
+      { chain: "arbitrum", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
+      { chain: "base", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
+      { chain: "avalanche", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
+      { chain: "bsc", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
+      { chain: "polygon", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
     ],
   }),
   usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
@@ -577,8 +616,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("219", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
-    collateral: "USDT deposits deployed in delta-neutral strategies exclusively on Binance",
-    pegMechanism: "1:1 USDT convertibility; yield from delta-neutral trading on Binance",
+    geckoId: "astherus-usdf",
+    collateral: "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
+    pegMechanism: "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
     links: [
       { label: "Website", url: "https://www.asterdex.com/en/usdf" },
       { label: "Twitter", url: "https://x.com/Aster_DEX" },
@@ -602,11 +642,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "centralized-dependent", {
+    geckoId: "satoshi-stablecoin",
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
-    pegMechanism: "Overcollateralized CDP with on-chain liquidation and redemption for $1 of collateral; operates on BNB Chain (not Ethereum or a Stage 1 L2)",
+    pegMechanism: "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
     links: [
       { label: "Website", url: "https://river.inc/" },
+      { label: "Twitter", url: "https://x.com/RiverdotInc" },
       { label: "Docs", url: "https://docs.river.inc" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x1958853a8be062dc4f401750eb233f5850f0d0d2", decimals: 18 },
+      { chain: "arbitrum", address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
+      { chain: "base",     address: "0x70654aad8b7734dc319d0c3608ec7b32e03fa162", decimals: 18 },
+      { chain: "bsc",      address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
     ],
   }),
 
@@ -720,16 +768,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("202", "Anzen USDz", "USDz", "rwa-backed", "centralized", {
     rwa: true,
-    collateral: "Tokenized private credit and real-world asset portfolio",
-    pegMechanism: "NAV-based pricing with RWA portfolio backing",
+    geckoId: "anzen-usdz",
+    collateral: "Diversified U.S. private credit assets (SMB merchant receivables, factored invoices, PO financing, auto lease financing, consumer installment lending) tokenized as Secured Private Credit Tokens (SPCT), underwritten by Percent (U.S.-licensed broker-dealer)",
+    pegMechanism: "Each USDz backed 1:1 by SPCT locked in the smart contract; peg maintained by arbitrage — if below $1, traders buy at discount; if above $1, Qualified Market Makers mint at 1:1 USDz/USDC and sell",
+    proofOfReserves: { type: "real-time", url: "https://rwa.anzen.finance/transparency", provider: "on-chain SPCT collateralization" },
     links: [
       { label: "Website", url: "https://anzen.finance/" },
       { label: "Twitter", url: "https://x.com/AnzenFinance" },
       { label: "Docs", url: "https://docs.anzen.finance/" },
     ],
-    jurisdiction: { country: "United States" },
+    jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067", decimals: 18 },
+      { chain: "base", address: "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938", decimals: 18 },
+      { chain: "arbitrum", address: "0x5018609ab477cc502e170a5accf5312b86a4b94f", decimals: 18 },
     ],
   }),
   usd("316", "CASH", "CASH", "rwa-backed", "centralized", {
@@ -840,11 +892,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("166", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
-    collateral: "U.S. dollar reserves via Cygnus Finance",
-    pegMechanism: "Direct 1:1 redemption through Cygnus",
+    geckoId: "cygnus-finance-global-usd",
+    collateral: "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
+    pegMechanism: "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
     links: [
       { label: "Website", url: "https://www.cygnus.finance/" },
       { label: "Twitter", url: "https://x.com/CygnusFi" },
+      { label: "Docs", url: "https://wiki.cygnus.finance/whitepaper/" },
     ],
     contracts: [
       { chain: "base", address: "0xca72827a3d211cfd8f6b00ac98824872b72cab49", decimals: 6 },
@@ -1062,11 +1116,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("168", "fxUSD", "fxUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "wstETH and WBTC split into stable (fxUSD) and leveraged components",
-    pegMechanism: "Stability Pool uses USDC to buy fxUSD below peg and sell above; ETH collateral redemption",
+    geckoId: "f-x-protocol-fxusd",
+    collateral: "wstETH and WBTC held in protocol pools; each pool backs both fxUSD (stable component) and xPOSITIONs (leveraged component), maintaining 100% collateralization via the f(x) invariant",
+    pegMechanism: "Stability Pool holds USDC and fxUSD acting as a peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for wstETH or WBTC when below peg; xPOSITION volatility absorption via the f(x) invariant; automatic rebalancing and liquidation of under-collateralized positions",
+    proofOfReserves: { type: "independent-audit", url: "https://www.openzeppelin.com/news/fx-v2-audit", provider: "OpenZeppelin" },
     links: [
       { label: "Website", url: "https://fx.aladdin.club" },
       { label: "Twitter", url: "https://x.com/protocol_fx" },
+      { label: "Docs", url: "https://fxprotocol.gitbook.io/fx-docs" },
     ],
     contracts: [
       { chain: "ethereum", address: "0x085780639cc2cacd35e474e71f4d000e2405d8f6", decimals: 18 },
@@ -1143,6 +1200,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("172", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
+    geckoId: "usdb",
     collateral: "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
     pegMechanism: "Automatic rebasing with yield from underlying centralized stablecoin strategies",
     links: [
@@ -1191,9 +1249,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://www.gyro.finance/" },
       { label: "Twitter", url: "https://x.com/GyroStable" },
+      { label: "Docs", url: "https://docs.gyro.finance/" },
     ],
     contracts: [
       { chain: "ethereum", address: "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a", decimals: 18 },
+      { chain: "polygon",  address: "0xca5d8f8a8d49439357d3cf46ca2e720702f132b8", decimals: 18 },
     ],
   }),
   usd("329", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
@@ -1224,11 +1284,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview" },
   }),
   usd("154", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
+    geckoId: "bucket-protocol-buck-stablecoin",
     collateral: "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
-    pegMechanism: "Overcollateralized CDPs plus PSM enabling 1:1 swaps with USDC/USDT",
+    pegMechanism: "Overcollateralized CDPs with per-asset minimum collateral ratios (e.g. 110% for SUI); hard peg via direct BUCK redemption for collateral with dynamic redemption fee; soft peg via PSM enabling 1:1 swaps with USDC/USDT; liquidations via Tank module",
     links: [
       { label: "Website", url: "https://www.bucketprotocol.io/" },
       { label: "Twitter", url: "https://x.com/bucket_protocol" },
+      { label: "Docs", url: "https://docs.bucketprotocol.io/" },
     ],
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
@@ -1423,16 +1485,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
-    collateral: "1:1 USD reserves custodied by Norwegian Block Exchange (NBX)",
-    pegMechanism: "Direct 1:1 redemption through Moneta",
-    proofOfReserves: { type: "self-reported", url: "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet", provider: "Charli3" },
+    geckoId: "usdm-2",
+    collateral: "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
+    pegMechanism: "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
+    proofOfReserves: { type: "real-time", url: "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet", provider: "Charli3" },
     links: [
       { label: "Website", url: "https://moneta.global/" },
+      { label: "Twitter", url: "https://x.com/USDMOfficial" },
     ],
-    jurisdiction: { country: "United States", regulator: "FinCEN" },
-    contracts: [
-      { chain: "ethereum", address: "0x59d9356e565ab3a36dd77763fc0d87feaf85508c", decimals: 18 },
-    ],
+    jurisdiction: { country: "Norway", regulator: "Finanstilsynet", license: "MiCA E-Money Token (EMT)" },
   }),
   usd("312", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
     collateral: "Overcollateralized by DOT, ETH, WBTC, USDT, USDC, and liquid staking tokens on Hydration",
@@ -1514,10 +1575,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "Overcollateralized Bitcoin (WBTC, BTCB) via CDP vaults",
+    geckoId: "bitcoin-usd-btcfi",
+    collateral: "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
     pegMechanism: "Overcollateralized CDP with liquidation mechanisms",
     links: [
       { label: "Website", url: "https://www.btcfi.one/" },
+      { label: "Twitter", url: "https://x.com/Bifrost_Network" },
+      { label: "Docs", url: "https://docs.bifrostnetwork.com/eng.btcfi.one" },
     ],
     contracts: [
       { chain: "base", address: "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4", decimals: 18 },
@@ -1976,6 +2040,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     pegMechanism: "RWA-indexed basket tracking purchasing power; price appreciates over time",
     links: [
       { label: "Website", url: "https://www.isc.money/" },
+      { label: "Twitter", url: "https://x.com/ISC_money" },
+      { label: "Docs",    url: "https://wp.isc.money/" },
     ],
   }), // no EVM contract — Solana-only
 
