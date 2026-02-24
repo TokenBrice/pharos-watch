@@ -50,7 +50,8 @@ export default function CemeteryPage() {
         </nav>
         <h1 className="text-3xl font-bold tracking-tight">Stablecoin Cemetery</h1>
         <p className="text-sm text-muted-foreground">
-          Defunct, depegged, and discontinued. A memorial to fallen stablecoins.
+          Defunct, depegged, and discontinued. A memorial to fallen stablecoins.{" "}
+          <span className="hidden md:inline">Press F on hover to pay respects.</span>
         </p>
       </div>
 

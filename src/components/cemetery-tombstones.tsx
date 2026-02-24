@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@/lib/format";
@@ -26,6 +26,42 @@ const CROSS_SIZE = {
   md: { vw: 6, vh: 24, hw: 18, hh: 6, top: -22 },
   sm: { vw: 5, vh: 21, hw: 16, hh: 5, top: -19 },
 } as const;
+
+// --- Flower for "Press F to pay respects" ---
+
+const FLOWER_COLORS = ["#f9a8d4", "#fde68a", "#c4b5fd", "#e5e7eb"] as const;
+
+function Flower({ index }: { index: number }) {
+  const color = FLOWER_COLORS[index % FLOWER_COLORS.length];
+  // Spread flowers horizontally from center
+  const offset = (index - 3) * 12 + (index % 2 === 0 ? 2 : -2);
+  return (
+    <svg
+      width="14"
+      height="16"
+      viewBox="0 0 14 16"
+      fill="none"
+      aria-hidden="true"
+      className="animate-in fade-in duration-300"
+      style={{
+        position: "absolute",
+        bottom: 0,
+        left: `calc(50% + ${offset}px - 7px)`,
+      }}
+    >
+      {/* Stem */}
+      <line x1="7" y1="16" x2="7" y2="7" stroke="#4ade80" strokeWidth="1.5" />
+      {/* Petals */}
+      <circle cx="7" cy="5" r="2.5" fill={color} opacity="0.85" />
+      <circle cx="4.5" cy="6.5" r="2.5" fill={color} opacity="0.75" />
+      <circle cx="9.5" cy="6.5" r="2.5" fill={color} opacity="0.75" />
+      <circle cx="5.2" cy="3.8" r="2.5" fill={color} opacity="0.7" />
+      <circle cx="8.8" cy="3.8" r="2.5" fill={color} opacity="0.7" />
+      {/* Center */}
+      <circle cx="7" cy="5.5" r="1.5" fill="#facc15" />
+    </svg>
+  );
+}
 
 // --- Shape variety ---
 
@@ -107,12 +143,32 @@ function Tombstone({
   coin,
   index,
   onSelect,
+  flowerCount,
+  onPayRespects,
 }: {
   coin: DeadStablecoin;
   index: number;
   onSelect: (symbol: string) => void;
+  flowerCount: number;
+  onPayRespects: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+
+  // "Press F to pay respects" — listen while hovered
+  const handleF = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "f" || e.key === "F") {
+        onPayRespects();
+      }
+    },
+    [onPayRespects],
+  );
+
+  useEffect(() => {
+    if (!hovered) return;
+    document.addEventListener("keydown", handleF);
+    return () => document.removeEventListener("keydown", handleF);
+  }, [hovered, handleF]);
   const size = getTombSize(coin.peakMcap);
   const cfg = SIZE[size];
   const color = CAUSE_HEX[coin.causeOfDeath];
@@ -155,6 +211,8 @@ function Tombstone({
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onSelect(coin.symbol);
+        } else if (e.key === "f" || e.key === "F") {
+          onPayRespects();
         }
       }}
     >
@@ -263,6 +321,15 @@ function Tombstone({
           </div>
         </div>
       )}
+
+      {/* Flowers — "Press F to pay respects" */}
+      {flowerCount > 0 && (
+        <div className="absolute bottom-1 left-0 right-0 h-4 pointer-events-none z-10">
+          {Array.from({ length: flowerCount }, (_, i) => (
+            <Flower key={i} index={i} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -273,6 +340,16 @@ interface CemeteryTombstonesProps {
 }
 
 export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps) {
+  const [flowers, setFlowers] = useState<Record<string, number>>({});
+
+  const handlePayRespects = useCallback((symbol: string) => {
+    setFlowers((prev) => {
+      const current = prev[symbol] ?? 0;
+      if (current >= 7) return prev;
+      return { ...prev, [symbol]: current + 1 };
+    });
+  }, []);
+
   return (
     <div>
       <div className="relative pb-8">
@@ -283,6 +360,8 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
               coin={coin}
               index={i}
               onSelect={onSelect}
+              flowerCount={flowers[coin.symbol] ?? 0}
+              onPayRespects={() => handlePayRespects(coin.symbol)}
             />
           ))}
         </div>
