@@ -30,8 +30,10 @@ export function CoinSelector({
 }: CoinSelectorProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Close on click outside
   useEffect(() => {
@@ -49,16 +51,72 @@ export function CoinSelector({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  // Close on Escape
+  // Filter coins by search (must be above early return so keyboard handler can reference it)
+  const query = search.toLowerCase();
+  const filtered = query
+    ? coins.filter(
+        (c) =>
+          c.name.toLowerCase().includes(query) ||
+          c.symbol.toLowerCase().includes(query),
+      )
+    : coins;
+
+  // Keyboard navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setSearch("");
+      if (!open) return;
+      switch (e.key) {
+        case "Escape":
+          setOpen(false);
+          setSearch("");
+          setFocusedIndex(-1);
+          buttonRef.current?.focus();
+          e.preventDefault();
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const nextIdx = prev + 1;
+            return nextIdx >= filtered.length ? 0 : nextIdx;
+          });
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedIndex((prev) => {
+            const nextIdx = prev - 1;
+            return nextIdx < 0 ? filtered.length - 1 : nextIdx;
+          });
+          break;
+        case "Enter": {
+          e.preventDefault();
+          const target = filtered[focusedIndex];
+          if (target && !disabledIds?.has(target.id)) {
+            onSelect(target);
+            setOpen(false);
+            setSearch("");
+            setFocusedIndex(-1);
+          }
+          break;
+        }
+        case "Tab":
+          setOpen(false);
+          setSearch("");
+          setFocusedIndex(-1);
+          break;
       }
     },
-    [],
+    [open, filtered, focusedIndex, disabledIds, onSelect],
   );
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusedIndex >= 0 && filtered[focusedIndex]) {
+      const el = document.getElementById(
+        `coin-option-${filtered[focusedIndex].id}`,
+      );
+      el?.scrollIntoView({ block: "nearest" });
+    }
+  }, [focusedIndex, filtered]);
 
   // Focus input when dropdown opens
   useEffect(() => {
@@ -91,19 +149,10 @@ export function CoinSelector({
     );
   }
 
-  // Filter coins by search
-  const query = search.toLowerCase();
-  const filtered = query
-    ? coins.filter(
-        (c) =>
-          c.name.toLowerCase().includes(query) ||
-          c.symbol.toLowerCase().includes(query),
-      )
-    : coins;
-
   return (
     <div ref={containerRef} className="relative" onKeyDown={handleKeyDown}>
       <Button
+        ref={buttonRef}
         variant="outline"
         className="w-full justify-between text-muted-foreground font-normal"
         onClick={() => setOpen((v) => !v)}
@@ -122,12 +171,20 @@ export function CoinSelector({
               type="text"
               placeholder="Search by name or symbol..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setFocusedIndex(-1);
+              }}
               className="w-full rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
           <ul
             role="listbox"
+            aria-activedescendant={
+              focusedIndex >= 0
+                ? `coin-option-${filtered[focusedIndex]?.id}`
+                : undefined
+            }
             className="max-h-56 overflow-y-auto px-1 pb-1"
           >
             {filtered.length === 0 && (
@@ -135,18 +192,20 @@ export function CoinSelector({
                 No stablecoin found.
               </li>
             )}
-            {filtered.map((coin) => {
+            {filtered.map((coin, idx) => {
               const disabled = disabledIds?.has(coin.id);
+              const focused = idx === focusedIndex;
               return (
                 <li
                   key={coin.id}
+                  id={`coin-option-${coin.id}`}
                   role="option"
-                  aria-selected={false}
+                  aria-selected={focused}
                   aria-disabled={disabled}
                   className={
                     disabled
                       ? "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm opacity-40 cursor-not-allowed"
-                      : "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent"
+                      : `flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent ${focused ? "bg-accent" : ""}`
                   }
                   onClick={() => {
                     if (!disabled) {
