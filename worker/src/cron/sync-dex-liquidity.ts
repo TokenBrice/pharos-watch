@@ -1039,6 +1039,127 @@ function buildChainAddressMap(): Map<string, Map<string, string>> {
   return chainAddrs;
 }
 
+/** Collect all pool addresses from existing sources for dedup against GT */
+function buildKnownPoolAddresses(
+  pools: LlamaPool[],
+  dexProjects: Set<string>,
+  curvePoolMap: Map<string, CurvePoolEntry>,
+  uniV3PoolFees: Map<string, number>,
+  aerodromeIsStable: Map<string, boolean>,
+): Set<string> {
+  const known = new Set<string>();
+
+  // DeFiLlama pools (all matched DEX pools)
+  for (const pool of pools) {
+    if (!pool.tvlUsd || pool.tvlUsd < 10_000) continue;
+    if (!dexProjects.has(pool.project)) continue;
+    if (pool.exposure === "single") continue;
+    const key = `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`;
+    known.add(key);
+  }
+
+  // Curve pools (keyed as chain:address in the map)
+  for (const key of curvePoolMap.keys()) {
+    // curvePoolMap keys are "chain:address" or "chain:SYMBOL-COMBO"
+    // Only keep address-based keys (those containing 0x)
+    if (key.includes("0x")) known.add(key);
+  }
+
+  // UniV3 pools (keyed as chain:address in the fees map)
+  for (const key of uniV3PoolFees.keys()) {
+    known.add(key);
+  }
+
+  // Aerodrome pools (keyed as chain:address in the isStable map)
+  for (const key of aerodromeIsStable.keys()) {
+    known.add(key);
+  }
+
+  console.log(`[dex-liquidity] Built known pool set: ${known.size} pool addresses from existing sources`);
+  return known;
+}
+
+/** Build chain → addresses map from TRACKED_STABLECOINS contracts, filtered to GT-supported chains */
+function buildGtChainAddresses(): Map<string, { address: string; stablecoinId: string }[]> {
+  const result = new Map<string, { address: string; stablecoinId: string }[]>();
+  for (const meta of TRACKED_STABLECOINS) {
+    if (!meta.contracts) continue;
+    for (const c of meta.contracts) {
+      const gtChain = GT_CHAIN_MAP[c.chain.toLowerCase()];
+      if (!gtChain) continue;
+      const list = result.get(gtChain) ?? [];
+      list.push({ address: c.address.toLowerCase(), stablecoinId: meta.id });
+      result.set(gtChain, list);
+    }
+  }
+  return result;
+}
+
+/** Fetch token-level aggregate data from GT multi-token endpoint.
+ *  Returns price observations (one per token per chain). */
+async function fetchGtTokenBatch(
+  addressToId: Map<string, string>,
+): Promise<Map<string, DexPriceObs[]>> {
+  const priceObs = new Map<string, DexPriceObs[]>();
+  const chainAddresses = buildGtChainAddresses();
+  let requestCount = 0;
+
+  for (const [gtChain, tokens] of chainAddresses) {
+    const ourChain = GT_CHAIN_REVERSE[gtChain] ?? gtChain;
+
+    // Batch into groups of 30 (GT limit for multi endpoint)
+    for (let i = 0; i < tokens.length; i += 30) {
+      const batch = tokens.slice(i, i + 30);
+      const addresses = batch.map((t) => t.address).join(",");
+
+      if (requestCount > 0) {
+        await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
+      }
+      requestCount++;
+
+      try {
+        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses}`;
+        const res = await fetchWithRetry(url, {
+          headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+        });
+        if (!res?.ok) {
+          if (res?.status === 429) {
+            console.warn(`[dex-liquidity] GT token batch rate-limited, backing off`);
+            await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
+          }
+          continue;
+        }
+
+        const json = (await res.json()) as { data?: GtToken[] };
+        if (!json.data) continue;
+
+        for (const token of json.data) {
+          const a = token.attributes;
+          const addr = a.address.toLowerCase();
+          const stablecoinId = batch.find((t) => t.address === addr)?.stablecoinId
+            ?? addressToId.get(addr);
+          if (!stablecoinId) continue;
+
+          const price = parseFloat(a.price_usd ?? "");
+          const tvl = parseFloat(a.total_reserve_in_usd ?? "");
+          if (!price || price <= 0 || isNaN(price)) continue;
+          if (price < 0.5 || price > 2.0) continue; // USD peg sanity
+          if (!tvl || tvl < 50_000) continue;
+
+          const obs = priceObs.get(stablecoinId) ?? [];
+          obs.push({ price, tvl, chain: ourChain, protocol: "geckoterminal-aggregate" });
+          priceObs.set(stablecoinId, obs);
+        }
+      } catch (err) {
+        console.warn(`[dex-liquidity] GT token batch error for ${gtChain}:`, err);
+      }
+    }
+  }
+
+  console.log(`[dex-liquidity] GT token batch: ${priceObs.size} coins with price obs (${requestCount} requests)`);
+  return priceObs;
+}
+
 interface DexScreenerTokenPair {
   chainId: string;
   dexId: string;
