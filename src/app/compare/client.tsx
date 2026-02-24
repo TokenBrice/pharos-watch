@@ -175,6 +175,18 @@ export function CompareClient() {
     setSelectedIds((prev) => prev.filter((_, i) => i !== slotIndex));
   };
 
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard may not be available
+    }
+  }, []);
+
   // Render 3 selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
   for (let i = 0; i < MAX_COINS; i++) {
@@ -194,6 +206,26 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
+      {selectedIds.length >= 2 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5" />
+                Copy link
+              </>
+            )}
+          </button>
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
