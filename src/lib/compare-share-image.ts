@@ -17,7 +17,6 @@ export interface ShareCoinData {
 
 // --- Layout constants ---
 const W = 1200;
-const H = 750;
 const BG = "#0d1628";
 const CARD_BG = "#1a2744";
 const CREAM = "#E8DCC4";
@@ -50,15 +49,27 @@ function roundRect(
   ctx.closePath();
 }
 
-/** Draw a single coin card at (x, y) with the given width. */
+// Card header height: padding (16) + logo (48) + gap (12) + symbol (22) + name (28) + divider (16)
+const CARD_HEADER_H = 142;
+const ROW_H = 24;
+const CARD_BOTTOM_PAD = 12;
+const CARDS_Y = 90;
+const FOOTER_H = 50;
+
+/** Compute the number of stat rows for a coin (8 base + 1 if has rating). */
+function statRowCount(coin: ShareCoinData): number {
+  return coin.bluechipRating ? 9 : 8;
+}
+
+/** Draw a single coin card at (x, y) with the given width and height. */
 function drawCoinCard(
   ctx: CanvasRenderingContext2D,
   coin: ShareCoinData,
   x: number,
   y: number,
   cardW: number,
+  cardH: number,
 ) {
-  const cardH = 440;
   const cx = x + cardW / 2; // center x of card
 
   // Card background
@@ -132,7 +143,6 @@ function drawCoinCard(
 
   const labelX = x + CARD_PAD;
   const valueX = x + cardW - CARD_PAD;
-  const ROW_H = 24;
 
   for (const [label, value, color] of stats) {
     // Label
@@ -159,6 +169,11 @@ export function renderCompareShareImage(
   coins: ShareCoinData[],
   pharosLogo: HTMLImageElement,
 ): HTMLCanvasElement {
+  // Compute card and canvas height from content
+  const maxRows = Math.max(...coins.map(statRowCount));
+  const cardH = CARD_HEADER_H + maxRows * ROW_H + CARD_BOTTOM_PAD;
+  const H = CARDS_Y + cardH + FOOTER_H;
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -198,17 +213,16 @@ export function renderCompareShareImage(
   const cardW = Math.min(availableW / n, 200);
   const totalCardsW = cardW * n + gap * (n - 1);
   const startX = (W - totalCardsW) / 2;
-  const cardsY = 90;
 
   for (let i = 0; i < n; i++) {
-    drawCoinCard(ctx, coins[i], startX + i * (cardW + gap), cardsY, cardW);
+    drawCoinCard(ctx, coins[i], startX + i * (cardW + gap), CARDS_Y, cardW, cardH);
   }
 
   // --- Footer branding ---
   ctx.fillStyle = MUTED;
   ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("pharos.watch/compare", W / 2, H - 24);
+  ctx.fillText("pharos.watch/compare", W / 2, H - 20);
 
   return canvas;
 }
