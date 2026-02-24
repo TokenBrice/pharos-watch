@@ -185,7 +185,7 @@ function classifyPoolType(project: string): string {
   const proj = project.toLowerCase();
   if (proj.includes("curve")) return "curve-stableswap"; // refined later via registryId
   if (proj.includes("fluid")) return "fluid-dex";
-  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined later via isStable flag if available
+  if (proj.includes("aerodrome")) return "aerodrome-volatile"; // refined to aerodrome-stable via subgraph isStable flag
   if (proj.includes("balancer") && proj.includes("stable")) return "balancer-stable";
   if (proj.includes("balancer")) return "balancer-weighted";
   if (proj.includes("uniswap-v3") || proj === "uniswap-v3") return "uniswap-v3-5bp";
@@ -701,7 +701,12 @@ async function fetchUniV3Data(
             totalValueLockedToken1: string;
           }[];
         };
+        errors?: { message: string }[];
       };
+      if (json.errors?.length) {
+        console.warn(`[dex-liquidity] Uni V3 subgraph GraphQL errors for ${chain}:`, json.errors.map((e) => e.message).join("; "));
+        if (!json.data?.pools?.length) continue;
+      }
       const subPools = json.data?.pools ?? [];
       let priceObsCount = 0;
       for (const p of subPools) {
@@ -813,15 +818,21 @@ const AERODROME_PAIR_QUERY = `{
   }
 }`;
 
-/** Fetch Aerodrome subgraph data for price observations. */
-async function fetchAerodromePriceObs(
+interface AerodromeLookups {
+  aerodromePriceObs: Map<string, DexPriceObs[]>;
+  aerodromeIsStable: Map<string, boolean>; // "chain:poolAddress" → isStable
+}
+
+/** Fetch Aerodrome subgraph data for price observations and pool stability flags. */
+async function fetchAerodromeData(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
   addressToId: Map<string, string>,
-): Promise<Map<string, DexPriceObs[]>> {
+): Promise<AerodromeLookups> {
   const priceObs = new Map<string, DexPriceObs[]>();
+  const isStableMap = new Map<string, boolean>();
 
-  if (!graphApiKey) return priceObs;
+  if (!graphApiKey) return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
 
   for (const [chain, subgraphId] of Object.entries(AERODROME_SUBGRAPHS)) {
     try {
@@ -849,12 +860,20 @@ async function fetchAerodromePriceObs(
             isStable: boolean;
           }[];
         };
+        errors?: { message: string }[];
       };
+      if (json.errors?.length) {
+        console.warn(`[dex-liquidity] Aerodrome subgraph GraphQL errors for ${chain}:`, json.errors.map((e) => e.message).join("; "));
+        if (!json.data?.pairs?.length) continue;
+      }
       const pairs = json.data?.pairs ?? [];
       let obsCount = 0;
       for (const pair of pairs) {
         const reserveUSD = parseFloat(pair.reserveUSD);
         if (isNaN(reserveUSD) || reserveUSD < 50_000) continue;
+
+        // Store isStable flag for pool type refinement in processPoolMetrics
+        isStableMap.set(`${chain}:${pair.id.toLowerCase()}`, pair.isStable);
 
         // Compute balance ratio from reserves in USD terms
         const reserve0 = parseFloat(pair.reserve0);
@@ -911,8 +930,8 @@ async function fetchAerodromePriceObs(
     }
   }
 
-  console.log(`[dex-liquidity] Collected ${priceObs.size} coins with Aerodrome price observations`);
-  return priceObs;
+  console.log(`[dex-liquidity] Collected ${priceObs.size} coins with Aerodrome price observations, ${isStableMap.size} pool stability flags`);
+  return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
 }
 
 // ---------------------------------------------------------------------------
@@ -1032,6 +1051,7 @@ function processPoolMetrics(
   curvePoolMap: Map<string, CurvePoolEntry>,
   uniV3PoolFees: Map<string, number>,
   uniV3SymbolFees: Map<string, number>,
+  aerodromeIsStable: Map<string, boolean>,
 ): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
 
@@ -1132,6 +1152,14 @@ function processPoolMetrics(
         if (feeTier <= 100) resolvedPoolType = "uniswap-v3-1bp";
         else if (feeTier <= 500) resolvedPoolType = "uniswap-v3-5bp";
         else resolvedPoolType = "uniswap-v3-30bp";
+      }
+      qualMult = getQualityMultiplier(resolvedPoolType);
+    } else if (poolType === "aerodrome-volatile" && aerodromeIsStable.size > 0) {
+      // Refine Aerodrome pool type using isStable flag from subgraph
+      const addrKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+      const isStable = aerodromeIsStable.get(addrKey);
+      if (isStable === true) {
+        resolvedPoolType = "aerodrome-stable";
       }
       qualMult = getQualityMultiplier(resolvedPoolType);
     } else {
@@ -1612,10 +1640,13 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
   }
 
-  // 4b. Fetch Aerodrome subgraph data for price observations
+  // 4b. Fetch Aerodrome subgraph data for price observations + pool stability flags
   let aerodromePriceObs = new Map<string, DexPriceObs[]>();
+  let aerodromeIsStable = new Map<string, boolean>();
   try {
-    aerodromePriceObs = await fetchAerodromePriceObs(graphApiKey, symbolToIds, addressToId);
+    const aeroData = await fetchAerodromeData(graphApiKey, symbolToIds, addressToId);
+    aerodromePriceObs = aeroData.aerodromePriceObs;
+    aerodromeIsStable = aeroData.aerodromeIsStable;
   } catch (err) {
     console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
   }
@@ -1649,7 +1680,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   // 5. Match pools to stablecoins and compute per-pool metrics
   const metrics = processPoolMetrics(
     dataSources.pools, dataSources.dexProjects, symbolToIds, addressToId,
-    curvePoolMap, uniV3PoolFees, uniV3SymbolFees,
+    curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
   );
 
   // 6. Compute composite scores per stablecoin
