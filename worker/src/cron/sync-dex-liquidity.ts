@@ -1172,32 +1172,44 @@ async function fetchGtPools(
   const nowSec = Date.now() / 1000;
   const startMs = Date.now();
 
+  // Flatten into a single list and shuffle so coverage rotates across runs
+  // (time budget means we can't always finish all 252 token-chain combos)
+  const allTokens: { gtChain: string; ourChain: string; address: string; stablecoinId: string }[] = [];
   for (const [gtChain, tokens] of chainAddresses) {
     const ourChain = GT_CHAIN_REVERSE[gtChain] ?? gtChain;
-
     for (const { address, stablecoinId } of tokens) {
-      // Time budget check — stop crawling to leave time for scoring + DB writes
-      if (Date.now() - startMs > GT_CRAWL_BUDGET_MS) {
-        console.log(
-          `[dex-liquidity] GT pool crawl time budget exhausted after ${stats.requests} requests ` +
-          `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`
-        );
-        return { newPools, priceObs, stats };
-      }
+      allTokens.push({ gtChain, ourChain, address, stablecoinId });
+    }
+  }
+  // Fisher-Yates shuffle
+  for (let i = allTokens.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allTokens[i], allTokens[j]] = [allTokens[j], allTokens[i]];
+  }
 
-      if (stats.requests > 0) {
-        await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
-      }
-      stats.requests++;
+  for (const { gtChain, ourChain, address, stablecoinId } of allTokens) {
+    // Time budget check — stop crawling to leave time for scoring + DB writes
+    if (Date.now() - startMs > GT_CRAWL_BUDGET_MS) {
+      console.log(
+        `[dex-liquidity] GT pool crawl time budget exhausted after ${stats.requests}/${allTokens.length} requests ` +
+        `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`
+      );
+      return { newPools, priceObs, stats };
+    }
 
-      try {
-        // maxRetries=0: single attempt per request to keep wall time predictable.
-        // fetchWithRetry's internal 429 handling (5s+ delays) would make total time unbounded.
-        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${address}/pools?page=1`;
-        const res = await fetchWithRetry(url, {
-          headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-        }, 0);
-        if (!res?.ok) continue;
+    if (stats.requests > 0) {
+      await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
+    }
+    stats.requests++;
+
+    try {
+      // maxRetries=0: single attempt per request to keep wall time predictable.
+      // fetchWithRetry's internal 429 handling (5s+ delays) would make total time unbounded.
+      const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${address}/pools?page=1`;
+      const res = await fetchWithRetry(url, {
+        headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+      }, 0);
+      if (!res?.ok) continue;
 
         const json = (await res.json()) as { data?: GtPool[] };
         if (!json.data) continue;
@@ -1285,11 +1297,10 @@ async function fetchGtPools(
       } catch (err) {
         console.warn(`[dex-liquidity] GT pool crawl error for ${ourChain}:${address}:`, err);
       }
-    }
   }
 
   console.log(
-    `[dex-liquidity] GT pool crawl: ${stats.requests} requests, ${stats.poolsSeen} pools seen, ` +
+    `[dex-liquidity] GT pool crawl: ${stats.requests}/${allTokens.length} requests, ${stats.poolsSeen} pools seen, ` +
     `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known)`
   );
   return { newPools, priceObs, stats };
