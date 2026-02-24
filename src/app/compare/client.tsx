@@ -9,8 +9,8 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import { derivePegRates } from "@/lib/peg-rates";
-import { formatCurrency } from "@/lib/format";
+import { derivePegRates, getPegReference } from "@/lib/peg-rates";
+import { formatCurrency, formatNativePrice } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
 import { CRON_1H } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
@@ -19,7 +19,14 @@ import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { Link2, Check } from "lucide-react";
+import { Share2, Twitter, Download } from "lucide-react";
+import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
+import {
+  renderCompareShareImage,
+  canvasToBlob,
+  loadImage,
+} from "@/lib/compare-share-image";
+import type { ShareCoinData } from "@/lib/compare-share-image";
 import type { CoinOption } from "@/components/coin-selector";
 import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 
@@ -200,17 +207,109 @@ export function CompareClient() {
     setSelectedIds((prev) => prev.filter((_, i) => i !== slotIndex));
   };
 
-  const [copied, setCopied] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
 
-  const handleCopyLink = useCallback(async () => {
+  const buildShareData = useCallback(async (): Promise<{
+    coins: ShareCoinData[];
+    pharosLogo: HTMLImageElement;
+  } | null> => {
+    if (comparisonCoins.length < 2) return null;
+
+    // Preload Pharos logo
+    const pharosLogo = await loadImage("/pharos-icon.png");
+    if (!pharosLogo) return null;
+
+    // Preload coin logos in parallel
+    const logoImgs = await Promise.all(
+      comparisonCoins.map((c) => {
+        const src = logos?.[c.id];
+        return src ? loadImage(src) : Promise.resolve(null);
+      }),
+    );
+
+    // Build formatted stats
+    const shareCoins: ShareCoinData[] = comparisonCoins.map((coin, i) => {
+      const cap = getCirculatingRaw(coin.data);
+      const prev = getPrevWeekRaw(coin.data);
+      const weeklyPct = prev > 0 ? ((cap - prev) / prev) * 100 : null;
+      const pegRef = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
+
+      return {
+        symbol: coin.symbol,
+        name: coin.name,
+        price: formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, pegRef),
+        marketCap: formatCurrency(cap),
+        pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}/10` : "N/A",
+        weeklyChange:
+          weeklyPct != null
+            ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%`
+            : "N/A",
+        weeklyChangePositive: weeklyPct != null ? weeklyPct >= 0 : true,
+        logoImg: logoImgs[i],
+      };
+    });
+
+    return { coins: shareCoins, pharosLogo };
+  }, [comparisonCoins, logos, pegRates]);
+
+  const handleTwitterShare = useCallback(() => {
+    const symbols = comparisonCoins.map((c) => c.symbol).join(" vs ");
+    const text = `Comparing ${symbols} on Pharos`;
+    const url = window.location.href;
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }, [comparisonCoins]);
+
+  const handleWebShare = useCallback(async () => {
+    setShareLoading(true);
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard may not be available
+      const data = await buildShareData();
+      if (!data) return;
+      const canvas = renderCompareShareImage(data.coins, data.pharosLogo);
+      const blob = await canvasToBlob(canvas);
+      const file = new File([blob], "pharos-compare.png", { type: "image/png" });
+      const symbols = comparisonCoins.map((c) => c.symbol).join(" vs ");
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: `${symbols} — Pharos Compare`,
+          text: `Comparing ${symbols} on Pharos`,
+          url: window.location.href,
+          files: [file],
+        });
+      } else {
+        // Fallback: copy URL to clipboard
+        await navigator.clipboard.writeText(window.location.href);
+      }
+    } catch (e) {
+      if (e instanceof Error && e.name !== "AbortError") {
+        console.warn("Share failed:", e);
+      }
+    } finally {
+      setShareLoading(false);
     }
-  }, []);
+  }, [buildShareData, comparisonCoins]);
+
+  const handleDownload = useCallback(async () => {
+    setShareLoading(true);
+    try {
+      const data = await buildShareData();
+      if (!data) return;
+      const canvas = renderCompareShareImage(data.coins, data.pharosLogo);
+      const blob = await canvasToBlob(canvas);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "pharos-compare.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setShareLoading(false);
+    }
+  }, [buildShareData]);
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
@@ -232,22 +331,32 @@ export function CompareClient() {
   return (
     <div className="space-y-6">
       {selectedIds.length >= 2 && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
           <button
-            onClick={handleCopyLink}
+            onClick={handleTwitterShare}
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            title="Share on Twitter/X"
           >
-            {copied ? (
-              <>
-                <Check className="h-3.5 w-3.5" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Link2 className="h-3.5 w-3.5" />
-                Copy link
-              </>
-            )}
+            <Twitter className="h-3.5 w-3.5" />
+            Tweet
+          </button>
+          <button
+            onClick={handleWebShare}
+            disabled={shareLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+            title="Share comparison"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </button>
+          <button
+            onClick={handleDownload}
+            disabled={shareLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
+            title="Download comparison image"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Image
           </button>
         </div>
       )}
