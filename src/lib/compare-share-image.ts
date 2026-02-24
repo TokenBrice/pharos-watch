@@ -49,8 +49,8 @@ function roundRect(
   ctx.closePath();
 }
 
-// Card header height: padding (16) + logo (48) + gap (12) + symbol (22) + name (28) + divider (16)
-const CARD_HEADER_H = 142;
+// Card header height: padding (16) + logo (48) + gap (24) + symbol (22) + name (28) + divider (16)
+const CARD_HEADER_H = 154;
 const ROW_H = 24;
 const CARD_BOTTOM_PAD = 12;
 const CARDS_Y = 90;
@@ -102,7 +102,7 @@ function drawCoinCard(
     ctx.fillStyle = "rgba(232, 220, 196, 0.15)";
     ctx.fill();
   }
-  curY += logoSize + 12;
+  curY += logoSize + 24;
 
   // Symbol (bold, large)
   ctx.fillStyle = WHITE;
