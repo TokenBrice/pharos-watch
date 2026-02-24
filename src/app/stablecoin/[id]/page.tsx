@@ -136,8 +136,6 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               {coin.name} is a {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance},{" "}
               {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoin
               {" "}pegged to {PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}.
-              {coin.collateral && ` Backed by: ${coin.collateral}.`}
-              {coin.pegMechanism && ` Peg mechanism: ${coin.pegMechanism}.`}
             </p>
           </div>
           <div className="mt-4">
