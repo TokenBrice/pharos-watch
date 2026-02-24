@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 
 interface SeriesData {
@@ -25,13 +26,20 @@ interface ComparisonChartProps {
   title: string;
   series: SeriesData[];
   formatValue?: (v: number) => string;
+  range?: TimeRangeOption;
+  onRangeChange?: (range: TimeRangeOption) => void;
+  normalizable?: boolean;
 }
 
 export function ComparisonChart({
   title,
   series,
   formatValue,
+  range,
+  onRangeChange,
+  normalizable,
 }: ComparisonChartProps) {
+  const [normalized, setNormalized] = useState(false);
   // Merge all series into a single array keyed by timestamp
   const mergedData = useMemo(() => {
     const tsMap = new Map<number, Record<string, number>>();
@@ -50,15 +58,56 @@ export function ComparisonChart({
     return Array.from(tsMap.values()).sort((a, b) => a.ts - b.ts);
   }, [series]);
 
-  const { range, setRange, filteredData, options } = useTimeRangeFilter(
+  const { range: localRange, setRange: setLocalRange, filteredData, options } = useTimeRangeFilter(
     mergedData,
     "ts"
   );
 
+  // Support controlled range from parent
+  const activeRange = range ?? localRange;
+  const handleRangeChange = useCallback((r: TimeRangeOption) => {
+    setLocalRange(r);
+    onRangeChange?.(r);
+  }, [setLocalRange, onRangeChange]);
+
+  // Sync external range prop into local state
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- localRange intentionally omitted to avoid infinite loop
+  useEffect(() => {
+    if (range != null && range !== localRange) {
+      setLocalRange(range);
+    }
+  }, [range]);
+
+  // Normalize: percent change from first available value per series
+  const displayData = useMemo(() => {
+    if (!normalized || filteredData.length === 0) return filteredData;
+    const firstValues: Record<string, number> = {};
+    for (const s of series) {
+      for (const row of filteredData) {
+        const val = row[s.id];
+        if (typeof val === "number" && val > 0) {
+          firstValues[s.id] = val;
+          break;
+        }
+      }
+    }
+    return filteredData.map((row) => {
+      const norm: Record<string, number> = { ts: row.ts };
+      for (const s of series) {
+        const val = row[s.id];
+        const first = firstValues[s.id];
+        if (typeof val === "number" && first) {
+          norm[s.id] = ((val / first) - 1) * 100;
+        }
+      }
+      return norm;
+    });
+  }, [normalized, filteredData, series]);
+
   // Determine XAxis date format based on selected range
-  const formatTimestamp = (ts: number) => {
+  const formatTimestamp = useCallback((ts: number) => {
     const d = new Date(ts);
-    if (range === "7d" || range === "30d") {
+    if (activeRange === "7d" || activeRange === "30d") {
       return d.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -68,16 +117,47 @@ export function ComparisonChart({
       month: "short",
       year: "2-digit",
     });
-  };
+  }, [activeRange]);
 
   const defaultFormat = (v: number) => v.toLocaleString();
   const valueFormatter = formatValue ?? defaultFormat;
+  const activeFormatter = normalized
+    ? (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`
+    : valueFormatter;
 
   return (
     <Card className="rounded-2xl">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle as="h2">{title}</CardTitle>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        <div className="flex items-center gap-2">
+          {normalizable && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => setNormalized(false)}
+                aria-pressed={!normalized}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+                  !normalized
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                Absolute
+              </button>
+              <button
+                onClick={() => setNormalized(true)}
+                aria-pressed={normalized}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+                  normalized
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                Normalized %
+              </button>
+            </div>
+          )}
+          <TimeRangeButtons options={options} value={activeRange} onChange={handleRangeChange} />
+        </div>
       </CardHeader>
       <CardContent>
         {series.length > 0 && (
@@ -93,7 +173,7 @@ export function ComparisonChart({
             ))}
           </div>
         )}
-        {filteredData.length > 0 ? (
+        {displayData.length > 0 ? (
           <div
             className="h-[300px] sm:h-[400px]"
             role="figure"
@@ -101,7 +181,7 @@ export function ComparisonChart({
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={filteredData}
+                data={displayData}
                 margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
               >
                 <XAxis
@@ -118,12 +198,12 @@ export function ComparisonChart({
                   tick={{ fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={valueFormatter}
+                  tickFormatter={activeFormatter}
                 />
                 <Tooltip
                   formatter={(value: number | string | (number | string)[] | undefined, name: string | number | undefined) => {
                     const match = series.find((s) => s.id === name);
-                    return [valueFormatter(Number(value)), match?.label ?? String(name ?? "")];
+                    return [activeFormatter(Number(value)), match?.label ?? String(name ?? "")];
                   }}
                   labelFormatter={(label) =>
                     new Date(Number(label)).toLocaleDateString("en-US", {

@@ -43,6 +43,24 @@ export function detailToSupplyHistory(detail: StablecoinDetail | undefined): Sup
     .filter((d) => d.circulatingUsd > 0);
 }
 
+export interface PriceHistoryPoint {
+  date: number;       // epoch seconds
+  price: number;      // USD price
+}
+
+/** Extract historical prices from detail tokens. Price = totalCirculatingUSD / totalCirculating. */
+export function detailToPriceHistory(detail: StablecoinDetail | undefined): PriceHistoryPoint[] {
+  if (!detail?.tokens) return [];
+  return detail.tokens
+    .map((t) => {
+      const usd = sumCirculating(t.totalCirculatingUSD) || sumCirculating(t.circulating);
+      const native = sumCirculating(t.totalCirculating);
+      if (usd <= 0 || native <= 0) return null;
+      return { date: t.date, price: usd / native };
+    })
+    .filter((d): d is PriceHistoryPoint => d !== null);
+}
+
 export function useSupplyHistory(id: string) {
   const query = useApiQuery<StablecoinDetail>(
     ["stablecoin-detail", id],

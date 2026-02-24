@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
-import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
+import { useStablecoins, detailToSupplyHistory, detailToPriceHistory } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
@@ -18,10 +18,12 @@ import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { Link2, Check } from "lucide-react";
 import type { CoinOption } from "@/components/coin-selector";
-import type { SupplyHistoryPoint, StablecoinDetail } from "@/hooks/use-stablecoins";
+import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 
-const MAX_COINS = 3;
+const MAX_COINS = 5;
 
 /** Lookup from lowercased symbol to coin for URL parsing. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
@@ -36,8 +38,8 @@ export function CompareClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Parse initial selection from URL: ?coins=usdt,usdc,dai
-  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+  // Derive selected IDs from URL (single source of truth)
+  const selectedIds = useMemo(() => {
     const param = searchParams.get("coins");
     if (!param) return [];
     return param
@@ -46,18 +48,41 @@ export function CompareClient() {
       .filter((c): c is CoinOption => !!c)
       .slice(0, MAX_COINS)
       .map((c) => c.id);
-  });
+  }, [searchParams]);
 
-  // Sync selected coins to URL
-  useEffect(() => {
-    const symbols = selectedIds
-      .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
-      .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
-      .map((c) => c.symbol.toLowerCase());
-    const paramStr = symbols.join(",");
-    const newUrl = paramStr ? `/compare/?coins=${paramStr}` : "/compare/";
-    router.replace(newUrl, { scroll: false });
-  }, [selectedIds, router]);
+  const range = (searchParams.get("range") as TimeRangeOption) || "all";
+
+  const setRange = useCallback(
+    (newRange: TimeRangeOption) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newRange === "all") {
+        params.delete("range");
+      } else {
+        params.set("range", newRange);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/compare/?${qs}` : "/compare/", { scroll: false });
+    },
+    [searchParams, router],
+  );
+
+  // Write selected IDs to URL
+  const setSelectedIds = useCallback(
+    (updater: (prev: string[]) => string[]) => {
+      const next = updater(selectedIds);
+      const symbols = next
+        .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
+        .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
+        .map((c) => c.symbol.toLowerCase());
+      const params = new URLSearchParams();
+      if (symbols.length > 0) params.set("coins", symbols.join(","));
+      const currentRange = searchParams.get("range");
+      if (currentRange) params.set("range", currentRange);
+      const qs = params.toString();
+      router.replace(qs ? `/compare/?${qs}` : "/compare/", { scroll: false });
+    },
+    [selectedIds, router, searchParams],
+  );
 
   const coinOptions = useMemo<CoinOption[]>(
     () =>
@@ -91,20 +116,27 @@ export function CompareClient() {
     return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates;
   }, [listData]);
 
-  // Per-coin supply history using useQueries (via stablecoin-detail endpoint)
-  const supplyQueries = useQueries({
+  // Per-coin detail data (raw, used for both supply and price history)
+  const detailQueries = useQueries({
     queries: selectedIds.map((id) => ({
       queryKey: ["stablecoin-detail", id],
       queryFn: () =>
         apiFetch<StablecoinDetail>(`/api/stablecoin/${encodeURIComponent(id)}`),
       staleTime: CRON_1H,
       enabled: !!id,
-      select: detailToSupplyHistory,
     })),
   });
 
-  // Color palette for chart series (first 3 from shared palette)
-  const CHART_COLORS = CHART_PALETTE.slice(0, 3);
+  // Track per-coin detail fetch errors
+  const detailErrors = useMemo(() => {
+    const errors: Record<string, boolean> = {};
+    selectedIds.forEach((id, i) => {
+      if (detailQueries[i]?.isError) errors[id] = true;
+    });
+    return errors;
+  }, [selectedIds, detailQueries]);
+
+  const CHART_COLORS = CHART_PALETTE;
 
   // Build enriched coin objects for ComparisonTable
   const comparisonCoins = useMemo(() => {
@@ -135,23 +167,39 @@ export function CompareClient() {
   const supplySeries = useMemo(() => {
     return selectedIds
       .map((id, i) => {
-        const queryResult = supplyQueries[i];
-        if (!queryResult?.data || queryResult.data.length === 0) return null;
+        const detail = detailQueries[i]?.data;
+        const history = detailToSupplyHistory(detail);
+        if (history.length === 0) return null;
         const meta = TRACKED_META_BY_ID.get(id);
         return {
           id,
           label: meta?.name ?? id,
-          data: queryResult.data.map((d: SupplyHistoryPoint) => ({
-            ts: d.date * 1000,
-            value: d.circulatingUsd,
-          })),
+          data: history.map((d) => ({ ts: d.date * 1000, value: d.circulatingUsd })),
           color: CHART_COLORS[i % CHART_COLORS.length],
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
-  }, [selectedIds, supplyQueries]);
+  }, [selectedIds, detailQueries]);
 
-  const supplyLoading = supplyQueries.some((q) => q.isLoading);
+  // Build price chart series
+  const priceSeries = useMemo(() => {
+    return selectedIds
+      .map((id, i) => {
+        const detail = detailQueries[i]?.data;
+        const history = detailToPriceHistory(detail);
+        if (history.length === 0) return null;
+        const meta = TRACKED_META_BY_ID.get(id);
+        return {
+          id,
+          label: meta?.name ?? id,
+          data: history.map((d) => ({ ts: d.date * 1000, value: d.price })),
+          color: CHART_COLORS[i % CHART_COLORS.length],
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+  }, [selectedIds, detailQueries]);
+
+  const detailLoading = detailQueries.some((q) => q.isLoading);
 
   const handleSelect = (slotIndex: number, coin: CoinOption) => {
     setSelectedIds((prev) => {
@@ -170,7 +218,19 @@ export function CompareClient() {
     setSelectedIds((prev) => prev.filter((_, i) => i !== slotIndex));
   };
 
-  // Render 3 selector slots (filled slots + empty slots up to MAX_COINS)
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard may not be available
+    }
+  }, []);
+
+  // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
   for (let i = 0; i < MAX_COINS; i++) {
     const coin = selectedCoins[i] ?? null;
@@ -189,7 +249,27 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">{slots}</div>
+      {selectedIds.length >= 2 && (
+        <div className="flex justify-end">
+          <button
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Link2 className="h-3.5 w-3.5" />
+                Copy link
+              </>
+            )}
+          </button>
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
         <div className="text-center py-12 text-muted-foreground">
@@ -205,17 +285,34 @@ export function CompareClient() {
             coins={comparisonCoins}
             pegRates={pegRates}
             logos={logos}
+            detailErrors={detailErrors}
           />
 
-          {supplyLoading ? (
+          {detailLoading ? (
             <Skeleton className="h-[300px] sm:h-[400px] rounded-2xl" />
-          ) : supplySeries.length >= 2 ? (
-            <ComparisonChart
-              title="Market Cap History"
-              series={supplySeries}
-              formatValue={formatCurrency}
-            />
-          ) : null}
+          ) : (
+            <>
+              {supplySeries.length >= 2 && (
+                <ComparisonChart
+                  title="Market Cap History"
+                  series={supplySeries}
+                  formatValue={formatCurrency}
+                  range={range}
+                  onRangeChange={setRange}
+                  normalizable
+                />
+              )}
+              {priceSeries.length >= 2 && (
+                <ComparisonChart
+                  title="Price History"
+                  series={priceSeries}
+                  formatValue={(v) => `$${v.toFixed(4)}`}
+                  range={range}
+                  onRangeChange={setRange}
+                />
+              )}
+            </>
+          )}
 
         </div>
       )}
