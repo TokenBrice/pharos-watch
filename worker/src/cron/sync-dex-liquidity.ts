@@ -1264,9 +1264,9 @@ async function fetchGtPools(
           // Rule 3: New pool — add with GT quality
           const vol24h = parseFloat(a.volume_usd?.h24 ?? "0");
 
-          // Sanity check: volume/TVL ratio > 10x is suspicious for stablecoins
-          // (typical range is 0.1x–3x; 3500x means garbage data)
-          if (tvl > 0 && vol24h / tvl > 10) {
+          // Sanity check: volume/TVL ratio > 50x is garbage data
+          // (legit concentrated AMMs like Maverick hit 15-25x)
+          if (tvl > 0 && vol24h / tvl > 50) {
             stats.poolsSkippedRatio++;
             continue;
           }
@@ -1657,10 +1657,11 @@ async function computeStablecoinScores(
 
   for (const [id, m] of metrics) {
     // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
-    // before sorting — bad data from any source (DL, GT) gets dropped
+    // before sorting — bad data from any source (DL, GT) gets dropped.
+    // 50x is generous: legit concentrated AMMs (Maverick, Uni V4) hit 15-25x.
     m.topPools = m.topPools.filter((p) => {
       const vol = p.volumeUsd1d || 0;
-      return p.tvlUsd <= 0 || vol / p.tvlUsd <= 10;
+      return p.tvlUsd <= 0 || vol / p.tvlUsd <= 50;
     });
 
     // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
