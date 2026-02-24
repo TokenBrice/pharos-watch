@@ -9,21 +9,21 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 - [x] USDT (1) — Tether
 - [x] USDC (2) — USD Coin
-- [ ] DAI (5) — Dai <!-- In Progress -->
-- [ ] FRAX (6) — Frax <!-- In Progress -->
-- [ ] TUSD (7) — TrueUSD <!-- In Progress -->
-- [ ] LUSD (8) — Liquity USD <!-- In Progress -->
-- [ ] MIM (10) — Magic Internet Money <!-- In Progress -->
+- [x] DAI (5) — Dai
+- [x] FRAX (6) — Frax
+- [x] TUSD (7) — TrueUSD
+- [x] LUSD (8) — Liquity USD
+- [x] MIM (10) — Magic Internet Money
 - [x] USDP (11) — Pax Dollar
 - [x] USDD (14) — USDD
 - [x] DOLA (15) — Dola
 - [x] GUSD (19) — Gemini Dollar
 - [x] ALUSD (20) — Alchemix USD
-- [ ] SUSD (22) — sUSD <!-- In Progress -->
-- [ ] OUSD (23) — Origin Dollar <!-- In Progress -->
-- [ ] cUSD (24) — Celo Dollar <!-- In Progress -->
-- [ ] FPI (66) — Frax Price Index <!-- In Progress -->
-- [ ] UUSD (75) — Youves uUSD <!-- In Progress -->
+- [x] SUSD (22) — sUSD
+- [x] OUSD (23) — Origin Dollar
+- [x] cUSD (24) — Celo Dollar
+- [x] FPI (66) — Frax Price Index
+- [x] UUSD (75) — Youves uUSD
 - [x] LISUSD (79) — Lista USD
 - [x] EUSD (106) — Electronic USD
 - [x] crvUSD (110) — crvUSD
@@ -150,11 +150,11 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 ## Gold / Commodity Stablecoins
 
-- [ ] XAUT (gold-xaut) — Tether Gold
-- [ ] PAXG (gold-paxg) — PAX Gold
-- [ ] KAU (gold-kau) — Kinesis Gold
-- [ ] XAUm (gold-xaum) — Matrixdock Gold
-- [ ] VRO (gold-vro) — VeraOne
-- [ ] CGO (gold-cgo) — Comtech Gold
-- [ ] DGLD (gold-dgld) — DGLD Tokenized Gold
-- [ ] KAG (silver-kag) — Kinesis Silver
+- [ ] XAUT (gold-xaut) — Tether Gold <!-- In Progress -->
+- [ ] PAXG (gold-paxg) — PAX Gold <!-- In Progress -->
+- [ ] KAU (gold-kau) — Kinesis Gold <!-- In Progress -->
+- [ ] XAUm (gold-xaum) — Matrixdock Gold <!-- In Progress -->
+- [ ] VRO (gold-vro) — VeraOne <!-- In Progress -->
+- [ ] CGO (gold-cgo) — Comtech Gold <!-- In Progress -->
+- [ ] DGLD (gold-dgld) — DGLD Tokenized Gold <!-- In Progress -->
+- [ ] KAG (silver-kag) — Kinesis Silver <!-- In Progress -->

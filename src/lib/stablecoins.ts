@@ -147,8 +147,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
-    collateral: "Mix of crypto (ETH, wBTC), RWA (U.S. Treasuries), and centralized stablecoins (USDC) via Maker vaults",
-    pegMechanism: "Peg Stability Module enabling 1:1 swaps with USDC; overcollateralized CDP liquidations",
+    geckoId: "dai",
+    collateral: "Multi-collateral: ETH (~70% of Core vaults), wstETH (~20%), WBTC (~10%), USDC via LitePSM (~$1.6B), and RWA (U.S. Treasuries via Blocktower Andromeda, ~$1.7B); all managed by Sky/MakerDAO governance",
+    pegMechanism: "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     links: [
       { label: "Website", url: "https://makerdao.com/" },
       { label: "Twitter", url: "https://x.com/MakerDAO" },
@@ -157,6 +158,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Denmark" },
     contracts: [
       { chain: "ethereum", address: "0x6b175474e89094c44da98b954eedeac495271d0f", decimals: 18 },
+      { chain: "polygon", address: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063", decimals: 18 },
+      { chain: "arbitrum", address: "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1", decimals: 18 },
+      { chain: "optimism", address: "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1", decimals: 18 },
+      { chain: "bsc", address: "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3", decimals: 18 },
+      { chain: "avalanche", address: "0xd586e7f844cea2f87f50152665bcbc2c279d8d70", decimals: 18 },
+      { chain: "fantom", address: "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e", decimals: 18 },
+      { chain: "base", address: "0x50c5725949a6f0c72e6c4a641f24049a917db0cb", decimals: 18 },
     ],
   }),
   usd("120", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
@@ -372,9 +380,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("7", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
-    collateral: "U.S. dollars held in escrow accounts with independent attestation",
-    pegMechanism: "Direct 1:1 redemption through TrueToken/Archblock",
-    proofOfReserves: { type: "real-time", url: "https://tusd.io/transparency", provider: "Chainlink / Moore Hong Kong" },
+    geckoId: "true-usd",
+    collateral: "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
+    pegMechanism: "Direct 1:1 redemption through Techteryx; minting controlled by Chainlink Proof of Reserve feed preventing supply from exceeding attested reserves",
+    proofOfReserves: { type: "real-time", url: "https://tusd.io/transparency", provider: "Moore Hong Kong / Chainlink" },
     links: [
       { label: "Website", url: "https://tusd.io/" },
       { label: "Twitter", url: "https://x.com/tusdio" },
@@ -382,6 +391,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Dominica" },
     contracts: [
       { chain: "ethereum", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
+      { chain: "tron", address: "TUpMhErZL2fhh4sVNULAbNKLokS4GjC1F4", decimals: 18 },
+      { chain: "avalanche", address: "0x1c20e891bab6b1727d14da358fae2984ed9b59eb", decimals: 18 },
+      { chain: "polygon", address: "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756", decimals: 18 },
+      { chain: "arbitrum", address: "0x4d15a3a2286d883af0aa1b3f21367843fac63e07", decimals: 18 },
+      { chain: "optimism", address: "0xcb59a0a753fdb7491d5f3d794316f1ade197b21e", decimals: 18 },
     ],
   }),
   usd("119", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
@@ -496,9 +510,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
-  usd("6", "Frax", "FRAX", "algorithmic", "centralized-dependent", {
-    collateral: "Mix of USDC reserves and algorithmic expansion/contraction (now 100% USDC-collateralized)",
-    pegMechanism: "Fractional-algorithmic: fully collateralized by USDC with algorithmic supply adjustment",
+  usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
+    geckoId: "legacy-frax-dollar",
+    collateral: "U.S. Treasury bills, Federal Reserve repurchase agreements, FDIC-insured deposits, and on-chain protocol-owned liquidity via AMOs (Curve, Fraxlend, Fraxswap) — fully collateralized since FIP-188 (2023)",
+    pegMechanism: "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
     links: [
       { label: "Website", url: "https://frax.com/" },
       { label: "Twitter", url: "https://x.com/fraxfinance" },
@@ -507,6 +522,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States" },
     contracts: [
       { chain: "ethereum", address: "0x853d955acef822db058eb8505911ed77f175b99e", decimals: 18 },
+      { chain: "arbitrum", address: "0x17fc002b466eec40dae837fc4be5c67993ddbd6f", decimals: 18 },
+      { chain: "optimism", address: "0x2e3d870790dc77a83dd1d18184acc7439a53f475", decimals: 18 },
+      { chain: "polygon", address: "0x45c32fa6df82ead1e2ef74d17b76547eddfaff89", decimals: 18 },
+      { chain: "avalanche", address: "0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64", decimals: 18 },
+      { chain: "bsc", address: "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40", decimals: 18 },
+      { chain: "fantom", address: "0xdc301622e621166bd8e82f2ca0a26c13ad0be355", decimals: 18 },
     ],
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
@@ -745,11 +766,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
     geckoId: "frax-price-index",
     navToken: true,
-    collateral: "FRAX and algorithmic mechanisms via Frax Finance",
-    pegMechanism: "Algorithmic adjustment tied to CPI; depends on FRAX which depends on USDC",
+    collateral: "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
+    pegMechanism: "Redemption price grows on-chain per second at the 12-month US CPI-U rate (BLS data); updated monthly via Chainlink oracle; 100% collateral ratio maintained via AMOs",
     links: [
       { label: "Website", url: "https://frax.com/" },
       { label: "Twitter", url: "https://x.com/fraxfinance" },
+      { label: "Docs", url: "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics" },
     ],
     jurisdiction: { country: "United States" },
     contracts: [
@@ -971,15 +993,18 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("22", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "SNX, ETH, and USDC/stataUSDC via Synthetix V3; V2 was SNX-only",
-    pegMechanism: "Overcollateralization via C-ratio (200%+); V3 added USDC as core collateral on Base",
+    geckoId: "synthetix-susd",
+    collateral: "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
+    pegMechanism: "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
     links: [
       { label: "Website", url: "https://www.synthetix.io/" },
       { label: "Twitter", url: "https://x.com/synthetix_io" },
+      { label: "Docs", url: "https://docs.synthetix.io/" },
     ],
     jurisdiction: { country: "Australia" },
     contracts: [
       { chain: "ethereum", address: "0x57ab1ec28d129707052df4df418d58a2d46d5f51", decimals: 18 },
+      { chain: "optimism", address: "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9", decimals: 18 },
     ],
   }),
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
@@ -1009,8 +1034,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
-    collateral: "ETH only; minimum 110% collateralization ratio",
-    pegMechanism: "Overcollateralized CDP with direct ETH redemption at $1 face value",
+    geckoId: "liquity-usd",
+    collateral: "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",
+    pegMechanism: "Overcollateralized ETH CDPs (Troves) with three peg mechanisms: (1) hard floor at $1 via direct on-chain redemption of LUSD for $1 of ETH from the riskiest Trove; (2) Stability Pool absorbs liquidations at 110% collateral ratio; (3) algorithmically adjusted borrowing and redemption fees throttle arbitrage volume",
     links: [
       { label: "Website", url: "https://www.liquity.org/" },
       { label: "Twitter", url: "https://x.com/LiquityProtocol" },
@@ -1018,6 +1044,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 },
+      { chain: "optimism", address: "0xc40f949f8a4e094d1b49a23ea9241d289b7b2819", decimals: 18 },
+      { chain: "arbitrum", address: "0x93b346b6bc2548da6a1e7d98e9a421b42541425b", decimals: 18 },
     ],
   }),
   usd("168", "fxUSD", "fxUSD", "crypto-backed", "centralized-dependent", {
@@ -1042,10 +1070,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 81-90 ───────────────────────────────────────────────────────
   usd("10", "Magic Internet Money", "MIM", "crypto-backed", "centralized-dependent", {
-    collateral: "Interest-bearing tokens (yvDAI, xSUSHI, yvUSDT) via Abracadabra CDPs",
-    pegMechanism: "Overcollateralized lending with yield-bearing collateral; depends on underlying stablecoin positions",
+    geckoId: "magic-internet-money",
+    collateral: "Interest-bearing tokens (yvWETH, yvUSDC, yvDAI, yvUSDT, xSUSHI, stETH, WBTC, WETH) deposited as collateral into Abracadabra cauldrons (isolated lending markets)",
+    pegMechanism: "CDP-style cauldrons with overcollateralization and automatic liquidations (4% liquidation fee); borrowers are incentivized to buy MIM below $1 to repay debt; 0.5% borrow/interest fees accrue to sSPELL stakers and governance treasury",
+    links: [
+      { label: "Website", url: "https://abracadabra.money/" },
+      { label: "Twitter", url: "https://x.com/MIM_Spell" },
+      { label: "Docs", url: "https://docs.abracadabra.money/" },
+    ],
     contracts: [
       { chain: "ethereum", address: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", decimals: 18 },
+      { chain: "arbitrum", address: "0xfea7a6a0b346362bf88a9e4a88416b77a57d6c2a", decimals: 18 },
+      { chain: "avalanche", address: "0x130966628846bfd36ff31a822705796e8cb8c18d", decimals: 18 },
+      { chain: "fantom", address: "0x82f0b8b456c1a451378467398982d4834b6829c1", decimals: 18 },
+      { chain: "bsc", address: "0xfe19f0b51438fd612f6fd59c1dbb3ea319f433ba", decimals: 18 },
+      { chain: "optimism", address: "0xb153fb3d196a8eb25522705560ac152eeec57901", decimals: 18 },
+      { chain: "polygon", address: "0x49a0400587a7f65072c87c4910449fdcc5c47242", decimals: 18 },
     ],
     supplyMethod: {
       type: "exclude", // totalSupply() includes unborrowed MIM across 45+ Cauldron contracts; DefiLlama tracks actual debt
@@ -1157,7 +1197,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     links: [
       { label: "Website", url: "https://reserve.org/" },
       { label: "Twitter", url: "https://x.com/reserveprotocol" },
-      { label: "Docs", url: "https://reserve.org/protocol/" },
+      { label: "Docs", url: "https://docs.reserve.org/" },
     ],
     contracts: [
       { chain: "ethereum", address: "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f", decimals: 18 },
@@ -1288,17 +1328,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("24", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
-    collateral: "Mento reserve containing USDC, DAI, plus BTC, ETH, and CELO (110%+ overcollateralization)",
-    pegMechanism: "Constant-product market maker arbitrage against reserve assets including centralized stablecoins",
+    geckoId: "celo-dollar",
+    collateral: "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
+    pegMechanism: "Mento AMM: users mint cUSD by sending $1 of reserve collateral, burn to receive equivalent value; oracle-driven arbitrage restores peg; circuit breakers enforce safety bounds",
     links: [
       { label: "Website", url: "https://celo.org/" },
       { label: "Twitter", url: "https://x.com/celoorg" },
-      { label: "Docs", url: "https://docs.celo.org/learn/platform-native-stablecoins-summary" },
+      { label: "Docs", url: "https://docs.mento.org/mento/overview/core-concepts/the-reserve" },
     ],
     jurisdiction: { country: "Germany" },
     contracts: [
       { chain: "celo", address: "0x765de816845861e75a25fca122bb6898b8b1282a", decimals: 18 },
     ],
+    proofOfReserves: { type: "self-reported", url: "https://reserve.mento.org/" },
   }),
   usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "alchemix-usd",
@@ -1381,8 +1423,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("75", "Youves uUSD", "UUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "XTZ (Tezos native token) at 300% minimum overcollateralization ratio",
-    pegMechanism: "Overcollateralized CDP on Tezos; purely crypto-backed but on a chain outside the Ethereum/L2 ecosystem",
+    geckoId: "youves-uusd",
+    collateral: "Overcollateralized by XTZ, tzBTC, USDt, or SIRS (tez/tzBTC LP); target ratios vary by collateral (200% for XTZ, 115% for stablecoins); 300% applied only to legacy v1/v2 vaults",
+    pegMechanism: "Overcollateralized CDP on Tezos with variable collateral ratios; liquidations triggered at emergency ratio with 12.5% reward; savings pool provides additional peg stability",
+    links: [
+      { label: "Website", url: "https://youves.com" },
+      { label: "Docs", url: "https://docs.youves.com" },
+      { label: "GitHub", url: "https://github.com/youves-com" },
+    ],
   }),
   usd("327", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -1427,11 +1475,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
-    collateral: "USDC, USDT, and USDS deployed into DeFi strategies (Morpho, Curve/Convex, Sky)",
+    geckoId: "origin-dollar",
+    collateral: "USDC deployed into DeFi strategies (Morpho, Curve)",
     pegMechanism: "1:1 minting/redemption backed by stablecoins; yield distributed via rebasing",
     links: [
       { label: "Website", url: "https://www.ousd.com/" },
       { label: "Twitter", url: "https://x.com/OriginProtocol" },
+      { label: "GitHub", url: "https://github.com/OriginProtocol/origin-dollar" },
     ],
     contracts: [
       { chain: "ethereum", address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86", decimals: 18 },
