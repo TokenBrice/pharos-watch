@@ -9,26 +9,26 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 - [x] USDT (1) — Tether
 - [x] USDC (2) — USD Coin
-- [ ] DAI (5) — Dai
-- [ ] FRAX (6) — Frax
-- [ ] TUSD (7) — TrueUSD
-- [ ] LUSD (8) — Liquity USD
-- [ ] MIM (10) — Magic Internet Money
-- [ ] USDP (11) — Pax Dollar
-- [ ] USDD (14) — USDD
-- [ ] DOLA (15) — Dola
-- [ ] GUSD (19) — Gemini Dollar
-- [ ] ALUSD (20) — Alchemix USD
-- [ ] SUSD (22) — sUSD
-- [ ] OUSD (23) — Origin Dollar
-- [ ] cUSD (24) — Celo Dollar
-- [ ] FPI (66) — Frax Price Index
-- [ ] UUSD (75) — Youves uUSD
-- [ ] LISUSD (79) — Lista USD
-- [ ] EUSD (106) — Electronic USD
-- [ ] crvUSD (110) — crvUSD
-- [ ] GHO (118) — GHO
-- [ ] FDUSD (119) — First Digital USD
+- [ ] DAI (5) — Dai <!-- In Progress -->
+- [ ] FRAX (6) — Frax <!-- In Progress -->
+- [ ] TUSD (7) — TrueUSD <!-- In Progress -->
+- [ ] LUSD (8) — Liquity USD <!-- In Progress -->
+- [ ] MIM (10) — Magic Internet Money <!-- In Progress -->
+- [x] USDP (11) — Pax Dollar
+- [x] USDD (14) — USDD
+- [x] DOLA (15) — Dola
+- [x] GUSD (19) — Gemini Dollar
+- [x] ALUSD (20) — Alchemix USD
+- [ ] SUSD (22) — sUSD <!-- In Progress -->
+- [ ] OUSD (23) — Origin Dollar <!-- In Progress -->
+- [ ] cUSD (24) — Celo Dollar <!-- In Progress -->
+- [ ] FPI (66) — Frax Price Index <!-- In Progress -->
+- [ ] UUSD (75) — Youves uUSD <!-- In Progress -->
+- [x] LISUSD (79) — Lista USD
+- [x] EUSD (106) — Electronic USD
+- [x] crvUSD (110) — crvUSD
+- [x] GHO (118) — GHO
+- [x] FDUSD (119) — First Digital USD
 - [ ] PYUSD (120) — PayPal USD
 - [ ] USDY (129) — Ondo US Dollar Yield
 - [x] USDe (146) — Ethena USDe

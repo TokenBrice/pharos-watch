@@ -256,16 +256,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
-    collateral: "Over-collateralized by BTC, USDT, and TRX held in TRON DAO Reserve",
-    pegMechanism: "Peg Stability Module with USDT; overcollateralization ratio maintained above 120%",
+    geckoId: "usdd",
+    collateral: "Over-collateralized by TRX, sTRX, and USDT locked in CDP vaults; Bitcoin removed from reserves in August 2024",
+    pegMechanism: "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
     proofOfReserves: { type: "self-reported", url: "https://usdd.io/" },
     links: [
       { label: "Website", url: "https://usdd.io/" },
+      { label: "Docs", url: "https://docs.usdd.io" },
       { label: "Twitter", url: "https://x.com/usddio" },
     ],
     jurisdiction: { country: "Dominica" },
     contracts: [
       { chain: "tron", address: "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz", decimals: 18 },
+      { chain: "ethereum", address: "0x4f8e5de400de08b164e7421b3ee387f461becd1a", decimals: 18 },
+      { chain: "bsc", address: "0x45e51bc23d592eb2dba86da3985299f7895d66ba", decimals: 18 },
     ],
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
@@ -336,17 +340,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
-    collateral: "Multiple crypto assets (ETH, wBTC, LINK) deposited in Aave V3 as collateral",
-    pegMechanism: "Overcollateralized minting via Aave; GHO Stability Module enables direct USDC/USDT swaps",
+    geckoId: "gho",
+    collateral: "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
+    pegMechanism: "Overcollateralized minting via Aave V3 facilitator model; GHO Stability Module (GSM) enables 1:1 conversions with USDC and USDT; dynamic borrow rate adjustments by GHO Stewards reinforce the peg",
     links: [
       { label: "Website", url: "https://aave.com/gho" },
-      { label: "Twitter", url: "https://x.com/aaveaave" },
-      { label: "Docs", url: "https://docs.aave.com/faq/gho-stablecoin" },
+      { label: "Twitter", url: "https://x.com/GHOAave" },
+      { label: "Docs", url: "https://aave.com/docs/ecosystem/gho" },
+      { label: "GitHub", url: "https://github.com/aave/gho-core" },
     ],
-    jurisdiction: { country: "Ireland", regulator: "Central Bank of Ireland", license: "MiCA Authorization" },
     contracts: [
       { chain: "ethereum", address: "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f", decimals: 18 },
+      { chain: "arbitrum", address: "0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33", decimals: 18 },
+      { chain: "base", address: "0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee", decimals: 18 },
     ],
+    proofOfReserves: { type: "independent-audit", url: "https://github.com/aave/gho-core/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
   }),
 
   // ── Rank 21-30 ───────────────────────────────────────────────────────
@@ -377,16 +385,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("119", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
-    collateral: "Cash and cash equivalents (U.S. Treasury bills) held in custodial accounts",
-    pegMechanism: "Direct 1:1 redemption through First Digital Trust",
-    proofOfReserves: { type: "independent-audit", url: "https://www.firstdigitallabs.com/transparency", provider: "Prescient Assurance" },
+    geckoId: "first-digital-usd",
+    collateral: "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
+    pegMechanism: "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
+    proofOfReserves: { type: "independent-audit", url: "https://www.firstdigitallabs.com/transparency", provider: "IAPA International / Prism" },
     links: [
       { label: "Website", url: "https://www.firstdigitallabs.com/fdusd" },
       { label: "Twitter", url: "https://x.com/FDLabsHQ" },
     ],
-    jurisdiction: { country: "Hong Kong", regulator: "HKMA", license: "Trust Company" },
+    jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409", decimals: 18 },
+      { chain: "bsc", address: "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409", decimals: 18 },
+      { chain: "arbitrum", address: "0x93c9932e4afa59201f0b5e63f7d816516f1669fe", decimals: 18 },
     ],
   }),
   usd("296", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
@@ -439,16 +450,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "SEC", license: "SEC-Registered Security" },
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "ETH, wBTC, wstETH, and other crypto assets via LLAMMA (Lending-Liquidating AMM)",
-    pegMechanism: "Peg keepers use centralized stablecoins (USDC, USDT, USDP) to stabilize price via Curve pools",
+    geckoId: "crvusd",
+    collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
+    pegMechanism: "Stabilization Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, pyUSD, and TUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     links: [
       { label: "Website", url: "https://www.curve.finance/" },
       { label: "Twitter", url: "https://x.com/CurveFinance" },
       { label: "Docs", url: "https://resources.curve.finance/" },
+      { label: "GitHub", url: "https://github.com/curvefi/curve-stablecoin" },
     ],
     jurisdiction: { country: "Switzerland" },
     contracts: [
       { chain: "ethereum", address: "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", decimals: 18 },
+      { chain: "arbitrum", address: "0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5", decimals: 18 },
+      { chain: "base", address: "0x417ac0e078398c154edfadd9ef675d30be60af93", decimals: 18 },
     ],
     supplyMethod: {
       type: "exclude", // totalSupply() includes pre-minted lending capacity; DefiLlama aggregates debt across all factories
@@ -495,15 +510,21 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
-    collateral: "Various crypto assets in Inverse Finance lending markets, including USDC",
-    pegMechanism: "Fed contracts manage supply via lending markets; relies on USDC for stability mechanisms",
+    geckoId: "dola-usd",
+    collateral: "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
+    pegMechanism: "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
+    proofOfReserves: { type: "self-reported", url: "https://www.inverse.finance/transparency" },
     links: [
       { label: "Website", url: "https://www.inverse.finance/" },
-      { label: "Twitter", url: "https://x.com/InverseFinance" },
       { label: "Docs", url: "https://docs.inverse.finance/" },
+      { label: "GitHub", url: "https://github.com/InverseFinance" },
+      { label: "Twitter", url: "https://x.com/InverseFinance" },
     ],
     contracts: [
       { chain: "ethereum", address: "0x865377367054516e17014ccded1e7d814edc9ce4", decimals: 18 },
+      { chain: "arbitrum", address: "0x6a7661795c374c0bfc635934efaddff3a7ee23b6", decimals: 18 },
+      { chain: "base", address: "0x4621b7a9c75199271f773ebd9a499dbd165c3191", decimals: 18 },
+      { chain: "optimism", address: "0x8ae125e8653821e851f12a49f7765db9a9ce7384", decimals: 18 },
     ],
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
@@ -759,12 +780,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States" },
   }),
   usd("79", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
+    geckoId: "helio-protocol-hay",
     collateral: "BNB, ETH, and LSTs via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
     pegMechanism: "PSM enabling 1:1 swaps with centralized stablecoins; CDP overcollateralization and liquidation",
     links: [
       { label: "Website", url: "https://lista.org/" },
       { label: "Twitter", url: "https://x.com/lista_dao" },
       { label: "Docs", url: "https://docs.bsc.lista.org" },
+      { label: "GitHub", url: "https://github.com/lista-dao" },
     ],
     contracts: [
       { chain: "bsc", address: "0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5", decimals: 18 },
@@ -866,11 +889,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("19", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
-    collateral: "U.S. dollar deposits held at State Street Bank",
+    geckoId: "gemini-dollar",
+    collateral: "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
     pegMechanism: "Direct 1:1 redemption through Gemini",
     proofOfReserves: { type: "independent-audit", url: "https://www.gemini.com/dollar", provider: "BPM LLP" },
     links: [
       { label: "Website", url: "https://www.gemini.com/dollar" },
+      { label: "GitHub", url: "https://github.com/gemini/dollar" },
       { label: "Twitter", url: "https://x.com/gemini" },
     ],
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
@@ -879,14 +904,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("11", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
-    collateral: "U.S. dollar deposits and T-bills held in bankruptcy-remote accounts",
+    geckoId: "paxos-standard",
+    collateral: "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
     pegMechanism: "Direct 1:1 redemption through Paxos",
     proofOfReserves: { type: "independent-audit", url: "https://www.paxos.com/usdp-transparency", provider: "KPMG" },
     links: [
       { label: "Website", url: "https://www.paxos.com/usdp" },
+      { label: "Docs", url: "https://docs.paxos.com/guides/stablecoin/usdp" },
       { label: "Twitter", url: "https://x.com/paxos" },
     ],
-    jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
+    jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0x8e870d67f660d95d5be530380d0ec0bd388289e1", decimals: 18 },
     ],
@@ -1124,15 +1151,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 91-100 ──────────────────────────────────────────────────────
   usd("106", "Electronic USD", "EUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "ETH LSTs (stETH, rETH, WBETH, swETH) with 150% minimum collateral ratio",
-    pegMechanism: "Overcollateralized CDP with Curve eUSD/3CRV pool and USDC premium suppression mechanism",
+    geckoId: "electronic-usd",
+    collateral: "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
+    pegMechanism: "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
     links: [
-      { label: "Website", url: "https://lybra.finance/" },
-      { label: "Twitter", url: "https://x.com/LybraFinance" },
+      { label: "Website", url: "https://reserve.org/" },
+      { label: "Twitter", url: "https://x.com/reserveprotocol" },
+      { label: "Docs", url: "https://reserve.org/protocol/" },
     ],
     contracts: [
-      { chain: "ethereum", address: "0xdf3ac4f479375802a821f7b7b46cd7eb5e4262cc", decimals: 18 },
+      { chain: "ethereum", address: "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f", decimals: 18 },
+      { chain: "base", address: "0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4", decimals: 18 },
+      { chain: "arbitrum", address: "0x12275dcb9048680c4be40942ea4d92c74c63b844", decimals: 18 },
     ],
+    proofOfReserves: { type: "real-time", url: "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview" },
   }),
   usd("154", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
     collateral: "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
@@ -1269,15 +1301,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "centralized-dependent", {
-    collateral: "DAI, USDC, USDT, and their yield-bearing vault tokens (yvDAI, yvUSDC, yvUSDT) via Alchemix CDPs",
+    geckoId: "alchemix-usd",
+    collateral: "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
     pegMechanism: "Self-repaying loans: yield from deposited stablecoin collateral automatically repays debt; Transmuter guarantees 1:1 redemption",
     links: [
       { label: "Website", url: "https://alchemix.fi/" },
+      { label: "Docs", url: "https://v2-docs.alchemix.fi/" },
+      { label: "GitHub", url: "https://github.com/alchemix-finance" },
       { label: "Twitter", url: "https://x.com/alchemixfi" },
     ],
-    jurisdiction: { country: "Saint Kitts and Nevis" },
     contracts: [
       { chain: "ethereum", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
+      { chain: "arbitrum", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
+      { chain: "optimism", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
     ],
   }),
   usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "centralized-dependent", {
