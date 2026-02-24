@@ -240,6 +240,7 @@ export interface DeadStablecoin {
   causeOfDeath: CauseOfDeath;
   deathDate: string;        // "YYYY-MM" format
   peakMcap?: number;        // peak circulating supply in USD (from DefiLlama historical data)
+  epitaph?: string;         // terse inscription for the tombstone face (~25 chars for sm, ~35 for md/lg)
   obituary: string;
   sourceUrl: string;
   sourceLabel: string;

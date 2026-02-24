@@ -30,6 +30,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     pegCurrency: "USD",
     causeOfDeath: "algorithmic-failure",
     deathDate: "2018-03",
+    epitaph: "The first to try",
     obituary:
       "One of the first stablecoins ever created (2014), NuBits held its peg for two years before collapsing when holders dumped it to chase Bitcoin gains. A pioneering cautionary tale about algorithmic pegs backed by volatile assets. (Excluded from timeline view due to early date.)",
     sourceUrl: "https://medium.com/reserve-currency/the-end-of-a-stablecoin-the-case-of-nubits-dd1f0fb427a9",
@@ -45,6 +46,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2021-01",
     peakMcap: 550_000_000,
+    epitaph: "The coupon experiment",
     obituary:
       "Pioneered the \"seigniorage shares\" model in DeFi. When ESD traded below $1, users could buy coupons (burning ESD) in hopes of future redemption at a profit. The mechanism worked during expansion but collapsed when confidence evaporated — coupons expired worthless, and ESD fell to $0.01.",
     sourceUrl: "https://thedailyeconomy.org/article/algorithmic-stablecoins/",
@@ -58,6 +60,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2021-01",
     peakMcap: 300_000_000,
+    epitaph: "Forked ESD. Same fate",
     obituary:
       "A fork of ESD with faster epoch cycles (2 hours vs 8 hours), designed to stabilize more quickly. Instead, the shorter cycles amplified volatility. DSD spiked to $3 during expansion then collapsed to $0.24 in the same month, proving that faster reflexivity cuts both ways.",
     sourceUrl: "https://cointelegraph.com/news/dynamic-set-dollar-faces-massive-test-as-stablecoin-falls-as-low-as-27",
@@ -71,6 +74,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     peakMcap: 91_119_238,
     causeOfDeath: "algorithmic-failure",
     deathDate: "2021-01",
+    epitaph: "The theory was elegant",
     obituary:
       "An anonymous fork of the Basis design, BAC lost its peg within weeks of launch. Later revealed to be co-founded by Do Kwon under a pseudonym -- who learned nothing before building the even more catastrophic TerraUSD.",
     sourceUrl: "https://protos.com/basis-cash-the-failed-algorithmic-stablecoin-do-kwon-didnt-learn-from",
@@ -84,6 +88,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2021-06",
     peakMcap: 800_000_000,
+    epitaph: "Crypto's first bank run",
     obituary:
       "Dubbed crypto's \"first large-scale bank run.\" IRON was partially collateralized (75% USDC, 25% TITAN token). When whales dumped TITAN at its peak, a flawed redemption mechanism sent TITAN from $65 to zero in hours, dragging IRON down with it.",
     sourceUrl: "https://www.coindesk.com/markets/2021/06/17/in-token-crash-postmortem-iron-finance-says-it-suffered-cryptos-first-large-scale-bank-run",
@@ -98,6 +103,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2021-09",
     peakMcap: 318_800_000,
+    epitaph: "Venus couldn't save it",
     obituary:
       "Venus Protocol's synthetic stablecoin on BSC was minted freely during DeFi summer 2021 — too freely. A $77M bad-debt crisis cratered confidence, VAI shed its peg to $0.74, and minting was paused. Supply collapsed 99% from $300M+ to under $3M.",
     sourceUrl: "https://cointelegraph.com/news/these-are-the-least-stable-stablecoins-not-named-terrausd",
@@ -113,6 +119,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-03",
     peakMcap: 52_000_000,
+    epitaph: "Infinite mint, instant death",
     obituary:
       "Missing validation code on Solana allowed an attacker to mint 2 billion CASH using a fake worthless token as collateral, draining $52M. CASH crashed from $1 to $0.00005 in minutes. The unaudited contract was a sitting duck. The hacker, Shakeeb Ahmed, was later caught and sentenced by the DOJ.",
     sourceUrl: "https://www.coindesk.com/tech/2022/03/23/stablecoin-cashio-suffers-infinite-glitch-exploit-tvl-drops-by-28m",
@@ -126,6 +133,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-04",
     peakMcap: 1_023_616_756,
+    epitaph: "Waves crashed",
     obituary:
       "Succumbed to an algorithmic death spiral after WAVES price manipulation destabilized collateral backing. Rebranded to XTN, now trading at $0.02.",
     sourceUrl: "https://cointelegraph.com/news/neutrino-dollar-breaks-peg-falls-to-0-82-amid-waves-price-manipulation-accusations",
@@ -139,6 +147,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-04",
     peakMcap: 100_000_000,
+    epitaph: "Beanstalk got cut down",
     obituary:
       "The original Beanstalk deployment grew to $100M and $144M in liquidity before a flash-loan governance attack drained $182M. The attacker flash-loaned $1B+ to gain 79% governance power and passed a malicious proposal in a single transaction. BEAN crashed from $1 to $0.09. The protocol was 'Replanted' with new contracts four months later.",
     sourceUrl: "https://www.coindesk.com/tech/2022/04/17/attacker-drains-182m-from-beanstalk-stablecoin-protocol",
@@ -152,6 +161,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-05",
     peakMcap: 18_770_471_902,
+    epitaph: "Too big to fail. Too flawed to live",
     obituary:
       "The largest stablecoin collapse in history. UST's algorithmic peg relied on minting/burning LUNA, but a coordinated sell-off triggered a death spiral that vaporized $40B in combined value within days. Anchor's unsustainable 20% yield had concentrated 70% of supply in a single venue.",
     sourceUrl: "https://www.coindesk.com/tech/2022/05/11/usts-do-kwon-was-behind-earlier-failed-stablecoin-ex-terra-colleagues-say",
@@ -165,6 +175,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-05",
     peakMcap: 80_000_000,
+    epitaph: "Swept away with Terra",
     obituary:
       "The most-used non-USD stablecoin in the Terra ecosystem, powering real Korean e-commerce payments via the CHAI app with millions of transactions. Destroyed alongside UST and LUNA in the May 2022 death spiral — all Terra stablecoins died simultaneously, but KRT was the only alternative peg with meaningful market cap.",
     sourceUrl: "https://en.wikipedia.org/wiki/Terra_(blockchain)",
@@ -178,6 +189,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     peakMcap: 62_000_000,
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-05",
+    epitaph: "Collateral damage",
     obituary:
       "An algorithmic stablecoin on Fantom hit by flash loan exploits totaling $16M, then finished off by contagion from UST's collapse. A further hack in May 2023 delivered the final blow.",
     sourceUrl: "https://www.coindesk.com/markets/2022/05/16/fantom-stablecoin-dei-becomes-latest-to-lose-dollar-peg",
@@ -191,6 +203,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2022-06",
     peakMcap: 196_400_000,
+    epitaph: "CoinFLEX went rigid",
     obituary:
       "CoinFLEX's interest-bearing stablecoin promised yields up to 114% APY from its futures lending market. When Roger Ver's account blew an $84M hole in the exchange, flexUSD holders discovered 'interest-bearing' also meant 'loss-bearing.' The exchange froze all redemptions, rebranded into OPNX with Three Arrows Capital's founders, and that venture also collapsed. 166M flexUSD tokens sit unredeemable at $0.08.",
     sourceUrl: "https://techstory.in/coinflexs-flexusd-is-the-new-entrant-in-the-club-of-failed-stablecoins/",
@@ -205,6 +218,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2022-06",
     peakMcap: 176_147_186,
+    epitaph: "Kava moved on",
     obituary:
       "Kava's flagship stablecoin was the crown jewel of the first cross-chain DeFi hub — mint USDX by depositing BTC, XRP, BNB, or KAVA into CDPs on Cosmos. It peaked at $176M in April 2022, then UST's implosion exposed a fatal flaw: USDX had accepted UST as collateral. The peg cracked to $0.55 and never healed. Kava Labs quietly pivoted to AI infrastructure and 'DeCloud' ambitions, leaving USDX to bleed over three years to $11M, trading at $0.44.",
     sourceUrl: "https://www.theblock.co/post/146802/kava-networks-usdx-tumbles-to-0-65-as-yet-another-stablecoin-depegs",
@@ -219,6 +233,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-06",
     peakMcap: 61_000_000,
+    epitaph: "Chained to a falling chain",
     obituary:
       "Fantom's native overcollateralized stablecoin required 300-500% FTM collateral ratios, but collapsed alongside the broader DeFi crisis in 2022. Traders exploited the gap between its market price and collateral value, devastating protocols like Scream. The peg broke to $0.50-$0.70 and never recovered, sliding to under $0.10. With the Fantom network itself migrating to Sonic, fUSD became a zombie token — still in wallets, but functionally dead.",
     sourceUrl: "https://www.reddit.com/r/FantomFoundation/comments/vl97k6/what_has_happened_to_fantom/",
@@ -232,6 +247,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2022-08",
     peakMcap: 20_100_000,
+    epitaph: "Inflation-proof wasn't",
     obituary:
       "The first CPI-pegged stablecoin promised inflation protection via yields from Rari Fuse lending markets. When the $80M Fuse exploit wiped out those markets, VOLT lost its yield engine. The Tribe DAO dissolution four months later removed the last collateral backstop; the team pivoted to Ethereum Credit Guild.",
     sourceUrl: "https://decrypt.co/97365/volt-protocol-raises-2-million-inflation-resistant-stablecoin",
@@ -245,6 +261,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2022-08",
     peakMcap: 2_336_281_370,
+    epitaph: "Built different. Died the same",
     obituary:
       "Raised $1.3B in ETH at launch, but Tribe DAO voted to wind down citing mounting technical, financial, and regulatory risks. An $80M hack of merged Rari/Fuse lending markets sealed its fate. Holders redeemed 1:1 for DAI.",
     sourceUrl: "https://www.axios.com/2022/08/25/algorithmic-stablecoin-tribedao-fei",
@@ -259,6 +276,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-09",
     peakMcap: 18_000_000,
+    epitaph: "Lost its flavor",
     obituary:
       "A partially algorithmic stablecoin on Avalanche from the Spice Trade DEX ecosystem. Launched in May 2022 into the post-UST wreckage, it never gained meaningful adoption. The peg broke almost immediately, sliding to $0.07, and the anonymous team abandoned the project. $18M in ghost supply sits unredeemable on Avalanche.",
     sourceUrl: "https://www.coingecko.com/en/coins/spiceusd",
@@ -272,6 +290,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2022-10",
     peakMcap: 393_463_176,
+    epitaph: "Trusted the wrong custodian",
     obituary:
       "A fiat-backed stablecoin tied to the Huobi ecosystem. When Justin Sun acquired Huobi and replaced it with USDD, HUSD was delisted with no redemption path. Crashed to $0.28.",
     sourceUrl: "https://www.coindesk.com/business/2022/10/31/after-huobi-delisting-stablecoin-husd-falls-72-from-dollar-peg",
@@ -287,6 +306,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2022-10",
     peakMcap: 136_700_000,
+    epitaph: "Double-minted. $40M short",
     obituary:
       "NEAR Protocol's native algorithmic stablecoin launched in April 2022. After UST's collapse, it was hastily converted to USDT-backed, but a double-minting bug left it $40M undercollateralized. The NEAR Foundation formally shut it down in October 2022 with a $40M 'USN Protection Programme.' Remaining ~$38M sits unredeemed.",
     sourceUrl: "https://www.coindesk.com/markets/2022/10/24/near-foundation-urges-wind-down-of-usn-stablecoin-sets-aside-40m",
@@ -303,6 +323,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2023-02",
     peakMcap: 30_000_000,
+    epitaph: "Flash loan, lights out",
     obituary:
       "Platypus Finance's stablecoin was backed by LP tokens from its stableswap pools. A flash loan exploit in February 2023 drained $8.5M, collapsing USP's peg. The protocol never recovered and ceased operations.",
     sourceUrl: "https://rekt.news/platypus-rekt/",
@@ -316,6 +337,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2023-02",
     peakMcap: 25_100_000,
+    epitaph: "9.7B minted from thin air",
     obituary:
       "Sperax promised auto-yield just from holding its stablecoin on Arbitrum — no staking required. Then a rebasing bug let someone mint 9.7 billion tokens out of thin air. The funds came back, but user trust didn't. Backed by Alameda at peak hubris, USDs survived its exploit only to bleed out slowly.",
     sourceUrl: "https://crypto.news/sperax-usd-stablecoin-reportedly-hacked-for-250000/",
@@ -329,6 +351,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "regulatory",
     deathDate: "2023-02",
     peakMcap: 23_462_869_722,
+    epitaph: "Killed by decree",
     obituary:
       "Once the third-largest stablecoin at $23.5B. The NYDFS ordered issuer Paxos to stop minting, while the SEC signaled intent to sue. Binance ceased support in Dec 2023, auto-converting remaining balances to FDUSD.",
     sourceUrl: "https://www.coindesk.com/business/2023/02/13/paxos-to-stop-minting-stablecoin-busd-following-regulatory-action",
@@ -342,6 +365,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-03",
     peakMcap: 29_016_644,
+    epitaph: "Reserved for history",
     obituary:
       "Reserve's prototype stablecoin was deprecated when the protocol launched its RToken system. eUSD (Electronic Dollar) replaced RSV in the LATAM-focused Reserve app.",
     sourceUrl: "https://fortune.com/crypto/2023/07/03/sam-altman-stablecoin-reserve-venezuela-ofac/",
@@ -355,6 +379,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-04",
     peakMcap: 171_000_000,
+    epitaph: "mStable unstable",
     obituary:
       "mStable dreamed of unifying the fragmented stablecoin landscape — one meta-stablecoin to swap them all, with built-in yield. It touched $171M, but frictionless stablecoin swaps couldn't compete with DEX aggregators and simple USDC. When the co-founder walked away in early 2023, the DAO chose an honorable death: acquisition by dHedge.",
     sourceUrl: "https://www.coindesk.com/business/2023/03/15/defi-exchange-mstable-mulls-over-acquisition-merger-offers",
@@ -367,6 +392,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2023-06",
     peakMcap: 42_500_000,
+    epitaph: "Prime Trust was neither",
     obituary:
       "USDK did everything right on paper: regulated US trust company, ERC-20 standard, clean audits. But its custodian Prime Trust was secretly gambling client funds on algorithmic stablecoins. When Prime Trust collapsed into receivership — revealed to be $82M short on customer fiat — USDK's 'fully backed' promise became just another line in a bankruptcy filing.",
     sourceUrl: "https://www.coindesk.com/policy/2023/06/27/nevada-places-crypto-custodian-prime-trust-into-receivership",
@@ -380,6 +406,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2023-06",
     peakMcap: 279_700_000,
+    epitaph: "Paxos stole the ticker",
     obituary:
       "Unit Protocol's USDP accepted everything from Yearn vaults to SushiSwap LP tokens as collateral — a collateral buffet that attracted nearly $280M. But quantity of options couldn't substitute for quality of demand, and when Paxos swooped in with its own 'USDP' ticker, the identity crisis accelerated the decline. Supply withered to under $10K.",
     sourceUrl: "https://defillama.com/stablecoin/usdp-stablecoin",
@@ -394,6 +421,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-06",
     peakMcap: 8_434_873,
+    epitaph: "Too niche to survive",
     obituary:
       "GFX Labs' fractional reserve experiment promised to be Ethereum's answer to traditional banking — mint USDi by depositing USDC, earn rebasing yield from borrowers. Launched with Chainlink oracles and a $2.5M seed round, USDi briefly touched $8.4M before the bear market crushed demand for yet another USDC wrapper. The team quietly pivoted to DAO governance consulting and DEX development, leaving USDi to wither to under $20K.",
     sourceUrl: "https://defillama.com/stablecoin/interest-protocol",
@@ -407,6 +435,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2023-07",
     peakMcap: 342_945_973,
+    epitaph: "Multichain took it down",
     obituary:
       "Hector Network's stablecoin collapsed after the Multichain bridge exploit wiped out $8M of treasury assets. The DAO voted to liquidate the remaining $16M treasury, ending a project already plagued by allegations that the team squandered $100M+ in funds.",
     sourceUrl: "https://www.coindesk.com/business/2023/07/17/hector-network-votes-to-liquidate-16m-treasury-following-multichain-fantom-losses",
@@ -420,6 +449,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2023-07",
     peakMcap: 180_000_000,
+    epitaph: "CEO arrested. Bridge burned",
     obituary:
       "Bridge-wrapped USDC on Fantom became worthless overnight when the Multichain bridge collapsed after the CEO was arrested by Chinese authorities. ~$180M in 'USDC' was revealed to be backed by nothing as the team lost access to MPC servers. Circle froze $63M, and Fantom's entire DeFi ecosystem was devastated.",
     sourceUrl: "https://www.coindesk.com/business/2023/07/06/multichain-bridges-experience-unannounced-outflows-of-over-130m-in-crypto",
@@ -433,6 +463,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-07",
     peakMcap: 23_100_000,
+    epitaph: "$85M in. A dime back",
     obituary:
       "Parrot Protocol raised $85M during Solana's DeFi summer, backed by Alameda Research. Two years and one FTX collapse later, the team held a governance vote to liquidate the $74M treasury and go tokenless. The vote passed 99.8% — allegedly stuffed with insider wallets — and IDO investors got back a dime on the dollar.",
     sourceUrl: "https://www.coindesk.com/markets/2023/07/21/defi-project-parrot-puts-fate-of-over-70m-treasury-prt-token-to-vote",
@@ -446,6 +477,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2023-07",
     peakMcap: 11_088_350,
+    epitaph: "One exploit. 1.28B minted",
     obituary:
       "Acala's aUSD lost its peg after a catastrophic exploit in August 2022 minted 1.28 billion unauthorized tokens. Converted to aSEED in July 2023, ceasing to function as a stablecoin.",
     sourceUrl: "https://www.coindesk.com/tech/2022/08/15/acalas-stablecoin-falls-99-percent-after-hackers-issue-13-billion-tokens/",
@@ -460,6 +492,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-07",
     peakMcap: 1_866_269,
+    epitaph: "SEC killed the parent",
     obituary:
       "FIAT DAO created a clever primitive: mint a dollar-pegged stablecoin against fixed-income assets like Notional fCash and Sense Principal Tokens. But the protocol barely reached $2M before its parent entity merged with BarnBridge — right before the SEC came knocking. When BarnBridge halted all operations in July 2023, FIAT was left orphaned with $7,600 of permanently stuck tokens and a domain that no longer resolves.",
     sourceUrl: "https://blockworks.co/news/barnbridge-sec-dao",
@@ -473,6 +506,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-09",
     peakMcap: 32_044_597,
+    epitaph: "Cultural differences",
     obituary:
       "Vesta Finance dissolved after founders proposed to exit citing \"cultural differences.\" Community voted 96% for dissolution; VSTA holders received pro-rata treasury redemptions in USDC and ARB.",
     sourceUrl: "https://golden.com/wiki/Vesta_Finance-EKWBMZW",
@@ -487,6 +521,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2023-10",
     peakMcap: 71_020_513,
+    epitaph: "Real estate illiquid",
     obituary:
       "Tangible's grand experiment in real estate-backed stablecoins ended exactly how skeptics predicted: with a classic bank run on illiquid assets. USDR promised 16% yields backed by UK rental properties, but when the $6M DAI cushion was drained in a single week, holders discovered that tokenized houses cannot be liquidated at 3 AM on a Wednesday. The team candidly admitted there were 'too many attack vectors in the design.'",
     sourceUrl: "https://www.coindesk.com/markets/2023/10/11/real-estate-backed-stablecoin-usdr-de-pegs-after-treasury-was-drained-of-liquid-assets",
@@ -501,6 +536,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2023-11",
     peakMcap: 32_900_000,
+    epitaph: "Adrift",
     obituary:
       "Allowed minting R stablecoin against wstETH and rETH collateral. A smart contract exploit drained $3.3M in ETH — though the hacker lost money due to a slippage error, netting only ~$1.6M. Raft halted minting, offered a 42% recovery plan, and was abandoned.",
     sourceUrl: "https://rekt.news/raft-rekt/",
@@ -515,6 +551,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2023-12",
     peakMcap: 296_400_000,
+    epitaph: "Yielded to reality",
     obituary:
       "Yeti Finance's cross-margin lending protocol on Avalanche allowed borrowing YUSD at 0% interest against diverse collateral. After declining TVL and concentration among few users, the team announced dissolution in December 2023, raising interest rates to encourage position closure and returning 90% of treasury to YETI holders.",
     sourceUrl: "https://crypto-economy.com/yeti-finance-announces-its-dissolution-here-the-reasons/",
@@ -528,6 +565,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2023-12",
     peakMcap: 50_369_497,
+    epitaph: "Iron Bank froze solid",
     obituary:
       "Liquidity pools drained after Iron Bank's lending markets froze, leaving no clear path to repeg. Still trades at a fraction of face value.",
     sourceUrl: "https://www.coindesk.com/business/2023/12/19/crashed-stablecoin-iron-bank-euro-ibeur-lacks-clear-repeg-path",
@@ -543,6 +581,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-02",
     peakMcap: 48_700_000,
+    epitaph: "Too pure for this world",
     obituary:
       "The idealist's stablecoin: RAI rejected the dollar peg, embraced 'ungovernance,' and floated freely on pure math and ETH collateral. The team achieved their goal of removing all human governance, then did what the protocol couldn't: moved on to build HAI on Optimism.",
     sourceUrl: "https://www.dlnews.com/articles/defi/defi-developer-ameen-soleimani-back-with-new-stablecoin-hai/",
@@ -557,6 +596,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2024-05",
     peakMcap: 50_493_989,
+    epitaph: "Second planting failed too",
     obituary:
       "The original Beanstalk was drained of $182M in a flash-loan governance attack in April 2022. Undeterred, the team relaunched on Arbitrum with a credit-based model where soil demand and adjustable interest rates (Temperature) were supposed to keep BEAN at $1. It didn't. BEAN slipped below peg in mid-2024 and never came back, proving the design flaw was in the algorithm, not the security. Even Pinto, the community fork that tried the same model on Base, met the same fate.",
     sourceUrl: "https://defillama.com/stablecoin/bean",
@@ -570,6 +610,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-06",
     peakMcap: 128_139_157,
+    epitaph: "Yield compressed to zero",
     obituary:
       "Lybra Finance V2's LST-backed yield-bearing stablecoin peaked at $128M. After mining incentives ended in June 2024 and development stalled, supply collapsed. The protocol is technically live but abandoned by its team.",
     sourceUrl: "https://beincrypto.com/lybra-finance-lbr-defi-fall/",
@@ -583,6 +624,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-06",
     peakMcap: 43_983_623,
+    epitaph: "Omnichain to no-chain",
     obituary:
       "Lybra's omnichain version of eUSD, designed for cross-chain use. Died alongside eUSD V2 when the team abandoned the protocol.",
     sourceUrl: "https://beincrypto.com/lybra-finance-lbr-defi-fall/",
@@ -596,6 +638,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2024-06",
     peakMcap: 13_967_554,
+    epitaph: "NFT floor pulled out",
     obituary:
       "JPEG'd's stablecoin minted against NFT collateral declined alongside the broader NFT market collapse. The protocol token stopped trading and the project was effectively abandoned.",
     sourceUrl: "https://defillama.com/protocol/jpegd",
@@ -609,6 +652,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2024-06",
     peakMcap: 11_297_476,
+    epitaph: "Couldn't hedge this",
     obituary:
       "Despite $3.7M in seed funding from Pantera and Solana Ventures, Hedge Protocol's stablecoin on Solana failed to gain traction in a competitive DeFi landscape. Supply dwindled from $11M to near zero.",
     sourceUrl: "https://defillama.com/stablecoin/hedge-usd",
@@ -622,6 +666,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-06",
     peakMcap: 32_136_242,
+    epitaph: "Faded without a word",
     obituary:
       "Preon Finance's stablecoin quietly died as the Sphere ecosystem faded. No shutdown announcement was made; supply simply declined from $32M to near zero.",
     sourceUrl: "https://defillama.com/protocol/preon-finance",
@@ -636,6 +681,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-06",
     peakMcap: 8_990_683,
+    epitaph: "Empire of dead links",
     obituary:
       "Stabl.fi's CASH was the native stablecoin of an ambitious Polygon DeFi empire spanning Satin Exchange, Retro DEX, and more. When Satin's launch imploded on day one, the ecosystem was rebranded around Retro — a Thena fork that briefly hit $18.8M TVL before bleeding out. The team's last blog post in February 2024 acknowledged 'adoption has been fairly low and TVL has bled,' then went silent. The website, docs, and dreams of a cross-chain yield-bearing indexcoin now all return connection refused.",
     sourceUrl: "https://defillama.com/stablecoin/stabl.fi-cash",
@@ -650,6 +696,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2024-06",
     peakMcap: 48_800_000,
+    epitaph: "Canto's ghost town",
     obituary:
       "Native overcollateralized stablecoin of the Canto L1 blockchain. Canto launched with 'free public infrastructure' DeFi primitives in late 2022, briefly attracting $300M TVL. As the chain's ecosystem collapsed, NOTE's supply fell 97% from $49M to $1.3M. The chain itself is essentially abandoned.",
     sourceUrl: "https://defillama.com/stablecoin/note",
@@ -663,6 +710,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-07",
     peakMcap: 166_837_992,
+    epitaph: "Deprecated for V3",
     obituary:
       "Synthetix deprecated all non-USD spot synths on Ethereum mainnet as part of the V3 migration. sEUR holders who didn't swap in time could only redeem via the L1 redeemer contract at a discounted rate.",
     sourceUrl: "https://blog.synthetix.io/legacy-spot-synth-exchange-deprecation-migration/",
@@ -677,6 +725,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-07",
     peakMcap: 472_000,
+    epitaph: "Last place",
     obituary:
       "Nostra's grand ambition to build Starknet's first native stablecoin launched with $472K of hope in April 2024 — and proceeded to lose 96% of its supply in a slow, silent hemorrhage. Initially pitched as an overcollateralized crypto stablecoin, then quietly rebranded to fiat-backed (1:1 USDC), UNO found itself answering a question nobody on Starknet was asking: why hold a wrapper when you can just hold USDC? Nostra pivoted to its NSTR governance token and scrubbed UNO from the main site.",
     sourceUrl: "https://defillama.com/stablecoin/uno",
@@ -690,6 +739,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-08",
     peakMcap: 41_817_136,
+    epitaph: "Delta-neutral theory",
     obituary:
       "UXD Protocol's delta-neutral stablecoin on Solana survived the Mango Markets exploit but couldn't attract users. The team admitted the model \"isn't exciting enough for DeFi users\" and the DAO voted to sunset.",
     sourceUrl: "https://www.dlnews.com/articles/defi/solana-stablecoin-uxd-protocol-with-75m-usd-tvl-shuts-down/",
@@ -704,6 +754,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-09",
     peakMcap: 25_000_000,
+    epitaph: "Mimo went quiet",
     obituary:
       "Born from the ashes of TenX, Mimo Protocol launched PAR as one of the first decentralized Euro stablecoins in early 2021, peaking at $25M during DeFi summer. But the euro-pegged CDP model never found product-market fit, and the team quietly pivoted to KUMA Protocol, tokenizing Swiss government bonds instead of minting synthetic euros. By late 2024, PAR's supply had cratered 90%, the governance forum went dark, and the MIMO token flatlined at $0.003 with zero daily volume.",
     sourceUrl: "https://decrypt.co/146349/mimo-dao-launches-interest-paying-stablecoins-through-kuma-protocol",
@@ -717,6 +768,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-10",
     peakMcap: 16_000_251,
+    epitaph: "Too private to notice",
     obituary:
       "zkBob's privacy-focused stablecoin was deliberately sunset as the protocol switched to USDC, USDT, and ETH. The team noted BOB \"did not receive enough consumer usage to justify ongoing support.\"",
     sourceUrl: "https://blog.zkbob.com/tron-pool-closes-october-29-2024/",
@@ -730,6 +782,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2024-11",
     peakMcap: 184_697_162,
+    epitaph: "Exploited. Never recovered",
     obituary:
       "After an $11.6M exploit in March 2024, Prisma Finance never recovered. Governance approved PIP-46 to decommission the protocol, reducing the debt ceiling to zero and introducing a PSM for orderly wind-down.",
     sourceUrl: "https://wavey.info/posts/2025/decomissioning-prisma-finance/",
@@ -743,6 +796,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2024-11",
     peakMcap: 22_649_284,
+    epitaph: "Fell with Prisma",
     obituary:
       "Prisma's LRT-backed stablecoin was decommissioned alongside mkUSD after the March 2024 exploit. A stability pool bug discovered during wind-down allowed one user to drain ~14 ETH.",
     sourceUrl: "https://wavey.info/posts/2025/decomissioning-prisma-finance/",
@@ -756,6 +810,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "regulatory",
     deathDate: "2024-11",
     peakMcap: 324_057_865,
+    epitaph: "MiCA made it untenable",
     obituary:
       "Peacefully retired by Tether as MiCA regulations made EU stablecoin issuance untenable. Holders given one year to redeem.",
     sourceUrl: "https://cointelegraph.com/news/tether-discontinues-euro-eurt-stablecoin",
@@ -769,6 +824,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2024-12",
     peakMcap: 14_696_384,
+    epitaph: "Overnight went dark",
     obituary:
       "Overnight Finance's yield-bearing DAI wrapper declined from $15M to near zero as the broader protocol wound down. CoinGecko reports circulating supply at zero.",
     sourceUrl: "https://defillama.com/stablecoin/dai+",
@@ -782,6 +838,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2024-12",
     peakMcap: 26_330_184,
+    epitaph: "Verified, then voided",
     obituary:
       "The Verified USD Foundation ceased support on December 31, 2024 and began removing all tokens from circulation. Backed by tokenized T-bills via Matrixport's STBT, the omnichain stablecoin never gained sufficient traction.",
     sourceUrl: "https://docs.usdv.money/docs",
@@ -797,6 +854,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-02",
     peakMcap: 34_600_000,
+    epitaph: "Immutable. Unfixable",
     obituary:
       "The first casualty of Liquity's own immutability principle. Legacy BOLD launched as the flagship of Liquity V2 — overcollateralized, decentralized, and permanently unchangeable. A Stability Pool vulnerability surfaced weeks after launch. The contracts couldn't be patched, so the team redeployed everything from scratch.",
     sourceUrl: "https://www.liquity.org/blog/liquity-v2-redeployment",
@@ -810,6 +868,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-01",
     peakMcap: 73_665_779,
+    epitaph: "Quietly wound down",
     obituary:
       "Overnight Finance quietly wound down operations, leaving USD+ without active management or yield strategies.",
     sourceUrl: "https://overnight.fi/",
@@ -824,6 +883,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-05",
     peakMcap: 157_210_136,
+    epitaph: "Team took the exit",
     obituary:
       "Mountain Protocol's yield-bearing USDM was the regulated darling of the T-bill stablecoin wave — licensed in Bermuda, rebasing daily, deployed across eight chains. It peaked at $157M in March 2024, then bled for a year as the yield-bearing stablecoin market became a knife fight. When Anchorage Digital came shopping for talent and licenses in May 2025, the team took the exit: minting off, rewards zeroed, and the remaining tokens dumped into a Uniswap pool for whoever was left holding them.",
     sourceUrl: "https://cointelegraph.com/news/anchorage-digital-acquires-stablecoin-issuer-mountain-protocol",
@@ -838,6 +898,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-05",
     peakMcap: 1_750_000,
+    epitaph: "Membrane dissolved",
     obituary:
       "Membrane Finance built one of Europe's first MiCA-compliant euro stablecoins — regulated by FIN-FSA in Finland, backed 1:1 with ring-fenced euro reserves, audited by KPMG. It never broke $2M in circulation. Paxos acquired Membrane in January 2025 to gain EU regulatory access, then announced a full wind-down of EUROe two months later to focus on bringing the Global Dollar (USDG) to Europe instead. Holders were urged to redeem; the contracts quietly went dark.",
     sourceUrl: "https://www.euroe.com/blog/paxos",
@@ -851,6 +912,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-06",
     peakMcap: 20_114_876,
+    epitaph: "Kerosene burned out",
     obituary:
       "DYAD's novel Kerosene-token model for overcollateralized CDPs failed to sustain interest. Supply declined from $20M peak to near zero despite continued GitHub activity.",
     sourceUrl: "https://defillama.com/stablecoin/dyad",
@@ -864,6 +926,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-06",
     peakMcap: 19_484_463,
+    epitaph: "USDC came to Aptos",
     obituary:
       "Thala Labs' stablecoin on Aptos declined from $19M to near zero. Despite a $25.5M exploit in Nov 2024 (funds recovered), MOD simply failed to compete as USDT/USDC expanded on Aptos.",
     sourceUrl: "https://www.coingecko.com/en/coins/move-dollar",
@@ -877,6 +940,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-06",
     peakMcap: 19_075_074,
+    epitaph: "Zero users, zero supply",
     obituary:
       "GMO Trust's NYDFS-regulated stablecoin failed to gain market share despite expansions to Solana and Bitstamp listing. Supply dwindled to essentially zero while GMO's JPY stablecoin (GYEN) continues.",
     sourceUrl: "https://www.coingecko.com/en/coins/zusd",
@@ -890,6 +954,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-06",
     peakMcap: 15_428_881,
+    epitaph: "Free wasn't enough",
     obituary:
       "Gravita Protocol's interest-free borrowing model against LSTs failed to maintain adoption as competitors offered better terms. Supply dropped from $15M to near zero.",
     sourceUrl: "https://defillama.com/stablecoin/grai",
@@ -903,6 +968,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-06",
     peakMcap: 11_268_731,
+    epitaph: "Higher yields beckoned",
     obituary:
       "An RToken built on Reserve Protocol for yield-bearing exposure on Base. The Reserve platform thrives, but this individual RToken lost adoption as users moved to higher-yield alternatives.",
     sourceUrl: "https://defillama.com/stablecoin/high-yield-usd",
@@ -916,6 +982,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-06",
     peakMcap: 32_700_000,
+    epitaph: "PulseChain sank",
     obituary:
       "A Liquity V1 fork on PulseChain where users minted USDL against PLS collateral at 110% minimum ratio. As PulseChain's ecosystem collapsed with PLS price down over 90%, USDL supply followed — from $33M peak to $3.4M. The immutable contracts still technically work, but with PulseChain abandoned by mainstream DeFi, nobody is using them.",
     sourceUrl: "https://defillama.com/stablecoin/liquid-loans-usdl",
@@ -929,6 +996,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-08",
     peakMcap: 121_275_798,
+    epitaph: "Replaced by decree",
     obituary:
       "TRON's legacy decentralized stablecoin was deliberately sunset as the ecosystem shifted to USDD. CDP functions ended August 2025, and 95% of supply was redeemed at a fixed rate of 1 USDJ = 1.5532 TRX.",
     sourceUrl: "https://en.cryptonomist.ch/2025/11/18/usdj-stablecoin-retirement-tron/",
@@ -942,6 +1010,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "algorithmic-failure",
     deathDate: "2025-10",
     peakMcap: 13_100_000,
+    epitaph: "Same algorithm, same end",
     obituary:
       "Beanstalk's first fork tried to give the credit-based stablecoin model a clean shot on Base, free from the governance exploit that killed the original. Without collateral backing and with insufficient demand for protocol debt, the price slid relentlessly from $1 to $0.11, proving the flaw was in the design, not the implementation.",
     sourceUrl: "https://www.coingecko.com/en/coins/pinto",
@@ -955,6 +1024,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-10",
     peakMcap: 185_007_045,
+    epitaph: "Team acqui-hired away",
     obituary:
       "The Level team was acqui-hired by another DeFi protocol and announced the sunsetting of lvlUSD. Users could unstake and redeem with cooldown periods reduced to 2 seconds.",
     sourceUrl: "https://level-money.gitbook.io/level-documentation",
@@ -968,6 +1038,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "abandoned",
     deathDate: "2025-10",
     peakMcap: 148_588_007,
+    epitaph: "Consolidated into USDG",
     obituary:
       "Paxos wound down Lift Dollar to focus on larger-scale institutional products. Minting ended October 2025 and remaining USDL was converted to USDG (Paxos's new stablecoin).",
     sourceUrl: "https://www.paxos.com/newsroom/winding-down-usdl-lift-dollar",
@@ -981,6 +1052,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2025-10",
     peakMcap: 142_014_760,
+    epitaph: "Coinshift shifted away",
     obituary:
       "A yield-bearing wrapper around Paxos's USDL via Morpho Blue, killed by Paxos's decision to wind down USDL. Coinshift stopped accepting new deposits and raised borrow rates to close positions.",
     sourceUrl: "https://forum.morpho.org/t/notice-of-usdl-winddown/2062",
@@ -994,6 +1066,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2025-11",
     peakMcap: 301_727_222,
+    epitaph: "97% gone overnight",
     obituary:
       "Lost 97% of value overnight when counterparty Stream Finance disclosed a $93M loss, wiping out 65% of deUSD's collateral.",
     sourceUrl: "https://beincrypto.com/elixir-deusd-stablecoin-collapse-stream-finance-loss/",
@@ -1007,6 +1080,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2025-11",
     peakMcap: 125_000_000,
+    epitaph: "Founder drained the pool",
     obituary:
       "Synthetic USD backed by delta-neutral positions across exchanges. A Balancer V2 security flaw drained $1M, then contagion from Stream Finance's $93M loss accelerated a full collapse. USDX crashed 64% to $0.35 as founder Flex Yang's wallet was linked to addresses draining liquidity. Now trades at $0.01–0.04 with Discord shut down.",
     sourceUrl: "https://www.theblock.co/post/377917/synthetic-stablecoin-usdx-depegs-pancakeswap-lista",
@@ -1020,6 +1094,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2025-11",
     peakMcap: 160_000_000,
+    epitaph: "$93M loss broke three coins",
     obituary:
       "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 77% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
     sourceUrl: "https://finance.yahoo.com/news/stream-finance-loses-93-million-225557903.html",
@@ -1034,6 +1109,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "counterparty-failure",
     deathDate: "2025-11",
     peakMcap: 153_465_803,
+    epitaph: "Survived once. Not twice",
     obituary:
       "Yala's BTC-backed stablecoin survived its first death in September 2025 when a security breach minted 120 million unauthorized YU tokens, draining $7.6M. The team injected $5.5M and clawed back the peg. Two months later, runaway borrowing drained all liquidity pools and YU collapsed again to $0.44. This time, nobody came to resuscitate.",
     sourceUrl: "https://unchainedcrypto.com/yala-protocols-bitcoin-stablecoin-depegs/",
@@ -1047,6 +1123,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2025-12",
     peakMcap: 88_500_000,
+    epitaph: "$88M walked out the door",
     obituary:
       "Reservoir boasted about processing $285M in redemptions during November 2025 'without failure' — technically true, but the patient survived the surgery only to flatline. Supply dropped from $88M to under $700K as every dollar that could leave, did.",
     sourceUrl: "https://defillama.com/stablecoin/reservoir-stablecoin",
@@ -1062,6 +1139,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     causeOfDeath: "liquidity-drain",
     deathDate: "2026-01",
     peakMcap: 26_000_000,
+    epitaph: "$2.8B promised. $81K left",
     obituary:
       "Palm USD promised to bridge Islamic finance and crypto with a Shariah-compliant, un-freezeable stablecoin backed by Gulf currencies. Despite announcing a $2.8B purchase agreement, actual circulating supply briefly touched $26M before collapsing to $81K. The billions sit perpetually 'unreleased.'",
     sourceUrl: "https://www.theblock.co/press-releases/378989/palm-usd-launches-pusd-a-global-free-stablecoin-backed-by-aed-and-sar",

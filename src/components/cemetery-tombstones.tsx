@@ -237,9 +237,9 @@ function Tombstone({
           {formatDeathDate(coin.deathDate)}
         </span>
 
-        {coin.peakMcap && (
-          <span className="text-[10px] font-mono tabular-nums text-muted-foreground/60">
-            {formatCurrency(coin.peakMcap, 1)}
+        {coin.epitaph && (
+          <span className="text-[8px] italic text-muted-foreground/50 text-center leading-tight px-1.5">
+            {coin.epitaph}
           </span>
         )}
       </div>
@@ -255,6 +255,11 @@ function Tombstone({
             <span className={CAUSE_META[coin.causeOfDeath].textColor}>
               {CAUSE_META[coin.causeOfDeath].label}
             </span>
+            {coin.peakMcap && (
+              <span className="font-mono tabular-nums text-muted-foreground">
+                {formatCurrency(coin.peakMcap, 1)}
+              </span>
+            )}
           </div>
         </div>
       )}
