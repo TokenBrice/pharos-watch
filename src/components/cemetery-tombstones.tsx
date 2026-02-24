@@ -16,9 +16,9 @@ function getTombSize(peakMcap?: number): TombSize {
 }
 
 const SIZE = {
-  lg: { w: "w-[160px]", h: "h-[240px]", arch: "rounded-t-[80px]", logo: 48 },
-  md: { w: "w-[132px]", h: "h-[200px]", arch: "rounded-t-[66px]", logo: 40 },
-  sm: { w: "w-[112px]", h: "h-[172px]", arch: "rounded-t-[56px]", logo: 34 },
+  lg: { w: "w-[160px]", h: "h-[240px]", arch: "rounded-t-[80px]", logo: 48, px: 160 },
+  md: { w: "w-[132px]", h: "h-[200px]", arch: "rounded-t-[66px]", logo: 40, px: 132 },
+  sm: { w: "w-[112px]", h: "h-[172px]", arch: "rounded-t-[56px]", logo: 34, px: 112 },
 } as const;
 
 const CROSS_SIZE = {
@@ -31,10 +31,17 @@ const CROSS_SIZE = {
 
 const FLOWER_COLORS = ["#f9a8d4", "#fde68a", "#c4b5fd", "#e5e7eb"] as const;
 
-function Flower({ index }: { index: number }) {
+function Flower({ index, tombWidth }: { index: number; tombWidth: number }) {
   const color = FLOWER_COLORS[index % FLOWER_COLORS.length];
-  // Spread flowers horizontally from center
-  const offset = (index - 3) * 12 + (index % 2 === 0 ? 2 : -2);
+  // Scatter flowers within the tombstone width, wrapping into rows
+  const perRow = Math.max(3, Math.floor(tombWidth / 16));
+  const row = Math.floor(index / perRow);
+  const col = index % perRow;
+  // Deterministic jitter from index
+  const jx = ((index * 7 + 3) % 11) - 5;
+  const jy = ((index * 13 + 5) % 9) - 4;
+  const x = (col - (perRow - 1) / 2) * 14 + jx;
+  const y = row * 14 + jy;
   return (
     <svg
       width="14"
@@ -45,8 +52,8 @@ function Flower({ index }: { index: number }) {
       className="animate-in fade-in duration-300"
       style={{
         position: "absolute",
-        bottom: 0,
-        left: `calc(50% + ${offset}px - 7px)`,
+        bottom: y,
+        left: `calc(50% + ${x}px - 7px)`,
       }}
     >
       {/* Stem */}
@@ -324,9 +331,12 @@ function Tombstone({
 
       {/* Flowers — "Press F to pay respects" */}
       {flowerCount > 0 && (
-        <div className="absolute bottom-1 left-0 right-0 h-4 pointer-events-none z-10">
+        <div
+          className="absolute left-0 right-0 pointer-events-none z-10"
+          style={{ bottom: -4, height: Math.ceil(flowerCount / Math.max(3, Math.floor(cfg.px / 16))) * 14 + 20 }}
+        >
           {Array.from({ length: flowerCount }, (_, i) => (
-            <Flower key={i} index={i} />
+            <Flower key={i} index={i} tombWidth={cfg.px} />
           ))}
         </div>
       )}
@@ -345,7 +355,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
   const handlePayRespects = useCallback((symbol: string) => {
     setFlowers((prev) => {
       const current = prev[symbol] ?? 0;
-      if (current >= 7) return prev;
+      if (current >= 50) return prev;
       return { ...prev, [symbol]: current + 1 };
     });
   }, []);
