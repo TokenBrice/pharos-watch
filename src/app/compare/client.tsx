@@ -209,6 +209,7 @@ export function CompareClient() {
   };
 
   const [shareLoading, setShareLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const buildShareData = useCallback(async (): Promise<{
     coins: ShareCoinData[];
@@ -258,7 +259,27 @@ export function CompareClient() {
     return { coins: shareCoins, pharosLogo };
   }, [comparisonCoins, logos, pegRates]);
 
-  const handleTwitterShare = useCallback(() => {
+  const handleTwitterShare = useCallback(async () => {
+    setShareLoading(true);
+    try {
+      // Generate and copy image to clipboard so the user can paste it into the tweet
+      const data = await buildShareData();
+      if (data) {
+        const canvas = renderCompareShareImage(data.coins, data.pharosLogo);
+        const blob = await canvasToBlob(canvas);
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "image/png": blob }),
+          ]);
+          setToast("Image copied — paste it in your tweet (Ctrl+V)");
+          setTimeout(() => setToast(null), 5000);
+        } catch {
+          // Clipboard image write not supported — open intent anyway
+        }
+      }
+    } finally {
+      setShareLoading(false);
+    }
     const symbols = comparisonCoins.map((c) => c.symbol).join(" vs ");
     const text = `Comparing ${symbols} on Pharos`;
     const url = window.location.href;
@@ -267,7 +288,7 @@ export function CompareClient() {
       "_blank",
       "noopener,noreferrer",
     );
-  }, [comparisonCoins]);
+  }, [buildShareData, comparisonCoins]);
 
   const handleWebShare = useCallback(async () => {
     setShareLoading(true);
@@ -287,8 +308,18 @@ export function CompareClient() {
           files: [file],
         });
       } else {
-        // Fallback: copy URL to clipboard
-        await navigator.clipboard.writeText(window.location.href);
+        // Fallback: copy image to clipboard
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "image/png": blob }),
+          ]);
+          setToast("Image copied to clipboard");
+          setTimeout(() => setToast(null), 3000);
+        } catch {
+          await navigator.clipboard.writeText(window.location.href);
+          setToast("Link copied to clipboard");
+          setTimeout(() => setToast(null), 3000);
+        }
       }
     } catch (e) {
       if (e instanceof Error && e.name !== "AbortError") {
@@ -337,10 +368,16 @@ export function CompareClient() {
   return (
     <div className="space-y-6">
       {selectedIds.length >= 2 && (
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-end gap-2">
+          {toast && (
+            <span className="text-xs text-muted-foreground animate-in fade-in duration-200">
+              {toast}
+            </span>
+          )}
           <button
             onClick={handleTwitterShare}
-            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            disabled={shareLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50"
             title="Share on Twitter/X"
           >
             <Twitter className="h-3.5 w-3.5" />
