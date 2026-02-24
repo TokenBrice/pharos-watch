@@ -127,6 +127,15 @@ export function CompareClient() {
     })),
   });
 
+  // Track per-coin detail fetch errors
+  const detailErrors = useMemo(() => {
+    const errors: Record<string, boolean> = {};
+    selectedIds.forEach((id, i) => {
+      if (detailQueries[i]?.isError) errors[id] = true;
+    });
+    return errors;
+  }, [selectedIds, detailQueries]);
+
   // Color palette for chart series (first 5 from shared palette)
   const CHART_COLORS = CHART_PALETTE.slice(0, 5);
 
@@ -277,6 +286,8 @@ export function CompareClient() {
             coins={comparisonCoins}
             pegRates={pegRates}
             logos={logos}
+            detailErrors={detailErrors}
+            loading={detailLoading}
           />
 
           {detailLoading ? (

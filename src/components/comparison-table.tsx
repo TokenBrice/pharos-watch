@@ -32,6 +32,8 @@ interface ComparisonTableProps {
   coins: ComparisonCoin[];
   pegRates: Record<string, number>;
   logos?: Record<string, string>;
+  detailErrors?: Record<string, boolean>;
+  loading?: boolean;
 }
 
 // --- Best-value detection helpers ---
@@ -89,7 +91,7 @@ function bestGradeIndex(grades: (BluechipGrade | null)[]): number | null {
 
 const BEST_CLASS = "text-green-600 dark:text-green-400 font-semibold";
 
-export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps) {
+export function ComparisonTable({ coins, pegRates, logos, detailErrors, loading }: ComparisonTableProps) {
   // Pre-compute row data
   const rowData = useMemo(() => {
     const prices = coins.map(({ data, meta }) => {
@@ -170,6 +172,9 @@ export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps
                 />
                 <span className="text-xs font-semibold">{coin.symbol}</span>
                 <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
+                {detailErrors?.[coin.id] && (
+                  <span className="text-xs text-destructive">Chart data unavailable</span>
+                )}
               </div>
             </TableHead>
           ))}
