@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
@@ -18,10 +18,11 @@ import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link2, Check } from "lucide-react";
 import type { CoinOption } from "@/components/coin-selector";
 import type { SupplyHistoryPoint, StablecoinDetail } from "@/hooks/use-stablecoins";
 
-const MAX_COINS = 3;
+const MAX_COINS = 5;
 
 /** Lookup from lowercased symbol to coin for URL parsing. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
@@ -36,8 +37,8 @@ export function CompareClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Parse initial selection from URL: ?coins=usdt,usdc,dai
-  const [selectedIds, setSelectedIds] = useState<string[]>(() => {
+  // Derive selected IDs from URL (single source of truth)
+  const selectedIds = useMemo(() => {
     const param = searchParams.get("coins");
     if (!param) return [];
     return param
@@ -46,18 +47,22 @@ export function CompareClient() {
       .filter((c): c is CoinOption => !!c)
       .slice(0, MAX_COINS)
       .map((c) => c.id);
-  });
+  }, [searchParams]);
 
-  // Sync selected coins to URL
-  useEffect(() => {
-    const symbols = selectedIds
-      .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
-      .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
-      .map((c) => c.symbol.toLowerCase());
-    const paramStr = symbols.join(",");
-    const newUrl = paramStr ? `/compare/?coins=${paramStr}` : "/compare/";
-    router.replace(newUrl, { scroll: false });
-  }, [selectedIds, router]);
+  // Write selected IDs to URL
+  const setSelectedIds = useCallback(
+    (updater: (prev: string[]) => string[]) => {
+      const next = updater(selectedIds);
+      const symbols = next
+        .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
+        .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
+        .map((c) => c.symbol.toLowerCase());
+      const paramStr = symbols.join(",");
+      const newUrl = paramStr ? `/compare/?coins=${paramStr}` : "/compare/";
+      router.replace(newUrl, { scroll: false });
+    },
+    [selectedIds, router],
+  );
 
   const coinOptions = useMemo<CoinOption[]>(
     () =>
@@ -103,8 +108,8 @@ export function CompareClient() {
     })),
   });
 
-  // Color palette for chart series (first 3 from shared palette)
-  const CHART_COLORS = CHART_PALETTE.slice(0, 3);
+  // Color palette for chart series (first 5 from shared palette)
+  const CHART_COLORS = CHART_PALETTE.slice(0, 5);
 
   // Build enriched coin objects for ComparisonTable
   const comparisonCoins = useMemo(() => {
@@ -189,7 +194,7 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-3">{slots}</div>
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
         <div className="text-center py-12 text-muted-foreground">
