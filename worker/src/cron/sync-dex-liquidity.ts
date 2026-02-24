@@ -1018,27 +1018,6 @@ async function fetchAerodromeData(
   return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
 }
 
-// ---------------------------------------------------------------------------
-// DexScreener batch token API
-// ---------------------------------------------------------------------------
-
-/** DexScreener chain IDs that map to our chain names */
-const DEXSCREENER_CHAINS = ["ethereum", "base", "arbitrum", "polygon", "solana"] as const;
-
-/** Build chain → (address → stablecoinId) map from TRACKED_STABLECOINS contracts */
-function buildChainAddressMap(): Map<string, Map<string, string>> {
-  const chainAddrs = new Map<string, Map<string, string>>();
-  for (const meta of TRACKED_STABLECOINS) {
-    if (!meta.contracts) continue;
-    for (const c of meta.contracts) {
-      const chain = c.chain.toLowerCase();
-      if (!chainAddrs.has(chain)) chainAddrs.set(chain, new Map());
-      chainAddrs.get(chain)!.set(c.address.toLowerCase(), meta.id);
-    }
-  }
-  return chainAddrs;
-}
-
 /** Collect all pool addresses from existing sources for dedup against GT */
 function buildKnownPoolAddresses(
   pools: LlamaPool[],
@@ -1382,93 +1361,6 @@ function mergeGtPools(
   if (merged > 0) {
     console.log(`[dex-liquidity] Merged ${merged} GT pools into ${gtNewPools.size} stablecoins`);
   }
-}
-
-interface DexScreenerTokenPair {
-  chainId: string;
-  dexId: string;
-  pairAddress: string;
-  baseToken: { address: string; symbol: string };
-  quoteToken: { address: string; symbol: string };
-  priceUsd: string;
-  liquidity: { usd: number; base: number; quote: number };
-}
-
-/** Fetch price observations from DexScreener batch token API. */
-async function fetchDexScreenerPriceObs(
-  addressToId: Map<string, string>,
-): Promise<Map<string, DexPriceObs[]>> {
-  const priceObs = new Map<string, DexPriceObs[]>();
-  const chainAddrs = buildChainAddressMap();
-  let totalObsCount = 0;
-  let totalRequests = 0;
-
-  for (const chain of DEXSCREENER_CHAINS) {
-    const addrMap = chainAddrs.get(chain);
-    if (!addrMap || addrMap.size === 0) continue;
-
-    // Merge with addressToId learned from other sources
-    const mergedMap = new Map(addrMap);
-    for (const [addr, id] of addressToId) {
-      if (!mergedMap.has(addr)) mergedMap.set(addr, id);
-    }
-
-    const addresses = [...mergedMap.keys()];
-
-    // Batch into groups of 30
-    for (let i = 0; i < addresses.length; i += 30) {
-      const batch = addresses.slice(i, i + 30);
-      try {
-        // Rate limit: 200ms between requests
-        if (totalRequests > 0) {
-          await new Promise((r) => setTimeout(r, 200));
-        }
-        totalRequests++;
-
-        const url = `https://api.dexscreener.com/tokens/v1/${chain}/${batch.join(",")}`;
-        const res = await fetchWithRetry(url, {
-          headers: { "User-Agent": USER_AGENT },
-        });
-        if (!res?.ok) {
-          console.warn(`[dex-liquidity] DexScreener batch failed for ${chain}: ${res?.status}`);
-          continue;
-        }
-        const pairs = (await res.json()) as DexScreenerTokenPair[];
-        if (!Array.isArray(pairs)) continue;
-
-        for (const pair of pairs) {
-          if (!pair.liquidity?.usd || pair.liquidity.usd < 50_000) continue;
-          if (!pair.priceUsd) continue;
-
-          const price = parseFloat(pair.priceUsd);
-          if (isNaN(price) || price <= 0) continue;
-
-          // Sanity check for USD stablecoins
-          if (price < 0.5 || price > 2.0) continue;
-
-          // Resolve baseToken to a tracked stablecoin — this is the token whose price we're observing
-          const baseAddr = pair.baseToken.address.toLowerCase();
-          const stablecoinId = mergedMap.get(baseAddr) ?? addressToId.get(baseAddr);
-          if (!stablecoinId) continue;
-
-          const obs = priceObs.get(stablecoinId) ?? [];
-          obs.push({
-            price,
-            tvl: pair.liquidity.usd,
-            chain: pair.chainId,
-            protocol: pair.dexId,
-          });
-          priceObs.set(stablecoinId, obs);
-          totalObsCount++;
-        }
-      } catch (err) {
-        console.warn(`[dex-liquidity] DexScreener batch error for ${chain}:`, err);
-      }
-    }
-  }
-
-  console.log(`[dex-liquidity] Collected ${priceObs.size} coins with DexScreener price observations (${totalObsCount} total obs across ${totalRequests} requests)`);
-  return priceObs;
 }
 
 /** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
@@ -2080,12 +1972,29 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
   }
 
-  // 4c. Fetch DexScreener batch token data for price observations
-  let dexScreenerPriceObs = new Map<string, DexPriceObs[]>();
+  // 4c. Build known pool address set from existing sources (for GT dedup)
+  const knownPoolAddrs = buildKnownPoolAddresses(
+    dataSources.pools, dataSources.dexProjects,
+    curvePoolMap, uniV3PoolFees, aerodromeIsStable,
+  );
+
+  // 4d. GeckoTerminal token-level batch (fast, ~10 requests)
+  let gtTokenPriceObs = new Map<string, DexPriceObs[]>();
   try {
-    dexScreenerPriceObs = await fetchDexScreenerPriceObs(addressToId);
+    gtTokenPriceObs = await fetchGtTokenBatch(addressToId);
   } catch (err) {
-    console.warn("[dex-liquidity] DexScreener fetch failed (non-fatal):", err);
+    console.warn("[dex-liquidity] GeckoTerminal token batch failed (non-fatal):", err);
+  }
+
+  // 4e. GeckoTerminal pool crawl (slow, ~250 requests spread over ~8 min)
+  let gtCrawlResult: GtCrawlResult = {
+    newPools: new Map(), priceObs: new Map(),
+    stats: { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0 },
+  };
+  try {
+    gtCrawlResult = await fetchGtPools(addressToId, knownPoolAddrs);
+  } catch (err) {
+    console.warn("[dex-liquidity] GeckoTerminal pool crawl failed (non-fatal):", err);
   }
 
   // Merge all price observations into a single map
@@ -2099,7 +2008,12 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     existing.push(...obs);
     priceObservations.set(id, existing);
   }
-  for (const [id, obs] of dexScreenerPriceObs) {
+  for (const [id, obs] of gtTokenPriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
+  for (const [id, obs] of gtCrawlResult.priceObs) {
     const existing = priceObservations.get(id) ?? [];
     existing.push(...obs);
     priceObservations.set(id, existing);
@@ -2111,6 +2025,9 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     dataSources.pools, dataSources.dexProjects, symbolToIds, addressToId,
     curvePoolMap, uniV3PoolFees, uniV3SymbolFees, aerodromeIsStable,
   );
+
+  // 5b. Merge GT new pools into metrics
+  mergeGtPools(metrics, gtCrawlResult.newPools);
 
   // 6. Compute composite scores per stablecoin
   const scoreResults = await computeStablecoinScores(db, metrics);
