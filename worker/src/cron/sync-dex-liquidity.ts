@@ -1160,6 +1160,230 @@ async function fetchGtTokenBatch(
   return priceObs;
 }
 
+/** Result of GT pool crawl: new pools to merge into metrics + price observations */
+interface GtCrawlResult {
+  /** New pools not found in existing sources, keyed by stablecoinId */
+  newPools: Map<string, GtNewPool[]>;
+  /** Price observations from all non-Curve GT pools */
+  priceObs: Map<string, DexPriceObs[]>;
+  /** Stats for logging */
+  stats: { requests: number; poolsSeen: number; poolsNew: number; poolsSkippedCurve: number; poolsSkippedKnown: number };
+}
+
+interface GtNewPool {
+  address: string;
+  chain: string;
+  dexId: string;
+  name: string;
+  tvlUsd: number;
+  volume24hUsd: number;
+  qualityMultiplier: number;
+  maturityDays: number;
+  poolType: string;
+  /** The stablecoin's price in this pool */
+  price: number;
+  /** Pool symbol (e.g., "USDC / USDT") */
+  symbol: string;
+}
+
+/** Crawl GT pools for all tracked stablecoins, dedup against known pools.
+ *  Returns new pool data and price observations. */
+async function fetchGtPools(
+  addressToId: Map<string, string>,
+  knownPoolAddrs: Set<string>,
+): Promise<GtCrawlResult> {
+  const newPools = new Map<string, GtNewPool[]>();
+  const priceObs = new Map<string, DexPriceObs[]>();
+  const stats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0 };
+  const chainAddresses = buildGtChainAddresses();
+  const nowSec = Date.now() / 1000;
+
+  for (const [gtChain, tokens] of chainAddresses) {
+    const ourChain = GT_CHAIN_REVERSE[gtChain] ?? gtChain;
+
+    for (const { address, stablecoinId } of tokens) {
+      if (stats.requests > 0) {
+        await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
+      }
+      stats.requests++;
+
+      try {
+        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${address}/pools?page=1`;
+        const res = await fetchWithRetry(url, {
+          headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+        });
+
+        if (!res?.ok) {
+          if (res?.status === 429) {
+            console.warn(`[dex-liquidity] GT pool crawl rate-limited at request ${stats.requests}, backing off`);
+            await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
+          }
+          continue;
+        }
+
+        const json = (await res.json()) as { data?: GtPool[] };
+        if (!json.data) continue;
+
+        for (const pool of json.data) {
+          stats.poolsSeen++;
+          const a = pool.attributes;
+          const dexId = pool.relationships.dex.data.id;
+          const poolAddr = a.address.toLowerCase();
+          const tvl = parseFloat(a.reserve_in_usd ?? "");
+          if (!tvl || tvl < 10_000) continue; // Skip dust
+
+          // Rule 1: Skip Curve pools entirely
+          if (dexId.startsWith("curve")) {
+            stats.poolsSkippedCurve++;
+            continue;
+          }
+
+          // Resolve which token in this pool is our stablecoin
+          // GT pool relationship IDs are formatted as "{network}_{address}"
+          const baseAddr = pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "";
+          const quoteAddr = pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "";
+          const isBase = baseAddr === address;
+          const isQuote = quoteAddr === address;
+          if (!isBase && !isQuote) {
+            // Neither token matches — try addressToId
+            const baseId = addressToId.get(baseAddr);
+            const quoteId = addressToId.get(quoteAddr);
+            if (baseId !== stablecoinId && quoteId !== stablecoinId) continue;
+          }
+
+          // Extract price for our stablecoin
+          const priceStr = isBase ? a.base_token_price_usd : a.quote_token_price_usd;
+          const price = parseFloat(priceStr ?? "");
+
+          // Price observation (from ALL non-Curve pools, even known ones)
+          if (price > 0 && price >= 0.5 && price <= 2.0 && tvl >= 50_000) {
+            const obs = priceObs.get(stablecoinId) ?? [];
+            obs.push({ price, tvl, chain: ourChain, protocol: dexId });
+            priceObs.set(stablecoinId, obs);
+          }
+
+          // Rule 2: Skip TVL/volume for known pools
+          const poolKey = `${ourChain}:${poolAddr}`;
+          if (knownPoolAddrs.has(poolKey)) {
+            stats.poolsSkippedKnown++;
+            continue;
+          }
+
+          // Rule 3: New pool — add with GT quality
+          const vol24h = parseFloat(a.volume_usd?.h24 ?? "0");
+          const qualMult = getGtDexQuality(dexId);
+
+          let maturityDays = 0;
+          if (a.pool_created_at) {
+            const createdSec = new Date(a.pool_created_at).getTime() / 1000;
+            if (createdSec > 0) {
+              maturityDays = Math.floor((nowSec - createdSec) / 86400);
+            }
+          }
+
+          // Classify pool type for display
+          const poolType = dexId.includes("v3") || dexId.includes("v4")
+            ? "concentrated" : dexId.includes("stable") ? "stable-amm" : "amm";
+
+          const pools = newPools.get(stablecoinId) ?? [];
+          pools.push({
+            address: poolAddr,
+            chain: ourChain,
+            dexId,
+            name: a.name,
+            tvlUsd: tvl,
+            volume24hUsd: vol24h,
+            qualityMultiplier: qualMult,
+            maturityDays,
+            poolType: `gt-${poolType}`,
+            price,
+            symbol: a.name, // GT pool name is like "USDC / USDT"
+          });
+          newPools.set(stablecoinId, pools);
+          stats.poolsNew++;
+        }
+      } catch (err) {
+        console.warn(`[dex-liquidity] GT pool crawl error for ${ourChain}:${address}:`, err);
+      }
+    }
+  }
+
+  console.log(
+    `[dex-liquidity] GT pool crawl: ${stats.requests} requests, ${stats.poolsSeen} pools seen, ` +
+    `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known)`
+  );
+  return { newPools, priceObs, stats };
+}
+
+/** Merge GT-discovered new pools into existing LiquidityMetrics. */
+function mergeGtPools(
+  metrics: Map<string, LiquidityMetrics>,
+  gtNewPools: Map<string, GtNewPool[]>,
+): void {
+  let merged = 0;
+
+  for (const [stablecoinId, pools] of gtNewPools) {
+    const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
+    if (!meta) continue;
+
+    let m = metrics.get(stablecoinId);
+    if (!m) {
+      m = initMetrics(stablecoinId, meta.symbol);
+      metrics.set(stablecoinId, m);
+    }
+
+    for (const pool of pools) {
+      const organicFraction = 0.5; // neutral default for GT pools
+      const balanceRatio = 1.0;    // no balance data from GT
+      const coinPairQuality = computePoolPairQuality(
+        pool.symbol.split(/\s*\/\s*/).map((s) => s.trim()),
+        meta.symbol,
+      );
+      const combinedQuality = pool.qualityMultiplier * coinPairQuality;
+      const poolEffTvl = pool.tvlUsd * combinedQuality;
+      const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
+
+      m.totalTvlUsd += pool.tvlUsd;
+      m.totalVolume24hUsd += pool.volume24hUsd;
+      m.poolCount++;
+      m.chains.add(pool.chain);
+      m.pairs.add(pool.symbol);
+      m.qualityAdjustedTvl += pool.tvlUsd * pool.qualityMultiplier;
+      m.effectiveTvl += poolEffTvl;
+      m.stressWeightedSum += pool.tvlUsd * stressIdx;
+      m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
+
+      // Protocol and chain TVL
+      const protocol = pool.dexId.split("-").slice(0, -1).join("-") || pool.dexId; // strip chain suffix
+      m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
+      m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
+
+      // Add to top pools
+      m.topPools.push({
+        project: pool.dexId,
+        chain: pool.chain,
+        tvlUsd: pool.tvlUsd,
+        symbol: pool.symbol,
+        volumeUsd1d: pool.volume24hUsd,
+        poolType: pool.poolType,
+        extra: {
+          effectiveTvl: Math.round(poolEffTvl),
+          organicFraction,
+          pairQuality: Math.round(coinPairQuality * 100) / 100,
+          stressIndex: stressIdx,
+          maturityDays: pool.maturityDays,
+        },
+      });
+
+      merged++;
+    }
+  }
+
+  if (merged > 0) {
+    console.log(`[dex-liquidity] Merged ${merged} GT pools into ${gtNewPools.size} stablecoins`);
+  }
+}
+
 interface DexScreenerTokenPair {
   chainId: string;
   dexId: string;
