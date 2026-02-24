@@ -1167,7 +1167,7 @@ async function fetchGtPools(
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
-  const stats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0 };
+  const stats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
   const chainAddresses = buildGtChainAddresses();
   const nowSec = Date.now() / 1000;
   const startMs = Date.now();
@@ -1263,6 +1263,14 @@ async function fetchGtPools(
 
           // Rule 3: New pool — add with GT quality
           const vol24h = parseFloat(a.volume_usd?.h24 ?? "0");
+
+          // Sanity check: volume/TVL ratio > 10x is suspicious for stablecoins
+          // (typical range is 0.1x–3x; 3500x means garbage data)
+          if (tvl > 0 && vol24h / tvl > 10) {
+            stats.poolsSkippedRatio++;
+            continue;
+          }
+
           const qualMult = getGtDexQuality(dexId);
 
           let maturityDays = 0;
@@ -1301,7 +1309,7 @@ async function fetchGtPools(
 
   console.log(
     `[dex-liquidity] GT pool crawl: ${stats.requests}/${allTokens.length} requests, ${stats.poolsSeen} pools seen, ` +
-    `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known)`
+    `${stats.poolsNew} new, ${stats.poolsSkippedCurve} skipped (Curve), ${stats.poolsSkippedKnown} skipped (known), ${stats.poolsSkippedRatio} skipped (vol/TVL ratio)`
   );
   return { newPools, priceObs, stats };
 }
