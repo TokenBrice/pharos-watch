@@ -1656,6 +1656,13 @@ async function computeStablecoinScores(
   const results = new Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>();
 
   for (const [id, m] of metrics) {
+    // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
+    // before sorting — bad data from any source (DL, GT) gets dropped
+    m.topPools = m.topPools.filter((p) => {
+      const vol = p.volumeUsd1d || 0;
+      return p.tvlUsd <= 0 || vol / p.tvlUsd <= 10;
+    });
+
     // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
     m.topPools.sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd);
     m.topPools.length = Math.min(m.topPools.length, 10);
