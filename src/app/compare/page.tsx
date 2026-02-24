@@ -42,7 +42,7 @@ export default function ComparePage() {
           Compare Stablecoins
         </h1>
         <p className="text-sm text-muted-foreground">
-          Select up to 3 stablecoins to compare side-by-side.
+          Select up to 5 stablecoins to compare side-by-side.
         </p>
       </div>
       <Suspense
