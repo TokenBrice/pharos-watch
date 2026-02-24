@@ -64,6 +64,44 @@ const QUALITY_MULTIPLIERS: Record<string, number> = {
   "generic": 0.3,
 };
 
+// GeckoTerminal API
+const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
+const GT_RATE_LIMIT_MS = 2000; // 30 req/min = 1 every 2s
+const GT_BACKOFF_MS = 65_000;  // Back off 65s on 429
+
+/** Map our chain names (from stablecoins.ts contracts) to GT network IDs */
+const GT_CHAIN_MAP: Record<string, string> = {
+  ethereum: "eth",
+  base: "base",
+  arbitrum: "arbitrum",
+  polygon: "polygon_pos",
+  bsc: "bsc",
+  avalanche: "avax",
+  optimism: "optimism",
+  celo: "celo",
+  gnosis: "xdai",
+  fantom: "ftm",
+};
+
+/** Reverse map: GT network ID → our chain name */
+const GT_CHAIN_REVERSE: Record<string, string> = Object.fromEntries(
+  Object.entries(GT_CHAIN_MAP).map(([k, v]) => [v, k])
+);
+
+/** Quality multipliers for GT-only pools, keyed by DEX ID prefix */
+const GT_DEX_QUALITY: [string, number][] = [
+  ["balancer", 0.7],
+  ["velodrome", 0.7],
+  ["pancakeswap-v3", 0.5],
+  ["trader-joe", 0.5],
+  ["sushiswap-v3", 0.5],
+  ["camelot-v3", 0.5],
+  ["maverick", 0.5],
+  ["ambient", 0.5],
+  ["pancakeswap-v2", 0.3],
+  ["sushiswap", 0.3],
+];
+
 interface LlamaPool {
   pool: string;
   chain: string;
@@ -165,6 +203,44 @@ interface DexPriceObs {
   protocol: string;
 }
 
+// GeckoTerminal response types
+interface GtPoolAttributes {
+  address: string;
+  name: string;
+  pool_created_at: string | null;
+  base_token_price_usd: string | null;
+  quote_token_price_usd: string | null;
+  reserve_in_usd: string | null;
+  volume_usd: { h24: string | null } | null;
+}
+
+interface GtPool {
+  id: string;
+  type: string;
+  attributes: GtPoolAttributes;
+  relationships: {
+    base_token: { data: { id: string; type: string } };
+    quote_token: { data: { id: string; type: string } };
+    dex: { data: { id: string; type: string } };
+  };
+}
+
+interface GtTokenAttributes {
+  address: string;
+  name: string;
+  symbol: string;
+  coingecko_coin_id: string | null;
+  price_usd: string | null;
+  total_reserve_in_usd: string | null;
+  volume_usd: { h24: string | null } | null;
+}
+
+interface GtToken {
+  id: string;
+  type: string;
+  attributes: GtTokenAttributes;
+}
+
 /** Parse pool symbol string into constituent token symbols */
 function parsePoolSymbols(symbol: string): string[] {
   // Handle known composite names first
@@ -198,6 +274,14 @@ function getQualityMultiplier(poolType: string, curveA?: number): number {
     return curveA >= 500 ? QUALITY_MULTIPLIERS["curve-stableswap-high-a"]! : QUALITY_MULTIPLIERS["curve-stableswap"]!;
   }
   return QUALITY_MULTIPLIERS[poolType] ?? QUALITY_MULTIPLIERS["generic"]!;
+}
+
+/** Resolve quality multiplier for a GeckoTerminal pool based on DEX ID */
+function getGtDexQuality(dexId: string): number {
+  for (const [prefix, quality] of GT_DEX_QUALITY) {
+    if (dexId.startsWith(prefix)) return quality;
+  }
+  return QUALITY_MULTIPLIERS["generic"]!;
 }
 
 interface ScoreComponents {
