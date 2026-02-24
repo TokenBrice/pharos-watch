@@ -71,6 +71,7 @@ export function ComparisonChart({
   }, [setLocalRange, onRangeChange]);
 
   // Sync external range prop into local state
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- localRange intentionally omitted to avoid infinite loop
   useEffect(() => {
     if (range != null && range !== localRange) {
       setLocalRange(range);
@@ -104,7 +105,7 @@ export function ComparisonChart({
   }, [normalized, filteredData, series]);
 
   // Determine XAxis date format based on selected range
-  const formatTimestamp = (ts: number) => {
+  const formatTimestamp = useCallback((ts: number) => {
     const d = new Date(ts);
     if (activeRange === "7d" || activeRange === "30d") {
       return d.toLocaleDateString("en-US", {
@@ -116,7 +117,7 @@ export function ComparisonChart({
       month: "short",
       year: "2-digit",
     });
-  };
+  }, [activeRange]);
 
   const defaultFormat = (v: number) => v.toLocaleString();
   const valueFormatter = formatValue ?? defaultFormat;

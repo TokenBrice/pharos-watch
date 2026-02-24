@@ -33,7 +33,6 @@ interface ComparisonTableProps {
   pegRates: Record<string, number>;
   logos?: Record<string, string>;
   detailErrors?: Record<string, boolean>;
-  loading?: boolean;
 }
 
 // --- Best-value detection helpers ---
@@ -91,7 +90,7 @@ function bestGradeIndex(grades: (BluechipGrade | null)[]): number | null {
 
 const BEST_CLASS = "text-green-600 dark:text-green-400 font-semibold";
 
-export function ComparisonTable({ coins, pegRates, logos, detailErrors, loading }: ComparisonTableProps) {
+export function ComparisonTable({ coins, pegRates, logos, detailErrors }: ComparisonTableProps) {
   // Pre-compute row data
   const rowData = useMemo(() => {
     const prices = coins.map(({ data, meta }) => {

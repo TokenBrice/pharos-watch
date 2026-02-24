@@ -136,8 +136,7 @@ export function CompareClient() {
     return errors;
   }, [selectedIds, detailQueries]);
 
-  // Color palette for chart series (first 5 from shared palette)
-  const CHART_COLORS = CHART_PALETTE.slice(0, 5);
+  const CHART_COLORS = CHART_PALETTE;
 
   // Build enriched coin objects for ComparisonTable
   const comparisonCoins = useMemo(() => {
@@ -231,7 +230,7 @@ export function CompareClient() {
     }
   }, []);
 
-  // Render 3 selector slots (filled slots + empty slots up to MAX_COINS)
+  // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];
   for (let i = 0; i < MAX_COINS; i++) {
     const coin = selectedCoins[i] ?? null;
@@ -287,7 +286,6 @@ export function CompareClient() {
             pegRates={pegRates}
             logos={logos}
             detailErrors={detailErrors}
-            loading={detailLoading}
           />
 
           {detailLoading ? (
