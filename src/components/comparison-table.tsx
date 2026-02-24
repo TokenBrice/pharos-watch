@@ -125,7 +125,7 @@ export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps
     // Best indices
     const bestPrice = bestPriceIndex(coins, pegRates);
     const bestPegScore = bestHighestIndex(pegScores);
-    const bestMarketCap = bestHighestIndex(marketCaps);
+
     const bestLiquidity = bestHighestIndex(liquidityScores);
     const bestGrade = bestGradeIndex(bluechipGrades);
 
@@ -141,7 +141,7 @@ export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps
       bluechipGrades,
       bestPrice,
       bestPegScore,
-      bestMarketCap,
+
       bestLiquidity,
       bestGrade,
     };
@@ -210,7 +210,7 @@ export function ComparisonTable({ coins, pegRates, logos }: ComparisonTableProps
           {coins.map((coin, i) => (
             <TableCell
               key={coin.id}
-              className={`text-center font-mono tabular-nums ${i === rowData.bestMarketCap ? BEST_CLASS : ""}`}
+              className="text-center font-mono tabular-nums"
             >
               {formatCurrency(rowData.marketCaps[i])}
             </TableCell>
