@@ -175,9 +175,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
-    │   ├── snapshot-supply.ts    # Periodic per-coin supply snapshots → D1 (12h, piggybacks on */15 cron)
+    │   ├── snapshot-supply.ts    # Periodic per-coin supply snapshots → D1 (dedicated 0 0,12 * * * cron)
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
-    │   ├── sync-usds-status.ts   # USDS protocol status → D1
+    │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
     │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (15min)

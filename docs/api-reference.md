@@ -503,7 +503,7 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded every 15 min
 
 ### `GET /api/supply-history`
 
-Per-coin circulating supply and price history, snapshotted every 12 hours by the cron.
+Per-coin circulating supply and price history, snapshotted twice daily at 00:00 and 12:00 UTC by a dedicated cron (`0 0,12 * * *`).
 
 **Cache:** slow
 
