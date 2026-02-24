@@ -158,145 +158,198 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors, loading 
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="min-w-[80px]">Metric</TableHead>
-          {coins.map((coin) => (
-            <TableHead key={coin.id} className="text-center min-w-[120px]">
-              <div className="flex flex-col items-center gap-1">
-                <StablecoinLogo
-                  src={logos?.[coin.id]}
-                  name={coin.name}
-                  size={28}
-                />
-                <span className="text-xs font-semibold">{coin.symbol}</span>
-                <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
-                {detailErrors?.[coin.id] && (
-                  <span className="text-xs text-destructive">Chart data unavailable</span>
-                )}
+    <>
+      {/* Mobile: stacked cards per coin */}
+      <div className="sm:hidden space-y-4">
+        {coins.map((coin, i) => (
+          <div key={coin.id} className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={28} />
+              <div>
+                <span className="font-semibold text-sm">{coin.symbol}</span>
+                <span className="text-xs text-muted-foreground ml-1.5">{coin.name}</span>
               </div>
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {/* Price */}
-        <TableRow>
-          <TableCell className="font-medium">Price</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell
-              key={coin.id}
-              className={`text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}
-            >
-              {rowData.prices[i]}
-            </TableCell>
-          ))}
-        </TableRow>
+              {detailErrors?.[coin.id] && (
+                <span className="text-xs text-destructive ml-auto">Chart unavailable</span>
+              )}
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Price</dt>
+              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
+              <dt className="text-muted-foreground">Peg Score</dt>
+              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
+                {rowData.pegScores[i] != null ? `${rowData.pegScores[i]!.toFixed(1)}/10` : "N/A"}
+              </dd>
+              <dt className="text-muted-foreground">Market Cap</dt>
+              <dd className="text-right font-mono tabular-nums">{formatCurrency(rowData.marketCaps[i])}</dd>
+              <dt className="text-muted-foreground">7d Change</dt>
+              <dd className="text-right font-mono tabular-nums">
+                {rowData.weeklyChanges[i] != null
+                  ? `${rowData.weeklyChanges[i]! >= 0 ? "+" : ""}${rowData.weeklyChanges[i]!.toFixed(2)}%`
+                  : "N/A"}
+              </dd>
+              <dt className="text-muted-foreground">Liquidity</dt>
+              <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
+                {rowData.liquidityScores[i] != null ? `${rowData.liquidityScores[i]!.toFixed(1)}/10` : "N/A"}
+              </dd>
+              <dt className="text-muted-foreground">Governance</dt>
+              <dd className="text-right">{rowData.governanceLabels[i]}</dd>
+              <dt className="text-muted-foreground">Backing</dt>
+              <dd className="text-right">{rowData.backingLabels[i]}</dd>
+              <dt className="text-muted-foreground">Peg</dt>
+              <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
+              <dt className="text-muted-foreground">Rating</dt>
+              <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
+                {rowData.bluechipGrades[i] ?? "N/A"}
+              </dd>
+            </dl>
+          </div>
+        ))}
+      </div>
 
-        {/* Peg Score */}
-        <TableRow>
-          <TableCell className="font-medium">Peg Score</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell
-              key={coin.id}
-              className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
-            >
-              {rowData.pegScores[i] != null
-                ? `${rowData.pegScores[i]!.toFixed(1)}/10`
-                : "N/A"}
-            </TableCell>
-          ))}
-        </TableRow>
+      {/* Desktop: side-by-side table */}
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[80px]">Metric</TableHead>
+              {coins.map((coin) => (
+                <TableHead key={coin.id} className="text-center min-w-[120px]">
+                  <div className="flex flex-col items-center gap-1">
+                    <StablecoinLogo
+                      src={logos?.[coin.id]}
+                      name={coin.name}
+                      size={28}
+                    />
+                    <span className="text-xs font-semibold">{coin.symbol}</span>
+                    <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
+                    {detailErrors?.[coin.id] && (
+                      <span className="text-xs text-destructive">Chart data unavailable</span>
+                    )}
+                  </div>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {/* Price */}
+            <TableRow>
+              <TableCell className="font-medium">Price</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell
+                  key={coin.id}
+                  className={`text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}
+                >
+                  {rowData.prices[i]}
+                </TableCell>
+              ))}
+            </TableRow>
 
-        {/* Market Cap */}
-        <TableRow>
-          <TableCell className="font-medium">Market Cap</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell
-              key={coin.id}
-              className="text-center font-mono tabular-nums"
-            >
-              {formatCurrency(rowData.marketCaps[i])}
-            </TableCell>
-          ))}
-        </TableRow>
+            {/* Peg Score */}
+            <TableRow>
+              <TableCell className="font-medium">Peg Score</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell
+                  key={coin.id}
+                  className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
+                >
+                  {rowData.pegScores[i] != null
+                    ? `${rowData.pegScores[i]!.toFixed(1)}/10`
+                    : "N/A"}
+                </TableCell>
+              ))}
+            </TableRow>
 
-        {/* 7d Change */}
-        <TableRow>
-          <TableCell className="font-medium">7d Change</TableCell>
-          {coins.map((coin, i) => {
-            const change = rowData.weeklyChanges[i];
-            const sign = change != null && change >= 0 ? "+" : "";
-            return (
-              <TableCell
-                key={coin.id}
-                className="text-center font-mono tabular-nums"
-              >
-                {change != null ? `${sign}${change.toFixed(2)}%` : "N/A"}
-              </TableCell>
-            );
-          })}
-        </TableRow>
+            {/* Market Cap */}
+            <TableRow>
+              <TableCell className="font-medium">Market Cap</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell
+                  key={coin.id}
+                  className="text-center font-mono tabular-nums"
+                >
+                  {formatCurrency(rowData.marketCaps[i])}
+                </TableCell>
+              ))}
+            </TableRow>
 
-        {/* Liquidity Score */}
-        <TableRow>
-          <TableCell className="font-medium">Liquidity Score</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell
-              key={coin.id}
-              className={`text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}
-            >
-              {rowData.liquidityScores[i] != null
-                ? `${rowData.liquidityScores[i]!.toFixed(1)}/10`
-                : "N/A"}
-            </TableCell>
-          ))}
-        </TableRow>
+            {/* 7d Change */}
+            <TableRow>
+              <TableCell className="font-medium">7d Change</TableCell>
+              {coins.map((coin, i) => {
+                const change = rowData.weeklyChanges[i];
+                const sign = change != null && change >= 0 ? "+" : "";
+                return (
+                  <TableCell
+                    key={coin.id}
+                    className="text-center font-mono tabular-nums"
+                  >
+                    {change != null ? `${sign}${change.toFixed(2)}%` : "N/A"}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
 
-        {/* Governance */}
-        <TableRow>
-          <TableCell className="font-medium">Governance</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell key={coin.id} className="text-center">
-              {rowData.governanceLabels[i]}
-            </TableCell>
-          ))}
-        </TableRow>
+            {/* Liquidity Score */}
+            <TableRow>
+              <TableCell className="font-medium">Liquidity Score</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell
+                  key={coin.id}
+                  className={`text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}
+                >
+                  {rowData.liquidityScores[i] != null
+                    ? `${rowData.liquidityScores[i]!.toFixed(1)}/10`
+                    : "N/A"}
+                </TableCell>
+              ))}
+            </TableRow>
 
-        {/* Backing */}
-        <TableRow>
-          <TableCell className="font-medium">Backing</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell key={coin.id} className="text-center">
-              {rowData.backingLabels[i]}
-            </TableCell>
-          ))}
-        </TableRow>
+            {/* Governance */}
+            <TableRow>
+              <TableCell className="font-medium">Governance</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell key={coin.id} className="text-center">
+                  {rowData.governanceLabels[i]}
+                </TableCell>
+              ))}
+            </TableRow>
 
-        {/* Peg Currency */}
-        <TableRow>
-          <TableCell className="font-medium">Peg Currency</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell key={coin.id} className="text-center">
-              {rowData.pegCurrencies[i]}
-            </TableCell>
-          ))}
-        </TableRow>
+            {/* Backing */}
+            <TableRow>
+              <TableCell className="font-medium">Backing</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell key={coin.id} className="text-center">
+                  {rowData.backingLabels[i]}
+                </TableCell>
+              ))}
+            </TableRow>
 
-        {/* Bluechip Rating */}
-        <TableRow>
-          <TableCell className="font-medium">Bluechip Rating</TableCell>
-          {coins.map((coin, i) => (
-            <TableCell
-              key={coin.id}
-              className={`text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`}
-            >
-              {rowData.bluechipGrades[i] ?? "N/A"}
-            </TableCell>
-          ))}
-        </TableRow>
-      </TableBody>
-    </Table>
+            {/* Peg Currency */}
+            <TableRow>
+              <TableCell className="font-medium">Peg Currency</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell key={coin.id} className="text-center">
+                  {rowData.pegCurrencies[i]}
+                </TableCell>
+              ))}
+            </TableRow>
+
+            {/* Bluechip Rating */}
+            <TableRow>
+              <TableCell className="font-medium">Bluechip Rating</TableCell>
+              {coins.map((coin, i) => (
+                <TableCell
+                  key={coin.id}
+                  className={`text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`}
+                >
+                  {rowData.bluechipGrades[i] ?? "N/A"}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </>
   );
 }
