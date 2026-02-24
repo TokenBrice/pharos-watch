@@ -301,6 +301,7 @@ export function CompareClient() {
                   formatValue={formatCurrency}
                   range={range}
                   onRangeChange={setRange}
+                  normalizable
                 />
               )}
               {priceSeries.length >= 2 && (
