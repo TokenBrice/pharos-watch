@@ -1649,7 +1649,7 @@ async function computeStablecoinScores(
 
   for (const [id, m] of metrics) {
     // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
-    m.topPools.sort((a, b) => b.tvlUsd - a.tvlUsd);
+    m.topPools.sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd);
     m.topPools.length = Math.min(m.topPools.length, 10);
 
     // Compute HHI from visible (truncated) pools
