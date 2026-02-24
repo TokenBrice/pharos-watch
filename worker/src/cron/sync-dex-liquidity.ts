@@ -67,7 +67,7 @@ const QUALITY_MULTIPLIERS: Record<string, number> = {
 // GeckoTerminal API
 const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 const GT_RATE_LIMIT_MS = 2000; // 30 req/min = 1 every 2s
-const GT_BACKOFF_MS = 65_000;  // Back off 65s on 429
+const GT_CRAWL_BUDGET_MS = 7 * 60 * 1000; // Max wall time for pool crawl (7 min of ~15 min cron)
 
 /** Map our chain names (from stablecoins.ts contracts) to GT network IDs */
 const GT_CHAIN_MAP: Record<string, string> = {
@@ -1098,17 +1098,9 @@ async function fetchGtTokenBatch(
 
       try {
         const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses}`;
-        let res = await fetchWithRetry(url, {
+        const res = await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
         });
-        // Retry once after 429 backoff
-        if (res?.status === 429) {
-          console.warn(`[dex-liquidity] GT token batch rate-limited, backing off`);
-          await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
-          res = await fetchWithRetry(url, {
-            headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-          });
-        }
         if (!res?.ok) continue;
 
         const json = (await res.json()) as { data?: GtToken[] };
@@ -1178,30 +1170,33 @@ async function fetchGtPools(
   const stats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0 };
   const chainAddresses = buildGtChainAddresses();
   const nowSec = Date.now() / 1000;
+  const startMs = Date.now();
 
   for (const [gtChain, tokens] of chainAddresses) {
     const ourChain = GT_CHAIN_REVERSE[gtChain] ?? gtChain;
 
     for (const { address, stablecoinId } of tokens) {
+      // Time budget check — stop crawling to leave time for scoring + DB writes
+      if (Date.now() - startMs > GT_CRAWL_BUDGET_MS) {
+        console.log(
+          `[dex-liquidity] GT pool crawl time budget exhausted after ${stats.requests} requests ` +
+          `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`
+        );
+        return { newPools, priceObs, stats };
+      }
+
       if (stats.requests > 0) {
         await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
       }
       stats.requests++;
 
       try {
+        // maxRetries=0: single attempt per request to keep wall time predictable.
+        // fetchWithRetry's internal 429 handling (5s+ delays) would make total time unbounded.
         const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${address}/pools?page=1`;
-        let res = await fetchWithRetry(url, {
+        const res = await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-        });
-
-        // Retry once after 429 backoff
-        if (res?.status === 429) {
-          console.warn(`[dex-liquidity] GT pool crawl rate-limited at request ${stats.requests}, backing off`);
-          await new Promise((r) => setTimeout(r, GT_BACKOFF_MS));
-          res = await fetchWithRetry(url, {
-            headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-          });
-        }
+        }, 0);
         if (!res?.ok) continue;
 
         const json = (await res.json()) as { data?: GtPool[] };
