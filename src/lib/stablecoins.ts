@@ -429,16 +429,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
   eur("50", "EURC", "EURC", "rwa-backed", "centralized", {
     geckoId: "euro-coin",
-    collateral: "Euro-denominated reserves held in regulated financial institutions",
-    pegMechanism: "Direct 1:1 redemption through Circle",
+    collateral: "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
+    pegMechanism: "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
     proofOfReserves: { type: "independent-audit", url: "https://www.circle.com/transparency", provider: "Deloitte" },
     links: [
       { label: "Website", url: "https://www.circle.com/eurc" },
       { label: "Twitter", url: "https://x.com/circle" },
+      { label: "Docs", url: "https://developers.circle.com/stablecoins/what-is-eurc" },
     ],
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", decimals: 6 },
+      { chain: "base", address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", decimals: 6 },
+      { chain: "avalanche", address: "0xc891eb4cbdeff6e073e859e987815ed1505c2acd", decimals: 6 },
     ],
   }),
   usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
@@ -610,15 +613,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 41-50 ───────────────────────────────────────────────────────
   other("249", "Brazilian Digital", "BRZ", "rwa-backed", "centralized", "BRL", {
     geckoId: "brz",
-    collateral: "Brazilian real-denominated reserves",
-    pegMechanism: "Direct redemption for BRL through Transfero",
+    collateral: "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil",
+    pegMechanism: "1:1 mint and redemption at Transfero for BRL; KYC verification required; redemption incurs a 1% fee in Brazil",
     links: [
       { label: "Website", url: "https://transfero.com/stablecoins/brz/" },
       { label: "Twitter", url: "https://x.com/BrzToken" },
+      { label: "Docs", url: "https://docs.transfero.com/" },
     ],
-    jurisdiction: { country: "Brazil", regulator: "Central Bank of Brazil" },
+    jurisdiction: { country: "Switzerland", regulator: "FINMA", license: "VQF" },
+    proofOfReserves: { type: "self-reported", url: "https://transfero.com/wp-content/uploads/2024/12/daily-report.pdf", provider: "Transfero" },
     contracts: [
-      { chain: "ethereum", address: "0x420412e765bfa6d85aaac94b4f7b708c89be2e2b", decimals: 4 },
+      { chain: "ethereum", address: "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839", decimals: 18 },
+      { chain: "polygon",  address: "0x4ed141110f6eeeaba9a1df36d8c26f684d2475dc", decimals: 18 },
+      { chain: "bsc",      address: "0x71be881e9c5d4465b3fff61e89c6f3651e69b5bb", decimals: 4 },
+      { chain: "gnosis",   address: "0x0a06c8354a6cc1a07549a38701eac205942e3ac6", decimals: 18 },
+      { chain: "base",     address: "0xe9185ee218cae427af7b9764a011bb89fea761b4", decimals: 18 },
+      { chain: "arbitrum", address: "0xa8940698fda5a07abaef4a5ccdf2f1bb525b47a2", decimals: 18 },
     ],
   }),
   usd("306", "Gate USD", "GUSD", "rwa-backed", "centralized", {
@@ -1152,17 +1162,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Cayman Islands" },
   }),
   eur("101", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
-    geckoId: "monerium-eur-money",
-    collateral: "Euro-denominated bank deposits in licensed European institutions",
-    pegMechanism: "Direct 1:1 redemption through Monerium",
+    geckoId: "monerium-eur-money-2",
+    collateral: "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
+    pegMechanism: "Mint-and-burn: EURe is minted when users deposit EUR via SEPA bank transfer after KYC/AML verification, and burned upon redemption back to EUR; peg maintained by licensed EMI with 1:1 backing",
+    proofOfReserves: { type: "self-reported", url: "https://monerium.com/financial-information/" },
     links: [
       { label: "Website", url: "https://monerium.com/" },
       { label: "Twitter", url: "https://x.com/monerium" },
+      { label: "Docs", url: "https://monerium.dev/docs/welcome" },
     ],
-    jurisdiction: { country: "Iceland", regulator: "Central Bank of Iceland", license: "EMI (MiCA)" },
+    jurisdiction: { country: "Iceland", regulator: "Financial Supervisory Authority of the Central Bank of Iceland", license: "Electronic Money Institution (EMI)" },
     contracts: [
-      { chain: "ethereum", address: "0x3231cb76718cdef2155fc47b5286d82e6eda273f", decimals: 18 },
-      { chain: "gnosis", address: "0xcb444e90d8198415266c6a2724b7900fb12fc56e", decimals: 18 },
+      { chain: "ethereum", address: "0x39b8b6385416f4ca36a20319f70d28621895279d", decimals: 18 },
+      { chain: "gnosis", address: "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430", decimals: 18 },
     ],
   }),
   usd("230", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
@@ -1221,8 +1233,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
     geckoId: "ageur",
-    collateral: "Crypto assets and over-collateralized positions via Angle Protocol",
-    pegMechanism: "Hedging agents and standard LPs maintain EUR peg; depends on USDC/DAI liquidity",
+    collateral: "Overcollateralized basket of Euro-denominated RWAs (tokenized T-bills and government/corporate bonds via Backed Finance: bC3M, bERNX, bIB01), EURC, and crypto assets (wETH, wBTC) managed via the Transmuter module",
+    pegMechanism: "Transmuter module enables 1:1 slippage-free swaps between EURA and whitelisted Euro collateral assets; dynamic fees and circuit breakers rebalance reserves; over-collateralization from Borrowing Module CDPs provides additional buffer",
+    proofOfReserves: { type: "self-reported", url: "https://analytics.angle.money/", provider: "Angle Protocol" },
     links: [
       { label: "Website", url: "https://www.angle.money/eura" },
       { label: "Twitter", url: "https://x.com/AngleProtocol" },
@@ -1231,6 +1244,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "British Virgin Islands" },
     contracts: [
       { chain: "ethereum", address: "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8", decimals: 18 },
+      { chain: "arbitrum", address: "0xfa5ed56a203466cbbc2430a43c66b9d8723528e7", decimals: 18 },
+      { chain: "polygon", address: "0xe0b52e49357fd4daf2c15e02058dce6bc0057db4", decimals: 18 },
+      { chain: "gnosis", address: "0x4b1e2c2762667331bc91648052f646d1b0d35984", decimals: 18 },
+      { chain: "bsc", address: "0x12f31b73d812c6bb0d735a218c086d44d5fe5f89", decimals: 18 },
+      { chain: "base", address: "0xa61beb4a3d02decb01039e378237032b351125b4", decimals: 18 },
+      { chain: "celo", address: "0xc16b81af351ba9e64c1a069e3ab18c244a1e3049", decimals: 18 },
     ],
   }),
   usd("303", "Mezo USD", "meUSD", "crypto-backed", "centralized-dependent", {
@@ -1259,16 +1278,18 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("51", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
     geckoId: "stasis-eurs",
-    collateral: "Euro-denominated reserves verified by independent auditors",
-    pegMechanism: "Direct 1:1 redemption through Stasis",
+    collateral: "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts",
+    pegMechanism: "Direct 1:1 redemption through STSS (Malta) Limited; users send EURS to the treasury wallet, euros are transferred from a segregated bank account, and redeemed tokens are frozen or burned",
     proofOfReserves: { type: "independent-audit", url: "https://stasis.net/transparency", provider: "BDO Malta" },
     links: [
       { label: "Website", url: "https://stasis.net/" },
       { label: "Twitter", url: "https://x.com/stasisnet" },
+      { label: "GitHub", url: "https://github.com/STASISNET/STASIS-EURS-token-smart-contract" },
     ],
     jurisdiction: { country: "Malta", regulator: "MFSA", license: "MiCA" },
     contracts: [
       { chain: "ethereum", address: "0xdb25f211ab05b1c97d595516f45794528a807ad8", decimals: 2 },
+      { chain: "polygon", address: "0xe111178a87a3bff0c8d18decba5798827539ae99", decimals: 2 },
     ],
   }),
   // USD+ (id 46) removed — protocol abandoned 2025 (see cemetery)
@@ -1551,9 +1572,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
     geckoId: "xsgd",
-    collateral: "Singapore dollar cash reserves held at DBS and Standard Chartered banks",
-    pegMechanism: "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution)",
-    proofOfReserves: { type: "independent-audit", url: "https://www.straitsx.com/xsgd" },
+    collateral: "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
+    pegMechanism: "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); independent attestation reports issued twice monthly",
+    proofOfReserves: { type: "independent-audit", url: "https://www.straitsx.com/xsgd", provider: "Independent public accountants (ISCA standards)" },
     links: [
       { label: "Website", url: "https://www.straitsx.com/xsgd" },
       { label: "Twitter", url: "https://x.com/straitsx" },
@@ -1561,59 +1582,79 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
     contracts: [
       { chain: "ethereum", address: "0x70e8de73ce538da2beed35d14187f6959a8eca96", decimals: 6 },
+      { chain: "polygon",  address: "0xdc3326e71d45186f113a2f448984ca0e8d201995", decimals: 6 },
+      { chain: "arbitrum", address: "0xe333e7754a2dc1e020a162ecab019254b9dab653", decimals: 6 },
+      { chain: "avalanche", address: "0xb2f85b7ab3c2b6f62df06de6ae7d09c010a5096e", decimals: 6 },
+      { chain: "base",     address: "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b", decimals: 6 },
     ],
   }),
   other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
     geckoId: "gyen",
-    collateral: "Japanese yen reserves held at FDIC-insured banks",
+    collateral: "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
     pegMechanism: "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
-    proofOfReserves: { type: "independent-audit", url: "https://stablecoin.z.com/attestation/" },
+    proofOfReserves: { type: "independent-audit", url: "https://stablecoin.z.com/attestation/", provider: "The Network Firm" },
     links: [
       { label: "Website", url: "https://stablecoin.z.com/" },
       { label: "Twitter", url: "https://x.com/GMOTrust" },
+      { label: "Docs", url: "https://stablecoin.z.com/what-are-gyen-and-zusd/" },
     ],
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0xc08512927d12348f6620a698105e1baac6ecd911", decimals: 6 },
+      { chain: "arbitrum", address: "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7", decimals: 6 },
     ],
   }),
   other("300", "BiLira", "TRYB", "rwa-backed", "centralized", "TRY", {
     geckoId: "bilira",
-    collateral: "Turkish lira reserves held in Turkish bank accounts",
+    collateral: "Turkish lira cash reserves held in Turkish bank accounts; independently audited with reports published regularly",
     pegMechanism: "Direct 1:1 redemption for TRY through BiLira",
+    proofOfReserves: { type: "independent-audit", url: "https://www.bilira.co/en/audit-reports" },
     links: [
       { label: "Website", url: "https://www.bilira.co/en/product/tryb-stablecoin" },
       { label: "Twitter", url: "https://x.com/BiLira_Official" },
+      { label: "Audit Reports", url: "https://www.bilira.co/en/audit-reports" },
+      { label: "Proof of Reserve", url: "https://dune.com/biliraofficial/bilira-official" },
     ],
     jurisdiction: { country: "Turkey", regulator: "SPK/CMB" },
     contracts: [
       { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
+      { chain: "bsc",      address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
+      { chain: "avalanche", address: "0x564a341df6c126f90cf3ecb92120fd7190acb401", decimals: 6 },
+      { chain: "polygon",  address: "0x4fb71290ac171e1d144f7221d882becac7196eb5", decimals: 6 },
+      { chain: "base",     address: "0xfb8718a69aed7726afb3f04d2bd4bfde1bdcb294", decimals: 6 },
     ],
   }),
   other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
     geckoId: "novatti-australian-digital-dollar",
-    collateral: "Australian dollar cash and cash equivalents held at Australian deposit-taking institutions",
-    pegMechanism: "Direct 1:1 redemption for AUD through AUDC (Novatti subsidiary)",
-    proofOfReserves: { type: "independent-audit", url: "https://www.audd.digital/", provider: "William Buck Audit" },
+    collateral: "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
+    pegMechanism: "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
+    proofOfReserves: { type: "independent-audit", url: "https://www.audd.digital/transparency/", provider: "William Buck" },
     links: [
       { label: "Website", url: "https://www.audd.digital/" },
       { label: "Twitter", url: "https://x.com/AUDD_digital" },
+      { label: "Docs", url: "https://www.audd.digital/wp-content/uploads/2024/05/AUDD-Whitepaper_MAY2024.pdf" },
+      { label: "Proof of Reserve", url: "https://www.audd.digital/transparency/" },
     ],
-    jurisdiction: { country: "Australia", regulator: "ASIC", license: "AFSL" },
+    jurisdiction: { country: "Australia", regulator: "ASIC", license: "AFSL No. 700123" },
     contracts: [
       { chain: "ethereum", address: "0x4cce605ed955295432958d8951d0b176c10720d5", decimals: 6 },
+      { chain: "base",     address: "0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65", decimals: 6 },
     ],
   }),
   other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
-    geckoId: "jpy-coin",
+    geckoId: "jpycoin",
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
-    pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. (FSA-registered Fund Transfer Service Provider)",
+    pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. via the JPYC EX platform; issuance and redemption via bank transfer after KYC; JPYC Inc. holds a Type II Funds Transfer Service Provider license under Japan's Payment Services Act",
     links: [
-      { label: "Website", url: "https://corporate.jpyc.co.jp/en" },
+      { label: "Website", url: "https://jpyc.co.jp/" },
+      { label: "Twitter", url: "https://x.com/jpyc_official" },
+      { label: "GitHub", url: "https://github.com/jpycoin" },
     ],
-    jurisdiction: { country: "Japan", regulator: "FSA" },
+    jurisdiction: { country: "Japan", regulator: "FSA", license: "Type II Funds Transfer Service Provider (Payment Services Act)" },
     contracts: [
-      { chain: "ethereum", address: "0x431d5dff03120afa4bdf332c61a6e1766ef37bdb", decimals: 18 },
+      { chain: "ethereum", address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18 },
+      { chain: "polygon",  address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18 },
+      { chain: "avalanche", address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18 },
     ],
   }),
 
@@ -1739,28 +1780,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // EURT removed — discontinued by Tether
   eur("52", "Celo Euro", "CEUR", "algorithmic", "centralized-dependent", {
     geckoId: "celo-euro",
-    collateral: "Mento reserve containing USDC, DAI, USDT, plus BTC, ETH, and CELO (110%+ ratio)",
-    pegMechanism: "Constant-product market maker arbitrage against reserve assets including centralized stablecoins",
-    jurisdiction: { country: "Germany" },
+    collateral: "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
+    pegMechanism: "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
+    proofOfReserves: { type: "real-time", url: "https://reserve.mento.org/", provider: "Mento Reserve (on-chain, publicly verifiable)" },
+    links: [
+      { label: "Website", url: "https://www.mento.org/" },
+      { label: "Twitter", url: "https://x.com/MentoLabs" },
+      { label: "Docs", url: "https://docs.mento.org/mento" },
+      { label: "GitHub", url: "https://github.com/mento-protocol" },
+    ],
     contracts: [
       { chain: "celo", address: "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73", decimals: 18 },
     ],
   }),
   // PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
   // IBEUR removed — liquidity drain Dec 2023 (see cemetery)
-  eur("98", "EUROe", "EUROe", "rwa-backed", "centralized", {
-    geckoId: "euroe-stablecoin",
-    collateral: "Euro-denominated reserves held in regulated European institutions",
-    pegMechanism: "Direct 1:1 redemption through Membrane Finance (now Paxos-backed)",
-    proofOfReserves: { type: "independent-audit", url: "https://www.euroe.com/transparency-and-regulation", provider: "KPMG" },
-    links: [
-      { label: "Website", url: "https://www.euroe.com/" },
-    ],
-    jurisdiction: { country: "Finland", regulator: "FIN-FSA", license: "EMI" },
-    contracts: [
-      { chain: "ethereum", address: "0x820802fa8a99901f52e39acd21177b0be6ee2974", decimals: 6 },
-    ],
-  }),
+  // EUROe (id 98) removed — acquired by Paxos, wound down May 2025 (see cemetery)
   eur("158", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
     geckoId: "vnx-euro",
     collateral: "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
@@ -1864,58 +1899,74 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Additional CHF-pegged ────────────────────────────────────────────
   other("157", "VNX Swiss Franc", "VCHF", "rwa-backed", "centralized", "CHF", {
     geckoId: "vnx-swiss-franc",
-    collateral: "CHF-denominated reserves",
-    pegMechanism: "Direct 1:1 redemption through VNX",
-    proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/" },
+    collateral: "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
+    pegMechanism: "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
     links: [
-      { label: "Website", url: "https://vnx.li/vchf/" },
+      { label: "Website", url: "https://vnx.li/" },
       { label: "Twitter", url: "https://x.com/VNX_Platform" },
+      { label: "Docs", url: "https://vnx.gitbook.io/vnx-platform/" },
     ],
-    jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "Blockchain Act" },
+    jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "TVTG (Blockchain Act)" },
     contracts: [
       { chain: "ethereum", address: "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f", decimals: 18 },
+      { chain: "base",     address: "0x1fca74d9ef54a6ac80ffe7d3b14e76c4330fd5d8", decimals: 18 },
+      { chain: "arbitrum", address: "0x02cea97794d2cfb5f560e1ff4e9c59d1bec75969", decimals: 18 },
+      { chain: "avalanche", address: "0x228a48df6819ccc2eca01e2192ebafffdad56c19", decimals: 18 },
     ],
   }),
 
   // ── GBP-pegged ───────────────────────────────────────────────────────
   other("292", "VNX British Pound", "VGBP", "rwa-backed", "centralized", "GBP", {
     geckoId: "vnx-british-pound",
-    collateral: "GBP-denominated reserves",
-    pegMechanism: "Direct 1:1 redemption through VNX",
-    proofOfReserves: { type: "independent-audit", url: "https://vnx.li/transparency/" },
+    collateral: "GBP deposits held in bank accounts in Switzerland and Liechtenstein, confirmed 1:1 by Areva General Auditing and Trust Company Limited (December 2024)",
+    pegMechanism: "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent GBP value",
     links: [
-      { label: "Website", url: "https://vnx.li/vgbp/" },
+      { label: "Website", url: "https://vnx.li/" },
       { label: "Twitter", url: "https://x.com/VNX_Platform" },
+      { label: "Docs", url: "https://vnx.gitbook.io/vnx-platform/" },
     ],
-    jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "Blockchain Act" },
+    jurisdiction: { country: "Liechtenstein", regulator: "FMA", license: "TVTG (Blockchain Act)" },
     contracts: [
-      { chain: "ethereum", address: "0x34c9c643becd939c950bb9f141e35777559817cb", decimals: 18 },
+      { chain: "base",     address: "0xaeb4bb7debd1e5e82266f7c3b5cff56b3a7bf411", decimals: 18 },
+      { chain: "celo",     address: "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f", decimals: 18 },
     ],
   }),
   other("317", "Tokenised GBP", "tGBP", "rwa-backed", "centralized", "GBP", {
     geckoId: "tokenised-gbp",
-    collateral: "GBP-denominated reserves",
-    pegMechanism: "Direct 1:1 redemption through issuer",
+    collateral: "Cash and short-term UK government bonds (zero-coupon gilts) held in a segregated account at a UK-regulated financial institution, custodied by Enumis Limited",
+    pegMechanism: "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
     links: [
       { label: "Website", url: "https://www.tokenisedgbp.com/" },
+      { label: "Twitter", url: "https://x.com/tokenGBP" },
+      { label: "Audit", url: "https://www.openzeppelin.com/news/tgbp-audit" },
     ],
-    jurisdiction: { country: "United Kingdom", regulator: "FCA" },
+    jurisdiction: { country: "United Kingdom", regulator: "FCA", license: "Cryptoasset AML Registration (FRN: 928840)" },
     contracts: [
-      { chain: "ethereum", address: "0x00000000441378008ea67f4284a57932b1c000a5", decimals: 18 },
+      { chain: "ethereum", address: "0x27f6c8289550fce67f6b50bed1f519966afe5287", decimals: 18 },
+      { chain: "base",     address: "0x27f6c8289550fce67f6b50bed1f519966afe5287", decimals: 18 },
+      { chain: "bsc",      address: "0x27f6c8289550fce67f6b50bed1f519966afe5287", decimals: 18 },
+      { chain: "polygon",  address: "0x27f6c8289550fce67f6b50bed1f519966afe5287", decimals: 18 },
+      { chain: "avalanche", address: "0x27f6c8289550fce67f6b50bed1f519966afe5287", decimals: 18 },
     ],
   }),
 
   // ── Additional non-USD/non-EUR pegs ──────────────────────────────────
   other("cg-zarp", "ZARP Stablecoin", "ZARP", "rwa-backed", "centralized", "ZAR", {
     geckoId: "zarp-stablecoin",
-    collateral: "South African rand reserves (treasury managed by Old Mutual Wealth)",
-    pegMechanism: "Direct 1:1 redemption for ZAR through ZARP",
+    collateral: "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
+    pegMechanism: "Mint/burn 1:1 with ZAR through ZARP Stablecoin (Pty) Ltd issuing partners; reserves may not be used for any purpose other than redemption",
+    proofOfReserves: { type: "independent-audit", url: "https://kempengroup.co.za/wp-content/uploads/2025/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2025-09-04-1757061801998.pdf", provider: "Kempen Audit" },
     links: [
-      { label: "Website", url: "https://zarp.co.za/" },
+      { label: "Website", url: "https://www.zarpstablecoin.com/" },
+      { label: "Twitter", url: "https://x.com/ZARP_Stablecoin" },
+      { label: "Docs", url: "https://docs.zarpstablecoin.com/zarp-stablecoin" },
+      { label: "GitHub", url: "https://github.com/venox-digital-assets/zarp.contract" },
     ],
-    jurisdiction: { country: "South Africa" },
+    jurisdiction: { country: "South Africa", regulator: "FSCA", license: "CASP license pending" },
     contracts: [
       { chain: "ethereum", address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18 },
+      { chain: "base",     address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18 },
+      { chain: "polygon",  address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18 },
     ],
   }),
   other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
@@ -1931,19 +1982,35 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── CAD / CNY / PHP / MXN / UAH / ARS pegs ───────────────────────────
   other("145", "CAD Coin", "CADC", "rwa-backed", "centralized", "CAD", {
     geckoId: "cad-coin",
-    collateral: "Canadian dollar reserves held 1:1 in a regulated Canadian bank account",
-    pegMechanism: "Direct 1:1 redemption for CAD through PayTrie (FINTRAC-registered MSB)",
+    collateral: "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
+    pegMechanism: "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
+    proofOfReserves: { type: "self-reported", url: "https://dune.com/cadc/stablecoin", provider: "Loon (on-chain Dune dashboard)" },
     links: [
-      { label: "Website", url: "https://paytrie.com/cadc" },
+      { label: "Website", url: "https://loon.finance/" },
+      { label: "Twitter", url: "https://x.com/LoonFinance" },
+      { label: "Docs", url: "https://faq.paytrie.com/col/cadc-faqs" },
     ],
-    jurisdiction: { country: "Canada", regulator: "FINTRAC" },
+    jurisdiction: { country: "Canada", regulator: "FINTRAC", license: "C10001420" },
+    contracts: [
+      { chain: "ethereum", address: "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef", decimals: 18 },
+      { chain: "polygon",  address: "0x9de41aff9f55219d5bf4359f167d1d0c772a396d", decimals: 18 },
+      { chain: "arbitrum", address: "0x2b28e826b55e399f4d4699b85f68666ac51e6f70", decimals: 18 },
+      { chain: "base",     address: "0x043eb4b75d0805c43d7c834902e335621983cf03", decimals: 18 },
+    ],
   }),
   other("299", "PHT Stablecoin", "PHT", "crypto-backed", "centralized-dependent", "PHP", {
     geckoId: "pht-stablecoin",
-    collateral: "Overcollateralized USDC/USDT vaults (MakerDAO MCD fork)",
-    pegMechanism: "Overcollateralized crypto-backed PHP stablecoin for remittances and on-chain payments",
+    collateral: "apcxUSDT (1:1 USDT-backed custodial token) in overcollateralized CDP vaults; future phases to add USDC, USDT, and other approved stablecoins as collateral types",
+    pegMechanism: "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
     links: [
       { label: "Website", url: "https://www.apacx.io/PHT" },
+      { label: "Twitter", url: "https://x.com/apacx_io" },
+      { label: "Docs", url: "https://docs.apacx.io/" },
+      { label: "Audit", url: "https://docs.apacx.io/technical-references/smart-contract-audits" },
+    ],
+    jurisdiction: { country: "Singapore" },
+    contracts: [
+      { chain: "ethereum", address: "0xbe370ad45d44eb45174c4ec60b88839fef32c077", decimals: 18 },
     ],
   }),
 ];

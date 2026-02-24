@@ -116,11 +116,11 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 ## Euro Stablecoins
 
-- [ ] EURC (50) — EURC <!-- In Progress -->
-- [ ] EURS (51) — Stasis Euro <!-- In Progress -->
-- [ ] EURA (55) — EURA <!-- In Progress -->
-- [ ] EUROe (98) — EUROe <!-- In Progress -->
-- [ ] EURE (101) — Monerium EUR emoney <!-- In Progress -->
+- [x] EURC (50) — EURC
+- [x] EURS (51) — Stasis Euro
+- [x] EURA (55) — EURA
+- [x] EUROe (98) — EUROe (moved to cemetery)
+- [x] EURE (101) — Monerium EUR emoney
 - [x] AEUR (147) — Anchored Coins AEUR
 - [x] VEUR (158) — VNX EURO
 - [x] EURR (239) — StablR Euro
@@ -134,19 +134,19 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 ## Other Fiat Stablecoins
 
-- [ ] CEUR (52) — Celo Euro <!-- In Progress -->
-- [ ] GYEN (122) — GYEN <!-- In Progress -->
-- [ ] CADC (145) — CAD Coin <!-- In Progress -->
-- [ ] VCHF (157) — VNX Swiss Franc <!-- In Progress -->
-- [ ] AUDD (165) — AUDD <!-- In Progress -->
-- [ ] BRZ (249) — Brazilian Digital <!-- In Progress -->
-- [ ] XSGD (289) — StraitsX XSGD <!-- In Progress -->
-- [ ] VGBP (292) — VNX British Pound <!-- In Progress -->
-- [ ] PHT (299) — PHT Stablecoin <!-- In Progress -->
-- [ ] TRYB (300) — BiLira <!-- In Progress -->
-- [ ] tGBP (317) — Tokenised GBP <!-- In Progress -->
-- [ ] JPYC (cg-jpyc) — JPY Coin <!-- In Progress -->
-- [ ] ZARP (cg-zarp) — ZARP Stablecoin <!-- In Progress -->
+- [x] CEUR (52) — Celo Euro
+- [x] GYEN (122) — GYEN
+- [x] CADC (145) — CAD Coin
+- [x] VCHF (157) — VNX Swiss Franc
+- [x] AUDD (165) — AUDD
+- [x] BRZ (249) — Brazilian Digital
+- [x] XSGD (289) — StraitsX XSGD
+- [x] VGBP (292) — VNX British Pound
+- [x] PHT (299) — PHT Stablecoin
+- [x] TRYB (300) — BiLira
+- [x] tGBP (317) — Tokenised GBP
+- [x] JPYC (cg-jpyc) — JPY Coin
+- [x] ZARP (cg-zarp) — ZARP Stablecoin
 
 ## Gold / Commodity Stablecoins
 

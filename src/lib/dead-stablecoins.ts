@@ -830,6 +830,20 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "CoinTelegraph",
   },
   {
+    name: "EUROe",
+    symbol: "EUROe",
+    llamaId: "98",
+    logo: "euroe.png",
+    pegCurrency: "EUR",
+    causeOfDeath: "abandoned",
+    deathDate: "2025-05",
+    peakMcap: 1_750_000,
+    obituary:
+      "Membrane Finance built one of Europe's first MiCA-compliant euro stablecoins — regulated by FIN-FSA in Finland, backed 1:1 with ring-fenced euro reserves, audited by KPMG. It never broke $2M in circulation. Paxos acquired Membrane in January 2025 to gain EU regulatory access, then announced a full wind-down of EUROe two months later to focus on bringing the Global Dollar (USDG) to Europe instead. Holders were urged to redeem; the contracts quietly went dark.",
+    sourceUrl: "https://www.euroe.com/blog/paxos",
+    sourceLabel: "EUROe Blog",
+  },
+  {
     name: "DYAD",
     symbol: "DYAD",
     logo: "dyad.png",
