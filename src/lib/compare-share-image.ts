@@ -7,12 +7,17 @@ export interface ShareCoinData {
   pegScore: string;
   weeklyChange: string;
   weeklyChangePositive: boolean;
+  liquidityScore: string;
+  governance: string;
+  backing: string;
+  pegCurrency: string;
+  bluechipRating: string | null;
   logoImg: HTMLImageElement | null;
 }
 
 // --- Layout constants ---
 const W = 1200;
-const H = 630;
+const H = 750;
 const BG = "#0d1628";
 const CARD_BG = "#1a2744";
 const CREAM = "#E8DCC4";
@@ -53,7 +58,7 @@ function drawCoinCard(
   y: number,
   cardW: number,
 ) {
-  const cardH = 320;
+  const cardH = 440;
   const cx = x + cardW / 2; // center x of card
 
   // Card background
@@ -110,31 +115,39 @@ function drawCoinCard(
   ctx.stroke();
   curY += 16;
 
-  // Stats rows: label (left-aligned) + value (right-aligned)
+  // Stats rows: [label, value, color]
   const stats: [string, string, string][] = [
     ["Price", coin.price, WHITE],
     ["Market Cap", coin.marketCap, WHITE],
     ["Peg Score", coin.pegScore, CREAM],
     ["7d Change", coin.weeklyChange, coin.weeklyChangePositive ? GREEN : RED],
+    ["Liquidity", coin.liquidityScore, CREAM],
+    ["Governance", coin.governance, WHITE],
+    ["Backing", coin.backing, WHITE],
+    ["Peg", coin.pegCurrency, WHITE],
   ];
+  if (coin.bluechipRating) {
+    stats.push(["Rating", coin.bluechipRating, CREAM]);
+  }
 
   const labelX = x + CARD_PAD;
   const valueX = x + cardW - CARD_PAD;
+  const ROW_H = 24;
 
   for (const [label, value, color] of stats) {
     // Label
     ctx.fillStyle = MUTED;
-    ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
+    ctx.font = "12px -apple-system, 'Segoe UI', sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(label, labelX, curY);
 
     // Value
     ctx.fillStyle = color;
-    ctx.font = "bold 14px 'SF Mono', 'Cascadia Code', 'Consolas', monospace";
+    ctx.font = "bold 12px 'SF Mono', 'Cascadia Code', 'Consolas', monospace";
     ctx.textAlign = "right";
     ctx.fillText(value, valueX, curY);
 
-    curY += 28;
+    curY += ROW_H;
   }
 }
 

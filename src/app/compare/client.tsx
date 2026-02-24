@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Share2, Twitter, Download } from "lucide-react";
 import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
+import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@/lib/classification";
 import {
   renderCompareShareImage,
   canvasToBlob,
@@ -245,6 +246,11 @@ export function CompareClient() {
             ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%`
             : "N/A",
         weeklyChangePositive: weeklyPct != null ? weeklyPct >= 0 : true,
+        liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}/10` : "N/A",
+        governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
+        backing: BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing,
+        pegCurrency: coin.meta.flags.pegCurrency,
+        bluechipRating: coin.bluechipGrade,
         logoImg: logoImgs[i],
       };
     });
