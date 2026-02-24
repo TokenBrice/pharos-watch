@@ -116,21 +116,21 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 ## Euro Stablecoins
 
-- [ ] EURC (50) — EURC
-- [ ] EURS (51) — Stasis Euro
-- [ ] EURA (55) — EURA
-- [ ] EUROe (98) — EUROe
-- [ ] EURE (101) — Monerium EUR emoney
-- [ ] AEUR (147) — Anchored Coins AEUR
-- [ ] VEUR (158) — VNX EURO
-- [ ] EURR (239) — StablR Euro
-- [ ] EUROP (247) — Schuman EUROP
-- [ ] EURCV (254) — EUR CoinVertible
-- [ ] ZCHF (226) — Frankencoin
-- [ ] DEURO (cg-deuro) — Decentralized Euro
-- [ ] EURQ (cg-eurq) — Quantoz EURQ
-- [ ] EURI (325) — Eurite
-- [ ] EURAU (319) — AllUnity EUR
+- [ ] EURC (50) — EURC <!-- In Progress -->
+- [ ] EURS (51) — Stasis Euro <!-- In Progress -->
+- [ ] EURA (55) — EURA <!-- In Progress -->
+- [ ] EUROe (98) — EUROe <!-- In Progress -->
+- [ ] EURE (101) — Monerium EUR emoney <!-- In Progress -->
+- [ ] AEUR (147) — Anchored Coins AEUR <!-- In Progress -->
+- [ ] VEUR (158) — VNX EURO <!-- In Progress -->
+- [ ] EURR (239) — StablR Euro <!-- In Progress -->
+- [ ] EUROP (247) — Schuman EUROP <!-- In Progress -->
+- [ ] EURCV (254) — EUR CoinVertible <!-- In Progress -->
+- [ ] ZCHF (226) — Frankencoin <!-- In Progress -->
+- [ ] DEURO (cg-deuro) — Decentralized Euro <!-- In Progress -->
+- [ ] EURQ (cg-eurq) — Quantoz EURQ <!-- In Progress -->
+- [ ] EURI (325) — Eurite <!-- In Progress -->
+- [ ] EURAU (319) — AllUnity EUR <!-- In Progress -->
 
 ## Other Fiat Stablecoins
 
@@ -150,11 +150,11 @@ Run the `stablecoin-info-fetch` skill on every tracked coin to verify and popula
 
 ## Gold / Commodity Stablecoins
 
-- [ ] XAUT (gold-xaut) — Tether Gold <!-- In Progress -->
-- [ ] PAXG (gold-paxg) — PAX Gold <!-- In Progress -->
-- [ ] KAU (gold-kau) — Kinesis Gold <!-- In Progress -->
-- [ ] XAUm (gold-xaum) — Matrixdock Gold <!-- In Progress -->
-- [ ] VRO (gold-vro) — VeraOne <!-- In Progress -->
-- [ ] CGO (gold-cgo) — Comtech Gold <!-- In Progress -->
-- [ ] DGLD (gold-dgld) — DGLD Tokenized Gold <!-- In Progress -->
-- [ ] KAG (silver-kag) — Kinesis Silver <!-- In Progress -->
+- [x] XAUT (gold-xaut) — Tether Gold
+- [x] PAXG (gold-paxg) — PAX Gold
+- [x] KAU (gold-kau) — Kinesis Gold
+- [x] XAUm (gold-xaum) — Matrixdock Gold
+- [x] VRO (gold-vro) — VeraOne
+- [x] CGO (gold-cgo) — Comtech Gold
+- [x] DGLD (gold-dgld) — DGLD Tokenized Gold
+- [x] KAG (silver-kag) — Kinesis Silver

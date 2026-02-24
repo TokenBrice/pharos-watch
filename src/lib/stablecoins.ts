@@ -1616,37 +1616,40 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // commodityOunces: troy ounces per token (used for peg deviation normalization)
   other("gold-xaut", "Tether Gold", "XAUT", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "tether-gold", protocolSlug: "tether-gold",
-    collateral: "Physical gold bars held in Swiss vaults by Tether",
-    pegMechanism: "Direct redemption for physical gold through Tether",
-    proofOfReserves: { type: "independent-audit", url: "https://gold.tether.to/reports", provider: "BDO" },
+    collateral: "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
+    pegMechanism: "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
+    proofOfReserves: { type: "independent-audit", url: "https://gold.tether.to/reports", provider: "BDO Italia" },
     links: [
       { label: "Website", url: "https://gold.tether.to/" },
+      { label: "Docs", url: "https://gold.tether.to/faq" },
       { label: "Twitter", url: "https://x.com/tethergold" },
     ],
-    jurisdiction: { country: "British Virgin Islands" },
+    jurisdiction: { country: "El Salvador", regulator: "CNAD", license: "Stablecoin Issuer & DASP" },
     contracts: [
       { chain: "ethereum", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6 },
     ],
   }),
   other("gold-paxg", "PAX Gold", "PAXG", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "pax-gold", protocolSlug: "paxos-gold",
-    collateral: "Physical gold bars held in London Brink's vaults by Paxos (NYDFS-regulated)",
-    pegMechanism: "Direct redemption for physical gold through Paxos",
+    collateral: "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
+    pegMechanism: "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
     proofOfReserves: { type: "independent-audit", url: "https://www.paxos.com/paxg-transparency", provider: "KPMG" },
     links: [
       { label: "Website", url: "https://www.paxos.com/pax-gold" },
+      { label: "Docs", url: "https://docs.paxos.com/guides/dashboard/paxg" },
+      { label: "GitHub", url: "https://github.com/paxosglobal/paxos-gold-contract" },
       { label: "Twitter", url: "https://x.com/paxos" },
     ],
-    jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
+    jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0x45804880de22913dafe09f4980848ece6ecbaf78", decimals: 18 },
     ],
   }),
   other("gold-kau", "Kinesis Gold", "KAU", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "kinesis-gold",
-    collateral: "Investment-grade physical gold bullion (1 KAU = 1 gram)",
+    collateral: "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
     pegMechanism: "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
-    proofOfReserves: { type: "independent-audit", url: "https://kinesis.money/trust-security/", provider: "Inspectorate International" },
+    proofOfReserves: { type: "independent-audit", url: "https://kinesis.money/audits/", provider: "Bureau Veritas (Inspectorate International)" },
     links: [
       { label: "Website", url: "https://kinesis.money/gold/" },
       { label: "Twitter", url: "https://x.com/KinesisMonetary" },
@@ -1655,49 +1658,58 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   other("gold-xaum", "Matrixdock Gold", "XAUm", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "matrixdock-gold",
-    collateral: "LBMA-certified 99.99% pure gold bars held in Asian vaults",
-    pegMechanism: "Direct redemption for physical gold through Matrixdock (Matrixport)",
-    proofOfReserves: { type: "independent-audit", url: "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold", provider: "Independent physical audit" },
+    collateral: "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
+    pegMechanism: "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
+    proofOfReserves: { type: "independent-audit", url: "https://www.matrixdock.com/blog/announcements/matrixdock-publishes-its-second-independent-audit-report-on-xaum-gold", provider: "Bureau Veritas" },
     links: [
       { label: "Website", url: "https://www.matrixdock.com/xaum" },
+      { label: "Docs", url: "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum" },
       { label: "Twitter", url: "https://x.com/matrixdock" },
     ],
     jurisdiction: { country: "Singapore" },
     contracts: [
       { chain: "ethereum", address: "0x2103e845c5e135493bb6c2a4f0b8651956ea8682", decimals: 18 },
+      { chain: "bsc", address: "0x23ae4fd8e7844cdbc97775496ebd0e8248656028", decimals: 18 },
     ],
   }),
   other("gold-vro", "VeraOne", "VRO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "veraone",
-    collateral: "Physical gold stored in secure zones in France (1 VRO = 1 gram of gold)",
-    pegMechanism: "Direct redemption for physical gold through VeraCash",
+    collateral: "LBMA-certified physical gold (999.9‰ fine) held in the Free Ports of Geneva, Switzerland (1 VRO = 1 gram)",
+    pegMechanism: "Direct 1:1 redemption for physical gold or fiat currency through VeraOne (LinGOLD Ltd); smaller amounts redeemable via partnered gold retailers worldwide",
+    proofOfReserves: { type: "independent-audit", url: "https://veraone.io/en/audit-processes-and-proof-of-reserves/", provider: "ALS Global" },
     links: [
-      { label: "Website", url: "https://music.veraone.net/" },
+      { label: "Website", url: "https://veraone.io/en/home/" },
+      { label: "Twitter", url: "https://x.com/VROtoken" },
     ],
-    jurisdiction: { country: "France" },
+    jurisdiction: { country: "United Kingdom" },
     contracts: [
       { chain: "ethereum", address: "0x10bc518c32fbae5e38ecb50a612160571bd81e44", decimals: 8 },
     ],
   }),
   other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "comtech-gold",
-    collateral: "Physical gold stored with Transguard in UAE (1 CGO = 1 gram of pure gold), Shariah-compliant",
-    pegMechanism: "Direct redemption for physical gold through Comtech Gold (DMCC-endorsed)",
+    collateral: "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
+    pegMechanism: "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
+    proofOfReserves: { type: "independent-audit", url: "https://comtechgold.com/Routine", provider: "unnamed" },
     links: [
       { label: "Website", url: "https://www.comtechgold.com/" },
+      { label: "Twitter", url: "https://x.com/ComTechOfficial" },
     ],
-    jurisdiction: { country: "United Arab Emirates" },
+    jurisdiction: { country: "United Arab Emirates", regulator: "DAFZA", license: "DAFZA; endorsed by DMCC" },
   }),
   other("gold-dgld", "DGLD Tokenized Gold", "DGLD", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "gold-token-sa-dgld-tokenized-gold",
-    collateral: "LBMA-certified PAMP gold bars stored in Swiss vaults (1 DGLD = 1 troy ounce)",
-    pegMechanism: "Direct redemption for physical gold through Gold Token SA (MKS PAMP subsidiary)",
+    collateral: "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
+    pegMechanism: "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
+    proofOfReserves: { type: "real-time", url: "https://explorer.dgld.ch/", provider: "MKS PAMP (bar serial numbers + independent physical audits)" },
     links: [
       { label: "Website", url: "https://dgld.ch/" },
+      { label: "Twitter", url: "https://x.com/DGLD_Official" },
     ],
-    jurisdiction: { country: "Switzerland" },
+    jurisdiction: { country: "Switzerland", regulator: "VQF (FINMA SRO)" },
     contracts: [
       { chain: "ethereum", address: "0xa9299c296d7830a99414d1e5546f5171fa01e9c8", decimals: 18 },
+      { chain: "base", address: "0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9", decimals: 18 },
     ],
   }),
 
@@ -1706,12 +1718,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     rwa: true, commodityOunces: 1, geckoId: "kinesis-silver", // 1 troy ounce per token
     collateral: "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
     pegMechanism: "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
-    proofOfReserves: { type: "independent-audit", url: "https://kinesis.money/trust-security/", provider: "Inspectorate International" },
+    proofOfReserves: { type: "independent-audit", url: "https://kinesis.money/trust-security/", provider: "Bureau Veritas (Inspectorate International)" },
     links: [
       { label: "Website", url: "https://kinesis.money/silver/" },
+      { label: "Docs", url: "https://kinesis.money/trust-security/" },
       { label: "Twitter", url: "https://x.com/KinesisMonetary" },
     ],
-    jurisdiction: { country: "Cayman Islands", regulator: "CIMA", license: "VASP Registration" },
+    jurisdiction: { country: "Cayman Islands", regulator: "CIMA", license: "VASP License (conditional)" },
     contracts: [
       { chain: "ethereum", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9 },
     ],
