@@ -238,7 +238,7 @@ function Tombstone({
         </span>
 
         {coin.epitaph && (
-          <span className="text-[8px] italic text-muted-foreground/50 text-center leading-tight px-1.5">
+          <span className="text-[9px] italic text-muted-foreground/70 text-center leading-tight px-1.5">
             {coin.epitaph}
           </span>
         )}
