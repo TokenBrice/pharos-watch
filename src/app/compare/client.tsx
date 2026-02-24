@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
-import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
+import { useStablecoins, detailToSupplyHistory, detailToPriceHistory } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Link2, Check } from "lucide-react";
 import type { CoinOption } from "@/components/coin-selector";
-import type { SupplyHistoryPoint, StablecoinDetail } from "@/hooks/use-stablecoins";
+import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 
 const MAX_COINS = 5;
 
@@ -116,15 +116,14 @@ export function CompareClient() {
     return derivePegRates(listData.peggedAssets, TRACKED_META_BY_ID, listData.fxFallbackRates).rates;
   }, [listData]);
 
-  // Per-coin supply history using useQueries (via stablecoin-detail endpoint)
-  const supplyQueries = useQueries({
+  // Per-coin detail data (raw, used for both supply and price history)
+  const detailQueries = useQueries({
     queries: selectedIds.map((id) => ({
       queryKey: ["stablecoin-detail", id],
       queryFn: () =>
         apiFetch<StablecoinDetail>(`/api/stablecoin/${encodeURIComponent(id)}`),
       staleTime: CRON_1H,
       enabled: !!id,
-      select: detailToSupplyHistory,
     })),
   });
 
@@ -160,23 +159,39 @@ export function CompareClient() {
   const supplySeries = useMemo(() => {
     return selectedIds
       .map((id, i) => {
-        const queryResult = supplyQueries[i];
-        if (!queryResult?.data || queryResult.data.length === 0) return null;
+        const detail = detailQueries[i]?.data;
+        const history = detailToSupplyHistory(detail);
+        if (history.length === 0) return null;
         const meta = TRACKED_META_BY_ID.get(id);
         return {
           id,
           label: meta?.name ?? id,
-          data: queryResult.data.map((d: SupplyHistoryPoint) => ({
-            ts: d.date * 1000,
-            value: d.circulatingUsd,
-          })),
+          data: history.map((d) => ({ ts: d.date * 1000, value: d.circulatingUsd })),
           color: CHART_COLORS[i % CHART_COLORS.length],
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
-  }, [selectedIds, supplyQueries]);
+  }, [selectedIds, detailQueries]);
 
-  const supplyLoading = supplyQueries.some((q) => q.isLoading);
+  // Build price chart series
+  const priceSeries = useMemo(() => {
+    return selectedIds
+      .map((id, i) => {
+        const detail = detailQueries[i]?.data;
+        const history = detailToPriceHistory(detail);
+        if (history.length === 0) return null;
+        const meta = TRACKED_META_BY_ID.get(id);
+        return {
+          id,
+          label: meta?.name ?? id,
+          data: history.map((d) => ({ ts: d.date * 1000, value: d.price })),
+          color: CHART_COLORS[i % CHART_COLORS.length],
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+  }, [selectedIds, detailQueries]);
+
+  const detailLoading = detailQueries.some((q) => q.isLoading);
 
   const handleSelect = (slotIndex: number, coin: CoinOption) => {
     setSelectedIds((prev) => {
@@ -264,17 +279,30 @@ export function CompareClient() {
             logos={logos}
           />
 
-          {supplyLoading ? (
+          {detailLoading ? (
             <Skeleton className="h-[300px] sm:h-[400px] rounded-2xl" />
-          ) : supplySeries.length >= 2 ? (
-            <ComparisonChart
-              title="Market Cap History"
-              series={supplySeries}
-              formatValue={formatCurrency}
-              range={range}
-              onRangeChange={setRange}
-            />
-          ) : null}
+          ) : (
+            <>
+              {supplySeries.length >= 2 && (
+                <ComparisonChart
+                  title="Market Cap History"
+                  series={supplySeries}
+                  formatValue={formatCurrency}
+                  range={range}
+                  onRangeChange={setRange}
+                />
+              )}
+              {priceSeries.length >= 2 && (
+                <ComparisonChart
+                  title="Price History"
+                  series={priceSeries}
+                  formatValue={(v) => `$${v.toFixed(4)}`}
+                  range={range}
+                  onRangeChange={setRange}
+                />
+              )}
+            </>
+          )}
 
         </div>
       )}
