@@ -153,10 +153,8 @@ const worker = {
         })());
         break;
       }
-      case "0 0,12 * * *":
-        ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
-        break;
       case "0 8 * * *":
+        ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
         ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
         ctx.waitUntil(logCronRun(db, "daily-digest", () => {
