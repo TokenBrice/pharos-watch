@@ -10,7 +10,8 @@ import { useLogos } from "@/hooks/use-logos";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
-import { PortfolioStressPanel } from "@/components/portfolio-stress-panel";
+import { PortfolioPanel } from "@/components/portfolio-panel";
+import { StressTestPanel } from "@/components/stress-test-panel";
 import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { sumPegBuckets } from "@/lib/supply";
@@ -236,8 +237,15 @@ export function ReportCardsClient() {
         </CardContent>
       </Card>
 
-      {/* Portfolio & Stress Test panel */}
-      <PortfolioStressPanel
+      {/* Portfolio panel */}
+      <PortfolioPanel
+        portfolio={portfolio}
+        cards={reportData?.cards}
+        logos={logos}
+      />
+
+      {/* Contagion Map panel */}
+      <StressTestPanel
         portfolio={portfolio}
         stressTest={stressTest}
         cards={reportData?.cards}
