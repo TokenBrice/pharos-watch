@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
 
@@ -148,7 +149,7 @@ export function StabilityIndex() {
   const sparkData = [...history].reverse().concat({ date: computedAt, score, band });
 
   return (
-    <div className="flex items-center gap-4 animate-in fade-in duration-300">
+    <Link href="/stability-index" className="flex items-center gap-4 animate-in fade-in duration-300 hover:opacity-80 transition-opacity">
       <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
         Pharos Stability Index
       </span>
@@ -171,7 +172,7 @@ export function StabilityIndex() {
       {sparkData.length > 1 && (
         <Sparkline data={sparkData} color={sparkColor} />
       )}
-    </div>
+    </Link>
   );
 }
 
