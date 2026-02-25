@@ -17,7 +17,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     return new Response(JSON.stringify({ current: null, history: [] }), {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": CACHE_PROFILES.slow,
+        "Cache-Control": CACHE_PROFILES.standard,
       },
     });
   }
@@ -39,7 +39,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   }), {
     headers: addFreshnessHeaders({
       "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.slow,
+      "Cache-Control": CACHE_PROFILES.standard,
     }, current.computed_at, 86400),
   });
 });

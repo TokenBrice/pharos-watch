@@ -162,9 +162,14 @@ const worker = {
 
     switch (cron) {
       case "*/15 * * * *": {
-        ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db, env.CMC_API_KEY)));
+        const stablecoinsSync = logCronRun(db, "sync-stablecoins", () => syncStablecoins(db, env.CMC_API_KEY));
+        ctx.waitUntil(stablecoinsSync);
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
         ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
+        // PSI depends on stablecoins cache + depeg_events — run after sync completes
+        ctx.waitUntil(stablecoinsSync.then(() =>
+          logCronRun(db, "stability-index", () => computeAndStoreStabilityIndex(db))
+        ));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {
           try {
@@ -190,9 +195,6 @@ const worker = {
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null)));
         break;
       }
-      case "55 7 * * *":
-        ctx.waitUntil(logCronRun(db, "stability-index", () => computeAndStoreStabilityIndex(db)));
-        break;
       case "0 8 * * *":
         ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
         ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));

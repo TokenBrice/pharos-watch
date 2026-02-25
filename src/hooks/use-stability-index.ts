@@ -1,6 +1,6 @@
 "use client";
 
-import { useApiQuery, CRON_24H } from "@/hooks/use-api-query";
+import { useApiQuery, CRON_15MIN } from "@/hooks/use-api-query";
 
 interface StabilityIndexComponents {
   severity: number;
@@ -31,7 +31,7 @@ export function useStabilityIndex() {
   return useApiQuery<StabilityIndexData>(
     ["stability-index"],
     "/api/stability-index",
-    CRON_24H,
+    CRON_15MIN,
   );
 }
 
@@ -51,6 +51,6 @@ export function useStabilityIndexDetail() {
   return useApiQuery<StabilityIndexDetailData>(
     ["stability-index-detail"],
     "/api/stability-index?detail=true",
-    CRON_24H,
+    CRON_15MIN,
   );
 }

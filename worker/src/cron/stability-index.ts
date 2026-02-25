@@ -59,13 +59,20 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, freezeCount24h, mcap7dChangePct });
 
-  const now = Math.floor(Date.now() / 1000);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const dayTs = nowSec - (nowSec % 86400); // midnight UTC of current day
   await db
     .prepare(
-      "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)"
+      `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(computed_at) DO UPDATE SET
+         score = excluded.score,
+         band = excluded.band,
+         components = excluded.components,
+         input_snapshot = excluded.input_snapshot`
     )
     .bind(
-      now,
+      dayTs,
       result.score,
       result.band,
       JSON.stringify(result.components),

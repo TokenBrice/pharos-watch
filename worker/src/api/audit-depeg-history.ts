@@ -323,8 +323,6 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
   const stmts: D1PreparedStatement[] = [];
 
   for (const day of sortedDays) {
-    stmts.push(db.prepare("DELETE FROM stability_index WHERE computed_at = ?").bind(day));
-
     const activeDepegs = depegEvents.filter(
       (e) => e.started_at <= day && (e.ended_at === null ? day <= now : e.ended_at > day)
     );
@@ -367,7 +365,13 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
 
     stmts.push(
       db.prepare(
-        "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)"
+        `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(computed_at) DO UPDATE SET
+           score = excluded.score,
+           band = excluded.band,
+           components = excluded.components,
+           input_snapshot = excluded.input_snapshot`
       ).bind(
         day,
         indexResult.score,

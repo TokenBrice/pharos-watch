@@ -213,16 +213,27 @@ export async function generateDailyDigest(
     .first<{ cnt: number }>();
   const freezeCount24h = freezeRow?.cnt ?? 0;
 
-  // 4. Stability index (latest two for today + yesterday comparison)
+  // 4. Stability index — date-keyed lookup for today + yesterday
+  const nowSec = Math.floor(Date.now() / 1000);
+  const todayTs = nowSec - (nowSec % 86400);
+  const yesterdayTs = todayTs - 86400;
   const indexRows = await db
-    .prepare("SELECT score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 2")
-    .all<{ score: number; band: string; components: string }>();
+    .prepare(
+      "SELECT computed_at, score, band, components FROM stability_index " +
+      "WHERE computed_at IN (?, ?) ORDER BY computed_at DESC"
+    )
+    .bind(todayTs, yesterdayTs)
+    .all<{ computed_at: number; score: number; band: string; components: string }>();
   const indexResults = indexRows.results ?? [];
-  const stabilityIndex = indexResults[0]
-    ? { score: indexResults[0].score, band: indexResults[0].band, components: JSON.parse(indexResults[0].components) }
+  const todayRow = indexResults.find(r => r.computed_at === todayTs);
+  const yesterdayRow = indexResults.find(r => r.computed_at === yesterdayTs);
+  // If today's PSI hasn't computed yet, use yesterday as "current"
+  const currentRow = todayRow ?? yesterdayRow;
+  const stabilityIndex = currentRow
+    ? { score: currentRow.score, band: currentRow.band, components: JSON.parse(currentRow.components) }
     : null;
-  const yesterdayIndex = indexResults[1]
-    ? { score: indexResults[1].score, band: indexResults[1].band }
+  const yesterdayIndex = todayRow && yesterdayRow
+    ? { score: yesterdayRow.score, band: yesterdayRow.band }
     : null;
 
   // --- Build input data ---
