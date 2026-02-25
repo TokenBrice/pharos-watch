@@ -90,6 +90,26 @@ const worker = {
       }
     }
 
+    // Admin-only: roll back blacklist sync state to re-scan missed events.
+    // EVM: rolls back 50000 blocks (~7d Ethereum, ~3.5h Arbitrum).
+    // Tron: rolls back 7 days of timestamps.
+    // INSERT OR IGNORE in the cron prevents duplicate insertion.
+    if (url.pathname === "/api/reset-blacklist-sync") {
+      const authError = await (await import("./lib/auth")).requireAdmin(request, env.ADMIN_KEY);
+      if (authError) return addCorsHeaders(authError, origin);
+      try {
+        const result = await env.DB.batch([
+          env.DB.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'"),
+          env.DB.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'"),
+        ]);
+        const evmChanged = result[0]?.meta?.changes ?? 0;
+        const tronChanged = result[1]?.meta?.changes ?? 0;
+        return addCorsHeaders(new Response(JSON.stringify({ ok: true, evmReset: evmChanged, tronReset: tronChanged }), { headers: { "Content-Type": "application/json" } }), origin);
+      } catch (err) {
+        return addCorsHeaders(new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { "Content-Type": "application/json" } }), origin);
+      }
+    }
+
     const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history";
 
     // Check edge cache first

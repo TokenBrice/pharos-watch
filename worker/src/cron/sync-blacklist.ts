@@ -23,6 +23,27 @@ import {
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
 
+// Safety margin when advancing sync state to chain head (prevents permanent event loss
+// if block explorer indexing lags behind chain tip). 15 minutes in seconds/ms.
+const INDEXING_SAFETY_SEC = 900;
+const TRON_SAFETY_MS = INDEXING_SAFETY_SEC * 1000;
+
+// Approximate block times (seconds) per EVM chain — used to compute safety margin in blocks.
+const EVM_BLOCK_TIME: Record<number, number> = {
+  1: 12,        // Ethereum
+  42161: 0.25,  // Arbitrum
+  8453: 2,      // Base
+  10: 2,        // Optimism
+  137: 2,       // Polygon
+  43114: 2,     // Avalanche
+  56: 3,        // BSC
+};
+
+function evmSafetyMarginBlocks(evmChainId: number): number {
+  const blockTime = EVM_BLOCK_TIME[evmChainId] ?? 2;
+  return Math.ceil(INDEXING_SAFETY_SEC / blockTime);
+}
+
 function buildExplorerTxUrl(chain: ChainConfig, txHash: string): string {
   if (chain.type === "tron") {
     return `${chain.explorerUrl}/#/transaction/${txHash}`;
@@ -647,7 +668,9 @@ export async function syncBlacklist(
         );
         await insertRows(db, result.rows);
 
-        const newBlock = result.rows.length > 0 ? result.maxBlock : Date.now();
+        // When no events found, advance toward current time but leave a safety margin
+        // to avoid permanently skipping events the explorer hasn't indexed yet.
+        const newBlock = result.rows.length > 0 ? result.maxBlock : Math.max(Date.now() - TRON_SAFETY_MS, lastBlock);
         if (newBlock > lastBlock) {
           await setLastBlock(db, configKey, newBlock);
         }
@@ -667,13 +690,16 @@ export async function syncBlacklist(
         if (result.rows.length > 0) {
           newBlock = result.maxBlock;
         } else {
-          // No new events — advance sync state to chain head to prevent rescanning
+          // No new events — advance sync state toward chain head, but leave a safety
+          // margin to avoid permanently skipping events that the explorer hasn't indexed yet.
           if (!chainHeadCache.has(evmChainId)) {
             const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget);
             if (head) chainHeadCache.set(evmChainId, head);
           }
+          const head = chainHeadCache.get(evmChainId);
+          const margin = evmSafetyMarginBlocks(evmChainId);
           // Fall back: if sentinel was reset, use 0 rather than staying stuck at sentinel
-          newBlock = chainHeadCache.get(evmChainId) ?? (wasReset ? 0 : lastBlock);
+          newBlock = head ? Math.max(head - margin, lastBlock) : (wasReset ? 0 : lastBlock);
         }
 
         if (newBlock !== lastBlock) {
