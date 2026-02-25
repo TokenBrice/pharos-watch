@@ -1,7 +1,7 @@
 # PSI Lighthouse Visual — Design
 
 **Date:** 2026-02-25
-**Status:** Approved
+**Status:** Implemented
 
 ## Goal
 
@@ -60,11 +60,17 @@ Before:
   [score] [band] [delta] [sparkline]
 
 After:
-  [Stability Index label]
+  [Pharos Stability Index label]
   [lighthouse] [score] [band] [delta] [sparkline]
 ```
 
-The lighthouse icon sits to the left of the score number, vertically centered with the text baseline.
+The label text was changed from "Stability Index" to "Pharos Stability Index". The lighthouse icon sits to the left of the score number, vertically centered.
+
+## Accessibility
+
+- SVG IDs namespaced with `React.useId()` to avoid collisions
+- `prefers-reduced-motion: reduce` disables the pulse animation
+- `aria-label` on the SVG describes the lighthouse and current band
 
 ## Files changed
 
