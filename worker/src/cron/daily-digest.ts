@@ -249,7 +249,7 @@ export async function generateDailyDigest(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6-20250620",
+      model: "claude-sonnet-4-6",
       max_tokens: 800,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPromptContent }],
