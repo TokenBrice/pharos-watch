@@ -1,18 +1,13 @@
 import { withErrorHandler } from "../lib/api-utils";
+import { requireAdmin } from "../lib/auth";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 
 export const handleBackfillStabilityIndex = withErrorHandler(
   "backfill-stability-index",
   async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
-    // Admin auth
-    const provided = request?.headers.get("X-Admin-Key");
-    if (!adminKey || provided !== adminKey) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const authError = await requireAdmin(request, adminKey);
+    if (authError) return authError;
 
     const now = Math.floor(Date.now() / 1000);
     const DAY = 86400;
