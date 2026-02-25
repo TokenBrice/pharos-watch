@@ -25,7 +25,6 @@ interface Env {
   GRAPH_API_KEY?: string;
   ALERT_WEBHOOK_URL?: string;
   ANTHROPIC_API_KEY?: string;
-  METALS_API_KEY?: string;
   CMC_API_KEY?: string;
   COINGECKO_API_KEY?: string;
   TWITTER_API_KEY?: string;
@@ -134,7 +133,7 @@ const worker = {
       }
     }
 
-    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY, env.METALS_API_KEY);
+    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY);
 
     if (!response) {
       return addCorsHeaders(

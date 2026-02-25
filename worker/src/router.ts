@@ -29,7 +29,6 @@ export function route(
   ctx: ExecutionContext,
   request?: Request,
   adminKey?: string,
-  metalsApiKey?: string,
 ): Promise<Response> | null {
   const path = url.pathname;
 
