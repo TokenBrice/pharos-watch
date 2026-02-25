@@ -361,44 +361,49 @@ export default function AboutPage() {
       </Card>
 
       {/* Section 5: Footer */}
-      <div className="text-sm text-muted-foreground pb-4 space-y-2">
-        <p>
-          Pharos is fully open source.{" "}
-          <a
-            href="https://github.com/TokenBrice/stablecoin-dashboard"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-          >
-            <Github className="inline h-3.5 w-3.5" />
-            View on GitHub
-            <ExternalLink className="inline h-3.5 w-3.5" />
-          </a>
-        </p>
-        <p>
-          Questions, corrections, or stablecoins we should add? Reach out on{" "}
-          <a
-            href="https://x.com/PharosWatch"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-          >
-            @PharosWatch
-            <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-          </a>
-          {" "}or{" "}
-          <a
-            href="https://tokenbrice.xyz/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
-          >
-            tokenbrice.xyz
-            <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
-          </a>
-          .
-        </p>
-      </div>
+      <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
+        <CardHeader>
+          <CardTitle as="h2">Get in Touch</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
+          <p>
+            Pharos is fully open source.{" "}
+            <a
+              href="https://github.com/TokenBrice/stablecoin-dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+            >
+              <Github className="inline h-3.5 w-3.5" />
+              View on GitHub
+              <ExternalLink className="inline h-3.5 w-3.5" />
+            </a>
+          </p>
+          <p>
+            Questions, corrections, or stablecoins we should add? Reach out on{" "}
+            <a
+              href="https://x.com/PharosWatch"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+            >
+              @PharosWatch
+              <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+            </a>
+            {" "}or{" "}
+            <a
+              href="https://tokenbrice.xyz/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+            >
+              tokenbrice.xyz
+              <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+            </a>
+            .
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
