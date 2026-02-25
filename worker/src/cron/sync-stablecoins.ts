@@ -5,6 +5,7 @@ import { enrichMissingPrices, hasMissingPrice, isReasonablePrice } from "./enric
 import type { PeggedAsset, DefiLlamaCoinPrice, EnrichmentStats } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
+import { confirmPendingDepegs } from "./confirm-pending-depegs";
 
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT } from "../lib/constants";
 import type { StablecoinMeta } from "../../../src/lib/types";
@@ -504,6 +505,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     await detectDepegEvents(db, llamaData.peggedAssets, llamaData.fxFallbackRates);
   } catch (err) {
     console.error("[sync-stablecoins] Depeg detection failed:", err);
+  }
+
+  // Confirm or expire pending depeg events for >$1B coins
+  try {
+    await confirmPendingDepegs(db, llamaData.peggedAssets, llamaData.fxFallbackRates);
+  } catch (err) {
+    console.error("[sync-stablecoins] Pending depeg confirmation failed:", err);
   }
 
   // Build metadata for cron_runs observability
