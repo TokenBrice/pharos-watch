@@ -74,25 +74,15 @@ export const handleBackfillCgPrices = withErrorHandler(
       }
 
       // Fetch historical prices + market caps from CoinGecko
-      const cgApiUrl = cgUrl(`/coins/${meta.geckoId}/market_chart?vs_currency=usd&days=max`);
-      let cgRes: Response | null = null;
-      let cgStatus = 0;
-      try {
-        const directRes = await fetch(cgApiUrl, {
-          headers: cgHeaders({ "User-Agent": USER_AGENT }),
-          signal: AbortSignal.timeout(30_000),
-        });
-        cgStatus = directRes.status;
-        if (directRes.ok) {
-          cgRes = directRes;
-        }
-      } catch (err) {
-        errors.push(`${meta.symbol}: CG exception (geckoId=${meta.geckoId}): ${err}`);
-        continue;
-      }
+      const cgRes = await fetchWithRetry(
+        cgUrl(`/coins/${meta.geckoId}/market_chart?vs_currency=usd&days=max`),
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+        2,
+        { timeoutMs: 30_000 },
+      );
 
       if (!cgRes) {
-        errors.push(`${meta.symbol}: CG returned ${cgStatus} (geckoId=${meta.geckoId})`);
+        errors.push(`${meta.symbol}: CoinGecko fetch failed (geckoId=${meta.geckoId})`);
         continue;
       }
 
