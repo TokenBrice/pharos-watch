@@ -116,10 +116,8 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     if (spanSec > 0) {
       const months = spanSec / (30 * 86400);
       freezeRateById.set(id, row.cnt / months);
-    } else {
-      // Single event or all same timestamp — treat as 1 event/month
-      freezeRateById.set(id, row.cnt);
     }
+    // When spanSec === 0: omit entry, coin gets neutral 85 in scoreResilience
   }
 
   // 4. Build lookup maps
@@ -188,7 +186,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       continue;
     }
 
-    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, freezeRateById, overallScores);
+    const card = computeCard(meta, pegDataById, priceById, dexLiqMap, bluechipMap, freezeRateById, overallScores);
     phase1Cards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
@@ -198,7 +196,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   // 7. Phase 2: Compute grades for centralized-dependent coins (using Phase 1 scores)
   const phase2Cards: ReportCard[] = [];
   for (const meta of phase2Metas) {
-    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, freezeRateById, overallScores);
+    const card = computeCard(meta, pegDataById, priceById, dexLiqMap, bluechipMap, freezeRateById, overallScores);
     phase2Cards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
@@ -264,6 +262,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
 function computeCard(
   meta: (typeof TRACKED_STABLECOINS)[number],
   pegDataById: Map<string, PegSummaryCoin>,
+  priceById: Map<string, StablecoinData>,
   dexLiqMap: Record<string, DexLiquidityData>,
   bluechipMap: Record<string, BluechipRating>,
   freezeRateById: Map<string, number>,
@@ -273,8 +272,9 @@ function computeCard(
   const liq = dexLiqMap[meta.id];
   const rating = bluechipMap[meta.id];
 
-  // Chain count: from DEX liquidity data, or fall back to 1
-  const chainCount = liq?.chainCount ?? 1;
+  // Chain count: from deployment data (how many chains the coin is on), not DEX pools
+  const asset = priceById.get(meta.id);
+  const chainCount = asset?.chains?.length ?? 1;
 
   // Freeze rate
   const hasTrackedFreezeEvents = COINS_WITH_TRACKED_FREEZE.has(meta.id);
