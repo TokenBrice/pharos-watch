@@ -26,6 +26,8 @@ export const handleAuditDepegHistory = withErrorHandler(
     // Pagination: ?limit=N&offset=M to process in batches (CoinGecko rate limits)
     const limit = parseInt(url.searchParams.get("limit") ?? "10", 10);
     const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
+    // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
+    const deleteIds = url.searchParams.get("delete");
 
     const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
 
@@ -36,6 +38,36 @@ export const handleAuditDepegHistory = withErrorHandler(
       )
       .all<DepegRow>();
     const events = allEvents.results ?? [];
+
+    // Fast path: direct delete of specific event IDs (pre-verified externally)
+    if (deleteIds) {
+      const ids = deleteIds.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+      const toDelete = events.filter((e) => ids.includes(e.id));
+      if (toDelete.length === 0) {
+        return new Response(JSON.stringify({ error: "No matching events found", requestedIds: ids }), {
+          status: 404, headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const affectedDays = new Set<number>();
+      for (const event of toDelete) {
+        await db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id).run();
+        const startDay = Math.floor(event.started_at / DAY) * DAY;
+        const endDay = Math.floor((event.ended_at ?? event.started_at) / DAY) * DAY;
+        for (let d = startDay; d <= endDay; d += DAY) {
+          affectedDays.add(d);
+        }
+        console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
+      }
+
+      // Recompute stability index for affected days (reuse logic below)
+      const daysRecomputed = await recomputeStabilityDays(db, affectedDays);
+
+      return new Response(JSON.stringify({
+        deletedEvents: toDelete.map((e) => ({ id: e.id, symbol: e.symbol, startedAt: e.started_at, peakBps: e.peak_deviation_bps })),
+        daysRecomputed,
+      }, null, 2), { headers: { "Content-Type": "application/json" } });
+    }
 
     // Filter to high-impact events (coins with >$1B supply at time of event)
     // Use supply_history to determine supply at event time
@@ -165,102 +197,7 @@ export const handleAuditDepegHistory = withErrorHandler(
 
     // Recompute stability index for affected days
     if (affectedDays.size > 0) {
-      const sortedDays = [...affectedDays].sort((a, b) => a - b);
-      const now = Math.floor(Date.now() / 1000);
-
-      // Reload depeg events after deletions
-      const remainingDepegs = await db
-        .prepare("SELECT stablecoin_id, peak_deviation_bps, started_at, ended_at FROM depeg_events ORDER BY started_at")
-        .all<{ stablecoin_id: string; peak_deviation_bps: number; started_at: number; ended_at: number | null }>();
-      const depegEvents = remainingDepegs.results ?? [];
-
-      // Load supply data
-      const allSupply = await db
-        .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
-        .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
-      const supplyForRecompute = new Map<string, { date: number; mcap: number }[]>();
-      for (const r of allSupply.results ?? []) {
-        const list = supplyForRecompute.get(r.stablecoin_id) ?? [];
-        list.push({ date: r.snapshot_date, mcap: r.circulating_usd });
-        supplyForRecompute.set(r.stablecoin_id, list);
-      }
-
-      function getMcapForDay(coinId: string, day: number): number {
-        const snapshots = supplyForRecompute.get(coinId);
-        if (!snapshots || snapshots.length === 0) return 0;
-        let best = snapshots[0];
-        for (const s of snapshots) {
-          if (Math.abs(s.date - day) < Math.abs(best.date - day)) best = s;
-          if (s.date > day) break;
-        }
-        return Math.abs(best.date - day) <= 14 * DAY ? best.mcap : 0;
-      }
-
-      const stmts: D1PreparedStatement[] = [];
-
-      for (const day of sortedDays) {
-        // Delete existing index entry for this day
-        stmts.push(
-          db.prepare("DELETE FROM stability_index WHERE computed_at = ?").bind(day)
-        );
-
-        // Find active depegs on this day
-        const activeDepegs = depegEvents.filter(
-          (e) => e.started_at <= day && (e.ended_at === null ? day <= now : e.ended_at > day)
-        );
-
-        const depegs: { bps: number; mcapUsd: number }[] = activeDepegs.map((e) => ({
-          bps: e.peak_deviation_bps,
-          mcapUsd: getMcapForDay(e.stablecoin_id, day),
-        }));
-
-        let totalMcapUsd = 0;
-        for (const [, snapshots] of supplyForRecompute) {
-          let best = snapshots[0];
-          for (const s of snapshots) {
-            if (Math.abs(s.date - day) < Math.abs(best.date - day)) best = s;
-            if (s.date > day) break;
-          }
-          if (Math.abs(best.date - day) <= 14 * DAY) totalMcapUsd += best.mcap;
-        }
-
-        const day7ago = day - 7 * DAY;
-        let totalMcap7dAgo = 0;
-        for (const [, snapshots] of supplyForRecompute) {
-          let best = snapshots[0];
-          for (const s of snapshots) {
-            if (Math.abs(s.date - day7ago) < Math.abs(best.date - day7ago)) best = s;
-            if (s.date > day7ago) break;
-          }
-          if (Math.abs(best.date - day7ago) <= 14 * DAY) totalMcap7dAgo += best.mcap;
-        }
-
-        const mcap7dChangePct = totalMcap7dAgo > 0
-          ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100
-          : 0;
-
-        const indexResult = computeStabilityIndex({
-          depegs,
-          totalMcapUsd,
-          freezeCount24h: 0,
-          mcap7dChangePct,
-        });
-
-        stmts.push(
-          db.prepare(
-            "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)"
-          ).bind(
-            day,
-            indexResult.score,
-            indexResult.band,
-            JSON.stringify(indexResult.components),
-            JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h: 0, mcap7dChangePct }),
-          )
-        );
-      }
-
-      await batchExecute(db, stmts);
-      result.daysRecomputed = sortedDays.length;
+      result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
     }
 
     return new Response(JSON.stringify(result, null, 2), {
@@ -268,3 +205,96 @@ export const handleAuditDepegHistory = withErrorHandler(
     });
   }
 );
+
+/** Recompute stability index for a set of affected days after event deletions */
+async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>): Promise<number> {
+  const sortedDays = [...affectedDays].sort((a, b) => a - b);
+  const now = Math.floor(Date.now() / 1000);
+
+  const remainingDepegs = await db
+    .prepare("SELECT stablecoin_id, peak_deviation_bps, started_at, ended_at FROM depeg_events ORDER BY started_at")
+    .all<{ stablecoin_id: string; peak_deviation_bps: number; started_at: number; ended_at: number | null }>();
+  const depegEvents = remainingDepegs.results ?? [];
+
+  const allSupply = await db
+    .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
+    .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+  const supplyByCoin = new Map<string, { date: number; mcap: number }[]>();
+  for (const r of allSupply.results ?? []) {
+    const list = supplyByCoin.get(r.stablecoin_id) ?? [];
+    list.push({ date: r.snapshot_date, mcap: r.circulating_usd });
+    supplyByCoin.set(r.stablecoin_id, list);
+  }
+
+  function getMcapForDay(coinId: string, day: number): number {
+    const snapshots = supplyByCoin.get(coinId);
+    if (!snapshots || snapshots.length === 0) return 0;
+    let best = snapshots[0];
+    for (const s of snapshots) {
+      if (Math.abs(s.date - day) < Math.abs(best.date - day)) best = s;
+      if (s.date > day) break;
+    }
+    return Math.abs(best.date - day) <= 14 * DAY ? best.mcap : 0;
+  }
+
+  const stmts: D1PreparedStatement[] = [];
+
+  for (const day of sortedDays) {
+    stmts.push(db.prepare("DELETE FROM stability_index WHERE computed_at = ?").bind(day));
+
+    const activeDepegs = depegEvents.filter(
+      (e) => e.started_at <= day && (e.ended_at === null ? day <= now : e.ended_at > day)
+    );
+    const depegs = activeDepegs.map((e) => ({
+      bps: e.peak_deviation_bps,
+      mcapUsd: getMcapForDay(e.stablecoin_id, day),
+    }));
+
+    let totalMcapUsd = 0;
+    for (const [, snapshots] of supplyByCoin) {
+      let best = snapshots[0];
+      for (const s of snapshots) {
+        if (Math.abs(s.date - day) < Math.abs(best.date - day)) best = s;
+        if (s.date > day) break;
+      }
+      if (Math.abs(best.date - day) <= 14 * DAY) totalMcapUsd += best.mcap;
+    }
+
+    const day7ago = day - 7 * DAY;
+    let totalMcap7dAgo = 0;
+    for (const [, snapshots] of supplyByCoin) {
+      let best = snapshots[0];
+      for (const s of snapshots) {
+        if (Math.abs(s.date - day7ago) < Math.abs(best.date - day7ago)) best = s;
+        if (s.date > day7ago) break;
+      }
+      if (Math.abs(best.date - day7ago) <= 14 * DAY) totalMcap7dAgo += best.mcap;
+    }
+
+    const mcap7dChangePct = totalMcap7dAgo > 0
+      ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100
+      : 0;
+
+    const indexResult = computeStabilityIndex({
+      depegs,
+      totalMcapUsd,
+      freezeCount24h: 0,
+      mcap7dChangePct,
+    });
+
+    stmts.push(
+      db.prepare(
+        "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)"
+      ).bind(
+        day,
+        indexResult.score,
+        indexResult.band,
+        JSON.stringify(indexResult.components),
+        JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h: 0, mcap7dChangePct }),
+      )
+    );
+  }
+
+  await batchExecute(db, stmts);
+  return sortedDays.length;
+}
