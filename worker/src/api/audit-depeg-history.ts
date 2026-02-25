@@ -4,7 +4,6 @@ import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
-import { fetchWithRetry } from "../lib/fetch-retry";
 import type { DepegRow } from "../lib/depeg-helpers";
 
 const DAY = 86400;
@@ -20,9 +19,13 @@ interface AuditResult {
 
 export const handleAuditDepegHistory = withErrorHandler(
   "audit-depeg-history",
-  async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
+  async (db: D1Database, url: URL, adminKey?: string, request?: Request): Promise<Response> => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
+
+    // Pagination: ?limit=N&offset=M to process in batches (CoinGecko rate limits)
+    const limit = parseInt(url.searchParams.get("limit") ?? "10", 10);
+    const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
 
     const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
 
@@ -57,11 +60,15 @@ export const handleAuditDepegHistory = withErrorHandler(
       return Math.abs(best.date - ts) <= 30 * DAY ? best.supply : 0;
     }
 
-    const highImpactEvents = events.filter(
+    const allHighImpact = events.filter(
       (e) => getSupplyAtTime(e.stablecoin_id, e.started_at) >= 1_000_000_000
     );
+    const highImpactEvents = allHighImpact.slice(offset, offset + limit);
 
-    const result: AuditResult = {
+    const result: AuditResult & { totalHighImpact: number; offset: number; limit: number } = {
+      totalHighImpact: allHighImpact.length,
+      offset,
+      limit,
       eventsAudited: highImpactEvents.length,
       falsePositivesDeleted: 0,
       deletedEvents: [],
@@ -89,17 +96,26 @@ export const handleAuditDepegHistory = withErrorHandler(
       const to = (event.ended_at ?? event.started_at) + 3600;
 
       try {
-        // Rate limit: 2-second delay between CG calls
-        await new Promise((r) => setTimeout(r, 2000));
+        // Rate limit: 7-second delay keeps us well within CG's 10 req/min public limit
+        await new Promise((r) => setTimeout(r, 7000));
 
-        const cgRes = await fetchWithRetry(
-          `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`,
-          { headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
-          1,
-        );
+        const cgUrl = `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`;
+        let cgRes = await fetch(cgUrl, {
+          headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+        });
 
-        if (!cgRes?.ok) {
-          console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
+        // Retry once on 429 with backoff
+        if (cgRes.status === 429) {
+          const retryAfter = parseInt(cgRes.headers.get("Retry-After") ?? "10", 10);
+          console.warn(`[audit] CG 429 for ${event.symbol}, waiting ${retryAfter}s`);
+          await new Promise((r) => setTimeout(r, retryAfter * 1000));
+          cgRes = await fetch(cgUrl, {
+            headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+          });
+        }
+
+        if (!cgRes.ok) {
+          console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes.status}`);
           result.cgFetchErrors++;
           continue;
         }

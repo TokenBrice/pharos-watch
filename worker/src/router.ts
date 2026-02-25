@@ -103,7 +103,7 @@ export function route(
   }
 
   if (path === "/api/audit-depeg-history") {
-    return handleAuditDepegHistory(db, adminKey, request);
+    return handleAuditDepegHistory(db, url, adminKey, request);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution
