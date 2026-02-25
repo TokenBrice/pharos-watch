@@ -1,7 +1,7 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache, setCache } from "../lib/db";
-import { getDepegThresholdBps, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
@@ -449,7 +449,7 @@ interface BackfillEvent {
   pegRef: number;
 }
 
-/** Returns null when CG has no price data (caller should preserve existing events). */
+/** Returns null when neither CG nor DL has price data (caller should preserve existing events). */
 async function backfillCoin(
   meta: StablecoinMeta,
   geckoId: string,
@@ -458,8 +458,25 @@ async function backfillCoin(
 ): Promise<BackfillEvent[] | null> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
   await new Promise(r => setTimeout(r, CG_DELAY_MS)); // rate limit
-  const prices = await fetchCgPriceHistory(geckoId);
-  if (prices.length === 0) return null; // no data — preserve existing events
+  let prices = await fetchCgPriceHistory(geckoId);
+  // Fall back to DefiLlama if CG has no data (~4 year coverage)
+  if (prices.length === 0) {
+    const coinId = `coingecko:${geckoId}`;
+    const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
+    const fourYearsAgo = twoYearsAgo - 2 * 365 * 86400;
+    const [pricesOld, pricesRecent] = await Promise.all([
+      fetchDlPriceChart(coinId, fourYearsAgo),
+      fetchDlPriceChart(coinId, twoYearsAgo),
+    ]);
+    const priceMap = new Map<number, number>();
+    for (const p of [...pricesOld, ...pricesRecent]) {
+      priceMap.set(p.timestamp, p.price);
+    }
+    prices = Array.from(priceMap.entries())
+      .map(([timestamp, price]) => ({ timestamp, price }))
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }
+  if (prices.length === 0) return null; // neither source has data
   return extractDepegEvents(prices, getPegRef, pegType, supplyByDate);
 }
 
@@ -478,6 +495,24 @@ async function fetchCgPriceHistory(geckoId: string): Promise<PricePoint[]> {
       .map(([ts, price]) => ({ timestamp: Math.floor(ts / 1000), price }));
   } catch (err) {
     console.error(`[backfill-depegs] Failed to fetch CG price history for ${geckoId}:`, err);
+    return [];
+  }
+}
+
+/** DefiLlama chart fallback (~800 daily points per call, ~4 years with two calls). */
+async function fetchDlPriceChart(coinId: string, start: number): Promise<PricePoint[]> {
+  try {
+    const res = await fetch(
+      `${DEFILLAMA_COINS}/chart/${coinId}?start=${start}&span=800&period=1d`,
+      { headers: { "User-Agent": USER_AGENT } }
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      coins: Record<string, { prices: PricePoint[] }>;
+    };
+    return data.coins?.[coinId]?.prices ?? [];
+  } catch (err) {
+    console.error(`[backfill-depegs] DL fallback failed for ${coinId}:`, err);
     return [];
   }
 }
