@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { scoreToGrade, DIMENSION_ORDER, DIMENSION_WEIGHTS } from "@/lib/report-cards";
+import { scoreToGrade, DIMENSION_ORDER } from "@/lib/report-cards";
 import type {
   ReportCard,
   DimensionKey,

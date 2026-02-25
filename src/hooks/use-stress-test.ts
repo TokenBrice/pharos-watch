@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { computeStressedGrades, scoreToGrade, GRADE_THRESHOLDS } from "@/lib/report-cards";
+import { computeStressedGrades, GRADE_THRESHOLDS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type {
   ReportCard,
