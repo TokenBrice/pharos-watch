@@ -1,7 +1,7 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
-import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
@@ -12,6 +12,14 @@ import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
 const BATCH_SIZE = 3;
 const CG_DELAY_MS = 200; // 500 req/min budget → 200ms between calls
+
+/** Consecutive above-threshold data points needed to confirm a large-cap depeg.
+ *  Mirrors the live system's pending → re-check → promote flow. */
+const BACKFILL_MIN_CONFIRM_POINTS = 2;
+
+/** Max gap (seconds) between data points before pending resets.
+ *  6h handles CG hourly gaps but resets for day-scale gaps. */
+const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
 
 // ── Historical FX rate support ──────────────────────────────────────
 
@@ -129,8 +137,7 @@ async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTime
   for (const meta of allCommodityCoins) {
     const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
     if (!geckoId) continue;
-    await new Promise((r) => setTimeout(r, CG_DELAY_MS));
-    const prices = await fetchCgPriceHistory(geckoId);
+    const prices = await fetchCgPriceHistoryHourly(geckoId);
     if (prices.length === 0) continue;
 
     const oz = meta.commodityOunces;
@@ -426,8 +433,7 @@ async function backfillCoin(
   supplyByDate: Map<number, number>
 ): Promise<BackfillEvent[] | null> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
-  await new Promise(r => setTimeout(r, CG_DELAY_MS)); // rate limit
-  let prices = await fetchCgPriceHistory(geckoId);
+  let prices = await fetchCgPriceHistoryHourly(geckoId);
   // Fall back to DefiLlama if CG has no data (~4 year coverage)
   if (prices.length === 0) {
     const coinId = `coingecko:${geckoId}`;
@@ -449,7 +455,7 @@ async function backfillCoin(
   return extractDepegEvents(prices, getPegRef, pegType, supplyByDate);
 }
 
-async function fetchCgPriceHistory(geckoId: string): Promise<PricePoint[]> {
+async function fetchCgPriceHistoryDaily(geckoId: string): Promise<PricePoint[]> {
   try {
     const res = await fetchWithRetry(
       cgUrl(`/coins/${geckoId}/market_chart?vs_currency=usd&days=max`),
@@ -463,9 +469,78 @@ async function fetchCgPriceHistory(geckoId: string): Promise<PricePoint[]> {
       .filter(([, p]) => p > 0)
       .map(([ts, price]) => ({ timestamp: Math.floor(ts / 1000), price }));
   } catch (err) {
-    console.error(`[backfill-depegs] Failed to fetch CG price history for ${geckoId}:`, err);
+    console.error(`[backfill-depegs] Failed to fetch CG daily price history for ${geckoId}:`, err);
     return [];
   }
+}
+
+/**
+ * Fetch CG price history with hourly granularity using market_chart/range.
+ * CG auto-granularity: ranges ≤90 days return hourly data on the Analyst plan.
+ * Phase 1: single request 2014-01-01 → 2018-01-30 (daily, pre-hourly epoch)
+ * Phase 2: 89-day chunks from 2018-01-30 → now (hourly)
+ * Falls back to fetchCgPriceHistoryDaily if 0 points returned.
+ */
+async function fetchCgPriceHistoryHourly(geckoId: string): Promise<PricePoint[]> {
+  const seen = new Map<number, number>(); // timestamp → price (dedup)
+
+  const HOURLY_EPOCH = Math.floor(new Date("2018-01-30T00:00:00Z").getTime() / 1000);
+  const CHUNK_DAYS = 89;
+  const CHUNK_SEC = CHUNK_DAYS * 86400;
+
+  // Phase 1: pre-hourly epoch — single request returns daily data
+  try {
+    const from = Math.floor(new Date("2014-01-01T00:00:00Z").getTime() / 1000);
+    await new Promise(r => setTimeout(r, CG_DELAY_MS));
+    const res = await fetchWithRetry(
+      cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${HOURLY_EPOCH}&precision=full`),
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+      2,
+      { timeoutMs: 30_000 },
+    );
+    if (res) {
+      const data = await res.json() as { prices: [number, number][] };
+      for (const [tsMs, p] of data.prices ?? []) {
+        if (p > 0) seen.set(Math.floor(tsMs / 1000), p);
+      }
+    }
+  } catch (err) {
+    console.error(`[backfill-depegs] CG hourly phase-1 failed for ${geckoId}:`, err);
+    // continue — partial data > no data
+  }
+
+  // Phase 2: 89-day chunks from hourly epoch to now
+  const nowSec = Math.floor(Date.now() / 1000);
+  for (let chunkFrom = HOURLY_EPOCH; chunkFrom < nowSec; chunkFrom += CHUNK_SEC) {
+    const chunkTo = Math.min(chunkFrom + CHUNK_SEC, nowSec);
+    try {
+      await new Promise(r => setTimeout(r, CG_DELAY_MS));
+      const res = await fetchWithRetry(
+        cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${chunkFrom}&to=${chunkTo}&precision=full`),
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+        2,
+        { timeoutMs: 30_000 },
+      );
+      if (res) {
+        const data = await res.json() as { prices: [number, number][] };
+        for (const [tsMs, p] of data.prices ?? []) {
+          if (p > 0) seen.set(Math.floor(tsMs / 1000), p);
+        }
+      }
+    } catch (err) {
+      console.error(`[backfill-depegs] CG hourly chunk failed for ${geckoId} (${chunkFrom}-${chunkTo}):`, err);
+      // continue to next chunk — partial data > no data
+    }
+  }
+
+  if (seen.size === 0) {
+    // Fallback to daily endpoint
+    return fetchCgPriceHistoryDaily(geckoId);
+  }
+
+  return Array.from(seen.entries())
+    .map(([timestamp, price]) => ({ timestamp, price }))
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 /** DefiLlama chart fallback (~800 daily points per call, ~4 years with two calls). */
@@ -522,6 +597,35 @@ function extractDepegEvents(
   const events: BackfillEvent[] = [];
   let current: BackfillEvent | null = null;
 
+  // Pending state for large-cap confirmation (mirrors live pending → confirm flow)
+  let pending: {
+    direction: string;
+    count: number;
+    firstTs: number;
+    lastTs: number;
+    peakBps: number;
+    startPrice: number;
+    peakPrice: number;
+    pegRef: number;
+  } | null = null;
+
+  /** Promote pending to an active event */
+  function promotePending(): void {
+    if (!pending) return;
+    current = {
+      pegType,
+      direction: pending.direction,
+      peakDeviationBps: pending.peakBps,
+      startedAt: pending.firstTs,
+      endedAt: null,
+      startPrice: pending.startPrice,
+      peakPrice: pending.peakPrice,
+      recoveryPrice: null,
+      pegRef: pending.pegRef,
+    };
+    pending = null;
+  }
+
   for (const point of prices) {
     const { timestamp, price } = point;
     if (price <= 0) continue;
@@ -539,8 +643,32 @@ function extractDepegEvents(
     const absBps = Math.abs(bps);
     const direction = bps >= 0 ? "above" : "below";
 
+    // Determine if this coin is large-cap at this point in time
+    const supply = findNearestSupply(supplyByDate, timestamp);
+    const isLargeCap = supply !== null && supply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD;
+
     if (absBps >= threshold) {
-      if (!current) {
+      if (current) {
+        if (current.direction !== direction) {
+          // Direction change: close current event, fall through to "no event" path below
+          current.endedAt = timestamp;
+          current.recoveryPrice = price;
+          events.push(current);
+          current = null;
+          // fall through — will be handled as "no active event" below
+        } else {
+          // Same direction: update peak, continue
+          if (absBps > Math.abs(current.peakDeviationBps)) {
+            current.peakDeviationBps = bps;
+            current.peakPrice = price;
+          }
+          continue;
+        }
+      }
+
+      // No active event — decide whether to open immediately or require confirmation
+      if (!isLargeCap) {
+        // Small cap: instant event (existing behavior)
         current = {
           pegType,
           direction,
@@ -552,36 +680,49 @@ function extractDepegEvents(
           recoveryPrice: null,
           pegRef,
         };
-      } else if (current.direction !== direction) {
-        // Direction change: close current event, open new one
+        pending = null;
+      } else {
+        // Large cap: require consecutive confirmation points
+        if (!pending || pending.direction !== direction
+            || (timestamp - pending.lastTs) > BACKFILL_PENDING_MAX_GAP_SEC) {
+          // Start new pending
+          pending = {
+            direction,
+            count: 1,
+            firstTs: timestamp,
+            lastTs: timestamp,
+            peakBps: bps,
+            startPrice: price,
+            peakPrice: price,
+            pegRef,
+          };
+        } else {
+          // Continue pending
+          pending.count++;
+          pending.lastTs = timestamp;
+          if (absBps > Math.abs(pending.peakBps)) {
+            pending.peakBps = bps;
+            pending.peakPrice = price;
+          }
+          if (pending.count >= BACKFILL_MIN_CONFIRM_POINTS) {
+            promotePending();
+          }
+        }
+      }
+    } else {
+      // Below threshold
+      if (current) {
         current.endedAt = timestamp;
         current.recoveryPrice = price;
         events.push(current);
-        current = {
-          pegType,
-          direction,
-          peakDeviationBps: bps,
-          startedAt: timestamp,
-          endedAt: null,
-          startPrice: price,
-          peakPrice: price,
-          recoveryPrice: null,
-          pegRef,
-        };
-      } else {
-        if (absBps > Math.abs(current.peakDeviationBps)) {
-          current.peakDeviationBps = bps;
-          current.peakPrice = price;
-        }
+        current = null;
       }
-    } else if (current) {
-      current.endedAt = timestamp;
-      current.recoveryPrice = price;
-      events.push(current);
-      current = null;
+      // Discard pending — recovered before confirmation
+      pending = null;
     }
   }
 
+  // Close any remaining active event
   if (current) {
     const lastTs = prices[prices.length - 1].timestamp;
     const now = Math.floor(Date.now() / 1000);
@@ -590,6 +731,7 @@ function extractDepegEvents(
     }
     events.push(current);
   }
+  // Discard any unconfirmed pending at end of series
 
   return events;
 }
