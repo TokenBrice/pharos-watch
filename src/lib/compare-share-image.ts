@@ -1,3 +1,17 @@
+/** Radar section data for one coin. */
+export interface ShareRadarCoinData {
+  symbol: string;
+  overallGrade: string;
+  color: string;
+  scores: number[]; // one per dimension, same order as dimensionLabels
+}
+
+/** Data for the radar section appended below the stat cards. */
+export interface ShareRadarData {
+  dimensionLabels: string[];
+  coins: ShareRadarCoinData[];
+}
+
 /** Data for one coin in the share image. All values are pre-formatted strings. */
 export interface ShareCoinData {
   symbol: string;
@@ -161,6 +175,120 @@ function drawCoinCard(
   }
 }
 
+// --- Radar constants ---
+const RADAR_R = 85;
+const RADAR_LABEL_OFFSET = 22;
+// Total section height: 24 top-gap + 16 title + 16 post-divider + radar circle + bottom label offset + 16 gap + 24 legend + 16 bottom
+const RADAR_SECTION_H = 24 + 16 + 16 + 2 * (RADAR_R + RADAR_LABEL_OFFSET) + 16 + 24 + 16;
+
+/** Draw the radar section and return the Y coordinate of its bottom edge. */
+function drawRadarSection(
+  ctx: CanvasRenderingContext2D,
+  radarData: ShareRadarData,
+  sectionY: number,
+): void {
+  const N = radarData.dimensionLabels.length;
+  if (N === 0) return;
+  const cx = W / 2;
+  const angleStep = (2 * Math.PI) / N;
+  const startAngle = -Math.PI / 2;
+
+  // Section title
+  let curY = sectionY + 24;
+  ctx.fillStyle = MUTED;
+  ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Report Card Comparison", cx, curY);
+  curY += 16;
+
+  // Subtle divider
+  ctx.strokeStyle = "rgba(232, 220, 196, 0.08)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(40, curY);
+  ctx.lineTo(W - 40, curY);
+  ctx.stroke();
+  curY += 16;
+
+  const radarCY = curY + RADAR_R + RADAR_LABEL_OFFSET;
+
+  // Grid rings (20 / 40 / 60 / 80 / 100 %)
+  for (let ring = 1; ring <= 5; ring++) {
+    const r = (ring / 5) * RADAR_R;
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const angle = startAngle + i * angleStep;
+      const px = cx + r * Math.cos(angle);
+      const py = radarCY + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = ring === 5 ? "rgba(148, 163, 184, 0.25)" : "rgba(148, 163, 184, 0.1)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Spokes
+  for (let i = 0; i < N; i++) {
+    const angle = startAngle + i * angleStep;
+    ctx.beginPath();
+    ctx.moveTo(cx, radarCY);
+    ctx.lineTo(cx + RADAR_R * Math.cos(angle), radarCY + RADAR_R * Math.sin(angle));
+    ctx.strokeStyle = "rgba(148, 163, 184, 0.15)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = MUTED;
+  ctx.font = "11px -apple-system, 'Segoe UI', sans-serif";
+  ctx.textAlign = "center";
+  for (let i = 0; i < N; i++) {
+    const angle = startAngle + i * angleStep;
+    const lr = RADAR_R + RADAR_LABEL_OFFSET;
+    const lx = cx + lr * Math.cos(angle);
+    const ly = radarCY + lr * Math.sin(angle) + 4;
+    ctx.fillText(radarData.dimensionLabels[i], lx, ly);
+  }
+
+  // Coin polygons
+  for (const coin of radarData.coins) {
+    ctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const angle = startAngle + i * angleStep;
+      const r = ((coin.scores[i] ?? 0) / 100) * RADAR_R;
+      const px = cx + r * Math.cos(angle);
+      const py = radarCY + r * Math.sin(angle);
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = coin.color + "33"; // ~20 % opacity
+    ctx.fill();
+    ctx.strokeStyle = coin.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Legend
+  const legendY = radarCY + RADAR_R + RADAR_LABEL_OFFSET + 16;
+  const LEGEND_ITEM_W = 110;
+  const totalLegendW = radarData.coins.length * LEGEND_ITEM_W;
+  let legendX = (W - totalLegendW) / 2 + 8;
+
+  for (const coin of radarData.coins) {
+    ctx.beginPath();
+    ctx.arc(legendX, legendY - 4, 5, 0, Math.PI * 2);
+    ctx.fillStyle = coin.color;
+    ctx.fill();
+
+    ctx.fillStyle = WHITE;
+    ctx.font = "bold 12px -apple-system, 'Segoe UI', sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`${coin.symbol}: ${coin.overallGrade}`, legendX + 10, legendY);
+    legendX += LEGEND_ITEM_W;
+  }
+}
+
 /**
  * Render the branded compare share image to a canvas.
  * Returns the canvas element — caller converts to blob for sharing/download.
@@ -168,11 +296,12 @@ function drawCoinCard(
 export function renderCompareShareImage(
   coins: ShareCoinData[],
   pharosLogo: HTMLImageElement,
+  radarData?: ShareRadarData,
 ): HTMLCanvasElement {
   // Compute card and canvas height from content
   const maxRows = Math.max(...coins.map(statRowCount));
   const cardH = CARD_HEADER_H + maxRows * ROW_H + CARD_BOTTOM_PAD;
-  const H = CARDS_Y + cardH + FOOTER_H;
+  const H = CARDS_Y + cardH + (radarData ? RADAR_SECTION_H : 0) + FOOTER_H;
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -216,6 +345,11 @@ export function renderCompareShareImage(
 
   for (let i = 0; i < n; i++) {
     drawCoinCard(ctx, coins[i], startX + i * (cardW + gap), CARDS_Y, cardW, cardH);
+  }
+
+  // --- Radar section (optional) ---
+  if (radarData) {
+    drawRadarSection(ctx, radarData, CARDS_Y + cardH);
   }
 
   // --- Footer branding ---

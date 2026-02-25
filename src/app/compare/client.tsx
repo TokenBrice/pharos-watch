@@ -30,7 +30,8 @@ import {
   canvasToBlob,
   loadImage,
 } from "@/lib/compare-share-image";
-import type { ShareCoinData } from "@/lib/compare-share-image";
+import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
+import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@/lib/report-cards";
 import type { CoinOption } from "@/components/coin-selector";
 import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 import type { ReportCard } from "@/lib/types";
@@ -235,6 +236,7 @@ export function CompareClient() {
   const buildShareData = useCallback(async (): Promise<{
     coins: ShareCoinData[];
     pharosLogo: HTMLImageElement;
+    radarData?: ShareRadarData;
   } | null> => {
     if (comparisonCoins.length < 2) return null;
 
@@ -277,8 +279,22 @@ export function CompareClient() {
       };
     });
 
-    return { coins: shareCoins, pharosLogo };
-  }, [comparisonCoins, logos, pegRates]);
+    // Build radar data when ≥ 2 coins have report cards
+    let radarData: ShareRadarData | undefined;
+    if (radarCards.length >= 2) {
+      radarData = {
+        dimensionLabels: DIMENSION_ORDER.map((k) => DIMENSION_SHORT_LABELS[k]),
+        coins: radarCards.map(({ card, color }) => ({
+          symbol: card.symbol,
+          overallGrade: card.overallGrade,
+          color,
+          scores: DIMENSION_ORDER.map((k) => card.dimensions[k]?.score ?? 0),
+        })),
+      };
+    }
+
+    return { coins: shareCoins, pharosLogo, radarData };
+  }, [comparisonCoins, logos, pegRates, radarCards]);
 
   const handleTwitterShare = useCallback(async () => {
     setShareLoading(true);
@@ -286,7 +302,7 @@ export function CompareClient() {
       // Generate and copy image to clipboard so the user can paste it into the tweet
       const data = await buildShareData();
       if (data) {
-        const canvas = renderCompareShareImage(data.coins, data.pharosLogo);
+        const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
         const blob = await canvasToBlob(canvas);
         try {
           await navigator.clipboard.write([
@@ -316,7 +332,7 @@ export function CompareClient() {
     try {
       const data = await buildShareData();
       if (!data) return;
-      const canvas = renderCompareShareImage(data.coins, data.pharosLogo);
+      const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
       const blob = await canvasToBlob(canvas);
       const file = new File([blob], "pharos-compare.png", { type: "image/png" });
       const symbols = comparisonCoins.map((c) => c.symbol).join(" vs ");
@@ -356,7 +372,7 @@ export function CompareClient() {
     try {
       const data = await buildShareData();
       if (!data) return;
-      const canvas = renderCompareShareImage(data.coins, data.pharosLogo);
+      const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
       const blob = await canvasToBlob(canvas);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
