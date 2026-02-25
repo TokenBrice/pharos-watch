@@ -6,7 +6,7 @@
 export type ConditionBand = "BEDROCK" | "STEADY" | "TREMOR" | "FRACTURE" | "CRISIS" | "MELTDOWN";
 
 export interface StabilityInput {
-  depegs: { bps: number; mcapUsd: number }[];
+  depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
   totalMcapUsd: number;
   freezeCount24h: number;
   mcap7dChangePct: number;
@@ -24,6 +24,15 @@ export interface StabilityResult {
 }
 
 const K = 60;
+const GRACE_DAYS = 30;
+const DECAY_DAYS = 120;
+const DEPRECIATION_FLOOR = 0.25;
+
+/** Linear decay: full impact for 30d, then fades to 25% floor over 120d. */
+export function getDepreciationFactor(ageDays: number): number {
+  if (ageDays <= GRACE_DAYS) return 1.0;
+  return Math.max(DEPRECIATION_FLOOR, 1.0 - (ageDays - GRACE_DAYS) / DECAY_DAYS);
+}
 
 export function computeStabilityIndex(input: StabilityInput): StabilityResult {
   const { depegs, totalMcapUsd, freezeCount24h, mcap7dChangePct } = input;
@@ -31,12 +40,14 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult {
   const severityRaw = depegs.reduce((sum, d) => {
     const share = totalMcapUsd > 0 ? d.mcapUsd / totalMcapUsd : 0;
     const amplifier = Math.log2(1 + d.mcapUsd / 1e9);
-    return sum + (Math.abs(d.bps) / 100) * share * amplifier * K;
+    const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
+    return sum + (Math.abs(d.bps) / 100) * share * amplifier * K * factor;
   }, 0);
   const severity = Math.min(60, severityRaw);
 
   const breadthRaw = depegs.reduce((sum, d) => {
-    return sum + Math.sqrt(d.mcapUsd / 1e9) * 3;
+    const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
+    return sum + Math.sqrt(d.mcapUsd / 1e9) * 3 * factor;
   }, 0);
   const breadth = Math.min(15, breadthRaw);
 
