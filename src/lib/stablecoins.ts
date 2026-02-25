@@ -1577,7 +1577,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("343", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
-    geckoId: "usat",
+    geckoId: "usa",
     collateral: "U.S. Treasury bills and cash deposits held by Cantor Fitzgerald as reserve custodian; issued 1:1 by Anchorage Digital Bank, N.A. under GENIUS Act federal regulation",
     pegMechanism: "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
     links: [

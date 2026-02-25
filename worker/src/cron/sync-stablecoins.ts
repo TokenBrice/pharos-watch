@@ -305,18 +305,20 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...silverTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
   }
 
-  // Patch known missing/wrong geckoIds from StablecoinMeta so enrichMissingPrices can resolve them
-  // Patch known missing contract addresses for Pass 1 resolution
+  // Always prefer our curated geckoId/cmcSlug over DefiLlama's — DL can have
+  // stale or wrong IDs (e.g. BOLD: DL returns "liquity-bold" which is Legacy BOLD,
+  // a different token; ours is "liquity-bold-2", the real Liquity v2 BOLD).
+  // Patch known missing contract addresses for Pass 1 resolution.
   const ADDRESS_OVERRIDES: Record<string, string> = {
     "213": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b", // M by M0 — no address in DL stablecoins API
     "67": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4", // BEAN — no address in DL stablecoins API
   };
   for (const asset of llamaData.peggedAssets) {
     const meta = TRACKED_META_BY_ID.get(String(asset.id));
-    if (meta?.geckoId && (!asset.geckoId || (asset.geckoId as string).includes("wrong"))) {
+    if (meta?.geckoId) {
       asset.geckoId = meta.geckoId;
     }
-    if (meta?.cmcSlug && !asset.cmcSlug) {
+    if (meta?.cmcSlug) {
       asset.cmcSlug = meta.cmcSlug;
     }
     if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
