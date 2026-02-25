@@ -180,6 +180,19 @@ function ComponentChart({
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>
+        <div className="flex flex-wrap gap-4 mb-4">
+          {[
+            { label: "Severity", color: COMPONENT_COLORS.severity },
+            { label: "Breadth", color: COMPONENT_COLORS.breadth },
+            { label: "Freezes", color: COMPONENT_COLORS.freezes },
+            { label: "Trend", color: COMPONENT_COLORS.trend },
+          ].map((item) => (
+            <div key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+              {item.label}
+            </div>
+          ))}
+        </div>
         {filteredData.length > 0 ? (
           <div
             className="h-[250px] sm:h-[350px]"
