@@ -8,15 +8,16 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ReportCard, DimensionKey } from "@/lib/types";
-import { DIMENSION_LABELS, DIMENSION_ORDER, gradeRange, GRADE_RADAR_COLORS } from "@/lib/report-cards";
+import { DIMENSION_LABELS, DIMENSION_SHORT_LABELS, DIMENSION_ORDER, gradeRange, GRADE_RADAR_COLORS } from "@/lib/report-cards";
 
 // ---------------------------------------------------------------------------
 // Data helpers
 // ---------------------------------------------------------------------------
 
-function buildRadarData(card: ReportCard, showLabels: boolean) {
+function buildRadarData(card: ReportCard, labels: "full" | "short" | "none") {
+  const labelMap = labels === "full" ? DIMENSION_LABELS : labels === "short" ? DIMENSION_SHORT_LABELS : null;
   return DIMENSION_ORDER.map((key) => ({
-    dimension: showLabels ? DIMENSION_LABELS[key] : key,
+    dimension: labelMap ? labelMap[key] : key,
     score: card.dimensions[key].score ?? 0,
     fullMark: 100,
   }));
@@ -29,17 +30,17 @@ function buildRadarData(card: ReportCard, showLabels: boolean) {
 interface ReportCardRadarProps {
   card: ReportCard;
   size?: number;
-  showLabels?: boolean;
+  labels?: "full" | "short" | "none";
   className?: string;
 }
 
 export function ReportCardRadar({
   card,
   size = 250,
-  showLabels = true,
+  labels = "full",
   className,
 }: ReportCardRadarProps) {
-  const data = buildRadarData(card, showLabels);
+  const data = buildRadarData(card, labels);
   const color = GRADE_RADAR_COLORS[gradeRange(card.overallGrade)] ?? GRADE_RADAR_COLORS.NR;
 
   return (

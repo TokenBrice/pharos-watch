@@ -84,7 +84,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                 </span>
               )}
             </div>
-            <ReportCardRadar card={card} size={280} showLabels />
+            <ReportCardRadar card={card} size={280} labels="full" />
           </div>
 
           {/* Right column: Dimension breakdown */}

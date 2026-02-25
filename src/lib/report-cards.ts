@@ -41,6 +41,15 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   dependencyRisk: "Dependency Risk",
 };
 
+export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
+  pegStability: "Peg",
+  liquidity: "Liquidity",
+  safety: "Safety",
+  resilience: "Resilience",
+  decentralization: "Decentral.",
+  dependencyRisk: "Dep. Risk",
+};
+
 /** Sorted descending by min — first match wins. */
 export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
   { grade: "A+", min: 97 },
