@@ -4,6 +4,7 @@ import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
+import { fetchWithRetry } from "../lib/fetch-retry";
 import type { DepegRow } from "../lib/depeg-helpers";
 
 const DAY = 86400;
@@ -91,13 +92,14 @@ export const handleAuditDepegHistory = withErrorHandler(
         // Rate limit: 2-second delay between CG calls
         await new Promise((r) => setTimeout(r, 2000));
 
-        const cgRes = await fetch(
+        const cgRes = await fetchWithRetry(
           `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`,
           { headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
+          1,
         );
 
-        if (!cgRes.ok) {
-          console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes.status}`);
+        if (!cgRes?.ok) {
+          console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
           result.cgFetchErrors++;
           continue;
         }
