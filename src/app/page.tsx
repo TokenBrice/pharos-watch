@@ -31,14 +31,16 @@ export default function HomePage() {
           }),
         }}
       />
-      <div className="space-y-2 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">Light on Every Peg</h1>
-        <p className="text-muted-foreground">
-          Track {total} stablecoins, across {PEG_CURRENCY_COUNT} pegs. Freezes, liquidity, depegs: all is watched.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Light on Every Peg</h1>
+          <p className="text-muted-foreground">
+            Track {total} stablecoins, across {PEG_CURRENCY_COUNT} pegs. Freezes, liquidity, depegs: all is watched.
+          </p>
+        </div>
+        <StabilityIndex />
       </div>
       <div className="mb-6">
-        <StabilityIndex />
         <DailyDigest />
       </div>
       <Suspense fallback={

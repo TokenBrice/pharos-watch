@@ -49,7 +49,7 @@ export function StabilityIndex() {
   const sparkData = [...history].reverse().concat({ date: computedAt, score, band });
 
   return (
-    <div className="flex items-center gap-4 py-3 animate-in fade-in duration-300">
+    <div className="flex items-center gap-4 animate-in fade-in duration-300">
       <div className="flex items-baseline gap-2">
         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Stability Index

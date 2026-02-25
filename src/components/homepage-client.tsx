@@ -61,8 +61,6 @@ export function HomepageClient() {
         />
       )}
 
-      <CategoryStats data={data?.peggedAssets} />
-
       <TotalMcapChart />
 
       <FilterBar {...filters} />
@@ -80,6 +78,8 @@ export function HomepageClient() {
         onClearSearch={() => filters.setSearchQuery("")}
         onClearFilters={filters.clearAll}
       />
+
+      <CategoryStats data={data?.peggedAssets} />
 
       <PegDiversityChart />
 
