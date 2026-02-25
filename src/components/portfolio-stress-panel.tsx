@@ -347,7 +347,7 @@ export function PortfolioStressPanel({
   // Compute portfolio stress headline
   const portfolioStressHeadline = useMemo(() => {
     if (!stressTest.headline || !cards) return null;
-    const { isPortfolioMode, totalAtRisk, totalHeld, affectedCount } =
+    const { isPortfolioMode, totalAtRisk, totalHeld, affectedCount, ecosystemAffectedCount } =
       stressTest.headline;
 
     if (isPortfolioMode) {
@@ -385,6 +385,7 @@ export function PortfolioStressPanel({
         totalAtRisk,
         totalHeld,
         affectedCount,
+        ecosystemAffectedCount,
         riskPct: totalHeld > 0 ? (totalAtRisk / totalHeld) * 100 : 0,
       };
     }
@@ -400,6 +401,7 @@ export function PortfolioStressPanel({
       totalAtRisk,
       totalHeld,
       affectedCount,
+      ecosystemAffectedCount,
       riskPct: 0,
     };
   }, [
@@ -656,18 +658,23 @@ export function PortfolioStressPanel({
                           </span>
                         )}
                     </div>
-                    {portfolioStressHeadline.totalAtRisk > 0 && (
-                      <div className="text-sm text-muted-foreground">
-                        {formatUsd(portfolioStressHeadline.totalAtRisk)} of{" "}
-                        {formatUsd(portfolioStressHeadline.totalHeld)} at risk (
-                        {portfolioStressHeadline.riskPct.toFixed(0)}%)
-                      </div>
-                    )}
+                    <div className="text-sm text-muted-foreground">
+                      {portfolioStressHeadline.totalAtRisk > 0 && (
+                        <>
+                          {formatUsd(portfolioStressHeadline.totalAtRisk)} of{" "}
+                          {formatUsd(portfolioStressHeadline.totalHeld)} at risk (
+                          {portfolioStressHeadline.riskPct.toFixed(0)}%).{" "}
+                        </>
+                      )}
+                      {portfolioStressHeadline.ecosystemAffectedCount} coin
+                      {portfolioStressHeadline.ecosystemAffectedCount !== 1 ? "s" : ""}{" "}
+                      affected ecosystem-wide.
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">
-                    {portfolioStressHeadline.affectedCount} coin
-                    {portfolioStressHeadline.affectedCount !== 1 ? "s" : ""}{" "}
+                    {portfolioStressHeadline.ecosystemAffectedCount} coin
+                    {portfolioStressHeadline.ecosystemAffectedCount !== 1 ? "s" : ""}{" "}
                     affected.{" "}
                     {portfolioStressHeadline.totalAtRisk > 0 && (
                       <>

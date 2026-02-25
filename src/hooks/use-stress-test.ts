@@ -32,10 +32,13 @@ export interface StressTestState {
   targetGrade: ReportCardGrade | null;
   stressedCards: ReportCard[] | null;
   impacts: StressTestImpact[];
+  /** All coin IDs whose score changed (regardless of portfolio filter) — used for card grid highlighting */
+  allAffectedIds: Set<string>;
   headline: {
     totalAtRisk: number;
     totalHeld: number;
     affectedCount: number;
+    ecosystemAffectedCount: number;
     isPortfolioMode: boolean;
   } | null;
   targetableCoins: { id: string; name: string; symbol: string; dependentCount: number }[];
@@ -190,6 +193,21 @@ export function useStressTest(
     return computeStressedGrades(reportData.cards, overrides);
   }, [targetCoinId, targetGrade, reportData]);
 
+  // --- All affected coin IDs (no portfolio filter) — for card grid highlighting ---
+  const allAffectedIds = useMemo((): Set<string> => {
+    if (!stressedCards || !reportData) return new Set();
+
+    const ids = new Set<string>();
+    for (let i = 0; i < reportData.cards.length; i++) {
+      const original = reportData.cards[i];
+      const stressed = stressedCards[i];
+      if (original.overallScore !== stressed.overallScore) {
+        ids.add(original.id);
+      }
+    }
+    return ids;
+  }, [stressedCards, reportData]);
+
   // --- Impacts: compare stressed vs original ---
   const impacts = useMemo((): StressTestImpact[] => {
     if (!stressedCards || !reportData) return [];
@@ -255,19 +273,20 @@ export function useStressTest(
         totalAtRisk,
         totalHeld,
         affectedCount: impacts.length,
+        ecosystemAffectedCount: allAffectedIds.size,
         isPortfolioMode: true,
       };
     }
 
     // Ecosystem mode: use mcapMap for totals
-    const affectedIds = new Set(impacts.map((i) => i.coinId));
+    const impactedIds = new Set(impacts.map((i) => i.coinId));
     let totalAtRisk = 0;
     let totalHeld = 0;
 
     if (mcapMap) {
       for (const [id, mcap] of mcapMap) {
         totalHeld += mcap;
-        if (affectedIds.has(id)) {
+        if (impactedIds.has(id)) {
           totalAtRisk += mcap;
         }
       }
@@ -277,9 +296,10 @@ export function useStressTest(
       totalAtRisk,
       totalHeld,
       affectedCount: impacts.length,
+      ecosystemAffectedCount: allAffectedIds.size,
       isPortfolioMode: false,
     };
-  }, [stressedCards, reportData, holdings, impacts, mcapMap]);
+  }, [stressedCards, reportData, holdings, impacts, allAffectedIds, mcapMap]);
 
   // --- Actions ---
 
@@ -303,6 +323,7 @@ export function useStressTest(
     targetGrade,
     stressedCards,
     impacts,
+    allAffectedIds,
     headline,
     targetableCoins,
     gradeOptions,
