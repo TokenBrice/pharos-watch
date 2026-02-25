@@ -15,6 +15,7 @@ import type {
   BluechipRating,
   StablecoinMeta,
   GovernanceType,
+  ReportCard,
 } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -409,4 +410,78 @@ export function computeOverallGrade(
   const clamped = Math.max(0, Math.min(100, score));
 
   return { grade: scoreToGrade(clamped), score: clamped, ratedDimensions: ratedCount };
+}
+
+// ---------------------------------------------------------------------------
+// Stress test recomputation
+// ---------------------------------------------------------------------------
+
+/**
+ * Recompute grades with overridden overall scores for target coins.
+ * Used by the stress test to simulate upstream downgrades.
+ *
+ * Only the Dependency Risk dimension is affected — overriding a coin's
+ * overall score changes the dependency risk of every coin that lists it
+ * as an upstream dependency.
+ */
+export function computeStressedGrades(
+  cards: ReportCard[],
+  overrides: Map<string, number>,  // coin ID -> synthetic overall score
+): ReportCard[] {
+  // Build effective overall scores map (real scores + overrides)
+  const overallScores = new Map<string, number>();
+  for (const card of cards) {
+    const override = overrides.get(card.id);
+    if (override !== undefined) {
+      overallScores.set(card.id, override);
+    } else if (card.overallScore !== null) {
+      overallScores.set(card.id, card.overallScore);
+    }
+  }
+
+  // Find which coins are directly overridden
+  const overriddenIds = new Set(overrides.keys());
+
+  // Find which coins depend on an overridden coin
+  const affectedIds = new Set<string>();
+  for (const card of cards) {
+    const deps = card.rawInputs.dependencies;
+    if (deps.length > 0 && deps.some((d) => overriddenIds.has(d.id))) {
+      affectedIds.add(card.id);
+    }
+  }
+
+  return cards.map((card) => {
+    // Directly overridden coin: swap its overall score and grade
+    if (overriddenIds.has(card.id)) {
+      const newScore = overrides.get(card.id)!;
+      return {
+        ...card,
+        overallGrade: scoreToGrade(newScore),
+        overallScore: newScore,
+      };
+    }
+
+    // Affected dependent coin: recompute dependency risk + overall
+    if (affectedIds.has(card.id)) {
+      // Build a minimal StablecoinMeta-like object for scoreDependencyRisk
+      const meta = {
+        flags: { governance: card.rawInputs.governanceTier },
+        dependencies: card.rawInputs.dependencies,
+      } as StablecoinMeta;
+      const newDepRisk = scoreDependencyRisk(meta, overallScores);
+      const newDimensions = { ...card.dimensions, dependencyRisk: newDepRisk };
+      const overall = computeOverallGrade(newDimensions);
+      return {
+        ...card,
+        dimensions: newDimensions,
+        overallGrade: overall.grade,
+        overallScore: overall.score,
+        ratedDimensions: overall.ratedDimensions,
+      };
+    }
+
+    // Unaffected: return as-is
+    return card;
+  });
 }
