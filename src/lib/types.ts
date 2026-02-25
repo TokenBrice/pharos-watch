@@ -79,6 +79,7 @@ export interface StablecoinMeta {
   jurisdiction?: Jurisdiction;
   contracts?: ContractDeployment[];  // On-chain contract deployments per chain
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
+  dependencies?: string[];  // DefiLlama IDs of upstream stablecoins (CeFi-Dependent coins only)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
