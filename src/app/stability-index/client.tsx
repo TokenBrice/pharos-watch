@@ -63,6 +63,20 @@ const COMPONENT_COLORS = {
   trend: "#22c55e",
 };
 
+const COMPONENT_LEGEND = [
+  { label: "Severity", color: COMPONENT_COLORS.severity },
+  { label: "Breadth", color: COMPONENT_COLORS.breadth },
+  { label: "Freezes", color: COMPONENT_COLORS.freezes },
+  { label: "Trend", color: COMPONENT_COLORS.trend },
+];
+
+const COMPONENT_DETAIL = [
+  { label: "Severity", sign: "−", color: "#f97316" },
+  { label: "Breadth", sign: "−", color: "#3b82f6" },
+  { label: "Freezes", sign: "−", color: "#ef4444" },
+  { label: "Trend", sign: "+", color: "#22c55e" },
+] as const;
+
 /* ─── ScoreChart ────────────────────────────────────────────────── */
 
 function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
@@ -183,12 +197,7 @@ function ComponentChart({
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4 mb-4">
-          {[
-            { label: "Severity", color: COMPONENT_COLORS.severity },
-            { label: "Breadth", color: COMPONENT_COLORS.breadth },
-            { label: "Freezes", color: COMPONENT_COLORS.freezes },
-            { label: "Trend", color: COMPONENT_COLORS.trend },
-          ].map((item) => (
+          {COMPONENT_LEGEND.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
               {item.label}
@@ -579,16 +588,11 @@ export function StabilityIndexClient() {
           <div className="hidden lg:flex items-center gap-6 ml-auto">
             <div className="h-14 w-px bg-border" />
             <div className="flex items-center gap-6">
-              {[
-                { label: "Severity", value: components.severity, sign: "−", color: "#f97316" },
-                { label: "Breadth", value: components.breadth, sign: "−", color: "#3b82f6" },
-                { label: "Freezes", value: components.freezes, sign: "−", color: "#ef4444" },
-                { label: "Trend", value: components.trend, sign: "+", color: "#22c55e" },
-              ].map((c) => (
+              {COMPONENT_DETAIL.map((c) => (
                 <div key={c.label} className="flex flex-col items-center gap-0.5">
                   <span className="text-xs text-muted-foreground">{c.label}</span>
                   <span className="text-xl font-bold tabular-nums" style={{ color: c.color }}>
-                    {c.sign}{c.value.toFixed(1)}
+                    {c.sign}{components[c.label.toLowerCase() as keyof typeof components].toFixed(1)}
                   </span>
                 </div>
               ))}

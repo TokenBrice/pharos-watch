@@ -46,7 +46,12 @@ export function ReportCardRadar({
   const compact = labels === "short";
 
   return (
-    <div className={`w-full ${className ?? ""}`} style={size !== undefined ? { height: size } : undefined}>
+    <div
+      className={`w-full ${className ?? ""}`}
+      style={size !== undefined ? { height: size } : undefined}
+      role="figure"
+      aria-label={`Report card radar chart for ${card.symbol}`}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "70%" : "80%"}>
           <PolarGrid stroke="currentColor" className="text-border" />
@@ -92,7 +97,12 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
   });
 
   return (
-    <div className={`w-full ${className ?? ""}`} style={{ height: size }}>
+    <div
+      className={`w-full ${className ?? ""}`}
+      style={{ height: size }}
+      role="figure"
+      aria-label={`Report card comparison for ${cards.map(({ card }) => card.symbol).join(", ")}`}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
           <PolarGrid stroke="currentColor" className="text-border" />

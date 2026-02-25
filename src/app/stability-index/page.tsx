@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StabilityIndexClient } from "./client";
 
 const description = "Historical Pharos Stability Index scores, component breakdowns, and condition band analysis for the stablecoin market.";
@@ -32,7 +33,7 @@ export default function StabilityIndexPage() {
           Historical stablecoin market health scores, component breakdowns, and condition band analysis.
         </p>
       </div>
-      <Suspense>
+      <Suspense fallback={<div className="space-y-6"><Skeleton className="h-48 w-full rounded-2xl" /><Skeleton className="h-[350px] w-full rounded-2xl" /><Skeleton className="h-[350px] w-full rounded-2xl" /></div>}>
         <StabilityIndexClient />
       </Suspense>
     </div>

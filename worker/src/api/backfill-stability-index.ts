@@ -61,10 +61,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       return Math.abs(best.date - day) <= 14 * DAY ? best.mcap : 0;
     }
 
-    // Clear existing backfill data
-    await db.prepare("DELETE FROM stability_index").run();
-
-    // Iterate day by day
+    // Iterate day by day — build all statements first, then atomically replace
     const stmts: D1PreparedStatement[] = [];
     let count = 0;
 
@@ -132,7 +129,10 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       count++;
     }
 
-    await batchExecute(db, stmts);
+    // Atomic replace: DELETE + INSERT in a single batch to minimize the window
+    // where the table is empty (concurrent cron reads could see stale data)
+    const deleteStmt = db.prepare("DELETE FROM stability_index");
+    await batchExecute(db, [deleteStmt, ...stmts]);
 
     return new Response(JSON.stringify({ ok: true, daysBackfilled: count }), {
       headers: { "Content-Type": "application/json" },

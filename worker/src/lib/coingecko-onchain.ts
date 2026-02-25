@@ -112,8 +112,8 @@ export async function fetchCgTokenPools(
     headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }),
   }, 1); // 1 retry max to keep wall time bounded
   if (!res?.ok) return [];
-  const json = (await res.json()) as { data?: CgPool[] };
-  return json.data ?? [];
+  const json = (await res.json()) as { data?: unknown };
+  return Array.isArray(json.data) ? (json.data as CgPool[]) : [];
 }
 
 /**
@@ -132,8 +132,8 @@ export async function fetchCgTokensBatch(
     headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }),
   }, 1);
   if (!res?.ok) return [];
-  const json = (await res.json()) as { data?: CgToken[] };
-  return json.data ?? [];
+  const json = (await res.json()) as { data?: unknown };
+  return Array.isArray(json.data) ? (json.data as CgToken[]) : [];
 }
 
 /**
