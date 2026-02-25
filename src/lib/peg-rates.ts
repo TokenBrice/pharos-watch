@@ -1,6 +1,13 @@
 import type { PegAssetBase, StablecoinMeta } from "./types";
 import { sumPegBuckets } from "./supply";
 
+/**
+ * Coins excluded from the commodity peer-median reference.
+ * DGLD's CoinGecko price is ~2× gold spot (likely a data error), which
+ * poisons the median used as peg reference for all gold tokens.
+ */
+export const COMMODITY_MEDIAN_EXCLUDES = new Set(["gold-dgld"]);
+
 type PegRateSource = "median" | "fallback";
 
 export interface PegRatesResult {
@@ -41,6 +48,7 @@ export function derivePegRates(
 
     // For gold/silver tokens, normalize price to "per troy ounce"
     if ((peg === "peggedGOLD" || peg === "peggedSILVER") && metaById) {
+      if (COMMODITY_MEDIAN_EXCLUDES.has(a.id)) continue;
       const meta = metaById.get(a.id);
       const oz = meta?.commodityOunces;
       if (oz && oz > 0) {

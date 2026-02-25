@@ -1,5 +1,5 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
-import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
+import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
@@ -116,10 +116,15 @@ async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTime
 
   const allCommodityCoins = TRACKED_STABLECOINS.filter(
     (m) => COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
+      && !COMMODITY_MEDIAN_EXCLUDES.has(m.id)
   );
 
-  // Collect per-troy-oz normalised price points for each peg type
-  const byPeg: Record<string, { timestamp: number; price: number }[]> = { GOLD: [], SILVER: [] };
+  // Per-coin per-day mean prices (normalised to per-troy-oz).
+  // CG days=max returns different granularities per coin (daily for old coins,
+  // hourly/5-min for newer ones), so we must aggregate per-coin first to give
+  // each coin equal weight in the cross-coin daily median.
+  const DAY = 86400;
+  const coinDailies: Record<string, Map<number, number>[]> = { GOLD: [], SILVER: [] };
 
   for (const meta of allCommodityCoins) {
     const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
@@ -130,44 +135,55 @@ async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTime
 
     const oz = meta.commodityOunces;
     const peg = meta.flags.pegCurrency;
-    const series = byPeg[peg];
-    if (!series) continue;
+    const arr = coinDailies[peg];
+    if (!arr) continue;
 
+    // Bucket this coin's prices by day, compute daily mean
+    const dayBuckets = new Map<number, { sum: number; count: number }>();
     for (const p of prices) {
-      // Normalise to per-troy-ounce so all tokens are on the same scale
-      // e.g. KAU (1 gram) → price / (1/31.1035) = price * 31.1035
       const perOz = oz && oz > 0 ? p.price / oz : p.price;
-      series.push({ timestamp: p.timestamp, price: perOz });
+      const day = Math.floor(p.timestamp / DAY) * DAY;
+      const bucket = dayBuckets.get(day) ?? { sum: 0, count: 0 };
+      bucket.sum += perOz;
+      bucket.count++;
+      dayBuckets.set(day, bucket);
     }
+
+    const dailyMean = new Map<number, number>();
+    for (const [day, { sum, count }] of dayBuckets) {
+      dailyMean.set(day, sum / count);
+    }
+    arr.push(dailyMean);
   }
 
-  // Bucket by UTC day, compute median per bucket
-  const DAY = 86400;
+  // Cross-coin median: for each day, collect one mean per coin, take the median
   for (const peg of ["GOLD", "SILVER"] as const) {
-    const points = byPeg[peg];
-    if (points.length === 0) continue;
+    const coinMaps = coinDailies[peg];
+    if (coinMaps.length === 0) continue;
 
-    const byDay = new Map<number, number[]>();
-    for (const { timestamp, price } of points) {
-      const day = Math.floor(timestamp / DAY) * DAY;
-      const bucket = byDay.get(day) ?? [];
-      bucket.push(price);
-      byDay.set(day, bucket);
-    }
+    // Collect all days that appear in any coin's data
+    const allDays = new Set<number>();
+    for (const m of coinMaps) for (const d of m.keys()) allDays.add(d);
 
     const series: FxTimeSeries[] = [];
-    for (const [ts, prices] of byDay) {
-      prices.sort((a, b) => a - b);
-      const mid = Math.floor(prices.length / 2);
+    for (const day of allDays) {
+      const vals: number[] = [];
+      for (const m of coinMaps) {
+        const v = m.get(day);
+        if (v !== undefined) vals.push(v);
+      }
+      if (vals.length === 0) continue;
+      vals.sort((a, b) => a - b);
+      const mid = Math.floor(vals.length / 2);
       const median =
-        prices.length % 2 === 0
-          ? (prices[mid - 1] + prices[mid]) / 2
-          : prices[mid];
-      series.push({ timestamp: ts, rate: median });
+        vals.length % 2 === 0
+          ? (vals[mid - 1] + vals[mid]) / 2
+          : vals[mid];
+      series.push({ timestamp: day, rate: median });
     }
     series.sort((a, b) => a.timestamp - b.timestamp);
     result[peg] = series;
-    console.log(`[backfill-depegs] Commodity median (${peg}): ${series.length} daily points from ${allCommodityCoins.filter(m => m.flags.pegCurrency === peg).length} tokens`);
+    console.log(`[backfill-depegs] Commodity median (${peg}): ${series.length} daily points from ${coinMaps.length} tokens`);
   }
 
   return result;
