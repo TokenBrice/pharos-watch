@@ -9,6 +9,7 @@ import { syncFxRates } from "./cron/sync-fx-rates";
 import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { snapshotSupply } from "./cron/snapshot-supply";
 import { generateDailyDigest } from "./cron/daily-digest";
+import { computeAndStoreStabilityIndex } from "./cron/stability-index";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 
@@ -186,6 +187,9 @@ const worker = {
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
         break;
       }
+      case "55 7 * * *":
+        ctx.waitUntil(logCronRun(db, "stability-index", () => computeAndStoreStabilityIndex(db)));
+        break;
       case "0 8 * * *":
         ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
         ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));

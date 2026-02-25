@@ -15,6 +15,7 @@ import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
+import { handleStabilityIndex } from "./api/stability-index";
 import { isValidStablecoinId } from "./lib/api-utils";
 
 export function route(
@@ -89,6 +90,10 @@ export function route(
 
   if (path === "/api/digest-archive") {
     return handleDigestArchive(db);
+  }
+
+  if (path === "/api/stability-index") {
+    return handleStabilityIndex(db);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution
