@@ -158,7 +158,7 @@ export default function AboutPage() {
         <h2 className="text-xl font-semibold tracking-tight">What Pharos Tracks</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-amber-500" />
                 <span className="font-bold">{TRACKED_STABLECOINS.length} Stablecoins</span>
@@ -170,7 +170,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Skull className="h-5 w-5 text-zinc-500" />
                 <span className="font-bold">{DEAD_STABLECOINS.length} in the Cemetery</span>
@@ -182,7 +182,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-red-500" />
                 <span className="font-bold">Freeze Tracking</span>
@@ -194,7 +194,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-emerald-500" />
                 <Link href="/peg-tracker" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
@@ -208,7 +208,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-sky-500" />
                 <span className="font-bold">Safety Ratings</span>
@@ -229,7 +229,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Droplets className="h-5 w-5 text-cyan-500" />
                 <Link href="/liquidity" className="font-bold underline underline-offset-4 hover:text-cyan-500 transition-colors">
@@ -243,7 +243,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Newspaper className="h-5 w-5 text-orange-500" />
                 <Link href="/digest" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
@@ -257,7 +257,7 @@ export default function AboutPage() {
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Gauge className="h-5 w-5 text-indigo-500" />
                 <span className="font-bold">Stability Index</span>
