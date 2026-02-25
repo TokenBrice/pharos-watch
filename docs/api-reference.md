@@ -677,7 +677,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 |-------|------|-------------|
 | `current` | `object \| null` | Latest PSI score and components. `null` if cron has not yet run |
 | `current.score` | `number` | PSI score 0–100 |
-| `current.band` | `string` | Condition band: `"CALM"`, `"STEADY"`, `"ALERT"`, `"STRESS"`, `"CRISIS"` |
+| `current.band` | `string` | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
 | `current.components` | `object` | Component breakdown: `severity`, `breadth`, `freezes`, `trend` |
 | `current.computedAt` | `number` | Unix seconds of computation |
 | `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
@@ -697,8 +697,8 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
   "cards": [ReportCard, ...],
   "methodology": {
     "version": "1.0",
-    "weights": { "pegStability": 0.25, "liquidity": 0.20, ... },
-    "thresholds": { "A+": 95, "A": 88, ... }
+    "weights": { "pegStability": 0.25, "liquidity": 0.25, "safety": 0.20, ... },
+    "thresholds": [{ "grade": "A+", "min": 97 }, { "grade": "A", "min": 93 }, ...]
   },
   "updatedAt": 1771977600
 }

@@ -1,0 +1,135 @@
+# Report Cards
+
+Multi-dimensional safety grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
+
+## Overall Grade
+
+Weighted sum of 6 dimension scores (each 0–100), mapped to a letter grade. NR dimensions have their weight redistributed proportionally among rated dimensions. Requires at least 3 rated dimensions; otherwise overall = NR. Cemetery coins get a permanent F.
+
+## Dimensions
+
+| Dimension | Weight | Source | Scoring |
+|-----------|--------|--------|---------|
+| **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
+| **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
+| **Safety** | 20% | Bluechip SMIDGE rating | Grade-to-score mapping (A+ → 100 … F → 25). NR if no rating |
+| **Resilience** | 15% | Chain count (60%) + freeze rate (40%) | See sub-scores below |
+| **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
+| **Dependency Risk** | 5% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → avg of upstream scores, −10 if any < 75. NR if unmapped |
+
+### Peg Stability Details
+
+- Uses `computePegScore()` output over 4-year tracking window
+- Active depeg caps score at 65 (C grade) regardless of historical performance
+- Clean 12-month streak awards +3 bonus points
+- NAV tokens (yield-accruing, price-appreciating) receive NR — peg tracking not applicable
+- Yield-bearing annotation added to detail text
+
+### Liquidity Details
+
+- Base score from DEX liquidity scoring system (see `docs/dex-liquidity.md`)
+- Concentration penalty via Herfindahl-Hirschman Index:
+  - HHI > 0.8: −10 (nearly single-pool concentration)
+  - HHI > 0.5: −5 (moderate concentration)
+
+### Safety Details
+
+Bluechip grade passthrough:
+
+| Bluechip Grade | Score |
+|----------------|-------|
+| A+ | 100 |
+| A | 95 |
+| A- | 90 |
+| B+ | 85 |
+| B | 80 |
+| B- | 75 |
+| C+ | 70 |
+| C | 65 |
+| C- | 60 |
+| D | 50 |
+| F | 25 |
+
+### Resilience Sub-Scores
+
+**Chain distribution (60% weight):**
+
+| Chains | Score |
+|--------|-------|
+| 1 | 40 |
+| 2 | 55 |
+| 3 | 65 |
+| 4–5 | 75 |
+| 6–8 | 85 |
+| 9+ | 95 |
+
+**Freeze event rate (40% weight):**
+- Formula: `100 − (events_per_month × 2)`, clamped 0–100
+- Applies to USDC, USDT, PAXG, XAUT (coins with tracked freeze/blacklist events)
+- Coins without freeze capability: 85 (neutral)
+
+### Dependency Risk Details
+
+Two-phase computation ensures upstream scores are available before dependent coins are graded:
+
+1. **Phase 1**: Grade `centralized` + `decentralized` coins (no upstream dependencies)
+2. **Phase 2**: Grade `centralized-dependent` coins using Phase 1 scores
+
+For Phase 2 coins:
+- Score = average of upstream stablecoins' overall scores
+- −10 penalty if any dependency scores below 75 (B-)
+- Falls back to 70 if dependencies aren't mapped or scores unavailable
+
+## Grade Thresholds
+
+| Grade | Min Score |
+|-------|-----------|
+| A+ | 97 |
+| A | 93 |
+| A- | 90 |
+| B+ | 85 |
+| B | 80 |
+| B- | 75 |
+| C+ | 70 |
+| C | 65 |
+| C- | 60 |
+| D | 50 |
+| F | 0 |
+| NR | null score |
+
+## Grade Colors
+
+| Range | Badge (Tailwind) | Radar (hex) |
+|-------|-------------------|-------------|
+| A (A+, A, A-) | emerald-500 | `#10b981` |
+| B (B+, B, B-) | blue-500 | `#3b82f6` |
+| C (C+, C, C-) | amber-500 | `#f59e0b` |
+| D | orange-500 | `#f97316` |
+| F | red-500 | `#ef4444` |
+| NR | muted | `#71717a` |
+
+## API
+
+`GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
+
+Response includes `cards` (array of `ReportCard`), `methodology` (version, weights, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
+
+## Frontend
+
+- **Grid page**: `src/app/report-cards/client.tsx` — filterable/sortable grid of grade cards with grade distribution bar chart
+- **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown
+- **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile
+- **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay)
+- **Hook**: `src/hooks/use-report-cards.ts` — TanStack Query with 15-min stale time
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors |
+| `worker/src/api/report-cards.ts` | API handler: data loading, two-phase computation, response |
+| `src/components/report-card.tsx` | Full detail card with radar |
+| `src/components/report-card-mini.tsx` | Compact grid tile |
+| `src/components/radar-chart.tsx` | Recharts radar visualization |
+| `src/app/report-cards/client.tsx` | Full page with filtering, sorting, grade distribution |
+| `src/hooks/use-report-cards.ts` | TanStack Query hook |

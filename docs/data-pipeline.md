@@ -84,17 +84,11 @@ Free tier = 100 requests/month. Monthly usage: ~30 live (1/day) + 49 backfill (o
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs daily at 07:55 UTC and computes a composite ecosystem health score (0–100).
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs daily at 07:55 UTC and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − freezes + trend`. See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
 
-**Components:**
-- **Severity** (penalty): TVL-weighted average of active depeg deviations
-- **Breadth** (penalty): Percentage of tracked stablecoins currently depegged
-- **Freezes** (penalty): Count of recent freeze/blacklist events
-- **Trend** (bonus/penalty): Score improvement or degradation vs. previous day
+**Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 
-**Band classification:** `CALM` (85–100), `STEADY` (70–85), `ALERT` (55–70), `STRESS` (40–55), `CRISIS` (0–40)
-
-**Storage:** `stability_index` table (migration 0022) with `computed_at`, `score`, `band`, `components` (JSON).
+**Storage:** `stability_index` table (migration 0022) with `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON).
 
 ## Pending Depeg Confirmation
 

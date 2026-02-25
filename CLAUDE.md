@@ -61,4 +61,6 @@ Read these when working on related code:
 - **`docs/api-reference.md`** — Full API reference: all 22 endpoints, query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
+- **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
+- **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
