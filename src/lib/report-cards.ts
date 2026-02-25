@@ -11,6 +11,7 @@ import type {
   DimensionKey,
   PegSummaryCoin,
   DexLiquidityData,
+  BluechipGrade,
   BluechipRating,
   StablecoinMeta,
   GovernanceType,
@@ -85,6 +86,14 @@ export const GRADE_RADAR_COLORS: Record<string, string> = {
   NR: "#71717a",  // zinc-500 (muted)
 };
 
+/** Maps Bluechip safety grades to numeric scores. */
+const BLUECHIP_GRADE_TO_SCORE: Record<BluechipGrade, number> = {
+  "A+": 100, A: 95, "A-": 90,
+  "B+": 85, B: 80, "B-": 75,
+  "C+": 70, C: 65, "C-": 60,
+  D: 50, F: 25,
+};
+
 // ---------------------------------------------------------------------------
 // Grade helpers
 // ---------------------------------------------------------------------------
@@ -136,12 +145,13 @@ export function scorePegStability(
     score = Math.min(score, 65);
   }
 
-  // +3 bonus if no depeg events in the last 12+ months
-  if (peg.eventCount > 0 && peg.lastEventAt !== null) {
-    const twelveMonthsAgo = Date.now() / 1000 - 365 * 86400;
-    if (peg.lastEventAt < twelveMonthsAgo) {
-      score = Math.min(100, score + 3);
-    }
+  // Award +3 if no depeg events, or last one was 12+ months ago
+  const twelveMonthsAgo = Date.now() / 1000 - 365 * 86400;
+  const noRecentEvents =
+    peg.eventCount === 0 ||
+    (peg.lastEventAt !== null && peg.lastEventAt < twelveMonthsAgo);
+  if (noRecentEvents) {
+    score = Math.min(100, score + 3);
   }
 
   score = Math.round(Math.max(0, Math.min(100, score)));
@@ -159,7 +169,12 @@ export function scorePegStability(
     parts.push(`worst deviation: ${peg.worstDeviationBps} bps`);
   }
 
-  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+  let detail = parts.join(". ");
+  if (meta.flags.yieldBearing) {
+    detail += " (yield-bearing — expected price appreciation excluded)";
+  }
+
+  return { grade: scoreToGrade(score), score, detail };
 }
 
 /**
@@ -209,14 +224,7 @@ export function scoreSafety(
     return { grade: "NR", score: null, detail: "No Bluechip safety rating available" };
   }
 
-  const gradeToScore: Record<string, number> = {
-    "A+": 100, "A": 95, "A-": 90,
-    "B+": 85, "B": 80, "B-": 75,
-    "C+": 70, "C": 65, "C-": 60,
-    "D": 50, "F": 25,
-  };
-
-  const score = gradeToScore[rating.grade] ?? 50;
+  const score = BLUECHIP_GRADE_TO_SCORE[rating.grade];
   const detail = `Bluechip safety grade: ${rating.grade}. Collateralization: ${rating.collateralization}%`;
 
   return { grade: scoreToGrade(score), score, detail };
