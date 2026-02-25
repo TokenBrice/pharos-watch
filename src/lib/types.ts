@@ -353,6 +353,42 @@ export interface DexLiquidityHistoryPoint {
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 
+// --- Report Card types ---
+
+export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
+
+export interface ReportCardDimension {
+  grade: ReportCardGrade;
+  score: number | null;   // 0-100, null if NR
+  detail: string;         // Human-readable explanation
+}
+
+export type DimensionKey = "pegStability" | "liquidity" | "safety" | "resilience" | "decentralization" | "dependencyRisk";
+
+export interface ReportCard {
+  id: string;
+  name: string;
+  symbol: string;
+  overallGrade: ReportCardGrade;
+  overallScore: number | null;
+  dimensions: Record<DimensionKey, ReportCardDimension>;
+  ratedDimensions: number;
+  dependencies?: string[];
+  isDefunct: boolean;
+}
+
+export interface ReportCardsResponse {
+  cards: ReportCard[];
+  methodology: {
+    version: string;
+    weights: Record<DimensionKey, number>;
+    thresholds: { grade: ReportCardGrade; min: number }[];
+  };
+  updatedAt: number;
+}
+
+export type ReportCardMap = Record<string, ReportCard>;
+
 // --- Status page types ---
 
 export interface CacheStatus {
