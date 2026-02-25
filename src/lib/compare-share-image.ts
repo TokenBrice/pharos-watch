@@ -178,8 +178,8 @@ function drawCoinCard(
 // --- Radar constants ---
 const RADAR_R = 85;
 const RADAR_LABEL_OFFSET = 22;
-// Total section height: 24 top-gap + 16 title + 16 post-divider + radar circle + bottom label offset + 16 gap + 24 legend + 16 bottom
-const RADAR_SECTION_H = 24 + 16 + 16 + 2 * (RADAR_R + RADAR_LABEL_OFFSET) + 16 + 24 + 16;
+// Total section height: 24 top-gap + 16 title + 32 post-divider + radar circle + bottom label offset + 16 gap + 24 legend + 16 bottom
+const RADAR_SECTION_H = 24 + 16 + 32 + 2 * (RADAR_R + RADAR_LABEL_OFFSET) + 16 + 24 + 16;
 
 /** Draw the radar section and return the Y coordinate of its bottom edge. */
 function drawRadarSection(
@@ -208,7 +208,7 @@ function drawRadarSection(
   ctx.moveTo(40, curY);
   ctx.lineTo(W - 40, curY);
   ctx.stroke();
-  curY += 16;
+  curY += 32;
 
   const radarCY = curY + RADAR_R + RADAR_LABEL_OFFSET;
 
