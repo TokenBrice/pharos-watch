@@ -99,7 +99,7 @@ export default function AboutPage() {
         </nav>
         <h1 className="text-3xl font-bold tracking-tight">About Pharos</h1>
         <p className="text-sm text-muted-foreground">
-          An open stablecoin analytics dashboard.
+          Open stablecoin analytics dashboard, built with love and care.
         </p>
       </div>
 
@@ -146,8 +146,8 @@ export default function AboutPage() {
                 Claude
                 <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>
-              . It puts the stablecoin data you want to monitor in one place — honest
-              classification, freeze tracking, and a graveyard for the ones that didn&apos;t make it.
+              . It puts the stablecoin data you want to monitor in one place: honest
+              classification, depeg and freeze tracking, liquidity scoring, daily digests and a graveyard for the ones that didn&apos;t make it.
             </p>
           </div>
         </CardContent>
