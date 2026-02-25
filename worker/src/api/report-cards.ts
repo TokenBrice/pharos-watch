@@ -29,6 +29,7 @@ import type {
   PegSummaryCoin,
   DimensionKey,
   GovernanceType,
+  RawDimensionInputs,
 } from "../../../src/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -235,6 +236,12 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
         dependencyRisk: nrDim,
       },
       ratedDimensions: 6,
+      rawInputs: {
+        pegScore: null, activeDepeg: false, depegEventCount: 0, lastEventAt: null,
+        liquidityScore: null, concentrationHhi: null, bluechipGrade: null,
+        chainCount: 0, freezeEventsPerMonth: null, hasTrackedFreezeEvents: false,
+        governanceTier: "centralized" as GovernanceType, dependencies: [],
+      },
       isDefunct: true,
     };
   });
@@ -249,7 +256,17 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     return b.overallScore - a.overallScore;
   });
 
-  // 10. Return ReportCardsResponse
+  // 10. Build dependency graph edge list
+  const edges: { from: string; to: string }[] = [];
+  for (const meta of TRACKED_STABLECOINS) {
+    if (meta.dependencies) {
+      for (const dep of meta.dependencies) {
+        edges.push({ from: dep.id, to: meta.id });
+      }
+    }
+  }
+
+  // 11. Return ReportCardsResponse
   const response: ReportCardsResponse = {
     cards: allCards,
     methodology: {
@@ -257,6 +274,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       weights: DIMENSION_WEIGHTS,
       thresholds: GRADE_THRESHOLDS,
     },
+    dependencyGraph: { edges },
     updatedAt: stablecoinsCached.updatedAt,
   };
 
@@ -305,6 +323,21 @@ function computeCard(
 
   const overall = computeOverallGrade(dimensions);
 
+  const rawInputs: RawDimensionInputs = {
+    pegScore: peg?.pegScore ?? null,
+    activeDepeg: peg?.activeDepeg ?? false,
+    depegEventCount: peg?.eventCount ?? 0,
+    lastEventAt: peg?.lastEventAt ?? null,
+    liquidityScore: liq?.liquidityScore ?? null,
+    concentrationHhi: liq?.concentrationHhi ?? null,
+    bluechipGrade: rating?.grade ?? null,
+    chainCount,
+    freezeEventsPerMonth,
+    hasTrackedFreezeEvents,
+    governanceTier: meta.flags.governance as GovernanceType,
+    dependencies: meta.dependencies ?? [],
+  };
+
   return {
     id: meta.id,
     name: meta.name,
@@ -313,6 +346,7 @@ function computeCard(
     overallScore: overall.score,
     dimensions,
     ratedDimensions: overall.ratedDimensions,
+    rawInputs,
     ...(meta.dependencies && meta.dependencies.length > 0 ? { dependencies: meta.dependencies } : {}),
     isDefunct: false,
   };

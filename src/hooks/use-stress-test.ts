@@ -1,0 +1,313 @@
+"use client";
+
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { computeStressedGrades, GRADE_THRESHOLDS } from "@/lib/report-cards";
+import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import type {
+  ReportCard,
+  ReportCardGrade,
+  ReportCardsResponse,
+} from "@/lib/types";
+import type { PortfolioHolding } from "./use-portfolio";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export interface StressTestImpact {
+  coinId: string;
+  name: string;
+  symbol: string;
+  holdingUsd: number | null; // null = ecosystem mode
+  gradeBefore: ReportCardGrade;
+  scoreBefore: number | null;
+  gradeAfter: ReportCardGrade;
+  scoreAfter: number | null;
+  delta: number; // score change (negative = downgrade)
+}
+
+export interface StressTestState {
+  targetCoinId: string | null;
+  targetGrade: ReportCardGrade | null;
+  stressedCards: ReportCard[] | null;
+  impacts: StressTestImpact[];
+  headline: {
+    totalAtRisk: number;
+    totalHeld: number;
+    affectedCount: number;
+    isPortfolioMode: boolean;
+  } | null;
+  targetableCoins: { id: string; name: string; symbol: string; dependentCount: number }[];
+  gradeOptions: ReportCardGrade[];
+  setTarget: (coinId: string | null) => void;
+  setGrade: (grade: ReportCardGrade | null) => void;
+  clear: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Lookup maps (built once at module level)
+// ---------------------------------------------------------------------------
+
+const symbolToId = new Map<string, string>();
+const idToMeta = new Map<string, { name: string; symbol: string }>();
+
+for (const coin of TRACKED_STABLECOINS) {
+  symbolToId.set(coin.symbol.toLowerCase(), coin.id);
+  idToMeta.set(coin.id, { name: coin.name, symbol: coin.symbol });
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a target grade to a numeric score (midpoint of grade range).
+ * For example: D has range 50-59, midpoint = 55.
+ * F has range 0-49, midpoint = 25.
+ * A+ has range 97-100, midpoint = 99 (capped at 100).
+ */
+function gradeToScore(grade: ReportCardGrade): number {
+  if (grade === "NR") return 0;
+
+  const idx = GRADE_THRESHOLDS.findIndex((t) => t.grade === grade);
+  if (idx < 0) return 0;
+
+  const min = GRADE_THRESHOLDS[idx].min;
+  // The max of this grade range is one below the min of the next-higher grade,
+  // or 100 for the top grade (A+).
+  const max = idx === 0 ? 100 : GRADE_THRESHOLDS[idx - 1].min - 1;
+
+  return Math.round((min + max) / 2);
+}
+
+/**
+ * Get the list of letter grades strictly below the given grade, down to F.
+ * NR is excluded. Returns empty if grade is F or NR.
+ */
+function getDowngradeOptions(currentGrade: ReportCardGrade): ReportCardGrade[] {
+  if (currentGrade === "NR") return [];
+
+  const gradeList = GRADE_THRESHOLDS.map((t) => t.grade);
+  const idx = gradeList.indexOf(currentGrade);
+  if (idx < 0 || idx >= gradeList.length - 1) return []; // F or not found
+
+  // Grades below: everything after current index (lower grades)
+  return gradeList.slice(idx + 1);
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+export function useStressTest(
+  reportData: ReportCardsResponse | undefined,
+  holdings: PortfolioHolding[],
+  mcapMap?: Map<string, number>,
+): StressTestState {
+  const searchParams = useSearchParams();
+
+  const [targetCoinId, setTargetCoinId] = useState<string | null>(null);
+  const [targetGrade, setTargetGrade] = useState<ReportCardGrade | null>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // --- URL init: read ?stress=usdc&grade=D on mount ---
+  useEffect(() => {
+    if (initialized) return;
+    setInitialized(true);
+
+    const stressParam = searchParams.get("stress");
+    const gradeParam = searchParams.get("grade");
+    if (!stressParam) return;
+
+    const coinId = symbolToId.get(stressParam.toLowerCase());
+    if (!coinId) return;
+
+    setTargetCoinId(coinId);
+
+    if (gradeParam) {
+      // Validate grade param against known grades
+      const validGrade = GRADE_THRESHOLDS.find(
+        (t) => t.grade === gradeParam.toUpperCase() || t.grade === gradeParam,
+      );
+      if (validGrade) {
+        setTargetGrade(validGrade.grade);
+      }
+    }
+  }, [initialized, searchParams]);
+
+  // --- Card lookup ---
+  const cardMap = useMemo(() => {
+    if (!reportData) return new Map<string, ReportCard>();
+    const m = new Map<string, ReportCard>();
+    for (const c of reportData.cards) m.set(c.id, c);
+    return m;
+  }, [reportData]);
+
+  // --- Holdings lookup ---
+  const holdingMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const h of holdings) m.set(h.coinId, h.amount);
+    return m;
+  }, [holdings]);
+
+  // --- Targetable coins: coins that appear as upstream (from) in dependency edges ---
+  const targetableCoins = useMemo(() => {
+    if (!reportData) return [];
+
+    const counts = new Map<string, number>();
+    for (const edge of reportData.dependencyGraph.edges) {
+      counts.set(edge.from, (counts.get(edge.from) ?? 0) + 1);
+    }
+
+    const result: { id: string; name: string; symbol: string; dependentCount: number }[] = [];
+    for (const [id, count] of counts) {
+      const meta = idToMeta.get(id);
+      if (meta) {
+        result.push({ id, name: meta.name, symbol: meta.symbol, dependentCount: count });
+      }
+    }
+
+    result.sort((a, b) => b.dependentCount - a.dependentCount);
+    return result;
+  }, [reportData]);
+
+  // --- Grade options: grades strictly below target coin's current grade ---
+  const gradeOptions = useMemo((): ReportCardGrade[] => {
+    if (!targetCoinId) return [];
+    const card = cardMap.get(targetCoinId);
+    if (!card) return [];
+    return getDowngradeOptions(card.overallGrade);
+  }, [targetCoinId, cardMap]);
+
+  // --- Stressed cards: recompute when target + grade are set ---
+  const stressedCards = useMemo((): ReportCard[] | null => {
+    if (!targetCoinId || !targetGrade || !reportData) return null;
+
+    const overrides = new Map<string, number>();
+    overrides.set(targetCoinId, gradeToScore(targetGrade));
+
+    return computeStressedGrades(reportData.cards, overrides);
+  }, [targetCoinId, targetGrade, reportData]);
+
+  // --- Impacts: compare stressed vs original ---
+  const impacts = useMemo((): StressTestImpact[] => {
+    if (!stressedCards || !reportData) return [];
+
+    const isPortfolioMode = holdings.length > 0;
+    const result: StressTestImpact[] = [];
+
+    for (let i = 0; i < reportData.cards.length; i++) {
+      const original = reportData.cards[i];
+      const stressed = stressedCards[i];
+
+      // Skip if scores didn't change
+      const scoreBefore = original.overallScore;
+      const scoreAfter = stressed.overallScore;
+      if (scoreBefore === scoreAfter) continue;
+      // Both null means no change
+      if (scoreBefore === null && scoreAfter === null) continue;
+
+      const delta = (scoreAfter ?? 0) - (scoreBefore ?? 0);
+
+      // In portfolio mode, only include held coins
+      if (isPortfolioMode && !holdingMap.has(original.id)) continue;
+
+      const meta = idToMeta.get(original.id);
+      result.push({
+        coinId: original.id,
+        name: meta?.name ?? original.name,
+        symbol: meta?.symbol ?? original.symbol,
+        holdingUsd: isPortfolioMode ? (holdingMap.get(original.id) ?? null) : null,
+        gradeBefore: original.overallGrade,
+        scoreBefore,
+        gradeAfter: stressed.overallGrade,
+        scoreAfter,
+        delta,
+      });
+    }
+
+    // Sort by absolute delta descending (biggest impact first)
+    result.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    return result;
+  }, [stressedCards, reportData, holdings.length, holdingMap]);
+
+  // --- Headline stats ---
+  const headline = useMemo(() => {
+    if (!stressedCards || !reportData) return null;
+
+    const isPortfolioMode = holdings.length > 0;
+
+    if (isPortfolioMode) {
+      // Portfolio mode: sum holdings for affected coins
+      const affectedIds = new Set(impacts.map((i) => i.coinId));
+      let totalAtRisk = 0;
+      let totalHeld = 0;
+
+      for (const h of holdings) {
+        totalHeld += h.amount;
+        if (affectedIds.has(h.coinId)) {
+          totalAtRisk += h.amount;
+        }
+      }
+
+      return {
+        totalAtRisk,
+        totalHeld,
+        affectedCount: impacts.length,
+        isPortfolioMode: true,
+      };
+    }
+
+    // Ecosystem mode: use mcapMap for totals
+    const affectedIds = new Set(impacts.map((i) => i.coinId));
+    let totalAtRisk = 0;
+    let totalHeld = 0;
+
+    if (mcapMap) {
+      for (const [id, mcap] of mcapMap) {
+        totalHeld += mcap;
+        if (affectedIds.has(id)) {
+          totalAtRisk += mcap;
+        }
+      }
+    }
+
+    return {
+      totalAtRisk,
+      totalHeld,
+      affectedCount: impacts.length,
+      isPortfolioMode: false,
+    };
+  }, [stressedCards, reportData, holdings, impacts, mcapMap]);
+
+  // --- Actions ---
+
+  const setTarget = useCallback((coinId: string | null) => {
+    setTargetCoinId(coinId);
+    // Reset grade when target changes (grade options change)
+    setTargetGrade(null);
+  }, []);
+
+  const setGrade = useCallback((grade: ReportCardGrade | null) => {
+    setTargetGrade(grade);
+  }, []);
+
+  const clear = useCallback(() => {
+    setTargetCoinId(null);
+    setTargetGrade(null);
+  }, []);
+
+  return {
+    targetCoinId,
+    targetGrade,
+    stressedCards,
+    impacts,
+    headline,
+    targetableCoins,
+    gradeOptions,
+    setTarget,
+    setGrade,
+    clear,
+  };
+}

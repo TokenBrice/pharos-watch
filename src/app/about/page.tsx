@@ -507,7 +507,86 @@ export default function AboutPage() {
         </CardContent>
       </Card>
 
-      {/* Section 6: Footer */}
+      {/* Section 6: Portfolio Analyzer & Stress Test Methodology */}
+      <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+        <CardHeader>
+          <CardTitle as="h2">Portfolio Analyzer &amp; Stress Test</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            The portfolio analyzer lets you input stablecoin holdings and receive an aggregate risk
+            assessment. The stress test simulates dependency failures to reveal concentration risk.
+          </p>
+
+          {/* Portfolio Grade */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Portfolio Grade</h3>
+            <p>
+              The portfolio grade is a USD-weighted average of held coins&apos; overall scores:
+            </p>
+            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              portfolioScore = &Sigma;(coinScore &times; coinAmount) / &Sigma;(coinAmount)
+            </p>
+            <p>
+              for all rated coins. Coins with an NR (Not Rated) grade are excluded from the
+              weighted average but flagged in the UI.
+            </p>
+          </div>
+
+          {/* Portfolio Radar */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Portfolio Radar</h3>
+            <p>
+              The portfolio radar chart shows the same weighted average applied per dimension
+              (Peg Stability, Liquidity, Safety, Resilience, Decentralization, Dependency Risk),
+              revealing the aggregate risk profile shape of the portfolio.
+            </p>
+          </div>
+
+          {/* Upstream Exposure */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Upstream Exposure</h3>
+            <p>
+              For each holding, the dashboard traces the dependency graph using researched
+              collateral weights to calculate effective exposure to upstream stablecoins.
+              Direct holdings of centralized stablecoins (e.g., USDC, USDT) attribute 100%
+              to themselves. Dependent coins split their exposure according to their collateral weights.
+            </p>
+            <p>
+              <span className="text-foreground font-medium">Example:</span>{" "}
+              $50K USDC (direct) + $5K DAI (85% USDC) + $2K FRAX (90% USDC)
+              = $56,050 effective USDC exposure out of $57,000 total (98%).
+            </p>
+          </div>
+
+          {/* Stress Test */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Stress Test</h3>
+            <p>
+              The interactive stress test overrides a target coin&apos;s overall score, then recomputes
+              the Dependency Risk dimension for every coin that lists that target as an upstream
+              dependency. This models the direct dependency channel only.
+            </p>
+            <p>
+              In reality, a major stablecoin failure would also impact peg stability, liquidity,
+              and market confidence simultaneously &mdash; the stress test captures only the
+              mechanical dependency impact.
+            </p>
+          </div>
+
+          {/* Limitations */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Limitations</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Collateral weights are researched estimates that may not reflect real-time ratios</li>
+              <li>Portfolio holdings are self-reported &mdash; no wallet connection or on-chain verification</li>
+              <li>The stress test models only the dependency risk channel, not second-order market effects</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Section 7: Footer */}
       <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
         <CardHeader>
           <CardTitle as="h2">Get in Touch</CardTitle>
