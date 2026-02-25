@@ -31,7 +31,7 @@ const PULSE_DURATION: Record<string, number> = {
   MELTDOWN: 0.7,
 };
 
-function PsiLighthouse({ band, color }: { band: string; color: string }) {
+export function PsiLighthouse({ band, color, size = 36 }: { band: string; color: string; size?: number }) {
   const uid = useId();
   const glowId = `psi-glow${uid}`;
   const bodyId = `psi-tBody${uid}`;
@@ -40,8 +40,8 @@ function PsiLighthouse({ band, color }: { band: string; color: string }) {
 
   return (
     <svg
-      width="36"
-      height="36"
+      width={size}
+      height={size}
       viewBox="0 0 88 88"
       fill="none"
       className="shrink-0"
@@ -92,9 +92,6 @@ function PsiLighthouse({ band, color }: { band: string; color: string }) {
       <line x1="44" y1="16" x2="84" y2="4" stroke={color} strokeWidth={2} opacity={0.25} strokeLinecap="round" />
       <line x1="44" y1="16" x2="-4" y2="14" stroke={color} strokeWidth={1.5} opacity={0.15} strokeLinecap="round" />
       <line x1="44" y1="16" x2="92" y2="14" stroke={color} strokeWidth={1.5} opacity={0.15} strokeLinecap="round" />
-
-      {/* Shield */}
-      <path d="M14,8 L74,8 L74,36 Q74,74 44,84 Q14,74 14,36 Z" fill="none" stroke="#E8DCC4" strokeWidth={3} opacity={0.5} strokeLinejoin="round" />
 
       {/* Lantern light */}
       <circle cx="44" cy="16" r="5" fill={color} opacity={0.85} filter={`url(#${filterId})`} />
