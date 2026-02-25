@@ -19,6 +19,8 @@ import { PegTrackerSummary } from "@/components/peg-tracker-summary";
 import { LiquiditySummary } from "@/components/liquidity-summary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
+import { ReportCardsSummary } from "@/components/report-cards-summary";
+import { StabilityIndexSummary } from "@/components/stability-index-summary";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
@@ -92,11 +94,13 @@ export function HomepageClient() {
 
       <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
         <PegTrackerSummary />
         <LiquiditySummary />
+        <ReportCardsSummary />
         <BlacklistSummary />
         <CemeterySummary />
+        <StabilityIndexSummary />
       </div>
 
       <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
