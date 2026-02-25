@@ -18,6 +18,7 @@ import { handleDigestArchive } from "./api/digest-archive";
 import { handleStabilityIndex } from "./api/stability-index";
 import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
 import { handleAuditDepegHistory } from "./api/audit-depeg-history";
+import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { isValidStablecoinId } from "./lib/api-utils";
 
 export function route(
@@ -104,6 +105,10 @@ export function route(
 
   if (path === "/api/audit-depeg-history") {
     return handleAuditDepegHistory(db, url, adminKey, request);
+  }
+
+  if (path === "/api/backfill-cg-prices") {
+    return handleBackfillCgPrices(db, url, adminKey, request);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution

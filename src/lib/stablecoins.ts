@@ -566,7 +566,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
   usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
-    geckoId: "legacy-frax-dollar",
+    geckoId: "frax",
     collateral: "U.S. Treasury bills, Federal Reserve repurchase agreements, FDIC-insured deposits, and on-chain protocol-owned liquidity via AMOs (Curve, Fraxlend, Fraxswap) — fully collateralized since FIP-188 (2023)",
     pegMechanism: "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
     links: [
@@ -1139,7 +1139,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("22", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
-    geckoId: "synthetix-susd",
+    geckoId: "nusd",
     collateral: "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
     pegMechanism: "Overcollateralization via C-ratio (200%+); V3 expanded collateral to SNX, ETH, USDC/stataUSDC; sUSD minting against SNX deprecated in 2025; peg sustained via SLP Vault basis-trade strategy and protocol fee buybacks",
     links: [
