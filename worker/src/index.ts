@@ -110,6 +110,14 @@ const worker = {
       }
     }
 
+    // Admin-only: debug sync state
+    if (url.pathname === "/api/debug-sync-state") {
+      const authError = await (await import("./lib/auth")).requireAdmin(request, env.ADMIN_KEY);
+      if (authError) return addCorsHeaders(authError, origin);
+      const rows = await env.DB.prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key").all();
+      return addCorsHeaders(new Response(JSON.stringify(rows.results), { headers: { "Content-Type": "application/json" } }), origin);
+    }
+
     const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history";
 
     // Check edge cache first
