@@ -50,7 +50,7 @@ export function route(
   }
 
   if (path === "/api/backfill-depegs") {
-    return handleBackfillDepegs(db, url, adminKey, request, metalsApiKey);
+    return handleBackfillDepegs(db, url, adminKey, request);
   }
 
   if (path === "/api/backfill-supply-history") {

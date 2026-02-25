@@ -1,6 +1,6 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { getCache, setCache } from "../lib/db";
+import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler } from "../lib/api-utils";
@@ -102,121 +102,75 @@ async function fetchHistoricalFxRates(
   }
 }
 
-const COMMODITY_CACHE_KEY = "commodity-history";
-const COMMODITY_CACHE_MAX_AGE_SEC = 30 * 86400; // 30 days
-
 /**
- * Fetch historical gold & silver spot prices from metals.dev /v1/timeseries.
- * Splits the date range into 30-day windows (API limit) and fetches sequentially
- * to avoid hitting Worker subrequest limits. Results are cached in D1 for 30 days
- * to avoid burning the 100/month free-tier quota on repeated backfills.
+ * Build a commodity peg reference time series from the peer-median of all tracked
+ * gold/silver token CG prices, bucketed by day.
+ *
+ * This mirrors derivePegRates() in the live system: gold/silver tokens are tightly
+ * arbitraged, so their median price is a reliable spot reference. metals.dev daily
+ * prices can diverge from CG market prices by 3–5% on days with large intraday moves,
+ * causing false depeg events for every gold token simultaneously.
  */
-async function fetchCommoditySpotHistoryMetals(
-  db: D1Database,
-  apiKey: string,
-  startDate: string, // "YYYY-MM-DD"
-  endDate: string,
-): Promise<{ data: Record<string, FxTimeSeries[]>; source: "cache" | "api"; goldPoints: number; silverPoints: number }> {
-  // Check D1 cache first
-  const cached = await getCache(db, COMMODITY_CACHE_KEY);
-  if (cached && (Math.floor(Date.now() / 1000) - cached.updatedAt) < COMMODITY_CACHE_MAX_AGE_SEC) {
-    try {
-      const data = JSON.parse(cached.value) as Record<string, FxTimeSeries[]>;
-      console.log(`[backfill-depegs] Using cached commodity history (age: ${Math.floor((Date.now() / 1000 - cached.updatedAt) / 86400)}d)`);
-      return { data, source: "cache", goldPoints: data.GOLD?.length ?? 0, silverPoints: data.SILVER?.length ?? 0 };
-    } catch {
-      console.warn("[backfill-depegs] Failed to parse commodity cache, refetching");
-    }
-  }
-
+async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTimeSeries[]>> {
   const result: Record<string, FxTimeSeries[]> = { GOLD: [], SILVER: [] };
-  try {
-    // Build 30-day windows
-    const windows: { start: string; end: string }[] = [];
-    let cursor = new Date(startDate + "T00:00:00Z");
-    const end = new Date(endDate + "T00:00:00Z");
-    while (cursor < end) {
-      const windowEnd = new Date(cursor);
-      windowEnd.setUTCDate(windowEnd.getUTCDate() + 29);
-      const clampedEnd = windowEnd > end ? end : windowEnd;
-      windows.push({
-        start: cursor.toISOString().slice(0, 10),
-        end: clampedEnd.toISOString().slice(0, 10),
-      });
-      cursor = new Date(clampedEnd);
-      cursor.setUTCDate(cursor.getUTCDate() + 1);
-    }
 
-    console.log(`[backfill-depegs] Fetching metals.dev timeseries: ${windows.length} windows (sequential)`);
+  const allCommodityCoins = TRACKED_STABLECOINS.filter(
+    (m) => COMMODITY_PEGS.has(m.flags.pegCurrency) && !m.flags.navToken
+  );
 
-    // Fetch sequentially to avoid Worker subrequest limits
-    let failCount = 0;
-    for (const w of windows) {
-      const url = `https://api.metals.dev/v1/timeseries?api_key=${apiKey}&start_date=${w.start}&end_date=${w.end}&currency=USD&unit=toz`;
-      const res = await fetch(url, {
-        headers: { "User-Agent": USER_AGENT },
-      });
-      if (!res.ok) {
-        if (res.status === 429) {
-          const retryAfter = parseInt(res.headers.get("Retry-After") ?? "5", 10);
-          console.warn(`[backfill-depegs] metals.dev 429, waiting ${retryAfter}s`);
-          await new Promise((r) => setTimeout(r, retryAfter * 1000));
-          // Retry once
-          const retry = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-          if (!retry.ok) { failCount++; continue; }
-          const retryData = (await retry.json()) as {
-            rates?: Record<string, { metals?: { gold?: number; silver?: number } }>;
-          };
-          if (retryData?.rates) parseCommodityRates(retryData.rates, result);
-          continue;
-        }
-        console.warn(`[backfill-depegs] metals.dev ${w.start}..${w.end} returned ${res.status}`);
-        failCount++;
-        continue;
-      }
-      const data = (await res.json()) as {
-        rates?: Record<string, { metals?: { gold?: number; silver?: number } }>;
-      };
-      if (data?.rates) parseCommodityRates(data.rates, result);
-    }
+  // Collect per-troy-oz normalised price points for each peg type
+  const byPeg: Record<string, { timestamp: number; price: number }[]> = { GOLD: [], SILVER: [] };
 
-    // Sort each series
-    result.GOLD.sort((a, b) => a.timestamp - b.timestamp);
-    result.SILVER.sort((a, b) => a.timestamp - b.timestamp);
+  for (const meta of allCommodityCoins) {
+    const geckoId = TRACKED_META_BY_ID.get(meta.id)?.geckoId;
+    if (!geckoId) continue;
+    await new Promise((r) => setTimeout(r, CG_DELAY_MS));
+    const prices = await fetchCgPriceHistory(geckoId);
+    if (prices.length === 0) continue;
 
-    console.log(`[backfill-depegs] metals.dev: ${result.GOLD.length} gold, ${result.SILVER.length} silver data points (${failCount} failures)`);
+    const oz = meta.commodityOunces;
+    const peg = meta.flags.pegCurrency;
+    const series = byPeg[peg];
+    if (!series) continue;
 
-    // Cache in D1 if we got meaningful data (>100 gold points guards against mostly-failed fetch)
-    if (result.GOLD.length > 100) {
-      try {
-        await setCache(db, COMMODITY_CACHE_KEY, JSON.stringify(result));
-        console.log("[backfill-depegs] Cached commodity history in D1");
-      } catch (err) {
-        console.warn("[backfill-depegs] Failed to cache commodity history:", err);
-      }
-    }
-  } catch (err) {
-    console.error(`[backfill-depegs] metals.dev timeseries fetch failed:`, err);
-  }
-  return { data: result, source: "api", goldPoints: result.GOLD.length, silverPoints: result.SILVER.length };
-}
-
-/** Parse metals.dev rates into GOLD/SILVER time series arrays */
-function parseCommodityRates(
-  rates: Record<string, { metals?: { gold?: number; silver?: number } }>,
-  result: Record<string, FxTimeSeries[]>,
-): void {
-  for (const [dateStr, dayData] of Object.entries(rates)) {
-    const ts = Math.floor(new Date(dateStr + "T00:00:00Z").getTime() / 1000);
-    const gold = dayData?.metals?.gold;
-    const silver = dayData?.metals?.silver;
-    if (typeof gold === "number" && gold > 0) {
-      result.GOLD.push({ timestamp: ts, rate: gold });
-    }
-    if (typeof silver === "number" && silver > 0) {
-      result.SILVER.push({ timestamp: ts, rate: silver });
+    for (const p of prices) {
+      // Normalise to per-troy-ounce so all tokens are on the same scale
+      // e.g. KAU (1 gram) → price / (1/31.1035) = price * 31.1035
+      const perOz = oz && oz > 0 ? p.price / oz : p.price;
+      series.push({ timestamp: p.timestamp, price: perOz });
     }
   }
+
+  // Bucket by UTC day, compute median per bucket
+  const DAY = 86400;
+  for (const peg of ["GOLD", "SILVER"] as const) {
+    const points = byPeg[peg];
+    if (points.length === 0) continue;
+
+    const byDay = new Map<number, number[]>();
+    for (const { timestamp, price } of points) {
+      const day = Math.floor(timestamp / DAY) * DAY;
+      const bucket = byDay.get(day) ?? [];
+      bucket.push(price);
+      byDay.set(day, bucket);
+    }
+
+    const series: FxTimeSeries[] = [];
+    for (const [ts, prices] of byDay) {
+      prices.sort((a, b) => a - b);
+      const mid = Math.floor(prices.length / 2);
+      const median =
+        prices.length % 2 === 0
+          ? (prices[mid - 1] + prices[mid]) / 2
+          : prices[mid];
+      series.push({ timestamp: ts, rate: median });
+    }
+    series.sort((a, b) => a.timestamp - b.timestamp);
+    result[peg] = series;
+    console.log(`[backfill-depegs] Commodity median (${peg}): ${series.length} daily points from ${allCommodityCoins.filter(m => m.flags.pegCurrency === peg).length} tokens`);
+  }
+
+  return result;
 }
 
 /**
@@ -248,7 +202,7 @@ interface CoinDetail {
   tokens?: SupplyPoint[];
 }
 
-export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request, metalsApiKey?: string): Promise<Response> => {
+export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
   const authError = await requireAdmin(request, adminSecret);
   if (authError) return authError;
 
@@ -320,17 +274,18 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   const startDate = new Date(tenYearsAgoMs).toISOString().slice(0, 10);
   const endDate = new Date().toISOString().slice(0, 10);
 
-  // Fetch FX and commodity spot history in parallel
+  // Fetch FX rates and commodity peer-median series in parallel.
+  // Commodity peg reference is derived from the median of all tracked gold/silver
+  // token CG prices — same approach as derivePegRates() in the live system.
   const fxPromise = neededFxCurrencies.size > 0
     ? fetchHistoricalFxRates([...neededFxCurrencies], startDate, endDate)
     : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
-  const commodityPromise = needsCommodities && metalsApiKey
-    ? fetchCommoditySpotHistoryMetals(db, metalsApiKey, startDate, endDate)
-    : Promise.resolve({ data: {} as Record<string, FxTimeSeries[]>, source: "api" as const, goldPoints: 0, silverPoints: 0 });
+  const commodityPromise = needsCommodities
+    ? buildCommodityMedianSeriesFromCg()
+    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
 
-  const [fxSeries, commodityResult] = await Promise.all([fxPromise, commodityPromise]);
-  const commoditySeries = commodityResult.data;
+  const [fxSeries, commoditySeries] = await Promise.all([fxPromise, commodityPromise]);
 
   // Process coins sequentially — each needs DL detail fetch + CG price history fetch.
   // Serializing avoids memory pressure from parsing multiple large JSON responses.
@@ -427,9 +382,8 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       skipped: skipped.length > 0 ? skipped : undefined,
       errors: errors.length > 0 ? errors : undefined,
       commodities: needsCommodities ? {
-        source: commodityResult.source,
-        goldDataPoints: commodityResult.goldPoints,
-        silverDataPoints: commodityResult.silverPoints,
+        goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
+        silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
       } : undefined,
     }),
     { headers: { "Content-Type": "application/json" } }
