@@ -43,7 +43,7 @@ export function ReportCardRadar({
   const color = GRADE_RADAR_COLORS[gradeRange(card.overallGrade)] ?? GRADE_RADAR_COLORS.NR;
 
   return (
-    <div className={className} style={{ height: size }}>
+    <div className={`w-full ${className ?? ""}`} style={{ height: size }}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
           <PolarGrid stroke="currentColor" className="text-border" />
@@ -89,7 +89,7 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
   });
 
   return (
-    <div className={className} style={{ height: size }}>
+    <div className={`w-full ${className ?? ""}`} style={{ height: size }}>
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
           <PolarGrid stroke="currentColor" className="text-border" />
