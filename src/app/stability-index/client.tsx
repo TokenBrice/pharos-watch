@@ -50,10 +50,10 @@ const BAND_ZONES = [
 ];
 
 const PSI_EVENTS = [
-  { date: Date.UTC(2018, 9, 15), label: "Tether Scare" },
-  { date: Date.UTC(2020, 2, 12), label: "Black Thursday" },
-  { date: Date.UTC(2022, 4, 7), label: "UST Collapse" },
-  { date: Date.UTC(2023, 2, 10), label: "SVB Weekend" },
+  { date: Date.UTC(2018, 9, 15), label: "Tether Scare", position: "top" as const },
+  { date: Date.UTC(2020, 2, 12), label: "Black Thursday", position: "insideBottom" as const },
+  { date: Date.UTC(2022, 4, 7), label: "UST Collapse", position: "top" as const },
+  { date: Date.UTC(2023, 2, 10), label: "SVB Weekend", position: "insideBottom" as const },
 ];
 
 const COMPONENT_COLORS = {
@@ -121,7 +121,7 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
                     strokeDasharray="4 4"
                     label={{
                       value: evt.label,
-                      position: "top",
+                      position: evt.position,
                       fontSize: 11,
                       fill: "#94a3b8",
                     }}
