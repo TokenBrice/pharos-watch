@@ -24,7 +24,7 @@ export function ReportCardMini({ card, logo }: ReportCardMiniProps) {
   return (
     <Link href={`/stablecoin/${card.id}`} className="block h-full">
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
-        <CardContent className="flex flex-col items-center gap-3 pt-4 pb-4">
+        <CardContent className="flex flex-col items-center gap-3 pt-2 pb-2">
           {/* Header: logo + name + symbol */}
           <div className="flex items-center gap-2 min-w-0 max-w-full">
             {logo && (
