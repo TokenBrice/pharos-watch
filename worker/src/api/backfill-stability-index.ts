@@ -30,8 +30,8 @@ export const handleBackfillStabilityIndex = withErrorHandler(
 
     // Load all depeg events into memory for fast lookup
     const allDepegs = await db
-      .prepare("SELECT stablecoin_id, peak_deviation_bps, started_at, ended_at FROM depeg_events ORDER BY started_at")
-      .all<{ stablecoin_id: string; peak_deviation_bps: number; started_at: number; ended_at: number | null }>();
+      .prepare("SELECT stablecoin_id, start_price, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
+      .all<{ stablecoin_id: string; start_price: number; peg_reference: number; started_at: number; ended_at: number | null }>();
     const depegEvents = allDepegs.results ?? [];
 
     // Load all supply snapshots for mcap lookup
@@ -77,8 +77,10 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       const depegs: { bps: number; mcapUsd: number }[] = [];
 
       for (const e of activeDepegs) {
+        if (e.peg_reference <= 0) continue;
         const mcap = getMcapForDay(e.stablecoin_id, day);
-        depegs.push({ bps: e.peak_deviation_bps, mcapUsd: mcap });
+        const bps = Math.round(((e.start_price / e.peg_reference) - 1) * 10000);
+        depegs.push({ bps, mcapUsd: mcap });
       }
 
       // Total mcap: sum all tracked coins' supply for this day

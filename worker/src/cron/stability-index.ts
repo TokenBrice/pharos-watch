@@ -29,14 +29,25 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
     ? ((totalMcapUsd - totalPrevWeek) / totalPrevWeek) * 100
     : 0;
 
-  // Active depegs
+  // Active depegs — use current price to compute live deviation
   const activeDepegs = await db
-    .prepare("SELECT stablecoin_id, peak_deviation_bps FROM depeg_events WHERE ended_at IS NULL")
-    .all<{ stablecoin_id: string; peak_deviation_bps: number }>();
-  const depegs = (activeDepegs.results ?? []).map((r) => ({
-    bps: r.peak_deviation_bps,
-    mcapUsd: mcapById.get(r.stablecoin_id) ?? 0,
-  }));
+    .prepare("SELECT stablecoin_id, peg_reference FROM depeg_events WHERE ended_at IS NULL")
+    .all<{ stablecoin_id: string; peg_reference: number }>();
+
+  // Build price lookup from stablecoins cache
+  const priceById = new Map<string, number>();
+  for (const coin of tracked) {
+    if (coin.price != null && typeof coin.price === "number" && coin.price > 0) {
+      priceById.set(coin.id, coin.price);
+    }
+  }
+
+  const depegs = (activeDepegs.results ?? []).flatMap((r) => {
+    const price = priceById.get(r.stablecoin_id);
+    if (!price || r.peg_reference <= 0) return [];
+    const bps = Math.round(((price / r.peg_reference) - 1) * 10000);
+    return [{ bps, mcapUsd: mcapById.get(r.stablecoin_id) ?? 0 }];
+  });
 
   // Freeze count in last 24h
   const cutoff = Math.floor(Date.now() / 1000) - 86400;
