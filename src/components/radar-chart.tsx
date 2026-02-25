@@ -43,14 +43,16 @@ export function ReportCardRadar({
   const data = buildRadarData(card, labels);
   const color = GRADE_RADAR_COLORS[gradeRange(card.overallGrade)] ?? GRADE_RADAR_COLORS.NR;
 
+  const compact = labels === "short";
+
   return (
     <div className={`w-full ${className ?? ""}`} style={{ height: size }}>
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
+        <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "60%" : "75%"}>
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
             dataKey="dimension"
-            tick={{ fontSize: 11, fill: "currentColor" }}
+            tick={{ fontSize: compact ? 10 : 11, fill: "currentColor" }}
             className="text-muted-foreground"
           />
           <Radar

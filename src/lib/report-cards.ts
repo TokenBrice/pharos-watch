@@ -43,11 +43,11 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
 
 export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg",
-  liquidity: "Liquidity",
+  liquidity: "Liq.",
   safety: "Safety",
-  resilience: "Resilience",
-  decentralization: "Decentral.",
-  dependencyRisk: "Dep. Risk",
+  resilience: "Resil.",
+  decentralization: "Decen.",
+  dependencyRisk: "Dep.",
 };
 
 /** Sorted descending by min — first match wins. */
