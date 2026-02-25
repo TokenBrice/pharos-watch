@@ -17,6 +17,12 @@ const SYSTEM_PROMPT =
   "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
+  "VARIETY IS MANDATORY. " +
+  "You will receive recent digests below. Do NOT reuse any phrasing, metaphors, or sentence structures from them. " +
+  "Never repeat pet phrases across days — no recurring catchphrases, no signature idioms. " +
+  "Vary your angle: one day lead with a macro observation, another with a single coin's story, another with a wry comparison. " +
+  "Rotate between tones: deadpan, wistful, clinical, bemused, foreboding. Never settle into one voice for consecutive days. " +
+  "If the data is similar to yesterday, find a completely different framing. Same numbers can tell different stories. " +
   "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\", \"extended\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
@@ -65,7 +71,9 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
   if (recentDigests.length > 0) {
     lines.push(
       "",
-      "Recent digests (use fresh phrasing, but DO keep covering ongoing stories — a depeg entering day 3 is bigger news, not old news):",
+      "RECENT DIGESTS — read these carefully, then write something that sounds NOTHING like them. " +
+        "Do not borrow their phrases, metaphors, structure, or framing. " +
+        "DO keep covering ongoing stories (a depeg entering day 3 is bigger news, not old news) but use a completely different angle and wording:",
       ...recentDigests.map((d) => `- "${d}"`),
     );
   }
@@ -105,9 +113,9 @@ export async function generateDailyDigest(
     }
   }
 
-  // Fetch last 3 digests for context-aware generation
+  // Fetch last 5 digests so the model sees a wider window to avoid repetition
   const recentRows = await db
-    .prepare("SELECT digest_title, digest_text, digest_extended FROM daily_digest ORDER BY generated_at DESC LIMIT 3")
+    .prepare("SELECT digest_title, digest_text, digest_extended FROM daily_digest ORDER BY generated_at DESC LIMIT 5")
     .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null }>();
   const recentDigests = (recentRows.results ?? []).map((r) => {
     const base = r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text;
