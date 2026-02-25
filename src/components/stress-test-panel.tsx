@@ -37,13 +37,14 @@ interface StressTestPanelProps {
   portfolio: PortfolioState;
   stressTest: StressTestState;
   cards: ReportCard[] | undefined;
+  logos?: Record<string, string>;
 }
 
 // ---------------------------------------------------------------------------
 // StressTestPanel
 // ---------------------------------------------------------------------------
 
-export function StressTestPanel({ portfolio, stressTest, cards }: StressTestPanelProps) {
+export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressTestPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Collapsed summary: show active scenario if set
@@ -263,7 +264,7 @@ export function StressTestPanel({ portfolio, stressTest, cards }: StressTestPane
                       <td className="py-2 pr-3">
                         <div className="flex items-center gap-2">
                           <StablecoinLogo
-                            src={undefined}
+                            src={logos?.[impact.coinId]}
                             name={impact.name}
                             size={20}
                           />
