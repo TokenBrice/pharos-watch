@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 142 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 141 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -14,7 +14,8 @@ Public-facing analytics dashboard tracking 142 stablecoins across multiple peg c
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
-- **Stablecoin Cemetery** — 77 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stability Index** — composite daily health score (0–100) aggregating peg integrity, supply growth, and liquidity depth into a single ecosystem signal
+- **Stablecoin Cemetery** — 78 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
@@ -42,6 +43,7 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 15 min |
 | [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 15 min |
 | [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 15 min |
+| [GeckoTerminal](https://www.geckoterminal.com/) | Pool crawl for DEX liquidity scoring across long-tail chains and DEXes | 15 min |
 | [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 15 min |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
@@ -107,9 +109,9 @@ src/                              Frontend (Next.js static export)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (17 handlers, all wrapped with withErrorHandler)
+│   ├── api/                      REST endpoints (19 handlers, all wrapped with withErrorHandler)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler
-└── migrations/                   D1 SQL migrations (20 total)
+└── migrations/                   D1 SQL migrations (22 total)
 ```
 
 ## Infrastructure
@@ -129,6 +131,7 @@ Cloudflare D1 (SQLite database)
   ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
   ├── supply_history       → twice-daily on-chain supply snapshots
+  ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── cron_runs            → cron execution log for health monitoring
   └── daily_digest         → AI-generated daily market summaries
 
