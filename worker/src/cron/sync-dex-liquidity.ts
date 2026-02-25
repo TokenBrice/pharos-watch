@@ -174,6 +174,8 @@ interface LiquidityMetrics {
   totalTvlForBalance: number;
   stressWeightedSum: number;
   oldestPoolDays: number;
+  lockedLiqWeightedSum: number;
+  totalTvlForLocked: number;
 }
 
 interface PoolEntry {
@@ -331,11 +333,18 @@ function computeDurabilityScore(
   // Maturity sub-score
   const maturityScore = Math.min(100, (m.oldestPoolDays / 365) * 100);
 
+  // Locked liquidity sub-score (0-100)
+  const lockedLiqFraction = m.totalTvlForLocked > 0
+    ? m.lockedLiqWeightedSum / m.totalTvlForLocked
+    : 0;
+  const lockedLiqScore = Math.min(100, lockedLiqFraction * 125);
+
   return Math.max(0, Math.min(100, Math.round(
-    organicScore * 0.40 +
+    organicScore * 0.35 +
     tvlStabilityScore * 0.25 +
     volumeConsistencyScore * 0.20 +
-    maturityScore * 0.15
+    maturityScore * 0.15 +
+    lockedLiqScore * 0.05
   )));
 }
 
@@ -416,6 +425,8 @@ function initMetrics(id: string, symbol: string): LiquidityMetrics {
     totalTvlForBalance: 0,
     stressWeightedSum: 0,
     oldestPoolDays: 0,
+    lockedLiqWeightedSum: 0,
+    totalTvlForLocked: 0,
   };
 }
 
@@ -1423,6 +1434,12 @@ function mergeCgPools(
       m.stressWeightedSum += pool.tvlUsd * stressIdx;
       m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
 
+      // Locked liquidity tracking (CG pools only)
+      if (pool.lockedLiquidityPct != null && pool.lockedLiquidityPct > 0) {
+        m.lockedLiqWeightedSum += pool.tvlUsd * (pool.lockedLiquidityPct / 100);
+        m.totalTvlForLocked += pool.tvlUsd;
+      }
+
       // CG pools with real balance ratios contribute to balance tracking
       if (pool.balanceRatio != null) {
         m.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
@@ -1915,7 +1932,7 @@ function processPoolMetrics(
 async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
-): Promise<Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>> {
+): Promise<Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null }>> {
   // Pre-fetch depth stability for durability computation
   const stabilityMap = new Map<string, number>();
   try {
@@ -1957,7 +1974,7 @@ async function computeStablecoinScores(
     }
   } catch { /* first run has no data */ }
 
-  const results = new Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>();
+  const results = new Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null }>();
 
   for (const [id, m] of metrics) {
     // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
@@ -2000,6 +2017,9 @@ async function computeStablecoinScores(
     const avgStress = m.totalTvlUsd > 0
       ? Math.round((m.stressWeightedSum / m.totalTvlUsd) * 100) / 100
       : null;
+    const lockedLiqPct = m.totalTvlForLocked > 0
+      ? Math.round((m.lockedLiqWeightedSum / m.totalTvlForLocked) * 10000) / 10000
+      : null;
 
     results.set(id, {
       tvl: m.totalTvlUsd,
@@ -2011,6 +2031,7 @@ async function computeStablecoinScores(
       weightedBalanceRatio,
       organicFrac,
       avgStress,
+      lockedLiqPct,
     });
   }
 
@@ -2021,7 +2042,7 @@ async function computeStablecoinScores(
 async function persistScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
-  scoreResults: Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null }>,
+  scoreResults: Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null }>,
   nowSec: number,
 ): Promise<void> {
   const stmts: D1PreparedStatement[] = [];
@@ -2039,8 +2060,8 @@ async function persistScores(
              top_pools_json, liquidity_score, concentration_hhi,
              avg_pool_stress, weighted_balance_ratio, organic_fraction,
              effective_tvl_usd, durability_score, score_components_json,
-             updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             locked_liquidity_pct, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
           id,
@@ -2062,6 +2083,7 @@ async function persistScores(
           Math.round(m.effectiveTvl),
           sr.durability,
           JSON.stringify(sr.components),
+          sr.lockedLiqPct,
           nowSec,
         ),
     );
