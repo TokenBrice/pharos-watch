@@ -82,6 +82,29 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 
 Free tier = 100 requests/month. Monthly usage: ~30 live (1/day) + 49 backfill (one-time) = 79 requests.
 
+## Stability Index (PSI) Computation
+
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs daily at 07:55 UTC and computes a composite ecosystem health score (0–100).
+
+**Components:**
+- **Severity** (penalty): TVL-weighted average of active depeg deviations
+- **Breadth** (penalty): Percentage of tracked stablecoins currently depegged
+- **Freezes** (penalty): Count of recent freeze/blacklist events
+- **Trend** (bonus/penalty): Score improvement or degradation vs. previous day
+
+**Band classification:** `CALM` (85–100), `STEADY` (70–85), `ALERT` (55–70), `STRESS` (40–55), `CRISIS` (0–40)
+
+**Storage:** `stability_index` table (migration 0022) with `computed_at`, `score`, `band`, `components` (JSON).
+
+## Pending Depeg Confirmation
+
+For stablecoins with >$1B circulating supply, depeg detection uses a two-phase confirmation system:
+
+1. **Phase 1** (`detect-depegs.ts`): When a large coin crosses the depeg threshold, instead of immediately opening an event, a record is inserted into `depeg_pending` (migration 0023)
+2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists, a real depeg event is opened. If the price recovered, the pending record is deleted
+
+This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.
+
 ## Blacklist Sync State Semantics
 
 The `blacklist_sync_state.last_block` column has different semantics per chain type:

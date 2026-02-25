@@ -645,6 +645,83 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 
 ---
 
+### `GET /api/stability-index`
+
+Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) aggregating peg integrity, supply growth, and liquidity depth across all tracked stablecoins.
+
+**Cache:** slow — `X-Data-Age` and `Warning` headers included.
+
+**Optional query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `detail` | `"true"` | — | When `"true"`, returns full history with per-day component breakdowns instead of last 91 days |
+
+**Response**
+
+```json
+{
+  "current": {
+    "score": 81.1,
+    "band": "STEADY",
+    "components": { "severity": 4.59, "breadth": 15, "freezes": 0, "trend": 0.65 },
+    "computedAt": 1771977600
+  },
+  "history": [
+    { "date": 1771891200, "score": 81.0, "band": "STEADY" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `current` | `object \| null` | Latest PSI score and components. `null` if cron has not yet run |
+| `current.score` | `number` | PSI score 0–100 |
+| `current.band` | `string` | Condition band: `"CALM"`, `"STEADY"`, `"ALERT"`, `"STRESS"`, `"CRISIS"` |
+| `current.components` | `object` | Component breakdown: `severity`, `breadth`, `freezes`, `trend` |
+| `current.computedAt` | `number` | Unix seconds of computation |
+| `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
+
+---
+
+### `GET /api/report-cards`
+
+Stablecoin safety grade cards with dimension-level scores. Grades are computed from 6 dimensions using weighted scoring.
+
+**Cache:** standard
+
+**Response**
+
+```json
+{
+  "cards": [ReportCard, ...],
+  "methodology": {
+    "version": "1.0",
+    "weights": { "pegStability": 0.25, "liquidity": 0.20, ... },
+    "thresholds": { "A+": 95, "A": 88, ... }
+  },
+  "updatedAt": 1771977600
+}
+```
+
+**`ReportCard`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Pharos stablecoin ID |
+| `name` | `string` | Full name |
+| `symbol` | `string` | Ticker |
+| `overallGrade` | `string` | Letter grade: `"A+"` through `"F"`, or `"NR"` |
+| `overallScore` | `number \| null` | Weighted score 0–100. `null` for unrated coins |
+| `dimensions` | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text |
+| `ratedDimensions` | `number` | Number of dimensions with data (max 6) |
+| `dependencies` | `string[] \| undefined` | IDs of upstream stablecoins (for CeFi-Dependent coins) |
+| `isDefunct` | `boolean` | `true` for cemetery coins (permanent F grade) |
+
+**Dimensions:** `pegStability`, `liquidity`, `safety`, `resilience`, `decentralization`, `dependencyRisk`
+
+---
+
 ## Admin Endpoints
 
 These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker secret. Unauthorized requests receive a `401` response. They are not intended for public consumption.
@@ -693,6 +770,41 @@ Backfills historical depeg events from stored price data.
 Backfills per-coin supply history snapshots.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
+
+### `GET /api/backfill-stability-index`
+
+Backfills historical stability index scores from stored depeg events and supply data.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+### `GET /api/backfill-cg-prices`
+
+Backfills CoinGecko historical prices into the price_cache table for more accurate depeg detection.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | `string` | — | Process a single stablecoin ID |
+| `batchSize` | `integer` | `10` | Coins per batch |
+| `batch` | `integer` | `0` | Batch offset for chunked processing |
+
+### `GET /api/audit-depeg-history`
+
+Audits existing depeg events against CoinGecko historical price data to detect false positives. Supports dry-run mode.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | `string` | — | Audit a single stablecoin ID |
+| `limit` | `integer` | `50` | Max events to audit |
+| `offset` | `integer` | `0` | Pagination offset |
+| `dryRun` | `"false"` | `"true"` | Set to `"false"` to actually delete false positives |
 
 ### `GET /api/trigger-digest`
 

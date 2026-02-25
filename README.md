@@ -43,7 +43,8 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 15 min |
 | [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 15 min |
 | [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 15 min |
-| [GeckoTerminal](https://www.geckoterminal.com/) | Pool crawl for DEX liquidity scoring across long-tail chains and DEXes | 15 min |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (12 chains), locked liquidity %, fee tiers, balance approximation | 15 min |
+| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 15 min |
 | [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 15 min |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
@@ -98,6 +99,8 @@ src/                              Frontend (Next.js static export)
 │   ├── liquidity/                DEX liquidity scores and pool breakdown
 │   ├── compare/                  Side-by-side stablecoin comparison
 │   ├── digest/                   AI-generated daily market digest
+│   ├── stability-index/          Pharos Stability Index (daily ecosystem health)
+│   ├── report-cards/             Stablecoin safety grade cards with radar charts
 │   ├── cemetery/                 Dead stablecoin graveyard
 │   ├── status/                   System health and cron monitoring
 │   ├── stablecoin/[id]/          Detail page per stablecoin
@@ -109,16 +112,18 @@ src/                              Frontend (Next.js static export)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (19 handlers, all wrapped with withErrorHandler)
+│   ├── api/                      REST endpoints (22 handlers, all wrapped with withErrorHandler)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler
-└── migrations/                   D1 SQL migrations (22 total)
+└── migrations/                   D1 SQL migrations (24 total)
 ```
 
 ## Infrastructure
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *   → sync stablecoins + charts + DEX liquidity + blacklist + FX rates
+  ├── Cron: */15 * * * *   → sync stablecoins + charts + FX rates
+  ├── Cron: 3,23,43 * * * * → DEX liquidity + blacklist + depeg detection
+  ├── Cron: 55 7 * * *     → stability index (daily ecosystem health score)
   └── Cron: 0 8 * * *      → supply snapshot + USDS status + Bluechip safety ratings + daily digest
 
 Cloudflare D1 (SQLite database)
@@ -132,6 +137,7 @@ Cloudflare D1 (SQLite database)
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
   ├── supply_history       → twice-daily on-chain supply snapshots
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
+  ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
   ├── cron_runs            → cron execution log for health monitoring
   └── daily_digest         → AI-generated daily market summaries
 

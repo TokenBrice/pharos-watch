@@ -19,8 +19,13 @@
 | `GET /api/digest-archive` | All daily digests, newest-first |
 | `GET /api/health` | Worker health check |
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
+| `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
+| `GET /api/report-cards` | Stablecoin safety grade cards with dimension scores (peg, liquidity, safety, resilience, decentralization, dependency) |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
+| `GET /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
+| `GET /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
+| `GET /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (requires `X-Admin-Key`) |
 | `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 
 ## Full File Tree
@@ -48,6 +53,12 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
+│   ├── stability-index/          # Pharos Stability Index (daily ecosystem health)
+│   │   ├── page.tsx
+│   │   └── client.tsx
+│   ├── report-cards/             # Stablecoin safety grade cards with radar charts
+│   │   ├── page.tsx
+│   │   └── client.tsx
 │   ├── digest/page.tsx           # Daily digest archive
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
@@ -129,6 +140,10 @@ src/                              # Next.js frontend (static export)
 │   ├── sort-icon.tsx             # Shared sort direction arrow icon
 │   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons
 │   ├── theme-toggle.tsx          # Dark/light mode toggle
+│   ├── report-card.tsx            # Report card component with grade, dimension scores, radar chart
+│   ├── report-card-mini.tsx       # Compact report card display for compare page
+│   ├── radar-chart.tsx            # Radar chart for report card dimensions (single + compare overlay)
+│   ├── stability-index.tsx        # Stability index visualizations (sparklines, lighthouse icon)
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (GET /api/supply-history with fallback)
@@ -149,7 +164,9 @@ src/                              # Next.js frontend (static export)
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
 │   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 10 data hooks)
-│   └── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
+│   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
+│   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
+│   └── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
@@ -162,6 +179,8 @@ src/                              # Next.js frontend (static export)
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
+    ├── report-cards.ts           # Report card scoring: 6 dimensions, grade thresholds, weights
+    ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
@@ -173,7 +192,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (21 total)
+├── migrations/                   # D1 SQL migrations (24 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -187,7 +206,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
-    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API → D1 (15min)
+    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API + CG Onchain → D1 (15min)
+    │   ├── stability-index.ts    # Composite ecosystem health score → D1 (daily, 7:55 UTC)
+    │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
@@ -205,8 +226,13 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
     │   ├── status.ts             # GET /api/status (admin)
+    │   ├── stability-index.ts    # GET /api/stability-index
+    │   ├── report-cards.ts       # GET /api/report-cards
     │   ├── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
-    │   └── backfill-supply-history.ts # GET /api/backfill-supply-history (admin)
+    │   ├── backfill-supply-history.ts # GET /api/backfill-supply-history (admin)
+    │   ├── backfill-stability-index.ts # GET /api/backfill-stability-index (admin)
+    │   ├── backfill-cg-prices.ts # GET /api/backfill-cg-prices (admin)
+    │   └── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
@@ -219,6 +245,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
+        ├── coingecko-onchain.ts   # CoinGecko Onchain API client (12 chains, pool discovery, locked liquidity)
+        ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
         └── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
 

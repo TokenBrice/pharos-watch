@@ -20,12 +20,12 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, peg-tracker, blacklist, cemetery, liquidity, compare, digest, status, about, stablecoin/[id])
+src/app/         — Pages (homepage, peg-tracker, blacklist, cemetery, liquidity, compare, digest, stability-index, report-cards, status, about, stablecoin/[id])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
 worker/src/cron/ — Data sync crons
-worker/src/api/  — REST API handlers (18 endpoints)
+worker/src/api/  — REST API handlers (22 endpoints)
 worker/src/lib/  — DB helpers, constants, shared utilities
 ```
 
@@ -58,7 +58,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all 18 endpoints, query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: all 22 endpoints, query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
