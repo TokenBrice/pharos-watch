@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, Droplets, ExternalLink, Gauge, Github, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import { Activity, BarChart3, ClipboardCheck, Droplets, ExternalLink, Gauge, Github, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
@@ -264,6 +264,20 @@ export default function AboutPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 Daily health score for the stablecoin ecosystem: aggregates peg integrity, supply growth, and liquidity depth into a 0&ndash;100 score
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5 text-emerald-500" />
+                <Link href="/report-cards" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
+                  Pharos Report Cards
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Composite A+&ndash;F grades for every tracked stablecoin, combining six dimensions: peg stability, liquidity depth, safety rating, resilience, decentralization, and dependency risk
               </p>
             </CardContent>
           </Card>
