@@ -54,3 +54,17 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "fx-rates": 1800,
   "bluechip-ratings": 43200,
 };
+
+// --- Depeg multi-source confirmation (>$1B coins) ---
+
+/** Minimum circulating supply (USD) for multi-source depeg confirmation */
+export const DEPEG_CONFIRMATION_SUPPLY_THRESHOLD = 1_000_000_000; // $1B
+
+/** Minimum age (seconds) before a pending depeg can be promoted */
+export const DEPEG_PENDING_MIN_AGE_SEC = 900; // 15 min (1 sync cycle)
+
+/** Maximum age (seconds) before an unconfirmed pending depeg expires */
+export const DEPEG_PENDING_EXPIRY_SEC = 2700; // 45 min (3 sync cycles)
+
+/** Secondary source agreement threshold as fraction of primary threshold */
+export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
