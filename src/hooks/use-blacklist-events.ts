@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { BlacklistEvent } from "@/lib/types";
-import { CRON_15MIN } from "./use-api-query";
+import { CRON_20MIN } from "./use-api-query";
 
 interface BlacklistResponse {
   events: BlacklistEvent[];
@@ -24,8 +24,8 @@ export function useBlacklistEvents() {
   return useQuery({
     queryKey: ["blacklist-events"],
     queryFn: fetchBlacklistEvents,
-    staleTime: CRON_15MIN,
-    refetchInterval: 2 * CRON_15MIN,
+    staleTime: CRON_20MIN,
+    refetchInterval: 2 * CRON_20MIN,
     retry: 1,
   });
 }

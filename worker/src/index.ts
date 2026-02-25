@@ -160,12 +160,6 @@ const worker = {
       case "*/15 * * * *": {
         ctx.waitUntil(logCronRun(db, "sync-stablecoins", () => syncStablecoins(db, env.CMC_API_KEY)));
         ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
-        ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
-        ctx.waitUntil(
-          logCronRun(db, "sync-blacklist", () =>
-            syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
-          )
-        );
         ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {
@@ -179,6 +173,17 @@ const worker = {
             }
           } catch { /* non-blocking */ }
         })());
+        break;
+      }
+      // Blacklist + DEX liquidity on a separate 20-min cycle (offset at :03/:23/:43
+      // to avoid colliding with the 15-min trigger)
+      case "3,23,43 * * * *": {
+        ctx.waitUntil(
+          logCronRun(db, "sync-blacklist", () =>
+            syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
+          )
+        );
+        ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null)));
         break;
       }
       case "0 8 * * *":

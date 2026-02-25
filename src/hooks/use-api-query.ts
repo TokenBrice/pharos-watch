@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 
 /** Cron interval constants — staleTime = cron interval, refetchInterval = 2x. */
 export const CRON_15MIN = 15 * 60_000;
+export const CRON_20MIN = 20 * 60_000;
 export const CRON_1H = 60 * 60_000;
 export const CRON_24H = 24 * 60 * 60_000;
 
