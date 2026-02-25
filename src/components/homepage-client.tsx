@@ -6,6 +6,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useReportCards } from "@/hooks/use-report-cards";
 import { useHomepageFilters } from "@/hooks/use-homepage-filters";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { CategoryStats } from "@/components/category-stats";
@@ -30,6 +31,7 @@ export function HomepageClient() {
   const { data: pegSummaryData } = usePegSummary();
   const { data: bluechipRatings } = useBluechipRatings();
   const { data: dexLiquidity } = useDexLiquidity();
+  const { data: reportCardsData } = useReportCards();
   const metaById = TRACKED_META_BY_ID;
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
@@ -39,6 +41,10 @@ export function HomepageClient() {
     }
     return map;
   }, [pegSummaryData]);
+  const reportCardMap = useMemo(() => {
+    if (!reportCardsData?.cards) return undefined;
+    return Object.fromEntries(reportCardsData.cards.map((c) => [c.id, c]));
+  }, [reportCardsData]);
   const { rates: pegRates } = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
   const filters = useHomepageFilters();
 
@@ -75,6 +81,7 @@ export function HomepageClient() {
         pegScores={pegScores}
         bluechipRatings={bluechipRatings ?? undefined}
         dexLiquidity={dexLiquidity ?? undefined}
+        reportCards={reportCardMap}
         onClearSearch={() => filters.setSearchQuery("")}
         onClearFilters={filters.clearAll}
       />
