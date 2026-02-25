@@ -9,11 +9,11 @@
 | **TVL Depth** | 30% | DeFiLlama Yields | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
 | **Volume Activity** | 20% | DeFiLlama Yields | Volume/TVL ratio. 0->0, 0.5->100 |
 | **Pool Quality** | 20% | Curve API + DeFiLlama | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below) |
-| **Durability** | 15% | DeFiLlama Yields + History | 40% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity |
+| **Durability** | 15% | DeFiLlama Yields + History | 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity |
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain->15, 2->40, 3->60, 5->80, 8+->100 |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + DexScreener Batch Token API (5 chains).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (12 chains, with GeckoTerminal free API as fallback when no CG API key is configured).
 
 ### Quality Multipliers (v2)
 
@@ -46,13 +46,31 @@ Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve F
 - `exposure === "single"` pools (lending deposits, not DEX liquidity): skipped
 - CryptoSwap pools: correctly classified via `registryId`
 
+### CoinGecko Onchain Integration
+
+When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko's `/onchain` endpoints instead of GeckoTerminal's free API:
+
+| Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
+|---------|--------------------------|--------------------------|
+| Rate limit | 30 req/min | ~240 req/min |
+| Chain coverage | 10 chains | 12 chains (adds tron, ink) |
+| Balance data | Not available (defaults to 1.0) | Approximated from token prices |
+| Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
+| Locked liquidity | Not available | `locked_liquidity_percentage` field |
+| Time budget | 7 min (partial coverage) | Not needed (full coverage) |
+
+The CG integration extracts three signals unavailable from GeckoTerminal:
+1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.
+2. **Fee tier classification**: `pool_fee_percentage` enables proper quality multipliers for non-Uniswap concentrated liquidity pools (PancakeSwap V3, SushiSwap V3, etc.).
+3. **Locked liquidity**: Weighted into durability scoring at 5% weight.
+
 ### Pool Stress Index (0-100)
 
 Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmaturityPenalty + 20x(1-pairQuality)`. TVL-weighted average stored as `avg_pool_stress`.
 
 ### Durability Score (0-100)
 
-Per-stablecoin durability metric combining: organic fee fraction (40%), TVL stability from 30-day CV (25%), volume consistency from 30-day CV (20%), and oldest pool maturity (15%). Stored as `durability_score`.
+Per-stablecoin durability metric combining: organic fee fraction (35%), TVL stability from 30-day CV (25%), volume consistency from 30-day CV (20%), oldest pool maturity (15%), and locked liquidity fraction (5%). Stored as `durability_score`.
 
 ### Storage
 
