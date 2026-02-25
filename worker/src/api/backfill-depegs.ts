@@ -389,8 +389,14 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     try {
       const events = await backfillCoin(meta, geckoId, getPegRef, supplyByDate);
 
-      // Always DELETE existing events first — even when backfill finds 0 genuine depegs,
-      // we need to wipe stale live-cron events that may have been written with a bad reference.
+      // null = CG had no price data → preserve existing events
+      if (events === null) {
+        skipped.push(meta.symbol);
+        continue;
+      }
+
+      // DELETE existing events, then INSERT new ones.
+      // When backfill finds 0 genuine depegs we still delete stale live-cron events.
       const deleteStmt = db
         .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ?")
         .bind(meta.id);
@@ -443,16 +449,17 @@ interface BackfillEvent {
   pegRef: number;
 }
 
+/** Returns null when CG has no price data (caller should preserve existing events). */
 async function backfillCoin(
   meta: StablecoinMeta,
   geckoId: string,
   getPegRef: (timestamp: number) => number,
   supplyByDate: Map<number, number>
-): Promise<BackfillEvent[]> {
+): Promise<BackfillEvent[] | null> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
   await new Promise(r => setTimeout(r, CG_DELAY_MS)); // rate limit
   const prices = await fetchCgPriceHistory(geckoId);
-  if (prices.length === 0) return [];
+  if (prices.length === 0) return null; // no data — preserve existing events
   return extractDepegEvents(prices, getPegRef, pegType, supplyByDate);
 }
 
