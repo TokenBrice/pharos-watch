@@ -22,6 +22,16 @@ export const PSI_BAND_CLASSES: Record<string, string> = {
   MELTDOWN: "text-red-800",
 };
 
+/** Static Tailwind border-l color classes for each PSI condition band. */
+export const PSI_BORDER_CLASSES: Record<string, string> = {
+  BEDROCK: "border-l-green-500",
+  STEADY: "border-l-teal-500",
+  TREMOR: "border-l-yellow-500",
+  FRACTURE: "border-l-orange-500",
+  CRISIS: "border-l-red-500",
+  MELTDOWN: "border-l-red-800",
+};
+
 /** Pulse animation duration (seconds) per band — faster = more urgent. */
 export const PSI_PULSE_DURATION: Record<string, number> = {
   BEDROCK: 3,
