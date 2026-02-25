@@ -1,14 +1,17 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { getCache, setCache } from "../lib/db";
-import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
+import { getDepegThresholdBps, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
+import { fetchWithRetry } from "../lib/fetch-retry";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
-const BATCH_SIZE = 3; // 3 detail + 6 price charts + 1 FX fetch = 10 subrequests per batch
+const BATCH_SIZE = 3;
+const CG_DELAY_MS = 200; // 500 req/min budget → 200ms between calls
 
 // ── Historical FX rate support ──────────────────────────────────────
 
@@ -312,9 +315,9 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     }
   }
 
-  // Fetch historical FX rates for the full 4-year backfill window
-  const fourYearsAgoMs = Date.now() - 4 * 365 * 86400 * 1000;
-  const startDate = new Date(fourYearsAgoMs).toISOString().slice(0, 10);
+  // Fetch historical FX rates — 10 years covers most stablecoin history (USDT 2014, DAI 2017)
+  const tenYearsAgoMs = Date.now() - 10 * 365 * 86400 * 1000;
+  const startDate = new Date(tenYearsAgoMs).toISOString().slice(0, 10);
   const endDate = new Date().toISOString().slice(0, 10);
 
   // Fetch FX and commodity spot history in parallel
@@ -329,7 +332,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   const [fxSeries, commodityResult] = await Promise.all([fxPromise, commodityPromise]);
   const commoditySeries = commodityResult.data;
 
-  // Process coins sequentially — each needs detail fetch + 2 price chart fetches.
+  // Process coins sequentially — each needs DL detail fetch + CG price history fetch.
   // Serializing avoids memory pressure from parsing multiple large JSON responses.
   for (const meta of processable) {
     // Fetch per-coin detail endpoint (includes gecko_id + supply history)
@@ -346,15 +349,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     const trackedMeta = TRACKED_META_BY_ID.get(meta.id);
     const geckoId = trackedMeta?.geckoId ?? detail?.gecko_id;
 
-    // Build coins chart API identifier: prefer geckoId, fall back to address
-    let coinId: string | null = null;
-    if (geckoId) {
-      coinId = `coingecko:${geckoId}`;
-    } else if (detail?.address && detail.address.startsWith("0x")) {
-      coinId = `ethereum:${detail.address}`;
-    }
-
-    if (!coinId) {
+    if (!geckoId) {
       skipped.push(meta.symbol);
       continue;
     }
@@ -392,7 +387,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     }
 
     try {
-      const events = await backfillCoin(meta, coinId, getPegRef, supplyByDate);
+      const events = await backfillCoin(meta, geckoId, getPegRef, supplyByDate);
 
       // Always DELETE existing events first — even when backfill finds 0 genuine depegs,
       // we need to wipe stale live-cron events that may have been written with a bad reference.
@@ -450,46 +445,32 @@ interface BackfillEvent {
 
 async function backfillCoin(
   meta: StablecoinMeta,
-  coinId: string, // e.g. "coingecko:dai" or "ethereum:0x6b17..."
+  geckoId: string,
   getPegRef: (timestamp: number) => number,
   supplyByDate: Map<number, number>
 ): Promise<BackfillEvent[]> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
-
-  const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
-  const fourYearsAgo = twoYearsAgo - 2 * 365 * 86400;
-
-  const [pricesOld, pricesRecent] = await Promise.all([
-    fetchPriceChart(coinId, fourYearsAgo),
-    fetchPriceChart(coinId, twoYearsAgo),
-  ]);
-
-  const priceMap = new Map<number, number>();
-  for (const p of [...pricesOld, ...pricesRecent]) {
-    priceMap.set(p.timestamp, p.price);
-  }
-  const prices = Array.from(priceMap.entries())
-    .map(([timestamp, price]) => ({ timestamp, price }))
-    .sort((a, b) => a.timestamp - b.timestamp);
-
+  await new Promise(r => setTimeout(r, CG_DELAY_MS)); // rate limit
+  const prices = await fetchCgPriceHistory(geckoId);
   if (prices.length === 0) return [];
-
   return extractDepegEvents(prices, getPegRef, pegType, supplyByDate);
 }
 
-async function fetchPriceChart(coinId: string, start: number): Promise<PricePoint[]> {
+async function fetchCgPriceHistory(geckoId: string): Promise<PricePoint[]> {
   try {
-    const res = await fetch(
-      `${DEFILLAMA_COINS}/chart/${coinId}?start=${start}&span=800&period=1d`,
-      { headers: { "User-Agent": USER_AGENT } }
+    const res = await fetchWithRetry(
+      cgUrl(`/coins/${geckoId}/market_chart?vs_currency=usd&days=max`),
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+      2,
+      { timeoutMs: 30_000 },
     );
-    if (!res.ok) return [];
-    const data = (await res.json()) as {
-      coins: Record<string, { prices: PricePoint[] }>;
-    };
-    return data.coins?.[coinId]?.prices ?? [];
+    if (!res) return [];
+    const data = await res.json() as { prices: [number, number][] };
+    return (data.prices ?? [])
+      .filter(([, p]) => p > 0)
+      .map(([ts, price]) => ({ timestamp: Math.floor(ts / 1000), price }));
   } catch (err) {
-    console.error(`[backfill-depegs] Failed to fetch price chart for ${coinId}:`, err);
+    console.error(`[backfill-depegs] Failed to fetch CG price history for ${geckoId}:`, err);
     return [];
   }
 }
