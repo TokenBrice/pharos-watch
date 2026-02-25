@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
@@ -123,10 +123,25 @@ const COMPONENT_DETAIL = [
   { label: "Trend", sign: "+", color: "#22c55e" },
 ] as const;
 
+/* ─── Helpers ──────────────────────────────────────────────────── */
+
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    setIsMobile(mql.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 /* ─── ScoreChart ────────────────────────────────────────────────── */
 
 function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
+  const isMobile = useIsMobile();
 
   return (
     <Card className="rounded-2xl animate-in fade-in duration-300">
@@ -165,7 +180,7 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
                     x={evt.date}
                     stroke="#94a3b8"
                     strokeDasharray="4 4"
-                    label={{
+                    label={isMobile ? undefined : {
                       value: evt.label,
                       position: evt.position,
                       fontSize: 11,
@@ -228,7 +243,7 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
 
 /* ─── EventTimeline ─────────────────────────────────────────────── */
 
-function EventTimeline() {
+function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
   return (
     <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader>
@@ -238,10 +253,24 @@ function EventTimeline() {
         {PSI_EVENTS.map((evt) => {
           const d = new Date(evt.date);
           const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          // Find the closest data point within 7 days of the event
+          const closest = data.length > 0
+            ? data.reduce((best, p) =>
+                Math.abs(p.ts - evt.date) < Math.abs(best.ts - evt.date) ? p : best
+              )
+            : null;
+          const psi = closest && Math.abs(closest.ts - evt.date) < 7 * 86400000 ? closest.score : null;
+          const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
+          const psiColor = psiBand ? BAND_COLORS[psiBand] ?? "text-muted-foreground" : "text-muted-foreground";
           return (
             <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
               <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
               <span className="text-sm font-semibold">{evt.label}</span>
+              {psi !== null && (
+                <span className={`text-sm tabular-nums font-medium ${psiColor}`}>
+                  PSI {psi.toFixed(1)}
+                </span>
+              )}
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {evt.links.map((link) => (
                   <a
@@ -649,7 +678,7 @@ function ContributorsTable({
 /* ─── Main Client Component ─────────────────────────────────────── */
 
 export function StabilityIndexClient() {
-  const { data, isLoading } = useStabilityIndexDetail();
+  const { data, isLoading, isError } = useStabilityIndexDetail();
 
   const daysInBand = useMemo(() => {
     if (!data?.current || !data.history.length) return 0;
@@ -729,6 +758,19 @@ export function StabilityIndexClient() {
     );
   }
 
+  if (isError || (!isLoading && !data?.current)) {
+    return (
+      <Card className="rounded-2xl">
+        <CardContent className="py-12 text-center space-y-2">
+          <p className="text-sm font-medium">Unable to load Stability Index data</p>
+          <p className="text-sm text-muted-foreground">
+            Please try refreshing the page. If the problem persists, data may be temporarily unavailable.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!data?.current) return null;
 
   const { score, band, components } = data.current;
@@ -793,7 +835,7 @@ export function StabilityIndexClient() {
       <ScoreChart data={chartData} />
 
       {/* Notable Events */}
-      <EventTimeline />
+      <EventTimeline data={chartData} />
 
       {/* Component Breakdown */}
       <ComponentChart data={componentData} />
