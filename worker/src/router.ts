@@ -98,7 +98,7 @@ export function route(
   }
 
   if (path === "/api/stability-index") {
-    return handleStabilityIndex(db);
+    return handleStabilityIndex(db, url);
   }
 
   if (path === "/api/backfill-stability-index") {

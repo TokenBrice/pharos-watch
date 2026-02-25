@@ -1,9 +1,15 @@
 import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
-export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database): Promise<Response> => {
+export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
+  const detail = url.searchParams.get("detail") === "true";
+
+  const query = detail
+    ? "SELECT computed_at, score, band, components FROM stability_index ORDER BY computed_at DESC"
+    : "SELECT computed_at, score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 91";
+
   const rows = await db
-    .prepare("SELECT computed_at, score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 91")
+    .prepare(query)
     .all<{ computed_at: number; score: number; band: string; components: string }>();
   const results = rows.results ?? [];
 
@@ -17,7 +23,10 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   }
 
   const current = results[0];
-  const history = results.slice(1).map((r) => ({ date: r.computed_at, score: r.score, band: r.band }));
+  const history = results.slice(1).map((r) => detail
+    ? { date: r.computed_at, score: r.score, band: r.band, components: JSON.parse(r.components) }
+    : { date: r.computed_at, score: r.score, band: r.band }
+  );
 
   return new Response(JSON.stringify({
     current: {
