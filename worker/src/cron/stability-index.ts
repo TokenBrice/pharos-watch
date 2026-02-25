@@ -3,7 +3,7 @@ import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { TRACKED_IDS } from "../../../src/lib/stablecoins";
 import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
-import { computeStabilityIndex } from "../lib/stability-index";
+import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 
 export async function computeAndStoreStabilityIndex(db: D1Database): Promise<CronResult> {
   const stablecoinsCache = await getCache(db, "stablecoins");
@@ -31,8 +31,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
 
   // Active depegs — use current price to compute live deviation
   const activeDepegs = await db
-    .prepare("SELECT stablecoin_id, peg_reference FROM depeg_events WHERE ended_at IS NULL")
-    .all<{ stablecoin_id: string; peg_reference: number }>();
+    .prepare("SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL")
+    .all<{ stablecoin_id: string; peg_reference: number; started_at: number }>();
 
   // Build price lookup from stablecoins cache
   const priceById = new Map<string, number>();
@@ -42,12 +42,51 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
     }
   }
 
-  const depegs = (activeDepegs.results ?? []).flatMap((r) => {
-    const price = priceById.get(r.stablecoin_id);
-    if (!price || r.peg_reference <= 0) return [];
-    const bps = Math.round(((price / r.peg_reference) - 1) * 10000);
-    return [{ bps, mcapUsd: mcapById.get(r.stablecoin_id) ?? 0 }];
-  });
+  // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start
+  type DepegRow = { stablecoin_id: string; peg_reference: number; started_at: number };
+  const grouped = new Map<string, DepegRow[]>();
+  for (const r of activeDepegs.results ?? []) {
+    const list = grouped.get(r.stablecoin_id) ?? [];
+    list.push(r);
+    grouped.set(r.stablecoin_id, list);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
+  const contributors: {
+    id: string; symbol: string; bps: number; mcapUsd: number;
+    ageDays: number; factor: number;
+  }[] = [];
+
+  for (const [coinId, events] of grouped) {
+    const price = priceById.get(coinId);
+    if (!price) continue;
+
+    let worstBps = 0;
+    let earliestStart = Infinity;
+    for (const e of events) {
+      if (e.peg_reference <= 0) continue;
+      const bps = Math.round(((price / e.peg_reference) - 1) * 10000);
+      if (Math.abs(bps) > Math.abs(worstBps)) worstBps = bps;
+      if (e.started_at < earliestStart) earliestStart = e.started_at;
+    }
+
+    if (earliestStart === Infinity) continue;
+    const mcapUsd = mcapById.get(coinId) ?? 0;
+    const ageDays = Math.max(0, (now - earliestStart) / 86400);
+
+    depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
+
+    const coin = tracked.find((c) => c.id === coinId);
+    contributors.push({
+      id: coinId,
+      symbol: coin?.symbol ?? coinId,
+      bps: worstBps,
+      mcapUsd,
+      ageDays: Math.round(ageDays * 10) / 10,
+      factor: Math.round(getDepreciationFactor(ageDays) * 100) / 100,
+    });
+  }
 
   // Freeze count in last 24h
   const cutoff = Math.floor(Date.now() / 1000) - 86400;
@@ -59,8 +98,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, freezeCount24h, mcap7dChangePct });
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  const dayTs = nowSec - (nowSec % 86400); // midnight UTC of current day
+  const dayTs = now - (now % 86400); // midnight UTC of current day
   await db
     .prepare(
       `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot)
@@ -76,7 +114,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
       result.score,
       result.band,
       JSON.stringify(result.components),
-      JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h, mcap7dChangePct }),
+      JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h, mcap7dChangePct, contributors }),
     )
     .run();
 
