@@ -307,6 +307,18 @@ function Tombstone({
             {coin.epitaph}
           </span>
         )}
+
+        {/* Flowers — "Press F to pay respects" */}
+        {flowerCount > 0 && (
+          <div
+            className="absolute left-0 right-0 pointer-events-none z-10"
+            style={{ bottom: -4, height: Math.ceil(flowerCount / Math.max(3, Math.floor(cfg.px / 16))) * 14 + 20 }}
+          >
+            {Array.from({ length: flowerCount }, (_, i) => (
+              <Flower key={i} index={i} tombWidth={cfg.px} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tooltip */}
@@ -329,17 +341,6 @@ function Tombstone({
         </div>
       )}
 
-      {/* Flowers — "Press F to pay respects" */}
-      {flowerCount > 0 && (
-        <div
-          className="absolute left-0 right-0 pointer-events-none z-10"
-          style={{ bottom: -4, height: Math.ceil(flowerCount / Math.max(3, Math.floor(cfg.px / 16))) * 14 + 20 }}
-        >
-          {Array.from({ length: flowerCount }, (_, i) => (
-            <Flower key={i} index={i} tombWidth={cfg.px} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
