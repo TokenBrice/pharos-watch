@@ -263,7 +263,7 @@ export default function AboutPage() {
                 <span className="font-bold">Stability Index</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Composite daily health score for the stablecoin ecosystem: aggregates peg integrity, supply growth, and liquidity depth into a 0&ndash;100 score
+                Daily health score for the stablecoin ecosystem: aggregates peg integrity, supply growth, and liquidity depth into a 0&ndash;100 score
               </p>
             </CardContent>
           </Card>
