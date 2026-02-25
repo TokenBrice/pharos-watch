@@ -1,5 +1,6 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
@@ -27,10 +28,9 @@ async function backfillCommodity(
   config: { geckoId: string; protocolSlug?: string },
 ): Promise<{ rows: number; error?: string }> {
   // Try CoinGecko market_chart first — provides actual historical market caps.
-  // Use days=365 (not max) to avoid CG free-tier rate limits on large responses.
   const cgRes = await fetch(
-    `https://api.coingecko.com/api/v3/coins/${config.geckoId}/market_chart?vs_currency=usd&days=365`,
-    { headers: { "User-Agent": USER_AGENT } },
+    cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
+    { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
   );
 
   if (cgRes.ok) {

@@ -1,5 +1,6 @@
 import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -221,8 +222,8 @@ export async function enrichMissingPrices(
     if (afterPass2.length > 0) {
       const ids = afterPass2.map((m) => m.geckoId).join(",");
       const cgRes = await fetchWithRetry(
-        `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
-        { headers: { "Accept": "application/json", "User-Agent": USER_AGENT } }
+        cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`),
+        { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) }
       );
       if (cgRes && cgRes.ok) {
         const cgData = (await cgRes.json()) as Record<string, { usd?: number }>;

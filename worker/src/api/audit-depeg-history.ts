@@ -2,6 +2,7 @@ import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
@@ -131,19 +132,16 @@ export const handleAuditDepegHistory = withErrorHandler(
         // Rate limit: 7-second delay keeps us well within CG's 10 req/min public limit
         await new Promise((r) => setTimeout(r, 7000));
 
-        const cgUrl = `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`;
-        let cgRes = await fetch(cgUrl, {
-          headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-        });
+        const cgEndpoint = cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}`);
+        const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
+        let cgRes = await fetch(cgEndpoint, { headers: cgFetchHeaders });
 
         // Retry once on 429 with backoff
         if (cgRes.status === 429) {
           const retryAfter = parseInt(cgRes.headers.get("Retry-After") ?? "10", 10);
           console.warn(`[audit] CG 429 for ${event.symbol}, waiting ${retryAfter}s`);
           await new Promise((r) => setTimeout(r, retryAfter * 1000));
-          cgRes = await fetch(cgUrl, {
-            headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-          });
+          cgRes = await fetch(cgEndpoint, { headers: cgFetchHeaders });
         }
 
         if (!cgRes.ok) {

@@ -8,6 +8,7 @@ import {
 } from "../lib/constants";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
 import type { PegAssetBase } from "../../../src/lib/types";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 
@@ -120,8 +121,8 @@ export async function confirmPendingDepegs(
     if (geckoId) {
       try {
         const cgRes = await fetchWithRetry(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`,
-          { headers: { Accept: "application/json", "User-Agent": USER_AGENT } },
+          cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`),
+          { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) },
           1, // single retry
         );
         if (cgRes?.ok) {

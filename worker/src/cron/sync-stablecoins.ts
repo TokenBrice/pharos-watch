@@ -8,6 +8,7 @@ import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
 
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT } from "../lib/constants";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
 import type { StablecoinMeta } from "../../../src/lib/types";
 
 // Derive commodity + CG-only fiat token lists from the central registry
@@ -253,8 +254,8 @@ async function fetchCoinGeckoMarketData(): Promise<CoinGeckoMcapData> {
   if (!ids) return {};
 
   const res = await fetchWithRetry(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`,
-    { headers: { Accept: "application/json", "User-Agent": USER_AGENT } }
+    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`),
+    { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) }
   );
   if (!res || !res.ok) {
     console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${res?.status ?? "no response"}`);

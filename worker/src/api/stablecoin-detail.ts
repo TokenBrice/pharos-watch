@@ -1,6 +1,7 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, CACHE_PROFILES, USER_AGENT } from "../lib/constants";
+import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { binarySearchNearest } from "../lib/binary-search";
 import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 
@@ -101,8 +102,8 @@ async function fetchCommodityDetail(config: {
   // Fallback: no protocol TVL → use CoinGecko market_chart directly
   if (tokens.length === 0) {
     const cgRes = await fetch(
-      `https://api.coingecko.com/api/v3/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`,
-      { headers: { "User-Agent": USER_AGENT } }
+      cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
     );
     if (cgRes.ok) {
       const cgData = (await cgRes.json()) as {
@@ -206,8 +207,8 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
       let tokens: Record<string, unknown>[] = [];
 
       const cgRes = await fetch(
-        `https://api.coingecko.com/api/v3/coins/${geckoId}/market_chart?vs_currency=usd&days=max`,
-        { headers: { "User-Agent": USER_AGENT } }
+        cgUrl(`/coins/${geckoId}/market_chart?vs_currency=usd&days=max`),
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
       );
       if (cgRes.ok) {
         const cgData = (await cgRes.json()) as {

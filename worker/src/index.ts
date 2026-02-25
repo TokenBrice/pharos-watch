@@ -12,6 +12,7 @@ import { generateDailyDigest } from "./cron/daily-digest";
 import { computeAndStoreStabilityIndex } from "./cron/stability-index";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
+import { initCoinGecko } from "./lib/coingecko";
 
 interface Env {
   DB: D1Database;
@@ -26,6 +27,7 @@ interface Env {
   ANTHROPIC_API_KEY?: string;
   METALS_API_KEY?: string;
   CMC_API_KEY?: string;
+  COINGECKO_API_KEY?: string;
   TWITTER_API_KEY?: string;
   TWITTER_API_SECRET?: string;
   TWITTER_ACCESS_TOKEN?: string;
@@ -56,6 +58,7 @@ function addCorsHeaders(response: Response, origin: string): Response {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    initCoinGecko(env.COINGECKO_API_KEY);
     const origin = env.CORS_ORIGIN;
 
     // Handle CORS preflight
@@ -154,6 +157,7 @@ const worker = {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
     initAlerts(env.ALERT_WEBHOOK_URL);
+    initCoinGecko(env.COINGECKO_API_KEY);
     const db = env.DB;
     const cron = event.cron;
 
