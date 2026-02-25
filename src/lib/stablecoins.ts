@@ -119,8 +119,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
-    dependencies: [{ id: "2", weight: 0.6 }, { id: "5", weight: 0.3 }],
-    collateral: "Mix of crypto (ETH), RWA (U.S. Treasuries), and centralized stablecoins (USDC) via Sky vaults",
+    dependencies: [{ id: "2", weight: 0.30 }],
+    collateral: "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
     pegMechanism: "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
     links: [
       { label: "Website", url: "https://sky.money/" },
@@ -151,8 +151,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     geckoId: "dai",
-    dependencies: [{ id: "2", weight: 0.85 }],
-    collateral: "Multi-collateral: ETH (~70% of Core vaults), wstETH (~20%), WBTC (~10%), USDC via LitePSM (~$1.6B), and RWA (U.S. Treasuries via Blocktower Andromeda, ~$1.7B); all managed by Sky/MakerDAO governance",
+    dependencies: [{ id: "2", weight: 0.35 }],
+    collateral: "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
     pegMechanism: "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     links: [
       { label: "Website", url: "https://makerdao.com/" },
@@ -325,7 +325,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base",     address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
     ],
   }),
-  usd("213", "M by M0", "M", "rwa-backed", "centralized-dependent", {
+  usd("213", "M by M0", "M", "rwa-backed", "centralized", {
     rwa: true,
     geckoId: "m",
     dependencies: [],
@@ -582,8 +582,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
   usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
     geckoId: "frax",
-    dependencies: [{ id: "2", weight: 0.9 }],
-    collateral: "U.S. Treasury bills, Federal Reserve repurchase agreements, FDIC-insured deposits, and on-chain protocol-owned liquidity via AMOs (Curve, Fraxlend, Fraxswap) — fully collateralized since FIP-188 (2023)",
+    dependencies: [{ id: "2", weight: 0.35 }],
+    collateral: "U.S. Treasury bills (~50%), USDC via FinresPBC (~35%), Federal Reserve repurchase agreements, FDIC-insured deposits, and on-chain protocol-owned liquidity via AMOs (Curve, Fraxlend) — fully collateralized since FIP-188 (2023)",
     pegMechanism: "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
     links: [
       { label: "Website", url: "https://frax.com/" },
@@ -684,7 +684,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122", decimals: 18 },
     ],
   }),
-  usd("218", "River Stablecoin", "satUSD", "crypto-backed", "centralized-dependent", {
+  usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
     geckoId: "satoshi-stablecoin",
     dependencies: [],
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
@@ -829,7 +829,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ink", address: "0x5bcf6b008bf80b9296238546bace1797657b05d6", decimals: 18 },
     ],
   }),
-  usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized-dependent", {
+  usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized", {
     geckoId: "precious-metals-usd",
     dependencies: [],
     collateral: "ION.au tokenized gold (issued by I-ON Digital Corp) deposited as collateral into RAAC's RWf(x) overcollateralized lending protocol",
@@ -1202,7 +1202,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
     ],
   }),
-  usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "centralized-dependent", {
+  usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "decentralized", {
     geckoId: "hylo-usd",
     dependencies: [],
     collateral: "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
@@ -1442,7 +1442,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
     geckoId: "ageur",
-    dependencies: [],
+    dependencies: [{ id: "2", weight: 0.30 }],
     collateral: "Overcollateralized basket of Euro-denominated RWAs (tokenized T-bills and government/corporate bonds via Backed Finance: bC3M, bERNX, bIB01), EURC, and crypto assets (wETH, wBTC) managed via the Transmuter module",
     pegMechanism: "Transmuter module enables 1:1 slippage-free swaps between EURA and whitelisted Euro collateral assets; dynamic fees and circuit breakers rebalance reserves; over-collateralization from Borrowing Module CDPs provides additional buffer",
     proofOfReserves: { type: "self-reported", url: "https://analytics.angle.money/", provider: "Angle Protocol" },
@@ -1462,7 +1462,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "celo", address: "0xc16b81af351ba9e64c1a069e3ab18c244a1e3049", decimals: 18 },
     ],
   }),
-  usd("303", "Mezo USD", "meUSD", "crypto-backed", "centralized-dependent", {
+  usd("303", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
     geckoId: "mezo-usd",
     dependencies: [],
     collateral: "Bitcoin only; minimum 110% collateral ratio",
@@ -1622,7 +1622,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
     ],
   }),
-  usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "centralized-dependent", {
+  usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "decentralized", {
     geckoId: "felix-feusd",
     dependencies: [],
     collateral: "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
@@ -1795,7 +1795,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86", decimals: 18 },
     ],
   }),
-  usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "centralized-dependent", {
+  usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
     geckoId: "bitcoin-usd-btcfi",
     dependencies: [],
     collateral: "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
@@ -1809,7 +1809,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4", decimals: 18 },
     ],
   }),
-  usd("253", "Bima USBD", "USBD", "crypto-backed", "centralized-dependent", {
+  usd("253", "Bima USBD", "USBD", "crypto-backed", "decentralized", {
     geckoId: "usbd",
     dependencies: [],
     collateral: "Overcollateralized Bitcoin LSTs/LRTs via CDP vaults at 150% MCR (160% CCR triggers recovery mode)",
@@ -2271,7 +2271,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
     geckoId: "international-stable-currency",
     navToken: true,
-    dependencies: [],
+    dependencies: [{ id: "2", weight: 0.20 }],
     collateral: "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
     pegMechanism: "RWA-indexed basket tracking purchasing power; price appreciates over time",
     links: [
