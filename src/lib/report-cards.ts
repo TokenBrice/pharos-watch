@@ -1,0 +1,398 @@
+/**
+ * Report Card grading engine.
+ *
+ * Pure functions: data in, grades out. No D1, no API calls.
+ * Imported by worker API handler and frontend components.
+ */
+
+import type {
+  ReportCardGrade,
+  ReportCardDimension,
+  DimensionKey,
+  PegSummaryCoin,
+  DexLiquidityData,
+  BluechipGrade,
+  BluechipRating,
+  StablecoinMeta,
+  GovernanceType,
+} from "./types";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+export const METHODOLOGY_VERSION = "1.0";
+
+export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
+  pegStability: 0.25,
+  liquidity: 0.25,
+  safety: 0.20,
+  resilience: 0.15,
+  decentralization: 0.10,
+  dependencyRisk: 0.05,
+};
+
+export const DIMENSION_LABELS: Record<DimensionKey, string> = {
+  pegStability: "Peg Stability",
+  liquidity: "Liquidity",
+  safety: "Safety",
+  resilience: "Resilience",
+  decentralization: "Decentralization",
+  dependencyRisk: "Dependency Risk",
+};
+
+/** Sorted descending by min — first match wins. */
+export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
+  { grade: "A+", min: 97 },
+  { grade: "A", min: 93 },
+  { grade: "A-", min: 90 },
+  { grade: "B+", min: 85 },
+  { grade: "B", min: 80 },
+  { grade: "B-", min: 75 },
+  { grade: "C+", min: 70 },
+  { grade: "C", min: 65 },
+  { grade: "C-", min: 60 },
+  { grade: "D", min: 50 },
+  { grade: "F", min: 0 },
+];
+
+/**
+ * Static Tailwind class strings for each ReportCardGrade.
+ * A-range = emerald, B-range = blue, C-range = amber, D = orange, F = red, NR = muted.
+ * These MUST be static literals (Tailwind purge requirement).
+ */
+export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
+  "A+": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "A":  "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "A-": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  "B+": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "B":  "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "B-": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "C+": "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  "C":  "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  "C-": "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  "D":  "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  "F":  "bg-red-500/10 text-red-500 border-red-500/20",
+  "NR": "bg-muted text-muted-foreground border-muted",
+};
+
+/** Canonical display order for report card dimensions. */
+export const DIMENSION_ORDER: DimensionKey[] = [
+  "pegStability",
+  "liquidity",
+  "safety",
+  "resilience",
+  "decentralization",
+  "dependencyRisk",
+];
+
+/** Hex colors for radar chart fills, keyed by grade range. */
+export const GRADE_RADAR_COLORS: Record<string, string> = {
+  A: "#10b981",   // emerald-500
+  B: "#3b82f6",   // blue-500
+  C: "#f59e0b",   // amber-500
+  D: "#f97316",   // orange-500
+  F: "#ef4444",   // red-500
+  NR: "#71717a",  // zinc-500 (muted)
+};
+
+/** Maps Bluechip safety grades to numeric scores. */
+const BLUECHIP_GRADE_TO_SCORE: Record<BluechipGrade, number> = {
+  "A+": 100, A: 95, "A-": 90,
+  "B+": 85, B: 80, "B-": 75,
+  "C+": 70, C: 65, "C-": 60,
+  D: 50, F: 25,
+};
+
+// ---------------------------------------------------------------------------
+// Grade helpers
+// ---------------------------------------------------------------------------
+
+/** Map a 0-100 score to a letter grade. null -> NR. */
+export function scoreToGrade(score: number | null): ReportCardGrade {
+  if (score === null) return "NR";
+  const clamped = Math.max(0, Math.min(100, score));
+  for (const { grade, min } of GRADE_THRESHOLDS) {
+    if (clamped >= min) return grade;
+  }
+  return "F";
+}
+
+/** Return the broad grade range: "A", "B", "C", "D", "F", or "NR". */
+export function gradeRange(grade: ReportCardGrade): string {
+  if (grade === "NR") return "NR";
+  // First character is the letter (A, B, C, D, F)
+  return grade.charAt(0);
+}
+
+// ---------------------------------------------------------------------------
+// Dimension scorers
+// ---------------------------------------------------------------------------
+
+/**
+ * Peg Stability: uses pegScore from the peg summary.
+ * - Caps at C (65) if activeDepeg
+ * - +3 bonus if no events in 12+ months
+ * - Annotates NAV tokens
+ */
+export function scorePegStability(
+  peg: PegSummaryCoin | undefined,
+  meta: StablecoinMeta,
+): ReportCardDimension {
+  // NAV tokens (yield-accruing, not pegged to $1) get NR
+  if (meta.flags.navToken) {
+    return { grade: "NR", score: null, detail: "NAV token - peg tracking not applicable" };
+  }
+
+  if (!peg || peg.pegScore === null) {
+    return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
+  }
+
+  let score = peg.pegScore;
+
+  // Cap at 65 (C) if there is an active depeg
+  if (peg.activeDepeg) {
+    score = Math.min(score, 65);
+  }
+
+  // Award +3 if no depeg events, or last one was 12+ months ago
+  const twelveMonthsAgo = Date.now() / 1000 - 365 * 86400;
+  const noRecentEvents =
+    peg.eventCount === 0 ||
+    (peg.lastEventAt !== null && peg.lastEventAt < twelveMonthsAgo);
+  if (noRecentEvents && !peg.activeDepeg) {
+    score = Math.min(100, score + 3);
+  }
+
+  score = Math.round(Math.max(0, Math.min(100, score)));
+
+  // Build detail string
+  const parts: string[] = [];
+  parts.push(`Peg score: ${score}/100`);
+  if (peg.activeDepeg) parts.push("(active depeg, capped at C)");
+  if (peg.eventCount === 0) {
+    parts.push("No depeg events recorded");
+  } else {
+    parts.push(`${peg.eventCount} depeg event${peg.eventCount === 1 ? "" : "s"}`);
+  }
+  if (peg.worstDeviationBps !== null) {
+    parts.push(`worst deviation: ${peg.worstDeviationBps} bps`);
+  }
+
+  let detail = parts.join(". ");
+  if (meta.flags.yieldBearing) {
+    detail += " (yield-bearing — expected price appreciation excluded)";
+  }
+
+  return { grade: scoreToGrade(score), score, detail };
+}
+
+/**
+ * Liquidity: uses liquidityScore from DEX liquidity data.
+ * - -5 if HHI > 0.5
+ * - -10 if HHI > 0.8
+ * - NR if no data
+ */
+export function scoreLiquidity(
+  liq: DexLiquidityData | undefined,
+): ReportCardDimension {
+  if (!liq || liq.liquidityScore === null) {
+    return { grade: "NR", score: null, detail: "No DEX liquidity data available" };
+  }
+
+  let score = liq.liquidityScore;
+
+  // Concentration penalty
+  if (liq.concentrationHhi !== null) {
+    if (liq.concentrationHhi > 0.8) {
+      score -= 10;
+    } else if (liq.concentrationHhi > 0.5) {
+      score -= 5;
+    }
+  }
+
+  score = Math.round(Math.max(0, Math.min(100, score)));
+
+  const parts: string[] = [];
+  parts.push(`Liquidity score: ${score}/100`);
+  parts.push(`${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`);
+  if (liq.concentrationHhi !== null && liq.concentrationHhi > 0.5) {
+    parts.push(`high concentration (HHI: ${liq.concentrationHhi.toFixed(2)})`);
+  }
+
+  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+}
+
+/**
+ * Safety: direct passthrough from Bluechip grade to numeric score.
+ * NR if no rating.
+ */
+export function scoreSafety(
+  rating: BluechipRating | undefined,
+): ReportCardDimension {
+  if (!rating) {
+    return { grade: "NR", score: null, detail: "No Bluechip safety rating available" };
+  }
+
+  const score = BLUECHIP_GRADE_TO_SCORE[rating.grade];
+  const detail = `Bluechip safety grade: ${rating.grade}. Collateralization: ${rating.collateralization}%`;
+
+  return { grade: scoreToGrade(score), score, detail };
+}
+
+/**
+ * Resilience: chain distribution (60%) + freeze rate (40%).
+ *
+ * Chain distribution: 1->40, 2->55, 3->65, 4-5->75, 6-8->85, 9+->95
+ * Freeze rate: 100 - events/month * 2, clamped 0-100. Untracked = 85.
+ */
+export function scoreResilience(
+  chainCount: number,
+  freezeEventsPerMonth: number | null,
+  hasTrackedFreezeEvents: boolean,
+): ReportCardDimension {
+  // Chain distribution component (60% weight)
+  let chainScore: number;
+  if (chainCount >= 9) chainScore = 95;
+  else if (chainCount >= 6) chainScore = 85;
+  else if (chainCount >= 4) chainScore = 75;
+  else if (chainCount >= 3) chainScore = 65;
+  else if (chainCount >= 2) chainScore = 55;
+  else chainScore = 40;
+
+  // Freeze rate component (40% weight)
+  let freezeScore: number;
+  if (!hasTrackedFreezeEvents) {
+    // Not a blacklistable token -- give a neutral score
+    freezeScore = 85;
+  } else if (freezeEventsPerMonth === null) {
+    freezeScore = 85;
+  } else {
+    freezeScore = Math.max(0, Math.min(100, 100 - freezeEventsPerMonth * 2));
+  }
+
+  const score = Math.round(chainScore * 0.6 + freezeScore * 0.4);
+
+  const parts: string[] = [];
+  parts.push(`Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"}`);
+  if (hasTrackedFreezeEvents && freezeEventsPerMonth !== null) {
+    parts.push(`${freezeEventsPerMonth.toFixed(1)} freeze events/month`);
+  } else if (!hasTrackedFreezeEvents) {
+    parts.push("No freeze/blacklist capability tracked");
+  }
+
+  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+}
+
+/**
+ * Decentralization: based on governance type.
+ * decentralized -> 95, centralized-dependent -> 70, centralized -> 50
+ */
+export function scoreDecentralization(
+  governance: GovernanceType,
+): ReportCardDimension {
+  const scoreMap: Record<GovernanceType, number> = {
+    decentralized: 95,
+    "centralized-dependent": 70,
+    centralized: 50,
+  };
+
+  const score = scoreMap[governance];
+  const labelMap: Record<GovernanceType, string> = {
+    decentralized: "Decentralized governance",
+    "centralized-dependent": "CeFi-Dependent governance",
+    centralized: "Centralized governance",
+  };
+
+  return { grade: scoreToGrade(score), score, detail: labelMap[governance] };
+}
+
+/**
+ * Dependency Risk: for CeFi-Dependent coins, average upstream dependency scores.
+ * - Non-CeFi-Dependent: 95
+ * - CeFi-Dependent with mapped deps: average of upstream scores, -10 if any below 75
+ * - CeFi-Dependent with no deps mapped or scores unavailable: 70
+ */
+export function scoreDependencyRisk(
+  meta: StablecoinMeta,
+  overallScores: Map<string, number>,
+): ReportCardDimension {
+  if (meta.flags.governance !== "centralized-dependent") {
+    return { grade: scoreToGrade(95), score: 95, detail: "Not dependent on upstream stablecoins" };
+  }
+
+  const deps = meta.dependencies;
+  if (!deps || deps.length === 0) {
+    return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent but no upstream dependencies mapped" };
+  }
+
+  // Gather upstream scores
+  const upstreamScores: number[] = [];
+  for (const depId of deps) {
+    const s = overallScores.get(depId);
+    if (s !== undefined) upstreamScores.push(s);
+  }
+
+  if (upstreamScores.length === 0) {
+    return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent; upstream dependency scores unavailable" };
+  }
+
+  const avg = upstreamScores.reduce((a, b) => a + b, 0) / upstreamScores.length;
+  let score = avg;
+
+  // Penalty if any upstream dependency scores below 75
+  const weakDeps = upstreamScores.filter((s) => s < 75);
+  if (weakDeps.length > 0) {
+    score -= 10;
+  }
+
+  score = Math.round(Math.max(0, Math.min(100, score)));
+
+  const parts: string[] = [];
+  parts.push(`Based on ${upstreamScores.length} upstream dependenc${upstreamScores.length === 1 ? "y" : "ies"}`);
+  parts.push(`avg upstream score: ${Math.round(avg)}`);
+  if (weakDeps.length > 0) {
+    parts.push(`-10 penalty: ${weakDeps.length} dependenc${weakDeps.length === 1 ? "y" : "ies"} below 75`);
+  }
+
+  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+}
+
+// ---------------------------------------------------------------------------
+// Overall grade computation
+// ---------------------------------------------------------------------------
+
+/**
+ * Weighted sum of rated dimensions. NR dimensions have their weight redistributed.
+ * Requires at least 3 rated dimensions for an overall grade, else NR.
+ */
+export function computeOverallGrade(
+  dimensions: Record<DimensionKey, ReportCardDimension>,
+): { grade: ReportCardGrade; score: number | null; ratedDimensions: number } {
+  const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
+
+  // Separate rated vs unrated
+  let ratedWeight = 0;
+  let weightedSum = 0;
+  let ratedCount = 0;
+
+  for (const key of keys) {
+    const dim = dimensions[key];
+    if (dim.score !== null) {
+      ratedWeight += DIMENSION_WEIGHTS[key];
+      weightedSum += dim.score * DIMENSION_WEIGHTS[key];
+      ratedCount++;
+    }
+  }
+
+  // Need at least 3 rated dimensions
+  if (ratedCount < 3 || ratedWeight === 0) {
+    return { grade: "NR", score: null, ratedDimensions: ratedCount };
+  }
+
+  // Redistribute weight from NR dimensions proportionally
+  const score = Math.round(weightedSum / ratedWeight);
+  const clamped = Math.max(0, Math.min(100, score));
+
+  return { grade: scoreToGrade(clamped), score: clamped, ratedDimensions: ratedCount };
+}

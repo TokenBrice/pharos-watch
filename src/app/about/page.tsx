@@ -360,7 +360,133 @@ export default function AboutPage() {
         </CardContent>
       </Card>
 
-      {/* Section 5: Footer */}
+      {/* Section 5: Report Card Methodology */}
+      <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+        <CardHeader>
+          <CardTitle as="h2">Report Card Methodology</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            Pharos synthesizes multiple data signals into a single transparent grade per stablecoin.
+            Each report card distills peg stability, liquidity depth, safety ratings, resilience,
+            decentralization, and dependency risk into a letter grade so you can compare stablecoins at a glance.
+          </p>
+
+          {/* Dimensions table */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Grading Dimensions</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4 font-medium text-foreground">Dimension</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Source</th>
+                    <th className="py-2 font-medium text-foreground">Description</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Peg Stability</td>
+                    <td className="py-2 pr-4">25%</td>
+                    <td className="py-2 pr-4">Peg score, depeg events</td>
+                    <td className="py-2">How faithfully the coin holds its peg</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Liquidity</td>
+                    <td className="py-2 pr-4">25%</td>
+                    <td className="py-2 pr-4">DEX liquidity score</td>
+                    <td className="py-2">Can you exit a large position without slippage?</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Safety</td>
+                    <td className="py-2 pr-4">20%</td>
+                    <td className="py-2 pr-4">Bluechip SMIDGE rating</td>
+                    <td className="py-2">Independent audit of stability, management, governance</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Resilience</td>
+                    <td className="py-2 pr-4">15%</td>
+                    <td className="py-2 pr-4">Chain count, freeze events</td>
+                    <td className="py-2">Single points of failure and operational risk</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Decentralization</td>
+                    <td className="py-2 pr-4">10%</td>
+                    <td className="py-2 pr-4">Governance model</td>
+                    <td className="py-2">Governance structure and custodial model</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
+                    <td className="py-2 pr-4">5%</td>
+                    <td className="py-2 pr-4">Dependencies, upstream grades</td>
+                    <td className="py-2">Inherited risk from upstream stablecoins</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Grade thresholds */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Grade Thresholds</h3>
+            <div className="overflow-x-auto">
+              <table className="text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-8 font-medium text-foreground">Grade</th>
+                    <th className="py-2 font-medium text-foreground">Score Range</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr><td className="py-1.5 pr-8 text-foreground">A+</td><td className="py-1.5">97&ndash;100</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A</td><td className="py-1.5">93&ndash;96</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A&minus;</td><td className="py-1.5">90&ndash;92</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B+</td><td className="py-1.5">85&ndash;89</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B</td><td className="py-1.5">80&ndash;84</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B&minus;</td><td className="py-1.5">75&ndash;79</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C+</td><td className="py-1.5">70&ndash;74</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C</td><td className="py-1.5">65&ndash;69</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C&minus;</td><td className="py-1.5">60&ndash;64</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">D</td><td className="py-1.5">50&ndash;59</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">F</td><td className="py-1.5">0&ndash;49</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">NR</td><td className="py-1.5">Not enough data</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Key design decisions */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Key Design Decisions</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground font-medium">NR (Not Rated)</span> is used when fewer than 3 dimensions have data &mdash; no misleading partial grades</li>
+              <li>Weight is redistributed proportionally among rated dimensions when some are NR</li>
+              <li>Cemetery (defunct) coins receive a permanent F</li>
+              <li>Decentralization score is structural, not a value judgment</li>
+            </ul>
+          </div>
+
+          {/* Limitations */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Limitations</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Peg stability only reflects price data &mdash; can&apos;t detect coins &ldquo;stable&rdquo; because nobody trades them</li>
+              <li>Safety depends on Bluechip coverage &mdash; unrated coins get NR, not penalized</li>
+              <li>Decentralization is structural, not a value judgment</li>
+              <li>Dependency map is manually maintained &mdash; may not capture every collateral relationship</li>
+              <li>Resilience uses chain count as proxy &mdash; doesn&apos;t account for chain quality or TVL distribution per chain</li>
+            </ul>
+          </div>
+
+          {/* Versioning */}
+          <p className="text-xs text-muted-foreground italic">
+            Methodology version v1.0. Version increments when weights, thresholds, or dimension definitions change.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Section 6: Footer */}
       <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
         <CardHeader>
           <CardTitle as="h2">Get in Touch</CardTitle>

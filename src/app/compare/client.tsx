@@ -8,6 +8,7 @@ import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useReportCards } from "@/hooks/use-report-cards";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@/lib/format";
@@ -17,6 +18,8 @@ import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
+import { CompareRadar } from "@/components/radar-chart";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Share2, Twitter, Download } from "lucide-react";
@@ -30,8 +33,10 @@ import {
 import type { ShareCoinData } from "@/lib/compare-share-image";
 import type { CoinOption } from "@/components/coin-selector";
 import type { StablecoinDetail } from "@/hooks/use-stablecoins";
+import type { ReportCard } from "@/lib/types";
 
 const MAX_COINS = 5;
+const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
 
 /** Lookup from lowercased symbol to coin for URL parsing. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
@@ -117,6 +122,22 @@ export function CompareClient() {
   const { data: pegSummary } = usePegSummary();
   const { data: bluechipData } = useBluechipRatings();
   const { data: dexData } = useDexLiquidity();
+  const { data: reportCardsData } = useReportCards();
+
+  const cardMap = useMemo(() => {
+    if (!reportCardsData?.cards) return new Map<string, ReportCard>();
+    return new Map(reportCardsData.cards.map((c) => [c.id, c]));
+  }, [reportCardsData]);
+
+  const radarCards = useMemo(() => {
+    return selectedIds
+      .map((id, i) => {
+        const card = cardMap.get(id);
+        if (!card) return null;
+        return { card, color: COMPARE_COLORS[i % COMPARE_COLORS.length] };
+      })
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+  }, [selectedIds, cardMap]);
 
   // Derive peg rates from stablecoin list
   const pegRates = useMemo(() => {
@@ -439,6 +460,29 @@ export function CompareClient() {
             </>
           )}
 
+          {radarCards.length >= 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Report Card Comparison</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CompareRadar cards={radarCards} size={350} />
+                <div className="flex flex-wrap gap-3 justify-center mt-3">
+                  {radarCards.map(({ card, color }) => (
+                    <div key={card.id} className="flex items-center gap-1.5 text-sm">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span>
+                        {card.symbol}: {card.overallGrade}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
     </div>
