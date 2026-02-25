@@ -11,7 +11,7 @@ const DATA_SOURCE_GROUPS = [
   { label: "Supply & Price", sources: "DefiLlama, CoinGecko, CoinMarketCap, DexScreener" },
   { label: "On-chain Events", sources: "Etherscan v2, TronGrid" },
   { label: "Ratings & Reference", sources: "Bluechip, ECB, fawazahmed0/exchange-api, gold-api.com" },
-  { label: "DEX Data", sources: "DeFiLlama Yields, Curve Finance API" },
+  { label: "DEX Data", sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, GeckoTerminal" },
 ] as const;
 
 function PipelineSources() {
@@ -82,7 +82,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2 and TronGrid for on-chain freeze events; Bluechip for safety ratings; ECB and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; and DeFiLlama Yields plus Curve Finance API for DEX liquidity data.",
+                  text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2 and TronGrid for on-chain freeze events; Bluechip for safety ratings; ECB and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; and DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data.",
                 },
               },
             ],
