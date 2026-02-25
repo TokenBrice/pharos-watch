@@ -1,6 +1,6 @@
 # Pharos Stability Index (PSI)
 
-Composite ecosystem health score (0–100) measuring how stable the stablecoin market is right now. Computed daily at 07:55 UTC.
+Composite ecosystem health score (0–100) measuring how stable the stablecoin market is right now. Computed every 15 minutes.
 
 ## Formula
 
@@ -14,16 +14,16 @@ Clamped to [0, 100], rounded to 1 decimal place.
 
 | Component | Range | Formula | Purpose |
 |-----------|-------|---------|---------|
-| **Severity** | 0–60 | `min(60, Σ (abs(bps) / 100 × mcap_share × log₂(1 + mcap / $1B) × 60))` | Depeg impact weighted by market cap significance |
-| **Breadth** | 0–15 | `min(15, Σ sqrt(mcap / $1B) × 3)` per depegged coin | Number of depegging coins, weighted so micro-caps barely register |
+| **Severity** | 0–60 | `min(60, Σ (abs(bps) / 100 × mcap_share × log₂(1 + mcap / $1B) × 60 × factor))` | Depeg impact weighted by market cap significance |
+| **Breadth** | 0–15 | `min(15, Σ sqrt(mcap / $1B) × 3 × factor)` per unique depegged coin | Number of depegging coins, weighted so micro-caps barely register |
 | **Freezes** | 0–10 | `min(10, freeze_events_24h × 2.5)` | Blacklist/freeze activity signals operational instability |
 | **Trend** | −5 to +5 | `clamp(-5, 5, mcap_7d_change_pct)` | 7-day total market cap momentum |
 
-Severity and breadth iterate over **active depegs only** (coins currently outside their peg threshold).
+Severity and breadth iterate over **active depegs only** (unique coins currently outside their peg threshold), with depreciation applied to chronic depegs.
 
 ### Severity scaling
 
-- `K = 60` scaling constant, calibrated so a 10bps USDT wobble drops the score ~30 points
+- `K = 60` scaling constant, calibrated so a 10bps USDT wobble drops the score ~30 points. Multiplied by `factor` for depreciation.
 - **log₂ amplifier** makes mega-cap depegs disproportionately impactful: USDT ($145B) gets 7.2×, USDC ($60B) gets 5.9×, a $50M coin gets 0.07×
 - **Cap at 60** prevents a single catastrophic event from consuming the entire score range
 
@@ -34,6 +34,44 @@ Severity and breadth iterate over **active depegs only** (coins currently outsid
 ### Deviation source
 
 The cron computes **live deviation** from current price: `bps = ((current_price / peg_reference) - 1) × 10000`. It does not use `peak_deviation_bps` from the depeg event — a coin that peaked at 500bps but is currently at 120bps contributes only 120bps of severity.
+
+### Depreciation
+
+Chronically depegged coins have their severity and breadth contributions reduced over time to prevent zombie stablecoins from permanently dominating the score.
+
+```
+factor = depegAgeDays ≤ 30 ? 1.0 : max(0.25, 1.0 - (depegAgeDays - 30) / 120)
+```
+
+| Age | Factor | Meaning |
+|-----|--------|---------|
+| 0–30 days | 100% | Full impact — fresh depeg, market-relevant |
+| 45 days | 87% | Still significant |
+| 60 days | 75% | Fading |
+| 90 days | 50% | Half impact |
+| 120 days | 25% | Floor reached |
+| 120+ days | 25% | Permanent residual |
+
+Age is measured from the **earliest** `started_at` across all active depeg events for a coin.
+
+### Deduplication
+
+A coin may have multiple overlapping depeg events (e.g., one event opened at 100bps that's still active when a second event opens at 200bps due to a peg reference change). To avoid double-counting:
+
+1. Events are grouped by `stablecoin_id`
+2. For each coin, the event with the **worst current abs(bps)** is used for severity
+3. The **earliest `started_at`** across all events determines the depreciation age
+4. Each coin contributes exactly **once** to both severity and breadth
+
+### Per-coin contributors
+
+The cron captures a per-coin breakdown in `input_snapshot.contributors`:
+
+```json
+[{ "id": "258", "symbol": "A7A5", "bps": -9871, "mcapUsd": 507000000, "ageDays": 61.2, "factor": 0.74 }]
+```
+
+The API surfaces this array in `current.contributors` (not in history). The frontend renders it as a "Top Contributors" table showing each coin's deviation, market cap, age, depreciation factor, and severity/breadth cost.
 
 ## Condition Bands
 
@@ -66,7 +104,7 @@ The cron computes **live deviation** from current price: `bps = ((current_price 
 
 ## Cron & Storage
 
-- **Cron**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs daily at **07:55 UTC** (5 min before digest cron)
+- **Cron**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Uses midnight-rounded `computed_at` with `ON CONFLICT DO UPDATE` so only one row per day is stored.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Table**: `stability_index` (migration 0022) — `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON)
 
@@ -91,7 +129,7 @@ The daily digest cron (08:00 UTC) queries the latest two stability index rows an
 | File | Purpose |
 |------|---------|
 | `worker/src/lib/stability-index.ts` | Pure compute function, band definitions, colors |
-| `worker/src/cron/stability-index.ts` | Daily cron job |
+| `worker/src/cron/stability-index.ts` | 15-minute cron job |
 | `worker/src/api/stability-index.ts` | API endpoint |
 | `worker/src/api/backfill-stability-index.ts` | Admin backfill (replays formula over historical data) |
 | `src/components/stability-index.tsx` | Homepage widget + lighthouse SVG |

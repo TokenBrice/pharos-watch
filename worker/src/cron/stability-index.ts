@@ -17,12 +17,14 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
   const mcapById = new Map<string, number>();
+  const symbolById = new Map<string, string>();
 
   for (const coin of tracked) {
     const mcap = getCirculatingRaw(coin);
     totalMcapUsd += mcap;
     totalPrevWeek += getPrevWeekRaw(coin);
     mcapById.set(coin.id, mcap);
+    symbolById.set(coin.id, coin.symbol);
   }
 
   const mcap7dChangePct = totalPrevWeek > 0
@@ -77,10 +79,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
 
     depegs.push({ bps: worstBps, mcapUsd, depegAgeDays: ageDays });
 
-    const coin = tracked.find((c) => c.id === coinId);
     contributors.push({
       id: coinId,
-      symbol: coin?.symbol ?? coinId,
+      symbol: symbolById.get(coinId) ?? coinId,
       bps: worstBps,
       mcapUsd,
       ageDays: Math.round(ageDays * 10) / 10,
@@ -89,7 +90,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
   }
 
   // Freeze count in last 24h
-  const cutoff = Math.floor(Date.now() / 1000) - 86400;
+  const cutoff = now - 86400;
   const freezeRow = await db
     .prepare("SELECT COUNT(*) as cnt FROM blacklist_events WHERE timestamp > ?")
     .bind(cutoff)
