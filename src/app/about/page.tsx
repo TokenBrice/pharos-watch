@@ -242,6 +242,13 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
+        </div>
+      </div>
+
+      {/* Section 3: What Pharos Computes */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold tracking-tight">What Pharos Computes</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="rounded-2xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
@@ -277,14 +284,14 @@ export default function AboutPage() {
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                Composite A+&ndash;F grades for every tracked stablecoin, combining six dimensions: peg stability, liquidity depth, safety rating, resilience, decentralization, and dependency risk
+                Comprehensive A+&ndash;F stablecoin grades with six dimensions: peg, liquidity, safety, resilience, decentralization, and dependency risk
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Section 3: Classification */}
+      {/* Section 4: Classification */}
       <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
         <CardHeader>
           <CardTitle as="h2">Classification</CardTitle>
