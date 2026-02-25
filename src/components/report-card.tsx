@@ -131,16 +131,16 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
             </p>
             <p className="text-sm text-muted-foreground">
               This stablecoin depends on{" "}
-              {card.dependencies.map((depId, i) => {
+              {card.dependencies.map((dep, i) => {
                 const depMeta = TRACKED_STABLECOINS.find(
-                  (s) => s.id === depId,
+                  (s) => s.id === dep.id,
                 );
-                const name = depMeta?.name ?? depId;
+                const name = depMeta?.name ?? dep.id;
                 return (
-                  <span key={depId}>
+                  <span key={dep.id}>
                     {i > 0 && ", "}
                     <Link
-                      href={`/stablecoin/${depId}`}
+                      href={`/stablecoin/${dep.id}`}
                       className="font-medium text-blue-500 underline underline-offset-2 hover:text-blue-400"
                     >
                       {name}

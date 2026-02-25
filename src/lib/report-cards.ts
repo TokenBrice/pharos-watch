@@ -335,22 +335,27 @@ export function scoreDependencyRisk(
     return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent but no upstream dependencies mapped" };
   }
 
-  // Gather upstream scores
-  const upstreamScores: number[] = [];
-  for (const depId of deps) {
-    const s = overallScores.get(depId);
-    if (s !== undefined) upstreamScores.push(s);
+  // Gather upstream scores with weights
+  const resolved: { id: string; weight: number; score: number }[] = [];
+  for (const dep of deps) {
+    const s = overallScores.get(dep.id);
+    if (s !== undefined) resolved.push({ id: dep.id, weight: dep.weight, score: s });
   }
 
-  if (upstreamScores.length === 0) {
+  if (resolved.length === 0) {
     return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent; upstream dependency scores unavailable" };
   }
 
-  const avg = upstreamScores.reduce((a, b) => a + b, 0) / upstreamScores.length;
-  let score = avg;
+  // Weighted average of upstream scores
+  const totalWeight = resolved.reduce((sum, d) => sum + d.weight, 0);
+  const weightedAvg = totalWeight > 0
+    ? resolved.reduce((sum, d) => sum + d.score * d.weight, 0) / totalWeight
+    : resolved.reduce((sum, d) => sum + d.score, 0) / resolved.length;
 
-  // Penalty if any upstream dependency scores below 75
-  const weakDeps = upstreamScores.filter((s) => s < 75);
+  let score = weightedAvg;
+
+  // Penalty if any upstream scores below 75
+  const weakDeps = resolved.filter((d) => d.score < 75);
   if (weakDeps.length > 0) {
     score -= 10;
   }
@@ -358,8 +363,8 @@ export function scoreDependencyRisk(
   score = Math.round(Math.max(0, Math.min(100, score)));
 
   const parts: string[] = [];
-  parts.push(`Based on ${upstreamScores.length} upstream dependenc${upstreamScores.length === 1 ? "y" : "ies"}`);
-  parts.push(`avg upstream score: ${Math.round(avg)}`);
+  parts.push(`Based on ${resolved.length} upstream dependenc${resolved.length === 1 ? "y" : "ies"}`);
+  parts.push(`weighted avg upstream score: ${Math.round(weightedAvg)}`);
   if (weakDeps.length > 0) {
     parts.push(`-10 penalty: ${weakDeps.length} dependenc${weakDeps.length === 1 ? "y" : "ies"} below 75`);
   }
