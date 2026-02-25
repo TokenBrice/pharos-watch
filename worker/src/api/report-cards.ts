@@ -57,12 +57,20 @@ interface BlacklistAggRow {
 // Handler
 // ---------------------------------------------------------------------------
 
+interface DexLiquidityRow {
+  stablecoin_id: string;
+  liquidity_score: number | null;
+  concentration_hhi: number | null;
+  pool_count: number;
+  chain_count: number;
+}
+
 export const handleReportCards = withErrorHandler("report-cards", async (db: D1Database): Promise<Response> => {
-  // 1. Load caches in parallel
-  const [stablecoinsCached, dexLiqCached, bluechipCached] = await Promise.all([
+  // 1. Load caches + dex_liquidity table in parallel
+  const [stablecoinsCached, bluechipCached, dexLiqResult] = await Promise.all([
     getCache(db, "stablecoins"),
-    getCache(db, "dex-liquidity"),
     getCache(db, "bluechip-ratings"),
+    db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity").all<DexLiquidityRow>(),
   ]);
 
   if (!stablecoinsCached) {
@@ -77,9 +85,16 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     fxFallbackRates?: Record<string, number>;
   };
 
-  const dexLiqMap: Record<string, DexLiquidityData> = dexLiqCached
-    ? JSON.parse(dexLiqCached.value)
-    : {};
+  // Build dex liquidity map from table rows (only fields scoreLiquidity needs)
+  const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
+  for (const row of dexLiqResult.results ?? []) {
+    dexLiqMap[row.stablecoin_id] = {
+      liquidityScore: row.liquidity_score,
+      concentrationHhi: row.concentration_hhi,
+      poolCount: row.pool_count,
+      chainCount: row.chain_count,
+    };
+  }
 
   const bluechipMap: Record<string, BluechipRating> = bluechipCached
     ? JSON.parse(bluechipCached.value)
@@ -261,7 +276,7 @@ function computeCard(
   meta: (typeof TRACKED_STABLECOINS)[number],
   pegDataById: Map<string, PegSummaryCoin>,
   priceById: Map<string, StablecoinData>,
-  dexLiqMap: Record<string, DexLiquidityData>,
+  dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>,
   bluechipMap: Record<string, BluechipRating>,
   freezeRateById: Map<string, number>,
   overallScores: Map<string, number>,

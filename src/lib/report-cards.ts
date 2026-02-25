@@ -194,7 +194,7 @@ export function scorePegStability(
  * - NR if no data
  */
 export function scoreLiquidity(
-  liq: DexLiquidityData | undefined,
+  liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
 ): ReportCardDimension {
   if (!liq || liq.liquidityScore === null) {
     return { grade: "NR", score: null, detail: "No DEX liquidity data available" };
