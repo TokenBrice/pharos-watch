@@ -16,7 +16,7 @@ import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/stability-index", label: "Stability", icon: Gauge },
+  { href: "/stability-index", label: "Stability Index", icon: Gauge },
   { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
   { href: "/peg-tracker", label: "Peg Tracker", icon: Activity },
   { href: "/liquidity", label: "Liquidity", icon: Droplets },
