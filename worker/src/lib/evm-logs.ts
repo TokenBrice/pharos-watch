@@ -96,6 +96,11 @@ export interface EtherscanLogEntry {
   logIndex: string;
 }
 
+/**
+ * Fetch EVM logs for a specific topic from Etherscan v2.
+ * Returns `null` on API failure (rate limit, network error, invalid key)
+ * vs `[]` for a genuine "no records found" response.
+ */
 export async function fetchEvmLogsForTopic(
   evmChainId: number,
   contractAddress: string,
@@ -106,9 +111,9 @@ export async function fetchEvmLogsForTopic(
   depth: number,
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget
-): Promise<EtherscanLogEntry[]> {
-  if (budgetExhausted(budget)) return [];
-  if (depth > MAX_RECURSION_DEPTH) return [];
+): Promise<EtherscanLogEntry[] | null> {
+  if (budgetExhausted(budget)) return null;
+  if (depth > MAX_RECURSION_DEPTH) return null;
 
   const params = new URLSearchParams({
     chainid: evmChainId.toString(),
@@ -127,7 +132,7 @@ export async function fetchEvmLogsForTopic(
       signal: AbortSignal.timeout(30_000),
     });
     if (!res.ok) {
-      console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${res.status}`);
+      console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${res.status}`);
       await res.body?.cancel();
       return null;
     }
@@ -135,9 +140,10 @@ export async function fetchEvmLogsForTopic(
   });
 
   if (!json || json.status !== "1" || !Array.isArray(json.result)) {
-    if (json?.message === "No records found") return [];
-    if (json) console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}): ${json.message}`, json.result ? String(json.result).slice(0, 200) : "no result");
-    return [];
+    if (json?.message === "No records found") return [];  // Genuine: no events in range
+    // API error — return null so callers know the scan was not reliable
+    if (json) console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${json.message}`, json.result ? String(json.result).slice(0, 200) : "no result");
+    return null;
   }
 
   const logs = json.result;
@@ -150,7 +156,9 @@ export async function fetchEvmLogsForTopic(
       fetchEvmLogsForTopic(evmChainId, contractAddress, topicHash, apiKey, fromBlock, mid, depth + 1, rateLimit, budget),
       fetchEvmLogsForTopic(evmChainId, contractAddress, topicHash, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget),
     ]);
-    return [...first, ...second];
+    // Combine partial results; propagate null only if both halves failed
+    if (first === null && second === null) return null;
+    return [...(first ?? []), ...(second ?? [])];
   }
 
   return logs;

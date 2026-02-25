@@ -296,12 +296,13 @@ async function fetchEvmEventsIncremental(
   fromBlock: number,
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget
-): Promise<{ rows: BlacklistRow[]; maxBlock: number }> {
+): Promise<{ rows: BlacklistRow[]; maxBlock: number; apiError: boolean }> {
   const evmChainId = config.chain.evmChainId;
-  if (evmChainId == null) return { rows: [], maxBlock: fromBlock };
+  if (evmChainId == null) return { rows: [], maxBlock: fromBlock, apiError: false };
 
   const allRows: BlacklistRow[] = [];
   let maxBlock = fromBlock;
+  let apiError = false;
 
   for (const eventDef of config.events) {
     if (budgetExhausted(budget)) break;
@@ -317,6 +318,12 @@ async function fetchEvmEventsIncremental(
       rateLimit,
       budget
     );
+
+    if (logs === null) {
+      apiError = true;
+      continue;  // Skip this event type but try others
+    }
+
     const rows = parseEvmLogs(config, eventDef.eventType, eventDef.hasAmount, logs);
     allRows.push(...rows);
 
@@ -325,7 +332,7 @@ async function fetchEvmEventsIncremental(
     }
   }
 
-  return { rows: allRows, maxBlock };
+  return { rows: allRows, maxBlock, apiError };
 }
 
 // --- Tron fetching ---
@@ -625,6 +632,7 @@ export async function syncBlacklist(
   const budget = createBudget(900);
   let totalNewEvents = 0;
   let contractsSkipped = 0;
+  let apiErrors = 0;
 
   const configStates = await Promise.all(
     CONTRACT_CONFIGS.map(async (config) => {
@@ -658,7 +666,7 @@ export async function syncBlacklist(
     }
 
     try {
-      let result: { rows: BlacklistRow[]; maxBlock: number };
+      let result: { rows: BlacklistRow[]; maxBlock: number; apiError?: boolean };
 
       if (config.chain.type === "tron") {
         result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget);
@@ -689,8 +697,13 @@ export async function syncBlacklist(
         let newBlock: number;
         if (result.rows.length > 0) {
           newBlock = result.maxBlock;
+        } else if (result.apiError) {
+          // API failure — don't advance sync state; retry next cycle
+          apiErrors++;
+          console.warn(`[sync-blacklist] API error scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`);
+          newBlock = lastBlock;
         } else {
-          // No new events — advance sync state toward chain head, but leave a safety
+          // Genuine no events — advance sync state toward chain head, but leave a safety
           // margin to avoid permanently skipping events that the explorer hasn't indexed yet.
           if (!chainHeadCache.has(evmChainId)) {
             const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget);
@@ -720,6 +733,6 @@ export async function syncBlacklist(
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   return {
     itemCount: totalNewEvents,
-    metadata: JSON.stringify({ contractsSkipped, budgetUsed: budget.count, budgetLimit: budget.limit }),
+    metadata: JSON.stringify({ contractsSkipped, apiErrors, budgetUsed: budget.count, budgetLimit: budget.limit }),
   };
 }
