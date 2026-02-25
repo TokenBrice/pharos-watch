@@ -8,20 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ReportCard, DimensionKey } from "@/lib/types";
-import { DIMENSION_LABELS, gradeRange, GRADE_RADAR_COLORS } from "@/lib/report-cards";
-
-// ---------------------------------------------------------------------------
-// Shared constants
-// ---------------------------------------------------------------------------
-
-const DIMENSION_ORDER: DimensionKey[] = [
-  "pegStability",
-  "liquidity",
-  "safety",
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-];
+import { DIMENSION_LABELS, DIMENSION_ORDER, gradeRange, GRADE_RADAR_COLORS } from "@/lib/report-cards";
 
 // ---------------------------------------------------------------------------
 // Data helpers

@@ -76,6 +76,16 @@ export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
   "NR": "bg-muted text-muted-foreground border-muted",
 };
 
+/** Canonical display order for report card dimensions. */
+export const DIMENSION_ORDER: DimensionKey[] = [
+  "pegStability",
+  "liquidity",
+  "safety",
+  "resilience",
+  "decentralization",
+  "dependencyRisk",
+];
+
 /** Hex colors for radar chart fills, keyed by grade range. */
 export const GRADE_RADAR_COLORS: Record<string, string> = {
   A: "#10b981",   // emerald-500
@@ -150,7 +160,7 @@ export function scorePegStability(
   const noRecentEvents =
     peg.eventCount === 0 ||
     (peg.lastEventAt !== null && peg.lastEventAt < twelveMonthsAgo);
-  if (noRecentEvents) {
+  if (noRecentEvents && !peg.activeDepeg) {
     score = Math.min(100, score + 3);
   }
 

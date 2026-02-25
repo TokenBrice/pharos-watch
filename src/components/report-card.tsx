@@ -6,24 +6,12 @@ import type { ReportCard as ReportCardType, DimensionKey } from "@/lib/types";
 import {
   REPORT_CARD_GRADE_COLORS,
   DIMENSION_LABELS,
+  DIMENSION_ORDER,
   METHODOLOGY_VERSION,
 } from "@/lib/report-cards";
 import { ReportCardRadar } from "./radar-chart";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import Link from "next/link";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const DIMENSION_ORDER: DimensionKey[] = [
-  "pegStability",
-  "liquidity",
-  "safety",
-  "resilience",
-  "decentralization",
-  "dependencyRisk",
-];
 
 // ---------------------------------------------------------------------------
 // Props

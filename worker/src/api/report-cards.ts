@@ -179,8 +179,6 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   const phase2Metas: typeof TRACKED_STABLECOINS = [];
 
   for (const meta of TRACKED_STABLECOINS) {
-    if (meta.flags.navToken) continue;
-
     if (meta.flags.governance === "centralized-dependent") {
       phase2Metas.push(meta);
       continue;
