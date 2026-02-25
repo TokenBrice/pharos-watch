@@ -20,8 +20,10 @@ import { ContractAddresses } from "@/components/contract-addresses";
 import { BluechipBox } from "@/components/bluechip-box";
 import { LiquidityBox } from "@/components/liquidity-box";
 import { AiSummary } from "@/components/ai-summary";
+import { ReportCardDetail } from "@/components/report-card";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData } from "@/lib/types";
 import { pegScoreColor } from "@/lib/severity-colors";
 
@@ -37,6 +39,8 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
   const { data: depegData } = useDepegEvents(id);
   const { data: ratingsMap } = useBluechipRatings();
   const { data: liquidityMap } = useDexLiquidity();
+  const { data: reportCardsData } = useReportCards();
+  const reportCard = reportCardsData?.cards.find((c) => c.id === id);
   const meta = TRACKED_META_BY_ID.get(id);
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
@@ -186,6 +190,8 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
         <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
         <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
       </div>
+
+      {reportCard && <ReportCardDetail card={reportCard} />}
 
       {summary && <AiSummary {...summary} />}
 
