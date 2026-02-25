@@ -17,6 +17,7 @@ import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
 import { handleStabilityIndex } from "./api/stability-index";
 import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
+import { handleAuditDepegHistory } from "./api/audit-depeg-history";
 import { isValidStablecoinId } from "./lib/api-utils";
 
 export function route(
@@ -99,6 +100,10 @@ export function route(
 
   if (path === "/api/backfill-stability-index") {
     return handleBackfillStabilityIndex(db, adminKey, request);
+  }
+
+  if (path === "/api/audit-depeg-history") {
+    return handleAuditDepegHistory(db, adminKey, request);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution
