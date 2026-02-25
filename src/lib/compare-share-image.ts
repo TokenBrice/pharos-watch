@@ -152,7 +152,7 @@ function drawCoinCard(
     ["Peg", coin.pegCurrency, WHITE],
   ];
   if (coin.bluechipRating) {
-    stats.push(["Rating", coin.bluechipRating, CREAM]);
+    stats.push(["Bluechip", coin.bluechipRating, CREAM]);
   }
 
   const labelX = x + CARD_PAD;

@@ -197,7 +197,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className="text-right">{rowData.backingLabels[i]}</dd>
               <dt className="text-muted-foreground">Peg</dt>
               <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
-              <dt className="text-muted-foreground">Rating</dt>
+              <dt className="text-muted-foreground">Bluechip Rating</dt>
               <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
                 {rowData.bluechipGrades[i] ?? "N/A"}
               </dd>
