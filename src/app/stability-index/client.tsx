@@ -50,10 +50,55 @@ const BAND_ZONES = [
 ];
 
 const PSI_EVENTS = [
-  { date: Date.UTC(2018, 9, 15), label: "Tether Scare", position: "top" as const },
-  { date: Date.UTC(2020, 2, 12), label: "Black Thursday", position: "insideBottom" as const },
-  { date: Date.UTC(2022, 4, 7), label: "UST Collapse", position: "top" as const },
-  { date: Date.UTC(2023, 2, 10), label: "SVB Weekend", position: "insideBottom" as const },
+  {
+    date: Date.UTC(2018, 9, 15),
+    label: "Tether Scare",
+    position: "top" as const,
+    links: [
+      { title: "USDT dropped to $0.90 on some exchanges amid Bitfinex withdrawal concerns", url: "https://www.coindesk.com/markets/2018/10/15/tether-crypto-usd-stablecoin-drops-to-96-cents" },
+    ],
+  },
+  {
+    date: Date.UTC(2020, 2, 12),
+    label: "Black Thursday",
+    position: "insideBottom" as const,
+    links: [
+      { title: "COVID panic crashed BTC 40% in one day, triggering MakerDAO liquidation crisis", url: "https://www.coindesk.com/markets/2020/03/12/bitcoin-sees-biggest-single-day-price-drop-since-2013" },
+    ],
+  },
+  {
+    date: Date.UTC(2021, 6, 30),
+    label: "EIP-1559 Rally",
+    position: "top" as const,
+    links: [
+      { title: "Pre-London hard fork rally drove stablecoin premiums as traders sold for ETH/BTC", url: "https://www.coindesk.com/markets/2021/07/25/countdown-to-ethereums-london-hard-fork-what-you-need-to-know" },
+    ],
+  },
+  {
+    date: Date.UTC(2022, 0, 21),
+    label: "Fed Crash",
+    position: "insideBottom" as const,
+    links: [
+      { title: "BTC crashed from $43K to $35K as Fed signaled aggressive rate hikes", url: "https://www.washingtonpost.com/business/2022/01/22/crypto-crash-bitcoin-fed/" },
+      { title: "Chicago Fed retrospective on the crypto runs of 2022", url: "https://www.chicagofed.org/publications/chicago-fed-letter/2023/479" },
+    ],
+  },
+  {
+    date: Date.UTC(2022, 4, 7),
+    label: "UST Collapse",
+    position: "top" as const,
+    links: [
+      { title: "Terra/Luna algorithmic stablecoin death spiral wiped $45B", url: "https://www.coindesk.com/learn/the-fall-of-terra-a-timeline-of-the-meteoric-rise-and-crash-of-ust-and-luna/" },
+    ],
+  },
+  {
+    date: Date.UTC(2023, 2, 10),
+    label: "SVB Weekend",
+    position: "insideBottom" as const,
+    links: [
+      { title: "USDC depegged to $0.88 after $3.3B stuck in collapsed Silicon Valley Bank", url: "https://www.coindesk.com/markets/2023/03/11/usdc-depegs-from-dollar-stablecoin-drops-below-090/" },
+    ],
+  },
 ];
 
 const COMPONENT_COLORS = {
@@ -175,6 +220,46 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
             No score history available
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── EventTimeline ─────────────────────────────────────────────── */
+
+function EventTimeline() {
+  return (
+    <Card className="rounded-2xl animate-in fade-in duration-300">
+      <CardHeader>
+        <CardTitle as="h2">Notable Events</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {PSI_EVENTS.map((evt) => {
+          const d = new Date(evt.date);
+          const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          return (
+            <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+              <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
+              <span className="text-sm font-semibold">{evt.label}</span>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {evt.links.map((link) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-500 hover:underline inline-flex items-center gap-1"
+                  >
+                    {link.title}
+                    <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M3.5 1.5h7v7M10.5 1.5 1.5 10.5" />
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </CardContent>
     </Card>
   );
@@ -606,6 +691,9 @@ export function StabilityIndexClient() {
 
       {/* Score History */}
       <ScoreChart data={chartData} />
+
+      {/* Notable Events */}
+      <EventTimeline />
 
       {/* Component Breakdown */}
       <ComponentChart data={componentData} />
