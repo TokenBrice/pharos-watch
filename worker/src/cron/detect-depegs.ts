@@ -1,4 +1,4 @@
-import { getDepegThresholdBps, DEX_FRESHNESS_SEC } from "../lib/constants";
+import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
@@ -174,31 +174,45 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
           }
         }
       } else {
-        // Open new event — check DEX price cross-validation first
-        const dexRow = dexPrices.get(asset.id);
-        const dexFresh = dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC;
-        if (dexFresh) {
-          const dexBps = Math.abs(Math.round(
-            ((dexRow.dex_price_usd / pegRef) - 1) * 10000
-          ));
-          if (dexBps < threshold) {
-            // DEX contradicts primary — likely false positive, suppress opening
-            console.log(
-              `[depeg] Suppressed new event for ${asset.symbol}: ` +
-              `primary=${bps}bps but DEX=${dexBps}bps (${dexRow.source_pool_count} pools, ` +
-              `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
-            );
-            continue;
+        // Open new event — check supply threshold for multi-source confirmation
+        const coinSupply = sumPegBuckets(asset.circulating);
+
+        if (coinSupply >= DEPEG_CONFIRMATION_SUPPLY_THRESHOLD) {
+          // >=$1B coin: insert into pending table for confirmation next cycle
+          stmts.push(
+            db.prepare(
+              `INSERT INTO depeg_pending (stablecoin_id, symbol, peg_type, direction, first_seen_bps, first_seen_at, first_price, peg_reference)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(stablecoin_id) DO NOTHING`
+            ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, pegRef)
+          );
+          console.log(
+            `[depeg] Pending confirmation for ${asset.symbol}: ${bps}bps (supply $${(coinSupply / 1e9).toFixed(1)}B)`
+          );
+        } else {
+          // <$1B coin: existing behavior — DEX cross-validation then instant event
+          const dexRow = dexPrices.get(asset.id);
+          const dexFresh = dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC;
+          if (dexFresh) {
+            const dexBps = Math.abs(Math.round(
+              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
+            ));
+            if (dexBps < threshold) {
+              console.log(
+                `[depeg] Suppressed new event for ${asset.symbol}: ` +
+                `primary=${bps}bps but DEX=${dexBps}bps (${dexRow.source_pool_count} pools, ` +
+                `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+              );
+              continue;
+            }
           }
+          stmts.push(
+            db.prepare(
+              `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
+            ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, price, pegRef)
+          );
         }
-        // New event — its ID is unknown until insert,
-        // but it won't be orphaned (handled by started_at check below)
-        stmts.push(
-          db.prepare(
-            `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
-          ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, price, pegRef)
-        );
       }
     } else if (existing) {
       // Price recovered — close the event (not added to seen since it's being closed)
