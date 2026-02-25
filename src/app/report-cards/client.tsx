@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -10,6 +11,7 @@ import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { PortfolioStressPanel } from "@/components/portfolio-stress-panel";
 import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
+import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { sumPegBuckets } from "@/lib/supply";
 import type { ReportCard, DimensionKey } from "@/lib/types";
 
@@ -87,6 +89,39 @@ export function ReportCardsClient() {
   // Portfolio & stress test
   const portfolio = usePortfolio(reportData?.cards);
   const stressTest = useStressTest(reportData, portfolio.holdings, mcapMap);
+
+  // URL sync: keep query string in sync with portfolio + stress test state
+  const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    // Portfolio: ?p=usdc:50000,dai:5000
+    if (portfolio.holdings.length > 0) {
+      const pParam = portfolio.holdings
+        .filter((h) => h.amount > 0)
+        .map((h) => {
+          const meta = TRACKED_STABLECOINS.find((s) => s.id === h.coinId);
+          return meta ? `${meta.symbol.toLowerCase()}:${Math.round(h.amount)}` : null;
+        })
+        .filter(Boolean)
+        .join(",");
+      if (pParam) params.set("p", pParam);
+    }
+
+    // Stress test: ?stress=usdc&grade=D
+    if (stressTest.targetCoinId) {
+      const meta = TRACKED_STABLECOINS.find((s) => s.id === stressTest.targetCoinId);
+      if (meta) params.set("stress", meta.symbol.toLowerCase());
+    }
+    if (stressTest.targetGrade) {
+      params.set("grade", stressTest.targetGrade);
+    }
+
+    const qs = params.toString();
+    const newPath = qs ? `/report-cards/?${qs}` : "/report-cards/";
+    router.replace(newPath, { scroll: false });
+  }, [portfolio.holdings, stressTest.targetCoinId, stressTest.targetGrade, router]);
 
   // When stress test is active, show simulated cards in the grid
   const displayCards = stressTest.stressedCards ?? reportData?.cards ?? [];
