@@ -42,7 +42,6 @@ Each summary has three fields:
 2. **Research if needed**: Use web search for recent events (depegs, regulatory actions, governance changes) that would make the summary more current and specific. Check the coin's links in `stablecoins.ts` for official sources
 3. **Write the summary**: Follow voice guidelines above. Reference the coin's actual classification data — don't contradict what's in `stablecoins.ts`
 4. **Update the file**: Add/update entries in `data/ai-summaries.json`. Set `updatedAt` to today's date. Preserve existing entries unless explicitly asked to remove them
-5. **Verify**: Run `npm run build` to confirm the JSON is valid and the build passes
 
 ### What to Cover
 
