@@ -5,12 +5,12 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   const detail = url.searchParams.get("detail") === "true";
 
   const query = detail
-    ? "SELECT computed_at, score, band, components FROM stability_index ORDER BY computed_at DESC"
-    : "SELECT computed_at, score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 91";
+    ? "SELECT computed_at, score, band, components, input_snapshot FROM stability_index ORDER BY computed_at DESC"
+    : "SELECT computed_at, score, band, components, input_snapshot FROM stability_index ORDER BY computed_at DESC LIMIT 91";
 
   const rows = await db
     .prepare(query)
-    .all<{ computed_at: number; score: number; band: string; components: string }>();
+    .all<{ computed_at: number; score: number; band: string; components: string; input_snapshot: string | null }>();
   const results = rows.results ?? [];
 
   if (results.length === 0) {
@@ -28,11 +28,16 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     : { date: r.computed_at, score: r.score, band: r.band }
   );
 
+  const snapshot = current.input_snapshot ? JSON.parse(current.input_snapshot) : {};
+  const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors : [];
+
   return new Response(JSON.stringify({
     current: {
       score: current.score,
       band: current.band,
       components: JSON.parse(current.components),
+      contributors,
+      totalMcapUsd: snapshot.totalMcapUsd ?? 0,
       computedAt: current.computed_at,
     },
     history,

@@ -9,10 +9,21 @@ interface StabilityIndexComponents {
   trend: number;
 }
 
+export interface StabilityContributor {
+  id: string;
+  symbol: string;
+  bps: number;
+  mcapUsd: number;
+  ageDays: number;
+  factor: number;
+}
+
 interface StabilityIndexCurrent {
   score: number;
   band: string;
   components: StabilityIndexComponents;
+  contributors?: StabilityContributor[];
+  totalMcapUsd?: number;
   computedAt: number;
 }
 

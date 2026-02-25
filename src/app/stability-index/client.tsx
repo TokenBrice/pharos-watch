@@ -18,6 +18,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
+import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -480,27 +481,36 @@ function Methodology() {
               <tbody className="text-muted-foreground">
                 <tr className="border-b">
                   <td className="py-2 pr-4 font-medium text-foreground">Severity</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 40</td>
-                  <td className="py-2">Worst individual depeg magnitude, cap-weighted</td>
+                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 60</td>
+                  <td className="py-2">Depeg magnitude weighted by market cap significance</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 font-medium text-foreground">Breadth</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 30</td>
-                  <td className="py-2">Share of tracked supply currently depegged</td>
+                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 15</td>
+                  <td className="py-2">Number of depegging coins, weighted so micro-caps barely register</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 font-medium text-foreground">Freezes</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 20</td>
-                  <td className="py-2">Penalty for active blacklist freezes on major stablecoins</td>
+                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 10</td>
+                  <td className="py-2">Blacklist/freeze activity in the last 24 hours</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-foreground">Trend</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 10</td>
-                  <td className="py-2">Bonus when conditions are improving (7-day momentum)</td>
+                  <td className="py-2 pr-4 tabular-nums">&minus;5 to +5</td>
+                  <td className="py-2">7-day total market cap momentum</td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold mb-2">Depreciation</h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            Chronically depegged coins have their impact reduced over time to prevent zombie stablecoins
+            from permanently dominating the score. Fresh depegs (under 30 days) have full impact. After 30 days,
+            both severity and breadth contributions decay linearly, reaching a 25% floor at 150 days.
+          </p>
         </div>
 
         <div>
@@ -548,6 +558,88 @@ function Methodology() {
               </tbody>
             </table>
           </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─── Contributors Table ───────────────────────────────────────── */
+
+function ContributorsTable({
+  contributors,
+  totalMcapUsd,
+}: {
+  contributors: StabilityContributor[];
+  totalMcapUsd: number;
+}) {
+  const rows = useMemo(() => {
+    if (!contributors.length) return [];
+    return contributors
+      .map((c) => {
+        const share = totalMcapUsd > 0 ? c.mcapUsd / totalMcapUsd : 0;
+        const amplifier = Math.log2(1 + c.mcapUsd / 1e9);
+        const severity = (Math.abs(c.bps) / 100) * share * amplifier * 60 * c.factor;
+        const breadth = Math.sqrt(c.mcapUsd / 1e9) * 3 * c.factor;
+        return { ...c, severity, breadth, total: severity + breadth };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [contributors, totalMcapUsd]);
+
+  if (!rows.length) return null;
+
+  return (
+    <Card className="rounded-2xl animate-in fade-in duration-300">
+      <CardHeader>
+        <CardTitle as="h2">Top Contributors</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-4">
+          Which stablecoins are currently pushing the score below 100, ranked by total impact.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="pb-2 pr-4 font-medium text-muted-foreground">Coin</th>
+                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Deviation</th>
+                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">MCap</th>
+                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Severity</th>
+                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right hidden sm:table-cell">Breadth</th>
+                <th className="pb-2 pr-4 font-medium text-muted-foreground text-right">Total</th>
+                <th className="pb-2 font-medium text-muted-foreground text-right">Age</th>
+              </tr>
+            </thead>
+            <tbody className="text-muted-foreground">
+              {rows.map((r) => (
+                <tr key={r.id} className="border-b last:border-0">
+                  <td className="py-2 pr-4">
+                    <a
+                      href={`/stablecoin/${r.id}`}
+                      className="font-medium text-foreground hover:text-blue-500 transition-colors"
+                    >
+                      {r.symbol}
+                    </a>
+                  </td>
+                  <td className={`py-2 pr-4 text-right tabular-nums ${r.bps < 0 ? "text-red-500" : "text-amber-500"}`}>
+                    {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
+                  </td>
+                  <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">
+                    ${r.mcapUsd >= 1e9 ? `${(r.mcapUsd / 1e9).toFixed(1)}B` : `${(r.mcapUsd / 1e6).toFixed(0)}M`}
+                  </td>
+                  <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.severity.toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.breadth.toFixed(2)}</td>
+                  <td className="py-2 pr-4 text-right tabular-nums font-medium text-foreground">{r.total.toFixed(2)}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {r.ageDays < 1 ? "<1d" : `${Math.round(r.ageDays)}d`}
+                    {r.factor < 1 && (
+                      <span className="ml-1 text-xs text-muted-foreground/60">({Math.round(r.factor * 100)}%)</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </CardContent>
     </Card>
@@ -688,6 +780,14 @@ export function StabilityIndexClient() {
 
       {/* Historical stat strip — desktop only */}
       <HistoryStats history={data.history} />
+
+      {/* Top Contributors */}
+      {data.current.contributors && data.current.contributors.length > 0 && (
+        <ContributorsTable
+          contributors={data.current.contributors}
+          totalMcapUsd={data.current.totalMcapUsd ?? 0}
+        />
+      )}
 
       {/* Score History */}
       <ScoreChart data={chartData} />
