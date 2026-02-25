@@ -260,6 +260,17 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               className="hidden sm:table-cell text-right"
             />
             <SortableTableHead
+              sortKey="grade"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Grade"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden md:table-cell text-center"
+              title="Pharos Grade — overall report card score across peg stability, liquidity, safety, resilience, decentralization, and dependency risk"
+            />
+            <SortableTableHead
               sortKey="stability"
               currentSortKey={sortKey}
               sortDirection={sortDirection}
@@ -279,17 +290,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               handleSortKeyDown={handleSortKeyDown}
               className="hidden sm:table-cell text-right"
               title="DEX Liquidity Score — measures pool depth, volume, and diversity across decentralized exchanges"
-            />
-            <SortableTableHead
-              sortKey="grade"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Grade"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="hidden md:table-cell text-center"
-              title="Pharos Grade — overall report card score across peg stability, liquidity, safety, resilience, decentralization, and dependency risk"
             />
             <TableHead className="hidden md:table-cell text-center">Backing</TableHead>
             <TableHead className="hidden md:table-cell text-center">Type</TableHead>
@@ -386,6 +386,17 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     ) : "N/A"}
                   </span>
                 </TableCell>
+                <TableCell className="hidden md:table-cell px-3 py-2 text-center">
+                  {reportCards?.[coin.id] && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs font-mono px-1 py-0 ${REPORT_CARD_GRADE_COLORS[reportCards[coin.id].overallGrade]}`}
+                      title={`Pharos grade: ${reportCards[coin.id].overallGrade}${reportCards[coin.id].overallScore ? ` (${reportCards[coin.id].overallScore}/100)` : ""}`}
+                    >
+                      {reportCards[coin.id].overallGrade}
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
                   {(() => {
                     if (meta?.flags.navToken) {
@@ -408,17 +419,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     const score = liq.liquidityScore;
                     return <span className={getScoreColor(score)}>{score}</span>;
                   })()}
-                </TableCell>
-                <TableCell className="hidden md:table-cell px-3 py-2 text-center">
-                  {reportCards?.[coin.id] && (
-                    <Badge
-                      variant="outline"
-                      className={`text-xs font-mono px-1 py-0 ${REPORT_CARD_GRADE_COLORS[reportCards[coin.id].overallGrade]}`}
-                      title={`Pharos grade: ${reportCards[coin.id].overallGrade}${reportCards[coin.id].overallScore ? ` (${reportCards[coin.id].overallScore}/100)` : ""}`}
-                    >
-                      {reportCards[coin.id].overallGrade}
-                    </Badge>
-                  )}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">
                   {meta && (

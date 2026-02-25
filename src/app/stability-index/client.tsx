@@ -50,6 +50,8 @@ const BAND_ZONES = [
 ];
 
 const PSI_EVENTS = [
+  { date: Date.UTC(2018, 9, 15), label: "Tether Scare" },
+  { date: Date.UTC(2020, 2, 12), label: "Black Thursday" },
   { date: Date.UTC(2022, 4, 7), label: "UST Collapse" },
   { date: Date.UTC(2023, 2, 10), label: "SVB Weekend" },
 ];
@@ -107,7 +109,7 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
                       value: evt.label,
                       position: "top",
                       fontSize: 11,
-                      fill: "var(--color-muted-foreground)",
+                      fill: "#94a3b8",
                     }}
                   />
                 ))}
@@ -296,6 +298,59 @@ function ComponentChart({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/* ─── HistoryStats ──────────────────────────────────────────────── */
+
+type HistoryPoint = { date: number; score: number; band: string };
+
+function HistoryStats({ history }: { history: HistoryPoint[] }) {
+  const stats = useMemo(() => {
+    if (!history.length) return null;
+    // history is newest-first
+    const last30 = history.slice(0, 30);
+    const scores = last30.map((p) => p.score);
+    const high30 = Math.max(...scores);
+    const low30 = Math.min(...scores);
+    const avg30 = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
+    const avg30Band = BAND_ZONES.find((z) => avg30 >= z.y1)?.label ?? "";
+    const high30Band = last30.find((p) => p.score === high30)?.band ?? "";
+    const low30Band = last30.find((p) => p.score === low30)?.band ?? "";
+    const worst = history.reduce((w, p) => (p.score < w.score ? p : w), history[0]);
+    return { high30, high30Band, low30, low30Band, avg30, avg30Band, worst };
+  }, [history]);
+
+  if (!stats) return null;
+
+  const items = [
+    { label: "30d High", value: stats.high30.toFixed(1), band: stats.high30Band, sub: null },
+    { label: "30d Low", value: stats.low30.toFixed(1), band: stats.low30Band, sub: null },
+    { label: "30d Avg", value: stats.avg30.toFixed(1), band: stats.avg30Band, sub: null },
+    {
+      label: "All-time Low",
+      value: stats.worst.score.toFixed(1),
+      band: stats.worst.band,
+      sub: new Date(stats.worst.date * 1000).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+    },
+  ];
+
+  return (
+    <div className="hidden lg:grid grid-cols-4 gap-3">
+      {items.map((item) => {
+        const color = BAND_COLORS[item.band] ?? "text-foreground";
+        return (
+          <Card key={item.label} className="rounded-xl">
+            <CardContent className="py-4 px-4">
+              <p className="text-xs text-muted-foreground mb-1">{item.label}</p>
+              <p className={`text-2xl font-bold tabular-nums ${color}`}>{item.value}</p>
+              <p className={`text-xs font-medium uppercase tracking-wide mt-0.5 ${color}`}>{item.band}</p>
+              {item.sub && <p className="text-xs text-muted-foreground mt-0.5">{item.sub}</p>}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 }
 
@@ -520,8 +575,30 @@ export function StabilityIndexClient() {
               <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
             </div>
           </div>
+          {/* Component breakdown — desktop only */}
+          <div className="hidden lg:flex items-center gap-6 ml-auto">
+            <div className="h-14 w-px bg-border" />
+            <div className="flex items-center gap-6">
+              {[
+                { label: "Severity", value: components.severity, sign: "−", color: "#f97316" },
+                { label: "Breadth", value: components.breadth, sign: "−", color: "#3b82f6" },
+                { label: "Freezes", value: components.freezes, sign: "−", color: "#ef4444" },
+                { label: "Trend", value: components.trend, sign: "+", color: "#22c55e" },
+              ].map((c) => (
+                <div key={c.label} className="flex flex-col items-center gap-0.5">
+                  <span className="text-xs text-muted-foreground">{c.label}</span>
+                  <span className="text-xl font-bold tabular-nums" style={{ color: c.color }}>
+                    {c.sign}{c.value.toFixed(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Historical stat strip — desktop only */}
+      <HistoryStats history={data.history} />
 
       {/* Score History */}
       <ScoreChart data={chartData} />

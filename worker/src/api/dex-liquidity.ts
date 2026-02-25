@@ -28,6 +28,7 @@ interface DexLiquidityRow {
   organic_fraction: number | null;
   durability_score: number | null;
   score_components_json: string | null;
+  locked_liquidity_pct: number | null;
 }
 
 interface DexHistoryRow {
@@ -131,6 +132,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       organicFraction: row.organic_fraction ?? null,
       durabilityScore: row.durability_score ?? null,
       scoreComponents: safeParse<unknown>(row.score_components_json, null),
+      lockedLiquidityPct: row.locked_liquidity_pct ?? null,
     };
   }
 
