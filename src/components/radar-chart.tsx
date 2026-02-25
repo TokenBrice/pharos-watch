@@ -48,7 +48,7 @@ export function ReportCardRadar({
   return (
     <div className={`w-full ${className ?? ""}`} style={{ height: size }}>
       <ResponsiveContainer width="100%" height="100%">
-        <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "60%" : "75%"}>
+        <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "65%" : "75%"}>
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
             dataKey="dimension"

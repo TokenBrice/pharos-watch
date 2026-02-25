@@ -54,7 +54,7 @@ export function ReportCardMini({ card, logo }: ReportCardMiniProps) {
               Defunct
             </span>
           ) : (
-            <ReportCardRadar card={card} labels="short" size={220} />
+            <ReportCardRadar card={card} labels="short" size={250} />
           )}
         </CardContent>
       </Card>
