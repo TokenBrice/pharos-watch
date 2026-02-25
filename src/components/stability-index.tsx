@@ -130,7 +130,8 @@ export function StabilityIndex() {
   if (isLoading) {
     return (
       <div className="flex items-center gap-4 py-3">
-        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-9 w-9 rounded-full" />
+        <Skeleton className="h-8 w-36" />
         <Skeleton className="h-6 w-32" />
       </div>
     );
