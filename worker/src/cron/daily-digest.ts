@@ -23,6 +23,9 @@ const SYSTEM_PROMPT =
   "Vary your angle: one day lead with a macro observation, another with a single coin's story, another with a wry comparison. " +
   "Rotate between tones: deadpan, wistful, clinical, bemused, foreboding. Never settle into one voice for consecutive days. " +
   "If the data is similar to yesterday, find a completely different framing. Same numbers can tell different stories. " +
+  "Open with the Pharos Stability Index score and its condition band. " +
+  "Reference the band name naturally — 'Another day in BEDROCK' or 'We\\'ve slipped into TREMOR for the first time since March.' " +
+  "When the band changed from yesterday, lead with that transition — band shifts are the headline. " +
   "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\", \"extended\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
@@ -42,6 +45,8 @@ interface DigestInputData {
     changeUsd: number;
     currentMcap: number;
   } | null;
+  stabilityIndex: { score: number; band: string; components: { severity: number; breadth: number; freezes: number; trend: number } } | null;
+  yesterdayIndex: { score: number; band: string } | null;
 }
 
 function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): string {
@@ -59,6 +64,17 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
   }
 
   lines.push(`Freeze/blacklist events in last 24h: ${data.freezeCount24h}`);
+
+  if (data.stabilityIndex) {
+    const { score, band, components } = data.stabilityIndex;
+    const trendStr = components.trend >= 0 ? `+${components.trend}` : `${components.trend}`;
+    lines.push(
+      `Pharos Stability Index: ${score} [${band}] (severity=${components.severity}, breadth=${components.breadth}, freezes=${components.freezes}, trend=${trendStr})`,
+    );
+    if (data.yesterdayIndex) {
+      lines.push(`Yesterday: ${data.yesterdayIndex.score} [${data.yesterdayIndex.band}]`);
+    }
+  }
 
   if (data.biggestSupplyChange) {
     const { symbol, changeUsd, currentMcap } = data.biggestSupplyChange;
@@ -197,6 +213,18 @@ export async function generateDailyDigest(
     .first<{ cnt: number }>();
   const freezeCount24h = freezeRow?.cnt ?? 0;
 
+  // 4. Stability index (latest two for today + yesterday comparison)
+  const indexRows = await db
+    .prepare("SELECT score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 2")
+    .all<{ score: number; band: string; components: string }>();
+  const indexResults = indexRows.results ?? [];
+  const stabilityIndex = indexResults[0]
+    ? { score: indexResults[0].score, band: indexResults[0].band, components: JSON.parse(indexResults[0].components) }
+    : null;
+  const yesterdayIndex = indexResults[1]
+    ? { score: indexResults[1].score, band: indexResults[1].band }
+    : null;
+
   // --- Build input data ---
   const inputData: DigestInputData = {
     totalMcapUsd,
@@ -205,6 +233,8 @@ export async function generateDailyDigest(
     topDepegs,
     freezeCount24h,
     biggestSupplyChange,
+    stabilityIndex,
+    yesterdayIndex,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentDigests);
