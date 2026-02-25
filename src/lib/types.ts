@@ -370,6 +370,21 @@ export interface ReportCardDimension {
 
 export type DimensionKey = "pegStability" | "liquidity" | "safety" | "resilience" | "decentralization" | "dependencyRisk";
 
+export interface RawDimensionInputs {
+  pegScore: number | null;
+  activeDepeg: boolean;
+  depegEventCount: number;
+  lastEventAt: number | null;
+  liquidityScore: number | null;
+  concentrationHhi: number | null;
+  bluechipGrade: BluechipGrade | null;
+  chainCount: number;
+  freezeEventsPerMonth: number | null;
+  hasTrackedFreezeEvents: boolean;
+  governanceTier: GovernanceType;
+  dependencies: DependencyWeight[];
+}
+
 export interface ReportCard {
   id: string;
   name: string;
@@ -378,6 +393,7 @@ export interface ReportCard {
   overallScore: number | null;
   dimensions: Record<DimensionKey, ReportCardDimension>;
   ratedDimensions: number;
+  rawInputs: RawDimensionInputs;
   dependencies?: DependencyWeight[];
   isDefunct: boolean;
 }
@@ -388,6 +404,9 @@ export interface ReportCardsResponse {
     version: string;
     weights: Record<DimensionKey, number>;
     thresholds: { grade: ReportCardGrade; min: number }[];
+  };
+  dependencyGraph: {
+    edges: { from: string; to: string }[];
   };
   updatedAt: number;
 }
