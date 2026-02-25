@@ -34,3 +34,23 @@ export function useStabilityIndex() {
     CRON_24H,
   );
 }
+
+interface StabilityIndexDetailHistoryPoint {
+  date: number;
+  score: number;
+  band: string;
+  components: StabilityIndexComponents;
+}
+
+export interface StabilityIndexDetailData {
+  current: StabilityIndexCurrent | null;
+  history: StabilityIndexDetailHistoryPoint[];
+}
+
+export function useStabilityIndexDetail() {
+  return useApiQuery<StabilityIndexDetailData>(
+    ["stability-index-detail"],
+    "/api/stability-index?detail=true",
+    CRON_24H,
+  );
+}
