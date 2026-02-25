@@ -12,7 +12,7 @@ import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 import { DIMENSION_ORDER, scoreToGrade } from "@/lib/report-cards";
 import type { PortfolioState } from "@/hooks/use-portfolio";
 import type { ReportCard } from "@/lib/types";
-import { ChevronDown, ChevronRight, X, Share2, Trash2, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, X, Share2, Trash2, AlertTriangle, Wallet } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
@@ -283,6 +283,7 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
       <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => !v)}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
+            <Wallet className="h-5 w-5 text-violet-500 shrink-0" />
             <CardTitle as="h2" className="text-lg">
               My Portfolio
             </CardTitle>

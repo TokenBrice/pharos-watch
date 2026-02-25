@@ -237,20 +237,20 @@ export function ReportCardsClient() {
         </CardContent>
       </Card>
 
-      {/* Portfolio panel */}
-      <PortfolioPanel
-        portfolio={portfolio}
-        cards={reportData?.cards}
-        logos={logos}
-      />
-
-      {/* Contagion Map panel */}
-      <StressTestPanel
-        portfolio={portfolio}
-        stressTest={stressTest}
-        cards={reportData?.cards}
-        logos={logos}
-      />
+      {/* Portfolio + Contagion Map panels — side by side on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <PortfolioPanel
+          portfolio={portfolio}
+          cards={reportData?.cards}
+          logos={logos}
+        />
+        <StressTestPanel
+          portfolio={portfolio}
+          stressTest={stressTest}
+          cards={reportData?.cards}
+          logos={logos}
+        />
+      </div>
 
       {/* Filter + Sort controls */}
       <div className="flex flex-wrap items-center gap-3">

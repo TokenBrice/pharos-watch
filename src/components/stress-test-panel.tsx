@@ -11,7 +11,7 @@ import { scoreToGrade } from "@/lib/report-cards";
 import type { PortfolioState } from "@/hooks/use-portfolio";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCard, ReportCardGrade } from "@/lib/types";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Network } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -126,6 +126,7 @@ export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressT
       <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => !v)}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
+            <Network className="h-5 w-5 text-rose-500 shrink-0" />
             <CardTitle as="h2" className="text-lg">
               Contagion Map
             </CardTitle>
