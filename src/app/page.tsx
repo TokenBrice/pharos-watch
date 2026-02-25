@@ -15,6 +15,7 @@ export default function HomePage() {
     name: `${coin.name} (${coin.symbol})`,
     url: `https://pharos.watch/stablecoin/${coin.id}/`,
   }));
+  const itemListCount = itemListElements.length;
 
   return (
     <>
@@ -26,7 +27,7 @@ export default function HomePage() {
             "@type": "ItemList",
             name: "Top Tracked Stablecoins",
             description: `${total} stablecoins tracked by Pharos across every major chain.`,
-            numberOfItems: total,
+            numberOfItems: itemListCount,
             itemListElement: itemListElements,
           }),
         }}
