@@ -3,6 +3,7 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { HomepageClient } from "@/components/homepage-client";
 import { DailyDigest } from "@/components/daily-digest";
+import { StabilityIndex } from "@/components/stability-index";
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
@@ -37,6 +38,7 @@ export default function HomePage() {
         </p>
       </div>
       <div className="mb-6">
+        <StabilityIndex />
         <DailyDigest />
       </div>
       <Suspense fallback={
