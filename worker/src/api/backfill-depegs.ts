@@ -395,13 +395,12 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
         continue;
       }
 
-      // DELETE existing events, then INSERT new ones.
-      // When backfill finds 0 genuine depegs we still delete stale live-cron events.
+      // Only replace backfill-sourced events; preserve live-cron-detected events
+      // (live cron catches brief intraday depegs that daily backfill data misses).
       const deleteStmt = db
-        .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ?")
+        .prepare("DELETE FROM depeg_events WHERE stablecoin_id = ? AND source = 'backfill'")
         .bind(meta.id);
       if (events.length > 0) {
-        // Atomic: DELETE + INSERT in a single batch (D1 batch is transactional)
         const insertStmts = events.map((e) =>
           db.prepare(
             `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
