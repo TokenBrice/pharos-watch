@@ -20,26 +20,9 @@ import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS } from "@/lib/psi-colors";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
-
-const BAND_COLORS: Record<string, string> = {
-  BEDROCK: "text-green-500",
-  STEADY: "text-teal-500",
-  TREMOR: "text-yellow-500",
-  FRACTURE: "text-orange-500",
-  CRISIS: "text-red-500",
-  MELTDOWN: "text-red-800",
-};
-
-const HEX_COLORS: Record<string, string> = {
-  BEDROCK: "#22c55e",
-  STEADY: "#14b8a6",
-  TREMOR: "#eab308",
-  FRACTURE: "#f97316",
-  CRISIS: "#ef4444",
-  MELTDOWN: "#991b1b",
-};
 
 const BAND_ZONES = [
   { y1: 90, y2: 100, color: "#22c55e", label: "BEDROCK" },
@@ -261,7 +244,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
             : null;
           const psi = closest && Math.abs(closest.ts - evt.date) < 7 * 86400000 ? closest.score : null;
           const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
-          const psiColor = psiBand ? BAND_COLORS[psiBand] ?? "text-muted-foreground" : "text-muted-foreground";
+          const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand] ?? "text-muted-foreground" : "text-muted-foreground";
           return (
             <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
               <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
@@ -462,7 +445,7 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
   return (
     <div className="hidden lg:grid grid-cols-4 gap-3">
       {items.map((item) => {
-        const color = BAND_COLORS[item.band] ?? "text-foreground";
+        const color = PSI_BAND_CLASSES[item.band] ?? "text-foreground";
         return (
           <Card key={item.label} className="rounded-xl">
             <CardContent className="py-4 px-4">
@@ -776,8 +759,8 @@ export function StabilityIndexClient() {
   const { score, band, components } = data.current;
   const yesterday = data.history.length > 0 ? data.history[0] : null;
   const delta = yesterday ? Math.round((score - yesterday.score) * 10) / 10 : null;
-  const colorClass = BAND_COLORS[band] ?? "text-foreground";
-  const hexColor = HEX_COLORS[band] ?? "#888";
+  const colorClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
+  const hexColor = PSI_HEX_COLORS[band] ?? "#888";
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">

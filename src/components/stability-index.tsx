@@ -4,40 +4,14 @@ import { useId } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
-
-const BAND_COLORS: Record<string, string> = {
-  BEDROCK: "text-green-500",
-  STEADY: "text-teal-500",
-  TREMOR: "text-yellow-500",
-  FRACTURE: "text-orange-500",
-  CRISIS: "text-red-500",
-  MELTDOWN: "text-red-800",
-};
-
-const SPARKLINE_COLORS: Record<string, string> = {
-  BEDROCK: "#22c55e",
-  STEADY: "#14b8a6",
-  TREMOR: "#eab308",
-  FRACTURE: "#f97316",
-  CRISIS: "#ef4444",
-  MELTDOWN: "#991b1b",
-};
-
-const PULSE_DURATION: Record<string, number> = {
-  BEDROCK: 3,
-  STEADY: 3,
-  TREMOR: 2,
-  FRACTURE: 1.5,
-  CRISIS: 1,
-  MELTDOWN: 0.7,
-};
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_PULSE_DURATION } from "@/lib/psi-colors";
 
 export function PsiLighthouse({ band, color, size = 36 }: { band: string; color: string; size?: number }) {
   const uid = useId();
   const glowId = `psi-glow${uid}`;
   const bodyId = `psi-tBody${uid}`;
   const filterId = `psi-sg${uid}`;
-  const dur = PULSE_DURATION[band] ?? 3;
+  const dur = PSI_PULSE_DURATION[band] ?? 3;
 
   return (
     <svg
@@ -142,8 +116,8 @@ export function StabilityIndex() {
   const yesterday = history.length > 0 ? history[0] : null;
   const delta = yesterday ? Math.round((score - yesterday.score) * 10) / 10 : null;
 
-  const colorClass = BAND_COLORS[band] ?? "text-foreground";
-  const sparkColor = SPARKLINE_COLORS[band] ?? "#888";
+  const colorClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
+  const sparkColor = PSI_HEX_COLORS[band] ?? "#888";
 
   // Build sparkline points from history (oldest to newest) + current
   const sparkData = [...history].reverse().concat({ date: computedAt, score, band });

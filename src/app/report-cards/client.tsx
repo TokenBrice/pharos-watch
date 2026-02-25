@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -182,9 +183,25 @@ export function ReportCardsClient() {
   // Loading state
   if (isLoadingCards) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
-        Loading report cards...
-      </p>
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-4 pb-4 space-y-2">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-5 w-full rounded-full" />
+          </CardContent>
+        </Card>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 15 }, (_, i) => (
+            <Card key={i}>
+              <CardContent className="py-4 space-y-2">
+                <Skeleton className="h-8 w-8 rounded-full" />
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-6 w-12" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     );
   }
 

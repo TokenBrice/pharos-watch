@@ -504,10 +504,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
   // Detect depeg events from current price data
+  const depegErrors: string[] = [];
   try {
     await detectDepegEvents(db, llamaData.peggedAssets, llamaData.fxFallbackRates);
   } catch (err) {
     console.error("[sync-stablecoins] Depeg detection failed:", err);
+    depegErrors.push(`detection: ${String(err).slice(0, 200)}`);
   }
 
   // Confirm or expire pending depeg events for >$1B coins
@@ -515,6 +517,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     await confirmPendingDepegs(db, llamaData.peggedAssets, llamaData.fxFallbackRates);
   } catch (err) {
     console.error("[sync-stablecoins] Pending depeg confirmation failed:", err);
+    depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
   }
 
   // Build metadata for cron_runs observability
@@ -526,6 +529,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     missingPrices: finalMissing,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
+  if (depegErrors.length > 0) metadata.depegErrors = depegErrors;
 
   return { itemCount: llamaData.peggedAssets.length, metadata: JSON.stringify(metadata) };
 }

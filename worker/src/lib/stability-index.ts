@@ -3,7 +3,8 @@
  * See docs/plans/2026-02-25-stability-index-design.md for algorithm details.
  */
 
-export type ConditionBand = "BEDROCK" | "STEADY" | "TREMOR" | "FRACTURE" | "CRISIS" | "MELTDOWN";
+import type { ConditionBand } from "../../../src/lib/psi-colors";
+export type { ConditionBand } from "../../../src/lib/psi-colors";
 
 export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
@@ -79,12 +80,5 @@ export function getConditionBand(score: number): ConditionBand {
   return "MELTDOWN";
 }
 
-/** Hex colors for each band — used by API consumers and frontend. */
-export const BAND_COLORS: Record<ConditionBand, string> = {
-  BEDROCK: "#22c55e",
-  STEADY: "#14b8a6",
-  TREMOR: "#eab308",
-  FRACTURE: "#f97316",
-  CRISIS: "#ef4444",
-  MELTDOWN: "#991b1b",
-};
+/** Re-export hex colors from shared module. */
+export { PSI_HEX_COLORS as BAND_COLORS } from "../../../src/lib/psi-colors";

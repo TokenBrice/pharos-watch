@@ -28,9 +28,9 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
   liquidity: 0.25,
   safety: 0.20,
-  resilience: 0.15,
-  decentralization: 0.10,
-  dependencyRisk: 0.05,
+  resilience: 0.10,
+  decentralization: 0.05,
+  dependencyRisk: 0.15,
 };
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
@@ -347,13 +347,17 @@ export function scoreDependencyRisk(
     return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent; upstream dependency scores unavailable" };
   }
 
-  // Weighted average of upstream scores
-  const totalWeight = resolved.reduce((sum, d) => sum + d.weight, 0);
-  const weightedAvg = totalWeight > 0
-    ? resolved.reduce((sum, d) => sum + d.score * d.weight, 0) / totalWeight
-    : resolved.reduce((sum, d) => sum + d.score, 0) / resolved.length;
+  // Blend upstream exposure with self-backed portion (non-stablecoin collateral).
+  // A coin 35% backed by USDC and 65% self-backed blends: 0.35*USDC + 0.65*95.
+  // Without this, dividing by totalWeight cancels out the weight entirely —
+  // a 5% USDC coin would get the same dep risk score as a 100% USDC coin.
+  const totalWeight = Math.min(1, resolved.reduce((sum, d) => sum + d.weight, 0));
+  const selfBackedFraction = 1 - totalWeight;
+  const SELF_BACKED_SCORE = 95; // same as non-dependent coins
+  const blendedScore = resolved.reduce((sum, d) => sum + d.score * d.weight, 0)
+    + selfBackedFraction * SELF_BACKED_SCORE;
 
-  let score = weightedAvg;
+  let score = blendedScore;
 
   // Penalty if any upstream scores below 75
   const weakDeps = resolved.filter((d) => d.score < 75);
@@ -364,8 +368,8 @@ export function scoreDependencyRisk(
   score = Math.round(Math.max(0, Math.min(100, score)));
 
   const parts: string[] = [];
-  parts.push(`Based on ${resolved.length} upstream dependenc${resolved.length === 1 ? "y" : "ies"}`);
-  parts.push(`weighted avg upstream score: ${Math.round(weightedAvg)}`);
+  parts.push(`Based on ${resolved.length} upstream dependenc${resolved.length === 1 ? "y" : "ies"} (${Math.round(totalWeight * 100)}% stablecoin-backed)`);
+  parts.push(`blended score: ${Math.round(blendedScore)}`);
   if (weakDeps.length > 0) {
     parts.push(`-10 penalty: ${weakDeps.length} dependenc${weakDeps.length === 1 ? "y" : "ies"} below 75`);
   }

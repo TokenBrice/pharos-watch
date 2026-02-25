@@ -13,9 +13,9 @@ Weighted sum of 6 dimension scores (each 0–100), mapped to a letter grade. NR 
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
 | **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
 | **Safety** | 20% | Bluechip SMIDGE rating | Grade-to-score mapping (A+ → 100 … F → 25). NR if no rating |
-| **Resilience** | 15% | Chain count (60%) + freeze rate (40%) | See sub-scores below |
-| **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
-| **Dependency Risk** | 5% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → avg of upstream scores, −10 if any < 75. NR if unmapped |
+| **Resilience** | 10% | Chain count (60%) + freeze rate (40%) | See sub-scores below |
+| **Decentralization** | 5% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
+| **Dependency Risk** | 15% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 95), −10 if any < 75. NR if unmapped |
 
 ### Peg Stability Details
 
@@ -76,7 +76,7 @@ Two-phase computation ensures upstream scores are available before dependent coi
 2. **Phase 2**: Grade `centralized-dependent` coins using Phase 1 scores
 
 For Phase 2 coins:
-- Score = weighted average of upstream stablecoins' overall scores, using collateral weights from `DependencyWeight[]` (e.g., a coin backed 60% USDC + 40% USDT weights those upstream scores accordingly)
+- Score = blended: `sum(weight_i × upstream_score_i) + (1 − totalWeight) × 95`. The self-backed fraction (non-stablecoin collateral) scores 95, same as independent coins. This ensures weights matter — a coin 10% backed by USDC has much lower contagion risk than one 100% backed by USDC.
 - −10 penalty if any dependency scores below 75 (B-)
 - Falls back to 70 if dependencies aren't mapped or scores unavailable
 
