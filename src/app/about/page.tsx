@@ -173,7 +173,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Skull className="h-5 w-5 text-zinc-500" />
-                <span className="font-bold">{DEAD_STABLECOINS.length} in the Cemetery</span>
+                <Link href="/cemetery" className="font-bold underline underline-offset-4 hover:text-zinc-500 transition-colors">{DEAD_STABLECOINS.length} in the Cemetery</Link>
               </div>
               <p className="text-sm text-muted-foreground">
                 Algorithmic failures, rug pulls, regulatory shutdowns, and quiet abandonments
@@ -185,7 +185,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-red-500" />
-                <span className="font-bold">Freeze Tracking</span>
+                <Link href="/blacklist" className="font-bold underline underline-offset-4 hover:text-red-500 transition-colors">Freeze Tracking</Link>
               </div>
               <p className="text-sm text-muted-foreground">
                 USDC, USDT, PAXG &amp; XAUT blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron
