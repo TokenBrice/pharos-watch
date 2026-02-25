@@ -71,13 +71,29 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         (e) => e.started_at <= day && (e.ended_at === null ? day <= now : e.ended_at > day)
       );
 
-      const depegs: { bps: number; mcapUsd: number }[] = [];
-
+      // Deduplicate by stablecoin_id: worst bps, earliest start
+      const grouped = new Map<string, typeof activeDepegs[number][]>();
       for (const e of activeDepegs) {
-        if (e.peg_reference <= 0) continue;
-        const mcap = getMcapForDay(e.stablecoin_id, day);
-        const bps = Math.round(((e.start_price / e.peg_reference) - 1) * 10000);
-        depegs.push({ bps, mcapUsd: mcap });
+        const list = grouped.get(e.stablecoin_id) ?? [];
+        list.push(e);
+        grouped.set(e.stablecoin_id, list);
+      }
+
+      const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
+
+      for (const [coinId, events] of grouped) {
+        let worstBps = 0;
+        let earliestStart = Infinity;
+        for (const e of events) {
+          if (e.peg_reference <= 0) continue;
+          const bps = Math.round(((e.start_price / e.peg_reference) - 1) * 10000);
+          if (Math.abs(bps) > Math.abs(worstBps)) worstBps = bps;
+          if (e.started_at < earliestStart) earliestStart = e.started_at;
+        }
+        if (earliestStart === Infinity) continue;
+        const mcap = getMcapForDay(coinId, day);
+        const ageDays = Math.max(0, (day - earliestStart) / DAY);
+        depegs.push({ bps: worstBps, mcapUsd: mcap, depegAgeDays: ageDays });
       }
 
       // Total mcap: sum all tracked coins' supply for this day
