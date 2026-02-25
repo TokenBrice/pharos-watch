@@ -69,7 +69,7 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 - **Endpoint**: `GET https://api.gold-api.com/price/XAU` (gold), `GET https://api.gold-api.com/price/XAG` (silver)
 - **Rate limiting**: None — no API key required, fetched every 15-minute cron run.
 - **Validation**: Same `isValidRate()` bounds + delta checks as FX rates (gold: $500-$10,000/oz, silver: $5-$500/oz, max 20% change from previous value).
-- **Fallback**: If no API key is configured, metals are skipped and peer median is the sole reference.
+- **Fallback**: If the gold-api.com live fetch fails, previously cached rates are used. The peer median serves as a last-resort reference if no cached rates exist.
 
 ### Backfill (backfill-depegs.ts)
 
@@ -80,7 +80,7 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 
 ### Budget
 
-Free tier = 100 requests/month. Monthly usage: ~30 live (1/day) + 49 backfill (one-time) = 79 requests.
+The live `/price/` endpoint requires no API key and has no documented rate limit — it is called every 15-minute sync run (2 requests: gold + silver), ~5,760/month. The historical `/v1/timeseries` endpoint used by backfills requires an API key; the free tier allows 100 requests/month. The one-time 4-year backfill uses ~49 timeseries requests.
 
 ## Stability Index (PSI) Computation
 

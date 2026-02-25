@@ -2,7 +2,7 @@
 
 ## DEX Liquidity Score
 
-`syncDexLiquidity()` in `sync-dex-liquidity.ts` runs every 15 minutes and computes a composite liquidity score (0-100) per stablecoin from 6 components:
+`syncDexLiquidity()` in `sync-dex-liquidity.ts` runs every 20 minutes (on the `3,23,43 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 6 components:
 
 | Component | Weight | Source | How Computed |
 |-----------|--------|--------|-------------|

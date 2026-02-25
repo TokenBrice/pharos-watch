@@ -27,6 +27,8 @@
 | `GET /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
 | `GET /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (requires `X-Admin-Key`) |
 | `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `GET /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 
 ## Full File Tree
 
@@ -245,7 +247,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
+        ├── coingecko.ts            # CoinGecko API key initialization (shared across crons)
         ├── coingecko-onchain.ts   # CoinGecko Onchain API client (12 chains, pool discovery, locked liquidity)
+        ├── twitter.ts             # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
         └── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)

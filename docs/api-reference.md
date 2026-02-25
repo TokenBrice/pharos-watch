@@ -35,9 +35,9 @@ Endpoints backed by the cron cache include these additional headers:
 
 | Profile | `Cache-Control` | Used by |
 |---------|----------------|---------|
-| realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary |
-| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive |
-| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings |
+| realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin/:id, blacklist, depeg-events, peg-summary |
+| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards |
+| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, stability-index |
 | no-store | `no-store` | health |
 
 ---
@@ -114,7 +114,7 @@ Historical price and supply chart data for a single stablecoin. Proxies DefiLlam
 
 **Path parameter:** `:id` — Pharos stablecoin ID.
 
-**Cache:** `public, s-maxage=300, max-age=10`
+**Cache:** realtime
 
 **Response**
 

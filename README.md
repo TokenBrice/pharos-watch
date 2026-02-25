@@ -9,7 +9,7 @@ Public-facing analytics dashboard tracking 141 stablecoins across multiple peg c
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, UAH, ARS, gold, and silver stablecoins with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, EURC, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
+- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, diversity, and cross-chain coverage
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
 - **Compare** — side-by-side stablecoin comparison across key metrics
@@ -40,17 +40,17 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | Source | Purpose | Refresh |
 |--------|---------|---------|
 | [DefiLlama](https://defillama.com/) | Stablecoin supply, price, chain distribution, history | 15 min |
-| [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 15 min |
-| [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 15 min |
-| [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 15 min |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (12 chains), locked liquidity %, fee tiers, balance approximation | 15 min |
-| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 15 min |
-| [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 15 min |
+| [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 20 min |
+| [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 20 min |
+| [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 20 min |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (12 chains), locked liquidity %, fee tiers, balance approximation | 20 min |
+| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 20 min |
+| [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 20 min |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
-| [Etherscan v2](https://etherscan.io/) | USDC, USDT, EURC, PAXG, XAUT freeze/blacklist events (EVM chains) | 15 min |
-| [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 15 min |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Archive RPC for L2 balance lookups at historical block heights | 15 min |
+| [Etherscan v2](https://etherscan.io/) | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains) | 20 min |
+| [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 20 min |
+| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Archive RPC for L2 balance lookups at historical block heights | 20 min |
 | [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 15 min |
 | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 15 min |
 | [gold-api.com](https://gold-api.com/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | 15 min |
@@ -121,8 +121,8 @@ worker/                           Cloudflare Worker (API + cron jobs)
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *   → sync stablecoins + charts + FX rates
-  ├── Cron: 3,23,43 * * * * → DEX liquidity + blacklist + depeg detection
+  ├── Cron: */15 * * * *   → sync stablecoins + charts + FX rates + depeg detection
+  ├── Cron: 3,23,43 * * * * → DEX liquidity + blacklist sync
   ├── Cron: 55 7 * * *     → stability index (daily ecosystem health score)
   └── Cron: 0 8 * * *      → supply snapshot + USDS status + Bluechip safety ratings + daily digest
 
@@ -135,7 +135,7 @@ Cloudflare D1 (SQLite database)
   ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
   ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
-  ├── supply_history       → twice-daily on-chain supply snapshots
+  ├── supply_history       → daily on-chain supply snapshots (08:00 UTC)
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
   ├── cron_runs            → cron execution log for health monitoring
@@ -171,7 +171,7 @@ Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 Required GitHub variable: `API_BASE_URL`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `METALS_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`
 
 ## License
 

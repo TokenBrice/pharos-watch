@@ -58,7 +58,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all 22 endpoints, query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: all endpoints (22 router handlers + inline admin), query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
