@@ -693,3 +693,20 @@ Backfills historical depeg events from stored price data.
 Backfills per-coin supply history snapshots.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
+
+### `GET /api/trigger-digest`
+
+Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Handled directly in `index.ts` (not via the router).
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Response**
+
+```json
+{
+  "ok": true,
+  "result": { ... }
+}
+```
+
+Returns `500` with `{ "ok": false, "error": "..." }` on failure.

@@ -1,6 +1,6 @@
 # Stablecoin Dashboard (Pharos)
 
-Analytics dashboard tracking ~142 stablecoins. Static Next.js 16 export → Cloudflare Pages. API: Cloudflare Worker + D1.
+Analytics dashboard tracking ~141 stablecoins. Static Next.js 16 export → Cloudflare Pages. API: Cloudflare Worker + D1.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -25,7 +25,7 @@ src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
 worker/src/cron/ — Data sync crons
-worker/src/api/  — REST API handlers (17 endpoints)
+worker/src/api/  — REST API handlers (18 endpoints)
 worker/src/lib/  — DB helpers, constants, shared utilities
 ```
 
@@ -58,7 +58,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all 17 endpoints, query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: all 18 endpoints, query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync

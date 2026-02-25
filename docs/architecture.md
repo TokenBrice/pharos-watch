@@ -21,6 +21,7 @@
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
+| `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 
 ## Full File Tree
 
@@ -30,14 +31,19 @@ src/                              # Next.js frontend (static export)
 │   ├── page.tsx                  # Homepage: stats, charts, filters, table
 │   ├── peg-tracker/              # Peg monitoring: scores, heatmap, depeg timeline
 │   │   ├── page.tsx              # Server component (metadata)
-│   │   └── client.tsx            # Interactive client component
+│   │   ├── client.tsx            # Interactive client component
+│   │   └── error.tsx
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
-│   │   └── layout.tsx
-│   ├── cemetery/page.tsx         # Dead stablecoin graveyard
+│   │   ├── layout.tsx
+│   │   └── error.tsx
+│   ├── cemetery/                 # Dead stablecoin graveyard
+│   │   ├── page.tsx
+│   │   └── error.tsx
 │   ├── liquidity/               # DEX liquidity scores & leaderboard
 │   │   ├── page.tsx              # Server component (metadata)
-│   │   └── client.tsx            # Interactive client component
+│   │   ├── client.tsx            # Interactive client component
+│   │   └── error.tsx
 │   ├── compare/                  # Side-by-side stablecoin comparison
 │   │   ├── page.tsx
 │   │   ├── client.tsx
@@ -52,7 +58,8 @@ src/                              # Next.js frontend (static export)
 │   │   └── error.tsx
 │   ├── stablecoin/[id]/          # Detail page: price chart, supply chart, chains
 │   │   ├── page.tsx
-│   │   └── client.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
 │   ├── layout.tsx                # Root layout (header, footer, providers)
 │   ├── error.tsx                 # Root error boundary
 │   ├── loading.tsx               # Root loading skeleton
@@ -79,8 +86,8 @@ src/                              # Next.js frontend (static export)
 │   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
 │   ├── digest-archive-client.tsx # Digest archive list (client component)
 │   ├── mcap-chart.tsx            # Market cap area chart (detail page)
-│   ├── mechanism-card.tsx        # Peg mechanism info card (detail page)
-│   ├── issuer-info-card.tsx      # Issuer information card (detail page)
+│   ├── key-info-card.tsx          # Key info card: peg mechanism, issuer, collateral (detail page)
+│   ├── ai-summary.tsx            # AI-generated editorial summary (detail page)
 │   ├── contract-addresses.tsx    # Contract address display (detail page)
 │   ├── peg-tracker-stats.tsx     # Peg tracker summary statistics
 │   ├── peg-tracker-summary.tsx   # Peg tracker homepage summary card
@@ -147,8 +154,8 @@ src/                              # Next.js frontend (static export)
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, CacheStatus (shared with worker)
-    ├── stablecoins.ts            # Master list of ~142 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
-    ├── dead-stablecoins.ts       # 77 dead stablecoins with cause of death, peak mcap, obituaries
+    ├── stablecoins.ts            # Master list of ~141 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
     ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
@@ -166,13 +173,13 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (20 total)
+├── migrations/                   # D1 SQL migrations (21 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
-    │   ├── enrich-prices.ts      # 4-pass price enrichment pipeline (DefiLlama, CoinGecko, DexScreener)
+    │   ├── enrich-prices.ts      # 5-pass price enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
