@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
 
@@ -31,6 +32,10 @@ const PULSE_DURATION: Record<string, number> = {
 };
 
 function PsiLighthouse({ band, color }: { band: string; color: string }) {
+  const uid = useId();
+  const glowId = `psi-glow${uid}`;
+  const bodyId = `psi-tBody${uid}`;
+  const filterId = `psi-sg${uid}`;
   const dur = PULSE_DURATION[band] ?? 3;
 
   return (
@@ -43,17 +48,22 @@ function PsiLighthouse({ band, color }: { band: string; color: string }) {
       aria-label={`Pharos lighthouse — ${band}`}
     >
       <defs>
-        <style>{`@keyframes psi-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }`}</style>
-        <radialGradient id="psi-glow" cx="50%" cy="50%" r="50%">
+        <style>{`
+  @keyframes psi-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+  @media (prefers-reduced-motion: reduce) {
+    .psi-glow-circle { animation: none !important; opacity: 0.5; }
+  }
+`}</style>
+        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor={color} stopOpacity={0.45} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </radialGradient>
-        <linearGradient id="psi-tBody" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={bodyId} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#D4C8B0" />
           <stop offset="40%" stopColor="#E8DCC4" />
           <stop offset="100%" stopColor="#C8BBAA" />
         </linearGradient>
-        <filter id="psi-sg" x="-40%" y="-40%" width="180%" height="180%">
+        <filter id={filterId} x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b" />
           <feMerge>
             <feMergeNode in="b" />
@@ -67,7 +77,8 @@ function PsiLighthouse({ band, color }: { band: string; color: string }) {
         cx="44"
         cy="16"
         r="16"
-        fill="url(#psi-glow)"
+        fill={`url(#${glowId})`}
+        className="psi-glow-circle"
         style={{
           animation: `psi-pulse ${dur}s ease-in-out infinite`,
         }}
@@ -86,7 +97,7 @@ function PsiLighthouse({ band, color }: { band: string; color: string }) {
       <path d="M14,8 L74,8 L74,36 Q74,74 44,84 Q14,74 14,36 Z" fill="none" stroke="#E8DCC4" strokeWidth={3} opacity={0.5} strokeLinejoin="round" />
 
       {/* Lantern light */}
-      <circle cx="44" cy="16" r="5" fill={color} opacity={0.85} filter="url(#psi-sg)" />
+      <circle cx="44" cy="16" r="5" fill={color} opacity={0.85} filter={`url(#${filterId})`} />
 
       {/* Dome */}
       <path d="M39,22 C39,14 49,14 49,22 Z" fill="#E8DCC4" opacity={0.9} />
@@ -100,7 +111,7 @@ function PsiLighthouse({ band, color }: { band: string; color: string }) {
       <rect x="34" y="29" width="20" height="4" rx="1.5" fill="#E8DCC4" opacity={0.85} />
 
       {/* Tower shaft */}
-      <path d="M37,33 L51,33 L54,66 L34,66 Z" fill="url(#psi-tBody)" opacity={0.8} />
+      <path d="M37,33 L51,33 L54,66 L34,66 Z" fill={`url(#${bodyId})`} opacity={0.8} />
       <line x1="36.2" y1="44" x2="52.2" y2="44" stroke="#0d1f3c" strokeWidth={2} opacity={0.35} />
       <line x1="35.3" y1="55" x2="53.1" y2="55" stroke="#0d1f3c" strokeWidth={2} opacity={0.35} />
 
@@ -140,6 +151,9 @@ export function StabilityIndex() {
 
   return (
     <div className="flex items-center gap-4 animate-in fade-in duration-300">
+      <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+        Pharos Stability Index
+      </span>
       <div className="flex items-center gap-3">
         <PsiLighthouse band={band} color={sparkColor} />
         <div className="flex items-baseline gap-2">
