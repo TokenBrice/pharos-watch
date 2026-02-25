@@ -589,7 +589,7 @@ export function PortfolioStressPanel({
                   onChange={(e) =>
                     stressTest.setTarget(e.target.value || null)
                   }
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">Select a coin...</option>
                   {stressTest.targetableCoins.map((c) => (
@@ -618,7 +618,7 @@ export function PortfolioStressPanel({
                     )
                   }
                   disabled={!stressTest.targetCoinId}
-                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Select grade...</option>
                   {stressTest.gradeOptions.map((g) => (
