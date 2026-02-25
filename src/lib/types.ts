@@ -63,6 +63,11 @@ export interface SupplyMethodConfig {
   };
 }
 
+export interface DependencyWeight {
+  id: string;      // DefiLlama ID of upstream stablecoin
+  weight: number;  // 0-1, fraction of collateral from this source
+}
+
 export interface StablecoinMeta {
   id: string; // DefiLlama numeric ID
   name: string;
@@ -79,7 +84,7 @@ export interface StablecoinMeta {
   jurisdiction?: Jurisdiction;
   contracts?: ContractDeployment[];  // On-chain contract deployments per chain
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
-  dependencies?: string[];  // DefiLlama IDs of upstream stablecoins (CeFi-Dependent coins only)
+  dependencies?: DependencyWeight[];  // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
@@ -373,7 +378,7 @@ export interface ReportCard {
   overallScore: number | null;
   dimensions: Record<DimensionKey, ReportCardDimension>;
   ratedDimensions: number;
-  dependencies?: string[];
+  dependencies?: DependencyWeight[];
   isDefunct: boolean;
 }
 

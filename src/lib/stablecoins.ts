@@ -16,7 +16,7 @@ interface StablecoinOpts {
   jurisdiction?: import("./types").Jurisdiction;
   contracts?: import("./types").ContractDeployment[];
   supplyMethod?: import("./types").SupplyMethodConfig;
-  dependencies?: string[];
+  dependencies?: import("./types").DependencyWeight[];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
