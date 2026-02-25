@@ -251,7 +251,6 @@ export function ReportCardsClient() {
             <ReportCardMini
               key={card.id}
               card={card}
-              mcap={mcapMap.get(card.id)}
               logo={logos?.[card.id]}
             />
           ))}

@@ -13,26 +13,14 @@ import { ReportCardRadar } from "./radar-chart";
 
 interface ReportCardMiniProps {
   card: ReportCard;
-  mcap?: number | null; // circulating supply in USD
   logo?: string; // logo URL
-}
-
-// ---------------------------------------------------------------------------
-// MCap formatting
-// ---------------------------------------------------------------------------
-
-function formatMcap(mcap: number): string {
-  if (mcap >= 1e9) return `$${(mcap / 1e9).toFixed(1)}B`;
-  if (mcap >= 1e6) return `$${(mcap / 1e6).toFixed(0)}M`;
-  if (mcap >= 1e3) return `$${(mcap / 1e3).toFixed(0)}K`;
-  return `$${mcap.toFixed(0)}`;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCardMini({ card, mcap, logo }: ReportCardMiniProps) {
+export function ReportCardMini({ card, logo }: ReportCardMiniProps) {
   return (
     <Link href={`/stablecoin/${card.id}`} className="block h-full">
       <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
@@ -66,14 +54,7 @@ export function ReportCardMini({ card, mcap, logo }: ReportCardMiniProps) {
               Defunct
             </span>
           ) : (
-            <ReportCardRadar card={card} showLabels={false} size={140} />
-          )}
-
-          {/* Market cap */}
-          {mcap != null && mcap > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {formatMcap(mcap)}
-            </span>
+            <ReportCardRadar card={card} showLabels={true} size={180} />
           )}
         </CardContent>
       </Card>
