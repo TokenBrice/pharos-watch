@@ -143,8 +143,9 @@ src/                              # Next.js frontend (static export)
 │   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons
 │   ├── theme-toggle.tsx          # Dark/light mode toggle
 │   ├── report-card.tsx            # Report card component with grade, dimension scores, radar chart
-│   ├── report-card-mini.tsx       # Compact report card display for compare page
+│   ├── report-card-mini.tsx       # Compact report card display for compare page (+ simulation mode)
 │   ├── radar-chart.tsx            # Radar chart for report card dimensions (single + compare overlay)
+│   ├── portfolio-stress-panel.tsx  # Combined portfolio analyzer + stress test collapsible panel
 │   ├── stability-index.tsx        # Stability index visualizations (sparklines, lighthouse icon)
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
@@ -168,11 +169,13 @@ src/                              # Next.js frontend (static export)
 │   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 10 data hooks)
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
-│   └── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
+│   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
+│   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
+│   └── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
-    ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, CacheStatus (shared with worker)
+    ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, RawDimensionInputs, CacheStatus (shared with worker)
     ├── stablecoins.ts            # Master list of ~141 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
@@ -181,7 +184,7 @@ src/                              # Next.js frontend (static export)
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
-    ├── report-cards.ts           # Report card scoring: 6 dimensions, grade thresholds, weights
+    ├── report-cards.ts           # Report card scoring: 6 dimensions, grade thresholds, weights, computeStressedGrades()
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics

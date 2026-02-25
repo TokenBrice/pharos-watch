@@ -76,7 +76,7 @@ Two-phase computation ensures upstream scores are available before dependent coi
 2. **Phase 2**: Grade `centralized-dependent` coins using Phase 1 scores
 
 For Phase 2 coins:
-- Score = average of upstream stablecoins' overall scores
+- Score = weighted average of upstream stablecoins' overall scores, using collateral weights from `DependencyWeight[]` (e.g., a coin backed 60% USDC + 40% USDT weights those upstream scores accordingly)
 - −10 penalty if any dependency scores below 75 (B-)
 - Falls back to 70 if dependencies aren't mapped or scores unavailable
 
@@ -112,24 +112,58 @@ For Phase 2 coins:
 
 `GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
 
-Response includes `cards` (array of `ReportCard`), `methodology` (version, weights, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
+Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
+
+Key types:
+- **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `chainCount`, `freezeEventsPerMonth`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
+
+## Portfolio Analyzer & Stress Test
+
+Collapsible panel on `/report-cards` between the grade distribution bar and card grid. Two sections stacked vertically:
+
+### Portfolio Analyzer
+
+Users enter stablecoin holdings (coin + USD amount). Derived computations (all client-side):
+
+- **Portfolio grade**: `sum(coinScore × coinAmount) / sum(coinAmount)` for rated coins. NR coins excluded.
+- **Portfolio radar**: Same weighted average per dimension. Displays via `ReportCardRadar` with a synthetic `ReportCard`.
+- **Upstream exposure**: Walks `dependencies` using collateral weights. Direct CeFi holdings attribute 100% to themselves. Aggregates by upstream coin ID. Shows concentration warning when any single upstream exceeds 80%.
+
+State: `usePortfolio` hook. Sources (priority): URL `?p=usdc:50000,dai:5000` → `localStorage` → empty. Shared links don't overwrite saved portfolio.
+
+### Interactive Stress Test
+
+Users simulate a grade downgrade for any upstream coin and watch cascading grade changes:
+
+- **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
+- **Grade selector**: Only downgrades from the coin's current grade to F.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. ~142 coins × 6 dimensions = <1ms, no debouncing needed.
+- **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
+- **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
+
+State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 
 ## Frontend
 
-- **Grid page**: `src/app/report-cards/client.tsx` — filterable/sortable grid of grade cards with grade distribution bar chart
+- **Grid page**: `src/app/report-cards/client.tsx` — filterable/sortable grid of grade cards with grade distribution bar, portfolio/stress panel integration, simulation mode
+- **Portfolio & stress panel**: `src/components/portfolio-stress-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
 - **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown
-- **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile
+- **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge)
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay)
-- **Hook**: `src/hooks/use-report-cards.ts` — TanStack Query with 15-min stale time
+- **Hooks**: `src/hooks/use-report-cards.ts` (TanStack Query), `src/hooks/use-portfolio.ts` (portfolio state + localStorage + URL sync), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors |
-| `worker/src/api/report-cards.ts` | API handler: data loading, two-phase computation, response |
+| `src/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
+| `worker/src/api/report-cards.ts` | API handler: data loading, two-phase computation, `rawInputs`, `dependencyGraph`, response |
+| `src/components/portfolio-stress-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
 | `src/components/report-card.tsx` | Full detail card with radar |
-| `src/components/report-card-mini.tsx` | Compact grid tile |
+| `src/components/report-card-mini.tsx` | Compact grid tile with simulation mode support |
 | `src/components/radar-chart.tsx` | Recharts radar visualization |
-| `src/app/report-cards/client.tsx` | Full page with filtering, sorting, grade distribution |
+| `src/app/report-cards/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
 | `src/hooks/use-report-cards.ts` | TanStack Query hook |
+| `src/hooks/use-portfolio.ts` | Portfolio holdings state, localStorage persistence, URL sync, upstream exposure |
+| `src/hooks/use-stress-test.ts` | Stress test state, `computeStressedGrades` invocation, impact calculation |

@@ -695,6 +695,9 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
 ```json
 {
   "cards": [ReportCard, ...],
+  "dependencyGraph": {
+    "edges": [{ "from": "2", "to": "5" }, ...]
+  },
   "methodology": {
     "version": "1.0",
     "weights": { "pegStability": 0.25, "liquidity": 0.25, "safety": 0.20, ... },
@@ -703,6 +706,8 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
   "updatedAt": 1771977600
 }
 ```
+
+**`dependencyGraph.edges`**: Pre-computed forward edges. `from` = upstream stablecoin ID, `to` = dependent stablecoin ID. Used by the frontend to identify targetable coins for stress testing and walk the dependency tree.
 
 **`ReportCard`**
 
@@ -715,8 +720,28 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
 | `overallScore` | `number \| null` | Weighted score 0–100. `null` for unrated coins |
 | `dimensions` | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text |
 | `ratedDimensions` | `number` | Number of dimensions with data (max 6) |
-| `dependencies` | `string[] \| undefined` | IDs of upstream stablecoins (for CeFi-Dependent coins) |
+| `dependencies` | `DependencyWeight[] \| undefined` | Upstream stablecoin dependencies with collateral weights (for CeFi-Dependent coins) |
+| `rawInputs` | `RawDimensionInputs` | Raw scoring inputs for client-side grade recomputation (stress testing) |
 | `isDefunct` | `boolean` | `true` for cemetery coins (permanent F grade) |
+
+**`DependencyWeight`**: `{ id: string, weight: number }` — upstream stablecoin ID + fraction of collateral from that source (0–1). Weights sum to ≤ 1.0; the remainder represents non-stablecoin collateral.
+
+**`RawDimensionInputs`**
+
+| Field | Type |
+|-------|------|
+| `pegScore` | `number \| null` |
+| `activeDepeg` | `boolean` |
+| `depegEventCount` | `number` |
+| `lastEventAt` | `number \| null` |
+| `liquidityScore` | `number \| null` |
+| `concentrationHhi` | `number \| null` |
+| `bluechipGrade` | `BluechipGrade \| null` |
+| `chainCount` | `number` |
+| `freezeEventsPerMonth` | `number \| null` |
+| `hasTrackedFreezeEvents` | `boolean` |
+| `governanceTier` | `GovernanceType` |
+| `dependencies` | `DependencyWeight[]` |
 
 **Dimensions:** `pegStability`, `liquidity`, `safety`, `resilience`, `decentralization`, `dependencyRisk`
 
