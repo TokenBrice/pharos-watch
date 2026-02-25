@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, Droplets, ExternalLink, Github, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import { Activity, BarChart3, Droplets, ExternalLink, Gauge, Github, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
@@ -238,6 +238,32 @@ export default function AboutPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 Pool depth, volume, quality-adjusted TVL, durability, and cross-chain presence scored 0&ndash;100
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="pt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Newspaper className="h-5 w-5 text-orange-500" />
+                <Link href="/digest" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
+                  Daily Digest
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                AI-written daily briefing on stablecoin market conditions — supply shifts, depeg alerts, and liquidity changes, updated every morning
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="pt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Gauge className="h-5 w-5 text-indigo-500" />
+                <span className="font-bold">Stability Index</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Composite daily health score for the stablecoin ecosystem — aggregates peg integrity, supply growth, and liquidity depth into a single 0&ndash;100 signal with trend band
               </p>
             </CardContent>
           </Card>
