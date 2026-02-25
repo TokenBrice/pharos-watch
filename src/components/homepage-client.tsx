@@ -71,37 +71,50 @@ export function HomepageClient() {
 
       <TotalMcapChart />
 
-      <FilterBar {...filters} />
+      <section>
+        <h2 className="text-lg font-semibold tracking-tight mb-4">Pharos&apos; Unique Features</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+          <PegTrackerSummary />
+          <LiquiditySummary />
+          <ReportCardsSummary />
+          <BlacklistSummary />
+          <CemeterySummary />
+          <StabilityIndexSummary />
+        </div>
+      </section>
 
-      <StablecoinTable
-        data={data?.peggedAssets}
-        isLoading={isLoading}
-        activeFilters={filters.activeFilters}
-        logos={logos}
-        pegRates={pegRates}
-        searchQuery={filters.searchQuery}
-        pegScores={pegScores}
-        bluechipRatings={bluechipRatings ?? undefined}
-        dexLiquidity={dexLiquidity ?? undefined}
-        reportCards={reportCardMap}
-        onClearSearch={() => filters.setSearchQuery("")}
-        onClearFilters={filters.clearAll}
-      />
+      <section>
+        <h2 className="text-lg font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
+        <FilterBar {...filters} />
+        <div className="mt-6">
+          <StablecoinTable
+            data={data?.peggedAssets}
+            isLoading={isLoading}
+            activeFilters={filters.activeFilters}
+            logos={logos}
+            pegRates={pegRates}
+            searchQuery={filters.searchQuery}
+            pegScores={pegScores}
+            bluechipRatings={bluechipRatings ?? undefined}
+            dexLiquidity={dexLiquidity ?? undefined}
+            reportCards={reportCardMap}
+            onClearSearch={() => filters.setSearchQuery("")}
+            onClearFilters={filters.clearAll}
+          />
+        </div>
+      </section>
 
-      <CategoryStats data={data?.peggedAssets} />
+      <section>
+        <h2 className="text-lg font-semibold tracking-tight mb-4">What Pharos Tracks</h2>
+        <CategoryStats data={data?.peggedAssets} />
+      </section>
+
+      <section>
+        <h2 className="text-lg font-semibold tracking-tight mb-4">Key Movements</h2>
+        <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+      </section>
 
       <PegDiversityChart />
-
-      <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
-
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-        <PegTrackerSummary />
-        <LiquiditySummary />
-        <ReportCardsSummary />
-        <BlacklistSummary />
-        <CemeterySummary />
-        <StabilityIndexSummary />
-      </div>
 
       <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
         Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies — USD, EUR, GBP,

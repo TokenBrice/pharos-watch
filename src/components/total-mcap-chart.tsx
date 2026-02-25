@@ -77,7 +77,7 @@ export function TotalMcapChart() {
     return (
       <Card className="rounded-2xl">
         <CardHeader>
-          <CardTitle as="h2">Total Stablecoin Market Cap</CardTitle>
+          <CardTitle as="h2">Stablecoin Pulse: Total Marketcap x Pharos Stability Index</CardTitle>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-[250px] sm:h-[350px] w-full" />
@@ -89,7 +89,7 @@ export function TotalMcapChart() {
   return (
     <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle as="h2">Total Stablecoin Market Cap</CardTitle>
+        <CardTitle as="h2">Stablecoin Pulse: Total Marketcap x Pharos Stability Index</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
       </CardHeader>
       <CardContent>

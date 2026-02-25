@@ -70,7 +70,7 @@ function BiggestDepegs({
     <Card className="rounded-2xl border-l-[3px] border-l-red-500 hover:border-foreground/20 transition-colors">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Biggest Depegs
+          Current Biggest Depegs
           <Link
             href="/peg-tracker"
             className="text-xs font-normal normal-case tracking-normal text-muted-foreground hover:text-foreground transition-colors"
