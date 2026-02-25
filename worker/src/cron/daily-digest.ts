@@ -219,12 +219,12 @@ export async function generateDailyDigest(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: "claude-sonnet-4-6-20250514",
       max_tokens: 800,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPromptContent }],
     }),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!response.ok) {
