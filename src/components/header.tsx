@@ -1,7 +1,16 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Activity, ClipboardCheck, Droplets, Gauge, Info, LayoutDashboard, Menu, ShieldBan, Skull } from "lucide-react";
+import { Activity, ClipboardCheck, Droplets, Info, LayoutDashboard, Menu, ShieldBan, Skull, createLucideIcon } from "lucide-react";
+
+const LighthouseIcon = createLucideIcon("lighthouse", [
+  ["path", { d: "M10 22V8l2-6 2 6v14", key: "tower" }],
+  ["path", { d: "M7 22h10", key: "base" }],
+  ["path", { d: "M9 12h6", key: "band1" }],
+  ["path", { d: "M9 16h6", key: "band2" }],
+  ["circle", { cx: "12", cy: "5", r: "1.5", key: "light" }],
+  ["path", { d: "M6 4l3.5 1M18 4l-3.5 1", key: "beams" }],
+]);
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,7 +25,7 @@ import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/stability-index", label: "Stability Index", icon: Gauge },
+  { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon },
   { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
   { href: "/peg-tracker", label: "Peg Tracker", icon: Activity },
   { href: "/liquidity", label: "Liquidity", icon: Droplets },
