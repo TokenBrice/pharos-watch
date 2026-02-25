@@ -18,11 +18,11 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 import { CHART_BLUE, CHART_TEAL, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
-import { useStabilityIndex } from "@/hooks/use-stability-index";
+import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 
 export function TotalMcapChart() {
   const { data, isLoading } = useStablecoinCharts();
-  const { data: psiData } = useStabilityIndex();
+  const { data: psiData } = useStabilityIndexDetail();
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
