@@ -105,7 +105,7 @@ export function TotalMcapChart() {
               Pharos Stability Index
             </div>
           </div>
-          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}>
+          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Total stablecoin market cap and Pharos Stability Index chart showing ${filteredData.length} data points`}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={filteredData} margin={{ top: 5, right: 45, bottom: 20, left: 5 }}>
               <defs>
@@ -150,7 +150,10 @@ export function TotalMcapChart() {
               <Tooltip
                 formatter={(value, name) => {
                   if (name === "Market Cap") return [formatCurrency(Number(value)), "Market Cap"];
-                  if (name === "PSI") return [Number(value).toFixed(1), "Pharos Stability Index"];
+                  if (name === "PSI") {
+                    if (value == null || isNaN(Number(value))) return null;
+                    return [Number(value).toFixed(1), "Pharos Stability Index"];
+                  }
                   return [String(value), String(name)];
                 }}
                 labelFormatter={(label) =>
