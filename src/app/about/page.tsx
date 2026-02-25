@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, ClipboardCheck, Droplets, ExternalLink, Gauge, Github, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import { Activity, BarChart3, ClipboardCheck, Droplets, ExternalLink, Gauge, Github, Layers, Network, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
@@ -285,6 +285,34 @@ export default function AboutPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 Comprehensive A+&ndash;F stablecoin grades with six dimensions: peg, liquidity, safety, resilience, decentralization, and dependency risk
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Network className="h-5 w-5 text-rose-500" />
+                <Link href="/report-cards" className="font-bold underline underline-offset-4 hover:text-rose-500 transition-colors">
+                  Contagion Map
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Simulates the failure of any tracked stablecoin and traces how it cascades through dependent coins — quantifies ecosystem-wide contagion risk
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Layers className="h-5 w-5 text-violet-500" />
+                <Link href="/report-cards" className="font-bold underline underline-offset-4 hover:text-violet-500 transition-colors">
+                  Effective Portfolio Exposure
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Traces collateral weights across your holdings to reveal true upstream exposure — see what fraction of your portfolio ultimately rests on each base asset
               </p>
             </CardContent>
           </Card>
