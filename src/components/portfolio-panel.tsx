@@ -9,10 +9,9 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { GradeBadge } from "@/components/grade-badge";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
-import { formatCurrency } from "@/lib/format";
 import { DIMENSION_ORDER, scoreToGrade } from "@/lib/report-cards";
 import type { PortfolioState } from "@/hooks/use-portfolio";
-import type { ReportCard, DimensionKey } from "@/lib/types";
+import type { ReportCard } from "@/lib/types";
 import { ChevronDown, ChevronRight, X, Share2, Trash2, AlertTriangle } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -221,14 +220,14 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
         DIMENSION_ORDER.map((key) => [
           key,
           {
-            grade: scoreToGrade(portfolio.dimensionScores[key as DimensionKey]),
-            score: portfolio.dimensionScores[key as DimensionKey],
+            grade: scoreToGrade(portfolio.dimensionScores[key]),
+            score: portfolio.dimensionScores[key],
             detail: "",
           },
         ]),
       ) as ReportCard["dimensions"],
       ratedDimensions: DIMENSION_ORDER.filter(
-        (k) => portfolio.dimensionScores[k as DimensionKey] !== null,
+        (k) => portfolio.dimensionScores[k] !== null,
       ).length,
       isDefunct: false,
       rawInputs: {
