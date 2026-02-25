@@ -26,10 +26,10 @@ import { ThemeToggle } from "./theme-toggle";
 const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon },
-  { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
-  { href: "/peg-tracker", label: "Peg Tracker", icon: Activity },
-  { href: "/liquidity", label: "Liquidity", icon: Droplets },
   { href: "/report-cards", label: "Report Cards", icon: ClipboardCheck },
+  { href: "/peg-tracker", label: "Peg Tracker", icon: Activity },
+  { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
+  { href: "/liquidity", label: "Liquidity", icon: Droplets },
   { href: "/cemetery", label: "Cemetery", icon: Skull },
   { href: "/about", label: "About", icon: Info },
 ];
