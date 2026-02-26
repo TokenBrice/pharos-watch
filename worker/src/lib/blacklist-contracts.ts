@@ -6,7 +6,7 @@ export interface ChainConfig {
   chainName: string;
   evmChainId: number | null; // Numeric EVM chain ID for Etherscan v2 API (null for non-EVM)
   explorerUrl: string;       // Block explorer for tx/address links
-  type: "evm" | "tron";
+  type: "evm" | "tron" | "other";
 }
 
 export interface ContractEventConfig {
