@@ -20,9 +20,9 @@ import { downloadCsv } from "@/lib/csv-export";
 import { getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@/lib/stablecoins";
-import type { StablecoinData, FilterTag, PegSummaryCoin, BluechipRating, DexLiquidityMap, ReportCard } from "@/lib/types";
+import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@/lib/types";
 import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
-import { GRADE_COLORS, BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
+import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -41,7 +41,6 @@ interface StablecoinTableProps {
   pegRates?: Record<string, number>;
   searchQuery?: string;
   pegScores?: Map<string, PegSummaryCoin>;
-  bluechipRatings?: Record<string, BluechipRating>;
   dexLiquidity?: DexLiquidityMap;
   reportCards?: Record<string, ReportCard>;
   onClearSearch?: () => void;
@@ -69,7 +68,7 @@ function MiniSparkline({ values }: { values: number[] }) {
 }
 
 
-export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, bluechipRatings, dexLiquidity, reportCards, onClearSearch, onClearFilters }: StablecoinTableProps) {
+export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, dexLiquidity, reportCards, onClearSearch, onClearFilters }: StablecoinTableProps) {
   type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "liquidity" | "grade";
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("mcap", "desc");
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
@@ -367,16 +366,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={24} />
                     <span className="font-medium">{coin.symbol}</span>
                     <span className="truncate max-w-[180px] text-xs text-muted-foreground hidden xl:inline">{coin.name}</span>
-                    {(() => {
-                      const rating = bluechipRatings?.[coin.id];
-                      if (!rating) return null;
-                      const colorCls = GRADE_COLORS[rating.grade] ?? "";
-                      return (
-                        <Badge variant="outline" className={`text-xs font-mono px-1 py-0 hidden sm:inline-flex ${colorCls}`} title={`Bluechip safety rating: ${rating.grade}`}>
-                          {rating.grade}
-                        </Badge>
-                      );
-                    })()}
                   </Link>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">

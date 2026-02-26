@@ -5,7 +5,6 @@ import { ChevronDown } from "lucide-react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
-import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
@@ -59,7 +58,6 @@ export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData, isLoading: isPegLoading } = usePegSummary();
-  const { data: bluechipRatings } = useBluechipRatings();
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
   const { data: eventsData } = useDepegEvents();
@@ -163,7 +161,6 @@ export function HomepageClient() {
             pegRates={pegRates}
             searchQuery={filters.searchQuery}
             pegScores={pegScores}
-            bluechipRatings={bluechipRatings ?? undefined}
             dexLiquidity={dexLiquidity ?? undefined}
             reportCards={reportCardMap}
             onClearSearch={() => filters.setSearchQuery("")}
