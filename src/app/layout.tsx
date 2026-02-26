@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
+import { Sidebar } from "@/components/sidebar";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://pharos.watch"),
   title: {
     template: "%s | Pharos",
-    default: "Light on Every Peg | Pharos",
+    default: "Shining a Light on Every Peg | Pharos",
   },
   description: siteDescription,
   robots: {
@@ -53,7 +54,7 @@ export const metadata: Metadata = {
     siteName: "Pharos",
     locale: "en_US",
     url: "https://pharos.watch/",
-    title: "Light on Every Peg | Pharos",
+    title: "Shining a Light on Every Peg | Pharos",
     description: siteDescription,
     images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 630 }],
   },
@@ -95,8 +96,15 @@ export default function RootLayout({
         </a>
         <Providers>
           <Header />
-          <main id="main-content" className="container mx-auto px-4 py-8">{children}</main>
-          <Footer />
+          <div className="flex min-h-screen">
+            <Sidebar />
+            {/* Spacer matches collapsed sidebar width on desktop */}
+            <div className="hidden md:block w-14 shrink-0" />
+            <div className="flex-1 flex flex-col min-w-0">
+              <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">{children}</main>
+              <Footer />
+            </div>
+          </div>
           <ScrollToTop />
         </Providers>
         <script

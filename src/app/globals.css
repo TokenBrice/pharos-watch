@@ -106,6 +106,12 @@
   }
 }
 
+@media (max-width: 767px) {
+  :root {
+    --table-header-top: 56px;
+  }
+}
+
 @layer utilities {
   .table-header-sticky thead {
     position: sticky;
