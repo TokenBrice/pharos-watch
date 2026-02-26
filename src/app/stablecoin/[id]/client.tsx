@@ -36,7 +36,7 @@ const DETAIL_SECTIONS = [
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
   { id: "liquidity", label: "Liquidity" },
-  { id: "history", label: "History" },
+  { id: "history", label: "Depeg History" },
 ];
 
 interface SummaryData {
