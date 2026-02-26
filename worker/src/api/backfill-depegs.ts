@@ -426,6 +426,16 @@ interface BackfillEvent {
   pegRef: number;
 }
 
+/**
+ * Known CoinGecko data quality issues: date ranges where above-peg prices
+ * are systematic artifacts, not real market events. Prices in these windows
+ * that exceed the threshold are dropped before depeg detection.
+ */
+const CG_ABOVE_PEG_EXCLUSIONS: { coinId: string; from: number; to: number; maxPrice: number }[] = [
+  // USDT Jul-Aug 2018: CG reports $1.05-$1.50 from illiquid exchange aggregation
+  { coinId: "1", from: 1531000000, to: 1534000000, maxPrice: 1.02 },
+];
+
 /** Returns null when neither CG nor DL has price data (caller should preserve existing events). */
 async function backfillCoin(
   meta: StablecoinMeta,
@@ -453,6 +463,18 @@ async function backfillCoin(
       .sort((a, b) => a.timestamp - b.timestamp);
   }
   if (prices.length === 0) return null; // neither source has data
+
+  // Filter out known CG data quality issues for this coin
+  const exclusions = CG_ABOVE_PEG_EXCLUSIONS.filter((e) => e.coinId === meta.id);
+  if (exclusions.length > 0) {
+    prices = prices.filter((p) => {
+      for (const ex of exclusions) {
+        if (p.timestamp >= ex.from && p.timestamp <= ex.to && p.price > ex.maxPrice) return false;
+      }
+      return true;
+    });
+  }
+
   return extractDepegEvents(prices, getPegRef, pegType, supplyByDate);
 }
 
