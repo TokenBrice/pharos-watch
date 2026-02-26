@@ -157,8 +157,6 @@ export function HomepageClient() {
         </section>
       )}
 
-      <FeatureHighlights />
-
       <section>
         <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
         <FilterBar {...filters} />
@@ -178,6 +176,8 @@ export function HomepageClient() {
           />
         </div>
       </section>
+
+      <FeatureHighlights />
 
       <section>
         <h2 className="text-xl font-semibold tracking-tight mb-4">Stablecoin Distribution</h2>

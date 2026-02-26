@@ -188,7 +188,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
         </Card>
         <Card className="rounded-xl border-l-[3px] border-l-sky-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Collateral <span className="normal-case font-normal">(ex. USDT/USDC)</span></CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Collateral <span className="normal-case font-normal">(USDT &amp; USDC excluded)</span></CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {stats.collateralTotal > 0 ? (
