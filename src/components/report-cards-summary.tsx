@@ -13,7 +13,7 @@ export function ReportCardsSummary() {
   const stats = useMemo(() => {
     if (!data?.cards) return null;
     const graded = data.cards.filter((c) => c.overallGrade !== "NR" && !c.isDefunct);
-    const topGrades = graded.filter((c) => c.overallGrade === "A+" || c.overallGrade === "A");
+    const topGrades = graded.filter((c) => c.overallGrade === "A+" || c.overallGrade === "A" || c.overallGrade === "B");
     const lowGrades = graded.filter((c) => c.overallGrade === "D" || c.overallGrade === "F");
     return { total: graded.length, top: topGrades.length, low: lowGrades.length };
   }, [data]);
@@ -52,7 +52,7 @@ export function ReportCardsSummary() {
           </div>
           <div>
             <p className="text-2xl font-bold font-mono text-emerald-500">{stats?.top ?? 0}</p>
-            <p className="text-xs text-muted-foreground">A or A+ grade</p>
+            <p className="text-xs text-muted-foreground">B grade or above</p>
           </div>
           <div>
             <p className="text-2xl font-bold font-mono text-red-500">{stats?.low ?? 0}</p>
