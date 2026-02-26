@@ -6,6 +6,7 @@ import { Copy, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CHAIN_META } from "@/lib/chains";
 import type { StablecoinMeta } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 function getExplorerUrl(chainKey: string, address: string): string | null {
   const chain = CHAIN_META[chainKey];
@@ -33,7 +34,7 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
             {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
           </span>
           <button
-            onClick={() => navigator.clipboard.writeText(openContract.address)}
+            onClick={() => { navigator.clipboard.writeText(openContract.address); trackEvent("contract_copied", { coin_id: meta.id ?? meta.symbol, chain: openContract.chain }); }}
             className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             title="Copy address"
             aria-label="Copy address"

@@ -21,6 +21,7 @@ import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS } from "@/lib/psi-colors";
+import { trackEvent } from "@/lib/analytics";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -59,7 +60,7 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2022, 0, 21),
+    date: Date.UTC(2022, 0, 22),
     label: "Fed Crash",
     position: "insideBottom" as const,
     links: [
@@ -76,7 +77,7 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2023, 2, 10),
+    date: Date.UTC(2023, 2, 11),
     label: "SVB Weekend",
     position: "insideBottom" as const,
     links: [
@@ -130,7 +131,7 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
     <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Score History</CardTitle>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
@@ -236,13 +237,13 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
         {PSI_EVENTS.map((evt) => {
           const d = new Date(evt.date);
           const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-          // Find the closest data point within 7 days of the event
-          const closest = data.length > 0
-            ? data.reduce((best, p) =>
-                Math.abs(p.ts - evt.date) < Math.abs(best.ts - evt.date) ? p : best
-              )
+          // Find the worst (lowest) score within ±3 days of the event
+          const WINDOW = 3 * 86400000;
+          const nearby = data.filter((p) => Math.abs(p.ts - evt.date) <= WINDOW);
+          const worst = nearby.length > 0
+            ? nearby.reduce((w, p) => (p.score < w.score ? p : w))
             : null;
-          const psi = closest && Math.abs(closest.ts - evt.date) < 7 * 86400000 ? closest.score : null;
+          const psi = worst ? worst.score : null;
           const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
           const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand] ?? "text-muted-foreground" : "text-muted-foreground";
           return (
@@ -291,7 +292,7 @@ function ComponentChart({
     <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Component Breakdown</CardTitle>
-        <TimeRangeButtons options={options} value={range} onChange={setRange} />
+        <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-components", range: r }); setRange(r); }} />
       </CardHeader>
       <CardContent>
         <div className="flex flex-wrap gap-4 mb-4">

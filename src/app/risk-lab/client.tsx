@@ -16,6 +16,7 @@ import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { sumPegBuckets } from "@/lib/supply";
 import type { ReportCard, DimensionKey } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,7 +48,6 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "overall", label: "Overall" },
   { key: "pegStability", label: "Peg" },
   { key: "liquidity", label: "Liquidity" },
-  { key: "safety", label: "Safety" },
   { key: "resilience", label: "Resilience" },
   { key: "decentralization", label: "Decent." },
   { key: "dependencyRisk", label: "Depend." },
@@ -257,7 +257,7 @@ export function ReportCardsClient() {
         {/* Grade filter buttons */}
         <div className="flex flex-wrap items-center gap-1">
           <button
-            onClick={() => setGradeFilter("all")}
+            onClick={() => { trackEvent("filter_applied", { page: "risk-lab", filter_type: "grade", filter_value: "all" }); setGradeFilter("all"); }}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               gradeFilter === "all"
                 ? "bg-foreground text-background"
@@ -275,7 +275,7 @@ export function ReportCardsClient() {
             return (
               <button
                 key={range}
-                onClick={() => setGradeFilter(range)}
+                onClick={() => { trackEvent("filter_applied", { page: "risk-lab", filter_type: "grade", filter_value: range }); setGradeFilter(range); }}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   isActive
                     ? colorClass
@@ -297,7 +297,7 @@ export function ReportCardsClient() {
           {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.key}
-              onClick={() => setSortKey(opt.key)}
+              onClick={() => { trackEvent("sort_changed", { page: "risk-lab", sort_by: opt.key }); setSortKey(opt.key); }}
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 sortKey === opt.key
                   ? "bg-foreground text-background"
