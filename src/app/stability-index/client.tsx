@@ -44,14 +44,6 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2020, 2, 12),
-    label: "Black Thursday",
-    position: "insideBottom" as const,
-    links: [
-      { title: "COVID panic crashed BTC 40% in one day, triggering MakerDAO liquidation crisis", url: "https://www.coindesk.com/markets/2020/03/12/bitcoin-sees-biggest-single-day-price-drop-since-2013" },
-    ],
-  },
-  {
     date: Date.UTC(2021, 6, 30),
     label: "EIP-1559 Rally",
     position: "top" as const,
