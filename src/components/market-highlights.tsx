@@ -63,7 +63,7 @@ function BiggestDepegs({
     }
 
     entries.sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
-    return entries.slice(0, 5);
+    return entries.slice(0, 6);
   }, [data, pegRates]);
 
   return (
@@ -73,44 +73,46 @@ function BiggestDepegs({
           Current Biggest Depegs
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2.5">
+      <CardContent>
         {depegs.length === 0 && (
           <p className="text-xs text-muted-foreground">No data</p>
         )}
-        {depegs.map((d) => (
-          <Link
-            key={d.id}
-            href={`/stablecoin/${d.id}`}
-            className="flex items-center justify-between gap-2 group"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <StablecoinLogo
-                src={logos?.[d.id]}
-                name={d.name}
-                size={20}
-              />
-              <span className="text-sm font-medium truncate group-hover:underline">
-                {d.symbol}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs text-muted-foreground font-mono">
-                {formatNativePrice(d.price, d.pegCurrency, d.pegRef)}
-              </span>
-              <span
-                className={`text-xs font-mono font-semibold ${
-                  Math.abs(d.bps) >= 50
-                    ? "text-red-500"
-                    : Math.abs(d.bps) >= 10
-                      ? "text-amber-500"
-                      : "text-muted-foreground"
-                }`}
-              >
-                {formatPegDeviation(d.price, d.pegRef)}
-              </span>
-            </div>
-          </Link>
-        ))}
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+          {depegs.map((d) => (
+            <Link
+              key={d.id}
+              href={`/stablecoin/${d.id}`}
+              className="flex items-center justify-between gap-2 group"
+            >
+              <div className="flex items-center gap-1.5 min-w-0">
+                <StablecoinLogo
+                  src={logos?.[d.id]}
+                  name={d.name}
+                  size={18}
+                />
+                <span className="text-sm font-medium truncate group-hover:underline">
+                  {d.symbol}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-muted-foreground font-mono">
+                  {formatNativePrice(d.price, d.pegCurrency, d.pegRef)}
+                </span>
+                <span
+                  className={`text-xs font-mono font-semibold ${
+                    Math.abs(d.bps) >= 50
+                      ? "text-red-500"
+                      : Math.abs(d.bps) >= 10
+                        ? "text-amber-500"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {formatPegDeviation(d.price, d.pegRef)}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

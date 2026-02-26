@@ -110,6 +110,8 @@ export function HomepageClient() {
         />
       )}
 
+      <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TotalMcapChart />
         <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
@@ -174,11 +176,6 @@ export function HomepageClient() {
       <section>
         <h2 className="text-xl font-semibold tracking-tight mb-4">What Pharos Tracks</h2>
         <CategoryStats data={data?.peggedAssets} />
-      </section>
-
-      <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Key Movements</h2>
-        <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </section>
 
       <section>
