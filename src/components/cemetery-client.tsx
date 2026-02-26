@@ -41,7 +41,7 @@ export function CemeteryClient() {
   return (
     <div className="space-y-6">
       {/* Tombstone grid */}
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardHeader className="pb-2">
           <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             The Cemetery
@@ -53,7 +53,7 @@ export function CemeteryClient() {
       </Card>
 
       {/* Autopsy reports */}
-      <Card className="rounded-2xl border-l-[3px] border-l-zinc-500">
+      <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
         <CardContent className="pt-6">
           <StablecoinCemetery
             coins={DEAD_STABLECOINS}

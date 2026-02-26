@@ -45,7 +45,7 @@ export function McapChart({ data }: McapChartProps) {
   }, [range, filteredData]);
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+    <Card className="rounded-xl border-l-[3px] border-l-blue-500">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Market Cap</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />
@@ -57,17 +57,17 @@ export function McapChart({ data }: McapChartProps) {
             <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
               <defs>
                 <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
+                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
               <XAxis
                 dataKey="ts"
                 type="number"
                 scale="time"
                 domain={["dataMin", "dataMax"]}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(ts: number) => {
@@ -79,7 +79,7 @@ export function McapChart({ data }: McapChartProps) {
                 }}
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(val: number) => formatCurrency(val)}

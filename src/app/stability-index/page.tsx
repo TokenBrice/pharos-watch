@@ -28,12 +28,12 @@ export default function StabilityIndexPage() {
           <span>/</span>
           <span className="text-foreground">Stability Index</span>
         </nav>
-        <h1 className="text-3xl font-bold tracking-tight">Pharos Stability Index</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Pharos Stability Index</h1>
         <p className="text-sm text-muted-foreground">
           Historical stablecoin market health scores, component breakdowns, and condition band analysis.
         </p>
       </div>
-      <Suspense fallback={<div className="space-y-6"><Skeleton className="h-48 w-full rounded-2xl" /><Skeleton className="h-[350px] w-full rounded-2xl" /><Skeleton className="h-[350px] w-full rounded-2xl" /></div>}>
+      <Suspense fallback={<div className="space-y-6"><Skeleton className="h-48 w-full rounded-xl" /><Skeleton className="h-[350px] w-full rounded-xl" /><Skeleton className="h-[350px] w-full rounded-xl" /></div>}>
         <StabilityIndexClient />
       </Suspense>
     </div>

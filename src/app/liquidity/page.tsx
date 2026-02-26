@@ -30,7 +30,7 @@ export default function LiquidityPage() {
           <span>/</span>
           <span className="text-foreground">DEX Liquidity</span>
         </nav>
-        <h1 className="text-3xl font-bold tracking-tight">DEX Liquidity</h1>
+        <h1 className="text-4xl font-bold tracking-tight">DEX Liquidity</h1>
         <p className="text-sm text-muted-foreground">
           Liquidity scores, pool depth, and protocol breakdowns for {TRACKED_STABLECOINS.length} stablecoins
           across decentralized exchanges.

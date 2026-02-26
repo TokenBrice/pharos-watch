@@ -170,7 +170,7 @@ function DataQualityCards({ dq }: {
         <Card key={c.label}>
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground">{c.label}</div>
-            <div className={`text-2xl font-bold ${severityColor[c.severity]}`}>{c.value}</div>
+            <div className={`text-2xl font-bold font-mono tabular-nums ${severityColor[c.severity]}`}>{c.value}</div>
             <div className="text-xs text-muted-foreground">{c.detail}</div>
           </CardContent>
         </Card>
@@ -328,7 +328,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       <StatusBanner status={data.overallStatus} timestamp={data.timestamp} />
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Cron Jobs</h2>
+        <h2 className="mb-3 text-xl font-semibold">Cron Jobs</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {Object.entries(data.crons).map(([job, cron]) => (
             <CronCard key={job} job={job} cron={cron} />
@@ -337,7 +337,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Data Quality</h2>
+        <h2 className="mb-3 text-xl font-semibold">Data Quality</h2>
         <DataQualityCards dq={data.dataQuality} />
       </section>
 

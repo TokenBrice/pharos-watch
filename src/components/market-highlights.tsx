@@ -67,7 +67,7 @@ function BiggestDepegs({
   }, [data, pegRates]);
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-red-500 hover:border-foreground/20 transition-colors">
+    <Card className="rounded-xl border-l-[3px] border-l-red-500 hover:border-foreground/20 transition-colors">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Current Biggest Depegs
@@ -156,7 +156,7 @@ function FastestMovers({
   }, [data]);
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-emerald-500 hover:border-foreground/20 transition-colors">
+    <Card className="rounded-xl border-l-[3px] border-l-emerald-500 hover:border-foreground/20 transition-colors">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Fastest Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span>
@@ -230,7 +230,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
     return (
       <div className="grid gap-5 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
-          <Card key={i} className="rounded-2xl">
+          <Card key={i} className="rounded-xl">
             <CardHeader className="pb-2">
               <Skeleton className="h-3 w-28" />
             </CardHeader>

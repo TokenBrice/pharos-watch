@@ -126,7 +126,7 @@ export function ComparisonChart({
     : valueFormatter;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle as="h2">{title}</CardTitle>
         <div className="flex items-center gap-2">
@@ -189,13 +189,13 @@ export function ComparisonChart({
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={formatTimestamp}
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={activeFormatter}

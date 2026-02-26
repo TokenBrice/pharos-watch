@@ -50,7 +50,7 @@ const COMPONENT_DETAIL = [
 
 function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
   return (
-    <Card className="rounded-2xl animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Notable Events</CardTitle>
       </CardHeader>
@@ -78,24 +78,24 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
           const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
           const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand] ?? "text-muted-foreground" : "text-muted-foreground";
           return (
-            <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3">
+            <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 min-w-0">
               <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
-              <span className="text-sm font-semibold">{evt.label}</span>
+              <span className="text-sm font-semibold shrink-0">{evt.label}</span>
               {psi !== null && (
-                <span className={`text-sm tabular-nums font-medium ${psiColor}`}>
+                <span className={`text-sm tabular-nums font-medium shrink-0 ${psiColor}`}>
                   PSI {psi.toFixed(1)}
                 </span>
               )}
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <div className="flex gap-x-4 min-w-0 overflow-hidden">
                 {evt.links.map((link) => (
                   <a
                     key={link.url}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-500 hover:underline inline-flex items-center gap-1"
+                    className="text-sm text-blue-500 hover:underline inline-flex items-center gap-1 min-w-0 shrink"
                   >
-                    {link.title}
+                    <span className="truncate">{link.title}</span>
                     <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <path d="M3.5 1.5h7v7M10.5 1.5 1.5 10.5" />
                     </svg>
@@ -120,7 +120,7 @@ function ComponentChart({
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
 
   return (
-    <Card className="rounded-2xl animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Component Breakdown</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-components", range: r }); setRange(r); }} />
@@ -144,25 +144,25 @@ function ComponentChart({
               <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
                 <defs>
                   <linearGradient id="psiSeverityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="psiBreadthGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.02} />
                   </linearGradient>
                   <linearGradient id="psiTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.2} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
                 <XAxis
                   dataKey="ts"
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(ts: number) =>
@@ -173,7 +173,7 @@ function ComponentChart({
                   }
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -302,7 +302,7 @@ function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
 
 function Methodology() {
   return (
-    <Card className="rounded-2xl animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Methodology</CardTitle>
       </CardHeader>
@@ -435,7 +435,7 @@ function ContributorsTable({
   if (!rows.length) return null;
 
   return (
-    <Card className="rounded-2xl animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Top Contributors</CardTitle>
       </CardHeader>
@@ -545,7 +545,7 @@ export function StabilityIndexClient() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card className="rounded-2xl">
+        <Card className="rounded-xl">
           <CardContent className="flex items-center gap-6 py-8">
             <Skeleton className="h-20 w-20 rounded-full" />
             <div className="space-y-3">
@@ -554,7 +554,7 @@ export function StabilityIndexClient() {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl">
+        <Card className="rounded-xl">
           <CardHeader>
             <Skeleton className="h-6 w-40" />
           </CardHeader>
@@ -562,7 +562,7 @@ export function StabilityIndexClient() {
             <Skeleton className="h-[250px] sm:h-[350px] w-full" />
           </CardContent>
         </Card>
-        <Card className="rounded-2xl">
+        <Card className="rounded-xl">
           <CardHeader>
             <Skeleton className="h-6 w-48" />
           </CardHeader>
@@ -576,7 +576,7 @@ export function StabilityIndexClient() {
 
   if (isError || (!isLoading && !data?.current)) {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardContent className="py-12 text-center space-y-2">
           <p className="text-sm font-medium">Unable to load Stability Index data</p>
           <p className="text-sm text-muted-foreground">
@@ -603,14 +603,14 @@ export function StabilityIndexClient() {
         queries={[{ label: "Stability Index", dataUpdatedAt, staleTime: CRON_15MIN }]}
       />
       {/* Hero — score + components + history stats in one card */}
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardContent className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6 py-6">
           {/* Score + delta */}
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
             <PsiLighthouse band={displayBand} color={hexColor} size={72} />
             <div className="flex flex-col items-center sm:items-start gap-0.5">
               <div className="flex items-baseline gap-2">
-                <span className={`text-4xl font-bold tabular-nums ${colorClass}`}>
+                <span className={`text-4xl font-bold font-mono tabular-nums ${colorClass}`}>
                   {displayScore.toFixed(1)}
                 </span>
                 <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>

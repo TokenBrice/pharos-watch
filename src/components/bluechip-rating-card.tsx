@@ -30,7 +30,7 @@ export function BluechipRatingCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl border-l-[3px] border-l-muted">
+      <Card className="rounded-xl border-l-[3px] border-l-muted">
         <CardHeader className="pb-2">
           <Skeleton className="h-3 w-36" />
         </CardHeader>
@@ -53,7 +53,7 @@ export function BluechipRatingCard({ stablecoinId }: { stablecoinId: string }) {
   const tier = getGradeTier(rating.grade);
 
   return (
-    <Card className={`rounded-2xl border-l-[3px] ${TIER_BORDER[tier]}`}>
+    <Card className={`rounded-xl border-l-[3px] ${TIER_BORDER[tier]}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

@@ -97,13 +97,13 @@ export default function AboutPage() {
           <span>/</span>
           <span className="text-foreground">About Pharos</span>
         </nav>
-        <h1 className="text-3xl font-bold tracking-tight">About Pharos</h1>
+        <h1 className="text-4xl font-bold tracking-tight">About Pharos</h1>
         <p className="text-sm text-muted-foreground">
           Open stablecoin analytics dashboard, built with love and care.
         </p>
       </div>
 
-      <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
+      <Card className="rounded-xl border-l-[3px] border-l-sky-500">
         <CardHeader>
           <CardTitle as="h2">Why Pharos?</CardTitle>
         </CardHeader>
@@ -157,7 +157,7 @@ export default function AboutPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">What Pharos Tracks</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-amber-500" />
@@ -169,7 +169,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Skull className="h-5 w-5 text-zinc-500" />
@@ -181,7 +181,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-red-500" />
@@ -193,7 +193,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-emerald-500" />
@@ -207,7 +207,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-sky-500" />
@@ -228,7 +228,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Droplets className="h-5 w-5 text-cyan-500" />
@@ -249,7 +249,7 @@ export default function AboutPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-semibold tracking-tight">What Pharos Computes</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Newspaper className="h-5 w-5 text-orange-500" />
@@ -263,7 +263,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Gauge className="h-5 w-5 text-indigo-500" />
@@ -275,7 +275,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="h-5 w-5 text-emerald-500" />
@@ -289,7 +289,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Network className="h-5 w-5 text-rose-500" />
@@ -303,7 +303,7 @@ export default function AboutPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl">
+          <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Layers className="h-5 w-5 text-violet-500" />
@@ -320,7 +320,7 @@ export default function AboutPage() {
       </div>
 
       {/* Section 4: Classification */}
-      <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
         <CardHeader>
           <CardTitle as="h2">Classification</CardTitle>
         </CardHeader>
@@ -336,7 +336,7 @@ export default function AboutPage() {
       </Card>
 
       {/* Section 4: Data Pipeline Diagram */}
-      <Card className="rounded-2xl border-l-[3px] border-l-zinc-500">
+      <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
         <CardHeader>
           <CardTitle as="h2">Data Pipeline</CardTitle>
         </CardHeader>
@@ -410,7 +410,7 @@ export default function AboutPage() {
       </Card>
 
       {/* Section 5: Report Card Methodology */}
-      <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader>
           <CardTitle as="h2">Grading Methodology</CardTitle>
         </CardHeader>
@@ -578,7 +578,7 @@ export default function AboutPage() {
       </Card>
 
       {/* Section 6: Portfolio Analyzer & Stress Test Methodology */}
-      <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>
           <CardTitle as="h2">Portfolio Analyzer &amp; Stress Test</CardTitle>
         </CardHeader>
@@ -657,7 +657,7 @@ export default function AboutPage() {
       </Card>
 
       {/* Section 7: Footer */}
-      <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
+      <Card className="rounded-xl border-l-[3px] border-l-sky-500">
         <CardHeader>
           <CardTitle as="h2">Get in Touch</CardTitle>
         </CardHeader>

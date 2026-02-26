@@ -146,7 +146,7 @@ export function PegDiversityChart() {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle as="h2">Fiat-pegged, other than USD</CardTitle>
         </CardHeader>
@@ -164,7 +164,7 @@ export function PegDiversityChart() {
     : pegKeys;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle as="h2">Fiat-pegged, other than USD</CardTitle>
@@ -201,19 +201,19 @@ export function PegDiversityChart() {
                           x2="0"
                           y2="1"
                         >
-                          <stop offset="5%" stopColor={hex} stopOpacity={0.6} />
-                          <stop offset="95%" stopColor={hex} stopOpacity={0.1} />
+                          <stop offset="5%" stopColor={hex} stopOpacity={0.2} />
+                          <stop offset="95%" stopColor={hex} stopOpacity={0.02} />
                         </linearGradient>
                       );
                     })}
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
                   <XAxis
                     dataKey="ts"
                     type="number"
                     scale="time"
                     domain={["dataMin", "dataMax"]}
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(ts: number) =>
@@ -224,7 +224,7 @@ export function PegDiversityChart() {
                     }
                   />
                   <YAxis
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(val: number) => formatCurrency(val, 0)}

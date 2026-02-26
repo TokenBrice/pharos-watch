@@ -20,7 +20,7 @@ export function ReportCardsSummary() {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader>
           <Skeleton className="h-4 w-32" />
         </CardHeader>
@@ -32,7 +32,7 @@ export function ReportCardsSummary() {
   }
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+    <Card className="rounded-xl border-l-[3px] border-l-amber-500">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
           <span className="flex items-center gap-1.5"><ClipboardCheck className="h-4 w-4" />Risk Lab</span>

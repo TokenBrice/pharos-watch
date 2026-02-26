@@ -195,19 +195,19 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
           <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
               <linearGradient id="tvlGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-blue-500, #3b82f6)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--color-blue-500, #3b82f6)" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-blue-500, #3b82f6)" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="var(--color-blue-500, #3b82f6)" stopOpacity={0.02} />
               </linearGradient>
             </defs>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v)}
@@ -304,7 +304,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
+      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="pb-2">
           <Skeleton className="h-3 w-36" />
         </CardHeader>
@@ -326,7 +326,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const tier = getScoreTier(score);
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
+    <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

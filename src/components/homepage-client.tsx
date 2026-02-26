@@ -91,7 +91,7 @@ export function HomepageClient() {
       </div>
 
       <section>
-        <h2 className="text-lg font-semibold tracking-tight mb-4">Pharos&apos; Unique Features</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Pharos&apos; Unique Features</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           <LiquiditySummary />
           <ReportCardsSummary />
@@ -102,7 +102,7 @@ export function HomepageClient() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
         <FilterBar {...filters} />
         <div className="mt-6">
           <StablecoinTable
@@ -123,12 +123,12 @@ export function HomepageClient() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold tracking-tight mb-4">What Pharos Tracks</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">What Pharos Tracks</h2>
         <CategoryStats data={data?.peggedAssets} />
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold tracking-tight mb-4">Key Movements</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Key Movements</h2>
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </section>
 

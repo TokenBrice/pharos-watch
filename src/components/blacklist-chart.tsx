@@ -90,7 +90,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardHeader>
           <Skeleton className="h-6 w-56" />
           <Skeleton className="h-4 w-72 mt-1" />
@@ -103,7 +103,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
   }
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader>
         <CardTitle as="h2">Blacklisted Funds Over Time</CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -115,10 +115,10 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
           <div className={CHART_HEIGHT}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
               <XAxis
                 dataKey="quarter"
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 angle={-45}
@@ -127,7 +127,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
                 interval={Math.max(0, Math.floor(chartData.length / 10) - 1)}
               />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(val: number) => formatCurrency(val, 0)}

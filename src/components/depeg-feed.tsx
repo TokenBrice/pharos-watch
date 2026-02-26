@@ -32,7 +32,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
   if (events.length === 0) return null;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-3">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Recent Depeg Events

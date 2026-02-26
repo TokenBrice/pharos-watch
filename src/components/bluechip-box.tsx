@@ -11,7 +11,7 @@ export function BluechipBox({ stablecoinId, ratingsMap }: { stablecoinId: string
   const textColor = order >= 10 ? "text-emerald-500" : order >= 7 ? "text-blue-500" : order >= 4 ? "text-amber-500" : "text-red-500";
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
+    <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
       <CardHeader className="pb-1">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bluechip Rating</CardTitle>
       </CardHeader>

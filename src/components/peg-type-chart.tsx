@@ -45,7 +45,7 @@ export function PegTypeChart({ data }: AltPegDominanceProps) {
   if (!stats || stats.altTotal === 0) return null;
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader>
         <CardTitle as="h2">Non-USD-Pegged Stablecoin Dominance</CardTitle>
       </CardHeader>

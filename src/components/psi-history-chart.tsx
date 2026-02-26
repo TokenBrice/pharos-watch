@@ -16,19 +16,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import { trackEvent } from "@/lib/analytics";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
 export const BAND_ZONES = [
-  { y1: 90, y2: 100, color: "#22c55e", label: "BEDROCK" },
-  { y1: 75, y2: 90, color: "#14b8a6", label: "STEADY" },
-  { y1: 60, y2: 75, color: "#eab308", label: "TREMOR" },
-  { y1: 40, y2: 60, color: "#f97316", label: "FRACTURE" },
-  { y1: 20, y2: 40, color: "#ef4444", label: "CRISIS" },
-  { y1: 0, y2: 20, color: "#991b1b", label: "MELTDOWN" },
+  { y1: 90, y2: 100, color: PSI_BAND_COLORS.BEDROCK, label: "BEDROCK" },
+  { y1: 75, y2: 90, color: PSI_BAND_COLORS.STEADY, label: "STEADY" },
+  { y1: 60, y2: 75, color: PSI_BAND_COLORS.TREMOR, label: "TREMOR" },
+  { y1: 40, y2: 60, color: PSI_BAND_COLORS.FRACTURE, label: "FRACTURE" },
+  { y1: 20, y2: 40, color: PSI_BAND_COLORS.CRISIS, label: "CRISIS" },
+  { y1: 0, y2: 20, color: PSI_BAND_COLORS.MELTDOWN, label: "MELTDOWN" },
 ];
 
 export const PSI_EVENTS = [
@@ -134,11 +134,16 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
       .filter((e) => e.date <= max && (e.dateEnd ?? e.date) >= min)
       .sort((a, b) => a.date - b.date);
 
-    const result = sorted.map((evt, i) => {
-      if (i > 0 && evt.date - sorted[i - 1].date < threshold && evt.position === sorted[i - 1].position)
-        return { ...evt, hideLabel: true };
-      return { ...evt, hideLabel: false };
-    });
+    const result: (typeof sorted[number] & { hideLabel: boolean })[] = [];
+    let lastShownEnd = -Infinity;
+    for (const evt of sorted) {
+      if (evt.date - lastShownEnd < threshold) {
+        result.push({ ...evt, hideLabel: true });
+      } else {
+        result.push({ ...evt, hideLabel: false });
+        lastShownEnd = evt.dateEnd ?? evt.date;
+      }
+    }
 
     // Events outside the visible range stay hidden
     return PSI_EVENTS.map(
@@ -147,7 +152,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
   }, [filteredData]);
 
   return (
-    <Card className="rounded-2xl animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Pharos Stability Index History</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
@@ -163,8 +168,8 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
               <AreaChart data={filteredData} margin={{ top: 30, right: 5, bottom: 20, left: 5 }}>
                 <defs>
                   <linearGradient id="psiScoreGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 {BAND_ZONES.map((zone) => (
@@ -211,13 +216,13 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                     />
                   )
                 )}
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
                 <XAxis
                   dataKey="ts"
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(ts: number) =>
@@ -228,7 +233,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                   }
                 />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
                   domain={[0, 100]}
@@ -280,7 +285,7 @@ export function PsiHistoryChart() {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle as="h2">Pharos Stability Index History</CardTitle>
         </CardHeader>

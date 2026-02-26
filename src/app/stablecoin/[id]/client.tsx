@@ -107,7 +107,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
         </div>
       )}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
           </CardHeader>
@@ -117,7 +117,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</CardTitle>
           </CardHeader>
@@ -129,7 +129,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
           </CardHeader>
@@ -141,7 +141,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply Changes</CardTitle>
           </CardHeader>
@@ -162,7 +162,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
         </Card>
 
         {!isNavToken && (
-          <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+          <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
 
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peg Score</CardTitle>

@@ -78,7 +78,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="rounded-2xl">
+            <Card key={i} className="rounded-xl">
               <CardHeader className="pb-1">
                 <Skeleton className="h-3 w-24" />
               </CardHeader>
@@ -96,7 +96,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Tracked</CardTitle>
           </CardHeader>
@@ -112,7 +112,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl border-l-[3px] border-l-yellow-500">
+        <Card className="rounded-xl border-l-[3px] border-l-yellow-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Governance</CardTitle>
           </CardHeader>
@@ -142,7 +142,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
             </div>
           </CardContent>
         </Card>
-        <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
+        <Card className="rounded-xl border-l-[3px] border-l-sky-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Stablecoin Dominance</CardTitle>
           </CardHeader>
@@ -183,7 +183,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
           </CardContent>
         </Card>
         {stats.altTotal > 0 && (
-          <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+          <Card className="rounded-xl border-l-[3px] border-l-violet-500">
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Alt-Peg Stablecoins</CardTitle>
             </CardHeader>

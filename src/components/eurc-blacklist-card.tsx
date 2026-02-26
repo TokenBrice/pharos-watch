@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 
 export function EurcBlacklistCard() {
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+    <Card className="rounded-xl border-l-[3px] border-l-blue-500">
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

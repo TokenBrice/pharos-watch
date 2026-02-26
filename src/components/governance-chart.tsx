@@ -36,7 +36,7 @@ export function GovernanceChart({ data }: GovernanceDominanceProps) {
   ];
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader>
         <CardTitle as="h2">Stablecoin by Type</CardTitle>
       </CardHeader>

@@ -203,7 +203,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   }
 
   return (
-    <div className="rounded-xl border overflow-x-auto table-striped scroll-shadow animate-in fade-in duration-300">
+    <div className="rounded-xl border overflow-x-auto scroll-shadow animate-in fade-in duration-300">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>
@@ -228,7 +228,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               handleSortKeyDown={handleSortKeyDown}
               className="text-right"
             />
-            <TableHead className="text-right">Peg</TableHead>
+            <TableHead className="text-right" title="Current peg deviation from target price">Peg</TableHead>
             <SortableTableHead
               sortKey="mcap"
               currentSortKey={sortKey}
@@ -248,6 +248,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
               className="text-right"
+              title="24-hour market cap change"
             />
             <SortableTableHead
               sortKey="change7d"
@@ -258,6 +259,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
               className="hidden sm:table-cell text-right"
+              title="7-day market cap change"
             />
             <SortableTableHead
               sortKey="grade"
@@ -279,6 +281,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
               className="hidden sm:table-cell text-right"
+              title="Peg Stability Score (0-100): measures peg-holding consistency over 30 days"
             />
             <SortableTableHead
               sortKey="liquidity"
@@ -291,8 +294,8 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               className="hidden sm:table-cell text-right"
               title="DEX Liquidity Score — measures pool depth, volume, and diversity across decentralized exchanges"
             />
-            <TableHead className="hidden md:table-cell text-center">Backing</TableHead>
-            <TableHead className="hidden md:table-cell text-center">Type</TableHead>
+            <TableHead className="hidden md:table-cell text-center" title="Collateral backing type">Backing</TableHead>
+            <TableHead className="hidden md:table-cell text-center" title="Stablecoin mechanism type">Type</TableHead>
             <TableHead className="hidden md:table-cell text-center">Flags</TableHead>
           </TableRow>
         </TableHeader>

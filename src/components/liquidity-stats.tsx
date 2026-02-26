@@ -41,7 +41,7 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
   if (total === 0) return null;
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-sky-500">
+    <Card className="rounded-xl border-l-[3px] border-l-sky-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Chain TVL Breakdown
@@ -113,7 +113,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
   if (total === 0) return null;
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Protocol TVL Breakdown
@@ -161,7 +161,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
     <>
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
-        <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total DEX TVL</CardTitle>
           </CardHeader>
@@ -178,7 +178,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">24h DEX Volume</CardTitle>
           </CardHeader>
@@ -188,7 +188,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Liq Score</CardTitle>
           </CardHeader>
@@ -200,7 +200,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
           <CardHeader className="pb-1">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active on DEX</CardTitle>
           </CardHeader>
@@ -210,7 +210,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           </CardContent>
         </Card>
         {stats.avgBalance != null && (
-          <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
+          <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Pool Balance</CardTitle>
             </CardHeader>
@@ -221,7 +221,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
           </Card>
         )}
         {stats.avgOrganic != null && (
-          <Card className="rounded-2xl border-l-[3px] border-l-pink-500">
+          <Card className="rounded-xl border-l-[3px] border-l-pink-500">
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Organic Liquidity</CardTitle>
             </CardHeader>

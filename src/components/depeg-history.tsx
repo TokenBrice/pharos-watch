@@ -40,7 +40,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
   const events = data?.events;
   if (!events || events.length === 0) {
     return (
-      <Card className="rounded-2xl border-l-[3px] border-l-emerald-500">
+      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader className="pb-1">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Depeg History
@@ -57,7 +57,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
   const metrics = computePegStability(events, earliestTrackingDate ?? null);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-1">
         <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Depeg History

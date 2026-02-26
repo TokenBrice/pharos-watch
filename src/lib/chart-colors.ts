@@ -19,7 +19,17 @@ export const RECHARTS_TOOLTIP_STYLES = {
     backgroundColor: "var(--color-card)",
     border: "1px solid var(--color-border)",
     borderRadius: "var(--radius-lg, 0.5rem)",
+    fontFamily: "var(--font-mono)",
   },
-  labelStyle: { color: "var(--color-foreground)" },
-  itemStyle: { color: "var(--color-muted-foreground)" },
+  labelStyle: { color: "var(--color-foreground)", fontFamily: "var(--font-sans)" },
+  itemStyle: { color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" },
+} as const;
+
+export const PSI_BAND_COLORS = {
+  BEDROCK: "#22c55e",
+  STEADY: "#14b8a6",
+  TREMOR: "#eab308",
+  FRACTURE: "#f97316",
+  CRISIS: "#ef4444",
+  MELTDOWN: "#991b1b",
 } as const;

@@ -58,7 +58,7 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
   })() : null;
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Contract Addresses

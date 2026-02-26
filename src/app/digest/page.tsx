@@ -28,7 +28,7 @@ export default function DigestArchivePage() {
           <span>/</span>
           <span className="text-foreground">Daily Digest Archive</span>
         </nav>
-        <h1 className="text-3xl font-bold tracking-tight">Daily Digest Archive</h1>
+        <h1 className="text-4xl font-bold tracking-tight">Daily Digest Archive</h1>
         <p className="text-sm text-muted-foreground">
           Every daily recap, newest first.
         </p>

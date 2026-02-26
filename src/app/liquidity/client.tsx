@@ -118,7 +118,7 @@ export function LiquidityClient() {
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="rounded-2xl">
+            <Card key={i} className="rounded-xl">
               <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
               <CardContent><Skeleton className="h-8 w-32" /></CardContent>
             </Card>
@@ -149,7 +149,7 @@ export function LiquidityClient() {
       {/* Filters + Leaderboard */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold">Liquidity Leaderboard</h2>
+          <h2 className="text-xl font-semibold">Liquidity Leaderboard</h2>
           <div className="flex items-center gap-3">
             <ToggleGroup
               type="single"

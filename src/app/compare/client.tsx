@@ -474,7 +474,7 @@ export function CompareClient() {
           />
 
           {detailLoading ? (
-            <Skeleton className="h-[300px] sm:h-[400px] rounded-2xl" />
+            <Skeleton className="h-[300px] sm:h-[400px] rounded-xl" />
           ) : (
             <>
               {supplySeries.length >= 2 && (

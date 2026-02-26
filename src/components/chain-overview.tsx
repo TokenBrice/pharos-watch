@@ -54,7 +54,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
 
   if (chartData.length === 0) {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-xl">
         <CardHeader>
           <CardTitle as="h2">Chain Distribution</CardTitle>
         </CardHeader>
@@ -66,7 +66,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
   }
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader>
         <CardTitle as="h2">Chain Distribution</CardTitle>
       </CardHeader>
@@ -74,10 +74,10 @@ export function ChainOverview({ data }: ChainOverviewProps) {
         <div className="h-[250px] sm:h-[350px]" role="figure" aria-label="Chain distribution bar chart">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" horizontal={false} />
             <XAxis
               type="number"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(val: number) => formatCurrency(val, 0)}
@@ -85,7 +85,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
             <YAxis
               type="category"
               dataKey="name"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               width={80}

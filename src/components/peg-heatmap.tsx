@@ -95,7 +95,7 @@ export function PegHeatmap({
   }, [coins]);
 
   return (
-    <Card className="rounded-2xl animate-in fade-in duration-300">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">

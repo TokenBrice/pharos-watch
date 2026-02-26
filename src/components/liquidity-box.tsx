@@ -11,7 +11,7 @@ export function LiquidityBox({ stablecoinId, liquidityMap }: { stablecoinId: str
   const textColor = getScoreColor(score);
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
+    <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
       <CardHeader className="pb-1">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidity Score</CardTitle>
       </CardHeader>

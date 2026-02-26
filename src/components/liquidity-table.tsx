@@ -115,7 +115,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
   const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
-    <div className="rounded-xl border overflow-x-auto table-striped scroll-shadow">
+    <div className="rounded-xl border overflow-x-auto scroll-shadow">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>

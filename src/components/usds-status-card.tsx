@@ -53,7 +53,7 @@ export function UsdsStatusCard() {
 
   if (isLoading) {
     return (
-      <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
         <CardHeader className="pb-1">
           <Skeleton className="h-4 w-32" />
         </CardHeader>
@@ -67,7 +67,7 @@ export function UsdsStatusCard() {
   if (!status) return null;
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

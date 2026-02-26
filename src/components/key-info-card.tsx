@@ -18,7 +18,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const hasLinks = meta.links && meta.links.length > 0;
 
   return (
-    <Card className="rounded-2xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
         <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key Information</CardTitle>
       </CardHeader>

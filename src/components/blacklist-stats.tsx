@@ -30,7 +30,7 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
-          <Card key={i} className="rounded-2xl">
+          <Card key={i} className="rounded-xl">
             <CardHeader>
               <Skeleton className="h-4 w-24" />
             </CardHeader>
@@ -45,7 +45,7 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5">
-      <Card className="rounded-2xl border-l-[3px] border-l-blue-500">
+      <Card className="rounded-xl border-l-[3px] border-l-blue-500">
         <CardHeader className="pb-1">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">USDC Blacklisted</CardTitle>
         </CardHeader>
@@ -54,7 +54,7 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
           <p className="text-xs text-muted-foreground">unique addresses</p>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-l-[3px] border-l-cyan-500">
+      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="pb-1">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">USDT Blacklisted</CardTitle>
         </CardHeader>
@@ -63,7 +63,7 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
           <p className="text-xs text-muted-foreground">unique addresses</p>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-l-[3px] border-l-yellow-500">
+      <Card className="rounded-xl border-l-[3px] border-l-yellow-500">
         <CardHeader className="pb-1">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Gold Frozen</CardTitle>
         </CardHeader>
@@ -72,7 +72,7 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
           <p className="text-xs text-muted-foreground">PAXG / XAUT addresses</p>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
+      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader className="pb-1">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Destroyed Funds</CardTitle>
         </CardHeader>
@@ -81,7 +81,7 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
           <p className="text-xs text-muted-foreground">seized &amp; burned (USD value)</p>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl border-l-[3px] border-l-red-500">
+      <Card className="rounded-xl border-l-[3px] border-l-red-500">
         <CardHeader className="pb-1">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Recent Events</CardTitle>
         </CardHeader>

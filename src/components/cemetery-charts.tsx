@@ -49,7 +49,7 @@ function CauseOfDeathByCountChart() {
   }, []);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Cause of Death (by Count)
@@ -128,7 +128,7 @@ function CauseOfDeathByMcapChart() {
   }, []);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Cause of Death (by Peak Mcap)
@@ -205,7 +205,7 @@ function DeathsByYearChart() {
   }, []);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Deaths per Year
@@ -215,16 +215,16 @@ function DeathsByYearChart() {
         <div className="h-[250px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%" aria-label="Stablecoin deaths per year">
           <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
             <XAxis
               dataKey="year"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
               yAxisId="left"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               allowDecimals={false}
@@ -232,7 +232,7 @@ function DeathsByYearChart() {
             <YAxis
               yAxisId="right"
               orientation="right"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v, 0)}
@@ -292,7 +292,7 @@ function TopFailuresChart() {
   }, []);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Largest Failures by Peak Mcap
@@ -302,10 +302,10 @@ function TopFailuresChart() {
         <div className="h-[250px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%" aria-label="Top 10 largest stablecoin failures">
           <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" horizontal={false} />
             <XAxis
               type="number"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v, 0)}
@@ -368,7 +368,7 @@ function CumulativeDestroyedChart() {
   }, []);
 
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Cumulative Peak Value Destroyed
@@ -380,20 +380,20 @@ function CumulativeDestroyedChart() {
           <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
             <defs>
               <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
+                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               interval={Math.max(0, Math.floor(data.length / 8))}
             />
             <YAxis
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v, 0)}
