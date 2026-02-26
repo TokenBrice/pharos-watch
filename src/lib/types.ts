@@ -68,6 +68,14 @@ export interface DependencyWeight {
   weight: number;  // 0-1, fraction of collateral from this source
 }
 
+/** Structured reserve composition for treemap visualization */
+export type ReserveRisk = "low" | "medium" | "high";
+export interface ReserveSlice {
+  name: string;
+  pct: number;        // percentage of total reserves (should sum to ~100)
+  risk: ReserveRisk;  // risk tier for coloring
+}
+
 /** Chain where the core protocol operates and collateral is held */
 export type ChainRisk = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
 
@@ -98,6 +106,7 @@ export interface StablecoinMeta {
   chainRisk?: ChainRisk;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
+  reserves?: ReserveSlice[];  // Structured reserve composition (manually curated)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---

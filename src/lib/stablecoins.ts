@@ -21,10 +21,11 @@ interface StablecoinOpts {
   chainRisk?: import("./types").ChainRisk;
   collateralQuality?: import("./types").CollateralQuality;
   custodyModel?: import("./types").CustodyModel;
+  reserves?: import("./types").ReserveSlice[];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, reserves: opts?.reserves };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -70,6 +71,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
         { chain: "ethereum", address: "0x5754284f345afc66a98fbB0a0Afe71e0f007b949" }, // Tether Treasury
       ],
     },
+    reserves: [
+      { name: "U.S. Treasury Bills", pct: 80, risk: "low" },
+      { name: "Reverse Repos", pct: 12, risk: "low" },
+      { name: "Secured Loans", pct: 4, risk: "medium" },
+      { name: "Gold & Bitcoin", pct: 3, risk: "high" },
+      { name: "Other Investments", pct: 1, risk: "medium" },
+    ],
   }),
   usd("2", "USD Coin", "USDC", "rwa-backed", "centralized", {
     geckoId: "usd-coin",
@@ -98,6 +106,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
         { chain: "ethereum", address: "0x55FE002aEFF02F77364de339a1292923A15844B8" }, // Circle Reserve
       ],
     },
+    reserves: [
+      { name: "U.S. Treasuries", pct: 75, risk: "low" },
+      { name: "Overnight Repos", pct: 18, risk: "low" },
+      { name: "Cash Deposits", pct: 7, risk: "low" },
+    ],
   }),
   usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
@@ -122,6 +135,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
+    reserves: [
+      { name: "ETH / stETH", pct: 45, risk: "medium" },
+      { name: "BTC", pct: 25, risk: "medium" },
+      { name: "SOL", pct: 10, risk: "high" },
+      { name: "Stablecoins (USDC/USDT)", pct: 20, risk: "low" },
+    ],
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
@@ -140,6 +159,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xdc035d45d973e3ec169d2276ddab16f1e407384f", decimals: 18 },
       { chain: "arbitrum", address: "0x6491c05a82219b8d1479057361ff1654749b876b", decimals: 18 },
       { chain: "base", address: "0x820c137fa70c8691f0e44dc420a5e53c168921dc", decimals: 18 },
+    ],
+    reserves: [
+      { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
+      { name: "USDC via PSM", pct: 30, risk: "low" },
+      { name: "ETH / wstETH", pct: 20, risk: "medium" },
+      { name: "Other Vaults", pct: 10, risk: "high" },
     ],
   }),
   usd("262", "World Liberty Financial USD", "USD1", "rwa-backed", "centralized", {
@@ -179,6 +204,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0xd586e7f844cea2f87f50152665bcbc2c279d8d70", decimals: 18 },
       { chain: "fantom", address: "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e", decimals: 18 },
       { chain: "base", address: "0x50c5725949a6f0c72e6c4a641f24049a917db0cb", decimals: 18 },
+    ],
+    reserves: [
+      { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
+      { name: "USDC via PSM", pct: 33, risk: "low" },
+      { name: "ETH / wstETH", pct: 20, risk: "medium" },
+      { name: "WBTC", pct: 5, risk: "medium" },
+      { name: "Other Vaults", pct: 2, risk: "high" },
     ],
   }),
   usd("120", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {

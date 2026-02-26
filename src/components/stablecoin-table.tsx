@@ -33,6 +33,7 @@ import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
 import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSort } from "@/hooks/use-sort";
@@ -558,7 +559,8 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                           ? "text-muted-foreground"
                           : deviationColorClass(absBps);
                         return (
-                          <span className={colorClass}>
+                          <span className={`inline-flex items-center gap-0.5 ${colorClass}`}>
+                            {absBps !== null && <DeviationIcon absBps={absBps} />}
                             {formatPegDeviation(price, ref)}
                           </span>
                         );

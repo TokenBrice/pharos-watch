@@ -604,7 +604,7 @@ export function StabilityIndexClient() {
       />
       {/* Hero — score + components + history stats in one card */}
       <Card className="rounded-xl">
-        <CardContent className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6 py-6">
+        <CardContent className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6 py-6" aria-live="polite">
           {/* Score + delta */}
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
             <PsiLighthouse band={displayBand} color={hexColor} size={72} />

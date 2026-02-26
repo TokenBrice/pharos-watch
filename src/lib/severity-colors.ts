@@ -42,6 +42,16 @@ export function deviationColorHex(absBps: number): string {
   return SEVERITY_HEX.severe;
 }
 
+/** Severity icon name (Lucide component name) for a given deviation in basis points */
+export type SeverityIcon = "CircleCheck" | "TriangleAlert" | "OctagonAlert" | "CircleX";
+
+export function deviationIconName(absBps: number): SeverityIcon {
+  if (absBps < THRESHOLDS.GREEN) return "CircleCheck";
+  if (absBps < THRESHOLDS.AMBER) return "TriangleAlert";
+  if (absBps < THRESHOLDS.ORANGE) return "OctagonAlert";
+  return "CircleX";
+}
+
 // ---------------------------------------------------------------------------
 // Score tier system (used by liquidity, bluechip, peg components)
 // ---------------------------------------------------------------------------

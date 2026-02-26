@@ -38,7 +38,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
           Recent Depeg Events
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1.5">
+      <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1.5" aria-live="polite">
         {visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
           return (

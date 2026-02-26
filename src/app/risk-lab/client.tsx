@@ -12,6 +12,7 @@ import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { PortfolioPanel } from "@/components/portfolio-panel";
 import { StressTestPanel } from "@/components/stress-test-panel";
+import { ContagionGraph } from "@/components/contagion-graph";
 import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { sumPegBuckets } from "@/lib/supply";
@@ -251,6 +252,15 @@ export function ReportCardsClient() {
           logos={logos}
         />
       </div>
+
+      {/* Dependency map */}
+      {reportData?.cards && (
+        <ContagionGraph
+          cards={reportData.cards}
+          mcapMap={mcapMap}
+          logos={logos}
+        />
+      )}
 
       {/* Filter + Sort controls */}
       <div className="flex flex-wrap items-center gap-3">

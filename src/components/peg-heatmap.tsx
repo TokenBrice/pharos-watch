@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
+import { DeviationIcon } from "@/components/severity-icon";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -168,7 +169,8 @@ export function PegHeatmap({
                     )}
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
                     <span className="text-[10px] font-medium truncate max-w-full">{coin.symbol}</span>
-                    <span className="text-[10px] font-mono font-semibold">
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold">
+                      <DeviationIcon absBps={absBps} className="h-2.5 w-2.5" />
                       {sign}{coin.currentDeviationBps}
                     </span>
                   </Link>

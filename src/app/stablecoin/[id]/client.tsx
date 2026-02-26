@@ -22,6 +22,8 @@ import { LiquidityBox } from "@/components/liquidity-box";
 import { AiSummary } from "@/components/ai-summary";
 import { ReportCardDetail } from "@/components/report-card";
 import { DetailSectionNav } from "@/components/detail-section-nav";
+import { PegGauge } from "@/components/peg-gauge";
+import { ReserveTreemap } from "@/components/reserve-treemap";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
@@ -127,6 +129,12 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
             </CardHeader>
             <CardContent>
+              {coinData.price != null && pegRef > 0 && (
+                <PegGauge
+                  deviationBps={Math.round(((coinData.price - pegRef) / pegRef) * 10000)}
+                  className="w-full max-w-[180px] mx-auto -mt-1 mb-1"
+                />
+              )}
               <div className="text-2xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
               <p className="text-sm text-muted-foreground font-mono">{formatPegDeviation(coinData.price, pegRef)}</p>
             </CardContent>
@@ -219,6 +227,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
       <section id="info">
         {meta && <KeyInfoCard meta={meta} />}
         {meta && <ContractAddresses meta={meta} />}
+        {meta?.reserves && <ReserveTreemap reserves={meta.reserves} />}
       </section>
 
       <section id="liquidity">
