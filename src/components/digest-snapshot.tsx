@@ -164,25 +164,32 @@ export function DigestSnapshot({ date }: { date: string }) {
           </SnapshotCard>
         )}
 
-        {/* 5. Blacklist Activity */}
+        {/* 5. Blacklist Activity — spans full width since it's a list */}
         {blacklistEvents.length > 0 && (
-          <SnapshotCard title="Blacklist Activity">
-            <p className="text-sm text-foreground/90">
-              <span className="font-medium">{blacklistEvents.length}</span>{" "}
-              event{blacklistEvents.length !== 1 ? "s" : ""}
-            </p>
-            <ul className="space-y-0.5">
-              {blacklistEvents.map((e) => (
-                <li key={`${e.timestamp}-${e.address}`} className="text-xs text-muted-foreground">
-                  {e.stablecoin} on {e.chainName} &mdash; {e.eventType}
-                  {e.amount != null && (
-                    <span> ({formatCurrency(e.amount)})</span>
-                  )}
-                  <span className="ml-1">{formatAddress(e.address)}</span>
-                </li>
-              ))}
-            </ul>
-          </SnapshotCard>
+          <div className="sm:col-span-2">
+            <SnapshotCard title="Blacklist Activity">
+              <p className="text-sm text-foreground/90">
+                <span className="font-medium">{blacklistEvents.length}</span>{" "}
+                event{blacklistEvents.length !== 1 ? "s" : ""} on this day
+              </p>
+              <ul className="space-y-0.5">
+                {blacklistEvents.slice(0, 5).map((e) => (
+                  <li key={`${e.timestamp}-${e.address}`} className="text-xs text-muted-foreground">
+                    {e.stablecoin} on {e.chainName} &mdash; {e.eventType}
+                    {e.amount != null && (
+                      <span> ({formatCurrency(e.amount)})</span>
+                    )}
+                    <span className="ml-1">{formatAddress(e.address)}</span>
+                  </li>
+                ))}
+              </ul>
+              {blacklistEvents.length > 5 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  and {blacklistEvents.length - 5} more
+                </p>
+              )}
+            </SnapshotCard>
+          </div>
         )}
       </div>
     </section>
