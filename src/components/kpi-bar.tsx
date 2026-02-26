@@ -67,7 +67,7 @@ export function KpiBar() {
   if (isLoading) {
     return (
       <Card className="p-0 overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border/50">
           <KpiSkeleton />
           <KpiSkeleton />
           <KpiSkeleton />
@@ -101,7 +101,7 @@ export function KpiBar() {
 
   return (
     <Card className="p-0 overflow-hidden">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border/50">
         <KpiCell
           label="PSI"
           value={psiScore}
