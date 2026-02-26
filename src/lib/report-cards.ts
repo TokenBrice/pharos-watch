@@ -13,6 +13,10 @@ import type {
   DexLiquidityData,
   StablecoinMeta,
   GovernanceType,
+  BackingType,
+  ChainRisk,
+  CollateralQuality,
+  CustodyModel,
   ReportCard,
 } from "./types";
 
@@ -20,14 +24,14 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "2.1";
+export const METHODOLOGY_VERSION = "3.0";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
   liquidity: 0.25,
-  resilience: 0.10,
+  resilience: 0.15,
   decentralization: 0.10,
-  dependencyRisk: 0.30,
+  dependencyRisk: 0.25,
 };
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
@@ -219,20 +223,121 @@ export function scoreLiquidity(
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
 }
 
+// ---------------------------------------------------------------------------
+// Resilience: 4-factor model
+// ---------------------------------------------------------------------------
+
+const CHAIN_RISK_SCORE: Record<ChainRisk, number> = {
+  ethereum: 100,
+  "stage1-l2": 66,
+  "established-alt-l1": 33,
+  unproven: 0,
+};
+
+const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
+  native: 100,
+  "eth-lst": 66,
+  "alt-lst-bridged": 33,
+  exotic: 0,
+};
+
+const CUSTODY_MODEL_SCORE: Record<CustodyModel, number> = {
+  onchain: 100,
+  institutional: 50,
+  cex: 0,
+};
+
+const CHAIN_RISK_LABEL: Record<ChainRisk, string> = {
+  ethereum: "Ethereum mainnet",
+  "stage1-l2": "Stage 1+ L2",
+  "established-alt-l1": "Established alt-L1",
+  unproven: "Unproven chain",
+};
+
+const COLLATERAL_QUALITY_LABEL: Record<CollateralQuality, string> = {
+  native: "Native assets (ETH/BTC)",
+  "eth-lst": "Ethereum LSTs",
+  "alt-lst-bridged": "Alt-L1 LSTs / Bridged",
+  exotic: "Exotic / opaque strategy",
+};
+
+const CUSTODY_MODEL_LABEL: Record<CustodyModel, string> = {
+  onchain: "Fully on-chain",
+  institutional: "Institutional custodian",
+  cex: "CEX / off-exchange custody",
+};
+
 /**
- * Resilience: binary based on whether the token can be blacklisted by its issuer.
+ * Infer default resilience sub-factors from backing + governance.
+ * Only used when the field is not explicitly set on StablecoinMeta.
+ */
+export function inferResilienceDefaults(
+  backing: BackingType,
+  governance: GovernanceType,
+): { chainRisk: ChainRisk; collateralQuality: CollateralQuality; custodyModel: CustodyModel } {
+  if (backing === "rwa-backed" && governance === "centralized") {
+    return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "institutional" };
+  }
+  if (backing === "crypto-backed" && governance === "decentralized") {
+    return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "onchain" };
+  }
+  if (backing === "crypto-backed" && governance === "centralized-dependent") {
+    return { chainRisk: "ethereum", collateralQuality: "eth-lst", custodyModel: "onchain" };
+  }
+  // algorithmic + any, or any remaining combo
+  return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "onchain" };
+}
+
+/**
+ * Resolve the final resilience sub-factor values for a coin.
+ * Explicit overrides on meta take priority; otherwise, infer from backing + governance.
+ */
+export function resolveResilienceFactors(meta: StablecoinMeta): {
+  chainRisk: ChainRisk;
+  collateralQuality: CollateralQuality;
+  custodyModel: CustodyModel;
+} {
+  const defaults = inferResilienceDefaults(meta.flags.backing, meta.flags.governance);
+  return {
+    chainRisk: meta.chainRisk ?? defaults.chainRisk,
+    collateralQuality: meta.collateralQuality ?? defaults.collateralQuality,
+    custodyModel: meta.custodyModel ?? defaults.custodyModel,
+  };
+}
+
+/**
+ * Resilience: 4-factor weighted average.
  *
- * Blacklistable tokens (e.g. USDC, USDT) score 0 — the issuer can freeze
- * or seize funds at any time. Non-blacklistable tokens score 100.
+ * Sub-factors (each 25% of the resilience score):
+ * 1. Chain Risk — where does the protocol live?
+ * 2. Collateral Quality — trust assumptions in backing assets
+ * 3. Custody Model — who holds the collateral?
+ * 4. Blacklist Capability — can the issuer freeze funds?
  */
 export function scoreResilience(
+  meta: StablecoinMeta,
   canBeBlacklisted: boolean,
 ): ReportCardDimension {
-  const score = canBeBlacklisted ? 0 : 100;
-  const detail = canBeBlacklisted
-    ? "Token can be blacklisted by issuer"
-    : "Token has no blacklist capability";
-  return { grade: scoreToGrade(score), score, detail };
+  const factors = resolveResilienceFactors(meta);
+  const blacklistScore = canBeBlacklisted ? 0 : 100;
+
+  const chainScore = CHAIN_RISK_SCORE[factors.chainRisk];
+  const collateralScore = COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
+  const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
+
+  const score = Math.round(
+    (chainScore + collateralScore + custodyScore + blacklistScore) / 4,
+  );
+
+  // Build detail: list each sub-factor
+  const parts = [
+    `Chain: ${CHAIN_RISK_LABEL[factors.chainRisk]} (${chainScore})`,
+    `Collateral: ${COLLATERAL_QUALITY_LABEL[factors.collateralQuality]} (${collateralScore})`,
+    `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
+    `Blacklist: ${canBeBlacklisted ? "Yes" : "No"} (${blacklistScore})`,
+  ];
+
+  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
 }
 
 /**
