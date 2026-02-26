@@ -20,6 +20,7 @@ import { CemeterySummary } from "@/components/cemetery-summary";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
 import { LiquiditySummary } from "@/components/liquidity-summary";
+import { DigestArchiveSummary } from "@/components/digest-archive-summary";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
@@ -122,6 +123,7 @@ export function HomepageClient() {
           <BlacklistSummary />
           <CemeterySummary />
           <StabilityIndexSummary />
+          <DigestArchiveSummary />
         </div>
       </section>
 
