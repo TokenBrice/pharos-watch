@@ -29,8 +29,11 @@ export function hasMissingPrice(a: PeggedAsset): boolean {
 /** Guard against corrupted API prices that would break peg deviation calculations */
 export function isReasonablePrice(price: number, pegType: string | undefined): boolean {
   if (!pegType) return price > 0 && price < 100_000;
-  if (pegType.includes("USD") || pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL") || pegType.includes("REAL")) {
-    return price > 0.01 && price < 5;
+  if (pegType.includes("USD")) {
+    return price > 0.01 && price < 1.20; // USD stablecoins never legitimately trade above $1.20 — higher values are CG data artifacts
+  }
+  if (pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL") || pegType.includes("REAL")) {
+    return price > 0.01 && price < 2;
   }
   if (pegType.includes("JPY")) return price > 0.001 && price < 0.05;
   if (pegType.includes("IDR")) return price > 0.00001 && price < 0.001;
