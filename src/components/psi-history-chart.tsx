@@ -120,7 +120,7 @@ function useIsMobile(breakpoint = 640) {
 
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
-export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
+export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score: number }[]; excludeEvents?: string[] }) {
   const chartRef = useRef<HTMLDivElement>(null);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");
@@ -130,14 +130,15 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
 
   /* Hide overlapping event labels when zoomed into a tight range */
   const visibleEvents = useMemo(() => {
+    const events = excludeEvents ? PSI_EVENTS.filter((e) => !excludeEvents.includes(e.label)) : PSI_EVENTS;
     const min = filteredData[0]?.ts;
     const max = filteredData[filteredData.length - 1]?.ts;
-    if (!min || !max) return PSI_EVENTS.map((e) => ({ ...e, hideLabel: false }));
+    if (!min || !max) return events.map((e) => ({ ...e, hideLabel: false }));
 
     const rangeMs = max - min;
     const threshold = rangeMs * 0.05; // 5% of visible range
 
-    const sorted = [...PSI_EVENTS]
+    const sorted = [...events]
       .filter((e) => e.date <= max && (e.dateEnd ?? e.date) >= min)
       .sort((a, b) => a.date - b.date);
 
@@ -155,10 +156,10 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
     }
 
     // Events outside the visible range stay hidden
-    return PSI_EVENTS.map(
+    return events.map(
       (e) => result.find((r) => r.label === e.label) ?? { ...e, hideLabel: true },
     );
-  }, [filteredData]);
+  }, [filteredData, excludeEvents]);
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -295,7 +296,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
 
 /* ─── Self-contained wrapper (fetches its own data) ────────────── */
 
-export function PsiHistoryChart() {
+export function PsiHistoryChart({ excludeEvents }: { excludeEvents?: string[] } = {}) {
   const { data, isLoading } = useStabilityIndexDetail();
 
   const chartData = useMemo(() => {
@@ -320,5 +321,5 @@ export function PsiHistoryChart() {
     );
   }
 
-  return <ScoreChart data={chartData} />;
+  return <ScoreChart data={chartData} excludeEvents={excludeEvents} />;
 }

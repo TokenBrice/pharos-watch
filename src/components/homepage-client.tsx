@@ -111,7 +111,7 @@ export function HomepageClient() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TotalMcapChart />
-        <PsiHistoryChart />
+        <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
       </div>
 
       <section>
