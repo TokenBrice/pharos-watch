@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -230,12 +231,12 @@ export function ReportCardsClient() {
 
       {/* Link to standalone dependency map */}
       <div className="flex items-center justify-end">
-        <a
+        <Link
           href="/dependency-map"
           className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
         >
           Explore the full dependency map →
-        </a>
+        </Link>
       </div>
 
       {/* Filter + Sort controls */}
