@@ -627,8 +627,8 @@ export function StabilityIndexClient() {
               </div>
             </div>
           </div>
-          {/* Component breakdown — desktop, next to score */}
-          <div className="hidden lg:flex items-center gap-5">
+          {/* Component breakdown — fills the middle */}
+          <div className="hidden lg:flex flex-1 items-center justify-center gap-5">
             <div className="h-10 w-px bg-border" />
             {COMPONENT_DETAIL.map((c) => (
               <div key={c.label} className="flex flex-col items-center gap-0.5">
@@ -639,8 +639,8 @@ export function StabilityIndexClient() {
               </div>
             ))}
           </div>
-          {/* History stats — desktop, right-aligned */}
-          <div className="hidden lg:flex items-center gap-5 ml-auto">
+          {/* History stats — right edge */}
+          <div className="hidden lg:flex items-center gap-5">
             <HistoryStats history={data.history} />
           </div>
           {/* History stats — mobile only */}
