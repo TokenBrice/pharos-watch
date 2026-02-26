@@ -33,11 +33,12 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     // Breakdown by governance
     const gov = computeGovernanceBreakdown(trackedData);
 
-    // Collateral quality breakdown by mcap
+    // Collateral quality breakdown by mcap (exclude USDT/USDC — they dominate RWA)
     const collateralMcap: Record<string, number> = {};
     let collateralTotal = 0;
     if (reportCards) {
       for (const coin of trackedData) {
+        if (coin.id === "1" || coin.id === "2") continue;
         const card = reportCards[coin.id];
         if (!card || card.isDefunct) continue;
         const mcap = getCirculatingRaw(coin);
@@ -187,7 +188,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
         </Card>
         <Card className="rounded-xl border-l-[3px] border-l-sky-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Collateral</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Collateral <span className="normal-case font-normal">(ex. USDT/USDC)</span></CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {stats.collateralTotal > 0 ? (
