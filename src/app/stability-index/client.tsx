@@ -168,9 +168,10 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
                       strokeDasharray="4 4"
                       label={isMobile ? undefined : {
                         value: evt.label,
-                        position: evt.position === "top" ? "insideTopLeft" : "insideBottomLeft",
+                        position: evt.position === "top" ? "insideTop" : "insideBottomLeft",
                         fontSize: 11,
                         fill: "#94a3b8",
+                        ...(evt.position === "top" ? { dy: -20 } : {}),
                       }}
                     />
                   ) : (
