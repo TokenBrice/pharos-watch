@@ -117,20 +117,20 @@ export function TotalMcapChart() {
             <AreaChart data={filteredData} margin={{ top: 5, right: 20, bottom: 20, left: 5 }}>
               <defs>
                 <linearGradient id="usdtGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={USDT_GREEN} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={USDT_GREEN} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor={USDT_GREEN} stopOpacity={0.5} />
+                  <stop offset="95%" stopColor={USDT_GREEN} stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="usdcGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={USDC_BLUE} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={USDC_BLUE} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor={USDC_BLUE} stopOpacity={0.5} />
+                  <stop offset="95%" stopColor={USDC_BLUE} stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={SKY_YELLOW} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={SKY_YELLOW} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor={SKY_YELLOW} stopOpacity={0.5} />
+                  <stop offset="95%" stopColor={SKY_YELLOW} stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="othersGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={OTHERS_SLATE} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor={OTHERS_SLATE} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />

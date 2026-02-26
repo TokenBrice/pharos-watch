@@ -144,16 +144,16 @@ function ComponentChart({
               <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
                 <defs>
                   <linearGradient id="psiSeverityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.02} />
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.severity} stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="psiBreadthGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.02} />
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="psiTrendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.2} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.02} />
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />

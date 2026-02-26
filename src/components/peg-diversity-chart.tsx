@@ -201,8 +201,8 @@ export function PegDiversityChart() {
                           x2="0"
                           y2="1"
                         >
-                          <stop offset="5%" stopColor={hex} stopOpacity={0.2} />
-                          <stop offset="95%" stopColor={hex} stopOpacity={0.02} />
+                          <stop offset="5%" stopColor={hex} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={hex} stopOpacity={0.05} />
                         </linearGradient>
                       );
                     })}
