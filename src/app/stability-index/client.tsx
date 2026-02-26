@@ -36,7 +36,8 @@ const BAND_ZONES = [
 
 const PSI_EVENTS = [
   {
-    date: Date.UTC(2018, 9, 15),
+    date: Date.UTC(2018, 9, 14),
+    dateEnd: Date.UTC(2018, 9, 26),
     label: "Tether Scare",
     position: "top" as const,
     links: [
@@ -44,7 +45,8 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2021, 6, 30),
+    date: Date.UTC(2021, 6, 20),
+    dateEnd: Date.UTC(2021, 7, 5),
     label: "EIP-1559 Rally",
     position: "top" as const,
     links: [
@@ -52,7 +54,8 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2022, 0, 22),
+    date: Date.UTC(2022, 0, 21),
+    dateEnd: Date.UTC(2022, 1, 8),
     label: "Fed Crash",
     position: "insideBottom" as const,
     links: [
@@ -62,6 +65,7 @@ const PSI_EVENTS = [
   },
   {
     date: Date.UTC(2022, 4, 7),
+    dateEnd: Date.UTC(2022, 6, 1),
     label: "UST Collapse",
     position: "top" as const,
     links: [
@@ -69,7 +73,8 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2023, 2, 11),
+    date: Date.UTC(2023, 2, 10),
+    dateEnd: Date.UTC(2023, 2, 16),
     label: "SVB Weekend",
     position: "insideBottom" as const,
     links: [
@@ -150,20 +155,39 @@ function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
                     ifOverflow="extendDomain"
                   />
                 ))}
-                {PSI_EVENTS.map((evt) => (
-                  <ReferenceLine
-                    key={evt.label}
-                    x={evt.date}
-                    stroke="#94a3b8"
-                    strokeDasharray="4 4"
-                    label={isMobile ? undefined : {
-                      value: evt.label,
-                      position: evt.position,
-                      fontSize: 11,
-                      fill: "#94a3b8",
-                    }}
-                  />
-                ))}
+                {PSI_EVENTS.map((evt) =>
+                  evt.dateEnd ? (
+                    <ReferenceArea
+                      key={evt.label}
+                      x1={evt.date}
+                      x2={evt.dateEnd}
+                      fill="#94a3b8"
+                      fillOpacity={0.1}
+                      stroke="#94a3b8"
+                      strokeOpacity={0.3}
+                      strokeDasharray="4 4"
+                      label={isMobile ? undefined : {
+                        value: evt.label,
+                        position: evt.position === "top" ? "insideTopLeft" : "insideBottomLeft",
+                        fontSize: 11,
+                        fill: "#94a3b8",
+                      }}
+                    />
+                  ) : (
+                    <ReferenceLine
+                      key={evt.label}
+                      x={evt.date}
+                      stroke="#94a3b8"
+                      strokeDasharray="4 4"
+                      label={isMobile ? undefined : {
+                        value: evt.label,
+                        position: evt.position,
+                        fontSize: 11,
+                        fill: "#94a3b8",
+                      }}
+                    />
+                  )
+                )}
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
                 <XAxis
                   dataKey="ts"
@@ -228,10 +252,20 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
       <CardContent className="space-y-3">
         {PSI_EVENTS.map((evt) => {
           const d = new Date(evt.date);
-          const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-          // Find the worst (lowest) score within ±3 days of the event
-          const WINDOW = 3 * 86400000;
-          const nearby = data.filter((p) => Math.abs(p.ts - evt.date) <= WINDOW);
+          const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" };
+          const dateStr = evt.dateEnd
+            ? (() => {
+                const dEnd = new Date(evt.dateEnd);
+                const sameYear = d.getFullYear() === dEnd.getFullYear();
+                const start = d.toLocaleDateString("en-US", sameYear ? { month: "short", day: "numeric" } : opts);
+                const end = dEnd.toLocaleDateString("en-US", opts);
+                return `${start} – ${end}`;
+              })()
+            : d.toLocaleDateString("en-US", opts);
+          // Find the worst (lowest) score within the event window
+          const rangeEnd = evt.dateEnd ?? evt.date + 3 * 86400000;
+          const SLACK = 3 * 86400000;
+          const nearby = data.filter((p) => p.ts >= evt.date - SLACK && p.ts <= rangeEnd + SLACK);
           const worst = nearby.length > 0
             ? nearby.reduce((w, p) => (p.score < w.score ? p : w))
             : null;
