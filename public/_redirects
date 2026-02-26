@@ -1,2 +1,4 @@
 /report-cards/* /risk-lab/:splat 301
 /report-cards /risk-lab 301
+/peg-tracker / 301
+/peg-tracker/ / 301
