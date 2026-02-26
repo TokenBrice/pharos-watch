@@ -35,7 +35,7 @@ export function ReportCardsSummary() {
     <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5"><ClipboardCheck className="h-4 w-4" />Report Cards</span>
+          <span className="flex items-center gap-1.5"><ClipboardCheck className="h-4 w-4" />Risk Lab</span>
           <Link
             href="/report-cards"
             className="text-xs font-normal text-muted-foreground hover:text-foreground transition-colors"

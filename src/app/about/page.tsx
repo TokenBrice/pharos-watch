@@ -280,7 +280,7 @@ export default function AboutPage() {
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="h-5 w-5 text-emerald-500" />
                 <Link href="/report-cards" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
-                  Pharos Report Cards
+                  Safety Grades
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -412,7 +412,7 @@ export default function AboutPage() {
       {/* Section 5: Report Card Methodology */}
       <Card className="rounded-2xl border-l-[3px] border-l-amber-500">
         <CardHeader>
-          <CardTitle as="h2">Report Card Methodology</CardTitle>
+          <CardTitle as="h2">Grading Methodology</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
