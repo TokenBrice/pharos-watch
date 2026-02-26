@@ -4,11 +4,11 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
+import { usePegSummary } from "@/hooks/use-peg-summary";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRaw } from "@/lib/supply";
-import { computePegScoreWithWindow } from "@/lib/peg-score";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
+  const { data: pegSummaryData } = usePegSummary();
   const { data: ratingsMap } = useBluechipRatings();
   const { data: liquidityMap } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
@@ -97,7 +98,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
 
   const supplyHistory = supplyData ?? [];
   const earliestTrackingDate = supplyHistory.length > 0 ? String(supplyHistory[0].date) : null;
-  const pegScoreResult = computePegScoreWithWindow(isNavToken, depegData?.events ?? null, earliestTrackingDate);
+  const pegScoreResult = pegSummaryData?.coins.find((c) => c.id === id) ?? null;
 
   return (
     <div className="space-y-6">
