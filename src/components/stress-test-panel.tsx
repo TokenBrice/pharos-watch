@@ -12,6 +12,7 @@ import type { PortfolioState } from "@/hooks/use-portfolio";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCard, ReportCardGrade } from "@/lib/types";
 import { ChevronDown, ChevronRight, Network } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -123,7 +124,7 @@ export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressT
   return (
     <Card>
       {/* Header */}
-      <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => !v)}>
+      <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => { const next = !v; trackEvent("panel_toggled", { panel: "stress_test", action: next ? "open" : "close" }); return next; })}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <Network className="h-5 w-5 text-rose-500 shrink-0" />
@@ -179,9 +180,17 @@ export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressT
               <select
                 id="stress-grade"
                 value={stressTest.targetGrade ?? ""}
-                onChange={(e) =>
-                  stressTest.setGrade((e.target.value as ReportCardGrade) || null)
-                }
+                onChange={(e) => {
+                  const grade = (e.target.value as ReportCardGrade) || null;
+                  stressTest.setGrade(grade);
+                  if (grade && stressTest.targetCoinId) {
+                    trackEvent("stress_test_run", {
+                      target_coin: stressTest.targetCoinId,
+                      target_grade: grade,
+                      affected_count: stressTest.impacts.length,
+                    });
+                  }
+                }}
                 disabled={!stressTest.targetCoinId}
                 className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
               >
