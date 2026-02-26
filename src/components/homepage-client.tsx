@@ -180,7 +180,7 @@ export function HomepageClient() {
       </section>
 
       <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">What Pharos Tracks</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Stablecoin Distribution</h2>
         <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
       </section>
 

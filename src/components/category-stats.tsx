@@ -60,7 +60,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     }
     const altPegs = Object.entries(pegTotals)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 3);
+      .slice(0, 4);
 
     // Safety score breakdown by grade tier
     let gradeA = 0;
@@ -227,27 +227,34 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
         {stats.altTotal > 0 && (
           <Card className="rounded-xl border-l-[3px] border-l-violet-500">
             <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Alt-Peg Stablecoins</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Peg (USD excluded)</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-1">
-              {stats.altPegs.map(([peg, mcap]) => {
-                const pct = (mcap / stats.altTotal) * 100;
-                const color = PEG_META[peg]?.textColor ?? "text-muted-foreground";
-                return (
-                  <div key={peg} className="flex justify-between text-sm">
-                    <span className={color}>{PEG_META[peg]?.label ?? peg}</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="font-bold font-mono text-xs">{pct.toFixed(0)}%</span>
-                      <span className="font-mono text-xs text-muted-foreground">{formatCurrency(mcap, 0)}</span>
+            <CardContent className="space-y-2">
+              <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
+                {stats.altPegs.map(([peg, mcap]) => {
+                  const pct = (mcap / stats.altTotal) * 100;
+                  const bg = PEG_META[peg]?.bgColor ?? "bg-muted-foreground";
+                  return <div key={peg} className={`h-full ${bg}`} style={{ width: `${pct}%` }} />;
+                })}
+              </div>
+              <div className="space-y-1">
+                {stats.altPegs.map(([peg, mcap]) => {
+                  const pct = (mcap / stats.altTotal) * 100;
+                  const textColor = PEG_META[peg]?.textColor ?? "text-muted-foreground";
+                  const bgColor = PEG_META[peg]?.bgColor ?? "bg-muted-foreground";
+                  return (
+                    <div key={peg} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`h-2 w-2 rounded-full ${bgColor}`} />
+                        <span className={`font-medium ${textColor}`}>{PEG_META[peg]?.label ?? peg}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-bold font-mono text-xs">{pct.toFixed(1)}%</span>
+                        <span className="text-muted-foreground text-xs font-mono">{formatCurrency(mcap, 0)}</span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              <div className="pt-1 border-t border-border/50">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Total</span>
-                  <span className="font-mono">{formatCurrency(stats.altTotal, 0)}</span>
-                </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
