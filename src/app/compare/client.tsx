@@ -35,6 +35,7 @@ import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@/lib/report-cards";
 import type { CoinOption } from "@/components/coin-selector";
 import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 import type { ReportCard } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
@@ -68,6 +69,7 @@ export function CompareClient() {
 
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {
+      trackEvent("time_range_changed", { page: "compare", range: newRange });
       const params = new URLSearchParams(searchParams.toString());
       if (newRange === "all") {
         params.delete("range");
@@ -216,11 +218,16 @@ export function CompareClient() {
   const handleSelect = (slotIndex: number, coin: CoinOption) => {
     setSelectedIds((prev) => {
       const next = [...prev];
-      // If the slot already has a value, replace it; otherwise append
       if (slotIndex < prev.length) {
         next[slotIndex] = coin.id;
       } else {
         next.push(coin.id);
+      }
+      if (next.length >= 2) {
+        trackEvent("comparison_created", {
+          coin_count: next.length,
+          coin_ids: next.slice(0, 5).join(","),
+        });
       }
       return next;
     });
@@ -317,6 +324,7 @@ export function CompareClient() {
     } finally {
       setShareLoading(false);
     }
+    trackEvent("comparison_exported", { method: "tweet", coin_count: comparisonCoins.length });
     const symbols = comparisonCoins.map((c) => c.symbol).join(" vs ");
     const text = `Comparing ${symbols} on Pharos`;
     const url = window.location.href;
@@ -329,6 +337,7 @@ export function CompareClient() {
 
   const handleWebShare = useCallback(async () => {
     setShareLoading(true);
+    trackEvent("comparison_exported", { method: "share", coin_count: comparisonCoins.length });
     try {
       const data = await buildShareData();
       if (!data) return;
@@ -380,6 +389,7 @@ export function CompareClient() {
       a.download = "pharos-compare.png";
       a.click();
       URL.revokeObjectURL(url);
+      trackEvent("comparison_exported", { method: "download", coin_count: comparisonCoins.length });
     } finally {
       setShareLoading(false);
     }
