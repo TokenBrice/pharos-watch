@@ -162,46 +162,49 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
 
             {/* LEFT: Identity + Price */}
-            <div className="lg:w-[45%] flex flex-col gap-4">
-              {/* Identity row */}
-              <div className="flex flex-wrap items-center gap-3">
-                {logoSrc ? (
-                  <Image
-                    src={logoSrc}
-                    alt={`${coin.name} logo`}
-                    width={48}
-                    height={48}
-                    className="rounded-full flex-shrink-0"
-                    unoptimized
-                  />
-                ) : (
-                  <div
-                    className="flex-shrink-0 rounded-full bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground"
-                    style={{ width: 48, height: 48 }}
-                  >
-                    {coin.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <h1 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h1>
-                <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
-                <BluechipHeaderBadge stablecoinId={coin.id} />
+            <div className="lg:w-[45%] flex flex-col gap-3">
+              {/* Identity + classification group */}
+              <div className="flex flex-col gap-1.5">
+                {/* Identity row */}
+                <div className="flex flex-wrap items-center gap-3">
+                  {logoSrc ? (
+                    <Image
+                      src={logoSrc}
+                      alt={`${coin.name} logo`}
+                      width={48}
+                      height={48}
+                      className="rounded-full flex-shrink-0"
+                      unoptimized
+                    />
+                  ) : (
+                    <div
+                      className="flex-shrink-0 rounded-full bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground"
+                      style={{ width: 48, height: 48 }}
+                    >
+                      {coin.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <h1 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h1>
+                  <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
+                  <BluechipHeaderBadge stablecoinId={coin.id} />
+                </div>
+
+                {/* Classification line */}
+                <p className="text-sm text-muted-foreground">
+                  {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
+                  {" \u00b7 "}
+                  {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
+                  {" \u00b7 "}
+                  {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+                </p>
               </div>
 
-              {/* Classification line */}
-              <p className="text-sm text-muted-foreground">
-                {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
-                {" \u00b7 "}
-                {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
-                {" \u00b7 "}
-                {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
-              </p>
-
               {/* Price + Gauge */}
-              <div className="flex items-center gap-4 mt-auto">
+              <div className="flex items-center gap-4 mt-auto border-t border-border/30 pt-3">
                 {coinData.price != null && pegRef > 0 && (
                   <PegGauge
                     deviationBps={deviationBps}
-                    className="w-full max-w-[140px]"
+                    className="w-full max-w-[110px]"
                   />
                 )}
                 <div>
@@ -216,7 +219,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
             </div>
 
             {/* Vertical divider (desktop only) */}
-            <div className="hidden lg:block w-px bg-border/40" />
+            <div className="hidden lg:block w-px bg-border/30 my-3" />
 
             {/* RIGHT: 2x2 Stats Grid */}
             <div className="lg:flex-1">
