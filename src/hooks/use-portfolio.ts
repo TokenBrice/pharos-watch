@@ -9,6 +9,7 @@ import type {
   DimensionKey,
   ReportCardGrade,
   DependencyWeight,
+  ReserveSlice,
 } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,7 @@ export interface UpstreamExposure {
   symbol: string;
   usd: number;
   pct: number;
+  isCollateral: boolean; // true = non-stablecoin collateral (ETH, T-bills, etc.)
 }
 
 export interface PortfolioState {
@@ -55,13 +57,23 @@ const STORAGE_KEY = "pharos:portfolio";
 
 const symbolToId = new Map<string, string>();
 const idToSymbol = new Map<string, string>();
-const idToMeta = new Map<string, { name: string; symbol: string }>();
+const idToMeta = new Map<string, {
+  name: string;
+  symbol: string;
+  backing: string;
+  reserves?: ReserveSlice[];
+}>();
 
 for (const coin of TRACKED_STABLECOINS) {
   const lower = coin.symbol.toLowerCase();
   symbolToId.set(lower, coin.id);
   idToSymbol.set(coin.id, lower);
-  idToMeta.set(coin.id, { name: coin.name, symbol: coin.symbol });
+  idToMeta.set(coin.id, {
+    name: coin.name,
+    symbol: coin.symbol,
+    backing: coin.flags.backing,
+    reserves: coin.reserves,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +135,27 @@ function saveToStorage(holdings: PortfolioHolding[]): void {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers for reserve-based collateral breakdown
+// ---------------------------------------------------------------------------
+
+const STABLECOIN_SLICE_KEYWORDS = ["usdc", "usdt", "dai", "usds", "busd", "frax", "stablecoin", "stable"];
+
+function isStablecoinSlice(name: string): boolean {
+  const lower = name.toLowerCase();
+  return STABLECOIN_SLICE_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function collateralKey(name: string): string {
+  return `__collateral_${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}__`;
+}
+
+function backingFallback(backing: string): { name: string; symbol: string } {
+  if (backing === "algorithmic") return { name: "Algorithmic Mechanism", symbol: "ALGO" };
+  if (backing === "crypto-backed") return { name: "Crypto Collateral", symbol: "CRYPTO" };
+  return { name: "Real-World Assets (RWA)", symbol: "RWA" };
+}
+
+// ---------------------------------------------------------------------------
 // Upstream exposure walker
 // ---------------------------------------------------------------------------
 
@@ -133,47 +166,87 @@ function computeUpstreamExposure(
   const cardMap = new Map<string, ReportCard>();
   for (const c of cards) cardMap.set(c.id, c);
 
-  // Accumulate USD exposure per upstream coin ID
-  const exposureUsd = new Map<string, number>();
-  let otherUsd = 0;
+  // Stablecoin upstream exposure: keyed by tracked coin id
+  const stablecoinUsd = new Map<string, number>();
+  // Collateral exposure: keyed by slug (same name = same bucket across coins)
+  const collateralUsd = new Map<string, { name: string; symbol: string; usd: number }>();
+
+  function addCollateral(name: string, symbol: string, usd: number): void {
+    if (usd < 0.01) return;
+    const key = collateralKey(name);
+    const existing = collateralUsd.get(key);
+    if (existing) {
+      existing.usd += usd;
+    } else {
+      collateralUsd.set(key, { name, symbol, usd });
+    }
+  }
+
+  function applyReservesToRemainder(
+    reserves: ReserveSlice[],
+    remainderUsd: number,
+    backing: string,
+  ): void {
+    const nonStable = reserves.filter((r) => !isStablecoinSlice(r.name));
+    if (nonStable.length === 0) {
+      const { name, symbol } = backingFallback(backing);
+      addCollateral(name, symbol, remainderUsd);
+      return;
+    }
+    const totalPct = nonStable.reduce((s, r) => s + r.pct, 0);
+    for (const slice of nonStable) {
+      addCollateral(slice.name, slice.name, remainderUsd * (slice.pct / totalPct));
+    }
+  }
 
   for (const holding of holdings) {
     const card = cardMap.get(holding.coinId);
     const deps: DependencyWeight[] = card?.rawInputs?.dependencies ?? [];
+    const meta = idToMeta.get(holding.coinId);
+    const backing = meta?.backing ?? "rwa-backed";
+    const reserves = meta?.reserves;
 
     if (deps.length === 0) {
-      // Direct CeFi or non-dependent coin: 100% exposure to itself
-      exposureUsd.set(
-        holding.coinId,
-        (exposureUsd.get(holding.coinId) ?? 0) + holding.amount,
-      );
+      // No stablecoin dependencies — look through to collateral
+      if (reserves && reserves.length > 0) {
+        const totalPct = reserves.reduce((s, r) => s + r.pct, 0);
+        for (const slice of reserves) {
+          addCollateral(slice.name, slice.name, holding.amount * (slice.pct / totalPct));
+        }
+      } else {
+        const { name, symbol } = backingFallback(backing);
+        addCollateral(name, symbol, holding.amount);
+      }
       continue;
     }
 
-    // Walk dependencies: each dep gets weight * holding amount
+    // Has stablecoin dependencies
     let allocatedWeight = 0;
     for (const dep of deps) {
       const depUsd = holding.amount * dep.weight;
-      // Only count tracked stablecoins as upstream exposure
       if (idToMeta.has(dep.id)) {
-        exposureUsd.set(dep.id, (exposureUsd.get(dep.id) ?? 0) + depUsd);
-      } else {
-        otherUsd += depUsd;
+        stablecoinUsd.set(dep.id, (stablecoinUsd.get(dep.id) ?? 0) + depUsd);
       }
+      // Untracked deps count toward allocatedWeight but go into remainder
       allocatedWeight += dep.weight;
     }
 
-    // Remainder (1 - sum of weights) goes to "Other" (non-stablecoin collateral)
     const remainder = 1 - allocatedWeight;
     if (remainder > 0.001) {
-      otherUsd += holding.amount * remainder;
+      const remainderUsd = holding.amount * remainder;
+      if (reserves && reserves.length > 0) {
+        applyReservesToRemainder(reserves, remainderUsd, backing);
+      } else {
+        const { name, symbol } = backingFallback(backing);
+        addCollateral(name, symbol, remainderUsd);
+      }
     }
   }
 
   const totalUsd = holdings.reduce((s, h) => s + h.amount, 0);
   const result: UpstreamExposure[] = [];
 
-  for (const [coinId, usd] of exposureUsd) {
+  for (const [coinId, usd] of stablecoinUsd) {
     const meta = idToMeta.get(coinId);
     if (!meta) continue;
     result.push({
@@ -182,21 +255,27 @@ function computeUpstreamExposure(
       symbol: meta.symbol,
       usd,
       pct: totalUsd > 0 ? (usd / totalUsd) * 100 : 0,
+      isCollateral: false,
     });
   }
 
-  if (otherUsd > 0.01) {
+  for (const [key, { name, symbol, usd }] of collateralUsd) {
     result.push({
-      coinId: "__other__",
-      name: "Other",
-      symbol: "OTHER",
-      usd: otherUsd,
-      pct: totalUsd > 0 ? (otherUsd / totalUsd) * 100 : 0,
+      coinId: key,
+      name,
+      symbol,
+      usd,
+      pct: totalUsd > 0 ? (usd / totalUsd) * 100 : 0,
+      isCollateral: true,
     });
   }
 
-  // Sort descending by exposure
-  result.sort((a, b) => b.usd - a.usd);
+  // Stablecoin entries first (most actionable risk), then collateral; descending USD within each group
+  result.sort((a, b) => {
+    if (a.isCollateral !== b.isCollateral) return a.isCollateral ? 1 : -1;
+    return b.usd - a.usd;
+  });
+
   return result;
 }
 
