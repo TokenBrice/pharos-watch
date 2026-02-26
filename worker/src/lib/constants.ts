@@ -52,7 +52,7 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "stablecoin-charts": 600,
   "usds-status": 86400,
   "fx-rates": 1800,
-  "bluechip-ratings": 43200,
+  "bluechip-ratings": 86400,
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---
