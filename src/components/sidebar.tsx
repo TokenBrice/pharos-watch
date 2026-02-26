@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,24 +10,40 @@ import type { NavItem } from "@/lib/nav-config";
 import { ThemeToggle } from "./theme-toggle";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
+const HOVER_DELAY = 200;
 
 function useExpanded() {
-  const [expanded, setExpanded] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setExpanded(true);
+    if (stored === "true") setPinned(true);
   }, []);
 
-  const toggle = useCallback(() => {
-    setExpanded((prev) => {
+  const togglePin = useCallback(() => {
+    setPinned((prev) => {
       const next = !prev;
       localStorage.setItem(STORAGE_KEY, String(next));
       return next;
     });
   }, []);
 
-  return { expanded, toggle };
+  const onMouseEnter = useCallback(() => {
+    hoverTimeout.current = setTimeout(() => setHovered(true), HOVER_DELAY);
+  }, []);
+
+  const onMouseLeave = useCallback(() => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    hoverTimeout.current = null;
+    setHovered(false);
+  }, []);
+
+  // Expanded if pinned OR hovered
+  const expanded = pinned || hovered;
+
+  return { expanded, pinned, togglePin, onMouseEnter, onMouseLeave };
 }
 
 function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded: boolean; isActive: boolean }) {
@@ -53,7 +69,7 @@ function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded:
 }
 
 export function Sidebar() {
-  const { expanded, toggle } = useExpanded();
+  const { expanded, pinned, togglePin, onMouseEnter, onMouseLeave } = useExpanded();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -62,12 +78,12 @@ export function Sidebar() {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === "[" || e.key === "]") {
         e.preventDefault();
-        toggle();
+        togglePin();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toggle]);
+  }, [togglePin]);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -79,6 +95,8 @@ export function Sidebar() {
       className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border bg-card z-40 transition-all duration-200"
       style={{ width: expanded ? 220 : 56 }}
       aria-label="Main navigation"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {/* Logo */}
       <div className={`flex items-center h-14 shrink-0 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
@@ -142,8 +160,8 @@ export function Sidebar() {
           <ThemeToggle />
         </div>
         <button
-          onClick={toggle}
-          title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          onClick={togglePin}
+          title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
           className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${
             expanded ? "mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
           }`}
@@ -151,7 +169,7 @@ export function Sidebar() {
           {expanded ? (
             <>
               <ChevronsLeft className="h-4 w-4 shrink-0" />
-              <span className="text-sm">Collapse</span>
+              <span className="text-sm">{pinned ? "Unpin" : "Pin open"}</span>
             </>
           ) : (
             <ChevronsRight className="h-4 w-4 shrink-0" />
