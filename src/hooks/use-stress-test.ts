@@ -9,7 +9,6 @@ import type {
   ReportCardGrade,
   ReportCardsResponse,
 } from "@/lib/types";
-import type { PortfolioHolding } from "./use-portfolio";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,7 +18,6 @@ export interface StressTestImpact {
   coinId: string;
   name: string;
   symbol: string;
-  holdingUsd: number | null; // null = ecosystem mode
   gradeBefore: ReportCardGrade;
   scoreBefore: number | null;
   gradeAfter: ReportCardGrade;
@@ -27,20 +25,27 @@ export interface StressTestImpact {
   delta: number; // score change (negative = downgrade)
 }
 
+export interface SystemicRisk {
+  coinId: string;
+  name: string;
+  symbol: string;
+  affectedCount: number;
+  supplyAtRisk: number;
+}
+
 export interface StressTestState {
   targetCoinId: string | null;
   targetGrade: ReportCardGrade | null;
   stressedCards: ReportCard[] | null;
   impacts: StressTestImpact[];
-  /** All coin IDs whose score changed (regardless of portfolio filter) — used for card grid highlighting */
+  /** All coin IDs whose score changed — used for card grid highlighting */
   allAffectedIds: Set<string>;
   headline: {
     totalAtRisk: number;
-    totalHeld: number;
+    totalSupply: number;
     affectedCount: number;
-    ecosystemAffectedCount: number;
-    isPortfolioMode: boolean;
   } | null;
+  systemicRisks: SystemicRisk[];
   targetableCoins: { id: string; name: string; symbol: string; dependentCount: number }[];
   gradeOptions: ReportCardGrade[];
   setTarget: (coinId: string | null) => void;
@@ -105,7 +110,6 @@ function getDowngradeOptions(currentGrade: ReportCardGrade): ReportCardGrade[] {
 
 export function useStressTest(
   reportData: ReportCardsResponse | undefined,
-  holdings: PortfolioHolding[],
   mcapMap?: Map<string, number>,
 ): StressTestState {
   const searchParams = useSearchParams();
@@ -146,13 +150,6 @@ export function useStressTest(
     for (const c of reportData.cards) m.set(c.id, c);
     return m;
   }, [reportData]);
-
-  // --- Holdings lookup ---
-  const holdingMap = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const h of holdings) m.set(h.coinId, h.amount);
-    return m;
-  }, [holdings]);
 
   // --- Targetable coins: coins that appear as upstream (from) in dependency edges ---
   const targetableCoins = useMemo(() => {
@@ -212,7 +209,6 @@ export function useStressTest(
   const impacts = useMemo((): StressTestImpact[] => {
     if (!stressedCards || !reportData) return [];
 
-    const isPortfolioMode = holdings.length > 0;
     const result: StressTestImpact[] = [];
 
     for (let i = 0; i < reportData.cards.length; i++) {
@@ -228,15 +224,11 @@ export function useStressTest(
 
       const delta = (scoreAfter ?? 0) - (scoreBefore ?? 0);
 
-      // In portfolio mode, only include held coins
-      if (isPortfolioMode && !holdingMap.has(original.id)) continue;
-
       const meta = idToMeta.get(original.id);
       result.push({
         coinId: original.id,
         name: meta?.name ?? original.name,
         symbol: meta?.symbol ?? original.symbol,
-        holdingUsd: isPortfolioMode ? (holdingMap.get(original.id) ?? null) : null,
         gradeBefore: original.overallGrade,
         scoreBefore,
         gradeAfter: stressed.overallGrade,
@@ -248,58 +240,62 @@ export function useStressTest(
     // Sort by absolute delta descending (biggest impact first)
     result.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     return result;
-  }, [stressedCards, reportData, holdings.length, holdingMap]);
+  }, [stressedCards, reportData]);
 
   // --- Headline stats ---
   const headline = useMemo(() => {
     if (!stressedCards || !reportData) return null;
 
-    const isPortfolioMode = holdings.length > 0;
-
-    if (isPortfolioMode) {
-      // Portfolio mode: sum holdings for affected coins
-      const affectedIds = new Set(impacts.map((i) => i.coinId));
-      let totalAtRisk = 0;
-      let totalHeld = 0;
-
-      for (const h of holdings) {
-        totalHeld += h.amount;
-        if (affectedIds.has(h.coinId)) {
-          totalAtRisk += h.amount;
-        }
-      }
-
-      return {
-        totalAtRisk,
-        totalHeld,
-        affectedCount: impacts.length,
-        ecosystemAffectedCount: allAffectedIds.size,
-        isPortfolioMode: true,
-      };
-    }
-
-    // Ecosystem mode: use mcapMap for totals
     const impactedIds = new Set(impacts.map((i) => i.coinId));
     let totalAtRisk = 0;
-    let totalHeld = 0;
+    let totalSupply = 0;
 
     if (mcapMap) {
       for (const [id, mcap] of mcapMap) {
-        totalHeld += mcap;
+        totalSupply += mcap;
         if (impactedIds.has(id)) {
           totalAtRisk += mcap;
         }
       }
     }
 
-    return {
-      totalAtRisk,
-      totalHeld,
-      affectedCount: impacts.length,
-      ecosystemAffectedCount: allAffectedIds.size,
-      isPortfolioMode: false,
-    };
-  }, [stressedCards, reportData, holdings, impacts, allAffectedIds, mcapMap]);
+    return { totalAtRisk, totalSupply, affectedCount: allAffectedIds.size };
+  }, [stressedCards, reportData, impacts, allAffectedIds, mcapMap]);
+
+  // --- Systemic risks: which coins would cause the most downstream damage ---
+  const systemicRisks = useMemo((): SystemicRisk[] => {
+    if (!reportData || !mcapMap) return [];
+
+    const results: SystemicRisk[] = [];
+    for (const coin of targetableCoins) {
+      const overrides = new Map<string, number>();
+      overrides.set(coin.id, gradeToScore("D"));
+
+      const stressed = computeStressedGrades(reportData.cards, overrides);
+      let affectedCount = 0;
+      let supplyAtRisk = 0;
+
+      for (let i = 0; i < reportData.cards.length; i++) {
+        if (reportData.cards[i].overallScore !== stressed[i].overallScore) {
+          affectedCount++;
+          supplyAtRisk += mcapMap.get(reportData.cards[i].id) ?? 0;
+        }
+      }
+
+      if (affectedCount > 0) {
+        results.push({
+          coinId: coin.id,
+          name: coin.name,
+          symbol: coin.symbol,
+          affectedCount,
+          supplyAtRisk,
+        });
+      }
+    }
+
+    results.sort((a, b) => b.supplyAtRisk - a.supplyAtRisk);
+    return results.slice(0, 5);
+  }, [reportData, mcapMap, targetableCoins]);
 
   // --- Actions ---
 
@@ -325,6 +321,7 @@ export function useStressTest(
     impacts,
     allAffectedIds,
     headline,
+    systemicRisks,
     targetableCoins,
     gradeOptions,
     setTarget,
