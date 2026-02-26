@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, ChevronsRight, Search } from "lucide-react";
+import { useTheme } from "next-themes";
+import { ChevronsLeft, ChevronsRight, Moon, Search, Sun } from "lucide-react";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
-import { ThemeToggle } from "./theme-toggle";
+import { trackEvent } from "@/lib/analytics";
 
 const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
@@ -65,6 +66,34 @@ function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded:
       <Icon className="h-4 w-4 shrink-0" />
       {expanded && <span className="text-sm truncate">{item.label}</span>}
     </Link>
+  );
+}
+
+function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setMounted(true), []);
+
+  const isDark = mounted ? theme === "dark" : false;
+  const Icon = isDark ? Sun : Moon;
+  const label = isDark ? "Light mode" : "Dark mode";
+
+  return (
+    <button
+      onClick={() => {
+        const next = isDark ? "light" : "dark";
+        trackEvent("theme_toggled", { theme: next });
+        setTheme(next);
+      }}
+      title={expanded ? undefined : label}
+      className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${
+        expanded ? "w-full mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
+      }`}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {expanded && <span className="text-sm">{label}</span>}
+    </button>
   );
 }
 
@@ -156,9 +185,7 @@ export function Sidebar() {
             isActive={isActive(item.href)}
           />
         ))}
-        <div className={`flex ${expanded ? "mx-2 px-3 py-1" : "justify-center py-1"}`}>
-          <ThemeToggle />
-        </div>
+        <ThemeSidebarItem expanded={expanded} />
         <button
           onClick={togglePin}
           title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
