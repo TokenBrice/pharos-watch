@@ -12,9 +12,9 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 |-----------|--------|--------|---------|
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
 | **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
-| **Resilience** | 10% | Token metadata (blacklist capability) | Not blacklistable → 100, Blacklistable → 0 |
+| **Resilience** | 15% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
-| **Dependency Risk** | 30% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 95), −10 if any < 75. NR if unmapped |
+| **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
 
 ### Peg Stability Details
 
@@ -33,12 +33,27 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 
 ### Resilience Details
 
-Binary scoring based on whether the token can be blacklisted/frozen by its issuer:
+4-factor weighted average (each sub-factor 25% of the resilience score):
 
-- **Not blacklistable** (decentralized, no admin freeze): score = 100
-- **Blacklistable** (issuer can freeze/seize funds): score = 0
+| Sub-factor | Scoring | Tiers |
+|---|---|---|
+| **Chain Risk** | Where does the core protocol operate? | Ethereum (100), Stage 1+ L2 (66), Established alt-L1 (33), Unproven (0) |
+| **Collateral Quality** | Trust assumptions in backing assets | Native ETH/BTC (100), Ethereum LSTs (66), Alt-L1 LSTs/bridged (33), Exotic/opaque (0) |
+| **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
+| **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Blacklistable (0) |
 
-Data source: `canBeBlacklisted` field on `StablecoinMeta` metadata. Falls back to governance type when not explicitly set (`centralized` → blacklistable, others → not).
+**Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:
+
+| Backing + Governance | Chain Risk | Collateral Quality | Custody Model |
+|---|---|---|---|
+| `rwa-backed` + `centralized` | ethereum | native | institutional |
+| `crypto-backed` + `decentralized` | ethereum | native | onchain |
+| `crypto-backed` + `centralized-dependent` | ethereum | eth-lst | onchain |
+| `algorithmic` + any | ethereum | native | onchain |
+
+Explicit overrides exist for ~20 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody).
+
+Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type).
 
 ### Dependency Risk Details
 
@@ -48,7 +63,7 @@ Two-phase computation ensures upstream scores are available before dependent coi
 2. **Phase 2**: Grade `centralized-dependent` coins using Phase 1 scores
 
 For Phase 2 coins:
-- Score = blended: `sum(weight_i × upstream_score_i) + (1 − totalWeight) × 95`. The self-backed fraction (non-stablecoin collateral) scores 95, same as independent coins. This ensures weights matter — a coin 10% backed by USDC has much lower contagion risk than one 100% backed by USDC.
+- Score = blended: `sum(weight_i × upstream_score_i) + (1 − totalWeight) × 75`. The self-backed fraction (non-stablecoin collateral) scores 75, reflecting that dependent coins inherently carry more risk than independent ones. This ensures weights matter — a coin 10% backed by USDC has much lower contagion risk than one 100% backed by USDC.
 - −10 penalty if any dependency scores below 75 (B-)
 - Falls back to 70 if dependencies aren't mapped or scores unavailable
 
@@ -88,7 +103,7 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainRisk`, `collateralQuality`, `custodyModel`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 
