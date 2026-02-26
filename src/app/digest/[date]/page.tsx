@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { DigestSnapshot } from "@/components/digest-snapshot";
 import digests from "../../../../data/digests.json";
 
 interface DigestEntry {
@@ -132,6 +133,8 @@ export default async function DigestDetailPage({
           </p>
         )}
       </article>
+
+      <DigestSnapshot date={digest.date} />
 
       <nav className="flex items-center justify-between pt-4 border-t border-border/50 text-sm">
         {older ? (
