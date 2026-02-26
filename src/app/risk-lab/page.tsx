@@ -1,8 +1,13 @@
-import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { ReportCardsClient } from "./client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ReportCardsClient = dynamic(
+  () => import("./client").then((m) => ({ default: m.ReportCardsClient })),
+  { loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> },
+);
 
 const reportCardsDescription =
   "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade — plus simulate what happens when a major stablecoin fails.";
@@ -17,6 +22,7 @@ export const metadata: Metadata = {
     title: "Risk Lab — Stablecoin Safety Grades",
     description: reportCardsDescription,
     url: "/risk-lab/",
+    images: [{ url: "https://pharos.watch/og-risk-lab.png", width: 1200, height: 630 }],
   },
 };
 
@@ -41,9 +47,61 @@ export default function ReportCardsPage() {
           hidden dependency chains and systemic risk.
         </p>
       </div>
-      <Suspense>
-        <ReportCardsClient />
-      </Suspense>
+      <ReportCardsClient />
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
+        <details className="group border border-border/50 rounded-lg">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            How are stablecoin safety grades calculated?
+          </summary>
+          <p className="px-4 pb-4 text-sm text-muted-foreground">
+            Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events),
+            liquidity depth (DEX pool size, volume, and protocol diversity), resilience (chain risk, collateral quality,
+            and custody model), decentralization (governance type, blacklist capability, and Bluechip rating), and
+            dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a
+            composite 0–100 score, then mapped to a letter grade from A+ to F.
+          </p>
+        </details>
+        <details className="group border border-border/50 rounded-lg">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            What does the contagion simulation show?
+          </summary>
+          <p className="px-4 pb-4 text-sm text-muted-foreground">
+            The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to
+            &quot;fail&quot; and the simulation traces dependency chains — if stablecoin A uses stablecoin B as
+            collateral, and B fails, A&apos;s grade degrades proportionally to its exposure. This reveals hidden
+            systemic risk: which coins look safe in isolation but are fragile under stress.
+          </p>
+        </details>
+      </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: "How are stablecoin safety grades calculated?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events), liquidity depth (DEX pool size, volume, and protocol diversity), resilience (chain risk, collateral quality, and custody model), decentralization (governance type, blacklist capability, and Bluechip rating), and dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a composite 0–100 score, then mapped to a letter grade from A+ to F.",
+                },
+              },
+              {
+                "@type": "Question",
+                name: "What does the contagion simulation show?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains — if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
+                },
+              },
+            ],
+          }),
+        }}
+      />
     </div>
   );
 }

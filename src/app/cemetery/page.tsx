@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     title: "Stablecoin Cemetery — Failed & Defunct Stablecoins",
     description: cemeteryDescription,
     url: "/cemetery/",
+    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 630 }],
   },
 };
 
@@ -58,6 +59,41 @@ export default function CemeteryPage() {
       <CemeteryClient />
 
       <CemeteryCharts />
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
+        <details className="group border border-border/50 rounded-lg">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            What causes stablecoins to fail?
+          </summary>
+          <p className="px-4 pb-4 text-sm text-muted-foreground">
+            Stablecoins fail for several recurring reasons: algorithmic designs that rely on reflexive token mechanics
+            (like TerraUSD), custodial failures where the issuer loses or mismanages reserves, liquidity drains where
+            redemptions outpace available collateral, regulatory shutdowns that freeze operations, and simple
+            abandonment when the team stops maintaining the peg. Most failures share a common pattern — loss of market
+            confidence triggers a bank-run dynamic that the stabilization mechanism cannot absorb.
+          </p>
+        </details>
+      </section>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              {
+                "@type": "Question",
+                name: "What causes stablecoins to fail?",
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: "Stablecoins fail for several recurring reasons: algorithmic designs that rely on reflexive token mechanics (like TerraUSD), custodial failures where the issuer loses or mismanages reserves, liquidity drains where redemptions outpace available collateral, regulatory shutdowns that freeze operations, and simple abandonment when the team stops maintaining the peg. Most failures share a common pattern — loss of market confidence triggers a bank-run dynamic that the stabilization mechanism cannot absorb.",
+                },
+              },
+            ],
+          }),
+        }}
+      />
     </div>
   );
 }

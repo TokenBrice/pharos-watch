@@ -1,0 +1,16 @@
+[
+  {
+    "date": "2026-02-26",
+    "title": "USDC Grows Up Fast",
+    "text": "PSI climbed to 95.9 in BEDROCK as USDC quietly added $1.82B in seven days to reach $75.45B, making it the only stablecoin doing real work this week.",
+    "extended": "The 10 active depeg events are technically correct and practically unimpressive: EURS is 890 bps off-peg on $8.65M, which is the kind of math that looks scary until you realize the total market impact is smaller than USDT's rounding tolerance. The $314.53B market grew by $1.70B this week, and USDC accounted for more than all of it, meaning the other 99 coins in the room collectively lost ground while one did the heavy lifting. BEDROCK at 95.9 is not complacency — it is what order looks like when one issuer decides to show up.",
+    "generatedAt": 1772092868
+  },
+  {
+    "date": "2026-02-25",
+    "title": "Quiet Money, Busy Custodians",
+    "text": "PSI holds at 94 in BEDROCK, but 5 freeze events in 24 hours suggest the plumbing is more active than the price feeds let on.",
+    "extended": "USDC absorbed essentially the entire $1.37B weekly inflow on its own, adding $1.39B to reach $74.94B — meaning the rest of the $313.82B market, collectively, shrank. The 11 active depeg events sound alarming until you check the names: EURS at 867 bps sounds dramatic on a $8.65M float, which is roughly the market impact of a rounding error on USDT. Nothing broke today. Whether that calm is earned or borrowed is the only interesting question.",
+    "generatedAt": 1772021621
+  }
+]

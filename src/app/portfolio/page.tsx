@@ -1,8 +1,13 @@
-import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { PortfolioClient } from "./client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const PortfolioClient = dynamic(
+  () => import("./client").then((m) => ({ default: m.PortfolioClient })),
+  { loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> },
+);
 
 const description =
   "Build your stablecoin portfolio, see your weighted safety grade, upstream collateral exposure, and simulate how a major stablecoin failure would affect your holdings.";
@@ -33,9 +38,7 @@ export default function PortfolioPage() {
           Track your stablecoin holdings and assess your personal risk exposure.
         </p>
       </div>
-      <Suspense>
-        <PortfolioClient />
-      </Suspense>
+      <PortfolioClient />
     </div>
   );
 }

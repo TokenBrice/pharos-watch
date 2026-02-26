@@ -1,8 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestArchive } from "@/hooks/use-digest-archive";
 import { formatDateline } from "@/components/daily-digest";
+
+function tsToDateSlug(ts: number): string {
+  return new Date(ts * 1000).toISOString().slice(0, 10);
+}
 
 export function DigestArchiveClient() {
   const { data, isLoading } = useDigestArchive();
@@ -32,7 +37,7 @@ export function DigestArchiveClient() {
   return (
     <div className="space-y-0">
       {data.digests.map((d) => (
-        <div key={d.generatedAt} className="border-b border-border/50 py-5">
+        <Link key={d.generatedAt} href={`/digest/${tsToDateSlug(d.generatedAt)}/`} className="block border-b border-border/50 py-5 hover:bg-muted/30 transition-colors -mx-2 px-2 rounded-lg">
           <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             {d.digestTitle || "Signal & Noise"}
             <span className="font-normal tracking-wide"> · {formatDateline(d.generatedAt)}</span>
@@ -51,7 +56,7 @@ export function DigestArchiveClient() {
               {d.digestExtended}
             </p>
           )}
-        </div>
+        </Link>
       ))}
     </div>
   );

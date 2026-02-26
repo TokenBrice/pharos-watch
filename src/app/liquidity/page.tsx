@@ -1,9 +1,14 @@
-import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { LiquidityClient } from "./client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const LiquidityClient = dynamic(
+  () => import("./client").then((m) => ({ default: m.LiquidityClient })),
+  { loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> },
+);
 
 const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${TRACKED_STABLECOINS.length} stablecoins across Curve, Uniswap, Fluid, and more.`;
 
@@ -17,6 +22,7 @@ export const metadata: Metadata = {
     title: "DEX Liquidity — Stablecoin Pool Depth & Volume",
     description: liquidityDescription,
     url: "/liquidity/",
+    images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 630 }],
   },
 };
 
@@ -41,9 +47,7 @@ export default function LiquidityPage() {
           can absorb larger trades with less slippage — critical for both everyday swaps and stress scenarios.
         </p>
       </div>
-      <Suspense>
-        <LiquidityClient />
-      </Suspense>
+      <LiquidityClient />
     </div>
   );
 }

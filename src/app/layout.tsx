@@ -140,6 +140,25 @@ export default function RootLayout({
                   url: "https://tokenbrice.xyz",
                 },
               },
+              {
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                name: "Pharos",
+                url: "https://pharos.watch",
+                applicationCategory: "FinanceApplication",
+                operatingSystem: "Web",
+                description: siteDescription,
+                offers: {
+                  "@type": "Offer",
+                  price: "0",
+                  priceCurrency: "USD",
+                },
+                creator: {
+                  "@type": "Person",
+                  name: "TokenBrice",
+                  url: "https://tokenbrice.xyz",
+                },
+              },
             ]),
           }}
         />

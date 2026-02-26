@@ -1,9 +1,14 @@
-import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { CompareClient } from "./client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const CompareClient = dynamic(
+  () => import("./client").then((m) => ({ default: m.CompareClient })),
+  { loading: () => <Skeleton className="h-[400px] w-full rounded-xl" /> },
+);
 
 const compareDescription = `Side-by-side comparison of stablecoin stats, supply history, and peg stability for ${TRACKED_STABLECOINS.length} tracked stablecoins.`;
 
@@ -17,6 +22,7 @@ export const metadata: Metadata = {
     title: "Compare Stablecoins — Side-by-Side Analysis",
     description: compareDescription,
     url: "/compare/",
+    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 630 }],
   },
 };
 
@@ -45,15 +51,7 @@ export default function ComparePage() {
           Select up to 5 stablecoins to compare side-by-side.
         </p>
       </div>
-      <Suspense
-        fallback={
-          <div className="flex min-h-[40vh] items-center justify-center">
-            <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
-          </div>
-        }
-      >
-        <CompareClient />
-      </Suspense>
+      <CompareClient />
     </div>
   );
 }

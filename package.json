@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:digests": "tsx scripts/sync-digests.ts"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.16",

@@ -175,7 +175,7 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   algorithmic: "Algorithmic",
 };
 
-function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
+export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
   switch (peg) {
     case "USD": return "usd-peg";
     case "EUR": return "eur-peg";

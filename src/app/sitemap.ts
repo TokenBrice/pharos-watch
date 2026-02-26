@@ -1,73 +1,85 @@
 import type { MetadataRoute } from "next";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
+import digests from "../../data/digests.json";
 
 export const dynamic = "force-static";
 
+/** Actual last-edited dates for static pages (avoid misleading Google with build-time dates). */
+const LAST_EDITED: Record<string, string> = {
+  "/about/": "2026-02-26",
+  "/cemetery/": "2026-02-26",
+  "/privacy/": "2026-02-26",
+  "/compare/": "2026-02-26",
+};
+
 export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date();
+
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: "https://pharos.watch/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "hourly",
       priority: 1.0,
     },
     {
       url: "https://pharos.watch/blacklist/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
-{
+    {
       url: "https://pharos.watch/cemetery/",
-      lastModified: new Date(),
+      lastModified: new Date(LAST_EDITED["/cemetery/"]!),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
       url: "https://pharos.watch/liquidity/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
       url: "https://pharos.watch/compare/",
-      lastModified: new Date(),
+      lastModified: new Date(LAST_EDITED["/compare/"]!),
       changeFrequency: "daily",
       priority: 0.6,
     },
     {
       url: "https://pharos.watch/digest/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily",
       priority: 0.6,
     },
     {
       url: "https://pharos.watch/risk-lab/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
       url: "https://pharos.watch/stability-index/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
       url: "https://pharos.watch/portfolio/",
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,
     },
     {
       url: "https://pharos.watch/about/",
-      lastModified: new Date(),
+      lastModified: new Date(LAST_EDITED["/about/"]!),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
       url: "https://pharos.watch/privacy/",
-      lastModified: new Date(),
+      lastModified: new Date(LAST_EDITED["/privacy/"]!),
       changeFrequency: "yearly",
       priority: 0.3,
     },
@@ -76,11 +88,25 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map(
     (coin) => ({
       url: `https://pharos.watch/stablecoin/${coin.id}/`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.6,
     })
   );
 
-  return [...staticPages, ...stablecoinPages];
+  const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
+    url: `https://pharos.watch/stablecoins/${PEG_SLUGS[peg]}/`,
+    lastModified: now,
+    changeFrequency: "daily" as const,
+    priority: 0.7,
+  }));
+
+  const digestPages: MetadataRoute.Sitemap = digests.map((d) => ({
+    url: `https://pharos.watch/digest/${d.date}/`,
+    lastModified: new Date(d.generatedAt * 1000),
+    changeFrequency: "never" as const,
+    priority: 0.5,
+  }));
+
+  return [...staticPages, ...stablecoinPages, ...pegPages, ...digestPages];
 }
