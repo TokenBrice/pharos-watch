@@ -62,7 +62,7 @@ const PSI_EVENTS = [
     label: "EIP-1559 Rally",
     position: "top" as const,
     links: [
-      { title: "Pre-London hard fork rally drove stablecoin premiums as traders sold for ETH/BTC", url: "https://www.coindesk.com/markets/2021/07/25/countdown-to-ethereums-london-hard-fork-what-you-need-to-know" },
+      { title: "Pre-London hard fork rally saw traders dump stablecoins for ETH/BTC, pushing several below peg", url: "https://www.coindesk.com/markets/2021/07/25/countdown-to-ethereums-london-hard-fork-what-you-need-to-know" },
     ],
   },
   {
