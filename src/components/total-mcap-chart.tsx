@@ -43,10 +43,13 @@ export function TotalMcapChart() {
         (sum, v) => sum + (v ?? 0),
         0,
       );
-      const usdt = usdtByDate.get(point.date) ?? 0;
-      const usdc = usdcByDate.get(point.date) ?? 0;
+      // Coerce date to number — stablecoin-charts API returns string dates
+      // while detail API returns numeric dates, causing Map lookup mismatch
+      const ts = Number(point.date);
+      const usdt = usdtByDate.get(ts) ?? 0;
+      const usdc = usdcByDate.get(ts) ?? 0;
       const others = Math.max(0, total - usdt - usdc);
-      return { ts: point.date * 1000, usdt, usdc, others, total };
+      return { ts: ts * 1000, usdt, usdc, others, total };
     });
   }, [data, usdtHistory, usdcHistory]);
 
