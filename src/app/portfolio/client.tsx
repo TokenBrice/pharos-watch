@@ -235,7 +235,7 @@ export function PortfolioClient() {
 
     // Encode stress test state
     if (stressTest.targetCoinId) {
-      const meta = TRACKED_STABLECOINS.find((s) => s.id === stressTest.targetCoinId);
+      const meta = TRACKED_META_BY_ID.get(stressTest.targetCoinId);
       if (meta) params.set("stress", meta.symbol.toLowerCase());
     }
     if (stressTest.targetGrade) {
@@ -312,17 +312,12 @@ export function PortfolioClient() {
     [displayCards, heldCardIds],
   );
 
-  const disabledIds = useMemo(
-    () => new Set(portfolio.holdings.map((h) => h.coinId)),
-    [portfolio.holdings],
-  );
-
   const handleShare = useCallback(async () => {
     const url = portfolio.shareUrl();
     if (!url) return;
-    trackEvent("portfolio_shared", { coin_count: portfolio.holdings.length });
     try {
       await navigator.clipboard.writeText(url);
+      trackEvent("portfolio_shared", { coin_count: portfolio.holdings.length });
       setToast("Link copied to clipboard");
       setTimeout(() => setToast(null), 2500);
     } catch {
@@ -408,7 +403,7 @@ export function PortfolioClient() {
             coins={coinOptions}
             selected={null}
             logos={logos}
-            disabledIds={disabledIds}
+            disabledIds={heldCardIds}
             onSelect={(coin) => {
               trackEvent("portfolio_coin_added", { coin_id: coin.id });
               portfolio.addCoin(coin.id, 0);
