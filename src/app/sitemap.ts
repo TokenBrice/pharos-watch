@@ -66,6 +66,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: "https://pharos.watch/dependency-map/",
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
       url: "https://pharos.watch/portfolio/",
       lastModified: now,
       changeFrequency: "daily",
