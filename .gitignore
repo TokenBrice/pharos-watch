@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# worktrees
+.worktrees/
+
 # claude code
 .claude/settings.local.json
 .mcp.json
