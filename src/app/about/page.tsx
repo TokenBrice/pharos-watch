@@ -470,6 +470,56 @@ export default function AboutPage() {
             </div>
           </div>
 
+          {/* Resilience sub-factors */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Resilience Scoring</h3>
+            <p>Weighted average of four equally-weighted sub-factors (25% each):</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4 font-medium text-foreground">Sub-factor</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">What it measures</th>
+                    <th className="py-2 font-medium text-foreground">Scoring</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Chain Risk</td>
+                    <td className="py-2 pr-4">Where does the protocol live?</td>
+                    <td className="py-2">Ethereum&nbsp;(100), Stage&nbsp;1+&nbsp;L2&nbsp;(66), Established&nbsp;alt&#8209;L1&nbsp;(33), Unproven&nbsp;(0)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Collateral Quality</td>
+                    <td className="py-2 pr-4">Trust assumptions in backing assets</td>
+                    <td className="py-2">Native&nbsp;ETH/BTC&nbsp;(100), ETH&nbsp;LSTs&nbsp;(66), Alt&#8209;LST/Bridged&nbsp;(33), Exotic&nbsp;(0)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Custody Model</td>
+                    <td className="py-2 pr-4">Who holds the collateral?</td>
+                    <td className="py-2">Fully&nbsp;on&#8209;chain&nbsp;(100), Institutional&nbsp;custodian&nbsp;(50), CEX&nbsp;(0)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Blacklist Capability</td>
+                    <td className="py-2 pr-4">Can the issuer freeze holder funds?</td>
+                    <td className="py-2">No&nbsp;(100), Yes&nbsp;(0)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Decentralization scoring */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Decentralization Scoring</h3>
+            <p>Structural classification based on governance type &mdash; not a value judgment:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground">Decentralized</span> &mdash; 100 (e.g.&nbsp;DAI, LUSD)</li>
+              <li><span className="text-foreground">CeFi-Dependent</span> &mdash; 50 (wraps or depends on centralized stablecoins, e.g.&nbsp;FRAX, GHO)</li>
+              <li><span className="text-foreground">Centralized</span> &mdash; 0 (single issuer, e.g.&nbsp;USDT, USDC)</li>
+            </ul>
+          </div>
+
           {/* Grade thresholds */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Grade Thresholds</h3>

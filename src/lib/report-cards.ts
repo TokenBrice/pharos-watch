@@ -345,15 +345,15 @@ export function scoreResilience(
 
 /**
  * Decentralization: based on governance type.
- * decentralized -> 95, centralized-dependent -> 70, centralized -> 50
+ * decentralized -> 100, centralized-dependent -> 50, centralized -> 0
  */
 export function scoreDecentralization(
   governance: GovernanceType,
 ): ReportCardDimension {
   const scoreMap: Record<GovernanceType, number> = {
-    decentralized: 95,
-    "centralized-dependent": 70,
-    centralized: 50,
+    decentralized: 100,
+    "centralized-dependent": 50,
+    centralized: 0,
   };
 
   const score = scoreMap[governance];
