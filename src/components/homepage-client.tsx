@@ -116,7 +116,7 @@ export function HomepageClient() {
       </div>
 
       <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Live Indicators</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Dashboard Highlights</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           <LiquiditySummary />
           <ReportCardsSummary />
