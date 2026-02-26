@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
-import { getCirculatingRaw, getPrevDayRaw } from "@/lib/supply";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { formatCurrency } from "@/lib/format";
 import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
 
@@ -50,16 +50,19 @@ export function KpiBar() {
   const { data: stablecoinsData, isLoading: stablecoinsLoading } = useStablecoins();
   const { data: pegData, isLoading: pegLoading } = usePegSummary();
 
-  const { totalMcap, mcapChange24hPct } = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) return { totalMcap: 0, mcapChange24hPct: 0 };
+  const { totalMcap, mcapChange24hPct, mcapChange7dPct } = useMemo(() => {
+    if (!stablecoinsData?.peggedAssets) return { totalMcap: 0, mcapChange24hPct: 0, mcapChange7dPct: 0 };
     let total = 0;
     let totalPrev = 0;
+    let totalPrevWeek = 0;
     for (const coin of stablecoinsData.peggedAssets) {
       total += getCirculatingRaw(coin);
       totalPrev += getPrevDayRaw(coin);
+      totalPrevWeek += getPrevWeekRaw(coin);
     }
-    const pct = totalPrev > 0 ? ((total - totalPrev) / totalPrev) * 100 : 0;
-    return { totalMcap: total, mcapChange24hPct: pct };
+    const pct24h = totalPrev > 0 ? ((total - totalPrev) / totalPrev) * 100 : 0;
+    const pct7d = totalPrevWeek > 0 ? ((total - totalPrevWeek) / totalPrevWeek) * 100 : 0;
+    return { totalMcap: total, mcapChange24hPct: pct24h, mcapChange7dPct: pct7d };
   }, [stablecoinsData]);
 
   const isLoading = psiLoading || stablecoinsLoading || pegLoading;
@@ -95,9 +98,10 @@ export function KpiBar() {
   const totalTracked = summary?.totalTracked ?? 0;
   const worstBps = summary?.worstCurrent?.bps ?? null;
 
-  // Format 24h change
-  const changeSign = mcapChange24hPct >= 0 ? "+" : "";
-  const changeSublabel = `${changeSign}${mcapChange24hPct.toFixed(2)}% 24h`;
+  // Format 24h + 7d change
+  const sign24h = mcapChange24hPct >= 0 ? "+" : "";
+  const sign7d = mcapChange7dPct >= 0 ? "+" : "";
+  const changeSublabel = `${sign24h}${mcapChange24hPct.toFixed(2)}% 24h · ${sign7d}${mcapChange7dPct.toFixed(2)}% 7d`;
 
   return (
     <Card className="p-0 overflow-hidden">
