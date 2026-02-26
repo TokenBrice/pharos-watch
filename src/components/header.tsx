@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 
 const ALL_NAV_ITEMS = [...NAV_ITEMS, ...BOTTOM_NAV_ITEMS];
 
@@ -58,7 +58,18 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9"
+            onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+          >
+            <Search className="h-4 w-4" />
+            <span className="sr-only">Search</span>
+          </Button>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );

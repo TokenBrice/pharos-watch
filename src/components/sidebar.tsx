@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronsLeft, ChevronsRight, Search } from "lucide-react";
 import { NAV_GROUPS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { ThemeToggle } from "./theme-toggle";
@@ -87,6 +87,23 @@ export function Sidebar() {
           {expanded && <span className="text-sm font-mono uppercase tracking-[0.2em] font-semibold">PHAROS</span>}
         </Link>
       </div>
+
+      {/* Search */}
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+        title={expanded ? undefined : "Search (Ctrl+K)"}
+        className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${
+          expanded ? "mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
+        }`}
+      >
+        <Search className="h-4 w-4 shrink-0" />
+        {expanded && <span className="text-sm">Search</span>}
+        {expanded && (
+          <kbd className="ml-auto text-[10px] font-mono text-muted-foreground/60 border border-border rounded px-1 py-0.5">
+            Ctrl+K
+          </kbd>
+        )}
+      </button>
 
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-4" aria-label="Main navigation">
