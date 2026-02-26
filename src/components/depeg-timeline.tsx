@@ -18,6 +18,7 @@ type TimeRange = "1M" | "3M" | "1Y" | "ALL";
 const LANE_HEIGHT = 32;
 const LABEL_WIDTH = 100;
 const TICK_ROW_HEIGHT = 20;
+const MAX_LANES = 20;
 
 function getTimeRange(range: TimeRange, now: number): number {
   switch (range) {
@@ -43,17 +44,25 @@ export function DepegTimeline({ events, logos }: DepegTimelineProps) {
       return eEnd > start && e.startedAt < end;
     });
 
-    // Group by symbol (preserving order by earliest event)
-    const laneMap = new Map<string, { symbol: string; id: string; events: DepegEvent[] }>();
+    // Group by symbol, tracking the most recent event per lane
+    const laneMap = new Map<string, { symbol: string; id: string; events: DepegEvent[]; latestAt: number }>();
     for (const e of visible) {
       if (!laneMap.has(e.symbol)) {
-        laneMap.set(e.symbol, { symbol: e.symbol, id: e.stablecoinId, events: [] });
+        laneMap.set(e.symbol, { symbol: e.symbol, id: e.stablecoinId, events: [], latestAt: 0 });
       }
-      laneMap.get(e.symbol)!.events.push(e);
+      const lane = laneMap.get(e.symbol)!;
+      lane.events.push(e);
+      if (e.startedAt > lane.latestAt) lane.latestAt = e.startedAt;
     }
 
+    // Sort by most recently active, cap at MAX_LANES
+    const lanes = Array.from(laneMap.values())
+      .sort((a, b) => b.latestAt - a.latestAt)
+      .slice(0, MAX_LANES)
+      .map(({ symbol, id, events }) => ({ symbol, id, events }));
+
     return {
-      lanes: Array.from(laneMap.values()),
+      lanes,
       startSec: start,
       endSec: end,
     };
