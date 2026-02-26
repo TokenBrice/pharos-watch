@@ -59,7 +59,7 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
       aria-label="Section navigation"
       className="sticky top-0 z-20 bg-card/95 backdrop-blur overflow-x-auto scrollbar-none"
     >
-      <div className="flex gap-1 p-1.5">
+      <div className="flex gap-0.5 p-1">
         {sections.map((section) => (
           <button
             key={section.id}
@@ -70,7 +70,7 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
             className={cn(
               "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-lg transition-colors",
               activeId === section.id
-                ? "text-foreground bg-muted"
+                ? "text-foreground bg-muted border-b-2 border-foreground/60"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             )}
           >
