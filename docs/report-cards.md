@@ -13,7 +13,7 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
 | **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
 | **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
-| **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0 |
+| **Decentralization** | 10% | Governance type + chain risk | Base: `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0. Chain-risk penalty applied for non-Ethereum chains |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
 
 ### Peg Stability Details
@@ -55,6 +55,25 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody).
 
 Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type).
+
+### Decentralization Details
+
+Base score from governance type, then a chain-risk penalty for protocols on less decentralized chains. Governance decentralization is undermined when the underlying chain itself has centralisation concerns (validator set, halt risk, etc.).
+
+**Base scores:** `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0.
+
+**Chain-risk penalty** (applied to non-centralized governance only):
+
+| Chain Risk | Penalty |
+|---|---|
+| Ethereum | 0 |
+| Stage 1+ L2 | −10 |
+| Established alt-L1 | −25 |
+| Unproven | −35 |
+
+The chain risk comes from the coin's explicit `chainRisk` override on `StablecoinMeta`. Coins without an override (defaulting to Ethereum) are unaffected.
+
+Examples: hyUSD (decentralized, Solana) = 100 − 25 = **75**. USDB (centralized-dependent, Blast L2) = 50 − 10 = **40**.
 
 ### Dependency Risk Details
 
