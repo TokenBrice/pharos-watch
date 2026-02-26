@@ -268,7 +268,7 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
           <div key={item.label} className="flex flex-col items-center gap-0.5">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
             <span className={`text-lg font-bold tabular-nums ${color}`}>{item.value}</span>
-            {item.sub && <span className="text-xs text-muted-foreground">{item.sub}</span>}
+            <span className={`text-xs ${item.sub ? "text-muted-foreground" : "invisible"}`}>{item.sub || "\u00A0"}</span>
           </div>
         );
       })}
@@ -288,7 +288,7 @@ function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
           <div key={item.label} className="flex flex-col items-center gap-0.5">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
             <span className={`text-base font-bold tabular-nums ${color}`}>{item.value}</span>
-            {item.sub && <span className="text-xs text-muted-foreground">{item.sub}</span>}
+            <span className={`text-xs ${item.sub ? "text-muted-foreground" : "invisible"}`}>{item.sub || "\u00A0"}</span>
           </div>
         );
       })}
