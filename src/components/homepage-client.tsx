@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
+import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { useHomepageFilters } from "@/hooks/use-homepage-filters";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { CategoryStats } from "@/components/category-stats";
@@ -16,7 +17,8 @@ import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { BlacklistSummary } from "@/components/blacklist-summary";
 import { CemeterySummary } from "@/components/cemetery-summary";
-import { PegTrackerSummary } from "@/components/peg-tracker-summary";
+import { PegHeatmap } from "@/components/peg-heatmap";
+import { DepegFeed } from "@/components/depeg-feed";
 import { LiquiditySummary } from "@/components/liquidity-summary";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
@@ -26,7 +28,7 @@ import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { derivePegRates } from "@/lib/peg-rates";
-import type { PegSummaryCoin } from "@/lib/types";
+import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
 
 export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
@@ -35,6 +37,19 @@ export function HomepageClient() {
   const { data: bluechipRatings } = useBluechipRatings();
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
+  const { data: eventsData } = useDepegEvents();
+  const [pegFilter, setPegFilter] = useState<PegCurrency | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<GovernanceType | "all">("all");
+
+  const filteredPegCoins = useMemo(
+    () =>
+      (pegSummaryData?.coins ?? []).filter((c) => {
+        if (pegFilter !== "all" && c.pegCurrency !== pegFilter) return false;
+        if (typeFilter !== "all" && c.governance !== typeFilter) return false;
+        return true;
+      }),
+    [pegSummaryData, pegFilter, typeFilter],
+  );
   const metaById = TRACKED_META_BY_ID;
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
@@ -78,7 +93,6 @@ export function HomepageClient() {
       <section>
         <h2 className="text-lg font-semibold tracking-tight mb-4">Pharos&apos; Unique Features</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-          <PegTrackerSummary />
           <LiquiditySummary />
           <ReportCardsSummary />
           <BlacklistSummary />
@@ -117,6 +131,23 @@ export function HomepageClient() {
         <h2 className="text-lg font-semibold tracking-tight mb-4">Key Movements</h2>
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </section>
+
+      <section>
+        <PegHeatmap
+          coins={filteredPegCoins}
+          logos={logos}
+          isLoading={isLoading}
+          pegFilter={pegFilter}
+          typeFilter={typeFilter}
+          onPegFilterChange={setPegFilter}
+          onTypeFilterChange={setTypeFilter}
+        />
+      </section>
+
+      <DepegFeed
+        events={eventsData?.events ?? []}
+        logos={logos}
+      />
 
       <PegDiversityChart />
 
