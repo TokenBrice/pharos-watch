@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
@@ -20,15 +21,39 @@ import { CemeterySummary } from "@/components/cemetery-summary";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
 import { LiquiditySummary } from "@/components/liquidity-summary";
+import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { ReportCardsSummary } from "@/components/report-cards-summary";
 import { StabilityIndexSummary } from "@/components/stability-index-summary";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
+import { cn } from "@/lib/utils";
 import { derivePegRates } from "@/lib/peg-rates";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
+
+const DIGEST_STORAGE_KEY = "pharos-digest-open";
+
+function useDigestOpen() {
+  const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(DIGEST_STORAGE_KEY);
+    if (stored === "false") setOpen(false);
+  }, []);
+
+  const toggle = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem(DIGEST_STORAGE_KEY, String(next));
+      return next;
+    });
+  };
+
+  return [open, toggle] as const;
+}
 
 export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
@@ -40,6 +65,7 @@ export function HomepageClient() {
   const { data: eventsData } = useDepegEvents();
   const [pegFilter, setPegFilter] = useState<PegCurrency | "all">("all");
   const [typeFilter, setTypeFilter] = useState<GovernanceType | "all">("all");
+  const [digestOpen, toggleDigest] = useDigestOpen();
 
   const filteredPegCoins = useMemo(
     () =>
@@ -91,7 +117,7 @@ export function HomepageClient() {
       </div>
 
       <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Pharos&apos; Unique Features</h2>
+        <h2 className="text-xl font-semibold tracking-tight mb-4">Live Indicators</h2>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           <LiquiditySummary />
           <ReportCardsSummary />
@@ -99,6 +125,30 @@ export function HomepageClient() {
           <CemeterySummary />
           <StabilityIndexSummary />
         </div>
+      </section>
+
+      <section>
+        <Card>
+          <CardHeader
+            className="flex flex-row items-center justify-between cursor-pointer"
+            onClick={toggleDigest}
+          >
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider">
+              Signal &amp; Noise
+            </CardTitle>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                digestOpen && "rotate-180",
+              )}
+            />
+          </CardHeader>
+          {digestOpen && (
+            <CardContent>
+              <DailyDigest />
+            </CardContent>
+          )}
+        </Card>
       </section>
 
       <section>

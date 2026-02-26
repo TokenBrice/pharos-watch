@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { HomepageClient } from "@/components/homepage-client";
-import { DailyDigest } from "@/components/daily-digest";
-import { StabilityIndex } from "@/components/stability-index";
+import { KpiBar } from "@/components/kpi-bar";
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
@@ -32,17 +31,16 @@ export default function HomePage() {
           }),
         }}
       />
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold tracking-tight">Shining a Light on Every Peg</h1>
-          <p className="text-muted-foreground">
-            Track {total} stablecoins, across {PEG_CURRENCY_COUNT} pegs. Freezes, liquidity, depegs: all is watched.
-          </p>
-        </div>
-        <StabilityIndex />
-      </div>
       <div className="mb-6">
-        <DailyDigest />
+        <div className="flex items-center gap-3 mb-4">
+          <h1 className="text-xl font-semibold tracking-tight text-muted-foreground">
+            PHAROS <span className="text-foreground">Dashboard</span>
+          </h1>
+          <span className="text-xs text-muted-foreground/60">
+            {total} stablecoins &middot; {PEG_CURRENCY_COUNT} pegs
+          </span>
+        </div>
+        <KpiBar />
       </div>
       <Suspense fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
