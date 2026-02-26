@@ -125,10 +125,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100
         : 0;
 
-      // Freezes: zero for backfill (no deep historical data)
-      const freezeCount24h = 0;
-
-      const result = computeStabilityIndex({ depegs, totalMcapUsd, freezeCount24h, mcap7dChangePct });
+      const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct });
 
       stmts.push(
         db.prepare(
@@ -138,7 +135,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
           result.score,
           result.band,
           JSON.stringify(result.components),
-          JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h, mcap7dChangePct }),
+          JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct }),
         )
       );
       count++;

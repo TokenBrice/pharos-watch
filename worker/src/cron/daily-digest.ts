@@ -37,7 +37,6 @@ interface DigestInputData {
   mcap7dDelta: number;
   activeDepegCount: number;
   topDepegs: { symbol: string; bps: number; mcapUsd: number }[];
-  freezeCount24h: number;
   biggestSupplyChange: {
     id: string;
     symbol: string;
@@ -45,7 +44,7 @@ interface DigestInputData {
     changeUsd: number;
     currentMcap: number;
   } | null;
-  stabilityIndex: { score: number; band: string; components: { severity: number; breadth: number; freezes: number; trend: number } } | null;
+  stabilityIndex: { score: number; band: string; components: { severity: number; breadth: number; trend: number } } | null;
   yesterdayIndex: { score: number; band: string } | null;
 }
 
@@ -63,13 +62,11 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
     }
   }
 
-  lines.push(`Freeze/blacklist events in last 24h: ${data.freezeCount24h}`);
-
   if (data.stabilityIndex) {
     const { score, band, components } = data.stabilityIndex;
     const trendStr = components.trend >= 0 ? `+${components.trend}` : `${components.trend}`;
     lines.push(
-      `Pharos Stability Index: ${score} [${band}] (severity=${components.severity}, breadth=${components.breadth}, freezes=${components.freezes}, trend=${trendStr})`,
+      `Pharos Stability Index: ${score} [${band}] (severity=${components.severity}, breadth=${components.breadth}, trend=${trendStr})`,
     );
     if (data.yesterdayIndex) {
       lines.push(`Yesterday: ${data.yesterdayIndex.score} [${data.yesterdayIndex.band}]`);
@@ -205,15 +202,7 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to query active depegs:", e);
   }
 
-  // 3. Freeze count in last 24h
-  const cutoff = Math.floor(Date.now() / 1000) - 86400;
-  const freezeRow = await db
-    .prepare("SELECT COUNT(*) as cnt FROM blacklist_events WHERE timestamp > ?")
-    .bind(cutoff)
-    .first<{ cnt: number }>();
-  const freezeCount24h = freezeRow?.cnt ?? 0;
-
-  // 4. Stability index — date-keyed lookup for today + yesterday
+  // 3. Stability index — date-keyed lookup for today + yesterday
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86400);
   const yesterdayTs = todayTs - 86400;
@@ -242,7 +231,6 @@ export async function generateDailyDigest(
     mcap7dDelta: totalMcapUsd - totalPrevWeek,
     activeDepegCount,
     topDepegs,
-    freezeCount24h,
     biggestSupplyChange,
     stabilityIndex,
     yesterdayIndex,

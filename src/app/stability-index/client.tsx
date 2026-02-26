@@ -96,21 +96,18 @@ const PSI_EVENTS = [
 const COMPONENT_COLORS = {
   severity: "#f97316",
   breadth: "#3b82f6",
-  freezes: "#ef4444",
   trend: "#22c55e",
 };
 
 const COMPONENT_LEGEND = [
   { label: "Severity", color: COMPONENT_COLORS.severity },
   { label: "Breadth", color: COMPONENT_COLORS.breadth },
-  { label: "Freezes", color: COMPONENT_COLORS.freezes },
   { label: "Trend", color: COMPONENT_COLORS.trend },
 ];
 
 const COMPONENT_DETAIL = [
   { label: "Severity", sign: "−", color: "#f97316" },
   { label: "Breadth", sign: "−", color: "#3b82f6" },
-  { label: "Freezes", sign: "−", color: "#ef4444" },
   { label: "Trend", sign: "+", color: "#22c55e" },
 ] as const;
 
@@ -321,7 +318,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
 function ComponentChart({
   data,
 }: {
-  data: { ts: number; severity: number; breadth: number; freezes: number; trend: number }[];
+  data: { ts: number; severity: number; breadth: number; trend: number }[];
 }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
 
@@ -356,10 +353,6 @@ function ComponentChart({
                   <linearGradient id="psiBreadthGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.4} />
                     <stop offset="95%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.05} />
-                  </linearGradient>
-                  <linearGradient id="psiFreezesGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COMPONENT_COLORS.freezes} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={COMPONENT_COLORS.freezes} stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="psiTrendGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.4} />
@@ -414,15 +407,6 @@ function ComponentChart({
                   stackId="penalties"
                   stroke={COMPONENT_COLORS.breadth}
                   fill="url(#psiBreadthGrad)"
-                  strokeWidth={1.5}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="freezes"
-                  name="Freezes"
-                  stackId="penalties"
-                  stroke={COMPONENT_COLORS.freezes}
-                  fill="url(#psiFreezesGrad)"
                   strokeWidth={1.5}
                 />
                 <Area
@@ -513,7 +497,7 @@ function Methodology() {
             The Pharos Stability Index (PSI) is a single 0-100 score reflecting overall stablecoin market health.
           </p>
           <code className="block rounded-lg bg-muted px-4 py-3 text-sm font-mono">
-            Score = 100 &minus; severity &minus; breadth &minus; freezes + trend
+            Score = 100 &minus; severity &minus; breadth + trend
           </code>
         </div>
 
@@ -531,18 +515,13 @@ function Methodology() {
               <tbody className="text-muted-foreground">
                 <tr className="border-b">
                   <td className="py-2 pr-4 font-medium text-foreground">Severity</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 60</td>
+                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 68</td>
                   <td className="py-2">Depeg magnitude weighted by market cap significance</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 font-medium text-foreground">Breadth</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 15</td>
+                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 17</td>
                   <td className="py-2">Number of depegging coins, weighted so micro-caps barely register</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 pr-4 font-medium text-foreground">Freezes</td>
-                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 10</td>
-                  <td className="py-2">Blacklist/freeze activity in the last 24 hours</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-foreground">Trend</td>
@@ -734,14 +713,12 @@ export function StabilityIndexClient() {
         ts: p.date * 1000,
         severity: p.components.severity,
         breadth: p.components.breadth,
-        freezes: p.components.freezes,
         trend: p.components.trend,
       })),
       {
         ts: data.current.computedAt * 1000,
         severity: data.current.components.severity,
         breadth: data.current.components.breadth,
-        freezes: data.current.components.freezes,
         trend: data.current.components.trend,
       },
     ];

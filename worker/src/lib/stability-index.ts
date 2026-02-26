@@ -9,7 +9,6 @@ export type { ConditionBand } from "../../../src/lib/psi-colors";
 export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
   totalMcapUsd: number;
-  freezeCount24h: number;
   mcap7dChangePct: number;
 }
 
@@ -19,7 +18,6 @@ export interface StabilityResult {
   components: {
     severity: number;
     breadth: number;
-    freezes: number;
     trend: number;
   };
 }
@@ -36,7 +34,7 @@ export function getDepreciationFactor(ageDays: number): number {
 }
 
 export function computeStabilityIndex(input: StabilityInput): StabilityResult {
-  const { depegs, totalMcapUsd, freezeCount24h, mcap7dChangePct } = input;
+  const { depegs, totalMcapUsd, mcap7dChangePct } = input;
 
   const severityRaw = depegs.reduce((sum, d) => {
     const share = totalMcapUsd > 0 ? d.mcapUsd / totalMcapUsd : 0;
@@ -44,19 +42,17 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult {
     const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
     return sum + (Math.abs(d.bps) / 100) * share * amplifier * K * factor;
   }, 0);
-  const severity = Math.min(60, severityRaw);
+  const severity = Math.min(68, severityRaw);
 
   const breadthRaw = depegs.reduce((sum, d) => {
     const factor = getDepreciationFactor(d.depegAgeDays ?? 0);
     return sum + Math.sqrt(d.mcapUsd / 1e9) * 3 * factor;
   }, 0);
-  const breadth = Math.min(15, breadthRaw);
-
-  const freezes = Math.min(10, freezeCount24h * 2.5);
+  const breadth = Math.min(17, breadthRaw);
 
   const trend = Math.max(-5, Math.min(5, mcap7dChangePct));
 
-  const raw = 100 - severity - breadth - freezes + trend;
+  const raw = 100 - severity - breadth + trend;
   const score = Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10;
 
   return {
@@ -65,7 +61,6 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult {
     components: {
       severity: Math.round(severity * 100) / 100,
       breadth: Math.round(breadth * 100) / 100,
-      freezes: Math.round(freezes * 100) / 100,
       trend: Math.round(trend * 100) / 100,
     },
   };

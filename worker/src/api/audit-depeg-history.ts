@@ -359,7 +359,6 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
     const indexResult = computeStabilityIndex({
       depegs,
       totalMcapUsd,
-      freezeCount24h: 0,
       mcap7dChangePct,
     });
 
@@ -377,7 +376,7 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
         indexResult.score,
         indexResult.band,
         JSON.stringify(indexResult.components),
-        JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h: 0, mcap7dChangePct }),
+        JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct }),
       )
     );
   }

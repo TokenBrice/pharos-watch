@@ -5,7 +5,6 @@ import { useApiQuery, CRON_15MIN } from "@/hooks/use-api-query";
 interface StabilityIndexComponents {
   severity: number;
   breadth: number;
-  freezes: number;
   trend: number;
 }
 

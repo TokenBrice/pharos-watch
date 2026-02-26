@@ -89,15 +89,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
     });
   }
 
-  // Freeze count in last 24h
-  const cutoff = now - 86400;
-  const freezeRow = await db
-    .prepare("SELECT COUNT(*) as cnt FROM blacklist_events WHERE timestamp > ?")
-    .bind(cutoff)
-    .first<{ cnt: number }>();
-  const freezeCount24h = freezeRow?.cnt ?? 0;
-
-  const result = computeStabilityIndex({ depegs, totalMcapUsd, freezeCount24h, mcap7dChangePct });
+  const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct });
 
   await db
     .prepare(
@@ -109,7 +101,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
       result.score,
       result.band,
       JSON.stringify(result.components),
-      JSON.stringify({ depegCount: depegs.length, totalMcapUsd, freezeCount24h, mcap7dChangePct, contributors }),
+      JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct, contributors }),
     )
     .run();
 

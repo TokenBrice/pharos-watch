@@ -5,7 +5,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 ## Formula
 
 ```
-Score = 100 − severity − breadth − freezes + trend
+Score = 100 − severity − breadth + trend
 ```
 
 Clamped to [0, 100], rounded to 1 decimal place.
@@ -14,9 +14,8 @@ Clamped to [0, 100], rounded to 1 decimal place.
 
 | Component | Range | Formula | Purpose |
 |-----------|-------|---------|---------|
-| **Severity** | 0–60 | `min(60, Σ (abs(bps) / 100 × mcap_share × log₂(1 + mcap / $1B) × 60 × factor))` | Depeg impact weighted by market cap significance |
-| **Breadth** | 0–15 | `min(15, Σ sqrt(mcap / $1B) × 3 × factor)` per unique depegged coin | Number of depegging coins, weighted so micro-caps barely register |
-| **Freezes** | 0–10 | `min(10, freeze_events_24h × 2.5)` | Blacklist/freeze activity signals operational instability |
+| **Severity** | 0–68 | `min(68, Σ (abs(bps) / 100 × mcap_share × log₂(1 + mcap / $1B) × 60 × factor))` | Depeg impact weighted by market cap significance |
+| **Breadth** | 0–17 | `min(17, Σ sqrt(mcap / $1B) × 3 × factor)` per unique depegged coin | Number of depegging coins, weighted so micro-caps barely register |
 | **Trend** | −5 to +5 | `clamp(-5, 5, mcap_7d_change_pct)` | 7-day total market cap momentum |
 
 Severity and breadth iterate over **active depegs only** (unique coins currently outside their peg threshold), with depreciation applied to chronic depegs.
@@ -25,7 +24,7 @@ Severity and breadth iterate over **active depegs only** (unique coins currently
 
 - `K = 60` scaling constant, calibrated so a 10bps USDT wobble drops the score ~30 points. Multiplied by `factor` for depreciation.
 - **log₂ amplifier** makes mega-cap depegs disproportionately impactful: USDT ($145B) gets 7.2×, USDC ($60B) gets 5.9×, a $50M coin gets 0.07×
-- **Cap at 60** prevents a single catastrophic event from consuming the entire score range
+- **Cap at 68** prevents a single catastrophic event from consuming the entire score range
 
 ### Breadth scaling
 
@@ -91,7 +90,7 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 | 12 micro-coin depegs, +0.26% mcap | 96.4 | BEDROCK |
 | USDT wobbles 10bps | 65.1 | TREMOR |
 | USDT wobbles 30bps | 25.4 | CRISIS |
-| USDT 50bps + USDC 20bps + 4 freezes − 3% mcap | 12.0 | MELTDOWN |
+| USDT 50bps + USDC 20bps − 3% mcap | 12.0 | MELTDOWN |
 
 ## Input Data
 
@@ -100,11 +99,10 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 | Active depegs (bps + mcap) | `depeg_events` where `ended_at IS NULL`, with current price from stablecoins cache |
 | Total market cap | Sum of all tracked stablecoins from DefiLlama cache |
 | 7-day market cap change | Current vs previous week total from stablecoins cache |
-| Freeze count (24h) | `blacklist_events` where `timestamp > now - 86400` |
 
 ## Cron & Storage
 
-- **Cron**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Uses midnight-rounded `computed_at` with `ON CONFLICT DO UPDATE` so only one row per day is stored.
+- **Cron**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs and trend from 7-day market cap change. Uses midnight-rounded `computed_at` with `ON CONFLICT DO UPDATE` so only one row per day is stored.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Table**: `stability_index` (migration 0022) — `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON)
 
