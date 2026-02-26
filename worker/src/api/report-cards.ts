@@ -89,11 +89,10 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   }
 
   // Build dex liquidity map from table rows (only fields scoreLiquidity needs)
-  const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
+  const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "poolCount" | "chainCount">> = {};
   for (const row of dexLiqResult.results ?? []) {
     dexLiqMap[row.stablecoin_id] = {
       liquidityScore: row.liquidity_score,
-      concentrationHhi: row.concentration_hhi,
       poolCount: row.pool_count,
       chainCount: row.chain_count,
     };
@@ -222,7 +221,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       ratedDimensions: 5,
       rawInputs: {
         pegScore: null, activeDepeg: false, depegEventCount: 0, lastEventAt: null,
-        liquidityScore: null, concentrationHhi: null, bluechipGrade: null,
+        liquidityScore: null, bluechipGrade: null,
         canBeBlacklisted: false,
         chainRisk: "ethereum" as ChainRisk,
         collateralQuality: "native" as CollateralQuality,
@@ -280,7 +279,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
 function computeCard(
   meta: (typeof TRACKED_STABLECOINS)[number],
   pegDataById: Map<string, PegSummaryCoin>,
-  dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>,
+  dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "poolCount" | "chainCount">>,
   bluechipMap: Record<string, BluechipRating>,
   overallScores: Map<string, number>,
 ): ReportCard {
@@ -308,7 +307,6 @@ function computeCard(
     depegEventCount: peg?.eventCount ?? 0,
     lastEventAt: peg?.lastEventAt ?? null,
     liquidityScore: liq?.liquidityScore ?? null,
-    concentrationHhi: liq?.concentrationHhi ?? null,
     bluechipGrade: rating?.grade ?? null,
     canBeBlacklisted,
     chainRisk: resilienceFactors.chainRisk,
