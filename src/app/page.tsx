@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Image from "next/image";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { HomepageClient } from "@/components/homepage-client";
@@ -33,6 +34,7 @@ export default function HomePage() {
       />
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
+          <Image src="/pharos-logo-full.png" alt="" width={36} height={36} className="rounded-lg" priority />
           <h1 className="text-xl font-extrabold tracking-tighter text-muted-foreground">
             PHAROS <span className="text-foreground">Dashboard</span>
           </h1>
