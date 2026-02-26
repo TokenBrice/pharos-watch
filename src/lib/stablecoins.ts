@@ -47,12 +47,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("1", "Tether", "USDT", "rwa-backed", "centralized", {
     geckoId: "tether",
     collateral: "U.S. Treasury bills and repurchase agreements (~92%), secured loans, gold, Bitcoin, and other investments; quarterly attestations by BDO Italia",
-    pegMechanism: "Direct 1:1 redemption through Tether",
+    pegMechanism: "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
     proofOfReserves: { type: "independent-audit", url: "https://tether.to/en/transparency", provider: "BDO Italia" },
     links: [
       { label: "Website", url: "https://tether.to/" },
       { label: "Twitter", url: "https://x.com/Tether_to" },
       { label: "Transparency", url: "https://tether.to/en/transparency" },
+      { label: "USDT0", url: "https://usdt0.to/" },
     ],
     jurisdiction: { country: "El Salvador", regulator: "CNAD", license: "Digital Asset Issuance / DASP" },
     contracts: [
@@ -2080,12 +2081,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   other("gold-xaut", "Tether Gold", "XAUT", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "tether-gold", protocolSlug: "tether-gold",
     collateral: "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
-    pegMechanism: "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only",
+    pegMechanism: "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
     proofOfReserves: { type: "independent-audit", url: "https://gold.tether.to/reports", provider: "BDO Italia" },
     links: [
       { label: "Website", url: "https://gold.tether.to/" },
       { label: "Docs", url: "https://gold.tether.to/faq" },
       { label: "Twitter", url: "https://x.com/tethergold" },
+      { label: "XAUt0", url: "https://usdt0.to/" },
     ],
     jurisdiction: { country: "El Salvador", regulator: "CNAD", license: "Stablecoin Issuer & DASP" },
     contracts: [
