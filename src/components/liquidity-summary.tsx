@@ -27,7 +27,7 @@ export function LiquiditySummary() {
   if (isLoading) {
     return (
       <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
-        <CardHeader>
+        <CardHeader className="pb-2">
           <Skeleton className="h-4 w-32" />
         </CardHeader>
         <CardContent>

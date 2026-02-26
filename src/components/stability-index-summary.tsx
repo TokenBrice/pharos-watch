@@ -31,7 +31,7 @@ export function StabilityIndexSummary() {
   if (isLoading) {
     return (
       <Card className="rounded-xl border-l-[3px] border-l-zinc-500">
-        <CardHeader>
+        <CardHeader className="pb-2">
           <Skeleton className="h-4 w-32" />
         </CardHeader>
         <CardContent>

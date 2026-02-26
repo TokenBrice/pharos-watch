@@ -38,9 +38,9 @@ function KpiCell({
 
 function KpiSkeleton() {
   return (
-    <div className="px-4 py-3 flex flex-col gap-1">
-      <Skeleton className="h-3 w-16" />
-      <Skeleton className="h-6 w-20" />
+    <div className="px-4 py-3 flex flex-col gap-0.5">
+      <Skeleton className="h-3.5 w-16" />
+      <Skeleton className="h-7 w-20" />
     </div>
   );
 }
