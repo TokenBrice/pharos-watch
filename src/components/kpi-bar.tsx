@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
+import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { formatCurrency } from "@/lib/format";
 import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
@@ -49,6 +50,7 @@ export function KpiBar() {
   const { data: psiData, isLoading: psiLoading } = useStabilityIndex();
   const { data: stablecoinsData, isLoading: stablecoinsLoading } = useStablecoins();
   const { data: pegData, isLoading: pegLoading } = usePegSummary();
+  const { data: dexData, isLoading: dexLoading } = useDexLiquidity();
 
   const { totalMcap, mcapChange24hPct, mcapChange7dPct } = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) return { totalMcap: 0, mcapChange24hPct: 0, mcapChange7dPct: 0 };
@@ -65,7 +67,20 @@ export function KpiBar() {
     return { totalMcap: total, mcapChange24hPct: pct24h, mcapChange7dPct: pct7d };
   }, [stablecoinsData]);
 
-  const isLoading = psiLoading || stablecoinsLoading || pegLoading;
+  const { totalVol24h, volVs7dAvgPct } = useMemo(() => {
+    if (!dexData) return { totalVol24h: 0, volVs7dAvgPct: 0 };
+    let vol24h = 0;
+    let vol7d = 0;
+    for (const liq of Object.values(dexData)) {
+      vol24h += liq.totalVolume24hUsd;
+      vol7d += liq.totalVolume7dUsd;
+    }
+    const avg7d = vol7d / 7;
+    const pct = avg7d > 0 ? ((vol24h - avg7d) / avg7d) * 100 : 0;
+    return { totalVol24h: vol24h, volVs7dAvgPct: pct };
+  }, [dexData]);
+
+  const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading;
 
   if (isLoading) {
     return (
@@ -107,7 +122,6 @@ export function KpiBar() {
 
   // Peg summary
   const summary = pegData?.summary;
-  const activeDepegs = summary?.activeDepegCount ?? 0;
   const coinsAtPeg = summary?.coinsAtPeg ?? 0;
   const totalTracked = summary?.totalTracked ?? 0;
   const worstBps = summary?.worstCurrent?.bps ?? null;
@@ -132,8 +146,9 @@ export function KpiBar() {
           sublabel={changeSublabel}
         />
         <KpiCell
-          label="Active Depegs"
-          value={activeDepegs}
+          label="24H DEX Vol"
+          value={formatCurrency(totalVol24h, 1)}
+          sublabel={`${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}% vs 7d avg`}
         />
         <KpiCell
           label="Coins at Peg"
