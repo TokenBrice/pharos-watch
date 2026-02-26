@@ -11,8 +11,6 @@ declare global {
 
 type EventMap = {
   // Tier 1 — Feature Adoption
-  portfolio_coin_added: { coin_id: string };
-  portfolio_shared: { coin_count: number };
   stress_test_run: { target_coin: string; target_grade: string; affected_count: number };
   comparison_created: { coin_count: number; coin_ids: string };
   comparison_preset_selected: { preset: string };
@@ -26,8 +24,6 @@ type EventMap = {
   // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
   panel_toggled: { panel: string; action: string };
-  portfolio_cleared: { coin_count: number };
-  portfolio_coin_removed: { coin_id: string };
 };
 
 // ---------------------------------------------------------------------------

@@ -80,7 +80,7 @@ export function StressTestPanel({ stressTest, cards, mcapMap, logos }: StressTes
                       trackEvent("stress_test_run", {
                         target_coin: risk.coinId,
                         target_grade: "D",
-                        source: "scoreboard",
+                        affected_count: risk.affectedCount,
                       });
                     }}
                   >
