@@ -27,7 +27,7 @@ import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData, StablecoinMeta } from "@/lib/types";
-import { pegScoreColor, getScoreColor, deviationColorClass } from "@/lib/severity-colors";
+import { pegScoreColor, getScoreColor, getScoreTier, TIER_BORDER, deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 
 const DETAIL_SECTIONS = [
@@ -125,11 +125,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const liqBorderClass = (() => {
     const liq = liquidityMap?.[id];
     if (liq == null || liq.liquidityScore === null) return "";
-    const score = liq.liquidityScore;
-    if (score >= 80) return "border-l-2 border-l-emerald-500";
-    if (score >= 60) return "border-l-2 border-l-blue-500";
-    if (score >= 40) return "border-l-2 border-l-amber-500";
-    return "border-l-2 border-l-red-500";
+    return `border-l-2 ${TIER_BORDER[getScoreTier(liq.liquidityScore)]}`;
   })();
 
   // Compute 90d mcap from supply history for change display
