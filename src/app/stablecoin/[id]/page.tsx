@@ -36,13 +36,13 @@ export async function generateMetadata({
   const desc = `Live analytics for ${coin.name} (${coin.symbol}). ${govLabel} stablecoin backed by ${backingLabel.toLowerCase()}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, and depeg history on Pharos.`;
 
   return {
-    title: `${coin.name} (${coin.symbol})`,
+    title: `${coin.name} (${coin.symbol}) — Stablecoin Analytics`,
     description: desc,
     alternates: {
       canonical: `/stablecoin/${id}/`,
     },
     openGraph: {
-      title: `${coin.name} (${coin.symbol})`,
+      title: `${coin.name} (${coin.symbol}) — Stablecoin Analytics`,
       description: desc,
       url: `/stablecoin/${id}/`,
     },

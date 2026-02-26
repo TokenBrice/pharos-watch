@@ -14,6 +14,7 @@ export function Footer() {
             <Link href="/liquidity" className="hover:text-foreground transition-colors">Liquidity</Link>
             <Link href="/cemetery" className="hover:text-foreground transition-colors">Cemetery</Link>
             <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
           </nav>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <a href="https://x.com/PharosWatch" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" aria-label="Pharos on X/Twitter">
@@ -37,6 +38,9 @@ export function Footer() {
             </Link>
           ))}
         </nav>
+        <p className="text-center text-xs text-muted-foreground/60">
+          Not financial advice. Data is provided as-is for informational purposes only.
+        </p>
       </div>
     </footer>
   );

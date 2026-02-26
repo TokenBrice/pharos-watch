@@ -802,7 +802,22 @@ export default function AboutPage() {
         </CardContent>
       </Card>
 
-      {/* Section 7: Footer */}
+      {/* Section 7: Disclaimer */}
+      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+        <CardHeader>
+          <CardTitle as="h2">Disclaimer</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground leading-relaxed space-y-2">
+          <p>
+            Pharos is an informational tool, not a licensed financial advisor. Nothing on this site
+            constitutes financial, investment, or legal advice. All data is provided as-is and may contain
+            errors or delays. Always do your own research and consult a qualified professional before making
+            financial decisions.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Section 8: Footer */}
       <Card className="rounded-xl border-l-[3px] border-l-sky-500">
         <CardHeader>
           <CardTitle as="h2">Get in Touch</CardTitle>

@@ -32,6 +32,12 @@ export default function StabilityIndexPage() {
         <p className="text-sm text-muted-foreground">
           Historical stablecoin market health scores, component breakdowns, and condition band analysis.
         </p>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity,
+          depeg breadth, and supply-weighted volatility into a single market health reading. Scores fall into
+          five condition bands — from Calm (80+) to Crisis (below 20) — so you can gauge stablecoin market
+          stress at a glance.
+        </p>
       </div>
       <Suspense fallback={<div className="space-y-6"><Skeleton className="h-48 w-full rounded-xl" /><Skeleton className="h-[350px] w-full rounded-xl" /><Skeleton className="h-[350px] w-full rounded-xl" /></div>}>
         <StabilityIndexClient />
