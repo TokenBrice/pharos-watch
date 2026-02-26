@@ -1,8 +1,13 @@
-import { Suspense } from "react";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { DependencyMapClient } from "./client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const DependencyMapClient = dynamic(
+  () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
+  { loading: () => <Skeleton className="h-[520px] w-full rounded-lg" /> },
+);
 
 const description =
   "Interactive graph of collateral dependencies between the top 50 stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
@@ -34,9 +39,7 @@ export default function DependencyMapPage() {
           lines show how one stablecoin relies on another as collateral. Drag nodes to explore. Click to view details.
         </p>
       </div>
-      <Suspense>
-        <DependencyMapClient />
-      </Suspense>
+      <DependencyMapClient />
     </div>
   );
 }

@@ -10,8 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { sumPegBuckets } from "@/lib/supply";
 
 export function DependencyMapClient() {
-  const { data: reportData, isLoading } = useReportCards();
-  const { data: stablecoinsData } = useStablecoins();
+  const { data: reportData, isLoading: isLoadingCards } = useReportCards();
+  const { data: stablecoinsData, isLoading: isLoadingCoins } = useStablecoins();
   const { data: logos } = useLogos();
 
   const mcapMap = useMemo(() => {
@@ -24,7 +24,7 @@ export function DependencyMapClient() {
     );
   }, [stablecoinsData]);
 
-  if (isLoading) {
+  if (isLoadingCards || isLoadingCoins) {
     return (
       <Card>
         <CardContent className="pt-4 pb-4">
