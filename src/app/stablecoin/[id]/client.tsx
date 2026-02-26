@@ -18,7 +18,6 @@ import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { KeyInfoCard } from "@/components/key-info-card";
 import { ContractAddresses } from "@/components/contract-addresses";
 import { BluechipBox } from "@/components/bluechip-box";
-import { LiquidityBox } from "@/components/liquidity-box";
 import { AiSummary } from "@/components/ai-summary";
 import { ReportCardDetail } from "@/components/report-card";
 import { DetailSectionNav } from "@/components/detail-section-nav";
@@ -28,7 +27,7 @@ import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData } from "@/lib/types";
-import { pegScoreColor } from "@/lib/severity-colors";
+import { pegScoreColor, getScoreColor } from "@/lib/severity-colors";
 
 const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
@@ -66,9 +65,9 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28" />
+        <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-44" />
           ))}
         </div>
         <Skeleton className="h-[400px]" />
@@ -123,7 +122,9 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
       <DetailSectionNav sections={DETAIL_SECTIONS} />
 
       <section id="overview">
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+        {/* Primary stats row – 3 large cards */}
+        <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-3">
+          {/* Price */}
           <Card className="rounded-xl border-l-[3px] border-l-blue-500">
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
@@ -140,30 +141,87 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
             </CardContent>
           </Card>
 
+          {/* Market Cap + Supply (24h) */}
           <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</div>
-              <p className="text-sm text-muted-foreground">
-                {coinData.chains?.length ?? 0} chains
-              </p>
-            </CardContent>
+            <div>
+              <CardHeader className="pb-1">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</div>
+                <p className="text-sm text-muted-foreground">
+                  {coinData.chains?.length ?? 0} chains
+                </p>
+              </CardContent>
+            </div>
+            <div className="border-t">
+              <CardHeader className="pb-1">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold font-mono tracking-tight">{formatSupply(supply)}</div>
+                <p className={`text-sm font-mono ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
+                  {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}
+                </p>
+              </CardContent>
+            </div>
           </Card>
 
-          <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold font-mono tracking-tight">{formatSupply(supply)}</div>
-              <p className={`text-sm font-mono ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
-                {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}
-              </p>
-            </CardContent>
+          {/* Peg Score + Liquidity Score */}
+          <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+            {!isNavToken && (
+              <div>
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peg Score</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
+                    <>
+                      <div className={`text-2xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
+                        {pegScoreResult.pegScore}<span className="text-lg text-muted-foreground">/100</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground font-mono">
+                        {pegScoreResult.pegPct.toFixed(1)}% at peg
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <div className="text-2xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+                  )}
+                </CardContent>
+              </div>
+            )}
+            {(() => {
+              const liq = liquidityMap?.[id];
+              if (!liq || (liq.liquidityScore === null && liq.poolCount === 0)) return null;
+              const score = liq.liquidityScore ?? 0;
+              const textColor = getScoreColor(score);
+              return (
+                <div className={!isNavToken ? "border-t" : ""}>
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Liquidity Score</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold font-mono tracking-tight ${textColor}`}>
+                      {Math.round(score)}<span className="text-lg text-muted-foreground">/100</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {formatCurrency(liq.totalTvlUsd)} TVL
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {liq.poolCount} pool{liq.poolCount !== 1 ? "s" : ""} &middot; {liq.chainCount} chain{liq.chainCount !== 1 ? "s" : ""}
+                    </p>
+                  </CardContent>
+                </div>
+              );
+            })()}
           </Card>
+        </div>
 
+        {/* Secondary stats row */}
+        <div className="grid gap-3 sm:gap-5 grid-cols-2 mt-3 sm:mt-5">
           <Card className="rounded-xl border-l-[3px] border-l-violet-500">
             <CardHeader className="pb-1">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply Changes</CardTitle>
@@ -184,33 +242,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
             </CardContent>
           </Card>
 
-          {!isNavToken && (
-            <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-              <CardHeader className="pb-1">
-                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peg Score</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
-                  <>
-                    <div className={`text-2xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
-                      {pegScoreResult.pegScore}<span className="text-lg text-muted-foreground">/100</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground font-mono">
-                      {pegScoreResult.pegPct.toFixed(1)}% at peg
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
-                    </p>
-                  </>
-                ) : (
-                  <div className="text-2xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
-          <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
         </div>
 
         {summary && <AiSummary {...summary} />}
