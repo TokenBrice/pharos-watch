@@ -3,19 +3,40 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestSnapshot } from "@/hooks/use-digest-snapshot";
 import { formatCurrency, formatAddress, formatPercentChange } from "@/lib/format";
-import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES } from "@/lib/psi-colors";
+import { Activity, BarChart3, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
 /* ---------- sub-section wrapper ---------- */
 
-function SnapshotCard({ title, children }: { title: string; children: React.ReactNode }) {
+function SnapshotCard({
+  title,
+  icon,
+  borderClass,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  borderClass: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="rounded-lg border border-border/50 p-3 space-y-1.5">
+    <div className={`rounded-lg border border-border/50 border-l-[3px] ${borderClass} p-3 space-y-1.5`}>
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-        {title}
+        <span className="flex items-center gap-1.5">
+          {icon}
+          {title}
+        </span>
       </p>
       {children}
     </div>
   );
+}
+
+/** Green for positive, red for negative, muted for zero. */
+function deltaColor(value: number): string {
+  if (value > 0) return "text-green-500";
+  if (value < 0) return "text-red-500";
+  return "text-muted-foreground";
 }
 
 /* ---------- main component ---------- */
@@ -43,6 +64,8 @@ export function DigestSnapshot({ date }: { date: string }) {
   const { inputData, prevInputData, blacklistEvents } = data;
   const prev = prevInputData ?? undefined;
 
+  const mcapDelta = prev ? inputData.totalMcapUsd - prev.totalMcapUsd : 0;
+
   return (
     <section className="mt-8 space-y-4 animate-in fade-in duration-300">
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -51,26 +74,30 @@ export function DigestSnapshot({ date }: { date: string }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         {/* 1. Market Snapshot — always shown */}
-        <SnapshotCard title="Market Snapshot">
+        <SnapshotCard
+          title="Market Snapshot"
+          icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
+          borderClass="border-l-blue-500"
+        >
           <p className="text-sm text-foreground/90">
             Total mcap:{" "}
             <span className="font-medium">
               {formatCurrency(inputData.totalMcapUsd)}
             </span>
             {prev && (
-              <span className="text-muted-foreground">
-                {" "}({inputData.totalMcapUsd - prev.totalMcapUsd >= 0 ? "+" : ""}
-                {formatCurrency(inputData.totalMcapUsd - prev.totalMcapUsd)} from yesterday)
+              <span className={deltaColor(mcapDelta)}>
+                {" "}({mcapDelta >= 0 ? "+" : ""}
+                {formatCurrency(mcapDelta)} from yesterday)
               </span>
             )}
           </p>
           <p className="text-sm text-muted-foreground">
             7d change:{" "}
-            <span className="font-medium">
+            <span className={`font-medium ${deltaColor(inputData.mcap7dDelta)}`}>
               {formatCurrency(inputData.mcap7dDelta)}
             </span>
             {inputData.totalMcapUsd - inputData.mcap7dDelta !== 0 && (
-              <span>
+              <span className={deltaColor(inputData.mcap7dDelta)}>
                 {" "}
                 ({formatPercentChange(
                   inputData.totalMcapUsd,
@@ -83,7 +110,11 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 2. Stability Index */}
         {inputData.stabilityIndex && (
-          <SnapshotCard title="Stability Index">
+          <SnapshotCard
+            title="Stability Index"
+            icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+            borderClass={PSI_BORDER_CLASSES[inputData.stabilityIndex.band] ?? "border-l-muted-foreground"}
+          >
             <p className="text-sm text-foreground/90">
               Score:{" "}
               {prev?.stabilityIndex && (
@@ -118,7 +149,11 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 3. Biggest Supply Mover */}
         {inputData.biggestSupplyChange && (
-          <SnapshotCard title="Biggest Supply Mover">
+          <SnapshotCard
+            title="Biggest Supply Mover"
+            icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}
+            borderClass="border-l-cyan-500"
+          >
             <p className="text-sm text-foreground/90">
               <span className="font-medium">
                 {inputData.biggestSupplyChange.symbol}
@@ -129,7 +164,7 @@ export function DigestSnapshot({ date }: { date: string }) {
             </p>
             <p className="text-sm text-foreground/90">
               7d change:{" "}
-              <span className="font-medium">
+              <span className={`font-medium ${deltaColor(inputData.biggestSupplyChange.changeUsd)}`}>
                 {inputData.biggestSupplyChange.changeUsd >= 0 ? "+" : ""}
                 {formatCurrency(inputData.biggestSupplyChange.changeUsd)}
               </span>
@@ -143,7 +178,11 @@ export function DigestSnapshot({ date }: { date: string }) {
 
         {/* 4. Active Depegs */}
         {inputData.activeDepegCount > 0 && (
-          <SnapshotCard title="Active Depegs">
+          <SnapshotCard
+            title="Active Depegs"
+            icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
+            borderClass="border-l-amber-500"
+          >
             <p className="text-sm text-foreground/90">
               <span className="font-medium">{inputData.activeDepegCount}</span>{" "}
               active depeg{inputData.activeDepegCount !== 1 ? "s" : ""}
@@ -167,7 +206,11 @@ export function DigestSnapshot({ date }: { date: string }) {
         {/* 5. Blacklist Activity — spans full width since it's a list */}
         {blacklistEvents.length > 0 && (
           <div className="sm:col-span-2">
-            <SnapshotCard title="Blacklist Activity">
+            <SnapshotCard
+              title="Blacklist Activity"
+              icon={<ShieldBan className="h-4 w-4" aria-hidden="true" />}
+              borderClass="border-l-red-500"
+            >
               <p className="text-sm text-foreground/90">
                 <span className="font-medium">{blacklistEvents.length}</span>{" "}
                 event{blacklistEvents.length !== 1 ? "s" : ""} on this day
