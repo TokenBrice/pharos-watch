@@ -63,7 +63,7 @@ function BiggestDepegs({
     }
 
     entries.sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
-    return entries.slice(0, 6);
+    return entries.slice(0, 8);
   }, [data, pegRates]);
 
   return (
@@ -93,23 +93,21 @@ function BiggestDepegs({
                 <span className="text-sm font-medium truncate group-hover:underline">
                   {d.symbol}
                 </span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-xs text-muted-foreground font-mono">
                   {formatNativePrice(d.price, d.pegCurrency, d.pegRef)}
                 </span>
-                <span
-                  className={`text-xs font-mono font-semibold ${
-                    Math.abs(d.bps) >= 50
-                      ? "text-red-500"
-                      : Math.abs(d.bps) >= 10
-                        ? "text-amber-500"
-                        : "text-muted-foreground"
-                  }`}
-                >
-                  {formatPegDeviation(d.price, d.pegRef)}
-                </span>
               </div>
+              <span
+                className={`text-xs font-mono font-semibold flex-shrink-0 ${
+                  Math.abs(d.bps) >= 50
+                    ? "text-red-500"
+                    : Math.abs(d.bps) >= 10
+                      ? "text-amber-500"
+                      : "text-muted-foreground"
+                }`}
+              >
+                {formatPegDeviation(d.price, d.pegRef)}
+              </span>
             </Link>
           ))}
         </div>

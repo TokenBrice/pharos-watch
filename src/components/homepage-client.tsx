@@ -15,17 +15,12 @@ import { MarketHighlights } from "@/components/market-highlights";
 import { TotalMcapChart } from "@/components/total-mcap-chart";
 import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
-import { BlacklistSummary } from "@/components/blacklist-summary";
-import { CemeterySummary } from "@/components/cemetery-summary";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
-import { LiquiditySummary } from "@/components/liquidity-summary";
-import { DigestArchiveSummary } from "@/components/digest-archive-summary";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
-import { ReportCardsSummary } from "@/components/report-cards-summary";
-import { StabilityIndexSummary } from "@/components/stability-index-summary";
+import { FeatureHighlights } from "@/components/feature-highlights";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
@@ -117,17 +112,7 @@ export function HomepageClient() {
         <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
       </div>
 
-      <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Live Indicators</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-          <LiquiditySummary />
-          <ReportCardsSummary />
-          <BlacklistSummary />
-          <CemeterySummary />
-          <StabilityIndexSummary />
-          <DigestArchiveSummary />
-        </div>
-      </section>
+      <FeatureHighlights />
 
       <section>
         <Card>
@@ -178,6 +163,8 @@ export function HomepageClient() {
         <CategoryStats data={data?.peggedAssets} />
       </section>
 
+      <PegDiversityChart />
+
       <section>
         <PegHeatmap
           coins={filteredPegCoins}
@@ -196,8 +183,6 @@ export function HomepageClient() {
           logos={logos}
         />
       </section>
-
-      <PegDiversityChart />
 
       <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
         Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies — USD, EUR, GBP,
