@@ -3,12 +3,20 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency, formatPercentChange } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
-import { getCirculatingRaw, getPrevWeekRaw, computeGovernanceBreakdown } from "@/lib/supply";
+import { getCirculatingRaw, computeGovernanceBreakdown } from "@/lib/supply";
 import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { StablecoinData, ReportCard } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
+
+const COLLATERAL_TIERS = [
+  { key: "rwa", label: "RWA", bg: "bg-blue-500", text: "text-blue-500" },
+  { key: "native", label: "Native", bg: "bg-emerald-500", text: "text-emerald-500" },
+  { key: "eth-lst", label: "ETH LST", bg: "bg-indigo-500", text: "text-indigo-500" },
+  { key: "alt-lst-bridged-or-mixed", label: "Mixed", bg: "bg-purple-500", text: "text-purple-500" },
+  { key: "exotic", label: "Exotic", bg: "bg-orange-500", text: "text-orange-500" },
+] as const;
 
 interface CategoryStatsProps {
   data: StablecoinData[] | undefined;
@@ -22,25 +30,21 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     const trackedIds = TRACKED_IDS;
     const trackedData = data.filter((c) => trackedIds.has(c.id));
 
-    const totalAll = trackedData.reduce((sum, c) => sum + getCirculatingRaw(c), 0);
-    const totalPrevWeek = trackedData.reduce((sum, c) => sum + getPrevWeekRaw(c), 0);
-
     // Breakdown by governance
     const gov = computeGovernanceBreakdown(trackedData);
 
-    // Dominance: USDT vs USDC vs rest
-    let usdt = 0;
-    let usdc = 0;
-    let rest = 0;
-    let usdtPrev = 0;
-    let usdcPrev = 0;
-    let restPrev = 0;
-    for (const coin of trackedData) {
-      const mcap = getCirculatingRaw(coin);
-      const prev = getPrevWeekRaw(coin);
-      if (coin.id === "1") { usdt = mcap; usdtPrev = prev; }
-      else if (coin.id === "2") { usdc = mcap; usdcPrev = prev; }
-      else { rest += mcap; restPrev += prev; }
+    // Collateral quality breakdown by mcap
+    const collateralMcap: Record<string, number> = {};
+    let collateralTotal = 0;
+    if (reportCards) {
+      for (const coin of trackedData) {
+        const card = reportCards[coin.id];
+        if (!card || card.isDefunct) continue;
+        const mcap = getCirculatingRaw(coin);
+        const cq = card.rawInputs.collateralQuality;
+        collateralMcap[cq] = (collateralMcap[cq] ?? 0) + mcap;
+        collateralTotal += mcap;
+      }
     }
 
     // Alternative peg breakdown (non-USD)
@@ -78,9 +82,6 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     const gradeTotal = gradeA + gradeB + gradeC + gradeDF;
 
     return {
-      totalAll,
-      totalPrevWeek,
-      totalCount: trackedData.length,
       gradeA, gradeB, gradeC, gradeDF, gradeNR, gradeTotal,
       centralizedMcap: gov.centralizedMcap,
       dependentMcap: gov.dependentMcap,
@@ -88,8 +89,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
       cefiPct: gov.cefiPct,
       depPct: gov.depPct,
       defiPct: gov.defiPct,
-      usdt, usdc, rest,
-      usdtPrev, usdcPrev, restPrev,
+      collateralMcap, collateralTotal,
       altPegs, altTotal,
     };
   }, [data, reportCards]);
@@ -187,42 +187,41 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
         </Card>
         <Card className="rounded-xl border-l-[3px] border-l-sky-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Stablecoin Dominance</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Collateral</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-emerald-500">USDT</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-semibold">{formatCurrency(stats.usdt, 0)}</span>
-                {stats.usdtPrev > 0 && (
-                  <span className={`text-xs font-mono ${stats.usdt >= stats.usdtPrev ? "text-green-500" : "text-red-500"}`}>
-                    {stats.usdt >= stats.usdtPrev ? "\u2191" : "\u2193"}{((stats.usdt - stats.usdtPrev) / stats.usdtPrev * 100).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-sky-400">USDC</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-semibold">{formatCurrency(stats.usdc, 0)}</span>
-                {stats.usdcPrev > 0 && (
-                  <span className={`text-xs font-mono ${stats.usdc >= stats.usdcPrev ? "text-green-500" : "text-red-500"}`}>
-                    {stats.usdc >= stats.usdcPrev ? "\u2191" : "\u2193"}{((stats.usdc - stats.usdcPrev) / stats.usdcPrev * 100).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Others</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-semibold">{formatCurrency(stats.rest, 0)}</span>
-                {stats.restPrev > 0 && (
-                  <span className={`text-xs font-mono ${stats.rest >= stats.restPrev ? "text-green-500" : "text-red-500"}`}>
-                    {stats.rest >= stats.restPrev ? "\u2191" : "\u2193"}{((stats.rest - stats.restPrev) / stats.restPrev * 100).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            </div>
+          <CardContent className="space-y-2">
+            {stats.collateralTotal > 0 ? (
+              <>
+                <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
+                  {COLLATERAL_TIERS.map((t) => {
+                    const mcap = stats.collateralMcap[t.key] ?? 0;
+                    const pct = (mcap / stats.collateralTotal) * 100;
+                    return pct > 0 ? <div key={t.key} className={`h-full ${t.bg}`} style={{ width: `${pct}%` }} /> : null;
+                  })}
+                </div>
+                <div className="space-y-1">
+                  {COLLATERAL_TIERS.map((t) => {
+                    const mcap = stats.collateralMcap[t.key] ?? 0;
+                    if (mcap === 0) return null;
+                    const pct = (mcap / stats.collateralTotal) * 100;
+                    return (
+                      <div key={t.key} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`h-2 w-2 rounded-full ${t.bg}`} />
+                          <span className={`font-medium ${t.text}`}>{t.label}</span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-bold font-mono text-xs">{pct.toFixed(1)}%</span>
+                          <span className="text-muted-foreground text-xs font-mono">{formatCurrency(mcap, 0)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Loading…</p>
+            )}
           </CardContent>
         </Card>
         {stats.altTotal > 0 && (
