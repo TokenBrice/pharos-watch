@@ -131,7 +131,13 @@ export async function enrichMissingPrices(
       const coinIds = withAddress.map((m) => m.coinId).join(",");
       const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
       if (res && res.ok) {
-        const data = (await res.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+        let data: { coins: Record<string, DefiLlamaCoinPrice> };
+        try {
+          data = (await res.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+        } catch {
+          console.error(`[enrich-prices] Failed to parse JSON from DefiLlama coins API (pass 1): ${res.status}`);
+          data = { coins: {} };
+        }
         for (const m of withAddress) {
           const priceInfo = data.coins[m.coinId];
           if (priceInfo?.price != null && priceInfo.price > 0) {
@@ -167,7 +173,13 @@ export async function enrichMissingPrices(
         const coinIds = altLookups.map((m) => m.coinId).join(",");
         const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
         if (res && res.ok) {
-          const data = (await res.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+          let data: { coins: Record<string, DefiLlamaCoinPrice> };
+          try {
+            data = (await res.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+          } catch {
+            console.error(`[enrich-prices] Failed to parse JSON from DefiLlama coins API (pass 1b): ${res.status}`);
+            data = { coins: {} };
+          }
           const resolved = new Set<number>(); // avoid double-count
           for (const m of altLookups) {
             if (resolved.has(m.index)) continue;
@@ -204,7 +216,13 @@ export async function enrichMissingPrices(
       const geckoIds = geckoPass.map((m) => `coingecko:${m.geckoId}`).join(",");
       const geckoRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${geckoIds}`);
       if (geckoRes && geckoRes.ok) {
-        const geckoData = (await geckoRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+        let geckoData: { coins: Record<string, DefiLlamaCoinPrice> };
+        try {
+          geckoData = (await geckoRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
+        } catch {
+          console.error(`[enrich-prices] Failed to parse JSON from DefiLlama coins API (pass 2): ${geckoRes.status}`);
+          geckoData = { coins: {} };
+        }
         for (const m of geckoPass) {
           const priceInfo = geckoData.coins[`coingecko:${m.geckoId}`];
           if (priceInfo?.price != null && priceInfo.price > 0) {
@@ -229,7 +247,13 @@ export async function enrichMissingPrices(
         { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) }
       );
       if (cgRes && cgRes.ok) {
-        const cgData = (await cgRes.json()) as Record<string, { usd?: number }>;
+        let cgData: Record<string, { usd?: number }>;
+        try {
+          cgData = (await cgRes.json()) as Record<string, { usd?: number }>;
+        } catch {
+          console.error(`[enrich-prices] Failed to parse JSON from CoinGecko API (pass 3): ${cgRes.status}`);
+          cgData = {};
+        }
         for (const m of afterPass2) {
           if (cgData[m.geckoId]?.usd != null && cgData[m.geckoId].usd! > 0) {
             assets[m.index].price = cgData[m.geckoId].usd!;
