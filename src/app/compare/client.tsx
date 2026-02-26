@@ -223,7 +223,7 @@ export function CompareClient() {
       } else {
         next.push(coin.id);
       }
-      if (next.length >= 2) {
+      if (next.length >= 2 && prev.length < 2) {
         trackEvent("comparison_created", {
           coin_count: next.length,
           coin_ids: next.slice(0, 5).join(","),

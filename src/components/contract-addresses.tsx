@@ -34,7 +34,7 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
             {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
           </span>
           <button
-            onClick={() => { navigator.clipboard.writeText(openContract.address); trackEvent("contract_copied", { coin_id: meta.id ?? meta.symbol, chain: openContract.chain }); }}
+            onClick={() => { navigator.clipboard.writeText(openContract.address); trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain }); }}
             className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             title="Copy address"
             aria-label="Copy address"

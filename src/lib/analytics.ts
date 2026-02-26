@@ -27,7 +27,6 @@ type EventMap = {
   panel_toggled: { panel: string; action: string };
   portfolio_cleared: { coin_count: number };
   portfolio_coin_removed: { coin_id: string };
-  share_link_copied: { page: string; content_type: string };
 };
 
 // ---------------------------------------------------------------------------
