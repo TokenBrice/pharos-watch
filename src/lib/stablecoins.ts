@@ -126,6 +126,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
     dependencies: [{ id: "2", weight: 0.30 }],
+    collateralQuality: "rwa",
     collateral: "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
     pegMechanism: "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
     links: [
@@ -158,6 +159,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     geckoId: "dai",
     dependencies: [{ id: "2", weight: 0.35 }],
+    collateralQuality: "rwa",
     collateral: "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
     pegMechanism: "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     links: [
@@ -314,7 +316,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0x45e51bc23d592eb2dba86da3985299f7895d66ba", decimals: 18 },
     ],
     chainRisk: "established-alt-l1",
-    collateralQuality: "alt-lst-bridged",
+    collateralQuality: "alt-lst-bridged-or-mixed",
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
     rwa: true,
@@ -405,7 +407,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     geckoId: "gho",
-    dependencies: [{ id: "1", weight: 0.15 }, { id: "2", weight: 0.15 }],
+    dependencies: [{ id: "1", weight: 0.20 }, { id: "2", weight: 0.20 }],
+    collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
     pegMechanism: "Overcollateralized minting via Aave V3 facilitator model; GHO Stability Module (GSM) enables 1:1 conversions with USDC and USDT; dynamic borrow rate adjustments by GHO Stewards reinforce the peg",
     links: [
@@ -542,9 +545,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "crvusd",
-    dependencies: [{ id: "1", weight: 0.15 }, { id: "2", weight: 0.15 }],
+    dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
-    pegMechanism: "Stabilization Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, pyUSD, and TUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
+    pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     links: [
       { label: "Website", url: "https://www.curve.finance/" },
       { label: "Twitter", url: "https://x.com/CurveFinance" },
@@ -573,7 +576,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Switzerland" },
     chainRisk: "established-alt-l1",
-    collateralQuality: "alt-lst-bridged",
+    collateralQuality: "alt-lst-bridged-or-mixed",
   }),
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
@@ -596,7 +599,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
     geckoId: "frax",
     dependencies: [{ id: "2", weight: 0.35 }],
-    collateral: "U.S. Treasury bills (~50%), USDC via FinresPBC (~35%), Federal Reserve repurchase agreements, FDIC-insured deposits, and on-chain protocol-owned liquidity via AMOs (Curve, Fraxlend) — fully collateralized since FIP-188 (2023)",
+    collateral: "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
     pegMechanism: "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
     links: [
       { label: "Website", url: "https://frax.com/" },
@@ -635,7 +638,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
     geckoId: "agora-dollar",
-    collateral: "Cash (USD deposits), short-dated U.S. Treasury bills, overnight reverse repurchase agreements, and stablecoins; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
+    collateral: "Cash (USD deposits), short-dated U.S. Treasury bills, and overnight reverse repurchase agreements; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
     pegMechanism: "Fiat-backed 1:1; users deposit USD and mint AUSD at par; direct redemption for USD through Agora; reserves held in bankruptcy-remote Delaware Statutory Trust administered by State Street",
     proofOfReserves: { type: "real-time", url: "https://oracles.chaoslabs.xyz/por-feeds/agora", provider: "Chaos Labs" },
     links: [
@@ -757,7 +760,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "frax-usd",
     dependencies: [{ id: "2", weight: 0.3 }],
-    collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians, including BlackRock BUIDL (U.S. Treasuries/repos), Superstate USTB (T-bills), WisdomTree WTGXX (U.S. government money market), and USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
+    collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
     pegMechanism: "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
     jurisdiction: { country: "United States" },
     proofOfReserves: { type: "real-time", url: "https://frax.com/transparency", provider: "Chaos Labs" },
@@ -1234,7 +1237,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL" },
     ],
     chainRisk: "established-alt-l1",
-    collateralQuality: "alt-lst-bridged",
+    collateralQuality: "alt-lst-bridged-or-mixed",
   }),
   usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
     geckoId: "liquity-usd",
@@ -1505,7 +1508,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
     ],
     chainRisk: "unproven",
-    collateralQuality: "alt-lst-bridged",
+    collateralQuality: "alt-lst-bridged-or-mixed",
   }),
   usd("305", "XSY UTY", "UTY", "crypto-backed", "centralized-dependent", {
     geckoId: "unity-2",
@@ -1562,6 +1565,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("346", "Neutrl USD", "NUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "nusd-2",
     dependencies: [{ id: "1", weight: 0.2 }, { id: "2", weight: 0.2 }],
+    collateralQuality: "exotic",
+    custodyModel: "institutional",
     collateral: "OTC-discounted locked token allocations sourced via STIX with delta-neutral perpetual futures hedges, plus liquid stablecoin reserves (USDC, USDT, USDS, USDe) held at institutional custodians (Fireblocks, Copper, Ceffu)",
     pegMechanism: "1:1 mint and redeem via permissionless router using USDC, USDT, or USDe; peg maintained by arbitrage incentives, delta hedging of derivatives positions, and rapid reserve deployment from liquid stablecoin buffer",
     links: [
@@ -1673,6 +1678,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/felixprotocol" },
       { label: "Docs", url: "https://usefelix.gitbook.io/docs" },
     ],
+    chainRisk: "unproven",
   }),
   usd("348", "Fidelity Digital Dollar", "FIDD", "rwa-backed", "centralized", {
     geckoId: "fidelity-digital-dollar",

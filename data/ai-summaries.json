@@ -126,8 +126,8 @@
   },
   "110": {
     "title": "Curve's Own Medicine",
-    "text": "When the protocol that handles more stablecoin volume than anyone else launches its own stablecoin, the design better be interesting -- and crvUSD delivers. The LLAMMA mechanism replaces hard liquidations with gradual, continuous rebalancing through price bands, letting collateral be automatically rebought if prices recover. PegKeepers using USDC, USDT, and USDP manage the peg algorithmically, while the savings vault (scrvUSD) creates a self-correcting feedback loop where depeg pressure increases yields, attracting buyers back. It's the most technically sophisticated CDP stablecoin operating today.",
-    "updatedAt": "2026-02-22"
+    "text": "When the protocol that handles more stablecoin volume than anyone else launches its own stablecoin, the design better be interesting -- and crvUSD delivers. The LLAMMA mechanism replaces hard liquidations with gradual, continuous rebalancing through price bands, letting collateral be automatically rebought if prices recover. The Peg Stability Reserve maintains the dollar peg through four PegKeeper pools paired with USDC, USDT, PYUSD, and frxUSD -- each a centralized dependency that the crypto-native collateral was supposed to avoid. The savings vault (scrvUSD) creates a self-correcting feedback loop where depeg pressure increases yields, attracting buyers back. It's technically sophisticated, but a stablecoin whose peg mechanism lives or dies by four centralized counterparties has traded one risk for four others.",
+    "updatedAt": "2026-02-26"
   },
   "118": {
     "title": "Aave's Dollar",
