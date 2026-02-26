@@ -101,7 +101,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
   }
 
   return (
-    <div className="rounded-xl border table-header-sticky overflow-x-auto scroll-shadow">
+    <div className="rounded-xl border overflow-hidden">
       <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
         <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={sorted.length === 0}>
           <Download className="h-3.5 w-3.5" />
