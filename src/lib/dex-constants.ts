@@ -49,6 +49,8 @@ export const PROTOCOL_COLORS: Record<string, string> = {
   sushiswap: "bg-indigo-500",
   "trader-joe": "bg-orange-500",
   raydium: "bg-purple-500",
+  orca: "bg-teal-400",
+  quickswap: "bg-violet-500",
 };
 
 export const EXTRA_COLORS = [

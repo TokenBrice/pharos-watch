@@ -446,6 +446,9 @@ function normalizeProtocol(project: string): string {
   if (p.includes("pancakeswap")) return "pancakeswap";
   if (p.includes("sushiswap") || p === "sushi") return "sushiswap";
   if (p.includes("trader-joe") || p.includes("traderjoe")) return "trader-joe";
+  if (p.includes("raydium")) return "raydium";
+  if (p.includes("orca")) return "orca";
+  if (p.includes("quickswap")) return "quickswap";
   // Pass through actual project name (frontend groups small ones into "Other")
   return project;
 }
