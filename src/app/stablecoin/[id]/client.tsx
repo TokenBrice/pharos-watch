@@ -245,8 +245,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                 {/* Top-left: Market Cap */}
                 <div className="px-3.5 py-2.5 min-h-[76px] border-b border-r border-border/30">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Market Cap</p>
-                  <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatCurrency(mcap)}</div>
-                  <p className={`text-xs font-mono mt-1 ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
+                  <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
+                  <p className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
                     {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"} <span className="text-muted-foreground">24h</span>
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
@@ -257,8 +257,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                 {/* Top-right: Supply */}
                 <div className="px-3.5 py-2.5 min-h-[76px] border-b border-border/30">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Supply</p>
-                  <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatSupply(supply)} <span className="text-base text-muted-foreground">{coin.symbol}</span></div>
-                  <p className="text-xs font-mono mt-1">
+                  <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatSupply(supply)} <span className="text-sm text-muted-foreground">{coin.symbol}</span></div>
+                  <p className="text-xs font-mono tabular-nums mt-0.5">
                     <span className={mcap >= prevWeek ? "text-green-500" : "text-red-500"}>
                       {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
                     </span>
@@ -290,10 +290,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Peg Score</p>
                     {pegScoreResult?.pegScore != null ? (
                       <>
-                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
-                          {pegScoreResult.pegScore}<span className="text-base text-muted-foreground">/100</span>
+                        <div className={`text-xl font-bold font-mono tracking-tight leading-none ${pegScoreColor(pegScoreResult.pegScore)}`}>
+                          {pegScoreResult.pegScore}<span className="text-sm text-muted-foreground">/100</span>
                         </div>
-                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
                           {pegScoreResult.pegPct.toFixed(1)}% at peg
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -322,10 +322,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                     const score = liq.liquidityScore ?? 0;
                     return (
                       <>
-                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${getScoreColor(score)}`}>
-                          {Math.round(score)}<span className="text-base text-muted-foreground">/100</span>
+                        <div className={`text-xl font-bold font-mono tracking-tight leading-none ${getScoreColor(score)}`}>
+                          {Math.round(score)}<span className="text-sm text-muted-foreground">/100</span>
                         </div>
-                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
                           {formatCurrency(liq.totalTvlUsd)} TVL
                         </p>
                         <p className="text-xs text-muted-foreground">
