@@ -171,6 +171,12 @@ export function DigestSnapshot({ date }: { date: string }) {
               <p className="text-sm text-foreground/90">
                 <span className="font-medium">{blacklistEvents.length}</span>{" "}
                 event{blacklistEvents.length !== 1 ? "s" : ""} on this day
+                {(() => {
+                  const total = blacklistEvents.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+                  return total > 0 ? (
+                    <span className="text-muted-foreground"> totaling {formatCurrency(total)}</span>
+                  ) : null;
+                })()}
               </p>
               <ul className="space-y-0.5">
                 {blacklistEvents.slice(0, 5).map((e) => (
