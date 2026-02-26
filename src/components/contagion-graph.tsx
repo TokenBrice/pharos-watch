@@ -116,9 +116,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
     const sim = forceSimulation(simNodes)
       .force("link", forceLink<GraphNode, GraphLink>(simLinks).id((d) => d.id).distance(80).strength((l) => (l as GraphLink).weight * 0.5))
-      .force("charge", forceManyBody().strength(-120))
+      .force("charge", forceManyBody().strength(-180))
       .force("center", forceCenter(WIDTH / 2, HEIGHT / 2))
-      .force("collide", forceCollide<GraphNode>().radius((d) => d.r + 6))
+      .force("collide", forceCollide<GraphNode>().radius((d) => d.r + 10))
       .stop();
 
     for (let i = 0; i < 300; i++) sim.tick();
@@ -131,6 +131,26 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
         y: Math.max(PAD + n.r, Math.min(HEIGHT - PAD - n.r, n.y ?? HEIGHT / 2)),
       });
     }
+    // Push nodes out of the legend area (top-right corner)
+    const legendBox = {
+      left: WIDTH - PAD - 88,
+      top: PAD - 10,
+      right: WIDTH - PAD + 6,
+      bottom: PAD + 4 * 18 + 20,
+    };
+    for (const n of simNodes) {
+      const pos = posMap.get(n.id)!;
+      if (
+        pos.x + n.r > legendBox.left &&
+        pos.x - n.r < legendBox.right &&
+        pos.y + n.r > legendBox.top &&
+        pos.y - n.r < legendBox.bottom
+      ) {
+        pos.x = legendBox.left - n.r - 2;
+        if (pos.x < PAD + n.r) pos.x = PAD + n.r;
+      }
+    }
+
     setPositions(posMap);
   }, [nodes, links]);
 
@@ -357,6 +377,19 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 </g>
               );
             })()}
+
+            {/* Legend background */}
+            <rect
+              x={WIDTH - PAD - 88}
+              y={PAD - 10}
+              width={94}
+              height={4 * 18 + 30}
+              rx={6}
+              fill="var(--color-card, #1a1a2e)"
+              fillOpacity={0.85}
+              stroke="var(--color-border, #333)"
+              strokeWidth={1}
+            />
 
             {/* Legend */}
             {[
