@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,8 +12,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Download } from "lucide-react";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@/lib/format";
+import { downloadCsv } from "@/lib/csv-export";
 import { getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@/lib/stablecoins";
@@ -180,6 +183,34 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const rangeStart = sorted.length === 0 ? 0 : page * PAGE_SIZE + 1;
   const rangeEnd = Math.min((page + 1) * PAGE_SIZE, sorted.length);
 
+  const handleCsvExport = useCallback(() => {
+    downloadCsv(sorted, [
+      { header: "Rank", accessor: (_row, i) => i + 1 },
+      { header: "Name", accessor: (row) => row.name },
+      { header: "Symbol", accessor: (row) => row.symbol },
+      { header: "Price", accessor: (row) => row.price ?? null },
+      { header: "Market Cap (USD)", accessor: (row) => getCirculatingRaw(row) },
+      {
+        header: "24h Change (%)",
+        accessor: (row) => {
+          const prev = getPrevDayRaw(row);
+          if (prev <= 0) return null;
+          return Number((((getCirculatingRaw(row) - prev) / prev) * 100).toFixed(2));
+        },
+      },
+      {
+        header: "7d Change (%)",
+        accessor: (row) => {
+          const prev = getPrevWeekRaw(row);
+          if (prev <= 0) return null;
+          return Number((((getCirculatingRaw(row) - prev) / prev) * 100).toFixed(2));
+        },
+      },
+      { header: "Peg Score", accessor: (row) => pegScores?.get(row.id)?.pegScore ?? null },
+      { header: "Liquidity Score", accessor: (row) => dexLiquidity?.[row.id]?.liquidityScore ?? null },
+      { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },
+    ], "pharos-stablecoins");
+  }, [sorted, pegScores, dexLiquidity, reportCards]);
 
   if (isLoading) {
     return (
@@ -204,6 +235,12 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow animate-in fade-in duration-300">
+      <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
+        <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={sorted.length === 0}>
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </Button>
+      </div>
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>

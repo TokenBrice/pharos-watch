@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import {
   AreaChart,
   Area,
@@ -12,7 +12,10 @@ import {
   ReferenceArea,
   ReferenceLine,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Camera } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { downloadChartPng } from "@/lib/chart-export";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
@@ -118,6 +121,10 @@ function useIsMobile(breakpoint = 640) {
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
 export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const handlePngExport = useCallback(() => {
+    downloadChartPng(chartRef, "pharos-psi-history");
+  }, []);
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
   const isMobile = useIsMobile();
 
@@ -155,10 +162,16 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Pharos Stability Index History</CardTitle>
-        <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
+        <CardAction className="flex items-center gap-2">
+          <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
+          <Button variant="ghost" size="icon-sm" onClick={handlePngExport} title="Save chart as PNG">
+            <Camera className="h-4 w-4" />
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
+          <div ref={chartRef}>
           <div
             className="h-[250px] sm:h-[350px]"
             role="figure"
@@ -258,6 +271,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                 />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
           </div>
         ) : (
           <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">

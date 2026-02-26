@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -10,8 +10,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink } from "lucide-react";
+import { Download, ExternalLink } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { formatAddress, formatEventDate, formatCurrency } from "@/lib/format";
 import { isGoldStablecoin } from "@/lib/blacklist-helpers";
 import type { BlacklistEvent } from "@/lib/types";
@@ -59,6 +61,23 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
     return sorted.slice(start, start + pageSize);
   }, [sorted, page, pageSize]);
 
+  const handleCsvExport = useCallback(() => {
+    downloadCsv(sorted, [
+      { header: "Date", accessor: (row) => formatEventDate(row.timestamp) },
+      { header: "Stablecoin", accessor: (row) => row.stablecoin },
+      { header: "Chain", accessor: (row) => row.chainName },
+      { header: "Event", accessor: (row) => EVENT_LABELS[row.eventType] ?? row.eventType },
+      { header: "Address", accessor: (row) => row.address },
+      {
+        header: "Amount",
+        accessor: (row) =>
+          row.amount != null && !(row.amount === 0 && row.eventType !== "destroy")
+            ? row.amount
+            : null,
+      },
+      { header: "Tx URL", accessor: (row) => row.explorerTxUrl },
+    ], "pharos-freeze-events");
+  }, [sorted]);
 
   if (isLoading) {
     return (
@@ -83,6 +102,12 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
 
   return (
     <div className="rounded-xl border table-header-sticky overflow-x-auto scroll-shadow">
+      <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
+        <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={sorted.length === 0}>
+          <Download className="h-3.5 w-3.5" />
+          Export CSV
+        </Button>
+      </div>
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow>
