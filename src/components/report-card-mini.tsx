@@ -35,9 +35,9 @@ export function ReportCardMini({
   const dimUnaffected = isSimulating && !isSimulated;
 
   return (
-    <Link href={`/stablecoin/${card.id}`} className="block h-full">
+    <Link href={`/stablecoin/${card.id}`} className="block h-full active:scale-[0.995] transition-transform">
       <Card
-        className={`hover:bg-accent/50 transition-colors cursor-pointer h-full ${
+        className={`hover:bg-accent/50 hover:shadow-md transition-all cursor-pointer h-full ${
           isSimulated
             ? "border-dashed border-amber-500/40"
             : ""
