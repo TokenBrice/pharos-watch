@@ -77,6 +77,13 @@ export async function confirmPendingDepegs(
   const openSet = new Set((openEvents.results ?? []).map((r) => r.stablecoin_id));
 
   for (const row of rows) {
+    // Guard: peg_reference is used as divisor below — skip if zero/negative
+    if (!row.peg_reference || row.peg_reference <= 0) {
+      await db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id).run();
+      console.warn(`[depeg-confirm] Deleted pending for ${row.symbol}: invalid peg_reference=${row.peg_reference}`);
+      continue;
+    }
+
     const asset = assetById.get(row.stablecoin_id);
     const meta = metaById.get(row.stablecoin_id);
     const threshold = getDepegThresholdBps(row.peg_type);
