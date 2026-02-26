@@ -24,7 +24,7 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "3.0";
+export const METHODOLOGY_VERSION = "3.1";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
