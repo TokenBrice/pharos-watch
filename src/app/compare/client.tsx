@@ -56,9 +56,9 @@ const SYMBOL_TO_COIN = new Map<string, CoinOption>(
 
 const COMPARISON_PRESETS = [
   {
-    title: "The Big Three",
-    description: "The three largest USD stablecoins by market cap",
-    coins: ["usdt", "usdc", "fdusd"],
+    title: "The Big Four",
+    description: "The four largest USD stablecoins by market cap",
+    coins: ["usdt", "usdc", "usds", "usde"],
   },
   {
     title: "DeFi Natives",
