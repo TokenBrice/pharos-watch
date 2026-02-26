@@ -449,9 +449,9 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Resilience</td>
-                    <td className="py-2 pr-4">10%</td>
-                    <td className="py-2 pr-4">Blacklist capability</td>
-                    <td className="py-2">Can the issuer freeze or seize holder funds?</td>
+                    <td className="py-2 pr-4">15%</td>
+                    <td className="py-2 pr-4">Chain risk, collateral, custody, blacklist</td>
+                    <td className="py-2">Structural resilience across 4 sub-factors</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Decentralization</td>
@@ -461,7 +461,7 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
-                    <td className="py-2 pr-4">30%</td>
+                    <td className="py-2 pr-4">25%</td>
                     <td className="py-2 pr-4">Dependencies, upstream grades</td>
                     <td className="py-2">Inherited risk from upstream stablecoins</td>
                   </tr>
@@ -522,7 +522,7 @@ export default function AboutPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v2.1. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v3.0. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>
