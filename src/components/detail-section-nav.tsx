@@ -57,7 +57,7 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
     <nav
       ref={navRef}
       aria-label="Section navigation"
-      className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border overflow-x-auto scrollbar-none"
+      className="sticky top-0 z-20 bg-card/95 backdrop-blur overflow-x-auto scrollbar-none"
     >
       <div className="flex gap-1 p-1.5">
         {sections.map((section) => (

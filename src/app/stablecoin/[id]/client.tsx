@@ -1,15 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { usePegSummary } from "@/hooks/use-peg-summary";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRaw } from "@/lib/supply";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { McapChart } from "@/components/mcap-chart";
@@ -22,10 +23,12 @@ import { ReportCardDetail } from "@/components/report-card";
 import { DetailSectionNav } from "@/components/detail-section-nav";
 import { PegGauge } from "@/components/peg-gauge";
 import { ReserveTreemap } from "@/components/reserve-treemap";
+import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
-import type { StablecoinData } from "@/lib/types";
+import type { StablecoinData, StablecoinMeta } from "@/lib/types";
 import { pegScoreColor, getScoreColor } from "@/lib/severity-colors";
+import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 
 const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
@@ -42,7 +45,14 @@ interface SummaryData {
   updatedAt: string;
 }
 
-export default function StablecoinDetailClient({ id, summary }: { id: string; summary: SummaryData | null }) {
+interface StablecoinDetailClientProps {
+  id: string;
+  summary: SummaryData | null;
+  coin: StablecoinMeta;
+  logoSrc?: string;
+}
+
+export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
@@ -50,7 +60,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
   const { data: liquidityMap } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
   const reportCard = reportCardsData?.cards.find((c) => c.id === id);
-  const meta = TRACKED_META_BY_ID.get(id);
+  const meta = coin;
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
   );
@@ -116,122 +126,191 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
         </div>
       )}
 
-      <DetailSectionNav sections={DETAIL_SECTIONS} />
+      {/* HERO CARD */}
+      <Card className="rounded-xl">
+        {/* Top bar: breadcrumb + compare */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-border/40">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+            <span>/</span>
+            <span className="text-foreground">{coin.name}</span>
+          </nav>
+          <Link
+            href={`/compare/?coins=${coin.symbol.toLowerCase()}`}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            Compare
+          </Link>
+        </div>
 
-      <section id="overview">
-        {/* Primary stats row – Left: Market Cap+Supply | Center: Price | Right: Peg+Liquidity */}
-        <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-3">
+        {/* Hero body: 2-column layout */}
+        <div className="px-5 py-4">
+          <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
 
-          {/* LEFT: Market Cap + Supply side-by-side */}
-          <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-            <CardContent className="pt-4 pb-4 flex flex-col h-full justify-between gap-4">
-              <div className="grid grid-cols-2 gap-x-5">
-                <div>
+            {/* LEFT: Identity + Price */}
+            <div className="lg:w-[45%] flex flex-col gap-4">
+              {/* Identity row */}
+              <div className="flex flex-wrap items-center gap-3">
+                {logoSrc ? (
+                  <Image
+                    src={logoSrc}
+                    alt={`${coin.name} logo`}
+                    width={48}
+                    height={48}
+                    className="rounded-full flex-shrink-0"
+                    unoptimized
+                  />
+                ) : (
+                  <div
+                    className="flex-shrink-0 rounded-full bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground"
+                    style={{ width: 48, height: 48 }}
+                  >
+                    {coin.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <h1 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h1>
+                <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
+                <BluechipHeaderBadge stablecoinId={coin.id} />
+              </div>
+
+              {/* Classification line */}
+              <p className="text-sm text-muted-foreground">
+                {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance}
+                {" \u00b7 "}
+                {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}
+                {" \u00b7 "}
+                {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
+              </p>
+
+              {/* Price + Gauge */}
+              {coinData && (
+                <div className="flex items-center gap-4 mt-auto">
+                  {coinData.price != null && pegRef > 0 && (
+                    <PegGauge
+                      deviationBps={Math.round(((coinData.price - pegRef) / pegRef) * 10000)}
+                      className="w-full max-w-[140px]"
+                    />
+                  )}
+                  <div>
+                    <div className="text-2xl font-bold font-mono tracking-tight">
+                      {formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}
+                    </div>
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {formatPegDeviation(coinData.price, pegRef)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Vertical divider (desktop only) */}
+            <div className="hidden lg:block w-px bg-border/40" />
+
+            {/* RIGHT: 2x2 Stats Grid */}
+            <div className="lg:flex-1">
+              <div className="grid grid-cols-2">
+                {/* Top-left: Market Cap */}
+                <div className="p-3 border-b border-r border-border/40">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Market Cap</p>
                   <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatCurrency(mcap)}</div>
                   <p className={`text-xs font-mono mt-1 ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
                     {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"} <span className="text-muted-foreground">24h</span>
                   </p>
                 </div>
-                <div>
+
+                {/* Top-right: Supply */}
+                <div className="p-3 border-b border-border/40">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Supply</p>
                   <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatSupply(supply)}</div>
                   <p className={`text-xs font-mono mt-1 ${mcap >= prevWeek ? "text-green-500" : "text-red-500"}`}>
                     {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"} <span className="text-muted-foreground">7d</span>
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center justify-between pt-3 border-t border-border/60 text-xs text-muted-foreground">
-                <span>{coinData.chains?.length ?? 0} chain{(coinData.chains?.length ?? 0) !== 1 ? "s" : ""}</span>
-                {prevMonth > 0 && (
-                  <span className={`font-mono ${mcap >= prevMonth ? "text-green-500" : "text-red-500"}`}>
-                    {formatPercentChange(mcap, prevMonth)} <span className="text-muted-foreground">30d</span>
-                  </span>
+
+                {/* Bottom-left: Peg Score (NAV tokens show "Type: NAV Token" instead) */}
+                {!isNavToken ? (
+                  <div className="p-3 border-r border-border/40">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Peg Score</p>
+                    {pegScoreResult?.pegScore != null ? (
+                      <>
+                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
+                          {pegScoreResult.pegScore}<span className="text-base text-muted-foreground">/100</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          {pegScoreResult.pegPct.toFixed(1)}% at peg
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {pegScoreResult.eventCount} event{pegScoreResult.eventCount !== 1 ? "s" : ""}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 border-r border-border/40">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Type</p>
+                    <div className="text-sm font-medium text-muted-foreground">NAV Token</div>
+                  </div>
                 )}
+
+                {/* Bottom-right: Liquidity Score */}
+                <div className="p-3">
+                  {(() => {
+                    const liq = liquidityMap?.[id];
+                    const hasLiq = liq != null && (liq.liquidityScore !== null || liq.poolCount > 0);
+                    const score = liq?.liquidityScore ?? 0;
+                    const textColor = hasLiq ? getScoreColor(score) : "";
+                    return hasLiq ? (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liquidity</p>
+                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${textColor}`}>
+                          {Math.round(score)}<span className="text-base text-muted-foreground">/100</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          {formatCurrency(liq!.totalTvlUsd)} TVL
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {liq!.poolCount} pool{liq!.poolCount !== 1 ? "s" : ""} · {liq!.chainCount} chain{liq!.chainCount !== 1 ? "s" : ""}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liquidity</p>
+                        <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* CENTER: Price */}
-          <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-            <CardContent className="pt-4 pb-4 flex flex-col items-center justify-center h-full text-center">
-              {coinData.price != null && pegRef > 0 && (
-                <PegGauge
-                  deviationBps={Math.round(((coinData.price - pegRef) / pegRef) * 10000)}
-                  className="w-full max-w-[180px] mb-2"
-                />
-              )}
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Price</p>
-              <div className="text-2xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
-              <p className="text-sm text-muted-foreground font-mono mt-1">{formatPegDeviation(coinData.price, pegRef)}</p>
-            </CardContent>
-          </Card>
-
-          {/* RIGHT: Peg Score + Liquidity Score side-by-side */}
-          <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-            <CardContent className="pt-4 pb-4 flex flex-col h-full justify-between gap-4">
-              {(() => {
-                const liq = liquidityMap?.[id];
-                const hasLiq = liq != null && (liq.liquidityScore !== null || liq.poolCount > 0);
-                const score = liq?.liquidityScore ?? 0;
-                const textColor = hasLiq ? getScoreColor(score) : "";
-                const showBoth = !isNavToken && hasLiq;
-                const deviationBps = pegScoreResult?.currentDeviationBps ?? null;
-                return (
-                  <>
-                    <div className={`grid gap-x-5 ${showBoth ? "grid-cols-2" : "grid-cols-1"}`}>
-                      {!isNavToken && (
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Peg Score</p>
-                          {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
-                            <>
-                              <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
-                                {pegScoreResult.pegScore}<span className="text-base text-muted-foreground">/100</span>
-                              </div>
-                              <p className="text-xs text-muted-foreground font-mono mt-1">
-                                {pegScoreResult.pegPct.toFixed(1)}% at peg
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
-                              </p>
-                            </>
-                          ) : (
-                            <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
-                          )}
-                        </div>
-                      )}
-                      {hasLiq && (
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liq. Score</p>
-                          <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${textColor}`}>
-                            {Math.round(score)}<span className="text-base text-muted-foreground">/100</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground font-mono mt-1">
-                            {formatCurrency(liq!.totalTvlUsd)} TVL
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {liq!.poolCount} pool{liq!.poolCount !== 1 ? "s" : ""} &middot; {liq!.chainCount} chain{liq!.chainCount !== 1 ? "s" : ""}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between pt-3 border-t border-border/60 text-xs text-muted-foreground">
-                      {deviationBps !== null ? (
-                        <span className={`font-mono ${Math.abs(deviationBps) >= 50 ? "text-red-500" : Math.abs(deviationBps) >= 10 ? "text-amber-500" : ""}`}>
-                          {deviationBps >= 0 ? "+" : ""}{deviationBps} bps now
-                        </span>
-                      ) : <span />}
-                      {pegScoreResult?.activeDepeg && (
-                        <span className="text-red-500 font-medium">Active depeg</span>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </CardContent>
-          </Card>
+              {/* Footer line: chain count + 30d change + active depeg */}
+              <div className="flex items-center justify-between px-3 pt-3 border-t border-border/40 text-xs text-muted-foreground">
+                <span>{coinData?.chains?.length ?? 0} chain{(coinData?.chains?.length ?? 0) !== 1 ? "s" : ""}</span>
+                <div className="flex items-center gap-3">
+                  {prevMonth > 0 && (
+                    <span className={`font-mono ${mcap >= prevMonth ? "text-green-500" : "text-red-500"}`}>
+                      {formatPercentChange(mcap, prevMonth)} <span className="text-muted-foreground">30d</span>
+                    </span>
+                  )}
+                  {pegScoreResult?.activeDepeg && (
+                    <span className="text-red-500 font-medium">Active depeg</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* Section nav as card bottom bar */}
+        <div className="border-t border-border/40">
+          <DetailSectionNav sections={DETAIL_SECTIONS} />
+        </div>
+      </Card>
+
+      {/* Sections outside the card */}
+      <section id="overview">
         {summary && <AiSummary {...summary} />}
       </section>
 

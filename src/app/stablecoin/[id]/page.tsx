@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeftRight } from "lucide-react";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { getFilterTags, FILTER_TAG_LABELS } from "@/lib/types";
-import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
-import { Badge } from "@/components/ui/badge";
+import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
 import StablecoinDetailClient from "./client";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import logos from "../../../../data/logos.json";
 import aiSummaries from "../../../../data/ai-summaries.json";
 
@@ -76,7 +71,6 @@ function getRelatedStablecoins(coinId: string, limit = 6) {
 export default async function StablecoinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
-  const tags = coin ? getFilterTags(coin) : [];
   const related = getRelatedStablecoins(id);
   const typedLogos = logos as Record<string, string>;
 
@@ -92,57 +86,12 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         </div>
       ) : (
         <>
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-                <span>/</span>
-                <span className="text-foreground">{coin.name}</span>
-              </nav>
-              <Link
-                href={`/compare/?coins=${coin.symbol.toLowerCase()}`}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeftRight className="h-3.5 w-3.5" />
-                Compare
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {typedLogos[coin.id] ? (
-                <Image
-                  src={typedLogos[coin.id]}
-                  alt={`${coin.name} logo`}
-                  width={40}
-                  height={40}
-                  className="rounded-full flex-shrink-0"
-                  unoptimized
-                />
-              ) : (
-                <div
-                  className="flex-shrink-0 rounded-full bg-muted flex items-center justify-center text-lg font-bold text-muted-foreground"
-                  style={{ width: 40, height: 40 }}
-                >
-                  {coin.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <h1 className="text-3xl font-extrabold tracking-tighter">{coin.name}</h1>
-              <span className="text-xl text-muted-foreground font-mono">{coin.symbol}</span>
-              <BluechipHeaderBadge stablecoinId={coin.id} />
-              {tags.map((tag) => (
-                <Badge key={tag} variant="secondary">{FILTER_TAG_LABELS[tag]}</Badge>
-              ))}
-            </div>
-
-            <p className="text-sm text-muted-foreground">
-              {coin.name} is a {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance},{" "}
-              {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoin
-              {" "}pegged to {PEG_LABELS[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}.
-            </p>
-          </div>
-          <div className="mt-4">
-            <StablecoinDetailClient id={id} summary={typedSummaries[id] ?? null} />
-          </div>
+          <StablecoinDetailClient
+            id={id}
+            summary={typedSummaries[id] ?? null}
+            coin={coin}
+            logoSrc={typedLogos[coin.id]}
+          />
           {related.length > 0 && (
             <section className="mt-8 space-y-3">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Related Stablecoins</h2>
