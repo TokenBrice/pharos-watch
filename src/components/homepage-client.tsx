@@ -33,7 +33,7 @@ import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
 export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
   const { data: logos } = useLogos();
-  const { data: pegSummaryData } = usePegSummary();
+  const { data: pegSummaryData, isLoading: isPegLoading } = usePegSummary();
   const { data: bluechipRatings } = useBluechipRatings();
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
@@ -136,7 +136,7 @@ export function HomepageClient() {
         <PegHeatmap
           coins={filteredPegCoins}
           logos={logos}
-          isLoading={isLoading}
+          isLoading={isPegLoading}
           pegFilter={pegFilter}
           typeFilter={typeFilter}
           onPegFilterChange={setPegFilter}
@@ -144,10 +144,12 @@ export function HomepageClient() {
         />
       </section>
 
-      <DepegFeed
-        events={eventsData?.events ?? []}
-        logos={logos}
-      />
+      <section>
+        <DepegFeed
+          events={eventsData?.events ?? []}
+          logos={logos}
+        />
+      </section>
 
       <PegDiversityChart />
 
