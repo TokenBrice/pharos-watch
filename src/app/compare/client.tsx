@@ -80,6 +80,31 @@ const COMPARISON_PRESETS = [
     description: "Stablecoins with native yield mechanisms",
     coins: ["usds", "usde", "gho"],
   },
+  {
+    title: "Tokenized Treasuries",
+    description: "NAV-priced tokens backed by U.S. Treasury bills",
+    coins: ["usyc", "usdy", "tbill", "buidl"],
+  },
+  {
+    title: "Protocol Stablecoins",
+    description: "Native stablecoins issued by major DeFi protocols",
+    coins: ["gho", "crvusd", "frax"],
+  },
+  {
+    title: "Institutional RWA",
+    description: "Tokenized real-world assets from institutional issuers",
+    coins: ["buidl", "m", "usd0"],
+  },
+  {
+    title: "Emerging Currency Pegs",
+    description: "Stablecoins pegged to emerging market fiat currencies",
+    coins: ["brz", "tryb", "zarp"],
+  },
+  {
+    title: "Non-USD Majors",
+    description: "Stablecoins pegged to developed-market non-USD currencies",
+    coins: ["xsgd", "gyen", "zchf"],
+  },
 ];
 
 export function CompareClient() {
