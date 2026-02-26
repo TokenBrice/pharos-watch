@@ -217,13 +217,6 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     return loadFromStorage();
   });
 
-  // Sync URL param changes into state (shared link opened)
-  useEffect(() => {
-    if (isFromUrl) {
-      setHoldings(parseUrlParam(urlParam));
-    }
-  }, [isFromUrl, urlParam]);
-
   // Persist to localStorage when holdings change (only if NOT from URL)
   useEffect(() => {
     if (!isFromUrl) {
