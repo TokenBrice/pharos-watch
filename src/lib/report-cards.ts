@@ -278,6 +278,9 @@ export function inferResilienceDefaults(
   if (backing === "rwa-backed" && governance === "centralized") {
     return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "institutional" };
   }
+  if (backing === "rwa-backed" && governance === "centralized-dependent") {
+    return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "institutional" };
+  }
   if (backing === "crypto-backed" && governance === "decentralized") {
     return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "onchain" };
   }

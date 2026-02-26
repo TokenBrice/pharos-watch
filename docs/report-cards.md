@@ -47,11 +47,12 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 | Backing + Governance | Chain Risk | Collateral Quality | Custody Model |
 |---|---|---|---|
 | `rwa-backed` + `centralized` | ethereum | native | institutional |
+| `rwa-backed` + `centralized-dependent` | ethereum | native | institutional |
 | `crypto-backed` + `decentralized` | ethereum | native | onchain |
 | `crypto-backed` + `centralized-dependent` | ethereum | eth-lst | onchain |
 | `algorithmic` + any | ethereum | native | onchain |
 
-Explicit overrides exist for ~20 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody).
+Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody).
 
 Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type).
 
