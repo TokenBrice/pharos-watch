@@ -28,13 +28,17 @@ The recently redesigned 2-column hero card has three issues:
 - Adjust cell padding: `p-3` → `px-3.5 py-2.5` (more horizontal room, less vertical)
 - Add `min-h-[76px]` to each cell for uniform height
 - Typography: add `leading-none` to stat values, reduce sub-value spacing `mt-1` → `mt-0.5`
+- Score suffix: `/100` spans from `text-base` → `text-sm` (smoother typographic ratio)
+- Change percentages: add `tabular-nums` to colored percentage spans to prevent layout shift
 - Score accent: Peg Score and Liquidity cells get a `border-l-2` in their score color (green/amber/red) when data is present
+- Active depeg warning: match cell padding (`px-3.5`), add `bg-red-500/5` background
 
 ### Card Wrapper
 
-- Breadcrumb bar: `pt-4 pb-3` → `pt-3 pb-2.5`
+- Breadcrumb bar: `pt-4 pb-3` → `pt-3 pb-2.5`; border from `border-border/40` → `border-border/30`
 - Card gap override: add `gap-0` to Card className (card manages spacing via borders)
-- Vertical column divider: `bg-border/40` → `bg-border/30`
+- Vertical column divider: `bg-border/40` → `bg-border/30`, add `my-3` inset (stop short of edges)
+- Section nav wrapper: border from `border-border/40` → `border-border/30`
 
 ### Section Nav
 
