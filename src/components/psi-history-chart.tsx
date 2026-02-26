@@ -135,7 +135,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
       .sort((a, b) => a.date - b.date);
 
     const result = sorted.map((evt, i) => {
-      if (i > 0 && evt.date - sorted[i - 1].date < threshold)
+      if (i > 0 && evt.date - sorted[i - 1].date < threshold && evt.position === sorted[i - 1].position)
         return { ...evt, hideLabel: true };
       return { ...evt, hideLabel: false };
     });

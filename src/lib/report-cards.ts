@@ -236,8 +236,9 @@ const CHAIN_RISK_SCORE: Record<ChainRisk, number> = {
 
 const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
   native: 100,
+  rwa: 50,
   "eth-lst": 66,
-  "alt-lst-bridged": 33,
+  "alt-lst-bridged-or-mixed": 33,
   exotic: 0,
 };
 
@@ -256,8 +257,9 @@ const CHAIN_RISK_LABEL: Record<ChainRisk, string> = {
 
 const COLLATERAL_QUALITY_LABEL: Record<CollateralQuality, string> = {
   native: "Native assets (ETH/BTC)",
+  rwa: "Real-world assets (off-chain)",
   "eth-lst": "Ethereum LSTs",
-  "alt-lst-bridged": "Alt-L1 LSTs / Bridged",
+  "alt-lst-bridged-or-mixed": "Alt-L1 LSTs / Bridged / Mixed",
   exotic: "Exotic / opaque strategy",
 };
 
@@ -276,10 +278,10 @@ export function inferResilienceDefaults(
   governance: GovernanceType,
 ): { chainRisk: ChainRisk; collateralQuality: CollateralQuality; custodyModel: CustodyModel } {
   if (backing === "rwa-backed" && governance === "centralized") {
-    return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "institutional" };
+    return { chainRisk: "ethereum", collateralQuality: "rwa", custodyModel: "institutional" };
   }
   if (backing === "rwa-backed" && governance === "centralized-dependent") {
-    return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "institutional" };
+    return { chainRisk: "ethereum", collateralQuality: "rwa", custodyModel: "institutional" };
   }
   if (backing === "crypto-backed" && governance === "decentralized") {
     return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "onchain" };

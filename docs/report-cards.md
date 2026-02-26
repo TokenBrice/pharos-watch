@@ -38,7 +38,7 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 | Sub-factor | Scoring | Tiers |
 |---|---|---|
 | **Chain Risk** | Where does the core protocol operate? | Ethereum (100), Stage 1+ L2 (66), Established alt-L1 (33), Unproven (0) |
-| **Collateral Quality** | Trust assumptions in backing assets | Native ETH/BTC (100), Ethereum LSTs (66), Alt-L1 LSTs/bridged (33), Exotic/opaque (0) |
+| **Collateral Quality** | Trust assumptions in backing assets | Native ETH/BTC (100), Ethereum LSTs (66), RWA/off-chain (50), Alt-L1 LSTs/bridged (33), Exotic/opaque (0) |
 | **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
 | **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Blacklistable (0) |
 
@@ -46,8 +46,8 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 
 | Backing + Governance | Chain Risk | Collateral Quality | Custody Model |
 |---|---|---|---|
-| `rwa-backed` + `centralized` | ethereum | native | institutional |
-| `rwa-backed` + `centralized-dependent` | ethereum | native | institutional |
+| `rwa-backed` + `centralized` | ethereum | rwa | institutional |
+| `rwa-backed` + `centralized-dependent` | ethereum | rwa | institutional |
 | `crypto-backed` + `decentralized` | ethereum | native | onchain |
 | `crypto-backed` + `centralized-dependent` | ethereum | eth-lst | onchain |
 | `algorithmic` + any | ethereum | native | onchain |

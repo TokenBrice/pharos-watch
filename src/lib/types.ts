@@ -72,7 +72,7 @@ export interface DependencyWeight {
 export type ChainRisk = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
 
 /** Trust assumptions in the backing assets */
-export type CollateralQuality = "native" | "eth-lst" | "alt-lst-bridged" | "exotic";
+export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-or-mixed" | "exotic";
 
 /** Where collateral is held and who controls it */
 export type CustodyModel = "onchain" | "institutional" | "cex";

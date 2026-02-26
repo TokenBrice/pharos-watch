@@ -492,7 +492,7 @@ export default function AboutPage() {
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Collateral Quality</td>
                     <td className="py-2 pr-4">Trust assumptions in backing assets</td>
-                    <td className="py-2">Native&nbsp;ETH/BTC&nbsp;(100), ETH&nbsp;LSTs&nbsp;(66), Alt&#8209;LST/Bridged&nbsp;(33), Exotic&nbsp;(0)</td>
+                    <td className="py-2">Native&nbsp;ETH/BTC&nbsp;(100), ETH&nbsp;LSTs&nbsp;(66), RWA/off&#8209;chain&nbsp;(50), Alt&#8209;LST/Bridged&nbsp;(33), Exotic&nbsp;(0)</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Custody Model</td>
