@@ -39,7 +39,7 @@ For each coin, determine the correct tier:
 | Sub-factor | Question | Tiers |
 |---|---|---|
 | `chainRisk` | Where does the core protocol live and where is collateral held? | `ethereum` (100), `stage1-l2` (66), `established-alt-l1` (33), `unproven` (0) |
-| `collateralQuality` | What are the trust assumptions in backing assets? | `native` (100), `eth-lst` (66), `alt-lst-bridged` (33), `exotic` (0) |
+| `collateralQuality` | What are the trust assumptions in backing assets? | `native` (100), `eth-lst` (66), `alt-lst-bridged-or-mixed` (33), `exotic` (0) |
 | `custodyModel` | Who holds the collateral and can it be verified on-chain? | `onchain` (100), `institutional` (50), `cex` (0) |
 
 **Classification rules:**
