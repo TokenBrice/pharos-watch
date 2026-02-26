@@ -172,6 +172,8 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
       <CardContent>
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
+          {/* Spacer matching the legend height in TotalMcapChart so both chart bottoms align */}
+          <div className="h-5 mb-4" />
           <div
             className="psi-chart h-[250px] sm:h-[350px]"
             role="figure"
@@ -237,6 +239,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                   tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
+                  minTickGap={72}
                   tickFormatter={(ts: number) =>
                     new Date(ts).toLocaleDateString("en-US", {
                       month: "short",
