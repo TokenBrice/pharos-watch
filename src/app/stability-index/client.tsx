@@ -712,7 +712,7 @@ export function StabilityIndexClient() {
 
   const componentData = useMemo(() => {
     if (!data?.current) return [];
-    const reversed = [...data.history].reverse();
+    const reversed = [...data.history].filter((p) => p.components).reverse();
     return [
       ...reversed.map((p) => ({
         ts: p.date * 1000,
