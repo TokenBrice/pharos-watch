@@ -30,8 +30,8 @@ export const handleBackfillStabilityIndex = withErrorHandler(
 
     // Load all depeg events into memory for fast lookup
     const allDepegs = await db
-      .prepare("SELECT stablecoin_id, start_price, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
-      .all<{ stablecoin_id: string; start_price: number; peg_reference: number; started_at: number; ended_at: number | null }>();
+      .prepare("SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
+      .all<{ stablecoin_id: string; peak_deviation_bps: number; peg_reference: number; started_at: number; ended_at: number | null }>();
     const depegEvents = allDepegs.results ?? [];
 
     // Load all supply snapshots for mcap lookup
@@ -86,8 +86,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         let earliestStart = Infinity;
         for (const e of events) {
           if (e.peg_reference <= 0) continue;
-          const bps = Math.round(((e.start_price / e.peg_reference) - 1) * 10000);
-          if (Math.abs(bps) > Math.abs(worstBps)) worstBps = bps;
+          if (Math.abs(e.peak_deviation_bps) > Math.abs(worstBps)) worstBps = e.peak_deviation_bps;
           if (e.started_at < earliestStart) earliestStart = e.started_at;
         }
         if (earliestStart === Infinity) continue;

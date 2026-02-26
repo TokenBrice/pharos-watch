@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
+import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/lib/psi-eligible";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
@@ -156,7 +156,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
 
     let coins;
     if (singleId) {
-      const match = TRACKED_STABLECOINS.filter((c) => c.id === singleId);
+      const match = PSI_ELIGIBLE_STABLECOINS.filter((c) => c.id === singleId);
       if (match.length === 0) {
         return new Response(
           JSON.stringify({ error: "Stablecoin not found" }),
@@ -171,7 +171,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       );
       const batch = parseInt(url.searchParams.get("batch") ?? "0", 10);
       const start = batch * batchSize;
-      coins = TRACKED_STABLECOINS.slice(start, start + batchSize);
+      coins = PSI_ELIGIBLE_STABLECOINS.slice(start, start + batchSize);
     }
 
     if (coins.length === 0) {
@@ -211,7 +211,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       // Determine if this coin needs native→USD conversion
       const isUsd = meta.flags.pegCurrency === "USD";
       const needsConversion = !isUsd;
-      const geckoId = meta.geckoId ?? TRACKED_META_BY_ID.get(meta.id)?.geckoId;
+      const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
 
       // Fetch DL detail + historical prices (for non-USD coins) in parallel
       const fetches: Promise<Response>[] = [
