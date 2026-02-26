@@ -230,7 +230,7 @@ export function scoreLiquidity(
 const CHAIN_RISK_SCORE: Record<ChainRisk, number> = {
   ethereum: 100,
   "stage1-l2": 66,
-  "established-alt-l1": 33,
+  "established-alt-l1": 20,
   unproven: 0,
 };
 
@@ -238,7 +238,7 @@ const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
   native: 100,
   rwa: 50,
   "eth-lst": 66,
-  "alt-lst-bridged-or-mixed": 33,
+  "alt-lst-bridged-or-mixed": 20,
   exotic: 0,
 };
 

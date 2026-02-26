@@ -27,8 +27,8 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon },
   { href: "/risk-lab", label: "Risk Lab", icon: ClipboardCheck },
-{ href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
   { href: "/liquidity", label: "Liquidity", icon: Droplets },
+  { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
   { href: "/cemetery", label: "Cemetery", icon: Skull },
   { href: "/about", label: "About", icon: Info },
 ];
