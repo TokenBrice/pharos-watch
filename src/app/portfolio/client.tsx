@@ -9,17 +9,13 @@ import { CoinSelector } from "@/components/coin-selector";
 import { ReportCardRadar } from "@/components/radar-chart";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { GradeBadge } from "@/components/grade-badge";
-import { StressTestPanel } from "@/components/stress-test-panel";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { useReportCards } from "@/hooks/use-report-cards";
-import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
-import { useStressTest } from "@/hooks/use-stress-test";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 import { DIMENSION_ORDER, scoreToGrade } from "@/lib/report-cards";
-import { sumPegBuckets } from "@/lib/supply";
 import type { ReportCard } from "@/lib/types";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
@@ -200,24 +196,12 @@ function ExposureBar({
 
 export function PortfolioClient() {
   const { data: reportData, isLoading: isLoadingCards } = useReportCards();
-  const { data: stablecoinsData } = useStablecoins();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
 
-  const mcapMap = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) return new Map<string, number>();
-    return new Map(
-      stablecoinsData.peggedAssets.map((a) => [
-        a.id,
-        a.circulating ? sumPegBuckets(a.circulating) : 0,
-      ]),
-    );
-  }, [stablecoinsData]);
-
   const portfolio = usePortfolio(reportData?.cards);
-  const stressTest = useStressTest(reportData, mcapMap);
 
-  // URL sync: keep query string in sync with portfolio + stress test state
+  // URL sync: keep query string in sync with portfolio holdings
   const router = useRouter();
 
   useEffect(() => {
@@ -233,19 +217,10 @@ export function PortfolioClient() {
       .join(",");
     if (encoded) params.set("p", encoded);
 
-    // Encode stress test state
-    if (stressTest.targetCoinId) {
-      const meta = TRACKED_META_BY_ID.get(stressTest.targetCoinId);
-      if (meta) params.set("stress", meta.symbol.toLowerCase());
-    }
-    if (stressTest.targetGrade) {
-      params.set("grade", stressTest.targetGrade);
-    }
-
     const qs = params.toString();
     const newPath = qs ? `/portfolio/?${qs}` : "/portfolio/";
     router.replace(newPath, { scroll: false });
-  }, [portfolio.holdings, stressTest.targetCoinId, stressTest.targetGrade, router]);
+  }, [portfolio.holdings, router]);
 
   // Build synthetic ReportCard for the portfolio radar chart
   const portfolioRadarCard = useMemo((): ReportCard | null => {
@@ -293,23 +268,15 @@ export function PortfolioClient() {
     portfolio.dimensionScores,
   ]);
 
-  // Grade card grid: simulated when stress test active, filtered to held coins only
-  const displayCards = stressTest.stressedCards ?? reportData?.cards ?? [];
-  const affectedIds = stressTest.allAffectedIds;
-  const originalCardMap = useMemo(
-    () => new Map(reportData?.cards?.map((c) => [c.id, c]) ?? []),
-    [reportData?.cards],
-  );
-  const isSimulating = stressTest.stressedCards !== null;
-
+  // Grade card grid: filtered to held coins only
   const heldCardIds = useMemo(
     () => new Set(portfolio.holdings.map((h) => h.coinId)),
     [portfolio.holdings],
   );
 
   const heldCards = useMemo(
-    () => displayCards.filter((c) => heldCardIds.has(c.id)),
-    [displayCards, heldCardIds],
+    () => (reportData?.cards ?? []).filter((c) => heldCardIds.has(c.id)),
+    [reportData?.cards, heldCardIds],
   );
 
   const handleShare = useCallback(async () => {
@@ -472,34 +439,12 @@ export function PortfolioClient() {
         </Card>
       )}
 
-      {/* Stress test */}
-      <StressTestPanel
-        stressTest={stressTest}
-        cards={reportData?.cards}
-        mcapMap={mcapMap}
-        logos={logos}
-      />
-
       {/* Grade cards for held coins only */}
       {portfolio.holdings.length > 0 && (
         <>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Holdings Safety Grades
           </h2>
-
-          {isSimulating && (
-            <div className="sticky top-14 z-30 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 flex items-center justify-between">
-              <span className="text-sm text-amber-500 font-medium">
-                Viewing simulated grades
-              </span>
-              <button
-                onClick={stressTest.clear}
-                className="text-sm text-amber-500 underline underline-offset-2 hover:text-amber-400"
-              >
-                Clear simulation
-              </button>
-            </div>
-          )}
 
           {heldCards.length === 0 ? (
             <p className="text-sm text-muted-foreground">
@@ -512,10 +457,6 @@ export function PortfolioClient() {
                   key={card.id}
                   card={card}
                   logo={logos?.[card.id]}
-                  isSimulated={affectedIds.has(card.id)}
-                  isSimulating={isSimulating}
-                  originalGrade={originalCardMap.get(card.id)?.overallGrade}
-                  originalScore={originalCardMap.get(card.id)?.overallScore}
                 />
               ))}
             </div>
