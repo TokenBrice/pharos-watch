@@ -15,6 +15,7 @@ type EventMap = {
   portfolio_shared: { coin_count: number };
   stress_test_run: { target_coin: string; target_grade: string; affected_count: number };
   comparison_created: { coin_count: number; coin_ids: string };
+  comparison_preset_selected: { preset: string };
   comparison_exported: { method: string; coin_count: number };
   search_performed: { page: string; query_length: number };
   // Tier 2 — Feature Engagement

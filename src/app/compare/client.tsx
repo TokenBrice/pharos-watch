@@ -19,7 +19,13 @@ import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
 import { ComparisonChart } from "@/components/comparison-chart";
 import { CompareRadar } from "@/components/radar-chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Share2, Twitter, Download, Search } from "lucide-react";
@@ -47,6 +53,34 @@ const SYMBOL_TO_COIN = new Map<string, CoinOption>(
     { id: c.id, name: c.name, symbol: c.symbol },
   ]),
 );
+
+const COMPARISON_PRESETS = [
+  {
+    title: "The Big Three",
+    description: "The three largest USD stablecoins by market cap",
+    coins: ["usdt", "usdc", "fdusd"],
+  },
+  {
+    title: "DeFi Natives",
+    description: "Decentralized, crypto-backed stablecoins",
+    coins: ["dai", "lusd", "bold"],
+  },
+  {
+    title: "Gold Pegs",
+    description: "Tokenized gold stablecoins",
+    coins: ["paxg", "xaut", "kau"],
+  },
+  {
+    title: "Euro Stablecoins",
+    description: "EUR-pegged stablecoins",
+    coins: ["eurs", "eura", "eure"],
+  },
+  {
+    title: "Yield-Bearing",
+    description: "Stablecoins with native yield mechanisms",
+    coins: ["usds", "usde", "gho"],
+  },
+];
 
 export function CompareClient() {
   const { data: logos } = useLogos();
@@ -453,14 +487,63 @@ export function CompareClient() {
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
-        <div className="flex flex-col items-center justify-center border-dashed border-2 rounded-lg py-12 px-4">
-          <Search className="h-8 w-8 text-muted-foreground/50 mb-3" />
-          <p className="text-sm text-muted-foreground">
-            Select at least 2 stablecoins to compare.
-          </p>
-          <p className="text-xs text-muted-foreground/70 mt-1">
-            Use the slots above to pick stablecoins
-          </p>
+        <div className="space-y-6">
+          <div className="flex flex-col items-center justify-center border-dashed border-2 rounded-lg py-12 px-4">
+            <Search className="h-8 w-8 text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Select at least 2 stablecoins to compare.
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Use the slots above or pick a preset below
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              Quick comparisons
+            </h3>
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {COMPARISON_PRESETS.map((preset) => (
+                <Card
+                  key={preset.title}
+                  className="cursor-pointer transition-colors hover:border-foreground/25 hover:bg-accent/50"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    trackEvent("comparison_preset_selected", {
+                      preset: preset.title,
+                    });
+                    const params = new URLSearchParams();
+                    params.set("coins", preset.coins.join(","));
+                    router.replace(`/compare/?${params.toString()}`, {
+                      scroll: false,
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      const params = new URLSearchParams();
+                      params.set("coins", preset.coins.join(","));
+                      router.replace(`/compare/?${params.toString()}`, {
+                        scroll: false,
+                      });
+                    }
+                  }}
+                >
+                  <CardHeader>
+                    <CardTitle className="text-base">{preset.title}</CardTitle>
+                    <CardDescription>{preset.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {preset.coins
+                        .map((s) => s.toUpperCase())
+                        .join(" vs ")}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
