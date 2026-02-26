@@ -10,7 +10,6 @@ import { useLogos } from "@/hooks/use-logos";
 import { useStressTest } from "@/hooks/use-stress-test";
 import { ReportCardMini } from "@/components/report-card-mini";
 import { StressTestPanel } from "@/components/stress-test-panel";
-import { ContagionGraph } from "@/components/contagion-graph";
 import { gradeRange, REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { sumPegBuckets } from "@/lib/supply";
@@ -229,14 +228,15 @@ export function ReportCardsClient() {
         logos={logos}
       />
 
-      {/* Dependency map */}
-      {reportData?.cards && (
-        <ContagionGraph
-          cards={reportData.cards}
-          mcapMap={mcapMap}
-          logos={logos}
-        />
-      )}
+      {/* Link to standalone dependency map */}
+      <div className="flex items-center justify-end">
+        <a
+          href="/dependency-map"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+        >
+          Explore the full dependency map →
+        </a>
+      </div>
 
       {/* Filter + Sort controls */}
       <div className="flex flex-wrap items-center gap-3">
