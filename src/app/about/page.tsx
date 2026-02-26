@@ -66,7 +66,7 @@ export default function AboutPage() {
                 name: "What does Pharos track?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: `Pharos tracks ${TRACKED_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 6 safety dimensions.`,
+                  text: `Pharos tracks ${TRACKED_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 risk dimensions.`,
                 },
               },
               {
@@ -284,7 +284,7 @@ export default function AboutPage() {
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                Comprehensive A+&ndash;F stablecoin grades with six dimensions: peg, liquidity, safety, resilience, decentralization, and dependency risk
+                Comprehensive A+&ndash;F stablecoin grades with five dimensions: peg, liquidity, resilience, decentralization, and dependency risk
               </p>
             </CardContent>
           </Card>
@@ -417,7 +417,7 @@ export default function AboutPage() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos synthesizes multiple data signals into a single transparent grade per stablecoin.
-            Each report card distills peg stability, liquidity depth, safety ratings, resilience,
+            Each report card distills peg stability, liquidity depth, resilience,
             decentralization, and dependency risk into a letter grade so you can compare stablecoins at a glance.
           </p>
 
@@ -448,12 +448,6 @@ export default function AboutPage() {
                     <td className="py-2">Can you exit a large position without slippage?</td>
                   </tr>
                   <tr>
-                    <td className="py-2 pr-4 text-foreground">Safety</td>
-                    <td className="py-2 pr-4">20%</td>
-                    <td className="py-2 pr-4">Bluechip SMIDGE rating</td>
-                    <td className="py-2">Independent audit of stability, management, governance</td>
-                  </tr>
-                  <tr>
                     <td className="py-2 pr-4 text-foreground">Resilience</td>
                     <td className="py-2 pr-4">15%</td>
                     <td className="py-2 pr-4">Chain count, freeze events</td>
@@ -467,7 +461,7 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
-                    <td className="py-2 pr-4">5%</td>
+                    <td className="py-2 pr-4">25%</td>
                     <td className="py-2 pr-4">Dependencies, upstream grades</td>
                     <td className="py-2">Inherited risk from upstream stablecoins</td>
                   </tr>
@@ -521,7 +515,6 @@ export default function AboutPage() {
             <h3 className="text-foreground font-medium">Limitations</h3>
             <ul className="list-disc list-inside space-y-1">
               <li>Peg stability only reflects price data &mdash; can&apos;t detect coins &ldquo;stable&rdquo; because nobody trades them</li>
-              <li>Safety depends on Bluechip coverage &mdash; unrated coins get NR, not penalized</li>
               <li>Decentralization is structural, not a value judgment</li>
               <li>Dependency map is manually maintained &mdash; may not capture every collateral relationship</li>
               <li>Resilience uses chain count as proxy &mdash; doesn&apos;t account for chain quality or TVL distribution per chain</li>
@@ -530,7 +523,7 @@ export default function AboutPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v1.0. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v2.0. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>
@@ -566,7 +559,7 @@ export default function AboutPage() {
             <h3 className="text-foreground font-medium">Portfolio Radar</h3>
             <p>
               The portfolio radar chart shows the same weighted average applied per dimension
-              (Peg Stability, Liquidity, Safety, Resilience, Decentralization, Dependency Risk),
+              (Peg Stability, Liquidity, Resilience, Decentralization, Dependency Risk),
               revealing the aggregate risk profile shape of the portfolio.
             </p>
           </div>

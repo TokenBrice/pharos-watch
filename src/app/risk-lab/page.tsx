@@ -5,7 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { ReportCardsClient } from "./client";
 
 const reportCardsDescription =
-  "Transparent stablecoin safety grades, portfolio risk analysis, and contagion simulation in one place. Six dimensions combined into a single letter grade — plus simulate what happens when a major stablecoin fails.";
+  "Transparent stablecoin safety grades, portfolio risk analysis, and contagion simulation in one place. Five dimensions combined into a single letter grade — plus simulate what happens when a major stablecoin fails.";
 
 export const metadata: Metadata = {
   title: "Risk Lab — Stablecoin Safety Grades & Contagion Simulation",

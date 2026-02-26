@@ -368,7 +368,7 @@ export interface ReportCardDimension {
   detail: string;         // Human-readable explanation
 }
 
-export type DimensionKey = "pegStability" | "liquidity" | "safety" | "resilience" | "decentralization" | "dependencyRisk";
+export type DimensionKey = "pegStability" | "liquidity" | "resilience" | "decentralization" | "dependencyRisk";
 
 export interface RawDimensionInputs {
   pegScore: number | null;

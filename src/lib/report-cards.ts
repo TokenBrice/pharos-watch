@@ -11,8 +11,6 @@ import type {
   DimensionKey,
   PegSummaryCoin,
   DexLiquidityData,
-  BluechipGrade,
-  BluechipRating,
   StablecoinMeta,
   GovernanceType,
   ReportCard,
@@ -22,21 +20,19 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "1.0";
+export const METHODOLOGY_VERSION = "2.0";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
   liquidity: 0.25,
-  safety: 0.20,
-  resilience: 0.10,
-  decentralization: 0.05,
-  dependencyRisk: 0.15,
+  resilience: 0.15,
+  decentralization: 0.10,
+  dependencyRisk: 0.25,
 };
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg Stability",
   liquidity: "Liquidity",
-  safety: "Safety",
   resilience: "Resilience",
   decentralization: "Decentralization",
   dependencyRisk: "Dependency Risk",
@@ -45,7 +41,6 @@ export const DIMENSION_LABELS: Record<DimensionKey, string> = {
 export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg",
   liquidity: "Liq.",
-  safety: "Safety",
   resilience: "Resil.",
   decentralization: "Decen.",
   dependencyRisk: "Dep.",
@@ -90,7 +85,6 @@ export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
 export const DIMENSION_ORDER: DimensionKey[] = [
   "pegStability",
   "liquidity",
-  "safety",
   "resilience",
   "decentralization",
   "dependencyRisk",
@@ -104,14 +98,6 @@ export const GRADE_RADAR_COLORS: Record<string, string> = {
   D: "#f97316",   // orange-500
   F: "#ef4444",   // red-500
   NR: "#71717a",  // zinc-500 (muted)
-};
-
-/** Maps Bluechip safety grades to numeric scores. */
-const BLUECHIP_GRADE_TO_SCORE: Record<BluechipGrade, number> = {
-  "A+": 100, A: 95, "A-": 90,
-  "B+": 85, B: 80, "B-": 75,
-  "C+": 70, C: 65, "C-": 60,
-  D: 50, F: 25,
 };
 
 // ---------------------------------------------------------------------------
@@ -234,23 +220,6 @@ export function scoreLiquidity(
 }
 
 /**
- * Safety: direct passthrough from Bluechip grade to numeric score.
- * NR if no rating.
- */
-export function scoreSafety(
-  rating: BluechipRating | undefined,
-): ReportCardDimension {
-  if (!rating) {
-    return { grade: "NR", score: null, detail: "No Bluechip safety rating available" };
-  }
-
-  const score = BLUECHIP_GRADE_TO_SCORE[rating.grade];
-  const detail = `Bluechip safety grade: ${rating.grade}. Collateralization: ${rating.collateralization}%`;
-
-  return { grade: scoreToGrade(score), score, detail };
-}
-
-/**
  * Resilience: chain distribution (60%) + freeze rate (40%).
  *
  * Chain distribution: 1->40, 2->55, 3->65, 4-5->75, 6-8->85, 9+->95
@@ -318,9 +287,9 @@ export function scoreDecentralization(
 }
 
 /**
- * Dependency Risk: for CeFi-Dependent coins, average upstream dependency scores.
+ * Dependency Risk: for CeFi-Dependent coins, blend upstream scores by weight.
  * - Non-CeFi-Dependent: 95
- * - CeFi-Dependent with mapped deps: average of upstream scores, -10 if any below 75
+ * - CeFi-Dependent with mapped deps: weighted blend of upstream + self-backed scores, -10 if any below 75
  * - CeFi-Dependent with no deps mapped or scores unavailable: 70
  */
 export function scoreDependencyRisk(

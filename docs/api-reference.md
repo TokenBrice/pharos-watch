@@ -686,7 +686,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 
 ### `GET /api/report-cards`
 
-Stablecoin safety grade cards with dimension-level scores. Grades are computed from 6 dimensions using weighted scoring.
+Stablecoin risk grade cards with dimension-level scores. Grades are computed from 5 dimensions using weighted scoring.
 
 **Cache:** standard
 
@@ -700,7 +700,7 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
   },
   "methodology": {
     "version": "1.0",
-    "weights": { "pegStability": 0.25, "liquidity": 0.25, "safety": 0.20, ... },
+    "weights": { "pegStability": 0.25, "liquidity": 0.25, "resilience": 0.15, "decentralization": 0.10, "dependencyRisk": 0.25 },
     "thresholds": [{ "grade": "A+", "min": 97 }, { "grade": "A", "min": 93 }, ...]
   },
   "updatedAt": 1771977600
@@ -719,7 +719,7 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
 | `overallGrade` | `string` | Letter grade: `"A+"` through `"F"`, or `"NR"` |
 | `overallScore` | `number \| null` | Weighted score 0–100. `null` for unrated coins |
 | `dimensions` | `Record<DimensionKey, DimensionScore>` | Per-dimension grade, score, and detail text |
-| `ratedDimensions` | `number` | Number of dimensions with data (max 6) |
+| `ratedDimensions` | `number` | Number of dimensions with data (max 5) |
 | `dependencies` | `DependencyWeight[] \| undefined` | Upstream stablecoin dependencies with collateral weights (for CeFi-Dependent coins) |
 | `rawInputs` | `RawDimensionInputs` | Raw scoring inputs for client-side grade recomputation (stress testing) |
 | `isDefunct` | `boolean` | `true` for cemetery coins (permanent F grade) |
@@ -743,7 +743,7 @@ Stablecoin safety grade cards with dimension-level scores. Grades are computed f
 | `governanceTier` | `GovernanceType` |
 | `dependencies` | `DependencyWeight[]` |
 
-**Dimensions:** `pegStability`, `liquidity`, `safety`, `resilience`, `decentralization`, `dependencyRisk`
+**Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 
 ---
 

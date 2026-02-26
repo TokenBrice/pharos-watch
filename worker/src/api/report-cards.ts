@@ -13,7 +13,6 @@ import {
   GRADE_THRESHOLDS,
   scorePegStability,
   scoreLiquidity,
-  scoreSafety,
   scoreResilience,
   scoreDecentralization,
   scoreDependencyRisk,
@@ -230,12 +229,11 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       dimensions: {
         pegStability: nrDim,
         liquidity: nrDim,
-        safety: nrDim,
         resilience: nrDim,
         decentralization: nrDim,
         dependencyRisk: nrDim,
       },
-      ratedDimensions: 6,
+      ratedDimensions: 5,
       rawInputs: {
         pegScore: null, activeDepeg: false, depegEventCount: 0, lastEventAt: null,
         liquidityScore: null, concentrationHhi: null, bluechipGrade: null,
@@ -315,7 +313,6 @@ function computeCard(
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq),
-    safety: scoreSafety(rating),
     resilience: scoreResilience(chainCount, freezeEventsPerMonth, hasTrackedFreezeEvents),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),

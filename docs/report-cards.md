@@ -1,10 +1,10 @@
-# Report Cards
+# Risk Lab
 
-Multi-dimensional safety grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
+Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
 ## Overall Grade
 
-Weighted sum of 6 dimension scores (each 0–100), mapped to a letter grade. NR dimensions have their weight redistributed proportionally among rated dimensions. Requires at least 3 rated dimensions; otherwise overall = NR. Cemetery coins get a permanent F.
+Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR dimensions have their weight redistributed proportionally among rated dimensions. Requires at least 3 rated dimensions; otherwise overall = NR. Cemetery coins get a permanent F.
 
 ## Dimensions
 
@@ -12,10 +12,9 @@ Weighted sum of 6 dimension scores (each 0–100), mapped to a letter grade. NR 
 |-----------|--------|--------|---------|
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
 | **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
-| **Safety** | 20% | Bluechip SMIDGE rating | Grade-to-score mapping (A+ → 100 … F → 25). NR if no rating |
-| **Resilience** | 10% | Chain count (60%) + freeze rate (40%) | See sub-scores below |
-| **Decentralization** | 5% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
-| **Dependency Risk** | 15% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 95), −10 if any < 75. NR if unmapped |
+| **Resilience** | 15% | Chain count (60%) + freeze rate (40%) | See sub-scores below |
+| **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
+| **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 95), −10 if any < 75. NR if unmapped |
 
 ### Peg Stability Details
 
@@ -31,24 +30,6 @@ Weighted sum of 6 dimension scores (each 0–100), mapped to a letter grade. NR 
 - Concentration penalty via Herfindahl-Hirschman Index:
   - HHI > 0.8: −10 (nearly single-pool concentration)
   - HHI > 0.5: −5 (moderate concentration)
-
-### Safety Details
-
-Bluechip grade passthrough:
-
-| Bluechip Grade | Score |
-|----------------|-------|
-| A+ | 100 |
-| A | 95 |
-| A- | 90 |
-| B+ | 85 |
-| B | 80 |
-| B- | 75 |
-| C+ | 70 |
-| C | 65 |
-| C- | 60 |
-| D | 50 |
-| F | 25 |
 
 ### Resilience Sub-Scores
 
@@ -120,7 +101,7 @@ Key types:
 
 ## Portfolio Analyzer & Stress Test
 
-Collapsible panel on `/report-cards` between the grade distribution bar and card grid. Two sections stacked vertically:
+Collapsible panel on `/risk-lab` between the grade distribution bar and card grid. Two sections stacked vertically:
 
 ### Portfolio Analyzer
 
@@ -138,7 +119,7 @@ Users simulate a grade downgrade for any upstream coin and watch cascading grade
 
 - **Coin selector**: Filtered to coins appearing as `from` in `dependencyGraph.edges`, sorted by dependent count.
 - **Grade selector**: Only downgrades from the coin's current grade to F.
-- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. ~142 coins × 6 dimensions = <1ms, no debouncing needed.
+- **Recomputation**: `computeStressedGrades()` injects a synthetic score, recomputes only the Dependency Risk dimension for affected downstream coins. ~142 coins × 5 dimensions = <1ms, no debouncing needed.
 - **Two display modes**: Portfolio mode (dollar-denominated, scoped to held coins in impact table) vs ecosystem mode (all affected coins with market cap).
 - **Card grid simulation**: ALL affected coins show dashed amber borders + "Simulated" badge regardless of portfolio mode. Unaffected cards dimmed. Sticky banner with clear button.
 

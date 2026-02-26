@@ -20,7 +20,7 @@
 | `GET /api/health` | Worker health check |
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
-| `GET /api/report-cards` | Stablecoin safety grade cards with dimension scores (peg, liquidity, safety, resilience, decentralization, dependency) |
+| `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
 | `GET /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
@@ -58,7 +58,7 @@ src/                              # Next.js frontend (static export)
 │   ├── stability-index/          # Pharos Stability Index (daily ecosystem health)
 │   │   ├── page.tsx
 │   │   └── client.tsx
-│   ├── report-cards/             # Stablecoin safety grade cards with radar charts
+│   ├── report-cards/             # Risk Lab: stablecoin risk grade cards with radar charts
 │   │   ├── page.tsx
 │   │   └── client.tsx
 │   ├── digest/page.tsx           # Daily digest archive
@@ -184,7 +184,7 @@ src/                              # Next.js frontend (static export)
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
-    ├── report-cards.ts           # Report card scoring: 6 dimensions, grade thresholds, weights, computeStressedGrades()
+    ├── report-cards.ts           # Report card scoring: 5 dimensions, grade thresholds, weights, computeStressedGrades()
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics
