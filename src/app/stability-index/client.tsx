@@ -45,6 +45,16 @@ const PSI_EVENTS = [
     ],
   },
   {
+    date: Date.UTC(2019, 1, 3),
+    dateEnd: Date.UTC(2019, 1, 9),
+    label: "QuadrigaCX Collapse",
+    position: "insideBottom" as const,
+    links: [
+      { title: "QuadrigaCX filed for creditor protection after founder's death left C$260M inaccessible", url: "https://www.osc.ca/quadrigacxreport/" },
+      { title: "Flight-to-quality panic: USDC hit +6.25% premium while sUSD crashed 25%", url: "https://www.nortonrosefulbright.com/en/knowledge/publications/168bc350/quadriga-bankruptcy" },
+    ],
+  },
+  {
     date: Date.UTC(2021, 6, 20),
     dateEnd: Date.UTC(2021, 7, 5),
     label: "EIP-1559 Rally",
