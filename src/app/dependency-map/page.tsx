@@ -34,7 +34,7 @@ export default function DependencyMapPage() {
           <span className="text-foreground">Dependency Map</span>
         </nav>
         <h1 className="text-4xl font-extrabold tracking-tighter">Dependency Map</h1>
-        <p className="text-sm text-muted-foreground max-w-2xl">
+        <p className="text-sm text-muted-foreground">
           Collateral dependencies between the top 50 stablecoins by market cap. Node size reflects market cap;
           lines show how one stablecoin relies on another as collateral. Drag nodes to explore. Click to view details.
         </p>

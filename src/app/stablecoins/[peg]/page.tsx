@@ -96,7 +96,7 @@ export default async function PegLandingPage({
           {label} Stablecoins
         </h1>
         {intro && (
-          <p className="text-sm text-muted-foreground max-w-2xl">{intro}</p>
+          <p className="text-sm text-muted-foreground">{intro}</p>
         )}
       </div>
       <PegLandingClient pegCurrency={pegCurrency} />

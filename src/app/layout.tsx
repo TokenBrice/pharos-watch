@@ -101,7 +101,7 @@ export default function RootLayout({
             {/* Spacer matches collapsed sidebar width on desktop */}
             <div className="hidden md:block w-14 shrink-0" />
             <div className="flex-1 flex flex-col min-w-0">
-              <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">{children}</main>
+              <main id="main-content" className="flex-1 px-4 py-6 lg:px-6">{children}</main>
               <Footer />
             </div>
           </div>
