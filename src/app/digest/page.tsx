@@ -32,7 +32,7 @@ export default function DigestArchivePage() {
         <p className="text-sm text-muted-foreground">
           Every daily recap, newest first.
         </p>
-        <p className="text-sm text-muted-foreground max-w-2xl">
+        <p className="text-sm text-muted-foreground">
           Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging
           trends across the stablecoin landscape. Browse the full archive to track how conditions have evolved
           over time.
