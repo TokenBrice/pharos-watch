@@ -160,7 +160,7 @@ export function HomepageClient() {
 
       <section>
         <h2 className="text-xl font-semibold tracking-tight mb-4">What Pharos Tracks</h2>
-        <CategoryStats data={data?.peggedAssets} />
+        <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
       </section>
 
       <PegDiversityChart />

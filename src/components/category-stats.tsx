@@ -7,14 +7,15 @@ import { formatCurrency, formatPercentChange } from "@/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
 import { getCirculatingRaw, getPrevWeekRaw, computeGovernanceBreakdown } from "@/lib/supply";
 import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import type { StablecoinData } from "@/lib/types";
+import type { StablecoinData, ReportCard } from "@/lib/types";
 import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
 interface CategoryStatsProps {
   data: StablecoinData[] | undefined;
+  reportCards?: Record<string, ReportCard>;
 }
 
-export function CategoryStats({ data }: CategoryStatsProps) {
+export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
@@ -57,10 +58,30 @@ export function CategoryStats({ data }: CategoryStatsProps) {
       .sort(([, a], [, b]) => b - a)
       .slice(0, 3);
 
+    // Safety score breakdown by grade tier
+    let gradeA = 0;
+    let gradeB = 0;
+    let gradeC = 0;
+    let gradeDF = 0;
+    let gradeNR = 0;
+    if (reportCards) {
+      for (const card of Object.values(reportCards)) {
+        if (card.isDefunct) continue;
+        const g = card.overallGrade;
+        if (g === "A+" || g === "A" || g === "A-") gradeA++;
+        else if (g === "B+" || g === "B" || g === "B-") gradeB++;
+        else if (g === "C+" || g === "C" || g === "C-") gradeC++;
+        else if (g === "D" || g === "F") gradeDF++;
+        else gradeNR++;
+      }
+    }
+    const gradeTotal = gradeA + gradeB + gradeC + gradeDF;
+
     return {
       totalAll,
       totalPrevWeek,
       totalCount: trackedData.length,
+      gradeA, gradeB, gradeC, gradeDF, gradeNR, gradeTotal,
       centralizedMcap: gov.centralizedMcap,
       dependentMcap: gov.dependentMcap,
       decentralizedMcap: gov.decentralizedMcap,
@@ -71,7 +92,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
       usdtPrev, usdcPrev, restPrev,
       altPegs, altTotal,
     };
-  }, [data]);
+  }, [data, reportCards]);
 
   if (!stats) {
     return (
@@ -98,18 +119,40 @@ export function CategoryStats({ data }: CategoryStatsProps) {
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         <Card className="rounded-xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Tracked</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Safety Score</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(stats.totalAll)}</div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">{stats.totalCount} with live data</p>
-              {stats.totalPrevWeek > 0 && (
-                <span className={`text-xs font-mono ${stats.totalAll >= stats.totalPrevWeek ? "text-green-500" : "text-red-500"}`}>
-                  {stats.totalAll >= stats.totalPrevWeek ? "\u2191" : "\u2193"} {formatPercentChange(stats.totalAll, stats.totalPrevWeek)} 7d
-                </span>
-              )}
-            </div>
+          <CardContent className="space-y-2">
+            {stats.gradeTotal > 0 ? (
+              <>
+                <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
+                  <div className="h-full bg-emerald-500" style={{ width: `${(stats.gradeA / stats.gradeTotal) * 100}%` }} />
+                  <div className="h-full bg-blue-500" style={{ width: `${(stats.gradeB / stats.gradeTotal) * 100}%` }} />
+                  <div className="h-full bg-amber-500" style={{ width: `${(stats.gradeC / stats.gradeTotal) * 100}%` }} />
+                  <div className="h-full bg-red-500" style={{ width: `${(stats.gradeDF / stats.gradeTotal) * 100}%` }} />
+                </div>
+                <div className="space-y-1">
+                  {([
+                    { label: "A tier", count: stats.gradeA, bg: "bg-emerald-500", text: "text-emerald-500" },
+                    { label: "B tier", count: stats.gradeB, bg: "bg-blue-500", text: "text-blue-500" },
+                    { label: "C tier", count: stats.gradeC, bg: "bg-amber-500", text: "text-amber-500" },
+                    { label: "D / F", count: stats.gradeDF, bg: "bg-red-500", text: "text-red-500" },
+                  ] as const).map((t) => (
+                    <div key={t.label} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`h-2 w-2 rounded-full ${t.bg}`} />
+                        <span className={`font-medium ${t.text}`}>{t.label}</span>
+                      </div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-bold font-mono text-xs">{t.count}</span>
+                        <span className="text-muted-foreground text-xs font-mono">{stats.gradeTotal > 0 ? ((t.count / stats.gradeTotal) * 100).toFixed(0) : 0}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">Loading scores…</p>
+            )}
           </CardContent>
         </Card>
         <Card className="rounded-xl border-l-[3px] border-l-yellow-500">
