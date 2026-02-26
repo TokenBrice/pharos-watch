@@ -1,5 +1,18 @@
+"use client";
+
+import { useMemo } from "react";
 import Link from "next/link";
-import { Droplets, FlaskConical, ShieldBan, Skull, ScrollText, Activity } from "lucide-react";
+import {
+  Activity,
+  ArrowLeftRight,
+  Droplets,
+  FlaskConical,
+  Network,
+  ScrollText,
+  ShieldBan,
+  Skull,
+  Wallet,
+} from "lucide-react";
 
 const FEATURES = [
   {
@@ -19,7 +32,7 @@ const FEATURES = [
     linkLabel: "View grades",
   },
   {
-    title: "Blacklist Monitor",
+    title: "Freeze Tracker",
     description: "On-chain freeze & destroy events across issuer blacklists.",
     href: "/blacklist",
     icon: ShieldBan,
@@ -50,14 +63,49 @@ const FEATURES = [
     borderClass: "border-l-violet-500",
     linkLabel: "View archive",
   },
-] as const;
+  {
+    title: "Dependency Map",
+    description: "Collateral dependency graph across the stablecoin ecosystem.",
+    href: "/dependency-map",
+    icon: Network,
+    borderClass: "border-l-indigo-500",
+    linkLabel: "View map",
+  },
+  {
+    title: "Portfolio",
+    description: "Personal stablecoin risk view with stress-test scenarios.",
+    href: "/portfolio",
+    icon: Wallet,
+    borderClass: "border-l-emerald-500",
+    linkLabel: "Build portfolio",
+  },
+  {
+    title: "Compare",
+    description: "Side-by-side stablecoin comparison on every metric.",
+    href: "/compare",
+    icon: ArrowLeftRight,
+    borderClass: "border-l-sky-500",
+    linkLabel: "Compare coins",
+  },
+];
+
+const DISPLAY_COUNT = 6;
 
 export function FeatureHighlights() {
+  const selected = useMemo(() => {
+    const shuffled = [...FEATURES];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled.slice(0, DISPLAY_COUNT);
+  }, []);
+
   return (
     <section>
       <h2 className="text-xl font-semibold tracking-tight mb-4">Explore</h2>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-        {FEATURES.map((f) => (
+        {selected.map((f) => (
           <Link
             key={f.href}
             href={f.href}
