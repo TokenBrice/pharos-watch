@@ -32,17 +32,17 @@ export function DailyDigest() {
   return (
     <div className="border-t border-b border-border/50 py-5 animate-in fade-in duration-300">
       <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-        {data!.digestTitle || "Signal & Noise"}
-        {data!.generatedAt && (
-          <span className="font-normal tracking-wide"> · {formatDateline(data!.generatedAt)}</span>
+        {data?.digestTitle || "Signal & Noise"}
+        {data?.generatedAt && (
+          <span className="font-normal tracking-wide"> · {formatDateline(data.generatedAt)}</span>
         )}
       </p>
       <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-        {data!.digest}
+        {data?.digest}
       </p>
-      {data!.digestExtended && (
+      {data?.digestExtended && (
         <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-          {data!.digestExtended}
+          {data.digestExtended}
         </p>
       )}
       <Link
