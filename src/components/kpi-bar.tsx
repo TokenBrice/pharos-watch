@@ -11,16 +11,25 @@ import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { formatCurrency } from "@/lib/format";
 import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
 
+/** Green for positive, red for negative, muted for zero. */
+function deltaColor(value: number): string {
+  if (value > 0) return "text-green-500";
+  if (value < 0) return "text-red-500";
+  return "text-muted-foreground";
+}
+
 function KpiCell({
   label,
   value,
   sublabel,
   valueClassName,
+  sublabelClassName,
 }: {
   label: string;
   value: string | number;
   sublabel?: string;
   valueClassName?: string;
+  sublabelClassName?: string;
 }) {
   return (
     <div className="px-4 py-3 flex flex-col gap-0.5">
@@ -31,7 +40,7 @@ function KpiCell({
         {value}
       </span>
       {sublabel && (
-        <span className="text-xs text-muted-foreground">{sublabel}</span>
+        <span className={`text-xs ${sublabelClassName ?? "text-muted-foreground"}`}>{sublabel}</span>
       )}
     </div>
   );
@@ -145,11 +154,13 @@ export function KpiBar() {
           label="Total MCAP"
           value={formatCurrency(totalMcap, 1)}
           sublabel={changeSublabel}
+          sublabelClassName={deltaColor(mcapChange24hPct)}
         />
         <KpiCell
           label="24H DEX Vol"
           value={formatCurrency(totalVol24h, 1)}
           sublabel={`${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}% vs 7d avg`}
+          sublabelClassName={deltaColor(volVs7dAvgPct)}
         />
         <KpiCell
           label="Coins at Peg"
@@ -159,6 +170,7 @@ export function KpiBar() {
           label="Depegs Today"
           value={depegToday}
           sublabel={`${depegDelta >= 0 ? "+" : ""}${depegDelta} vs yesterday`}
+          sublabelClassName={deltaColor(-depegDelta)}
         />
       </div>
     </Card>
