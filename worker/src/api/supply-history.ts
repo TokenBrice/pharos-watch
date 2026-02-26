@@ -26,7 +26,8 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
     );
   }
 
-  const days = Math.min(1825, Math.max(1, parseInt(url.searchParams.get("days") ?? "365", 10) || 365));
+  const parsedDays = parseInt(url.searchParams.get("days") ?? "365", 10);
+  const days = Number.isNaN(parsedDays) ? 365 : Math.min(1825, Math.max(1, parsedDays));
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
 
   const result = await db

@@ -27,7 +27,8 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
     );
   }
 
-  const days = Math.min(365, Math.max(1, parseInt(url.searchParams.get("days") ?? "90", 10) || 90));
+  const parsedDays = parseInt(url.searchParams.get("days") ?? "90", 10);
+  const days = Number.isNaN(parsedDays) ? 90 : Math.min(365, Math.max(1, parsedDays));
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
 
   const result = await db

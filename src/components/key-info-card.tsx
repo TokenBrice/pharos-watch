@@ -28,7 +28,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           {hasLinks && (
             <div className="flex flex-wrap items-center gap-2">
-              {meta.links!.map((link) => (
+              {meta.links?.map((link) => (
                 <a
                   key={link.url}
                   href={link.url}

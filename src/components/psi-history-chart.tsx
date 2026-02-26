@@ -19,7 +19,7 @@ import { downloadChartPng } from "@/lib/chart-export";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import { trackEvent } from "@/lib/analytics";
 
@@ -210,16 +210,16 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                       key={evt.label}
                       x1={evt.date}
                       x2={evt.dateEnd}
-                      fill="#94a3b8"
+                      fill={CHART_SLATE}
                       fillOpacity={0.1}
-                      stroke="#94a3b8"
+                      stroke={CHART_SLATE}
                       strokeOpacity={0.3}
                       strokeDasharray="4 4"
                       label={isMobile || evt.hideLabel ? undefined : {
                         value: evt.label,
                         position: evt.position === "top" ? "insideTop" : "insideBottomLeft",
                         fontSize: 11,
-                        fill: "#94a3b8",
+                        fill: CHART_SLATE,
                         ...(evt.position === "top" ? { dy: -20 } : {}),
                       }}
                     />
@@ -227,13 +227,13 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                     <ReferenceLine
                       key={evt.label}
                       x={evt.date}
-                      stroke="#94a3b8"
+                      stroke={CHART_SLATE}
                       strokeDasharray="4 4"
                       label={isMobile || evt.hideLabel ? undefined : {
                         value: evt.label,
                         position: evt.position,
                         fontSize: 11,
-                        fill: "#94a3b8",
+                        fill: CHART_SLATE,
                       }}
                     />
                   )

@@ -6,6 +6,7 @@ import {
   DEPEG_SECONDARY_THRESHOLD_RATIO,
   USER_AGENT,
 } from "../lib/constants";
+import { batchExecute } from "../lib/db";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -76,7 +77,17 @@ export async function confirmPendingDepegs(
     .all<{ stablecoin_id: string }>();
   const openSet = new Set((openEvents.results ?? []).map((r) => r.stablecoin_id));
 
+  // Collect all mutation statements and execute as a batch at the end
+  const stmts: D1PreparedStatement[] = [];
+
   for (const row of rows) {
+    // Guard: peg_reference is used as divisor below — skip if zero/negative
+    if (!row.peg_reference || row.peg_reference <= 0) {
+      stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
+      console.warn(`[depeg-confirm] Deleted pending for ${row.symbol}: invalid peg_reference=${row.peg_reference}`);
+      continue;
+    }
+
     const asset = assetById.get(row.stablecoin_id);
     const meta = metaById.get(row.stablecoin_id);
     const threshold = getDepegThresholdBps(row.peg_type);
@@ -84,7 +95,7 @@ export async function confirmPendingDepegs(
 
     // If an open event was created by another path (e.g. direction change), clean up pending
     if (openSet.has(row.stablecoin_id)) {
-      await db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id).run();
+      stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(`[depeg-confirm] Cleaned pending for ${row.symbol}: open event already exists`);
       continue;
     }
@@ -97,7 +108,7 @@ export async function confirmPendingDepegs(
         if (pegRef > 0) {
           const currentBps = Math.abs(Math.round(((price / pegRef) - 1) * 10000));
           if (currentBps < threshold) {
-            await db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id).run();
+            stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
             console.log(`[depeg-confirm] Cleared pending for ${row.symbol}: primary recovered to ${currentBps}bps`);
             continue;
           }
@@ -113,7 +124,7 @@ export async function confirmPendingDepegs(
 
     // 7. Check expiry -- delete if too old without confirmation
     if (age > DEPEG_PENDING_EXPIRY_SEC) {
-      await db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id).run();
+      stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(`[depeg-confirm] Expired pending for ${row.symbol}: ${Math.round(age / 60)}min without confirmation`);
       continue;
     }
@@ -161,13 +172,13 @@ export async function confirmPendingDepegs(
 
     // 5. Decision
     if (cgAgrees === true || dexAgrees === true) {
-      // At least one secondary source confirms -- promote to real event
+      // At least one secondary source confirms -- promote to real event (INSERT + DELETE atomically)
       const currentPrice = asset?.price ?? row.first_price;
       const currentBps = asset?.price
         ? Math.round(((asset.price / row.peg_reference) - 1) * 10000)
         : row.first_seen_bps;
 
-      await db.batch([
+      stmts.push(
         db.prepare(
           `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
@@ -177,7 +188,7 @@ export async function confirmPendingDepegs(
           row.first_seen_at, row.first_price, currentPrice, row.peg_reference,
         ),
         db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id),
-      ]);
+      );
 
       const confirmedBy = [
         cgAgrees ? "CoinGecko" : null,
@@ -188,17 +199,23 @@ export async function confirmPendingDepegs(
       );
     } else if (cgAgrees === false && dexAgrees === false) {
       // Both secondary sources disagree -- confirmed false positive
-      await db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id).run();
+      stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected false positive for ${row.symbol}: both CG and DEX disagree`
       );
     } else if (cgAgrees === false && dexAgrees === null) {
       // CG disagrees, no DEX data -- lean toward false positive
-      await db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id).run();
+      stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
       console.log(
         `[depeg-confirm] Rejected ${row.symbol}: CG disagrees, no DEX data`
       );
     }
     // else: cgAgrees === null and dexAgrees === null (or null+false) -- keep pending, retry next cycle
+  }
+
+  // Execute all collected mutations atomically
+  if (stmts.length > 0) {
+    await batchExecute(db, stmts);
+    console.log(`[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
   }
 }

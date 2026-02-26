@@ -97,8 +97,6 @@ export function PsiLighthouse({ band, color, size = 36 }: { band: string; color:
 export function StabilityIndex() {
   const { data, isLoading } = useStabilityIndex();
 
-  if (!isLoading && (!data || !data.current)) return null;
-
   if (isLoading) {
     return (
       <div className="flex items-center gap-4 py-3">
@@ -109,10 +107,12 @@ export function StabilityIndex() {
     );
   }
 
-  const { score, band, avg24h, avg24hBand, computedAt } = data!.current!;
+  if (!data || !data.current) return null;
+
+  const { score, band, avg24h, avg24hBand, computedAt } = data.current;
   const displayScore = avg24h ?? score;
   const displayBand = avg24hBand ?? band;
-  const history = data!.history;
+  const history = data.history;
 
   // Delta from yesterday (first history point)
   const yesterday = history.length > 0 ? history[0] : null;

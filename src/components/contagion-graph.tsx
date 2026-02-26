@@ -13,7 +13,8 @@ import {
 } from "d3-force";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import type { ReportCard } from "@/lib/types";
+import { GRADE_RADAR_COLORS, gradeRange } from "@/lib/report-cards";
+import type { ReportCard, ReportCardGrade } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,18 +50,8 @@ const MIN_RADIUS = 10;
 const MAX_RADIUS = 34;
 const RING_WIDTH = 3;
 
-/** Map grade letter to a ring color hex */
-const GRADE_FILL: Record<string, string> = {
-  "A+": "#10b981", A: "#10b981", "A-": "#10b981",
-  "B+": "#3b82f6", B: "#3b82f6", "B-": "#3b82f6",
-  "C+": "#f59e0b", C: "#f59e0b", "C-": "#f59e0b",
-  "D+": "#f97316", D: "#f97316", "D-": "#f97316",
-  F: "#ef4444",
-  NR: "#6b7280",
-};
-
 function gradeColor(grade: string): string {
-  return GRADE_FILL[grade] ?? GRADE_FILL.NR;
+  return GRADE_RADAR_COLORS[gradeRange(grade as ReportCardGrade)] ?? GRADE_RADAR_COLORS.NR;
 }
 
 // ---------------------------------------------------------------------------
@@ -393,11 +384,11 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
             {/* Legend */}
             {[
-              { label: "A", color: GRADE_FILL.A },
-              { label: "B", color: GRADE_FILL.B },
-              { label: "C", color: GRADE_FILL.C },
-              { label: "D", color: GRADE_FILL.D },
-              { label: "F", color: GRADE_FILL.F },
+              { label: "A", color: GRADE_RADAR_COLORS.A },
+              { label: "B", color: GRADE_RADAR_COLORS.B },
+              { label: "C", color: GRADE_RADAR_COLORS.C },
+              { label: "D", color: GRADE_RADAR_COLORS.D },
+              { label: "F", color: GRADE_RADAR_COLORS.F },
             ].map(({ label, color }, i) => (
               <g key={label} transform={`translate(${WIDTH - PAD - 80}, ${PAD + i * 18})`}>
                 <circle cx={6} cy={6} r={6} fill="var(--color-card, #1a1a2e)" stroke={color} strokeWidth={2.5} />

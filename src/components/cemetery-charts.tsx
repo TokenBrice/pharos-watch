@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
+import { CHART_RED, CHART_BLUE } from "@/lib/chart-colors";
 import { formatCurrency } from "@/lib/format";
 import type { CauseOfDeath } from "@/lib/types";
 
@@ -245,14 +246,14 @@ function DeathsByYearChart() {
                     <p className="font-semibold mb-1">{label}</p>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-1.5">
-                        <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#ef4444" }} />
+                        <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
                         <span>Deaths</span>
                       </div>
                       <span className="font-mono tabular-nums">{payload[0]?.value}</span>
                     </div>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-1.5">
-                        <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#3b82f6" }} />
+                        <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
                         <span>Peak Mcap</span>
                       </div>
                       <span className="font-mono tabular-nums">
@@ -264,8 +265,8 @@ function DeathsByYearChart() {
               }}
             />
             <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="left" dataKey="count" name="Deaths" fill="#ef4444" radius={[3, 3, 0, 0]} />
-            <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+            <Bar yAxisId="left" dataKey="count" name="Deaths" fill={CHART_RED} radius={[3, 3, 0, 0]} />
+            <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill={CHART_BLUE} radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
         </div>
@@ -380,8 +381,8 @@ function CumulativeDestroyedChart() {
           <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
             <defs>
               <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
+                <stop offset="5%" stopColor={CHART_RED} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_RED} stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
@@ -417,7 +418,7 @@ function CumulativeDestroyedChart() {
             <Area
               type="stepAfter"
               dataKey="cumulative"
-              stroke="#ef4444"
+              stroke={CHART_RED}
               strokeWidth={2}
               fill="url(#destroyedGradient)"
             />

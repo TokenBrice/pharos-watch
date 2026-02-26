@@ -65,7 +65,13 @@ export async function syncStablecoinCharts(db: D1Database): Promise<void> {
     return;
   }
 
-  const raw = (await res.json()) as RawChartPoint[];
+  let raw: RawChartPoint[];
+  try {
+    raw = (await res.json()) as RawChartPoint[];
+  } catch {
+    console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);
+    return;
+  }
 
   if (!Array.isArray(raw) || raw.length < 100) {
     console.error(`[sync-charts] Unexpected data length (${raw?.length}), skipping cache write`);
