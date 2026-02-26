@@ -62,6 +62,16 @@ export const PSI_EVENTS = [
     ],
   },
   {
+    date: Date.UTC(2021, 6, 26),
+    dateEnd: Date.UTC(2021, 7, 1),
+    label: "Tether DOJ Probe",
+    position: "insideBottom" as const,
+    links: [
+      { title: "DOJ opened criminal investigation into Tether executives for bank fraud", url: "https://www.cnbc.com/2021/07/26/doj-reportedly-probes-crypto-company-tether-for-possible-bank-fraud.html" },
+      { title: "Broad stablecoin depeg: 10 coins depegged simultaneously as market panicked", url: "https://fortune.com/2021/07/26/tether-crypto-bank-fraud-doj-investigation/" },
+    ],
+  },
+  {
     date: Date.UTC(2022, 0, 21),
     dateEnd: Date.UTC(2022, 1, 8),
     label: "Fed Crash",
