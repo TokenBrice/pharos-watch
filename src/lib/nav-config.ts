@@ -44,7 +44,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Risk",
     items: [
       { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Pharos Stability Index" },
-      { href: "/risk-lab", label: "Risk Lab", icon: FlaskConical, description: "Report cards and portfolio analysis" },
+      { href: "/risk-lab", label: "Risk Lab", icon: FlaskConical, description: "Safety grades and contagion simulation" },
     ],
   },
   {
