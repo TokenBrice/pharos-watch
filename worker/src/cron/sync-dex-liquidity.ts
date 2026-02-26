@@ -1986,10 +1986,32 @@ async function computeStablecoinScores(
     // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
     // before sorting — bad data from any source (DL, GT) gets dropped.
     // 50x is generous: legit concentrated AMMs (Maverick, Uni V4) hit 15-25x.
+    // Also filter fake TVL: >$100M with <$50K daily volume is not a real pool.
     m.topPools = m.topPools.filter((p) => {
       const vol = p.volumeUsd1d || 0;
-      return p.tvlUsd <= 0 || vol / p.tvlUsd <= 50;
+      if (p.tvlUsd > 0 && vol / p.tvlUsd > 50) return false;
+      if (p.tvlUsd > 100_000_000 && vol < 50_000) return false;
+      return true;
     });
+
+    // Recompute aggregates from filtered pools so bogus data
+    // (e.g. fake-TVL exchanges like Dnax) doesn't pollute breakdown or scores.
+    m.protocolTvl = {};
+    m.chainTvl = {};
+    m.totalTvlUsd = 0;
+    m.effectiveTvl = 0;
+    m.poolCount = m.topPools.length;
+    m.chains = new Set();
+    m.pairs = new Set();
+    for (const p of m.topPools) {
+      const proto = normalizeProtocol(p.project);
+      m.protocolTvl[proto] = (m.protocolTvl[proto] ?? 0) + p.tvlUsd;
+      m.chainTvl[p.chain] = (m.chainTvl[p.chain] ?? 0) + p.tvlUsd;
+      m.totalTvlUsd += p.tvlUsd;
+      m.effectiveTvl += (p.extra as Record<string, number>)?.effectiveTvl ?? p.tvlUsd;
+      m.chains.add(p.chain);
+      m.pairs.add(p.symbol);
+    }
 
     // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
     m.topPools.sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd);
