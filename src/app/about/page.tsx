@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, ClipboardCheck, Droplets, ExternalLink, Gauge, Github, Layers, Network, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import { Activity, BarChart3, Droplets, ExternalLink, FlaskConical, Gauge, Github, Layers, Network, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
@@ -278,7 +278,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <ClipboardCheck className="h-5 w-5 text-emerald-500" />
+                <FlaskConical className="h-5 w-5 text-emerald-500" />
                 <Link href="/risk-lab" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
                   Safety Grades
                 </Link>

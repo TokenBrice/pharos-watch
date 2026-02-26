@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ClipboardCheck } from "lucide-react";
+import { FlaskConical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReportCards } from "@/hooks/use-report-cards";
@@ -35,7 +35,7 @@ export function ReportCardsSummary() {
     <Card className="rounded-xl border-l-[3px] border-l-amber-500">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5"><ClipboardCheck className="h-4 w-4" />Risk Lab</span>
+          <span className="flex items-center gap-1.5"><FlaskConical className="h-4 w-4" />Risk Lab</span>
           <Link
             href="/risk-lab"
             className="text-xs font-normal text-muted-foreground hover:text-foreground transition-colors"
