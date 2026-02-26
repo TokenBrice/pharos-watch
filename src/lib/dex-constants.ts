@@ -16,6 +16,7 @@ const PROTOCOL_NAMES: Record<string, string> = {
   pancakeswap: "PancakeSwap",
   sushiswap: "SushiSwap",
   "trader-joe": "Trader Joe",
+  raydium: "Raydium",
 };
 
 export const PROTOCOL_LOGOS: Record<string, string> = {
@@ -29,6 +30,7 @@ export const PROTOCOL_LOGOS: Record<string, string> = {
   pancakeswap: "/dexes/pancakeswap.png",
   sushiswap: "/dexes/sushiswap.png",
   "trader-joe": "/dexes/trader-joe.png",
+  raydium: "/dexes/raydium.png",
 };
 
 export const PROTOCOL_COLORS: Record<string, string> = {
@@ -42,6 +44,7 @@ export const PROTOCOL_COLORS: Record<string, string> = {
   pancakeswap: "bg-amber-500",
   sushiswap: "bg-indigo-500",
   "trader-joe": "bg-orange-500",
+  raydium: "bg-purple-500",
 };
 
 export const EXTRA_COLORS = [

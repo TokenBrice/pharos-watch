@@ -2,7 +2,7 @@ interface ChainMeta {
   name: string;
   explorerUrl: string;
   evmChainId: number | null;
-  type: "evm" | "tron";
+  type: "evm" | "tron" | "other";
   logoPath: string;
 }
 
@@ -17,5 +17,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   gnosis:    { name: "Gnosis",    explorerUrl: "https://gnosisscan.io",             evmChainId: 100,   type: "evm",  logoPath: "/chains/gnosis.png"    },
   fantom:    { name: "Fantom",    explorerUrl: "https://ftmscan.com",               evmChainId: 250,   type: "evm",  logoPath: "/chains/fantom.png"    },
   celo:      { name: "Celo",      explorerUrl: "https://celoscan.io",               evmChainId: 42220, type: "evm",  logoPath: "/chains/celo.png"      },
-  tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron", logoPath: "/chains/tron.png"      },
+  tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png"      },
+  aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png"     },
+  sui:       { name: "Sui",       explorerUrl: "https://suiscan.xyz",              evmChainId: null,  type: "other", logoPath: "/chains/sui.png"       },
 };

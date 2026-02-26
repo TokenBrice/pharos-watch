@@ -549,7 +549,23 @@ export function CompareClient() {
                   }}
                 >
                   <CardHeader>
-                    <CardTitle className="text-base">{preset.title}</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      {preset.title}
+                      <span className="inline-flex items-center gap-1 ml-auto">
+                        {preset.coins.map((sym) => {
+                          const coin = SYMBOL_TO_COIN.get(sym);
+                          const src = coin ? logos?.[coin.id] : undefined;
+                          return src ? (
+                            <img
+                              key={sym}
+                              src={src}
+                              alt={sym.toUpperCase()}
+                              className="h-5 w-5 rounded-full"
+                            />
+                          ) : null;
+                        })}
+                      </span>
+                    </CardTitle>
                     <CardDescription>{preset.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
