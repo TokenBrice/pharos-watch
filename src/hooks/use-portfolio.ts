@@ -133,6 +133,7 @@ function computeUpstreamExposure(
   const cardMap = new Map<string, ReportCard>();
   for (const c of cards) cardMap.set(c.id, c);
 
+  // Accumulate USD exposure per upstream coin ID
   const exposureUsd = new Map<string, number>();
   let otherUsd = 0;
 
@@ -141,6 +142,7 @@ function computeUpstreamExposure(
     const deps: DependencyWeight[] = card?.rawInputs?.dependencies ?? [];
 
     if (deps.length === 0) {
+      // Direct CeFi or non-dependent coin: 100% exposure to itself
       exposureUsd.set(
         holding.coinId,
         (exposureUsd.get(holding.coinId) ?? 0) + holding.amount,
@@ -148,9 +150,11 @@ function computeUpstreamExposure(
       continue;
     }
 
+    // Walk dependencies: each dep gets weight * holding amount
     let allocatedWeight = 0;
     for (const dep of deps) {
       const depUsd = holding.amount * dep.weight;
+      // Only count tracked stablecoins as upstream exposure
       if (idToMeta.has(dep.id)) {
         exposureUsd.set(dep.id, (exposureUsd.get(dep.id) ?? 0) + depUsd);
       } else {
@@ -159,6 +163,7 @@ function computeUpstreamExposure(
       allocatedWeight += dep.weight;
     }
 
+    // Remainder (1 - sum of weights) goes to "Other" (non-stablecoin collateral)
     const remainder = 1 - allocatedWeight;
     if (remainder > 0.001) {
       otherUsd += holding.amount * remainder;
@@ -190,6 +195,7 @@ function computeUpstreamExposure(
     });
   }
 
+  // Sort descending by exposure
   result.sort((a, b) => b.usd - a.usd);
   return result;
 }
@@ -202,27 +208,34 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
   const searchParams = useSearchParams();
   const urlParam = searchParams.get("p");
 
+  // Determine if holdings come from URL
   const isFromUrl = urlParam !== null && urlParam.length > 0;
 
+  // Initialize state: URL param > localStorage > empty
   const [holdings, setHoldings] = useState<PortfolioHolding[]>(() => {
     if (isFromUrl) return parseUrlParam(urlParam);
     return loadFromStorage();
   });
 
+  // Sync URL param changes into state (shared link opened)
   useEffect(() => {
     if (isFromUrl) {
       setHoldings(parseUrlParam(urlParam));
     }
   }, [isFromUrl, urlParam]);
 
+  // Persist to localStorage when holdings change (only if NOT from URL)
   useEffect(() => {
     if (!isFromUrl) {
       saveToStorage(holdings);
     }
   }, [holdings, isFromUrl]);
 
+  // --- Actions ---
+
   const addCoin = useCallback((coinId: string, amount: number) => {
     setHoldings((prev) => {
+      // Don't add duplicates
       if (prev.some((h) => h.coinId === coinId)) return prev;
       return [...prev, { coinId, amount }];
     });
@@ -254,11 +267,14 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     return url.toString();
   }, [holdings]);
 
+  // --- Derived values ---
+
   const totalUsd = useMemo(
     () => holdings.reduce((sum, h) => sum + h.amount, 0),
     [holdings],
   );
 
+  // Build a card lookup for fast access
   const cardMap = useMemo(() => {
     if (!cards) return new Map<string, ReportCard>();
     const m = new Map<string, ReportCard>();
@@ -266,6 +282,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     return m;
   }, [cards]);
 
+  // Portfolio-level overall grade: weighted average of held coins' overall scores
   const { portfolioGrade, portfolioScore } = useMemo(() => {
     if (!cards || holdings.length === 0 || totalUsd === 0) {
       return { portfolioGrade: "NR" as ReportCardGrade, portfolioScore: null };
@@ -276,7 +293,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
 
     for (const h of holdings) {
       const card = cardMap.get(h.coinId);
-      if (!card || card.overallScore === null) continue;
+      if (!card || card.overallScore === null) continue; // Exclude NR coins
       weightedSum += card.overallScore * h.amount;
       scoredUsd += h.amount;
     }
@@ -289,6 +306,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     return { portfolioGrade: scoreToGrade(score), portfolioScore: score };
   }, [cards, holdings, totalUsd, cardMap]);
 
+  // Per-dimension weighted average scores
   const dimensionScores = useMemo((): Record<DimensionKey, number | null> => {
     const result = {} as Record<DimensionKey, number | null>;
 
@@ -315,6 +333,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     return result;
   }, [cards, holdings, totalUsd, cardMap]);
 
+  // Upstream exposure
   const upstreamExposure = useMemo(
     () => (cards ? computeUpstreamExposure(holdings, cards) : []),
     [holdings, cards],
