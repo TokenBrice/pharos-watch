@@ -9,6 +9,7 @@ import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS, PEG_LABELS_SHORT } from 
 import { Badge } from "@/components/ui/badge";
 import StablecoinDetailClient from "./client";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import logos from "../../../../data/logos.json";
 import aiSummaries from "../../../../data/ai-summaries.json";
 
@@ -127,6 +128,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               )}
               <h1 className="text-3xl font-extrabold tracking-tighter">{coin.name}</h1>
               <span className="text-xl text-muted-foreground font-mono">{coin.symbol}</span>
+              <BluechipHeaderBadge stablecoinId={coin.id} />
               {tags.map((tag) => (
                 <Badge key={tag} variant="secondary">{FILTER_TAG_LABELS[tag]}</Badge>
               ))}
