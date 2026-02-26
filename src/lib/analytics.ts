@@ -21,6 +21,11 @@ type EventMap = {
   time_range_changed: { page: string; range: string };
   sort_changed: { page: string; sort_by: string };
   contract_copied: { coin_id: string; chain: string };
+  // Portfolio
+  portfolio_coin_added: { coin_id: string };
+  portfolio_coin_removed: { coin_id: string };
+  portfolio_shared: { coin_count: number };
+  portfolio_cleared: { coin_count: number };
   // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
   panel_toggled: { panel: string; action: string };
