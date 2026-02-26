@@ -160,7 +160,7 @@ function BlacklistPageInner() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5">
         <UsdsStatusCard />
         <EurcBlacklistCard />
       </div>
