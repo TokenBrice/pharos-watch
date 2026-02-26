@@ -845,3 +845,34 @@ Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Han
 ```
 
 Returns `500` with `{ "ok": false, "error": "..." }` on failure.
+
+### `GET /api/reset-blacklist-sync`
+
+Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Handled directly in `index.ts` (not via the router).
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Response**
+
+```json
+{
+  "ok": true,
+  "evmReset": 12345678,
+  "tronReset": 1740000000000
+}
+```
+
+### `GET /api/debug-sync-state`
+
+Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Handled directly in `index.ts` (not via the router).
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Response**
+
+```json
+[
+  { "config_key": "ethereum-usdc", "last_block": 19500000 },
+  { "config_key": "tron-usdt", "last_block": 1740000000000 }
+]
+```

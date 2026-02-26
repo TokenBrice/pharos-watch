@@ -1,13 +1,13 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 141 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 143 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
 ## Features
 
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
-- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, UAH, ARS, gold, and silver stablecoins with cross-currency FX-adjusted totals
+- **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, UAH, ARS, gold, silver, CPI-linked, and other peg currencies with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
 - **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, diversity, and cross-chain coverage
@@ -93,17 +93,19 @@ cd worker && npx tsc --noEmit   # Type-check worker
 ```
 src/                              Frontend (Next.js static export)
 ├── app/
-│   ├── page.tsx                  Homepage: stats, charts, filters, table
-│   ├── peg-tracker/              Peg monitoring: scores, heatmap, timeline
+│   ├── page.tsx                  Homepage: stats, charts, filters, peg tracker, table
 │   ├── blacklist/                Freeze & blacklist event tracker
-│   ├── liquidity/                DEX liquidity scores and pool breakdown
-│   ├── compare/                  Side-by-side stablecoin comparison
-│   ├── digest/                   AI-generated daily market digest
-│   ├── stability-index/          Pharos Stability Index (daily ecosystem health)
-│   ├── report-cards/             Stablecoin safety grade cards with radar charts
 │   ├── cemetery/                 Dead stablecoin graveyard
-│   ├── status/                   System health and cron monitoring
+│   ├── compare/                  Side-by-side stablecoin comparison
+│   ├── dependency-map/           Collateral dependency graph visualization
+│   ├── digest/                   AI-generated daily market digest (+ digest/[date]/)
+│   ├── liquidity/                DEX liquidity scores and pool breakdown
+│   ├── portfolio/                Portfolio stress testing & upstream exposure
+│   ├── safety-scores/            Stablecoin safety grade cards with radar charts
+│   ├── stability-index/          Pharos Stability Index (ecosystem health)
 │   ├── stablecoin/[id]/          Detail page per stablecoin
+│   ├── stablecoins/[peg]/        Stablecoins filtered by peg currency
+│   ├── status/                   System health and cron monitoring
 │   └── about/                    About & methodology
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
@@ -114,17 +116,16 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoints (22 handlers, all wrapped with withErrorHandler)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler
-└── migrations/                   D1 SQL migrations (24 total)
+└── migrations/                   D1 SQL migrations (26 total)
 ```
 
 ## Infrastructure
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *   → sync stablecoins + charts + FX rates + depeg detection
+  ├── Cron: */15 * * * *    → sync stablecoins + charts + FX rates + depeg detection + stability index (PSI)
   ├── Cron: 3,23,43 * * * * → DEX liquidity + blacklist sync
-  ├── Cron: 55 7 * * *     → stability index (daily ecosystem health score)
-  └── Cron: 0 8 * * *      → supply snapshot + USDS status + Bluechip safety ratings + daily digest
+  └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, logos) with CAS write guard
@@ -135,8 +136,10 @@ Cloudflare D1 (SQLite database)
   ├── dex_liquidity        → per-stablecoin DEX liquidity scores, pool data, HHI, depth stability
   ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
+  ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
   ├── supply_history       → daily on-chain supply snapshots (08:00 UTC)
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
+  ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
   ├── cron_runs            → cron execution log for health monitoring
   └── daily_digest         → AI-generated daily market summaries

@@ -153,8 +153,8 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 
 ## Frontend
 
-- **Grid page**: `src/app/report-cards/client.tsx` — filterable/sortable grid of grade cards with grade distribution bar, portfolio/stress panel integration, simulation mode
-- **Portfolio & stress panel**: `src/components/portfolio-stress-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
+- **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of grade cards with grade distribution bar, portfolio/stress panel integration, simulation mode
+- **Portfolio & stress panel**: `src/components/stress-test-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
 - **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown
 - **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge)
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay)
@@ -166,11 +166,11 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 |------|---------|
 | `src/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
 | `worker/src/api/report-cards.ts` | API handler: data loading, two-phase computation, `rawInputs`, `dependencyGraph`, response |
-| `src/components/portfolio-stress-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
+| `src/components/stress-test-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
 | `src/components/report-card.tsx` | Full detail card with radar |
 | `src/components/report-card-mini.tsx` | Compact grid tile with simulation mode support |
 | `src/components/radar-chart.tsx` | Recharts radar visualization |
-| `src/app/report-cards/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
+| `src/app/safety-scores/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
 | `src/hooks/use-report-cards.ts` | TanStack Query hook |
 | `src/hooks/use-portfolio.ts` | Portfolio holdings state, localStorage persistence, URL sync, upstream exposure |
 | `src/hooks/use-stress-test.ts` | Stress test state, `computeStressedGrades` invocation, impact calculation |

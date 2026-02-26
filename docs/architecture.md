@@ -35,11 +35,7 @@
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
-│   ├── page.tsx                  # Homepage: stats, charts, filters, table
-│   ├── peg-tracker/              # Peg monitoring: scores, heatmap, depeg timeline
-│   │   ├── page.tsx              # Server component (metadata)
-│   │   ├── client.tsx            # Interactive client component
-│   │   └── error.tsx
+│   ├── page.tsx                  # Homepage: stats, charts, peg tracker, filters, table
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
@@ -47,29 +43,41 @@ src/                              # Next.js frontend (static export)
 │   ├── cemetery/                 # Dead stablecoin graveyard
 │   │   ├── page.tsx
 │   │   └── error.tsx
-│   ├── liquidity/               # DEX liquidity scores & leaderboard
-│   │   ├── page.tsx              # Server component (metadata)
-│   │   ├── client.tsx            # Interactive client component
-│   │   └── error.tsx
 │   ├── compare/                  # Side-by-side stablecoin comparison
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
-│   ├── stability-index/          # Pharos Stability Index (daily ecosystem health)
+│   ├── dependency-map/           # Collateral dependency graph visualization
 │   │   ├── page.tsx
 │   │   └── client.tsx
-│   ├── report-cards/             # Risk Lab: stablecoin risk grade cards with radar charts
+│   ├── digest/                   # Daily digest archive
+│   │   ├── page.tsx
+│   │   └── [date]/page.tsx       # Historical digest by date
+│   ├── liquidity/                # DEX liquidity scores & leaderboard
+│   │   ├── page.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
+│   ├── portfolio/                # Portfolio stress testing & upstream exposure
 │   │   ├── page.tsx
 │   │   └── client.tsx
-│   ├── digest/page.tsx           # Daily digest archive
+│   ├── privacy/page.tsx          # Privacy policy
+│   ├── safety-scores/            # Risk Lab: stablecoin safety grade cards with radar charts
+│   │   ├── page.tsx
+│   │   └── client.tsx
+│   ├── stability-index/          # Pharos Stability Index (ecosystem health)
+│   │   ├── page.tsx
+│   │   └── client.tsx
+│   ├── stablecoin/[id]/          # Detail page: price chart, supply chart, chains
+│   │   ├── page.tsx
+│   │   ├── client.tsx
+│   │   └── error.tsx
+│   ├── stablecoins/[peg]/        # Stablecoins filtered by peg currency
+│   │   ├── page.tsx
+│   │   └── client.tsx
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
 │   │   └── error.tsx
 │   ├── status/                   # Admin status dashboard (not in nav)
-│   │   ├── page.tsx
-│   │   ├── client.tsx
-│   │   └── error.tsx
-│   ├── stablecoin/[id]/          # Detail page: price chart, supply chart, chains
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
@@ -82,12 +90,16 @@ src/                              # Next.js frontend (static export)
 │   └── robots.ts                 # robots.txt
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives (do not edit manually)
-│   ├── header.tsx                # Pill-style nav with active state
+│   ├── header.tsx                # Top nav bar
+│   ├── sidebar.tsx               # Sidebar navigation menu
 │   ├── footer.tsx                # Site footer with data attribution
 │   ├── providers.tsx             # TanStack Query + theme providers
+│   ├── command-palette.tsx       # ⌘K command palette for quick navigation
+│   ├── scroll-to-top.tsx         # Scroll-to-top button
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
 │   ├── stablecoin-table.tsx      # Sortable table with filters
 │   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
+│   ├── kpi-bar.tsx               # Homepage KPI bar (total supply, dominance, etc.)
 │   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
 │   ├── governance-chart.tsx      # "Stablecoin by Type" breakdown card
 │   ├── peg-type-chart.tsx        # "Alternative Peg Dominance" card
@@ -99,14 +111,12 @@ src/                              # Next.js frontend (static export)
 │   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
 │   ├── digest-archive-client.tsx # Digest archive list (client component)
 │   ├── mcap-chart.tsx            # Market cap area chart (detail page)
-│   ├── key-info-card.tsx          # Key info card: peg mechanism, issuer, collateral (detail page)
+│   ├── key-info-card.tsx         # Key info card: peg mechanism, issuer, collateral (detail page)
 │   ├── ai-summary.tsx            # AI-generated editorial summary (detail page)
 │   ├── contract-addresses.tsx    # Contract address display (detail page)
-│   ├── peg-tracker-stats.tsx     # Peg tracker summary statistics
-│   ├── peg-tracker-summary.tsx   # Peg tracker homepage summary card
+│   ├── detail-section-nav.tsx    # In-page section navigation (detail page)
+│   ├── peg-gauge.tsx             # Peg score gauge visualization
 │   ├── peg-heatmap.tsx           # Real-time peg deviation heatmap
-│   ├── peg-leaderboard.tsx       # Ranked coins by peg score
-│   ├── depeg-timeline.tsx        # 4-year depeg event timeline
 │   ├── depeg-feed.tsx            # Depeg event list
 │   ├── depeg-history.tsx         # Per-coin depeg history (detail page)
 │   ├── blacklist-table.tsx       # Blacklist event table
@@ -124,6 +134,7 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-logo.tsx       # Logo component with fallback
 │   ├── bluechip-rating-card.tsx  # Bluechip safety rating card (detail page)
 │   ├── bluechip-box.tsx          # Bluechip rating box (homepage)
+│   ├── bluechip-header-badge.tsx # Bluechip grade badge in header
 │   ├── dex-liquidity-card.tsx    # DEX liquidity card with trend chart (detail page)
 │   ├── liquidity-box.tsx         # Liquidity box (homepage)
 │   ├── liquidity-stats.tsx       # Liquidity page summary stat cards + protocol/chain breakdown bars
@@ -133,6 +144,19 @@ src/                              # Next.js frontend (static export)
 │   ├── coin-selector.tsx         # Coin selector dropdown (compare page)
 │   ├── comparison-chart.tsx      # Multi-series comparison line chart
 │   ├── comparison-table.tsx      # Side-by-side comparison table
+│   ├── report-card.tsx           # Report card component with grade, dimension scores, radar chart
+│   ├── report-card-mini.tsx      # Compact report card display for compare page (+ simulation mode)
+│   ├── report-cards-summary.tsx  # Report cards page summary stats
+│   ├── grade-badge.tsx           # Grade letter badge component
+│   ├── radar-chart.tsx           # Radar chart for report card dimensions (single + compare overlay)
+│   ├── stress-test-panel.tsx     # Stress test panel (coin failure simulation)
+│   ├── reserve-treemap.tsx       # Reserve composition treemap visualization
+│   ├── contagion-graph.tsx       # Dependency contagion force-directed graph
+│   ├── stability-index.tsx       # Stability index visualizations (sparklines, lighthouse icon)
+│   ├── stability-index-summary.tsx # PSI summary stats for homepage
+│   ├── psi-history-chart.tsx     # PSI historical score chart
+│   ├── chart-skeleton.tsx        # Loading skeleton for charts
+│   ├── severity-icon.tsx         # Severity level icon
 │   ├── page-error.tsx            # Shared error boundary component
 │   ├── stale-data-banner.tsx     # Stale data warning banner
 │   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
@@ -142,11 +166,6 @@ src/                              # Next.js frontend (static export)
 │   ├── sort-icon.tsx             # Shared sort direction arrow icon
 │   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons
 │   ├── theme-toggle.tsx          # Dark/light mode toggle
-│   ├── report-card.tsx            # Report card component with grade, dimension scores, radar chart
-│   ├── report-card-mini.tsx       # Compact report card display for compare page (+ simulation mode)
-│   ├── radar-chart.tsx            # Radar chart for report card dimensions (single + compare overlay)
-│   ├── portfolio-stress-panel.tsx  # Combined portfolio analyzer + stress test collapsible panel
-│   ├── stability-index.tsx        # Stability index visualizations (sparklines, lighthouse icon)
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (GET /api/supply-history with fallback)
@@ -171,24 +190,33 @@ src/                              # Next.js frontend (static export)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
 │   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
+│   ├── use-preferences.ts        # User preference state (persistent settings)
 │   └── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
+    ├── analytics.ts              # Analytics tracking (page views, events)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, RawDimensionInputs, CacheStatus (shared with worker)
-    ├── stablecoins.ts            # Master list of ~141 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── stablecoins.ts            # Master list of ~143 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
     ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
     ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
+    ├── chart-export.ts           # Chart export utilities (PNG download)
+    ├── csv-export.ts             # CSV export helpers
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
+    ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
+    ├── peg-landing.ts            # Peg currency landing page data helpers
     ├── report-cards.ts           # Report card scoring: 5 dimensions, grade thresholds, weights, computeStressedGrades()
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
+    ├── psi-colors.ts             # PSI condition band color mapping
+    ├── psi-eligible.ts           # PSI eligibility logic (which coins qualify for index)
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()
     ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors, chart hex colors (PEG_CHART_COLORS, BLACKLIST_CHART_COLORS, GRADE_COLORS)
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red) + getDurabilityColor/getDurabilityBgColor
@@ -197,7 +225,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (24 total)
+├── migrations/                   # D1 SQL migrations (26 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -211,8 +239,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
-    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API + CG Onchain → D1 (15min)
-    │   ├── stability-index.ts    # Composite ecosystem health score → D1 (daily, 7:55 UTC)
+    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API + CG Onchain → D1 (every ~20min)
+    │   ├── stability-index.ts    # Composite ecosystem health score → D1 (every 15 min, after sync-stablecoins)
+    │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
     ├── api/
@@ -258,5 +287,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         └── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
 
 data/
-└── logos.json                    # Static stablecoin logo URLs (from CoinGecko)
+├── logos.json                    # Static stablecoin logo URLs (from CoinGecko)
+├── ai-summaries.json             # Cached AI-generated editorial summaries
+└── digests.json                  # Digest archive data
 ```
