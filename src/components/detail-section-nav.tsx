@@ -12,11 +12,16 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
   const navRef = useRef<HTMLElement>(null);
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-  // Scroll the active tab into view within the horizontal nav
+  // Scroll the nav horizontally to show the active tab (without affecting page scroll)
   useEffect(() => {
     const btn = tabRefs.current.get(activeId);
-    if (btn && navRef.current) {
-      btn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    const nav = navRef.current;
+    if (btn && nav) {
+      const navRect = nav.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+      const btnCenter = btnRect.left + btnRect.width / 2;
+      const navCenter = navRect.left + navRect.width / 2;
+      nav.scrollBy({ left: btnCenter - navCenter, behavior: "smooth" });
     }
   }, [activeId]);
 
