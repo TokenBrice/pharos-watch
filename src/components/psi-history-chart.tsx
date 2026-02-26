@@ -142,13 +142,15 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
       .sort((a, b) => a.date - b.date);
 
     const result: (typeof sorted[number] & { hideLabel: boolean })[] = [];
-    let lastShownEnd = -Infinity;
+    const lastShownEndByPos: Record<string, number> = {};
     for (const evt of sorted) {
-      if (evt.date - lastShownEnd < threshold) {
+      const pos = evt.position ?? "insideBottom";
+      const lastEnd = lastShownEndByPos[pos] ?? -Infinity;
+      if (evt.date - lastEnd < threshold) {
         result.push({ ...evt, hideLabel: true });
       } else {
         result.push({ ...evt, hideLabel: false });
-        lastShownEnd = evt.dateEnd ?? evt.date;
+        lastShownEndByPos[pos] = evt.dateEnd ?? evt.date;
       }
     }
 
@@ -172,8 +174,14 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
       <CardContent>
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
-          {/* Spacer matching the legend height in TotalMcapChart so both chart bottoms align */}
-          <div className="h-5 mb-4" />
+          <div className="flex flex-wrap gap-4 mb-4">
+            {BAND_ZONES.map((zone) => (
+              <div key={zone.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
+                {zone.label}
+              </div>
+            ))}
+          </div>
           <div
             className="psi-chart h-[250px] sm:h-[350px]"
             role="figure"
