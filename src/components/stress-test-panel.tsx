@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { GradeBadge } from "@/components/grade-badge";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency } from "@/lib/format";
-import { scoreToGrade } from "@/lib/report-cards";
-import type { PortfolioState } from "@/hooks/use-portfolio";
 import type { StressTestState } from "@/hooks/use-stress-test";
 import type { ReportCard, ReportCardGrade } from "@/lib/types";
-import { ChevronDown, ChevronRight, Network } from "lucide-react";
+import { Network, Play } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
@@ -26,18 +22,14 @@ function severityArrow(delta: number): string {
   return "";
 }
 
-function formatUsd(value: number): string {
-  return `$${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(value)}`;
-}
-
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 interface StressTestPanelProps {
-  portfolio: PortfolioState;
   stressTest: StressTestState;
   cards: ReportCard[] | undefined;
+  mcapMap: Map<string, number>;
   logos?: Record<string, string>;
 }
 
@@ -45,231 +37,156 @@ interface StressTestPanelProps {
 // StressTestPanel
 // ---------------------------------------------------------------------------
 
-export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressTestPanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Collapsed summary: show active scenario if set
-  const collapsedSummary = useMemo(() => {
-    if (!stressTest.targetCoinId || !stressTest.targetGrade) return null;
-    const meta = TRACKED_META_BY_ID.get(stressTest.targetCoinId);
-    return meta ? `${meta.symbol} → ${stressTest.targetGrade}` : null;
-  }, [stressTest.targetCoinId, stressTest.targetGrade]);
-
-  // Compute stressed portfolio headline
-  const portfolioStressHeadline = useMemo(() => {
-    if (!stressTest.headline || !cards) return null;
-    const { isPortfolioMode, totalAtRisk, totalHeld, affectedCount, ecosystemAffectedCount } =
-      stressTest.headline;
-
-    if (isPortfolioMode) {
-      const stressedCards = stressTest.stressedCards;
-      if (!stressedCards) return null;
-
-      const cardMap = new Map<string, ReportCard>();
-      for (const c of stressedCards) cardMap.set(c.id, c);
-
-      let weightedSum = 0;
-      let scoredUsd = 0;
-      for (const h of portfolio.holdings) {
-        const card = cardMap.get(h.coinId);
-        if (!card || card.overallScore === null) continue;
-        weightedSum += card.overallScore * h.amount;
-        scoredUsd += h.amount;
-      }
-      const afterScore = scoredUsd > 0 ? Math.round(weightedSum / scoredUsd) : null;
-      const afterGrade = afterScore !== null ? scoreToGrade(afterScore) : ("NR" as ReportCardGrade);
-
-      const delta =
-        afterScore !== null && portfolio.portfolioScore !== null
-          ? afterScore - portfolio.portfolioScore
-          : null;
-
-      return {
-        isPortfolioMode: true,
-        beforeGrade: portfolio.portfolioGrade,
-        beforeScore: portfolio.portfolioScore,
-        afterGrade,
-        afterScore,
-        delta,
-        totalAtRisk,
-        totalHeld,
-        affectedCount,
-        ecosystemAffectedCount,
-        riskPct: totalHeld > 0 ? (totalAtRisk / totalHeld) * 100 : 0,
-      };
-    }
-
-    return {
-      isPortfolioMode: false,
-      beforeGrade: null,
-      beforeScore: null,
-      afterGrade: null,
-      afterScore: null,
-      delta: null,
-      totalAtRisk,
-      totalHeld,
-      affectedCount,
-      ecosystemAffectedCount,
-      riskPct: 0,
-    };
-  }, [
-    stressTest.headline,
-    stressTest.stressedCards,
-    cards,
-    portfolio.holdings,
-    portfolio.portfolioGrade,
-    portfolio.portfolioScore,
-  ]);
-
+export function StressTestPanel({ stressTest, cards, mcapMap, logos }: StressTestPanelProps) {
   return (
     <Card>
       {/* Header */}
-      <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => { const next = !v; trackEvent("panel_toggled", { panel: "stress_test", action: next ? "open" : "close" }); return next; })}>
-        <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
-            <Network className="h-5 w-5 text-rose-500 shrink-0" />
-            <CardTitle as="h2" className="text-lg">
-              Contagion Map
-            </CardTitle>
-            {!isOpen && collapsedSummary && (
-              <span className="text-sm text-muted-foreground hidden sm:inline">
-                &mdash; {collapsedSummary}
-              </span>
-            )}
-          </div>
-          <Button variant="ghost" size="icon-sm" aria-label={isOpen ? "Collapse" : "Expand"}>
-            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </Button>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Network className="h-5 w-5 text-rose-500 shrink-0" />
+          <CardTitle as="h2" className="text-lg">
+            Contagion Map
+          </CardTitle>
         </div>
       </CardHeader>
 
-      {isOpen && (
-        <CardContent className="space-y-4 pt-0">
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <label
-                htmlFor="stress-target"
-                className="text-xs text-muted-foreground mb-1 block"
-              >
-                Target Coin
-              </label>
-              <select
-                id="stress-target"
-                value={stressTest.targetCoinId ?? ""}
-                onChange={(e) => stressTest.setTarget(e.target.value || null)}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Select a coin...</option>
-                {stressTest.targetableCoins.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.symbol}) &mdash; {c.dependentCount} dependent
-                    {c.dependentCount !== 1 ? "s" : ""}
-                  </option>
-                ))}
-              </select>
+      <CardContent className="space-y-4 pt-0">
+        {/* Systemic Risk Scoreboard */}
+        {stressTest.systemicRisks.length > 0 && (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              {stressTest.systemicRisks.map((risk, i) => (
+                <div
+                  key={risk.coinId}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <span className="text-muted-foreground w-5 text-right shrink-0">
+                    {i + 1}.
+                  </span>
+                  <span className="font-medium">{risk.symbol}</span>
+                  <span className="text-muted-foreground">
+                    &rarr; {risk.affectedCount} coin
+                    {risk.affectedCount !== 1 ? "s" : ""},{" "}
+                    {formatCurrency(risk.supplyAtRisk)} at risk
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="h-6 w-6 ml-auto shrink-0"
+                    aria-label={`Simulate ${risk.symbol} downgrade`}
+                    onClick={() => {
+                      stressTest.setTarget(risk.coinId);
+                      stressTest.setGrade("D" as ReportCardGrade);
+                      trackEvent("stress_test_run", {
+                        target_coin: risk.coinId,
+                        target_grade: "D",
+                        source: "scoreboard",
+                      });
+                    }}
+                  >
+                    <Play className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
-            <div className="flex-1">
-              <label
-                htmlFor="stress-grade"
-                className="text-xs text-muted-foreground mb-1 block"
-              >
-                Downgrade To
-              </label>
-              <select
-                id="stress-grade"
-                value={stressTest.targetGrade ?? ""}
-                onChange={(e) => {
-                  const grade = (e.target.value as ReportCardGrade) || null;
-                  stressTest.setGrade(grade);
-                  if (grade && stressTest.targetCoinId) {
-                    trackEvent("stress_test_run", {
-                      target_coin: stressTest.targetCoinId,
-                      target_grade: grade,
-                      affected_count: stressTest.impacts.length,
-                    });
-                  }
-                }}
-                disabled={!stressTest.targetCoinId}
-                className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="">Select grade...</option>
-                {stressTest.gradeOptions.map((g) => (
-                  <option key={g} value={g}>
-                    {g}
-                  </option>
-                ))}
-              </select>
+            <div className="border-t pt-3">
+              <p className="text-xs text-muted-foreground">
+                or simulate your own
+              </p>
             </div>
           </div>
+        )}
 
-          {/* Headline */}
-          {portfolioStressHeadline && (
-            <div className="space-y-2">
-              {portfolioStressHeadline.isPortfolioMode ? (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium">Your portfolio:</span>
-                    <GradeBadge
-                      grade={portfolioStressHeadline.beforeGrade!}
-                      score={portfolioStressHeadline.beforeScore}
-                    />
-                    <span className="text-muted-foreground">&rarr;</span>
-                    <GradeBadge
-                      grade={portfolioStressHeadline.afterGrade!}
-                      score={portfolioStressHeadline.afterScore}
-                    />
-                    {portfolioStressHeadline.delta !== null &&
-                      portfolioStressHeadline.delta !== 0 && (
-                        <span className="text-sm font-medium text-red-500">
-                          {portfolioStressHeadline.delta > 0 ? "+" : ""}
-                          {portfolioStressHeadline.delta} pts
-                        </span>
-                      )}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    {portfolioStressHeadline.totalAtRisk > 0 && (
-                      <>
-                        {formatUsd(portfolioStressHeadline.totalAtRisk)} of{" "}
-                        {formatUsd(portfolioStressHeadline.totalHeld)} at risk (
-                        {portfolioStressHeadline.riskPct.toFixed(0)}%).{" "}
-                      </>
-                    )}
-                    {portfolioStressHeadline.ecosystemAffectedCount} coin
-                    {portfolioStressHeadline.ecosystemAffectedCount !== 1 ? "s" : ""} affected
-                    ecosystem-wide.
-                  </div>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  {portfolioStressHeadline.ecosystemAffectedCount} coin
-                  {portfolioStressHeadline.ecosystemAffectedCount !== 1 ? "s" : ""} affected.{" "}
-                  {portfolioStressHeadline.totalAtRisk > 0 && (
-                    <>{formatCurrency(portfolioStressHeadline.totalAtRisk)} in supply at risk.</>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <label
+              htmlFor="stress-target"
+              className="text-xs text-muted-foreground mb-1 block"
+            >
+              Target Coin
+            </label>
+            <select
+              id="stress-target"
+              value={stressTest.targetCoinId ?? ""}
+              onChange={(e) => stressTest.setTarget(e.target.value || null)}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Select a coin...</option>
+              {stressTest.targetableCoins.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} ({c.symbol}) &mdash; {c.dependentCount} dependent
+                  {c.dependentCount !== 1 ? "s" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          {/* Impact table */}
-          {stressTest.impacts.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="pb-2 pr-3 font-medium">Coin</th>
-                    <th className="pb-2 pr-3 font-medium hidden sm:table-cell">
-                      {portfolio.holdings.length > 0 ? "Holding" : "Mkt Cap"}
-                    </th>
-                    <th className="pb-2 pr-3 font-medium">Before</th>
-                    <th className="pb-2 pr-3 font-medium">After</th>
-                    <th className="pb-2 font-medium">Delta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stressTest.impacts.map((impact) => (
+          <div className="flex-1">
+            <label
+              htmlFor="stress-grade"
+              className="text-xs text-muted-foreground mb-1 block"
+            >
+              Downgrade To
+            </label>
+            <select
+              id="stress-grade"
+              value={stressTest.targetGrade ?? ""}
+              onChange={(e) => {
+                const grade = (e.target.value as ReportCardGrade) || null;
+                stressTest.setGrade(grade);
+                if (grade && stressTest.targetCoinId) {
+                  trackEvent("stress_test_run", {
+                    target_coin: stressTest.targetCoinId,
+                    target_grade: grade,
+                    affected_count: stressTest.impacts.length,
+                  });
+                }
+              }}
+              disabled={!stressTest.targetCoinId}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">Select grade...</option>
+              {stressTest.gradeOptions.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Headline */}
+        {stressTest.headline && (
+          <div className="text-sm text-muted-foreground">
+            {stressTest.headline.affectedCount} coin
+            {stressTest.headline.affectedCount !== 1 ? "s" : ""} affected.{" "}
+            {stressTest.headline.totalAtRisk > 0 && (
+              <>{formatCurrency(stressTest.headline.totalAtRisk)} in supply at risk.</>
+            )}
+          </div>
+        )}
+
+        {/* Impact table */}
+        {stressTest.impacts.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th className="pb-2 pr-3 font-medium">Coin</th>
+                  <th className="pb-2 pr-3 font-medium hidden sm:table-cell">
+                    Mkt Cap
+                  </th>
+                  <th className="pb-2 pr-3 font-medium">Before</th>
+                  <th className="pb-2 pr-3 font-medium">After</th>
+                  <th className="pb-2 font-medium">Delta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stressTest.impacts.map((impact) => {
+                  const mcap = mcapMap.get(impact.coinId);
+                  return (
                     <tr key={impact.coinId} className="border-b last:border-0">
                       <td className="py-2 pr-3">
                         <div className="flex items-center gap-2">
@@ -285,7 +202,7 @@ export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressT
                         </div>
                       </td>
                       <td className="py-2 pr-3 text-muted-foreground hidden sm:table-cell">
-                        {impact.holdingUsd !== null ? formatUsd(impact.holdingUsd) : ""}
+                        {mcap != null ? formatCurrency(mcap) : ""}
                       </td>
                       <td className="py-2 pr-3">
                         <GradeBadge grade={impact.gradeBefore} score={impact.scoreBefore} />
@@ -300,30 +217,30 @@ export function StressTestPanel({ portfolio, stressTest, cards, logos }: StressT
                         </span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* No results */}
+        {stressTest.targetCoinId &&
+          stressTest.targetGrade &&
+          stressTest.impacts.length === 0 && (
+            <div className="text-sm text-muted-foreground text-center py-4">
+              No coins are affected by this downgrade scenario.
             </div>
           )}
 
-          {/* No results */}
-          {stressTest.targetCoinId &&
-            stressTest.targetGrade &&
-            stressTest.impacts.length === 0 && (
-              <div className="text-sm text-muted-foreground text-center py-4">
-                No coins are affected by this downgrade scenario.
-              </div>
-            )}
-
-          {/* Methodology note */}
-          {stressTest.impacts.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              Grades recomputed client-side using the same algorithm. Only the Dependency Risk
-              dimension is affected.
-            </p>
-          )}
-        </CardContent>
-      )}
+        {/* Methodology note */}
+        {stressTest.impacts.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Grades recomputed client-side using the same algorithm. Only the Dependency Risk
+            dimension is affected.
+          </p>
+        )}
+      </CardContent>
     </Card>
   );
 }
