@@ -8,7 +8,7 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRaw } from "@/lib/supply";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -102,7 +102,7 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
   const supply = (typeof price === "number" && price > 0) ? mcap / price : mcap;
   const prevDay = getPrevDayRaw(coinData);
   const prevWeek = getPrevWeekRaw(coinData);
-
+  const prevMonth = getPrevMonthRaw(coinData);
   const metaById = TRACKED_META_BY_ID;
   const { rates: pegRates } = derivePegRates(listData?.peggedAssets ?? [], metaById, listData?.fxFallbackRates);
   const pegRef = getPegReference(coinData.pegType, pegRates, meta?.commodityOunces);
@@ -125,9 +125,9 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
         {/* Primary stats row – Left: Market Cap+Supply | Center: Price | Right: Peg+Liquidity */}
         <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-3">
 
-          {/* LEFT: Market Cap + Supply side-by-side with 24h/7d changes */}
+          {/* LEFT: Market Cap + Supply side-by-side */}
           <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-            <CardContent className="pt-4 pb-4">
+            <CardContent className="pt-4 pb-4 flex flex-col h-full justify-between gap-4">
               <div className="grid grid-cols-2 gap-x-5">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Market Cap</p>
@@ -144,75 +144,91 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                {coinData.chains?.length ?? 0} chain{(coinData.chains?.length ?? 0) !== 1 ? "s" : ""}
-              </p>
+              <div className="flex items-center justify-between pt-3 border-t border-border/60 text-xs text-muted-foreground">
+                <span>{coinData.chains?.length ?? 0} chain{(coinData.chains?.length ?? 0) !== 1 ? "s" : ""}</span>
+                {prevMonth > 0 && (
+                  <span className={`font-mono ${mcap >= prevMonth ? "text-green-500" : "text-red-500"}`}>
+                    {formatPercentChange(mcap, prevMonth)} <span className="text-muted-foreground">30d</span>
+                  </span>
+                )}
+              </div>
             </CardContent>
           </Card>
 
           {/* CENTER: Price */}
           <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center text-center">
+            <CardContent className="pt-4 pb-4 flex flex-col items-center justify-center h-full text-center">
               {coinData.price != null && pegRef > 0 && (
                 <PegGauge
                   deviationBps={Math.round(((coinData.price - pegRef) / pegRef) * 10000)}
-                  className="w-full max-w-[180px] -mt-1 mb-2"
+                  className="w-full max-w-[180px] mb-2"
                 />
               )}
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Price</p>
               <div className="text-2xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
-              <p className="text-sm text-muted-foreground font-mono">{formatPegDeviation(coinData.price, pegRef)}</p>
+              <p className="text-sm text-muted-foreground font-mono mt-1">{formatPegDeviation(coinData.price, pegRef)}</p>
             </CardContent>
           </Card>
 
           {/* RIGHT: Peg Score + Liquidity Score side-by-side */}
           <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-            <CardContent className="pt-4 pb-4">
+            <CardContent className="pt-4 pb-4 flex flex-col h-full justify-between gap-4">
               {(() => {
                 const liq = liquidityMap?.[id];
                 const hasLiq = liq != null && (liq.liquidityScore !== null || liq.poolCount > 0);
                 const score = liq?.liquidityScore ?? 0;
                 const textColor = hasLiq ? getScoreColor(score) : "";
                 const showBoth = !isNavToken && hasLiq;
+                const deviationBps = pegScoreResult?.currentDeviationBps ?? null;
                 return (
-                  <div className={`grid gap-x-5 ${showBoth ? "grid-cols-2" : "grid-cols-1"}`}>
-                    {!isNavToken && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Peg Score</p>
-                        {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
-                          <>
-                            <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
-                              {pegScoreResult.pegScore}<span className="text-base text-muted-foreground">/100</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground font-mono mt-1">
-                              {pegScoreResult.pegPct.toFixed(1)}% at peg
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
-                            </p>
-                          </>
-                        ) : (
-                          <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
-                        )}
-                      </div>
-                    )}
-                    {hasLiq && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liq. Score</p>
-                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${textColor}`}>
-                          {Math.round(score)}<span className="text-base text-muted-foreground">/100</span>
+                  <>
+                    <div className={`grid gap-x-5 ${showBoth ? "grid-cols-2" : "grid-cols-1"}`}>
+                      {!isNavToken && (
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Peg Score</p>
+                          {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
+                            <>
+                              <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
+                                {pegScoreResult.pegScore}<span className="text-base text-muted-foreground">/100</span>
+                              </div>
+                              <p className="text-xs text-muted-foreground font-mono mt-1">
+                                {pegScoreResult.pegPct.toFixed(1)}% at peg
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
+                              </p>
+                            </>
+                          ) : (
+                            <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground font-mono mt-1">
-                          {formatCurrency(liq!.totalTvlUsd)} TVL
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {liq!.poolCount} pool{liq!.poolCount !== 1 ? "s" : ""} &middot; {liq!.chainCount} chain{liq!.chainCount !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                      {hasLiq && (
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liq. Score</p>
+                          <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${textColor}`}>
+                            {Math.round(score)}<span className="text-base text-muted-foreground">/100</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground font-mono mt-1">
+                            {formatCurrency(liq!.totalTvlUsd)} TVL
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {liq!.poolCount} pool{liq!.poolCount !== 1 ? "s" : ""} &middot; {liq!.chainCount} chain{liq!.chainCount !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-border/60 text-xs text-muted-foreground">
+                      {deviationBps !== null ? (
+                        <span className={`font-mono ${Math.abs(deviationBps) >= 50 ? "text-red-500" : Math.abs(deviationBps) >= 10 ? "text-amber-500" : ""}`}>
+                          {deviationBps >= 0 ? "+" : ""}{deviationBps} bps now
+                        </span>
+                      ) : <span />}
+                      {pegScoreResult?.activeDepeg && (
+                        <span className="text-red-500 font-medium">Active depeg</span>
+                      )}
+                    </div>
+                  </>
                 );
               })()}
             </CardContent>
