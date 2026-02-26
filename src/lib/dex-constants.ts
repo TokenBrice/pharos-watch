@@ -18,6 +18,19 @@ const PROTOCOL_NAMES: Record<string, string> = {
   "trader-joe": "Trader Joe",
 };
 
+export const PROTOCOL_LOGOS: Record<string, string> = {
+  curve: "/dexes/curve.png",
+  "uniswap-v3": "/dexes/uniswap-v3.png",
+  uniswap: "/dexes/uniswap-v3.png",
+  fluid: "/dexes/fluid.png",
+  balancer: "/dexes/balancer.png",
+  aerodrome: "/dexes/aerodrome.png",
+  velodrome: "/dexes/velodrome.png",
+  pancakeswap: "/dexes/pancakeswap.png",
+  sushiswap: "/dexes/sushiswap.png",
+  "trader-joe": "/dexes/trader-joe.png",
+};
+
 export const PROTOCOL_COLORS: Record<string, string> = {
   curve: "bg-blue-500",
   "uniswap-v3": "bg-pink-500",

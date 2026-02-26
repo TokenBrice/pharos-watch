@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import {
   AreaChart,
   Area,
@@ -15,7 +16,8 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
-import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
+import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
+import { CHAIN_META } from "@/lib/chains";
 import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@/lib/types";
@@ -66,12 +68,19 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
         })}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entries.slice(0, 5).map(([protocol, tvl]) => (
-          <span key={protocol} className="flex items-center gap-1.5">
-            <span className={`inline-block h-2 w-2 rounded-full ${colorFor[protocol] ?? "bg-muted-foreground"}`} />
-            {prettifyProtocol(protocol)} {((tvl / total) * 100).toFixed(0)}%
-          </span>
-        ))}
+        {entries.slice(0, 5).map(([protocol, tvl]) => {
+          const logo = PROTOCOL_LOGOS[protocol];
+          return (
+            <span key={protocol} className="flex items-center gap-1.5">
+              {logo ? (
+                <Image src={logo} alt="" width={14} height={14} className="rounded-full shrink-0" />
+              ) : (
+                <span className={`inline-block h-2 w-2 rounded-full ${colorFor[protocol] ?? "bg-muted-foreground"}`} />
+              )}
+              {prettifyProtocol(protocol)} {((tvl / total) * 100).toFixed(0)}%
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -101,12 +110,19 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
         })}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entries.slice(0, 4).map(([chain, tvl]) => (
-          <span key={chain} className="flex items-center gap-1.5">
-            <span className={`inline-block h-2 w-2 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
-            {normalizeChain(chain)} {formatCurrency(tvl)}
-          </span>
-        ))}
+        {entries.slice(0, 4).map(([chain, tvl]) => {
+          const meta = CHAIN_META[chain.toLowerCase()];
+          return (
+            <span key={chain} className="flex items-center gap-1.5">
+              {meta?.logoPath ? (
+                <Image src={meta.logoPath} alt="" width={14} height={14} className="rounded-full shrink-0" />
+              ) : (
+                <span className={`inline-block h-2 w-2 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
+              )}
+              {normalizeChain(chain)} {formatCurrency(tvl)}
+            </span>
+          );
+        })}
       </div>
     </div>
   );

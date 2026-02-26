@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
-import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
+import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
+import { CHAIN_META } from "@/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@/lib/types";
 
@@ -63,15 +65,22 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
           })}
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {chainTotals.slice(0, 10).map(([chain, tvl]) => (
-            <div key={chain} className="flex items-center gap-2">
-              <span className={`inline-block h-3 w-3 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
-              <div>
-                <p className="text-sm font-medium">{normalizeChain(chain)}</p>
-                <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>
+          {chainTotals.slice(0, 10).map(([chain, tvl]) => {
+            const meta = CHAIN_META[chain.toLowerCase()];
+            return (
+              <div key={chain} className="flex items-center gap-2">
+                {meta?.logoPath ? (
+                  <Image src={meta.logoPath} alt="" width={16} height={16} className="rounded-full shrink-0" />
+                ) : (
+                  <span className={`inline-block h-4 w-4 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
+                )}
+                <div>
+                  <p className="text-sm font-medium">{normalizeChain(chain)}</p>
+                  <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
@@ -140,9 +149,14 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
           {displayEntries.map(([protocol, tvl]) => {
             const color = colorMap[protocol] ?? "bg-muted-foreground";
             const name = protocol === "_other" ? "Other" : prettifyProtocol(protocol);
+            const logo = PROTOCOL_LOGOS[protocol];
             return (
               <div key={protocol} className="flex items-center gap-2">
-                <span className={`inline-block h-3 w-3 rounded-full ${color}`} />
+                {logo ? (
+                  <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />
+                ) : (
+                  <span className={`inline-block h-4 w-4 rounded-full ${color}`} />
+                )}
                 <div>
                   <p className="text-sm font-medium">{name}</p>
                   <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import { BalanceBar } from "@/components/balance-bar";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
-import { prettifyProtocol } from "@/lib/dex-constants";
+import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
 import type { StablecoinMeta, DexLiquidityData } from "@/lib/types";
 
@@ -292,7 +293,14 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">{liq.poolCount}</TableCell>
                 <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">{liq.chainCount}</TableCell>
                 <TableCell className="hidden md:table-cell text-left text-sm text-muted-foreground">
-                  {topProtocol ? prettifyProtocol(topProtocol[0]) : "—"}
+                  {topProtocol ? (
+                    <span className="flex items-center gap-1.5">
+                      {PROTOCOL_LOGOS[topProtocol[0]] && (
+                        <Image src={PROTOCOL_LOGOS[topProtocol[0]]} alt="" width={16} height={16} className="rounded-full shrink-0" />
+                      )}
+                      {prettifyProtocol(topProtocol[0])}
+                    </span>
+                  ) : "—"}
                 </TableCell>
                 <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
                   {liq.effectiveTvlUsd ? formatCurrency(liq.effectiveTvlUsd) : "—"}
