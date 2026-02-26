@@ -34,9 +34,8 @@ export default function HomePage() {
       />
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <h1>
-            <Image src="/pharos-logo-full.png" alt="Pharos" width={300} height={88} className="h-10 w-auto" priority />
-          </h1>
+          <Image src="/pharos-icon.png" alt="" width={32} height={32} className="rounded-lg" priority />
+          <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
           <span className="text-xs text-muted-foreground/60">
             {total} stablecoins &middot; {PEG_CURRENCY_COUNT} pegs
           </span>
