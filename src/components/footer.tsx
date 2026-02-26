@@ -4,7 +4,7 @@ import { CATEGORY_LINKS } from "@/lib/constants";
 export function Footer() {
   return (
     <footer className="border-t py-6">
-      <div className="px-4 lg:px-6 space-y-4">
+      <div className="container mx-auto px-4 space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>

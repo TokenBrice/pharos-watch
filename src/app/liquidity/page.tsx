@@ -41,7 +41,7 @@ export default function LiquidityPage() {
           Liquidity scores, pool depth, and protocol breakdowns for {TRACKED_STABLECOINS.length} stablecoins
           across decentralized exchanges.
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground max-w-2xl">
           The liquidity score is a 0–100 composite that measures on-chain pool depth, 24h trading volume,
           and protocol diversity across DEXes like Curve, Uniswap, and Fluid. Higher scores mean a stablecoin
           can absorb larger trades with less slippage — critical for both everyday swaps and stress scenarios.

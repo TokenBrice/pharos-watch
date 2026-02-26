@@ -83,7 +83,7 @@ function BlacklistPageInner() {
         <p className="text-sm text-muted-foreground">
           Who got frozen. When. Why it matters.
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground max-w-2xl">
           Centralized stablecoin issuers like Circle and Tether can freeze or destroy tokens at any address.
           This tracker documents every on-chain blacklist, unblacklist, and destroy event — giving you a
           transparent record of issuer intervention across Ethereum and Tron.
