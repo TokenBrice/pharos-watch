@@ -15,6 +15,7 @@ import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
+import { handleDigestSnapshot } from "./api/digest-snapshot";
 import { handleStabilityIndex } from "./api/stability-index";
 import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
 import { handleAuditDepegHistory } from "./api/audit-depeg-history";
@@ -94,6 +95,10 @@ export function route(
 
   if (path === "/api/digest-archive") {
     return handleDigestArchive(db);
+  }
+
+  if (path === "/api/digest-snapshot") {
+    return handleDigestSnapshot(db, url);
   }
 
   if (path === "/api/stability-index") {
