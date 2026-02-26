@@ -78,7 +78,7 @@ export const PSI_EVENTS = [
     date: Date.UTC(2022, 0, 21),
     dateEnd: Date.UTC(2022, 1, 8),
     label: "Fed Crash",
-    position: "insideBottom" as const,
+    position: "top" as const,
     links: [
       { title: "BTC crashed from $43K to $35K as Fed signaled aggressive rate hikes", url: "https://www.washingtonpost.com/business/2022/01/22/crypto-crash-bitcoin-fed/" },
       { title: "Chicago Fed retrospective on the crypto runs of 2022", url: "https://www.chicagofed.org/publications/chicago-fed-letter/2023/479" },
@@ -88,7 +88,7 @@ export const PSI_EVENTS = [
     date: Date.UTC(2022, 4, 7),
     dateEnd: Date.UTC(2022, 6, 1),
     label: "UST Collapse",
-    position: "top" as const,
+    position: "insideBottom" as const,
     links: [
       { title: "Terra/Luna algorithmic stablecoin death spiral wiped $45B", url: "https://www.coindesk.com/learn/the-fall-of-terra-a-timeline-of-the-meteoric-rise-and-crash-of-ust-and-luna/" },
     ],
@@ -97,7 +97,7 @@ export const PSI_EVENTS = [
     date: Date.UTC(2023, 2, 10),
     dateEnd: Date.UTC(2023, 2, 16),
     label: "SVB Weekend",
-    position: "insideBottom" as const,
+    position: "top" as const,
     links: [
       { title: "USDC depegged to $0.88 after $3.3B stuck in collapsed Silicon Valley Bank", url: "https://www.coindesk.com/markets/2023/03/11/usdc-depegs-from-dollar-stablecoin-drops-below-090/" },
     ],
