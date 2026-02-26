@@ -40,7 +40,7 @@ function TreemapCell({
 }) {
   const fill = RISK_COLORS[risk];
   const showLabel = width > 50 && height > 30;
-  const showPct = width > 40 && height > 20;
+  const showPct = showLabel && width > 40 && height > 40;
 
   return (
     <g>
