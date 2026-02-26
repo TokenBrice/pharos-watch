@@ -154,20 +154,24 @@ function ExposureBar({
   usd,
   pct,
   isWarning,
+  isCollateral,
 }: {
   name: string;
   symbol: string;
   usd: number;
   pct: number;
   isWarning: boolean;
+  isCollateral: boolean;
 }) {
   const widthPct = Math.min(100, Math.round(pct));
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
         <span className="truncate font-medium">
-          {name}{" "}
-          <span className="text-muted-foreground">({symbol})</span>
+          {name}
+          {!isCollateral && (
+            <span className="text-muted-foreground"> ({symbol})</span>
+          )}
           {isWarning && (
             <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />
           )}
@@ -179,9 +183,11 @@ function ExposureBar({
       <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
         <div
           className={
-            isWarning
-              ? "h-full rounded-full bg-amber-500/70"
-              : "h-full rounded-full bg-blue-500/50"
+            isCollateral
+              ? "h-full rounded-full bg-teal-500/50"
+              : isWarning
+                ? "h-full rounded-full bg-amber-500/70"
+                : "h-full rounded-full bg-blue-500/50"
           }
           style={{ width: `${widthPct}%` }}
         />
@@ -419,11 +425,12 @@ export function PortfolioClient() {
                         symbol={exp.symbol}
                         usd={exp.usd}
                         pct={exp.pct}
-                        isWarning={exp.pct > 80}
+                        isWarning={!exp.isCollateral && exp.pct > 80}
+                        isCollateral={exp.isCollateral}
                       />
                     ))}
                   </div>
-                  {portfolio.upstreamExposure.some((e) => e.pct > 80) && (
+                  {portfolio.upstreamExposure.some((e) => !e.isCollateral && e.pct > 80) && (
                     <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                       <span>
