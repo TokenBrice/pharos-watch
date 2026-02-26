@@ -369,9 +369,9 @@ export function scoreDecentralization(
   // Chain-risk penalty (only meaningful for non-centralized governance)
   const chainPenalty: Record<ChainRisk, number> = {
     ethereum: 0,
-    "stage1-l2": -10,
-    "established-alt-l1": -25,
-    unproven: -35,
+    "stage1-l2": -15,
+    "established-alt-l1": -50,
+    unproven: -65,
   };
   const chainRisk = meta?.chainRisk;
   const penalty = chainRisk ? (chainPenalty[chainRisk] ?? 0) : 0;

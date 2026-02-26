@@ -67,13 +67,13 @@ Base score from governance type, then a chain-risk penalty for protocols on less
 | Chain Risk | Penalty |
 |---|---|
 | Ethereum | 0 |
-| Stage 1+ L2 | −10 |
-| Established alt-L1 | −25 |
-| Unproven | −35 |
+| Stage 1+ L2 | −15 |
+| Established alt-L1 | −50 |
+| Unproven | −65 |
 
 The chain risk comes from the coin's explicit `chainRisk` override on `StablecoinMeta`. Coins without an override (defaulting to Ethereum) are unaffected.
 
-Examples: hyUSD (decentralized, Solana) = 100 − 25 = **75**. USDB (centralized-dependent, Blast L2) = 50 − 10 = **40**.
+Examples: hyUSD (decentralized, Solana) = 100 − 50 = **50**. USDB (centralized-dependent, Blast L2) = 50 − 15 = **35**.
 
 ### Dependency Risk Details
 
