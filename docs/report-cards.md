@@ -11,8 +11,8 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
-| **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
-| **Resilience** | 15% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
+| **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
+| **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0 |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
 
