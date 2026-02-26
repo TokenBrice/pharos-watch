@@ -9,6 +9,7 @@ import {
   ArrowLeftRight,
   Newspaper,
   Wallet,
+  Network,
   createLucideIcon,
 } from "lucide-react";
 
@@ -47,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Pharos Stability Index" },
       { href: "/risk-lab", label: "Risk Lab", icon: FlaskConical, description: "Safety grades and contagion simulation" },
       { href: "/portfolio", label: "Portfolio", icon: Wallet, description: "Personal stablecoin risk view" },
+      { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Stablecoin collateral dependency graph" },
     ],
   },
   {
