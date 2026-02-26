@@ -22,21 +22,28 @@ import { useSupplyHistory } from "@/hooks/use-stablecoins";
 /* Brand colors */
 const USDT_GREEN = "#26a17b";
 const USDC_BLUE = "#2775ca";
+const SKY_YELLOW = "#f5a623";
 const OTHERS_SLATE = "#94a3b8";
 
 export function TotalMcapChart() {
   const { data, isLoading } = useStablecoinCharts();
   const { data: usdtHistory } = useSupplyHistory("1");
   const { data: usdcHistory } = useSupplyHistory("2");
+  const { data: usdsHistory } = useSupplyHistory("209");
+  const { data: daiHistory } = useSupplyHistory("5");
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
-    // Build lookup maps keyed by date (unix seconds) for USDT/USDC
+    // Build lookup maps keyed by date (unix seconds)
     const usdtByDate = new Map<number, number>();
     for (const p of usdtHistory) usdtByDate.set(p.date, p.circulatingUsd);
     const usdcByDate = new Map<number, number>();
     for (const p of usdcHistory) usdcByDate.set(p.date, p.circulatingUsd);
+    const usdsByDate = new Map<number, number>();
+    for (const p of usdsHistory) usdsByDate.set(p.date, p.circulatingUsd);
+    const daiByDate = new Map<number, number>();
+    for (const p of daiHistory) daiByDate.set(p.date, p.circulatingUsd);
 
     return data.map((point) => {
       const total = Object.values(point.totalCirculatingUSD).reduce(
@@ -48,10 +55,11 @@ export function TotalMcapChart() {
       const ts = Number(point.date);
       const usdt = usdtByDate.get(ts) ?? 0;
       const usdc = usdcByDate.get(ts) ?? 0;
-      const others = Math.max(0, total - usdt - usdc);
-      return { ts: ts * 1000, usdt, usdc, others, total };
+      const sky = (usdsByDate.get(ts) ?? 0) + (daiByDate.get(ts) ?? 0);
+      const others = Math.max(0, total - usdt - usdc - sky);
+      return { ts: ts * 1000, usdt, usdc, sky, others, total };
     });
-  }, [data, usdtHistory, usdcHistory]);
+  }, [data, usdtHistory, usdcHistory, usdsHistory, daiHistory]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
@@ -96,6 +104,10 @@ export function TotalMcapChart() {
               USDC
             </div>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: SKY_YELLOW }} />
+              USDS + DAI
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: OTHERS_SLATE }} />
               Others
             </div>
@@ -111,6 +123,10 @@ export function TotalMcapChart() {
                 <linearGradient id="usdcGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={USDC_BLUE} stopOpacity={0.5} />
                   <stop offset="95%" stopColor={USDC_BLUE} stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={SKY_YELLOW} stopOpacity={0.5} />
+                  <stop offset="95%" stopColor={SKY_YELLOW} stopOpacity={0.1} />
                 </linearGradient>
                 <linearGradient id="othersGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={OTHERS_SLATE} stopOpacity={0.3} />
@@ -168,6 +184,15 @@ export function TotalMcapChart() {
                 fill="url(#usdcGrad)"
                 strokeWidth={1.5}
                 name="USDC"
+              />
+              <Area
+                type="monotone"
+                dataKey="sky"
+                stackId="mcap"
+                stroke={SKY_YELLOW}
+                fill="url(#skyGrad)"
+                strokeWidth={1.5}
+                name="USDS + DAI"
               />
               <Area
                 type="monotone"
