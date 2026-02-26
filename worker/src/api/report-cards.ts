@@ -40,7 +40,7 @@ import type {
 // Blacklistability helper
 // ---------------------------------------------------------------------------
 
-function isBlacklistable(meta: StablecoinMeta): boolean {
+function isBlacklistable(meta: StablecoinMeta): boolean | "possible" {
   if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
   return meta.flags.governance === "centralized";
 }

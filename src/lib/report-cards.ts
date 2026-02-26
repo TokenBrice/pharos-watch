@@ -321,10 +321,11 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
  */
 export function scoreResilience(
   meta: StablecoinMeta,
-  canBeBlacklisted: boolean,
+  canBeBlacklisted: boolean | "possible",
 ): ReportCardDimension {
   const factors = resolveResilienceFactors(meta);
-  const blacklistScore = canBeBlacklisted ? 0 : 100;
+  const blacklistScore = canBeBlacklisted === true ? 0 : canBeBlacklisted === "possible" ? 50 : 100;
+  const blacklistLabel = canBeBlacklisted === true ? "Yes" : canBeBlacklisted === "possible" ? "Possible (mutable contract)" : "No";
 
   const chainScore = CHAIN_RISK_SCORE[factors.chainRisk];
   const collateralScore = COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
@@ -339,7 +340,7 @@ export function scoreResilience(
     `Chain: ${CHAIN_RISK_LABEL[factors.chainRisk]} (${chainScore})`,
     `Collateral: ${COLLATERAL_QUALITY_LABEL[factors.collateralQuality]} (${collateralScore})`,
     `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
-    `Blacklist: ${canBeBlacklisted ? "Yes" : "No"} (${blacklistScore})`,
+    `Blacklist: ${blacklistLabel} (${blacklistScore})`,
   ];
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };

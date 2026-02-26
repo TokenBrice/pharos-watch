@@ -17,7 +17,7 @@ interface StablecoinOpts {
   contracts?: import("./types").ContractDeployment[];
   supplyMethod?: import("./types").SupplyMethodConfig;
   dependencies?: import("./types").DependencyWeight[];
-  canBeBlacklisted?: boolean;
+  canBeBlacklisted?: boolean | "possible";
   chainRisk?: import("./types").ChainRisk;
   collateralQuality?: import("./types").CollateralQuality;
   custodyModel?: import("./types").CustodyModel;
@@ -127,6 +127,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "usds",
     dependencies: [{ id: "2", weight: 0.30 }],
     collateralQuality: "rwa",
+    custodyModel: "institutional",
     collateral: "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
     pegMechanism: "Peg Stability Modules enabling 1:1 swaps with USDC and DAI",
     links: [
@@ -160,6 +161,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "dai",
     dependencies: [{ id: "2", weight: 0.35 }],
     collateralQuality: "rwa",
+    custodyModel: "institutional",
     collateral: "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
     pegMechanism: "Overcollateralized CDP vaults (auto-liquidated if ratio drops below minimum); LitePSM enabling 1:1 USDC↔DAI swaps; MKR acts as backstop (minted and sold to cover bad debt)",
     links: [
@@ -709,6 +711,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
     geckoId: "satoshi-stablecoin",
     dependencies: [],
+    collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
     pegMechanism: "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
     links: [
