@@ -114,6 +114,24 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const earliestTrackingDate = supplyHistory.length > 0 ? String(supplyHistory[0].date) : null;
   const pegScoreResult = pegSummaryData?.coins.find((c) => c.id === id) ?? null;
 
+  const pegScoreBorderClass = (() => {
+    const score = pegScoreResult?.pegScore;
+    if (score == null) return "";
+    if (score >= 90) return "border-l-2 border-l-green-500";
+    if (score >= 70) return "border-l-2 border-l-amber-500";
+    return "border-l-2 border-l-red-500";
+  })();
+
+  const liqBorderClass = (() => {
+    const liq = liquidityMap?.[id];
+    if (liq == null || liq.liquidityScore === null) return "";
+    const score = liq.liquidityScore;
+    if (score >= 80) return "border-l-2 border-l-emerald-500";
+    if (score >= 60) return "border-l-2 border-l-blue-500";
+    if (score >= 40) return "border-l-2 border-l-amber-500";
+    return "border-l-2 border-l-red-500";
+  })();
+
   // Compute 90d mcap from supply history for change display
   const prev90d = (() => {
     if (supplyHistory.length === 0) return 0;
@@ -225,7 +243,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
             <div className="lg:flex-1">
               <div className="grid grid-cols-2">
                 {/* Top-left: Market Cap */}
-                <div className="p-3 border-b border-r border-border/40">
+                <div className="px-3.5 py-2.5 min-h-[76px] border-b border-r border-border/30">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Market Cap</p>
                   <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatCurrency(mcap)}</div>
                   <p className={`text-xs font-mono mt-1 ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
@@ -237,7 +255,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                 </div>
 
                 {/* Top-right: Supply */}
-                <div className="p-3 border-b border-border/40">
+                <div className="px-3.5 py-2.5 min-h-[76px] border-b border-border/30">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Supply</p>
                   <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatSupply(supply)} <span className="text-base text-muted-foreground">{coin.symbol}</span></div>
                   <p className="text-xs font-mono mt-1">
@@ -268,7 +286,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
                 {/* Bottom-left: Peg Score (NAV tokens show "Type: NAV Token" instead) */}
                 {!isNavToken ? (
-                  <div className="p-3 border-r border-border/40">
+                  <div className={`px-3.5 py-2.5 min-h-[76px] border-r border-border/30 ${pegScoreBorderClass}`}>
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Peg Score</p>
                     {pegScoreResult?.pegScore != null ? (
                       <>
@@ -287,14 +305,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                     )}
                   </div>
                 ) : (
-                  <div className="p-3 border-r border-border/40">
+                  <div className="px-3.5 py-2.5 min-h-[76px] border-r border-border/30">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Type</p>
                     <div className="text-sm font-medium text-muted-foreground">NAV Token</div>
                   </div>
                 )}
 
                 {/* Bottom-right: Liquidity Score */}
-                <div className="p-3">
+                <div className={`px-3.5 py-2.5 min-h-[76px] ${liqBorderClass}`}>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liquidity</p>
                   {(() => {
                     const liq = liquidityMap?.[id];
@@ -321,7 +339,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
               {/* Footer: active depeg warning */}
               {pegScoreResult?.activeDepeg && (
-                <div className="px-3 pt-3 border-t border-border/40 text-xs">
+                <div className="px-3.5 pt-2.5 pb-2.5 border-t border-border/30 text-xs bg-red-500/5">
                   <span className="text-red-500 font-medium">Active depeg</span>
                 </div>
               )}
