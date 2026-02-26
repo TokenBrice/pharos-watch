@@ -452,7 +452,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
                   className="hidden md:table-cell text-center"
-                  title="Pharos Grade — overall report card score across peg stability, liquidity, resilience, decentralization, and dependency risk"
+                  title="Pharos Grade — overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk"
                 />
               )}
               {isVisible("stability") && (

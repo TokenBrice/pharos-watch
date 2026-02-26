@@ -417,7 +417,7 @@ export default function AboutPage() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos synthesizes multiple data signals into a single transparent grade per stablecoin.
-            Each report card distills peg stability, liquidity depth, resilience,
+            Each safety score distills peg stability, liquidity depth, resilience,
             decentralization, and dependency risk into a letter grade so you can compare stablecoins at a glance.
             The overall score is a weighted sum of 5 dimension scores (each 0&ndash;100), mapped to a letter grade.
             When some dimensions lack data (NR), their weight is redistributed proportionally among rated ones.

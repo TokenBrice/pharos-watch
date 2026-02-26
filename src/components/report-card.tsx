@@ -31,7 +31,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Pharos Report Card</CardTitle>
+          <CardTitle>Safety Score</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
@@ -58,7 +58,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
       <CardHeader>
         <CardTitle>
           <div className="flex items-center justify-between">
-            <span>Pharos Report Card</span>
+            <span>Safety Score</span>
             <span className="text-xs font-normal text-muted-foreground">
               v{METHODOLOGY_VERSION}
             </span>

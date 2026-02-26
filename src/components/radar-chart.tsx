@@ -50,7 +50,7 @@ export function ReportCardRadar({
       className={`w-full ${className ?? ""}`}
       style={size !== undefined ? { height: size } : undefined}
       role="figure"
-      aria-label={`Report card radar chart for ${card.symbol}`}
+      aria-label={`Safety score radar chart for ${card.symbol}`}
     >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "70%" : "80%"}>
@@ -101,7 +101,7 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
       className={`w-full ${className ?? ""}`}
       style={{ height: size }}
       role="figure"
-      aria-label={`Report card comparison for ${cards.map(({ card }) => card.symbol).join(", ")}`}
+      aria-label={`Safety score comparison for ${cards.map(({ card }) => card.symbol).join(", ")}`}
     >
       <ResponsiveContainer width="100%" height="100%">
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">

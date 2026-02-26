@@ -612,7 +612,7 @@ export function CompareClient() {
           {radarCards.length >= 2 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Report Card Comparison</CardTitle>
+                <CardTitle className="text-lg">Safety Score Comparison</CardTitle>
               </CardHeader>
               <CardContent>
                 <CompareRadar cards={radarCards} size={350} />

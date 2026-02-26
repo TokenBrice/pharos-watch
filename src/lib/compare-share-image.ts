@@ -198,7 +198,7 @@ function drawRadarSection(
   ctx.fillStyle = MUTED;
   ctx.font = "13px -apple-system, 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Report Card Comparison", cx, curY);
+  ctx.fillText("Safety Score Comparison", cx, curY);
   curY += 16;
 
   // Subtle divider

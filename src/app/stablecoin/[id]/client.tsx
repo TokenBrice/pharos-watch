@@ -31,7 +31,7 @@ import { pegScoreColor, getScoreColor } from "@/lib/severity-colors";
 
 const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
-  { id: "report-card", label: "Report Card" },
+  { id: "report-card", label: "Safety Score" },
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
   { id: "liquidity", label: "Liquidity" },
