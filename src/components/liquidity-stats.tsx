@@ -30,7 +30,8 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
     const totals: Record<string, number> = {};
     for (const liq of Object.values(data)) {
       for (const [chain, tvl] of Object.entries(liq.chainTvl)) {
-        totals[chain] = (totals[chain] ?? 0) + tvl;
+        const key = chain.toLowerCase();
+        totals[key] = (totals[key] ?? 0) + tvl;
       }
     }
     return Object.entries(totals).sort((a, b) => b[1] - a[1]);
