@@ -17,13 +17,11 @@ import { DepegHistory } from "@/components/depeg-history";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { KeyInfoCard } from "@/components/key-info-card";
 import { ContractAddresses } from "@/components/contract-addresses";
-import { BluechipBox } from "@/components/bluechip-box";
 import { AiSummary } from "@/components/ai-summary";
 import { ReportCardDetail } from "@/components/report-card";
 import { DetailSectionNav } from "@/components/detail-section-nav";
 import { PegGauge } from "@/components/peg-gauge";
 import { ReserveTreemap } from "@/components/reserve-treemap";
-import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData } from "@/lib/types";
@@ -49,7 +47,6 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
   const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
   const { data: pegSummaryData } = usePegSummary();
-  const { data: ratingsMap } = useBluechipRatings();
   const { data: liquidityMap } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
   const reportCard = reportCardsData?.cards.find((c) => c.id === id);
@@ -233,11 +230,6 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
               })()}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Secondary row – Bluechip rating */}
-        <div className="mt-3 sm:mt-5">
-          <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
         </div>
 
         {summary && <AiSummary {...summary} />}
