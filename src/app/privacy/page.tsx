@@ -5,14 +5,14 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Pharos privacy policy — what data we collect, how we use it, and your choices.",
+    "Pharos privacy policy: what data we collect, how we use it, and your choices.",
   alternates: {
     canonical: "/privacy/",
   },
   openGraph: {
     title: "Privacy Policy",
     description:
-      "Pharos privacy policy — what data we collect, how we use it, and your choices.",
+      "Pharos privacy policy: what data we collect, how we use it, and your choices.",
     url: "/privacy/",
   },
 };

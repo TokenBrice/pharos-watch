@@ -10,16 +10,16 @@ const ReportCardsClient = dynamic(
 );
 
 const reportCardsDescription =
-  "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade — plus simulate what happens when a major stablecoin fails.";
+  "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade, plus simulate what happens when a major stablecoin fails.";
 
 export const metadata: Metadata = {
-  title: "Safety Scores — Stablecoin Safety Grades",
+  title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
   alternates: {
     canonical: "/safety-scores/",
   },
   openGraph: {
-    title: "Safety Scores — Stablecoin Safety Grades",
+    title: "Safety Scores: Stablecoin Safety Grades",
     description: reportCardsDescription,
     url: "/safety-scores/",
     images: [{ url: "https://pharos.watch/og-safety-scores.png", width: 1200, height: 630 }],
@@ -43,7 +43,7 @@ export default function ReportCardsPage() {
         <p className="text-sm text-muted-foreground">
           Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability,
           liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator
-          lets you model what happens to the broader market when a major stablecoin fails — revealing
+          lets you model what happens to the broader market when a major stablecoin fails, revealing
           hidden dependency chains and systemic risk.
         </p>
       </div>
@@ -69,7 +69,7 @@ export default function ReportCardsPage() {
           </summary>
           <p className="px-4 pb-4 text-sm text-muted-foreground">
             The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to
-            &quot;fail&quot; and the simulation traces dependency chains — if stablecoin A uses stablecoin B as
+            &quot;fail&quot; and the simulation traces dependency chains: if stablecoin A uses stablecoin B as
             collateral, and B fails, A&apos;s grade degrades proportionally to its exposure. This reveals hidden
             systemic risk: which coins look safe in isolation but are fragile under stress.
           </p>
@@ -95,7 +95,7 @@ export default function ReportCardsPage() {
                 name: "What does the contagion simulation show?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains — if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
+                  text: "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
                 },
               },
             ],

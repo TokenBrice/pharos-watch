@@ -13,11 +13,11 @@ const description =
   "Interactive graph of collateral dependencies between the top 50 stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
 
 export const metadata: Metadata = {
-  title: "Dependency Map — Stablecoin Collateral Graph",
+  title: "Dependency Map: Stablecoin Collateral Graph",
   description,
   alternates: { canonical: "/dependency-map/" },
   openGraph: {
-    title: "Dependency Map — Stablecoin Collateral Graph",
+    title: "Dependency Map: Stablecoin Collateral Graph",
     description,
     url: "/dependency-map/",
   },

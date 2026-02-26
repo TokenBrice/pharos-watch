@@ -40,11 +40,11 @@ export async function generateMetadata({
   const formatted = formatDate(digest.date);
   const description = digest.text.slice(0, 160);
   return {
-    title: `Daily Digest — ${formatted}`,
+    title: `Daily Digest: ${formatted}`,
     description,
     alternates: { canonical: `/digest/${digest.date}/` },
     openGraph: {
-      title: `Daily Digest — ${formatted} | Pharos`,
+      title: `Daily Digest: ${formatted} | Pharos`,
       description,
       url: `/digest/${digest.date}/`,
       type: "article",
@@ -71,14 +71,14 @@ export default async function DigestDetailPage({
 
   return (
     <div className="space-y-6">
-      <BreadcrumbJsonLd name={`Daily Digest — ${formatted}`} path={`/digest/${digest.date}/`} />
+      <BreadcrumbJsonLd name={`Daily Digest: ${formatted}`} path={`/digest/${digest.date}/`} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Article",
-            headline: `${digest.title} — ${formatted}`,
+            headline: `${digest.title}, ${formatted}`,
             datePublished: new Date(digest.generatedAt * 1000).toISOString(),
             description: digest.text.slice(0, 160),
             author: {

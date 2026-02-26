@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import StatusClient from "./client";
 
 export const metadata: Metadata = {
-  title: "System Status — Pharos",
+  title: "System Status",
   description: "Admin status dashboard for Pharos data pipeline monitoring.",
   robots: { index: false, follow: false },
 };

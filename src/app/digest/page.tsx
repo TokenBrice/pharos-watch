@@ -4,16 +4,16 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 
 export const metadata: Metadata = {
-  title: "Daily Digest Archive — Pharos Stablecoin Recaps",
+  title: "Daily Digest Archive: Pharos Stablecoin Recaps",
   description:
-    "Browse the full archive of Pharos daily stablecoin market recaps — sardonic commentary backed by hard data.",
+    "Browse the full archive of Pharos daily stablecoin market recaps. Sardonic commentary backed by hard data.",
   alternates: {
     canonical: "/digest/",
   },
   openGraph: {
-    title: "Daily Digest Archive — Pharos Stablecoin Recaps",
+    title: "Daily Digest Archive: Pharos Stablecoin Recaps",
     description:
-      "Browse the full archive of Pharos daily stablecoin market recaps — sardonic commentary backed by hard data.",
+      "Browse the full archive of Pharos daily stablecoin market recaps. Sardonic commentary backed by hard data.",
     url: "/digest/",
   },
 };

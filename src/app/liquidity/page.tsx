@@ -13,13 +13,13 @@ const LiquidityClient = dynamic(
 const liquidityDescription = `DEX liquidity scores, pool depth analysis, and protocol breakdowns for ${TRACKED_STABLECOINS.length} stablecoins across Curve, Uniswap, Fluid, and more.`;
 
 export const metadata: Metadata = {
-  title: "DEX Liquidity — Stablecoin Pool Depth & Volume",
+  title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
   description: liquidityDescription,
   alternates: {
     canonical: "/liquidity/",
   },
   openGraph: {
-    title: "DEX Liquidity — Stablecoin Pool Depth & Volume",
+    title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
     description: liquidityDescription,
     url: "/liquidity/",
     images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 630 }],
@@ -44,7 +44,7 @@ export default function LiquidityPage() {
         <p className="text-sm text-muted-foreground">
           The liquidity score is a 0–100 composite that measures on-chain pool depth, 24h trading volume,
           and protocol diversity across DEXes like Curve, Uniswap, and Fluid. Higher scores mean a stablecoin
-          can absorb larger trades with less slippage — critical for both everyday swaps and stress scenarios.
+          can absorb larger trades with less slippage, critical for both everyday swaps and stress scenarios.
         </p>
       </div>
       <LiquidityClient />

@@ -369,7 +369,7 @@ export function CompareClient() {
           await navigator.clipboard.write([
             new ClipboardItem({ "image/png": blob }),
           ]);
-          setToast("Image copied — paste it in your tweet (Ctrl+V)");
+          setToast("Image copied! Paste it in your tweet (Ctrl+V)");
           setTimeout(() => setToast(null), 5000);
         } catch {
           // Clipboard image write not supported — open intent anyway
@@ -402,7 +402,7 @@ export function CompareClient() {
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({
-          title: `${symbols} — Pharos Compare`,
+          title: `${symbols} on Pharos Compare`,
           text: `Comparing ${symbols} on Pharos`,
           url: window.location.href,
           files: [file],

@@ -13,11 +13,11 @@ const description =
   "Build your stablecoin portfolio, see your weighted safety grade, upstream collateral exposure, and simulate how a major stablecoin failure would affect your holdings.";
 
 export const metadata: Metadata = {
-  title: "Portfolio — Personal Stablecoin Risk View",
+  title: "Portfolio: Personal Stablecoin Risk View",
   description,
   alternates: { canonical: "/portfolio/" },
   openGraph: {
-    title: "Portfolio — Personal Stablecoin Risk View",
+    title: "Portfolio: Personal Stablecoin Risk View",
     description,
     url: "/portfolio/",
   },

@@ -452,7 +452,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
                   className="hidden md:table-cell text-center"
-                  title="Pharos Grade — overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk"
+                  title="Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk"
                 />
               )}
               {isVisible("stability") && (
@@ -478,7 +478,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
                   className="hidden sm:table-cell text-right"
-                  title="DEX Liquidity Score — measures pool depth, volume, and diversity across decentralized exchanges"
+                  title="DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges"
                 />
               )}
               {isVisible("backing") && (
@@ -546,7 +546,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {isVisible("peg") && (
                     <TableCell className="text-right font-mono tabular-nums">
                       {meta?.flags.navToken ? (
-                        <span className="text-muted-foreground" title={meta.flags.pegCurrency === "VAR" ? "CPI-indexed — price tracks inflation" : "NAV token — price appreciates with yield"}>
+                        <span className="text-muted-foreground" title={meta.flags.pegCurrency === "VAR" ? "CPI-indexed, price tracks inflation" : "NAV token, price appreciates with yield"}>
                           {meta.flags.pegCurrency === "VAR" ? "CPI" : "NAV"}
                         </span>
                       ) : (() => {

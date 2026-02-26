@@ -28,16 +28,16 @@ function PipelineSources() {
 }
 
 export const metadata: Metadata = {
-  title: "About Pharos — Shining a Light on Every Peg",
+  title: "About Pharos: Shining a Light on Every Peg",
   description:
-    "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+    "About Pharos, an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   alternates: {
     canonical: "/about/",
   },
   openGraph: {
-    title: "About Pharos — Shining a Light on Every Peg",
+    title: "About Pharos: Shining a Light on Every Peg",
     description:
-      "About Pharos — an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+      "About Pharos, an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
   },
 };
@@ -58,7 +58,7 @@ export default function AboutPage() {
                 name: "Why does Pharos exist?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Pharos is a project by TokenBrice and Claude. It puts the stablecoin data you want to monitor in one place — honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+                  text: "Pharos is a project by TokenBrice and Claude. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
                 },
               },
               {
@@ -214,7 +214,7 @@ export default function AboutPage() {
                 <span className="font-bold">Safety Ratings</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Independent Bluechip SMIDGE grades for rated stablecoins —{" "}
+                Independent Bluechip SMIDGE grades for rated stablecoins via{" "}
                 <a
                   href="https://bluechip.org"
                   target="_blank"
@@ -258,7 +258,7 @@ export default function AboutPage() {
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                AI-written daily briefing on stablecoin market conditions — supply shifts, depeg alerts, and liquidity changes, updated every morning
+                AI-written daily briefing on stablecoin market conditions covering supply shifts, depeg alerts, and liquidity changes, updated every morning
               </p>
             </CardContent>
           </Card>
@@ -298,7 +298,7 @@ export default function AboutPage() {
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                Simulates the failure of any tracked stablecoin and traces how it cascades through dependent coins — quantifies ecosystem-wide contagion risk
+                Simulates the failure of any tracked stablecoin and traces how it cascades through dependent coins, quantifying ecosystem-wide contagion risk
               </p>
             </CardContent>
           </Card>
@@ -312,7 +312,7 @@ export default function AboutPage() {
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                Pre-computes the most damaging single-coin failure scenarios across the ecosystem — see which stablecoin failures would cause the most collateral damage
+                Pre-computes the most damaging single-coin failure scenarios across the ecosystem to reveal which failures would cause the most collateral damage
               </p>
             </CardContent>
           </Card>

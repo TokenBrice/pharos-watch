@@ -206,11 +206,11 @@ export function HomepageClient() {
       </section>
 
       <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
-        Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies — USD, EUR, GBP,
-        gold, silver, and more — with honest governance classification: {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,
+        Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP,
+        gold, silver, and more) with honest governance classification: {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,
         {" "}{TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
         deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
-        fallen stablecoins — updated every 15 minutes.
+        fallen stablecoins. Updated every 15 minutes.
       </p>
       {dataUpdatedAt > 0 && (
         <p className="text-xs text-muted-foreground text-center">
