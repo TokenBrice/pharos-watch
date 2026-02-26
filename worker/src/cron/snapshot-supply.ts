@@ -1,5 +1,5 @@
 import { getCache, batchExecute } from "../lib/db";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { PSI_ELIGIBLE_STABLECOINS } from "../../../src/lib/psi-eligible";
 import { sumPegBuckets } from "../../../src/lib/supply";
 import type { CronResult } from "../lib/db";
 
@@ -28,7 +28,7 @@ export async function snapshotSupply(db: D1Database): Promise<CronResult> {
     return { itemCount: 0 };
   }
 
-  const trackedIds = new Set(TRACKED_STABLECOINS.map((s) => s.id));
+  const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
 
   // Floor to UTC midnight
   const now = new Date();

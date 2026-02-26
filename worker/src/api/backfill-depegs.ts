@@ -1,4 +1,5 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
+import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/lib/psi-eligible";
 import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../../../src/lib/peg-rates";
 import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
@@ -233,7 +234,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
 
   let coins;
   if (singleId) {
-    const match = TRACKED_STABLECOINS.filter((c) => c.id === singleId);
+    const match = PSI_ELIGIBLE_STABLECOINS.filter((c) => c.id === singleId);
     if (match.length === 0) {
       return new Response(JSON.stringify({ error: "Stablecoin not found" }), {
         status: 404,
@@ -244,7 +245,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   } else {
     const batch = parseInt(url.searchParams.get("batch") ?? "0", 10);
     const start = batch * BATCH_SIZE;
-    coins = TRACKED_STABLECOINS.slice(start, start + BATCH_SIZE);
+    coins = PSI_ELIGIBLE_STABLECOINS.slice(start, start + BATCH_SIZE);
   }
 
   if (coins.length === 0) {
@@ -260,7 +261,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   if (cached) {
     try {
       const data = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
-      const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+      const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
       ({ rates: pegRates } = derivePegRates(data.peggedAssets, metaById, data.fxFallbackRates));
     } catch (err) {
       console.error("[backfill-depegs] Failed to parse peg rates from cache:", err);
@@ -324,7 +325,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
       console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
     }
 
-    const trackedMeta = TRACKED_META_BY_ID.get(meta.id);
+    const trackedMeta = PSI_ELIGIBLE_META_BY_ID.get(meta.id);
     const geckoId = trackedMeta?.geckoId ?? detail?.gecko_id;
 
     if (!geckoId) {

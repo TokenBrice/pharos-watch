@@ -1,6 +1,6 @@
 import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
-import { TRACKED_IDS } from "../../../src/lib/stablecoins";
+import { PSI_ELIGIBLE_IDS } from "../../../src/lib/psi-eligible";
 import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
@@ -12,7 +12,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
   }
 
   const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-  const tracked = parsed.peggedAssets.filter((c) => TRACKED_IDS.has(c.id));
+  const tracked = parsed.peggedAssets.filter((c) => PSI_ELIGIBLE_IDS.has(c.id));
 
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;

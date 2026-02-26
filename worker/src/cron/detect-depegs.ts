@@ -2,14 +2,14 @@ import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRE
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { PSI_ELIGIBLE_STABLECOINS } from "../../../src/lib/psi-eligible";
 import type { PegAssetBase } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
 
 // --- Depeg event detection ---
 
 export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], fxFallbackRates?: Record<string, number>): Promise<void> {
-  const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+  const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
   const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;

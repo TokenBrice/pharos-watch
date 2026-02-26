@@ -156,6 +156,7 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
   {
     name: "TerraUSD",
     symbol: "UST",
+    llamaId: "3",
     logo: "ust.png",
     pegCurrency: "USD",
     causeOfDeath: "algorithmic-failure",
