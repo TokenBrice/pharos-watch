@@ -115,8 +115,6 @@ export function HomepageClient() {
         <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
       </div>
 
-      <FeatureHighlights />
-
       {digestData?.digest && (
         <section>
           <Card>
@@ -158,6 +156,8 @@ export function HomepageClient() {
           </Card>
         </section>
       )}
+
+      <FeatureHighlights />
 
       <section>
         <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
