@@ -47,7 +47,7 @@ export function McapChart({ data, isLoading }: McapChartProps) {
   }, [range, filteredData]);
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-blue-500">
+    <Card className="rounded-xl border-l-[3px] border-l-blue-500 animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle as="h2">Market Cap</CardTitle>
         <TimeRangeButtons options={options} value={range} onChange={setRange} />

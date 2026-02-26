@@ -61,7 +61,7 @@ export function PegTypeChart({ data, isLoading }: AltPegDominanceProps) {
   }
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Non-USD-Pegged Stablecoin Dominance</CardTitle>
       </CardHeader>

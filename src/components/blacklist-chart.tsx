@@ -103,7 +103,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
   }
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Blacklisted Funds Over Time</CardTitle>
         <p className="text-sm text-muted-foreground">

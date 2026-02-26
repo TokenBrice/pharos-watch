@@ -50,7 +50,7 @@ function CauseOfDeathByCountChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Cause of Death (by Count)
@@ -129,7 +129,7 @@ function CauseOfDeathByMcapChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Cause of Death (by Peak Mcap)
@@ -206,7 +206,7 @@ function DeathsByYearChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Deaths per Year
@@ -293,7 +293,7 @@ function TopFailuresChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Largest Failures by Peak Mcap
@@ -369,7 +369,7 @@ function CumulativeDestroyedChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Cumulative Peak Value Destroyed

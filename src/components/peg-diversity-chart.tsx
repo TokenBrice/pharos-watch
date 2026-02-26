@@ -164,7 +164,7 @@ export function PegDiversityChart() {
     : pegKeys;
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle as="h2">Fiat-pegged, other than USD</CardTitle>

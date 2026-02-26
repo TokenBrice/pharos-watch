@@ -129,7 +129,7 @@ export function ComparisonChart({
     : valueFormatter;
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
         <CardTitle as="h2">{title}</CardTitle>
         <div className="flex items-center gap-2">

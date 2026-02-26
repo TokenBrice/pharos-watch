@@ -52,7 +52,7 @@ export function GovernanceChart({ data, isLoading }: GovernanceDominanceProps) {
   ];
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Stablecoin by Type</CardTitle>
       </CardHeader>
