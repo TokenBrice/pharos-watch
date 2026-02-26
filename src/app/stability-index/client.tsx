@@ -22,6 +22,8 @@ import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS } from "@/lib/psi-colors";
 import { trackEvent } from "@/lib/analytics";
+import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { useLogos } from "@/hooks/use-logos";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -602,6 +604,8 @@ function ContributorsTable({
   contributors: StabilityContributor[];
   totalMcapUsd: number;
 }) {
+  const { data: logos } = useLogos();
+
   const rows = useMemo(() => {
     if (!contributors.length) return [];
     return contributors
@@ -645,8 +649,9 @@ function ContributorsTable({
                   <td className="py-2 pr-4">
                     <a
                       href={`/stablecoin/${r.id}`}
-                      className="font-medium text-foreground hover:text-blue-500 transition-colors"
+                      className="flex items-center gap-2 font-medium text-foreground hover:text-blue-500 transition-colors"
                     >
+                      <StablecoinLogo src={logos[r.id]} name={r.symbol} size={20} />
                       {r.symbol}
                     </a>
                   </td>
