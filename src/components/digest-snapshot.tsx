@@ -2,22 +2,8 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestSnapshot } from "@/hooks/use-digest-snapshot";
-import { formatCurrency, formatAddress } from "@/lib/format";
+import { formatCurrency, formatAddress, formatPercentChange } from "@/lib/format";
 import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
-
-/* ---------- helpers ---------- */
-
-function deltaArrow(current: number, previous: number | undefined): string {
-  if (previous === undefined) return "";
-  if (current > previous) return " \u2191";
-  if (current < previous) return " \u2193";
-  return "";
-}
-
-function formatPct(value: number): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
 
 /* ---------- sub-section wrapper ---------- */
 
@@ -73,7 +59,8 @@ export function DigestSnapshot({ date }: { date: string }) {
             </span>
             {prev && (
               <span className="text-muted-foreground">
-                {deltaArrow(inputData.totalMcapUsd, prev.totalMcapUsd)}
+                {" "}({inputData.totalMcapUsd - prev.totalMcapUsd >= 0 ? "+" : ""}
+                {formatCurrency(inputData.totalMcapUsd - prev.totalMcapUsd)} from yesterday)
               </span>
             )}
           </p>
@@ -85,10 +72,9 @@ export function DigestSnapshot({ date }: { date: string }) {
             {inputData.totalMcapUsd - inputData.mcap7dDelta !== 0 && (
               <span>
                 {" "}
-                ({formatPct(
-                  (inputData.mcap7dDelta /
-                    (inputData.totalMcapUsd - inputData.mcap7dDelta)) *
-                    100
+                ({formatPercentChange(
+                  inputData.totalMcapUsd,
+                  inputData.totalMcapUsd - inputData.mcap7dDelta
                 )})
               </span>
             )}
@@ -100,19 +86,14 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard title="Stability Index">
             <p className="text-sm text-foreground/90">
               Score:{" "}
+              {prev?.stabilityIndex && (
+                <span className="text-muted-foreground">
+                  {prev.stabilityIndex.score.toFixed(1)} &rarr;{" "}
+                </span>
+              )}
               <span className="font-medium">
                 {inputData.stabilityIndex.score.toFixed(1)}
               </span>
-              {prev?.stabilityIndex && (
-                <span className="text-muted-foreground">
-                  {" "}
-                  &rarr; from {prev.stabilityIndex.score.toFixed(1)}
-                  {deltaArrow(
-                    inputData.stabilityIndex.score,
-                    prev.stabilityIndex.score
-                  )}
-                </span>
-              )}
             </p>
             <p className="text-sm">
               Band:{" "}
@@ -191,8 +172,8 @@ export function DigestSnapshot({ date }: { date: string }) {
               event{blacklistEvents.length !== 1 ? "s" : ""}
             </p>
             <ul className="space-y-0.5">
-              {blacklistEvents.map((e, i) => (
-                <li key={i} className="text-xs text-muted-foreground">
+              {blacklistEvents.map((e) => (
+                <li key={`${e.timestamp}-${e.address}`} className="text-xs text-muted-foreground">
                   {e.stablecoin} on {e.chainName} &mdash; {e.eventType}
                   {e.amount != null && (
                     <span> ({formatCurrency(e.amount)})</span>
