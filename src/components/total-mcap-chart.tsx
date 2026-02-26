@@ -15,23 +15,40 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
-import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
+import { useSupplyHistory } from "@/hooks/use-stablecoins";
+
+/* Brand colors */
+const USDT_GREEN = "#26a17b";
+const USDC_BLUE = "#2775ca";
+const OTHERS_SLATE = "#94a3b8";
 
 export function TotalMcapChart() {
   const { data, isLoading } = useStablecoinCharts();
+  const { data: usdtHistory } = useSupplyHistory("1");
+  const { data: usdcHistory } = useSupplyHistory("2");
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
-    return data.map((point) => ({
-      ts: point.date * 1000,
-      total: Object.values(point.totalCirculatingUSD).reduce(
+    // Build lookup maps keyed by date (unix seconds) for USDT/USDC
+    const usdtByDate = new Map<number, number>();
+    for (const p of usdtHistory) usdtByDate.set(p.date, p.circulatingUsd);
+    const usdcByDate = new Map<number, number>();
+    for (const p of usdcHistory) usdcByDate.set(p.date, p.circulatingUsd);
+
+    return data.map((point) => {
+      const total = Object.values(point.totalCirculatingUSD).reduce(
         (sum, v) => sum + (v ?? 0),
         0,
-      ),
-    }));
-  }, [data]);
+      );
+      const usdt = usdtByDate.get(point.date) ?? 0;
+      const usdc = usdcByDate.get(point.date) ?? 0;
+      const others = Math.max(0, total - usdt - usdc);
+      return { ts: point.date * 1000, usdt, usdc, others, total };
+    });
+  }, [data, usdtHistory, usdcHistory]);
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
@@ -65,13 +82,36 @@ export function TotalMcapChart() {
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
+          <>
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDT_GREEN }} />
+              USDT
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: USDC_BLUE }} />
+              USDC
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: OTHERS_SLATE }} />
+              Others
+            </div>
+          </div>
           <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={filteredData} margin={{ top: 5, right: 20, bottom: 20, left: 5 }}>
               <defs>
-                <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
+                <linearGradient id="usdtGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={USDT_GREEN} stopOpacity={0.5} />
+                  <stop offset="95%" stopColor={USDT_GREEN} stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="usdcGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={USDC_BLUE} stopOpacity={0.5} />
+                  <stop offset="95%" stopColor={USDC_BLUE} stopOpacity={0.1} />
+                </linearGradient>
+                <linearGradient id="othersGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={OTHERS_SLATE} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -98,7 +138,7 @@ export function TotalMcapChart() {
                 domain={yDomain}
               />
               <Tooltip
-                formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
+                formatter={(value, name) => [formatCurrency(Number(value)), String(name)]}
                 labelFormatter={(label) =>
                   new Date(Number(label)).toLocaleDateString("en-US", {
                     month: "short",
@@ -110,15 +150,35 @@ export function TotalMcapChart() {
               />
               <Area
                 type="monotone"
-                dataKey="total"
-                stroke={CHART_BLUE}
-                fill="url(#mcapGradient)"
-                strokeWidth={2}
-                name="Market Cap"
+                dataKey="usdt"
+                stackId="mcap"
+                stroke={USDT_GREEN}
+                fill="url(#usdtGrad)"
+                strokeWidth={1.5}
+                name="USDT"
+              />
+              <Area
+                type="monotone"
+                dataKey="usdc"
+                stackId="mcap"
+                stroke={USDC_BLUE}
+                fill="url(#usdcGrad)"
+                strokeWidth={1.5}
+                name="USDC"
+              />
+              <Area
+                type="monotone"
+                dataKey="others"
+                stackId="mcap"
+                stroke={OTHERS_SLATE}
+                fill="url(#othersGrad)"
+                strokeWidth={1.5}
+                name="Others"
               />
             </AreaChart>
           </ResponsiveContainer>
           </div>
+          </>
         ) : (
           <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
             No market cap data available
