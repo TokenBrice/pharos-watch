@@ -21,11 +21,21 @@ import { BluechipBox } from "@/components/bluechip-box";
 import { LiquidityBox } from "@/components/liquidity-box";
 import { AiSummary } from "@/components/ai-summary";
 import { ReportCardDetail } from "@/components/report-card";
+import { DetailSectionNav } from "@/components/detail-section-nav";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData } from "@/lib/types";
 import { pegScoreColor } from "@/lib/severity-colors";
+
+const DETAIL_SECTIONS = [
+  { id: "overview", label: "Overview" },
+  { id: "report-card", label: "Report Card" },
+  { id: "chart", label: "Chart" },
+  { id: "info", label: "Info" },
+  { id: "liquidity", label: "Liquidity" },
+  { id: "history", label: "History" },
+];
 
 interface SummaryData {
   title: string;
@@ -107,110 +117,117 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
           Supply history is temporarily unavailable.
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
-            <p className="text-sm text-muted-foreground font-mono">{formatPegDeviation(coinData.price, pegRef)}</p>
-          </CardContent>
-        </Card>
 
-        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</div>
-            <p className="text-sm text-muted-foreground">
-              {coinData.chains?.length ?? 0} chains
-            </p>
-          </CardContent>
-        </Card>
+      <DetailSectionNav sections={DETAIL_SECTIONS} />
 
-        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{formatSupply(supply)}</div>
-            <p className={`text-sm font-mono ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
-              {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply Changes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">7d</span>
-              <span className={`font-mono ${mcap >= prevWeek ? "text-green-500" : "text-red-500"}`}>
-                {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">30d</span>
-              <span className={`font-mono ${mcap >= prevMonth ? "text-green-500" : "text-red-500"}`}>
-                {prevMonth > 0 ? formatPercentChange(mcap, prevMonth) : "N/A"}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {!isNavToken && (
-          <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-
+      <section id="overview">
+        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+          <Card className="rounded-xl border-l-[3px] border-l-blue-500">
             <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peg Score</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</CardTitle>
             </CardHeader>
             <CardContent>
-              {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
-                <>
-                  <div className={`text-2xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
-                    {pegScoreResult.pegScore}<span className="text-lg text-muted-foreground">/100</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground font-mono">
-                    {pegScoreResult.pegPct.toFixed(1)}% at peg
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
-                  </p>
-                </>
-              ) : (
-                <div className="text-2xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
-              )}
+              <div className="text-2xl font-bold font-mono tracking-tight">{formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}</div>
+              <p className="text-sm text-muted-foreground font-mono">{formatPegDeviation(coinData.price, pegRef)}</p>
             </CardContent>
           </Card>
-        )}
 
-        <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
-        <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
-      </div>
+          <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Market Cap</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(mcap)}</div>
+              <p className="text-sm text-muted-foreground">
+                {coinData.chains?.length ?? 0} chains
+              </p>
+            </CardContent>
+          </Card>
 
-      {summary && <AiSummary {...summary} />}
+          <Card className="rounded-xl border-l-[3px] border-l-blue-500">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply (24h)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold font-mono tracking-tight">{formatSupply(supply)}</div>
+              <p className={`text-sm font-mono ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
+                {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}
+              </p>
+            </CardContent>
+          </Card>
 
-      {reportCard && <ReportCardDetail card={reportCard} />}
+          <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+            <CardHeader className="pb-1">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Supply Changes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">7d</span>
+                <span className={`font-mono ${mcap >= prevWeek ? "text-green-500" : "text-red-500"}`}>
+                  {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">30d</span>
+                <span className={`font-mono ${mcap >= prevMonth ? "text-green-500" : "text-red-500"}`}>
+                  {prevMonth > 0 ? formatPercentChange(mcap, prevMonth) : "N/A"}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-      <McapChart data={supplyHistory} />
+          {!isNavToken && (
+            <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+              <CardHeader className="pb-1">
+                <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peg Score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pegScoreResult?.pegScore !== null && pegScoreResult?.pegScore !== undefined ? (
+                  <>
+                    <div className={`text-2xl font-bold font-mono tracking-tight ${pegScoreColor(pegScoreResult.pegScore)}`}>
+                      {pegScoreResult.pegScore}<span className="text-lg text-muted-foreground">/100</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {pegScoreResult.pegPct.toFixed(1)}% at peg
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {pegScoreResult.eventCount} depeg event{pegScoreResult.eventCount !== 1 ? "s" : ""}
+                    </p>
+                  </>
+                ) : (
+                  <div className="text-2xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
+          <BluechipBox stablecoinId={id} ratingsMap={ratingsMap} />
+          <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
+        </div>
 
-      {meta && (
-        <KeyInfoCard meta={meta} />
-      )}
+        {summary && <AiSummary {...summary} />}
+      </section>
 
-      {meta && (
-        <ContractAddresses meta={meta} />
-      )}
+      <section id="report-card">
+        {reportCard && <ReportCardDetail card={reportCard} />}
+      </section>
 
-      <DexLiquidityCard stablecoinId={id} />
+      <section id="chart">
+        <McapChart data={supplyHistory} />
+      </section>
 
-      <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
+      <section id="info">
+        {meta && <KeyInfoCard meta={meta} />}
+        {meta && <ContractAddresses meta={meta} />}
+      </section>
 
+      <section id="liquidity">
+        <DexLiquidityCard stablecoinId={id} />
+      </section>
+
+      <section id="history">
+        <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
+      </section>
     </div>
   );
 }
