@@ -68,6 +68,15 @@ export interface DependencyWeight {
   weight: number;  // 0-1, fraction of collateral from this source
 }
 
+/** Chain where the core protocol operates and collateral is held */
+export type ChainRisk = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
+
+/** Trust assumptions in the backing assets */
+export type CollateralQuality = "native" | "eth-lst" | "alt-lst-bridged" | "exotic";
+
+/** Where collateral is held and who controls it */
+export type CustodyModel = "onchain" | "institutional" | "cex";
+
 export interface StablecoinMeta {
   id: string; // DefiLlama numeric ID
   name: string;
@@ -86,6 +95,9 @@ export interface StablecoinMeta {
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
   dependencies?: DependencyWeight[];  // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
   canBeBlacklisted?: boolean;          // Whether the issuer can blacklist/freeze holder addresses
+  chainRisk?: ChainRisk;
+  collateralQuality?: CollateralQuality;
+  custodyModel?: CustodyModel;
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
@@ -380,6 +392,9 @@ export interface RawDimensionInputs {
   concentrationHhi: number | null;
   bluechipGrade: BluechipGrade | null;
   canBeBlacklisted: boolean;
+  chainRisk: ChainRisk;
+  collateralQuality: CollateralQuality;
+  custodyModel: CustodyModel;
   governanceTier: GovernanceType;
   dependencies: DependencyWeight[];
 }
