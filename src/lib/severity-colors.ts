@@ -1,6 +1,9 @@
 /**
  * Shared deviation severity color mapping.
  *
+ * Hex values match --severity-*-hex CSS custom properties in semantic.css.
+ * Tailwind class functions use static strings (required for purge).
+ *
  * Thresholds (absolute basis points):
  *   < GREEN  green  (healthy)
  *   GREEN-AMBER  amber  (mild)
@@ -9,6 +12,14 @@
  */
 
 const THRESHOLDS = { GREEN: 50, AMBER: 200, ORANGE: 500 } as const;
+
+/** Severity hex token map — single source of truth for JS-side hex values */
+const SEVERITY_HEX = {
+  healthy:  "#22c55e",
+  mild:     "#f59e0b",
+  moderate: "#f97316",
+  severe:   "#ef4444",
+} as const;
 
 export function deviationColorClass(absBps: number): string {
   if (absBps < THRESHOLDS.GREEN) return "text-green-500";
@@ -25,10 +36,10 @@ export function deviationBgClass(absBps: number): string {
 }
 
 export function deviationColorHex(absBps: number): string {
-  if (absBps < THRESHOLDS.GREEN) return "#22c55e";
-  if (absBps < THRESHOLDS.AMBER) return "#f59e0b";
-  if (absBps < THRESHOLDS.ORANGE) return "#f97316";
-  return "#ef4444";
+  if (absBps < THRESHOLDS.GREEN) return SEVERITY_HEX.healthy;
+  if (absBps < THRESHOLDS.AMBER) return SEVERITY_HEX.mild;
+  if (absBps < THRESHOLDS.ORANGE) return SEVERITY_HEX.moderate;
+  return SEVERITY_HEX.severe;
 }
 
 // ---------------------------------------------------------------------------

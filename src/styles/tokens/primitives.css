@@ -1,0 +1,181 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Design Token Primitives
+   Raw, theme-agnostic values. Never reference these directly in
+   components — use semantic tokens instead.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Color Scales (OKLch) ────────────────────────────────────────
+     Naming: --p-{hue}-{lightness-stop}
+     Stops: 50 (lightest) → 950 (darkest)
+     ─────────────────────────────────────────────────────────────── */
+
+  /* Neutral (no chroma — pure gray scale) */
+  --p-neutral-50:  oklch(0.985 0 0);
+  --p-neutral-100: oklch(0.970 0 0);
+  --p-neutral-200: oklch(0.922 0 0);
+  --p-neutral-300: oklch(0.870 0 0);
+  --p-neutral-400: oklch(0.708 0 0);
+  --p-neutral-500: oklch(0.556 0 0);
+  --p-neutral-600: oklch(0.440 0 0);
+  --p-neutral-700: oklch(0.370 0 0);
+  --p-neutral-800: oklch(0.270 0 0);
+  --p-neutral-850: oklch(0.220 0.01 260);
+  --p-neutral-900: oklch(0.200 0.015 260);
+  --p-neutral-925: oklch(0.140 0.010 260);
+  --p-neutral-950: oklch(0.145 0 0);
+  --p-neutral-975: oklch(0.085 0.015 260);
+
+  /* Blue (hue ≈ 248–264) */
+  --p-blue-50:  oklch(0.970 0.020 248);
+  --p-blue-100: oklch(0.930 0.040 248);
+  --p-blue-200: oklch(0.860 0.070 248);
+  --p-blue-300: oklch(0.720 0.140 248);
+  --p-blue-400: oklch(0.640 0.180 248);
+  --p-blue-500: oklch(0.588 0.220 264);
+  --p-blue-600: oklch(0.488 0.243 264);
+  --p-blue-700: oklch(0.420 0.220 264);
+  --p-blue-800: oklch(0.340 0.180 264);
+  --p-blue-900: oklch(0.280 0.140 264);
+
+  /* Green (hue ≈ 155–163) */
+  --p-green-50:  oklch(0.970 0.020 163);
+  --p-green-100: oklch(0.920 0.050 163);
+  --p-green-200: oklch(0.840 0.100 163);
+  --p-green-300: oklch(0.760 0.140 155);
+  --p-green-400: oklch(0.696 0.170 162);
+  --p-green-500: oklch(0.620 0.180 155);
+  --p-green-600: oklch(0.540 0.160 155);
+  --p-green-700: oklch(0.460 0.130 155);
+  --p-green-800: oklch(0.380 0.100 155);
+  --p-green-900: oklch(0.300 0.070 155);
+
+  /* Teal (hue ≈ 175–185) */
+  --p-teal-50:  oklch(0.970 0.020 180);
+  --p-teal-100: oklch(0.910 0.050 180);
+  --p-teal-200: oklch(0.830 0.100 180);
+  --p-teal-300: oklch(0.740 0.140 180);
+  --p-teal-400: oklch(0.650 0.150 180);
+  --p-teal-500: oklch(0.580 0.130 180);
+  --p-teal-600: oklch(0.500 0.110 180);
+  --p-teal-700: oklch(0.420 0.090 180);
+  --p-teal-800: oklch(0.350 0.070 180);
+  --p-teal-900: oklch(0.280 0.050 180);
+
+  /* Amber (hue ≈ 84–90) */
+  --p-amber-50:  oklch(0.980 0.030 90);
+  --p-amber-100: oklch(0.940 0.070 90);
+  --p-amber-200: oklch(0.880 0.130 90);
+  --p-amber-300: oklch(0.828 0.189 84);
+  --p-amber-400: oklch(0.780 0.170 84);
+  --p-amber-500: oklch(0.720 0.150 84);
+  --p-amber-600: oklch(0.640 0.130 84);
+  --p-amber-700: oklch(0.540 0.110 84);
+  --p-amber-800: oklch(0.450 0.090 84);
+  --p-amber-900: oklch(0.370 0.070 84);
+
+  /* Orange (hue ≈ 50–60) */
+  --p-orange-50:  oklch(0.980 0.030 60);
+  --p-orange-100: oklch(0.940 0.060 60);
+  --p-orange-200: oklch(0.880 0.120 55);
+  --p-orange-300: oklch(0.820 0.160 55);
+  --p-orange-400: oklch(0.769 0.188 55);
+  --p-orange-500: oklch(0.700 0.180 50);
+  --p-orange-600: oklch(0.620 0.160 50);
+  --p-orange-700: oklch(0.540 0.130 50);
+  --p-orange-800: oklch(0.450 0.100 50);
+  --p-orange-900: oklch(0.370 0.070 50);
+
+  /* Red (hue ≈ 22–30) */
+  --p-red-50:  oklch(0.980 0.020 27);
+  --p-red-100: oklch(0.930 0.050 27);
+  --p-red-200: oklch(0.860 0.100 27);
+  --p-red-300: oklch(0.780 0.160 27);
+  --p-red-400: oklch(0.704 0.191 22);
+  --p-red-500: oklch(0.640 0.220 27);
+  --p-red-600: oklch(0.577 0.245 27);
+  --p-red-700: oklch(0.500 0.200 27);
+  --p-red-800: oklch(0.420 0.160 27);
+  --p-red-900: oklch(0.340 0.120 27);
+  --p-red-950: oklch(0.260 0.080 27);
+
+  /* Purple (hue ≈ 300–310) */
+  --p-purple-50:  oklch(0.970 0.020 304);
+  --p-purple-100: oklch(0.930 0.050 304);
+  --p-purple-200: oklch(0.860 0.100 304);
+  --p-purple-300: oklch(0.780 0.160 304);
+  --p-purple-400: oklch(0.700 0.200 304);
+  --p-purple-500: oklch(0.627 0.265 304);
+  --p-purple-600: oklch(0.560 0.230 304);
+  --p-purple-700: oklch(0.480 0.190 304);
+  --p-purple-800: oklch(0.400 0.150 304);
+  --p-purple-900: oklch(0.320 0.110 304);
+
+  /* Pink (hue ≈ 350) */
+  --p-pink-50:  oklch(0.970 0.020 350);
+  --p-pink-100: oklch(0.930 0.050 350);
+  --p-pink-200: oklch(0.860 0.100 350);
+  --p-pink-300: oklch(0.780 0.150 350);
+  --p-pink-400: oklch(0.700 0.180 350);
+  --p-pink-500: oklch(0.630 0.200 350);
+  --p-pink-600: oklch(0.560 0.180 350);
+  --p-pink-700: oklch(0.480 0.150 350);
+  --p-pink-800: oklch(0.400 0.120 350);
+  --p-pink-900: oklch(0.320 0.090 350);
+
+  /* Frost Blue (brand accent) */
+  --p-frost-blue: oklch(0.72 0.14 248);
+
+  /* ── Spacing Scale ───────────────────────────────────────────────
+     Based on 4px grid. Use semantic aliases in components.
+     ─────────────────────────────────────────────────────────────── */
+  --p-space-0:   0;
+  --p-space-0-5: 0.125rem;  /*  2px */
+  --p-space-1:   0.25rem;   /*  4px */
+  --p-space-1-5: 0.375rem;  /*  6px */
+  --p-space-2:   0.5rem;    /*  8px */
+  --p-space-3:   0.75rem;   /* 12px */
+  --p-space-4:   1rem;      /* 16px */
+  --p-space-5:   1.25rem;   /* 20px */
+  --p-space-6:   1.5rem;    /* 24px */
+  --p-space-8:   2rem;      /* 32px */
+  --p-space-10:  2.5rem;    /* 40px */
+  --p-space-12:  3rem;      /* 48px */
+  --p-space-16:  4rem;      /* 64px */
+  --p-space-20:  5rem;      /* 80px */
+
+  /* ── Typography Scale ────────────────────────────────────────────
+     Using Tailwind-compatible names for easy mapping.
+     ─────────────────────────────────────────────────────────────── */
+  --p-text-xs:   0.75rem;   /* 12px */
+  --p-text-sm:   0.875rem;  /* 14px */
+  --p-text-base: 1rem;      /* 16px */
+  --p-text-lg:   1.125rem;  /* 18px */
+  --p-text-xl:   1.25rem;   /* 20px */
+  --p-text-2xl:  1.5rem;    /* 24px */
+  --p-text-3xl:  1.875rem;  /* 30px */
+  --p-text-4xl:  2.25rem;   /* 36px */
+  --p-text-5xl:  3rem;      /* 48px */
+
+  --p-leading-none:   1;
+  --p-leading-tight:  1.25;
+  --p-leading-snug:   1.375;
+  --p-leading-normal: 1.5;
+  --p-leading-relaxed: 1.625;
+
+  --p-tracking-tighter: -0.05em;
+  --p-tracking-tight:   -0.025em;
+  --p-tracking-normal:  0em;
+  --p-tracking-wide:    0.025em;
+
+  /* ── Radius Scale ────────────────────────────────────────────────
+     ─────────────────────────────────────────────────────────────── */
+  --p-radius-none: 0;
+  --p-radius-sm:   0.25rem;   /*  4px */
+  --p-radius-md:   0.375rem;  /*  6px */
+  --p-radius-lg:   0.5rem;    /*  8px */
+  --p-radius-xl:   0.75rem;   /* 12px */
+  --p-radius-2xl:  1rem;      /* 16px */
+  --p-radius-3xl:  1.5rem;    /* 24px */
+  --p-radius-full: 9999px;
+}

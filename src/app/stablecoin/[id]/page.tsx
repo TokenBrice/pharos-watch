@@ -83,7 +83,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
     <>
       {!coin ? (
         <div className="space-y-4 py-12 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Stablecoin Not Found</h1>
+          <h1 className="text-3xl font-extrabold tracking-tighter">Stablecoin Not Found</h1>
           <p className="text-muted-foreground">No stablecoin found with ID &ldquo;{id}&rdquo;.</p>
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             &larr; Back to Dashboard
@@ -125,7 +125,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
                   {coin.name.charAt(0).toUpperCase()}
                 </div>
               )}
-              <h1 className="text-3xl font-bold tracking-tight">{coin.name}</h1>
+              <h1 className="text-3xl font-extrabold tracking-tighter">{coin.name}</h1>
               <span className="text-xl text-muted-foreground font-mono">{coin.symbol}</span>
               {tags.map((tag) => (
                 <Badge key={tag} variant="secondary">{FILTER_TAG_LABELS[tag]}</Badge>

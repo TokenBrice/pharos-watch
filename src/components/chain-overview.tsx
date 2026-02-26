@@ -74,7 +74,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
         <div className="h-[250px] sm:h-[350px]" role="figure" aria-label="Chain distribution bar chart">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
             <XAxis
               type="number"
               tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}

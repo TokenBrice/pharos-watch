@@ -132,7 +132,7 @@ export function StabilityIndex() {
       <div className="flex items-center gap-3">
         <PsiLighthouse band={displayBand} color={sparkColor} />
         <div className="flex items-baseline gap-2">
-          <span className={`text-2xl font-bold font-mono tabular-nums ${colorClass}`}>
+          <span className={`text-2xl font-extrabold font-mono tabular-nums ${colorClass}`}>
             {displayScore.toFixed(1)}
           </span>
           <span className={`text-sm font-bold uppercase tracking-wide ${colorClass}`}>

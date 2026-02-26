@@ -115,7 +115,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
           <div className={CHART_HEIGHT}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
               <XAxis
                 dataKey="quarter"
                 tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}

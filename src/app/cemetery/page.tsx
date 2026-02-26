@@ -48,7 +48,7 @@ export default function CemeteryPage() {
           <span>/</span>
           <span className="text-foreground">Stablecoin Cemetery</span>
         </nav>
-        <h1 className="text-4xl font-bold tracking-tight">Stablecoin Cemetery</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Stablecoin Cemetery</h1>
         <p className="text-sm text-muted-foreground">
           Defunct, depegged, and discontinued. A memorial to fallen stablecoins.{" "}
           <span className="hidden md:inline">Press F on hover to pay respects.</span>

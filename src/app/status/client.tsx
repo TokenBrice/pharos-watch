@@ -170,7 +170,7 @@ function DataQualityCards({ dq }: {
         <Card key={c.label}>
           <CardContent className="pt-4">
             <div className="text-xs text-muted-foreground">{c.label}</div>
-            <div className={`text-2xl font-bold font-mono tabular-nums ${severityColor[c.severity]}`}>{c.value}</div>
+            <div className={`text-2xl font-extrabold font-mono tabular-nums ${severityColor[c.severity]}`}>{c.value}</div>
             <div className="text-xs text-muted-foreground">{c.detail}</div>
           </CardContent>
         </Card>
@@ -319,7 +319,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Pharos System Status</h1>
+        <h1 className="text-xl font-extrabold tracking-tighter">Pharos System Status</h1>
         <Button variant="outline" size="sm" onClick={onSignOut}>
           Sign out
         </Button>

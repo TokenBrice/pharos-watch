@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* ── Design Tokens ─────────────────────────────────────────────── */
+@import "../styles/tokens/primitives.css";
+@import "../styles/tokens/semantic.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -40,56 +44,60 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ── Bridge Layer ──────────────────────────────────────────────────
+   Maps shadcn/ui vars → semantic tokens. Existing code referencing
+   --background, --card, etc. continues to work unchanged.
+   ────────────────────────────────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
-  --frost-blue: oklch(0.72 0.14 248);
-  --background: oklch(0.98 0.008 248);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --frost-blue: var(--brand-accent);
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-overlay);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
   --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --primary-foreground: var(--p-neutral-50);
+  --secondary: var(--p-neutral-100);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --muted: var(--p-neutral-100);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--p-neutral-100);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --destructive: var(--p-red-600);
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--p-neutral-400);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --surface-raised: oklch(0.97 0 0);
+  --surface-raised: var(--p-neutral-100);
 }
 
 .dark {
-  --frost-blue: oklch(0.72 0.14 248);
-  --background: oklch(0.085 0.015 260);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.14 0.01 260);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.14 0.01 260);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
+  --frost-blue: var(--brand-accent);
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-overlay);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--p-neutral-200);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.20 0.015 260);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.20 0.015 260);
-  --muted-foreground: oklch(0.82 0 0);
-  --accent: oklch(0.20 0.015 260);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.556 0 0);
-  --surface-raised: oklch(0.22 0.01 260);
+  --secondary: var(--p-neutral-900);
+  --secondary-foreground: var(--p-neutral-50);
+  --muted: var(--p-neutral-900);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--p-neutral-900);
+  --accent-foreground: var(--p-neutral-50);
+  --destructive: var(--p-red-400);
+  --border: var(--border-default);
+  --input: var(--border-strong);
+  --ring: var(--p-neutral-500);
+  --surface-raised: var(--p-neutral-850);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -103,6 +111,11 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Theme-aware card elevation shadows */
+  [data-slot="card"] {
+    box-shadow: var(--card-shadow);
+    transition: box-shadow 0.15s ease;
   }
 }
 
@@ -136,7 +149,23 @@
     0%, 100% { opacity: 0.6; transform: scale(1); }
     50% { opacity: 1; transform: scale(1.05); }
   }
-  .animate-pharos-pulse {
+  /* Light mode: higher contrast for pulse animation */
+  :root .animate-pharos-pulse {
     animation: pharos-pulse 2.5s ease-in-out infinite;
+    filter: brightness(0.85);
+  }
+  .dark .animate-pharos-pulse {
+    animation: pharos-pulse 2.5s ease-in-out infinite;
+    filter: none;
+  }
+
+  /* Theme-aware chart grid opacity — targets Recharts CartesianGrid */
+  .recharts-cartesian-grid {
+    opacity: var(--chart-grid-opacity);
+  }
+
+  /* Theme-aware PSI band fill opacity */
+  .psi-chart .recharts-reference-area rect {
+    fill-opacity: var(--psi-band-opacity);
   }
 }

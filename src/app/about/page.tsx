@@ -97,7 +97,7 @@ export default function AboutPage() {
           <span>/</span>
           <span className="text-foreground">About Pharos</span>
         </nav>
-        <h1 className="text-4xl font-bold tracking-tight">About Pharos</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter">About Pharos</h1>
         <p className="text-sm text-muted-foreground">
           Open stablecoin analytics dashboard, built with love and care.
         </p>

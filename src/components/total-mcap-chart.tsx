@@ -145,7 +145,7 @@ export function TotalMcapChart() {
                   <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.05} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
               <XAxis
                 dataKey="ts"
                 type="number"

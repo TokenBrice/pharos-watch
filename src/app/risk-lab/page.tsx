@@ -30,7 +30,7 @@ export default function ReportCardsPage() {
           <span>/</span>
           <span className="text-foreground">Risk Lab</span>
         </nav>
-        <h1 className="text-4xl font-bold tracking-tight">Risk Lab</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Risk Lab</h1>
         <p className="text-sm text-muted-foreground">
           Safety grades, portfolio risk analysis, and contagion simulation for every tracked stablecoin.
         </p>

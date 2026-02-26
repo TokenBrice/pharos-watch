@@ -352,7 +352,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <div>
             <p className="text-xs text-muted-foreground">Total AMM Liquidity TVL</p>
-            <p className="text-lg font-bold font-mono tabular-nums">
+            <p className="text-lg font-extrabold font-mono tabular-nums">
               {formatCurrency(liq.totalTvlUsd)}
             </p>
             {(liq.tvlChange24h != null || liq.tvlChange7d != null) && (
@@ -377,19 +377,19 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">24h Volume</p>
-            <p className="text-lg font-bold font-mono tabular-nums">{formatCurrency(liq.totalVolume24hUsd)}</p>
+            <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume24hUsd)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">7d Volume</p>
-            <p className="text-lg font-bold font-mono tabular-nums">{formatCurrency(liq.totalVolume7dUsd)}</p>
+            <p className="text-lg font-extrabold font-mono tabular-nums">{formatCurrency(liq.totalVolume7dUsd)}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Pools</p>
-            <p className="text-lg font-bold font-mono tabular-nums">{liq.poolCount}</p>
+            <p className="text-lg font-extrabold font-mono tabular-nums">{liq.poolCount}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Chains</p>
-            <p className="text-lg font-bold font-mono tabular-nums">{liq.chainCount}</p>
+            <p className="text-lg font-extrabold font-mono tabular-nums">{liq.chainCount}</p>
           </div>
         </div>
 
@@ -444,7 +444,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">DEX-Implied Price</p>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className="text-lg font-bold font-mono tabular-nums">
+              <span className="text-lg font-extrabold font-mono tabular-nums">
                 ${liq.dexPriceUsd.toFixed(4)}
               </span>
               {liq.dexDeviationBps != null && (

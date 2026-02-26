@@ -215,7 +215,7 @@ function DeathsByYearChart() {
         <div className="h-[250px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%" aria-label="Stablecoin deaths per year">
           <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
             <XAxis
               dataKey="year"
               tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
@@ -302,7 +302,7 @@ function TopFailuresChart() {
         <div className="h-[250px] sm:h-[350px]">
         <ResponsiveContainer width="100%" height="100%" aria-label="Top 10 largest stablecoin failures">
           <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" horizontal={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
             <XAxis
               type="number"
               tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
@@ -384,7 +384,7 @@ function CumulativeDestroyedChart() {
                 <stop offset="95%" stopColor="#ef4444" stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}

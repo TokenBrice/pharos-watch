@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Design Token Semantics
+   Purpose-driven aliases that map primitives to meaning.
+   These are what components should reference.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Light Mode (default) ──────────────────────────────────────── */
+:root {
+  /* ── Surfaces ─────────────────────────────────────────────────── */
+  --surface-base:    var(--p-neutral-50);
+  --surface-raised:  var(--p-neutral-100);
+  --surface-overlay: oklch(1 0 0);
+
+  /* ── Text ─────────────────────────────────────────────────────── */
+  --text-primary:   var(--p-neutral-950);
+  --text-secondary: var(--p-neutral-500);
+  --text-tertiary:  var(--p-neutral-400);
+  --text-inverse:   var(--p-neutral-50);
+
+  /* ── Borders ──────────────────────────────────────────────────── */
+  --border-default:  var(--p-neutral-200);
+  --border-subtle:   var(--p-neutral-100);
+  --border-strong:   var(--p-neutral-300);
+
+  /* ── Brand ────────────────────────────────────────────────────── */
+  --brand-accent:    var(--p-frost-blue);
+
+  /* ── Severity (peg deviation) ─────────────────────────────────── */
+  --severity-healthy:  var(--p-green-500);
+  --severity-mild:     var(--p-amber-300);
+  --severity-moderate: var(--p-orange-500);
+  --severity-severe:   var(--p-red-600);
+
+  /* ── Severity hex values (for Recharts / canvas) ──────────────── */
+  --severity-healthy-hex:  #22c55e;
+  --severity-mild-hex:     #f59e0b;
+  --severity-moderate-hex: #f97316;
+  --severity-severe-hex:   #ef4444;
+
+  /* ── PSI Bands ────────────────────────────────────────────────── */
+  --psi-bedrock:  var(--p-green-500);
+  --psi-steady:   var(--p-teal-400);
+  --psi-tremor:   var(--p-amber-300);
+  --psi-fracture: var(--p-orange-500);
+  --psi-crisis:   var(--p-red-500);
+  --psi-meltdown: var(--p-red-950);
+
+  /* ── PSI Band hex values (for Recharts) ───────────────────────── */
+  --psi-bedrock-hex:  #22c55e;
+  --psi-steady-hex:   #14b8a6;
+  --psi-tremor-hex:   #eab308;
+  --psi-fracture-hex: #f97316;
+  --psi-crisis-hex:   #ef4444;
+  --psi-meltdown-hex: #991b1b;
+  --psi-band-opacity: 0.10;
+
+  /* ── Score Tiers ──────────────────────────────────────────────── */
+  --score-green: var(--p-green-500);
+  --score-blue:  var(--p-blue-500);
+  --score-amber: var(--p-amber-300);
+  --score-red:   var(--p-red-500);
+
+  /* ── Interactive States ───────────────────────────────────────── */
+  --interactive-hover:   var(--p-neutral-100);
+  --interactive-active:  var(--p-neutral-200);
+  --interactive-focus:   var(--p-blue-300);
+  --interactive-disabled: var(--p-neutral-200);
+
+  /* ── Chart ────────────────────────────────────────────────────── */
+  --chart-grid-opacity: 0.1;
+  --chart-fill-opacity: 0.25;
+  --chart-primary:   var(--p-blue-500);
+  --chart-secondary: var(--p-green-400);
+  --chart-tertiary:  var(--p-teal-400);
+  --chart-negative:  var(--p-red-500);
+
+  /* ── Chart hex values (for Recharts) ──────────────────────────── */
+  --chart-primary-hex:   #3b82f6;
+  --chart-secondary-hex: #10b981;
+  --chart-tertiary-hex:  #14b8a6;
+  --chart-negative-hex:  #ef4444;
+
+  /* ── Component: Card ──────────────────────────────────────────── */
+  --card-bg:         var(--surface-overlay);
+  --card-border:     var(--border-default);
+  --card-shadow:     0 1px 3px oklch(0 0 0 / 8%), 0 1px 2px oklch(0 0 0 / 4%);
+  --card-shadow-hover: 0 4px 6px oklch(0 0 0 / 8%), 0 2px 4px oklch(0 0 0 / 4%);
+
+  /* ── Component: Table ─────────────────────────────────────────── */
+  --table-header-bg:    var(--surface-raised);
+  --table-row-hover:    var(--interactive-hover);
+  --table-row-stripe:   oklch(0.985 0 0 / 50%);
+  --table-border:       var(--border-subtle);
+
+  /* ── Component: Sidebar ───────────────────────────────────────── */
+  --sidebar-bg:        var(--surface-overlay);
+  --sidebar-border:    var(--border-default);
+  --sidebar-item-hover: var(--interactive-hover);
+}
+
+/* ── Dark Mode ─────────────────────────────────────────────────── */
+.dark {
+  /* ── Surfaces ─────────────────────────────────────────────────── */
+  --surface-base:    var(--p-neutral-975);
+  --surface-raised:  var(--p-neutral-850);
+  --surface-overlay: var(--p-neutral-925);
+
+  /* ── Text ─────────────────────────────────────────────────────── */
+  --text-primary:   var(--p-neutral-50);
+  --text-secondary: oklch(0.82 0 0);
+  --text-tertiary:  var(--p-neutral-400);
+  --text-inverse:   var(--p-neutral-950);
+
+  /* ── Borders ──────────────────────────────────────────────────── */
+  --border-default:  oklch(1 0 0 / 12%);
+  --border-subtle:   oklch(1 0 0 / 8%);
+  --border-strong:   oklch(1 0 0 / 18%);
+
+  /* ── Severity (same hues, adjusted lightness for dark bg) ────── */
+  --severity-healthy:  var(--p-green-500);
+  --severity-mild:     var(--p-amber-300);
+  --severity-moderate: var(--p-orange-500);
+  --severity-severe:   var(--p-red-400);
+
+  /* ── Interactive States ───────────────────────────────────────── */
+  --interactive-hover:   var(--p-neutral-900);
+  --interactive-active:  var(--p-neutral-850);
+  --interactive-focus:   var(--p-blue-600);
+  --interactive-disabled: var(--p-neutral-800);
+
+  /* ── Chart ────────────────────────────────────────────────────── */
+  --chart-grid-opacity: 0.06;
+  --chart-fill-opacity: 0.20;
+  --chart-primary:   var(--p-blue-600);
+  --chart-secondary: var(--p-green-400);
+  --chart-tertiary:  var(--p-teal-400);
+  --chart-negative:  var(--p-red-400);
+  --psi-band-opacity: 0.06;
+
+  /* ── Component: Card ──────────────────────────────────────────── */
+  --card-bg:         var(--surface-overlay);
+  --card-border:     var(--border-default);
+  --card-shadow:     0 1px 3px oklch(0 0 0 / 20%), 0 1px 2px oklch(0 0 0 / 12%);
+  --card-shadow-hover: 0 4px 6px oklch(0 0 0 / 20%), 0 2px 4px oklch(0 0 0 / 12%);
+
+  /* ── Component: Table ─────────────────────────────────────────── */
+  --table-header-bg:    var(--surface-raised);
+  --table-row-hover:    var(--interactive-hover);
+  --table-row-stripe:   oklch(1 0 0 / 3%);
+  --table-border:       var(--border-subtle);
+
+  /* ── Component: Sidebar ───────────────────────────────────────── */
+  --sidebar-bg:        var(--surface-overlay);
+  --sidebar-border:    var(--border-default);
+  --sidebar-item-hover: var(--interactive-hover);
+}

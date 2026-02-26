@@ -33,7 +33,7 @@ export default function HomePage() {
       />
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <h1 className="text-xl font-semibold tracking-tight text-muted-foreground">
+          <h1 className="text-xl font-extrabold tracking-tighter text-muted-foreground">
             PHAROS <span className="text-foreground">Dashboard</span>
           </h1>
           <span className="text-xs text-muted-foreground/60">

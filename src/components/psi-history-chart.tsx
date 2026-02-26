@@ -19,7 +19,7 @@ import { downloadChartPng } from "@/lib/chart-export";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import { trackEvent } from "@/lib/analytics";
 
@@ -173,7 +173,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
           <div
-            className="h-[250px] sm:h-[350px]"
+            className="psi-chart h-[250px] sm:h-[350px]"
             role="figure"
             aria-label={`PSI score history chart showing ${filteredData.length} data points`}
           >
@@ -181,8 +181,8 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
               <AreaChart data={filteredData} margin={{ top: 30, right: 5, bottom: 20, left: 5 }}>
                 <defs>
                   <linearGradient id="psiScoreGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 {BAND_ZONES.map((zone) => (
@@ -191,7 +191,6 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                     y1={zone.y1}
                     y2={zone.y2}
                     fill={zone.color}
-                    fillOpacity={0.06}
                     ifOverflow="extendDomain"
                   />
                 ))}
@@ -229,7 +228,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                     />
                   )
                 )}
-                <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis
                   dataKey="ts"
                   type="number"
@@ -265,7 +264,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                 <Area
                   type="monotone"
                   dataKey="score"
-                  stroke="#3b82f6"
+                  stroke={CHART_BLUE}
                   fill="url(#psiScoreGradient)"
                   strokeWidth={2}
                 />

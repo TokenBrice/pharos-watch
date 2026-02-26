@@ -156,7 +156,7 @@ function ComponentChart({
                     <stop offset="95%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="var(--color-border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
                 <XAxis
                   dataKey="ts"
                   type="number"
@@ -269,7 +269,7 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
         return (
           <div key={item.label} className="flex flex-col items-center gap-0.5">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
-            <span className={`text-lg font-bold tabular-nums ${color}`}>{item.value}</span>
+            <span className={`text-lg font-extrabold tabular-nums ${color}`}>{item.value}</span>
             <span className={`text-xs ${item.sub ? "text-muted-foreground" : "invisible"}`}>{item.sub || "\u00A0"}</span>
           </div>
         );
@@ -610,7 +610,7 @@ export function StabilityIndexClient() {
             <PsiLighthouse band={displayBand} color={hexColor} size={72} />
             <div className="flex flex-col items-center sm:items-start gap-0.5">
               <div className="flex items-baseline gap-2">
-                <span className={`text-4xl font-bold font-mono tabular-nums ${colorClass}`}>
+                <span className={`text-4xl font-extrabold font-mono tabular-nums ${colorClass}`}>
                   {displayScore.toFixed(1)}
                 </span>
                 <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
@@ -633,7 +633,7 @@ export function StabilityIndexClient() {
             {COMPONENT_DETAIL.map((c) => (
               <div key={c.label} className="flex flex-col items-center gap-0.5">
                 <span className="text-xs text-muted-foreground">{c.label}</span>
-                <span className="text-lg font-bold tabular-nums" style={{ color: c.color }}>
+                <span className="text-lg font-extrabold tabular-nums" style={{ color: c.color }}>
                   {c.sign}{components[c.label.toLowerCase() as keyof typeof components].toFixed(1)}
                 </span>
               </div>

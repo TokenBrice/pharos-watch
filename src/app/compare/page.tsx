@@ -38,7 +38,7 @@ export default function ComparePage() {
           <span>/</span>
           <span className="text-foreground">Compare</span>
         </nav>
-        <h1 className="text-4xl font-bold tracking-tight">
+        <h1 className="text-4xl font-extrabold tracking-tighter">
           Compare Stablecoins
         </h1>
         <p className="text-sm text-muted-foreground">

@@ -28,7 +28,7 @@ export default function StabilityIndexPage() {
           <span>/</span>
           <span className="text-foreground">Stability Index</span>
         </nav>
-        <h1 className="text-4xl font-bold tracking-tight">Pharos Stability Index</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Pharos Stability Index</h1>
         <p className="text-sm text-muted-foreground">
           Historical stablecoin market health scores, component breakdowns, and condition band analysis.
         </p>
