@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -17,7 +18,8 @@ import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
-import { DailyDigest } from "@/components/daily-digest";
+import { useDailyDigest } from "@/hooks/use-daily-digest";
+import { formatDateline } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
@@ -57,6 +59,7 @@ export function HomepageClient() {
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
   const { data: eventsData } = useDepegEvents();
+  const { data: digestData } = useDailyDigest();
   const [pegFilter, setPegFilter] = useState<PegCurrency | "all">("all");
   const [typeFilter, setTypeFilter] = useState<GovernanceType | "all">("all");
   const [digestOpen, toggleDigest] = useDigestOpen();
@@ -114,29 +117,47 @@ export function HomepageClient() {
 
       <FeatureHighlights />
 
-      <section>
-        <Card>
-          <CardHeader
-            className="flex flex-row items-center justify-between cursor-pointer"
-            onClick={toggleDigest}
-          >
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider">
-              Signal &amp; Noise
-            </CardTitle>
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 text-muted-foreground transition-transform",
-                digestOpen && "rotate-180",
-              )}
-            />
-          </CardHeader>
-          {digestOpen && (
-            <CardContent>
-              <DailyDigest />
-            </CardContent>
-          )}
-        </Card>
-      </section>
+      {digestData?.digest && (
+        <section>
+          <Card>
+            <CardHeader
+              className="flex flex-row items-center justify-between cursor-pointer"
+              onClick={toggleDigest}
+            >
+              <CardTitle className="text-sm font-semibold uppercase tracking-wider">
+                {digestData.digestTitle || "Daily Recap"}
+                {digestData.generatedAt && (
+                  <span className="font-normal tracking-wide text-muted-foreground"> · {formatDateline(digestData.generatedAt)}</span>
+                )}
+              </CardTitle>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform flex-shrink-0",
+                  digestOpen && "rotate-180",
+                )}
+              />
+            </CardHeader>
+            {digestOpen && (
+              <CardContent className="animate-in fade-in duration-200">
+                <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+                  {digestData.digest}
+                </p>
+                {digestData.digestExtended && (
+                  <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+                    {digestData.digestExtended}
+                  </p>
+                )}
+                <Link
+                  href="/digest/"
+                  className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Read all previous recaps &rarr;
+                </Link>
+              </CardContent>
+            )}
+          </Card>
+        </section>
+      )}
 
       <section>
         <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
