@@ -54,6 +54,9 @@ const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
   "FRAXBP": ["FRAX", "USDC"],
 };
 
+// Explicitly blocked DEX slugs (dead/deprecated protocols not yet flagged by DeFiLlama)
+const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3"]);
+
 // Quality multipliers for pool-type-adjusted TVL
 const QUALITY_MULTIPLIERS: Record<string, number> = {
   "curve-stableswap-high-a": 1.0,
@@ -1276,7 +1279,8 @@ async function fetchCgPools(
         const dexId = pool.relationships.dex.data.id;
         const poolAddr = a.address.toLowerCase();
         const tvl = parseFloat(a.reserve_in_usd ?? "");
-        if (!tvl || tvl < 10_000) continue;
+        if (!tvl || tvl < 10_000 || tvl > 1e12) continue;
+        if (BLOCKED_DEX_IDS.has(dexId)) continue;
 
         // Skip Curve pools (already covered by Curve API with richer data)
         if (dexId.startsWith("curve")) {
@@ -1541,7 +1545,8 @@ async function fetchGtPools(
           const dexId = pool.relationships.dex.data.id;
           const poolAddr = a.address.toLowerCase();
           const tvl = parseFloat(a.reserve_in_usd ?? "");
-          if (!tvl || tvl < 10_000) continue; // Skip dust
+          if (!tvl || tvl < 10_000 || tvl > 1e12) continue; // Skip dust and corrupt values
+          if (BLOCKED_DEX_IDS.has(dexId)) continue;
 
           // Rule 1: Skip Curve pools entirely
           if (dexId.startsWith("curve")) {
@@ -1721,8 +1726,9 @@ function processPoolMetrics(
   const metrics = new Map<string, LiquidityMetrics>();
 
   for (const pool of pools) {
-    if (!pool.tvlUsd || pool.tvlUsd < 10_000) continue; // Skip dust pools
+    if (!pool.tvlUsd || pool.tvlUsd < 10_000 || pool.tvlUsd > 1e12) continue; // Skip dust and corrupt values
     if (!dexProjects.has(pool.project)) continue; // Only count DEX pools
+    if (BLOCKED_DEX_IDS.has(pool.project)) continue; // Skip explicitly blocked dead DEXes
     // v2: skip lending pools (single-asset exposure, not DEX liquidity)
     if (pool.exposure === "single") continue;
 
