@@ -33,7 +33,7 @@ export function FilterBar({
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Filters
             {hasFilters && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold w-4 h-4">
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold w-4 h-4">
                 {activeFilters.length}
               </span>
             )}

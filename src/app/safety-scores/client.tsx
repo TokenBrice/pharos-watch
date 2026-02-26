@@ -208,7 +208,7 @@ export function ReportCardsClient() {
                 return (
                   <div
                     key={range}
-                    className={`${GRADE_BAR_COLORS[range]} flex items-center justify-center text-[10px] font-medium text-white`}
+                    className={`${GRADE_BAR_COLORS[range]} flex items-center justify-center text-xs font-medium text-white`}
                     style={{ width: `${pct}%` }}
                     title={`${range}: ${count}`}
                   >

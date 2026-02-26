@@ -64,7 +64,7 @@ export function CemeteryTimeline({ coins }: CemeteryTimelineProps) {
               className="absolute bottom-full -translate-x-1/2 flex flex-col items-center"
               style={{ left: `${t.pct}%`, top: 0 }}
             >
-              <span className="text-[10px] text-muted-foreground font-mono">
+              <span className="text-xs text-muted-foreground font-mono">
                 {t.year}
               </span>
               <div className="h-2 w-px bg-border" />
@@ -108,7 +108,7 @@ export function CemeteryTimeline({ coins }: CemeteryTimelineProps) {
                       unoptimized
                     />
                   ) : (
-                    <span className="text-[10px] font-bold text-muted-foreground">
+                    <span className="text-xs font-bold text-muted-foreground">
                       {coin.symbol.charAt(0)}
                     </span>
                   )}

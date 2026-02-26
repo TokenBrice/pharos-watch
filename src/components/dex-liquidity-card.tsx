@@ -179,7 +179,7 @@ function TopPoolsTable({ pools }: { pools: DexLiquidityPool[] }) {
                     <span title="Fee tier">{pool.extra.feeTier}bp</span>
                   )}
                   {pool.extra?.isMetaPool && (
-                    <span className="ml-1 text-[10px] opacity-60">meta</span>
+                    <span className="ml-1 text-xs opacity-60">meta</span>
                   )}
                 </td>
               </tr>
@@ -314,7 +314,7 @@ function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined
     color = "text-red-600 bg-red-500/10";
   }
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${color}`}>
+    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${color}`}>
       {label}
     </span>
   );
@@ -386,7 +386,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               </div>
             )}
             {liq.effectiveTvlUsd > 0 && liq.effectiveTvlUsd !== liq.totalTvlUsd && (
-              <div className="text-[10px] text-muted-foreground mt-0.5">
+              <div className="text-xs text-muted-foreground mt-0.5">
                 Effective: {formatCurrency(liq.effectiveTvlUsd)}
               </div>
             )}

@@ -64,7 +64,7 @@ function KeyNumbers({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
         Key Numbers
       </p>
 
@@ -135,7 +135,7 @@ function KeyNumbers({
           {govTiers.map((t) => (
             <div key={t.key} className="flex items-center gap-1">
               <div className={`h-1.5 w-1.5 rounded-full ${GOVERNANCE_TIER_COLORS[t.key].bg}`} />
-              <span className={`text-[10px] font-medium ${GOVERNANCE_TIER_COLORS[t.key].text}`}>
+              <span className={`text-xs font-medium ${GOVERNANCE_TIER_COLORS[t.key].text}`}>
                 {GOVERNANCE_LABELS_SHORT[t.key]} {t.pct.toFixed(1)}%
               </span>
             </div>
@@ -189,7 +189,7 @@ function MoversSignals({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
         Movers
       </p>
 
@@ -291,7 +291,7 @@ function ActivityTicker({
 
   return (
     <div className="space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
         Activity
       </p>
       {items.length === 0 ? (

@@ -104,7 +104,7 @@ function ColumnVisibilityDropdown({
           <Columns3 className="h-3.5 w-3.5" />
           Columns
           {hiddenCount > 0 && (
-            <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold w-4 h-4">
+            <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold w-4 h-4">
               {hiddenCount}
             </span>
           )}

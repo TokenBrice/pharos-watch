@@ -60,7 +60,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                     </span>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] px-1.5 py-0 ${
+                      className={`text-xs px-1.5 py-0 ${
                         evt.direction === "below"
                           ? "border-red-500/50 text-red-500"
                           : "border-amber-500/50 text-amber-500"
@@ -69,7 +69,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                       {evt.direction}
                     </Badge>
                     {isOngoing && (
-                      <span className="flex items-center gap-1 text-[10px] text-red-500 font-medium">
+                      <span className="flex items-center gap-1 text-xs text-red-500 font-medium">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
@@ -78,7 +78,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formatEventDate(evt.startedAt)}
                   </span>
                 </div>

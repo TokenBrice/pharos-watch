@@ -152,7 +152,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
               <div className="flex items-center gap-2">
                 <span className="font-mono font-semibold">{formatCurrency(stats.usdt, 0)}</span>
                 {stats.usdtPrev > 0 && (
-                  <span className={`text-[10px] font-mono ${stats.usdt >= stats.usdtPrev ? "text-green-500" : "text-red-500"}`}>
+                  <span className={`text-xs font-mono ${stats.usdt >= stats.usdtPrev ? "text-green-500" : "text-red-500"}`}>
                     {stats.usdt >= stats.usdtPrev ? "\u2191" : "\u2193"}{((stats.usdt - stats.usdtPrev) / stats.usdtPrev * 100).toFixed(1)}%
                   </span>
                 )}
@@ -163,7 +163,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
               <div className="flex items-center gap-2">
                 <span className="font-mono font-semibold">{formatCurrency(stats.usdc, 0)}</span>
                 {stats.usdcPrev > 0 && (
-                  <span className={`text-[10px] font-mono ${stats.usdc >= stats.usdcPrev ? "text-green-500" : "text-red-500"}`}>
+                  <span className={`text-xs font-mono ${stats.usdc >= stats.usdcPrev ? "text-green-500" : "text-red-500"}`}>
                     {stats.usdc >= stats.usdcPrev ? "\u2191" : "\u2193"}{((stats.usdc - stats.usdcPrev) / stats.usdcPrev * 100).toFixed(1)}%
                   </span>
                 )}
@@ -174,7 +174,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
               <div className="flex items-center gap-2">
                 <span className="font-mono font-semibold">{formatCurrency(stats.rest, 0)}</span>
                 {stats.restPrev > 0 && (
-                  <span className={`text-[10px] font-mono ${stats.rest >= stats.restPrev ? "text-green-500" : "text-red-500"}`}>
+                  <span className={`text-xs font-mono ${stats.rest >= stats.restPrev ? "text-green-500" : "text-red-500"}`}>
                     {stats.rest >= stats.restPrev ? "\u2191" : "\u2193"}{((stats.rest - stats.restPrev) / stats.restPrev * 100).toFixed(1)}%
                   </span>
                 )}

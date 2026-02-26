@@ -168,8 +168,8 @@ export function PegHeatmap({
                       <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-[8px] font-bold text-white" aria-label="DEX price disagrees">!</span>
                     )}
                     <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={20} />
-                    <span className="text-[10px] font-medium truncate max-w-full">{coin.symbol}</span>
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-semibold">
+                    <span className="text-xs font-medium truncate max-w-full">{coin.symbol}</span>
+                    <span className="inline-flex items-center gap-0.5 text-xs font-mono font-semibold">
                       <DeviationIcon absBps={absBps} className="h-2.5 w-2.5" />
                       {sign}{coin.currentDeviationBps}
                     </span>

@@ -46,7 +46,7 @@ export function ReportCardMini({
         <CardContent className="relative flex flex-col items-center gap-3 pt-2 pb-2">
           {/* Simulated badge */}
           {isSimulated && (
-            <span className="absolute top-1 right-1 text-[10px] font-medium text-amber-500 bg-amber-500/10 rounded px-1 py-0.5 leading-none">
+            <span className="absolute top-1 right-1 text-xs font-medium text-amber-500 bg-amber-500/10 rounded px-1 py-0.5 leading-none">
               Simulated
             </span>
           )}

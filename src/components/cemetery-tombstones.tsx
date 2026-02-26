@@ -298,12 +298,12 @@ function Tombstone({
           {coin.symbol}
         </span>
 
-        <span className="text-[11px] font-mono tabular-nums text-muted-foreground">
+        <span className="text-xs font-mono tabular-nums text-muted-foreground">
           {formatDeathDate(coin.deathDate)}
         </span>
 
         {coin.epitaph && (
-          <span className="text-[10px] italic text-muted-foreground/70 text-center leading-tight px-1.5">
+          <span className="text-xs italic text-muted-foreground/70 text-center leading-tight px-1.5">
             {coin.epitaph}
           </span>
         )}
@@ -394,7 +394,7 @@ export function CemeteryTombstones({ coins, onSelect }: CemeteryTombstonesProps)
             </span>
           </div>
         ))}
-        <span className="ml-auto text-[10px] text-muted-foreground/50 italic">
+        <span className="ml-auto text-xs text-muted-foreground/50 italic">
           Tombstone size reflects peak market cap
         </span>
       </div>

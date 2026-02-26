@@ -146,7 +146,7 @@ export function Sidebar() {
         <Search className="h-4 w-4 shrink-0" />
         {expanded && <span className="text-sm">Search</span>}
         {expanded && (
-          <kbd className="ml-auto text-[10px] font-mono text-muted-foreground/60 border border-border rounded px-1 py-0.5">
+          <kbd className="ml-auto text-xs font-mono text-muted-foreground/60 border border-border rounded px-1 py-0.5">
             Ctrl+K
           </kbd>
         )}
@@ -161,7 +161,7 @@ export function Sidebar() {
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
             {expanded && (
-              <div className="px-5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              <div className="px-5 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
                 {group.label}
               </div>
             )}

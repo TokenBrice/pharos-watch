@@ -23,7 +23,7 @@ function KpiCell({
 }) {
   return (
     <div className="px-4 py-3 flex flex-col gap-0.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
       <span className={`text-xl font-extrabold font-mono tabular-nums ${valueClassName ?? ""}`}>
