@@ -389,6 +389,7 @@ export interface RawDimensionInputs {
   depegEventCount: number;
   lastEventAt: number | null;
   liquidityScore: number | null;
+  concentrationHhi: number | null;
   bluechipGrade: BluechipGrade | null;
   canBeBlacklisted: boolean | "possible";
   chainRisk: ChainRisk;

@@ -188,22 +188,37 @@ export function scorePegStability(
 }
 
 /**
- * Liquidity: passes through the composite liquidityScore from the
- * dex_liquidity table (6-component weighted score computed by the
- * sync-dex-liquidity cron).  NR if no data.
+ * Liquidity: uses liquidityScore from DEX liquidity data.
+ * - -5 if HHI > 0.5
+ * - -10 if HHI > 0.8
+ * - NR if no data
  */
 export function scoreLiquidity(
-  liq: Pick<DexLiquidityData, "liquidityScore" | "poolCount" | "chainCount"> | undefined,
+  liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
 ): ReportCardDimension {
   if (!liq || liq.liquidityScore === null) {
     return { grade: "NR", score: null, detail: "No DEX liquidity data available" };
   }
 
-  const score = Math.round(Math.max(0, Math.min(100, liq.liquidityScore)));
+  let score = liq.liquidityScore;
+
+  // Concentration penalty
+  if (liq.concentrationHhi !== null) {
+    if (liq.concentrationHhi > 0.8) {
+      score -= 10;
+    } else if (liq.concentrationHhi > 0.5) {
+      score -= 5;
+    }
+  }
+
+  score = Math.round(Math.max(0, Math.min(100, score)));
 
   const parts: string[] = [];
   parts.push(`Liquidity score: ${score}/100`);
   parts.push(`${liq.poolCount} pool${liq.poolCount === 1 ? "" : "s"} across ${liq.chainCount} chain${liq.chainCount === 1 ? "" : "s"}`);
+  if (liq.concentrationHhi !== null && liq.concentrationHhi > 0.5) {
+    parts.push(`high concentration (HHI: ${liq.concentrationHhi.toFixed(2)})`);
+  }
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
 }

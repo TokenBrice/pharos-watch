@@ -11,7 +11,7 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
-| **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough (see `docs/dex-liquidity.md`) |
+| **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
 | **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 10% | Governance type + chain risk | Base: `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0. Chain-risk penalty applied for non-Ethereum chains |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
@@ -26,7 +26,10 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 
 ### Liquidity Details
 
-- Direct passthrough of the composite `liquidityScore` from the `dex_liquidity` table (6-component weighted score computed by `sync-dex-liquidity` cron — see `docs/dex-liquidity.md`)
+- Base score from DEX liquidity scoring system (see `docs/dex-liquidity.md`)
+- Concentration penalty via Herfindahl-Hirschman Index:
+  - HHI > 0.8: −10 (nearly single-pool concentration)
+  - HHI > 0.5: −5 (moderate concentration)
 
 ### Resilience Details
 
@@ -120,7 +123,7 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `bluechipGrade`, `canBeBlacklisted`, `chainRisk`, `collateralQuality`, `custodyModel`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainRisk`, `collateralQuality`, `custodyModel`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 

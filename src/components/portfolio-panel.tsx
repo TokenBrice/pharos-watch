@@ -237,6 +237,7 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
         depegEventCount: 0,
         lastEventAt: null,
         liquidityScore: null,
+        concentrationHhi: null,
         bluechipGrade: null,
         canBeBlacklisted: false,
         chainRisk: "ethereum",
