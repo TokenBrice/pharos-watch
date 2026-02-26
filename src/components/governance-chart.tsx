@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { formatCurrency } from "@/lib/format";
 import { computeGovernanceBreakdown } from "@/lib/supply";
 import type { StablecoinData } from "@/lib/types";
@@ -9,9 +10,10 @@ import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
 
 interface GovernanceDominanceProps {
   data: StablecoinData[] | undefined;
+  isLoading?: boolean;
 }
 
-export function GovernanceChart({ data }: GovernanceDominanceProps) {
+export function GovernanceChart({ data, isLoading }: GovernanceDominanceProps) {
   const stats = useMemo(() => {
     if (!data) return null;
     const gov = computeGovernanceBreakdown(data);
@@ -27,7 +29,21 @@ export function GovernanceChart({ data }: GovernanceDominanceProps) {
     };
   }, [data]);
 
-  if (!stats) return null;
+  if (!stats) {
+    if (isLoading) {
+      return (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle as="h2">Stablecoin by Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartSkeleton className="h-[140px]" variant="bars" />
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
+  }
 
   const tiers = [
     { label: "Centralized", pct: stats.cefiPct, mcap: stats.centralized, ...GOVERNANCE_TIER_COLORS.centralized },

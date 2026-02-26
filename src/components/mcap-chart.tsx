@@ -15,13 +15,15 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
 interface McapChartProps {
   data: SupplyHistoryPoint[];
+  isLoading?: boolean;
 }
 
-export function McapChart({ data }: McapChartProps) {
+export function McapChart({ data, isLoading }: McapChartProps) {
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
@@ -106,6 +108,8 @@ export function McapChart({ data }: McapChartProps) {
             </AreaChart>
           </ResponsiveContainer>
           </div>
+        ) : isLoading ? (
+          <ChartSkeleton className="h-[250px] sm:h-[350px]" />
         ) : (
           <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
             No market cap data available

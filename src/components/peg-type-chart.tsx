@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { formatCurrency } from "@/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
 import { getCirculatingRaw } from "@/lib/supply";
@@ -10,9 +11,10 @@ import type { StablecoinData } from "@/lib/types";
 
 interface AltPegDominanceProps {
   data: StablecoinData[] | undefined;
+  isLoading?: boolean;
 }
 
-export function PegTypeChart({ data }: AltPegDominanceProps) {
+export function PegTypeChart({ data, isLoading }: AltPegDominanceProps) {
   const stats = useMemo(() => {
     if (!data) return null;
 
@@ -42,7 +44,21 @@ export function PegTypeChart({ data }: AltPegDominanceProps) {
     return { categories: sorted, altTotal };
   }, [data]);
 
-  if (!stats || stats.altTotal === 0) return null;
+  if (!stats || stats.altTotal === 0) {
+    if (isLoading) {
+      return (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle as="h2">Non-USD-Pegged Stablecoin Dominance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartSkeleton className="h-[180px]" variant="bars" />
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
+  }
 
   return (
     <Card className="rounded-xl">

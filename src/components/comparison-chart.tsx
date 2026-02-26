@@ -14,6 +14,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 
 interface SeriesData {
   id: string;
@@ -29,6 +30,7 @@ interface ComparisonChartProps {
   range?: TimeRangeOption;
   onRangeChange?: (range: TimeRangeOption) => void;
   normalizable?: boolean;
+  isLoading?: boolean;
 }
 
 export function ComparisonChart({
@@ -38,6 +40,7 @@ export function ComparisonChart({
   range,
   onRangeChange,
   normalizable,
+  isLoading,
 }: ComparisonChartProps) {
   const [normalized, setNormalized] = useState(false);
   // Merge all series into a single array keyed by timestamp
@@ -229,6 +232,8 @@ export function ComparisonChart({
               </LineChart>
             </ResponsiveContainer>
           </div>
+        ) : isLoading ? (
+          <ChartSkeleton className="h-[300px] sm:h-[400px]" />
         ) : (
           <div className="flex h-[300px] sm:h-[400px] items-center justify-center text-muted-foreground">
             No data available

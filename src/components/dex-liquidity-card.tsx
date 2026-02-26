@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
@@ -175,7 +176,7 @@ function TopPoolsTable({ pools }: { pools: DexLiquidityPool[] }) {
 }
 
 function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
-  const { data: history } = useDexLiquidityHistory(stablecoinId, 90);
+  const { data: history, isLoading } = useDexLiquidityHistory(stablecoinId, 90);
 
   const chartData = useMemo(() => {
     if (!history || history.length < 2) return [];
@@ -185,7 +186,17 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
     }));
   }, [history]);
 
-  if (chartData.length < 2) return null;
+  if (chartData.length < 2) {
+    if (isLoading) {
+      return (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">TVL History (90d)</p>
+          <ChartSkeleton className="h-32" />
+        </div>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="space-y-2">
