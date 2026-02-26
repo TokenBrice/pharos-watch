@@ -34,38 +34,38 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+export const DASHBOARD_NAV_ITEM: NavItem = { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Market overview and KPIs" };
+
 export const NAV_GROUPS: NavGroup[] = [
-  {
-    label: "Market",
-    items: [
-      { href: "/", label: "Dashboard", icon: LayoutDashboard, description: "Market overview and KPIs" },
-      { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
-    ],
-  },
   {
     label: "Risk Lab",
     items: [
       { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Pharos Stability Index" },
       { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Safety grades and contagion simulation" },
-      { href: "/portfolio", label: "Portfolio", icon: Wallet, description: "Personal stablecoin risk view" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Stablecoin collateral dependency graph" },
+      { href: "/portfolio", label: "Portfolio", icon: Wallet, description: "Personal stablecoin risk view" },
     ],
   },
   {
     label: "Data",
     items: [
-      { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
+      { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
       { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan, description: "Frozen address events" },
+      { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
+    ],
+  },
+  {
+    label: "Info",
+    items: [
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Dead stablecoins" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily market digest" },
+      { href: "/about", label: "About", icon: Info, description: "About Pharos" },
     ],
   },
 ];
 
 /** Flat list for use in header and command palette */
-export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+export const NAV_ITEMS: NavItem[] = [DASHBOARD_NAV_ITEM, ...NAV_GROUPS.flatMap((g) => g.items)];
 
 /** Bottom items (always shown at sidebar bottom) */
-export const BOTTOM_NAV_ITEMS: NavItem[] = [
-  { href: "/about", label: "About", icon: Info, description: "About Pharos" },
-];
+export const BOTTOM_NAV_ITEMS: NavItem[] = [];

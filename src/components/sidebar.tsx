@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { ChevronsLeft, ChevronsRight, Moon, Search, Sun } from "lucide-react";
-import { NAV_GROUPS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
+import { NAV_GROUPS, BOTTOM_NAV_ITEMS, DASHBOARD_NAV_ITEM } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { trackEvent } from "@/lib/analytics";
 
@@ -154,6 +154,10 @@ export function Sidebar() {
 
       {/* Nav groups */}
       <nav className="flex-1 overflow-y-auto py-2 space-y-4" aria-label="Main navigation">
+        {/* Dashboard standalone */}
+        <div className="space-y-0.5">
+          <SidebarNavItem item={DASHBOARD_NAV_ITEM} expanded={expanded} isActive={isActive(DASHBOARD_NAV_ITEM.href)} />
+        </div>
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
             {expanded && (
