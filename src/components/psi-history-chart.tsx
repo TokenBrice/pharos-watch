@@ -52,6 +52,16 @@ export const PSI_EVENTS = [
     ],
   },
   {
+    date: Date.UTC(2021, 5, 16),
+    dateEnd: Date.UTC(2021, 5, 21),
+    label: "IRON Finance",
+    position: "top" as const,
+    links: [
+      { title: "Crypto's first large-scale bank run: TITAN went from $65 to zero, dragging IRON to $0.75", url: "https://www.coindesk.com/markets/2021/06/17/in-token-crash-postmortem-iron-finance-says-it-suffered-cryptos-first-large-scale-bank-run" },
+      { title: "Federal Reserve analysis of the algorithmic stablecoin run mechanism", url: "https://www.federalreserve.gov/econres/notes/feds-notes/runs-on-algorithmic-stablecoins-evidence-from-iron-titan-and-steel-20220602.html" },
+    ],
+  },
+  {
     date: Date.UTC(2022, 0, 21),
     dateEnd: Date.UTC(2022, 1, 8),
     label: "Fed Crash",
