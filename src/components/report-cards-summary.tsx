@@ -37,7 +37,7 @@ export function ReportCardsSummary() {
         <CardTitle as="h2" className="flex items-center justify-between">
           <span className="flex items-center gap-1.5"><ClipboardCheck className="h-4 w-4" />Risk Lab</span>
           <Link
-            href="/report-cards"
+            href="/risk-lab"
             className="text-xs font-normal text-muted-foreground hover:text-foreground transition-colors"
           >
             View grades &rarr;

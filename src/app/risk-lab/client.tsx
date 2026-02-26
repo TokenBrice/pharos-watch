@@ -121,7 +121,7 @@ export function ReportCardsClient() {
     }
 
     const qs = params.toString();
-    const newPath = qs ? `/report-cards/?${qs}` : "/report-cards/";
+    const newPath = qs ? `/risk-lab/?${qs}` : "/risk-lab/";
     router.replace(newPath, { scroll: false });
   }, [portfolio.holdings, stressTest.targetCoinId, stressTest.targetGrade, router]);
 

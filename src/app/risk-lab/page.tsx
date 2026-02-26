@@ -11,19 +11,19 @@ export const metadata: Metadata = {
   title: "Risk Lab — Stablecoin Safety Grades & Contagion Simulation",
   description: reportCardsDescription,
   alternates: {
-    canonical: "/report-cards/",
+    canonical: "/risk-lab/",
   },
   openGraph: {
     title: "Risk Lab — Stablecoin Safety Grades & Contagion Simulation",
     description: reportCardsDescription,
-    url: "/report-cards/",
+    url: "/risk-lab/",
   },
 };
 
 export default function ReportCardsPage() {
   return (
     <div className="space-y-6">
-      <BreadcrumbJsonLd name="Risk Lab" path="/report-cards/" />
+      <BreadcrumbJsonLd name="Risk Lab" path="/risk-lab/" />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
