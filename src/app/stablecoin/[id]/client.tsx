@@ -27,7 +27,7 @@ import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData, StablecoinMeta } from "@/lib/types";
-import { pegScoreColor, getScoreColor } from "@/lib/severity-colors";
+import { pegScoreColor, getScoreColor, deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 
 const DETAIL_SECTIONS = [
@@ -60,23 +60,17 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const { data: liquidityMap } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
   const reportCard = reportCardsData?.cards.find((c) => c.id === id);
-  const meta = coin;
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
   );
-  const isNavToken = meta?.flags.navToken ?? false;
+  const isNavToken = coin.flags.navToken ?? false;
 
   const isLoading = supplyLoading || listLoading;
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid gap-3 sm:gap-5 grid-cols-1 sm:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-44" />
-          ))}
-        </div>
+        <Skeleton className="h-[280px] rounded-xl" />
         <Skeleton className="h-[400px]" />
       </div>
     );
@@ -110,13 +104,32 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const prevDay = getPrevDayRaw(coinData);
   const prevWeek = getPrevWeekRaw(coinData);
   const prevMonth = getPrevMonthRaw(coinData);
-  const metaById = TRACKED_META_BY_ID;
-  const { rates: pegRates } = derivePegRates(listData?.peggedAssets ?? [], metaById, listData?.fxFallbackRates);
-  const pegRef = getPegReference(coinData.pegType, pegRates, meta?.commodityOunces);
+  const { rates: pegRates } = derivePegRates(listData?.peggedAssets ?? [], TRACKED_META_BY_ID, listData?.fxFallbackRates);
+  const pegRef = getPegReference(coinData.pegType, pegRates, coin.commodityOunces);
+  const deviationBps = (coinData.price != null && pegRef > 0)
+    ? Math.round(((coinData.price - pegRef) / pegRef) * 10000)
+    : 0;
 
   const supplyHistory = supplyData ?? [];
   const earliestTrackingDate = supplyHistory.length > 0 ? String(supplyHistory[0].date) : null;
   const pegScoreResult = pegSummaryData?.coins.find((c) => c.id === id) ?? null;
+
+  // Compute 90d mcap from supply history for change display
+  const prev90d = (() => {
+    if (supplyHistory.length === 0) return 0;
+    const now = Date.now();
+    const target = now - 90 * 24 * 60 * 60 * 1000;
+    let closest = supplyHistory[0];
+    for (const entry of supplyHistory) {
+      const d = new Date(entry.date).getTime();
+      if (Math.abs(d - target) < Math.abs(new Date(closest.date).getTime() - target)) {
+        closest = entry;
+      }
+    }
+    // Only use if within 7 days of target
+    if (Math.abs(new Date(closest.date).getTime() - target) > 7 * 24 * 60 * 60 * 1000) return 0;
+    return closest.circulatingUsd;
+  })();
 
   return (
     <div className="space-y-6">
@@ -133,7 +146,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
             <span>/</span>
-            <span className="text-foreground">{coin.name}</span>
+            <span className="text-foreground" aria-current="page">{coin.name}</span>
           </nav>
           <Link
             href={`/compare/?coins=${coin.symbol.toLowerCase()}`}
@@ -184,24 +197,22 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               </p>
 
               {/* Price + Gauge */}
-              {coinData && (
-                <div className="flex items-center gap-4 mt-auto">
-                  {coinData.price != null && pegRef > 0 && (
-                    <PegGauge
-                      deviationBps={Math.round(((coinData.price - pegRef) / pegRef) * 10000)}
-                      className="w-full max-w-[140px]"
-                    />
-                  )}
-                  <div>
-                    <div className="text-2xl font-bold font-mono tracking-tight">
-                      {formatNativePrice(coinData.price, meta?.flags.pegCurrency ?? "USD", pegRef)}
-                    </div>
-                    <p className="text-sm text-muted-foreground font-mono">
-                      {formatPegDeviation(coinData.price, pegRef)}
-                    </p>
+              <div className="flex items-center gap-4 mt-auto">
+                {coinData.price != null && pegRef > 0 && (
+                  <PegGauge
+                    deviationBps={deviationBps}
+                    className="w-full max-w-[140px]"
+                  />
+                )}
+                <div>
+                  <div className="text-2xl font-bold font-mono tracking-tight">
+                    {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
                   </div>
+                  <p className={`text-sm font-mono ${deviationColorClass(Math.abs(deviationBps))}`}>
+                    {formatPegDeviation(coinData.price, pegRef)}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Vertical divider (desktop only) */}
@@ -217,14 +228,38 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                   <p className={`text-xs font-mono mt-1 ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
                     {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"} <span className="text-muted-foreground">24h</span>
                   </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {coinData?.chains?.length ?? 0} chain{(coinData?.chains?.length ?? 0) !== 1 ? "s" : ""}
+                  </p>
                 </div>
 
                 {/* Top-right: Supply */}
                 <div className="p-3 border-b border-border/40">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Supply</p>
-                  <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatSupply(supply)}</div>
-                  <p className={`text-xs font-mono mt-1 ${mcap >= prevWeek ? "text-green-500" : "text-red-500"}`}>
-                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"} <span className="text-muted-foreground">7d</span>
+                  <div className="text-xl font-bold font-mono tracking-tight leading-tight">{formatSupply(supply)} <span className="text-base text-muted-foreground">{coin.symbol}</span></div>
+                  <p className="text-xs font-mono mt-1">
+                    <span className={mcap >= prevWeek ? "text-green-500" : "text-red-500"}>
+                      {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
+                    </span>
+                    <span className="text-muted-foreground"> 7d</span>
+                    {prevMonth > 0 && (
+                      <>
+                        <span className="text-muted-foreground"> · </span>
+                        <span className={mcap >= prevMonth ? "text-green-500" : "text-red-500"}>
+                          {formatPercentChange(mcap, prevMonth)}
+                        </span>
+                        <span className="text-muted-foreground"> 30d</span>
+                      </>
+                    )}
+                    {prev90d > 0 && (
+                      <>
+                        <span className="text-muted-foreground"> · </span>
+                        <span className={mcap >= prev90d ? "text-green-500" : "text-red-500"}>
+                          {formatPercentChange(mcap, prev90d)}
+                        </span>
+                        <span className="text-muted-foreground"> 90d</span>
+                      </>
+                    )}
                   </p>
                 </div>
 
@@ -257,48 +292,36 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
                 {/* Bottom-right: Liquidity Score */}
                 <div className="p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liquidity</p>
                   {(() => {
                     const liq = liquidityMap?.[id];
-                    const hasLiq = liq != null && (liq.liquidityScore !== null || liq.poolCount > 0);
-                    const score = liq?.liquidityScore ?? 0;
-                    const textColor = hasLiq ? getScoreColor(score) : "";
-                    return hasLiq ? (
+                    if (liq == null || (liq.liquidityScore === null && liq.poolCount === 0)) {
+                      return <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>;
+                    }
+                    const score = liq.liquidityScore ?? 0;
+                    return (
                       <>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liquidity</p>
-                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${textColor}`}>
+                        <div className={`text-xl font-bold font-mono tracking-tight leading-tight ${getScoreColor(score)}`}>
                           {Math.round(score)}<span className="text-base text-muted-foreground">/100</span>
                         </div>
                         <p className="text-xs text-muted-foreground font-mono mt-1">
-                          {formatCurrency(liq!.totalTvlUsd)} TVL
+                          {formatCurrency(liq.totalTvlUsd)} TVL
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {liq!.poolCount} pool{liq!.poolCount !== 1 ? "s" : ""} · {liq!.chainCount} chain{liq!.chainCount !== 1 ? "s" : ""}
+                          {liq.poolCount} pool{liq.poolCount !== 1 ? "s" : ""} · {liq.chainCount} chain{liq.chainCount !== 1 ? "s" : ""}
                         </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Liquidity</p>
-                        <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
                       </>
                     );
                   })()}
                 </div>
               </div>
 
-              {/* Footer line: chain count + 30d change + active depeg */}
-              <div className="flex items-center justify-between px-3 pt-3 border-t border-border/40 text-xs text-muted-foreground">
-                <span>{coinData?.chains?.length ?? 0} chain{(coinData?.chains?.length ?? 0) !== 1 ? "s" : ""}</span>
-                <div className="flex items-center gap-3">
-                  {prevMonth > 0 && (
-                    <span className={`font-mono ${mcap >= prevMonth ? "text-green-500" : "text-red-500"}`}>
-                      {formatPercentChange(mcap, prevMonth)} <span className="text-muted-foreground">30d</span>
-                    </span>
-                  )}
-                  {pegScoreResult?.activeDepeg && (
-                    <span className="text-red-500 font-medium">Active depeg</span>
-                  )}
+              {/* Footer: active depeg warning */}
+              {pegScoreResult?.activeDepeg && (
+                <div className="px-3 pt-3 border-t border-border/40 text-xs">
+                  <span className="text-red-500 font-medium">Active depeg</span>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -323,9 +346,9 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       </section>
 
       <section id="info">
-        {meta && <KeyInfoCard meta={meta} />}
-        {meta && <ContractAddresses meta={meta} />}
-        {meta?.reserves && <ReserveTreemap reserves={meta.reserves} />}
+        <KeyInfoCard meta={coin} />
+        <ContractAddresses meta={coin} />
+        {coin.reserves && <ReserveTreemap reserves={coin.reserves} />}
       </section>
 
       <section id="liquidity">
