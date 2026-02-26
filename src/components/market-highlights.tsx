@@ -71,12 +71,6 @@ function BiggestDepegs({
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Current Biggest Depegs
-          <Link
-            href="/peg-tracker"
-            className="text-xs font-normal normal-case tracking-normal text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Depeg tracker &rarr;
-          </Link>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2.5">

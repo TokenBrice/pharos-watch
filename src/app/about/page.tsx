@@ -197,7 +197,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-emerald-500" />
-                <Link href="/peg-tracker" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
+                <Link href="/" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
                   Peg Tracker
                 </Link>
               </div>
