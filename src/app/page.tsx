@@ -34,7 +34,7 @@ export default function HomePage() {
       />
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Shining a Light on Every Peg</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Shining a Light on Every Peg</h1>
           <p className="text-muted-foreground">
             Track {total} stablecoins, across {PEG_CURRENCY_COUNT} pegs. Freezes, liquidity, depegs: all is watched.
           </p>
