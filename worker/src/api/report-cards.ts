@@ -296,7 +296,7 @@ function computeCard(
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq),
     resilience: scoreResilience(meta, canBeBlacklisted),
-    decentralization: scoreDecentralization(meta.flags.governance as GovernanceType),
+    decentralization: scoreDecentralization(meta.flags.governance as GovernanceType, meta),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
 

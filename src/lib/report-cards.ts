@@ -347,11 +347,16 @@ export function scoreResilience(
 }
 
 /**
- * Decentralization: based on governance type.
- * decentralized -> 100, centralized-dependent -> 50, centralized -> 0
+ * Decentralization: governance type + chain-risk modifier.
+ *
+ * Base scores: decentralized 100, centralized-dependent 50, centralized 0.
+ * Chain penalty: protocols on less decentralized chains get a reduction
+ * because governance decentralization is undermined when the underlying
+ * chain itself has centralisation concerns (validator set, halt risk, etc.).
  */
 export function scoreDecentralization(
   governance: GovernanceType,
+  meta?: StablecoinMeta,
 ): ReportCardDimension {
   const scoreMap: Record<GovernanceType, number> = {
     decentralized: 100,
@@ -359,14 +364,33 @@ export function scoreDecentralization(
     centralized: 0,
   };
 
-  const score = scoreMap[governance];
+  let score = scoreMap[governance];
+
+  // Chain-risk penalty (only meaningful for non-centralized governance)
+  const chainPenalty: Record<ChainRisk, number> = {
+    ethereum: 0,
+    "stage1-l2": -10,
+    "established-alt-l1": -25,
+    unproven: -35,
+  };
+  const chainRisk = meta?.chainRisk;
+  const penalty = chainRisk ? (chainPenalty[chainRisk] ?? 0) : 0;
+  if (governance !== "centralized" && penalty < 0) {
+    score = Math.max(0, score + penalty);
+  }
+
   const labelMap: Record<GovernanceType, string> = {
     decentralized: "Decentralized governance",
     "centralized-dependent": "CeFi-Dependent governance",
     centralized: "Centralized governance",
   };
 
-  return { grade: scoreToGrade(score), score, detail: labelMap[governance] };
+  let detail = labelMap[governance];
+  if (penalty < 0) {
+    detail += ` (${CHAIN_RISK_LABEL[chainRisk!]}: ${penalty} penalty)`;
+  }
+
+  return { grade: scoreToGrade(score), score, detail };
 }
 
 /**
