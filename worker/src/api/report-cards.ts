@@ -17,6 +17,7 @@ import {
   scoreDecentralization,
   scoreDependencyRisk,
   computeOverallGrade,
+  resolveResilienceFactors,
 } from "../../../src/lib/report-cards";
 import type {
   StablecoinData,
@@ -30,6 +31,9 @@ import type {
   DimensionKey,
   GovernanceType,
   RawDimensionInputs,
+  ChainRisk,
+  CollateralQuality,
+  CustodyModel,
 } from "../../../src/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -220,6 +224,9 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
         pegScore: null, activeDepeg: false, depegEventCount: 0, lastEventAt: null,
         liquidityScore: null, concentrationHhi: null, bluechipGrade: null,
         canBeBlacklisted: false,
+        chainRisk: "ethereum" as ChainRisk,
+        collateralQuality: "native" as CollateralQuality,
+        custodyModel: "onchain" as CustodyModel,
         governanceTier: "centralized" as GovernanceType, dependencies: [],
       },
       isDefunct: true,
@@ -282,12 +289,13 @@ function computeCard(
   const rating = bluechipMap[meta.id];
 
   const canBeBlacklisted = isBlacklistable(meta);
+  const resilienceFactors = resolveResilienceFactors(meta);
 
   // Score each dimension
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq),
-    resilience: scoreResilience(canBeBlacklisted),
+    resilience: scoreResilience(meta, canBeBlacklisted),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
@@ -303,6 +311,9 @@ function computeCard(
     concentrationHhi: liq?.concentrationHhi ?? null,
     bluechipGrade: rating?.grade ?? null,
     canBeBlacklisted,
+    chainRisk: resilienceFactors.chainRisk,
+    collateralQuality: resilienceFactors.collateralQuality,
+    custodyModel: resilienceFactors.custodyModel,
     governanceTier: meta.flags.governance as GovernanceType,
     dependencies: meta.dependencies ?? [],
   };
