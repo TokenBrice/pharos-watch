@@ -502,30 +502,29 @@ export function CompareClient() {
               Quick comparisons
             </h3>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {COMPARISON_PRESETS.map((preset) => (
+              {COMPARISON_PRESETS.map((preset) => {
+                const applyPreset = () => {
+                  trackEvent("comparison_preset_selected", {
+                    preset: preset.title,
+                  });
+                  const params = new URLSearchParams();
+                  params.set("coins", preset.coins.join(","));
+                  router.replace(`/compare/?${params.toString()}`, {
+                    scroll: false,
+                  });
+                };
+                return (
                 <Card
                   key={preset.title}
                   className="cursor-pointer transition-colors hover:border-foreground/25 hover:bg-accent/50"
                   role="button"
                   tabIndex={0}
-                  onClick={() => {
-                    trackEvent("comparison_preset_selected", {
-                      preset: preset.title,
-                    });
-                    const params = new URLSearchParams();
-                    params.set("coins", preset.coins.join(","));
-                    router.replace(`/compare/?${params.toString()}`, {
-                      scroll: false,
-                    });
-                  }}
+                  aria-label={`Compare ${preset.coins.map((s) => s.toUpperCase()).join(", ")}`}
+                  onClick={applyPreset}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      const params = new URLSearchParams();
-                      params.set("coins", preset.coins.join(","));
-                      router.replace(`/compare/?${params.toString()}`, {
-                        scroll: false,
-                      });
+                      applyPreset();
                     }
                   }}
                 >
@@ -541,7 +540,8 @@ export function CompareClient() {
                     </p>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
