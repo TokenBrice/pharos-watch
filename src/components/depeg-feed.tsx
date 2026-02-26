@@ -38,7 +38,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
           Recent Depeg Events
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1.5">
+      <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1.5">
         {visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
           return (
@@ -94,7 +94,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
         })}
 
         {hasMore && (
-          <div className="pt-2 text-center">
+          <div className="pt-2 text-center lg:col-span-2">
             <Button
               variant="ghost"
               size="sm"
