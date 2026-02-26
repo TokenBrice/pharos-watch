@@ -12,6 +12,7 @@ import { StablecoinTable } from "@/components/stablecoin-table";
 import { CategoryStats } from "@/components/category-stats";
 import { MarketHighlights } from "@/components/market-highlights";
 import { TotalMcapChart } from "@/components/total-mcap-chart";
+import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { BlacklistSummary } from "@/components/blacklist-summary";
 import { CemeterySummary } from "@/components/cemetery-summary";
@@ -69,7 +70,10 @@ export function HomepageClient() {
         />
       )}
 
-      <TotalMcapChart />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TotalMcapChart />
+        <PsiHistoryChart />
+      </div>
 
       <section>
         <h2 className="text-lg font-semibold tracking-tight mb-4">Pharos&apos; Unique Features</h2>
