@@ -57,15 +57,6 @@ const PSI_EVENTS = [
     ],
   },
   {
-    date: Date.UTC(2021, 6, 20),
-    dateEnd: Date.UTC(2021, 7, 5),
-    label: "EIP-1559 Rally",
-    position: "top" as const,
-    links: [
-      { title: "Pre-London hard fork rally saw traders dump stablecoins for ETH/BTC, pushing several below peg", url: "https://www.coindesk.com/markets/2021/07/25/countdown-to-ethereums-london-hard-fork-what-you-need-to-know" },
-    ],
-  },
-  {
     date: Date.UTC(2022, 0, 21),
     dateEnd: Date.UTC(2022, 1, 8),
     label: "Fed Crash",
