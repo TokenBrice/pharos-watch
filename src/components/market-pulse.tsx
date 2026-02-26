@@ -64,7 +64,7 @@ function KeyNumbers({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Key Numbers
       </p>
 
@@ -189,7 +189,7 @@ function MoversSignals({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Movers
       </p>
 
@@ -291,7 +291,7 @@ function ActivityTicker({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Activity
       </p>
       {items.length === 0 ? (
@@ -358,7 +358,7 @@ export function MarketPulse({
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardContent>
-        <div className="grid gap-6 lg:grid-cols-3 lg:divide-x lg:divide-border">
+        <div className="grid gap-6 lg:grid-cols-3 lg:divide-x lg:divide-border/50">
           <div className="lg:pr-6">
             <KeyNumbers
               data={data}

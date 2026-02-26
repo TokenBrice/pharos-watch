@@ -201,7 +201,7 @@ export function CategoryStats({ data }: CategoryStatsProps) {
                   </div>
                 );
               })}
-              <div className="pt-1 border-t">
+              <div className="pt-1 border-t border-border/50">
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>Total</span>
                   <span className="font-mono">{formatCurrency(stats.altTotal, 0)}</span>
