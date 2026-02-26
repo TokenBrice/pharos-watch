@@ -10,26 +10,23 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
-| **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
-| **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
+| **Peg Stability** | 25% | `pegScore` from peg summary | Direct passthrough of composite peg score. NAV tokens → NR |
+| **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
 | **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 10% | Governance type + chain risk | Base: `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0. Chain-risk penalty applied for non-Ethereum chains |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
 
 ### Peg Stability Details
 
-- Uses `computePegScore()` output over 4-year tracking window
-- Active depeg caps score at 65 (C grade) regardless of historical performance
-- Clean 12-month streak awards +3 bonus points
+- Direct passthrough of `computePegScore()` output (see `docs/stability-index.md` for the composite formula)
 - NAV tokens (yield-accruing, price-appreciating) receive NR — peg tracking not applicable
 - Yield-bearing annotation added to detail text
 
 ### Liquidity Details
 
-- Base score from DEX liquidity scoring system (see `docs/dex-liquidity.md`)
-- Concentration penalty via Herfindahl-Hirschman Index:
-  - HHI > 0.8: −10 (nearly single-pool concentration)
-  - HHI > 0.5: −5 (moderate concentration)
+- Direct passthrough of DEX liquidity composite score (see `docs/dex-liquidity.md`)
+- The composite already weighs TVL depth, volume, pool quality, durability, pair diversity, and cross-chain breadth
+- High concentration (HHI > 0.5) noted in detail text but no additional penalty applied
 
 ### Resilience Details
 

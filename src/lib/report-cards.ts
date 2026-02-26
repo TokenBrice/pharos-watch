@@ -148,23 +148,7 @@ export function scorePegStability(
     return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
   }
 
-  let score = peg.pegScore;
-
-  // Cap at 65 (C) if there is an active depeg
-  if (peg.activeDepeg) {
-    score = Math.min(score, 65);
-  }
-
-  // Award +3 if no depeg events, or last one was 12+ months ago
-  const twelveMonthsAgo = Date.now() / 1000 - 365 * 86400;
-  const noRecentEvents =
-    peg.eventCount === 0 ||
-    (peg.lastEventAt !== null && peg.lastEventAt < twelveMonthsAgo);
-  if (noRecentEvents && !peg.activeDepeg) {
-    score = Math.min(100, score + 3);
-  }
-
-  score = Math.round(Math.max(0, Math.min(100, score)));
+  const score = Math.round(Math.max(0, Math.min(100, peg.pegScore)));
 
   // Build detail string
   const parts: string[] = [];
@@ -188,10 +172,9 @@ export function scorePegStability(
 }
 
 /**
- * Liquidity: uses liquidityScore from DEX liquidity data.
- * - -5 if HHI > 0.5
- * - -10 if HHI > 0.8
- * - NR if no data
+ * Liquidity: uses liquidityScore from DEX liquidity data as-is.
+ * The composite score already factors in pool quality, diversity, and durability.
+ * NR if no data.
  */
 export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
@@ -200,18 +183,7 @@ export function scoreLiquidity(
     return { grade: "NR", score: null, detail: "No DEX liquidity data available" };
   }
 
-  let score = liq.liquidityScore;
-
-  // Concentration penalty
-  if (liq.concentrationHhi !== null) {
-    if (liq.concentrationHhi > 0.8) {
-      score -= 10;
-    } else if (liq.concentrationHhi > 0.5) {
-      score -= 5;
-    }
-  }
-
-  score = Math.round(Math.max(0, Math.min(100, score)));
+  const score = Math.round(Math.max(0, Math.min(100, liq.liquidityScore)));
 
   const parts: string[] = [];
   parts.push(`Liquidity score: ${score}/100`);
