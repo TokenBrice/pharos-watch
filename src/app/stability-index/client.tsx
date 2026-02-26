@@ -806,6 +806,12 @@ export function StabilityIndexClient() {
       {/* Historical stat strip — desktop only */}
       <HistoryStats history={data.history} />
 
+      {/* Score History */}
+      <ScoreChart data={chartData} />
+
+      {/* Notable Events */}
+      <EventTimeline data={chartData} />
+
       {/* Top Contributors */}
       {data.current.contributors && data.current.contributors.length > 0 && (
         <ContributorsTable
@@ -813,12 +819,6 @@ export function StabilityIndexClient() {
           totalMcapUsd={data.current.totalMcapUsd ?? 0}
         />
       )}
-
-      {/* Score History */}
-      <ScoreChart data={chartData} />
-
-      {/* Notable Events */}
-      <EventTimeline data={chartData} />
 
       {/* Component Breakdown */}
       <ComponentChart data={componentData} />
