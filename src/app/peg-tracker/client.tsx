@@ -13,6 +13,7 @@ import { PegLeaderboard } from "@/components/peg-leaderboard";
 import { DepegTimeline } from "@/components/depeg-timeline";
 import { DepegFeed } from "@/components/depeg-feed";
 import type { PegCurrency, GovernanceType } from "@/lib/types";
+import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const VALID_PEG_FILTERS = new Set(["all", "USD", "EUR", "GOLD"]);
 const VALID_TYPE_FILTERS = new Set(["all", "centralized", "centralized-dependent", "decentralized"]);
@@ -30,9 +31,9 @@ export function PegTrackerClient() {
   const pegFilter = (VALID_PEG_FILTERS.has(rawPeg) ? rawPeg : "all") as PegCurrency | "all";
   const typeFilter = (VALID_TYPE_FILTERS.has(rawType) ? rawType : "all") as GovernanceType | "all";
 
-  const setPegFilter = useCallback((v: PegCurrency | "all") => setParam("peg", v), [setParam]);
-  const setTypeFilter = useCallback((v: GovernanceType | "all") => setParam("type", v), [setParam]);
-  const setSearchQuery = useCallback((v: string) => setParam("q", v), [setParam]);
+  const setPegFilter = useCallback((v: PegCurrency | "all") => { trackEvent("filter_applied", { page: "peg-tracker", filter_type: "peg", filter_value: v }); setParam("peg", v); }, [setParam]);
+  const setTypeFilter = useCallback((v: GovernanceType | "all") => { trackEvent("filter_applied", { page: "peg-tracker", filter_type: "type", filter_value: v }); setParam("type", v); }, [setParam]);
+  const setSearchQuery = useCallback((v: string) => { trackSearch("peg-tracker", v.length); setParam("q", v); }, [setParam]);
 
   const filteredCoins = useMemo(
     () => (pegData?.coins ?? []).filter((c) => {

@@ -14,6 +14,7 @@ import { BlacklistTable } from "@/components/blacklist-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { BlacklistStablecoin, BlacklistEventType } from "@/lib/types";
+import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const PAGE_SIZE = 50;
 
@@ -38,15 +39,19 @@ function BlacklistPageInner() {
   const page = rawPage ? Math.max(1, parseInt(rawPage, 10) || 1) : 1;
 
   const handleStablecoinChange = useCallback((v: BlacklistStablecoin | "all") => {
+    trackEvent("filter_applied", { page: "blacklist", filter_type: "stablecoin", filter_value: v });
     updateParams({ stablecoin: v, page: "1" });
   }, [updateParams]);
   const handleChainChange = useCallback((v: string) => {
+    trackEvent("filter_applied", { page: "blacklist", filter_type: "chain", filter_value: v });
     updateParams({ chain: v, page: "1" });
   }, [updateParams]);
   const handleEventTypeChange = useCallback((v: BlacklistEventType | "all") => {
+    trackEvent("filter_applied", { page: "blacklist", filter_type: "event_type", filter_value: v });
     updateParams({ event: v, page: "1" });
   }, [updateParams]);
   const handleSearchChange = useCallback((v: string) => {
+    trackSearch("blacklist", v.length);
     updateParams({ q: v || "all", page: "1" });
   }, [updateParams]);
 

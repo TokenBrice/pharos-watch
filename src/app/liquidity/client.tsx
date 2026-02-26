@@ -18,6 +18,7 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats";
 import type { PegCurrency } from "@/lib/types";
+import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -32,8 +33,8 @@ export function LiquidityClient() {
   const { getParam, setParam } = useUrlFilters();
   const pegFilter = (getParam("peg", "all")) as PegCurrency | "all";
   const searchQuery = getParam("q");
-  const setPegFilter = useCallback((v: PegCurrency | "all") => setParam("peg", v), [setParam]);
-  const setSearchQuery = useCallback((v: string) => setParam("q", v), [setParam]);
+  const setPegFilter = useCallback((v: PegCurrency | "all") => { trackEvent("filter_applied", { page: "liquidity", filter_type: "peg", filter_value: v }); setParam("peg", v); }, [setParam]);
+  const setSearchQuery = useCallback((v: string) => { trackSearch("liquidity", v.length); setParam("q", v); }, [setParam]);
   const router = useRouter();
 
   // Combine tracked stablecoins with liquidity data, applying filters
