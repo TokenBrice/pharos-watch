@@ -69,7 +69,7 @@ export default async function DigestDetailPage({
   const older = idx < allDigests.length - 1 ? allDigests[idx + 1] : null;
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6">
       <BreadcrumbJsonLd name={`Daily Digest — ${formatted}`} path={`/digest/${digest.date}/`} />
       <script
         type="application/ld+json"
