@@ -76,11 +76,6 @@ const COMPARISON_PRESETS = [
     coins: ["eurs", "eura", "eure"],
   },
   {
-    title: "Yield-Bearing",
-    description: "Stablecoins with native yield mechanisms",
-    coins: ["usds", "usde", "gho"],
-  },
-  {
     title: "Tokenized Treasuries",
     description: "NAV-priced tokens backed by U.S. Treasury bills",
     coins: ["usyc", "usdy", "tbill", "buidl"],
