@@ -13,6 +13,7 @@ import { DIMENSION_ORDER, scoreToGrade } from "@/lib/report-cards";
 import type { PortfolioState } from "@/hooks/use-portfolio";
 import type { ReportCard } from "@/lib/types";
 import { ChevronDown, ChevronRight, X, Share2, Trash2, AlertTriangle, Wallet } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
@@ -264,6 +265,7 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
   const handleShare = useCallback(async () => {
     const url = portfolio.shareUrl();
     if (!url) return;
+    trackEvent("portfolio_shared", { coin_count: portfolio.holdings.length });
     try {
       await navigator.clipboard.writeText(url);
       setToast("Link copied to clipboard");
@@ -274,13 +276,14 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
   }, [portfolio]);
 
   const handleClear = useCallback(() => {
+    trackEvent("portfolio_cleared", { coin_count: portfolio.holdings.length });
     portfolio.clearAll();
   }, [portfolio]);
 
   return (
     <Card>
       {/* Header */}
-      <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => !v)}>
+      <CardHeader className="cursor-pointer select-none" onClick={() => setIsOpen((v) => { const next = !v; trackEvent("panel_toggled", { panel: "portfolio", action: next ? "open" : "close" }); return next; })}>
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-violet-500 shrink-0" />
@@ -345,7 +348,7 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
                 amount={h.amount}
                 logos={logos}
                 onSetAmount={portfolio.setAmount}
-                onRemove={portfolio.removeCoin}
+                onRemove={(coinId) => { trackEvent("portfolio_coin_removed", { coin_id: coinId }); portfolio.removeCoin(coinId); }}
               />
             ))}
 
@@ -354,7 +357,7 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
               selected={null}
               logos={logos}
               disabledIds={disabledIds}
-              onSelect={(coin) => portfolio.addCoin(coin.id, 0)}
+              onSelect={(coin) => { trackEvent("portfolio_coin_added", { coin_id: coin.id }); portfolio.addCoin(coin.id, 0); }}
               onRemove={() => {}}
             />
           </div>
