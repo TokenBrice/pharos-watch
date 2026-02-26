@@ -13,7 +13,8 @@ export function StabilityIndexSummary() {
 
   const stats = useMemo(() => {
     if (!data?.current) return null;
-    const { score, band } = data.current;
+    const score = data.current.avg24h ?? data.current.score;
+    const band = data.current.avg24hBand ?? data.current.band;
     // History is newest-first; count consecutive days matching current band
     let daysInBand = 1; // today counts
     for (const point of data.history) {

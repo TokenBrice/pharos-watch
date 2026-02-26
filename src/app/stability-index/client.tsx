@@ -693,7 +693,7 @@ export function StabilityIndexClient() {
 
   const daysInBand = useMemo(() => {
     if (!data?.current || !data.history.length) return 0;
-    const currentBand = data.current.band;
+    const currentBand = data.current.avg24hBand ?? data.current.band;
     // History is newest-first; count consecutive days with same band
     let count = 0;
     for (const point of data.history) {
@@ -784,25 +784,27 @@ export function StabilityIndexClient() {
 
   if (!data?.current) return null;
 
-  const { score, band, components } = data.current;
+  const { score, band, avg24h, avg24hBand, components } = data.current;
+  const displayScore = avg24h ?? score;
+  const displayBand = avg24hBand ?? band;
   const yesterday = data.history.length > 0 ? data.history[0] : null;
-  const delta = yesterday ? Math.round((score - yesterday.score) * 10) / 10 : null;
-  const colorClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
-  const hexColor = PSI_HEX_COLORS[band] ?? "#888";
+  const delta = yesterday ? Math.round((displayScore - yesterday.score) * 10) / 10 : null;
+  const colorClass = PSI_BAND_CLASSES[displayBand] ?? "text-foreground";
+  const hexColor = PSI_HEX_COLORS[displayBand] ?? "#888";
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Hero */}
       <Card className="rounded-2xl">
         <CardContent className="flex flex-col sm:flex-row items-center gap-6 py-8">
-          <PsiLighthouse band={band} color={hexColor} size={80} />
+          <PsiLighthouse band={displayBand} color={hexColor} size={80} />
           <div className="flex flex-col items-center sm:items-start gap-1">
             <div className="flex items-baseline gap-3">
               <span className={`text-5xl font-bold tabular-nums ${colorClass}`}>
-                {score.toFixed(1)}
+                {displayScore.toFixed(1)}
               </span>
               <span className={`text-xl font-bold uppercase tracking-wide ${colorClass}`}>
-                {band}
+                {displayBand}
               </span>
             </div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -811,7 +813,7 @@ export function StabilityIndexClient() {
                   {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
                 </span>
               )}
-              <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
+              <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {displayBand}</span>
             </div>
           </div>
           {/* Component breakdown — desktop only */}

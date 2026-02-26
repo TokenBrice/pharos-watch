@@ -21,6 +21,8 @@ export interface StabilityContributor {
 interface StabilityIndexCurrent {
   score: number;
   band: string;
+  avg24h?: number;
+  avg24hBand?: string;
   components: StabilityIndexComponents;
   contributors?: StabilityContributor[];
   totalMcapUsd?: number;

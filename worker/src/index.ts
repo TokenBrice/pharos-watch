@@ -10,6 +10,7 @@ import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
 import { snapshotSupply } from "./cron/snapshot-supply";
 import { generateDailyDigest } from "./cron/daily-digest";
 import { computeAndStoreStabilityIndex } from "./cron/stability-index";
+import { snapshotPsiDaily } from "./cron/snapshot-psi";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 import { initCoinGecko } from "./lib/coingecko";
@@ -197,6 +198,7 @@ const worker = {
       }
       case "0 8 * * *":
         ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
+        ctx.waitUntil(logCronRun(db, "snapshot-psi", () => snapshotPsiDaily(db)));
         ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
         ctx.waitUntil(logCronRun(db, "daily-digest", () => {

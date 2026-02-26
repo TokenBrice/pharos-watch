@@ -109,18 +109,20 @@ export function StabilityIndex() {
     );
   }
 
-  const { score, band, computedAt } = data!.current!;
+  const { score, band, avg24h, avg24hBand, computedAt } = data!.current!;
+  const displayScore = avg24h ?? score;
+  const displayBand = avg24hBand ?? band;
   const history = data!.history;
 
   // Delta from yesterday (first history point)
   const yesterday = history.length > 0 ? history[0] : null;
-  const delta = yesterday ? Math.round((score - yesterday.score) * 10) / 10 : null;
+  const delta = yesterday ? Math.round((displayScore - yesterday.score) * 10) / 10 : null;
 
-  const colorClass = PSI_BAND_CLASSES[band] ?? "text-foreground";
-  const sparkColor = PSI_HEX_COLORS[band] ?? "#888";
+  const colorClass = PSI_BAND_CLASSES[displayBand] ?? "text-foreground";
+  const sparkColor = PSI_HEX_COLORS[displayBand] ?? "#888";
 
   // Build sparkline points from history (oldest to newest) + current
-  const sparkData = [...history].reverse().concat({ date: computedAt, score, band });
+  const sparkData = [...history].reverse().concat({ date: computedAt, score: displayScore, band: displayBand });
 
   return (
     <Link href="/stability-index" className="flex items-center gap-4 animate-in fade-in duration-300 hover:opacity-80 transition-opacity">
@@ -128,13 +130,13 @@ export function StabilityIndex() {
         Pharos Stability Index
       </span>
       <div className="flex items-center gap-3">
-        <PsiLighthouse band={band} color={sparkColor} />
+        <PsiLighthouse band={displayBand} color={sparkColor} />
         <div className="flex items-baseline gap-2">
           <span className={`text-2xl font-bold tabular-nums ${colorClass}`}>
-            {score.toFixed(1)}
+            {displayScore.toFixed(1)}
           </span>
           <span className={`text-sm font-bold uppercase tracking-wide ${colorClass}`}>
-            {band}
+            {displayBand}
           </span>
         </div>
       </div>
