@@ -17,6 +17,8 @@ const PROTOCOL_NAMES: Record<string, string> = {
   sushiswap: "SushiSwap",
   "trader-joe": "Trader Joe",
   raydium: "Raydium",
+  orca: "Orca",
+  quickswap: "QuickSwap",
 };
 
 export const PROTOCOL_LOGOS: Record<string, string> = {
@@ -31,6 +33,8 @@ export const PROTOCOL_LOGOS: Record<string, string> = {
   sushiswap: "/dexes/sushiswap.png",
   "trader-joe": "/dexes/trader-joe.png",
   raydium: "/dexes/raydium.png",
+  orca: "/dexes/orca.png",
+  quickswap: "/dexes/quickswap.png",
 };
 
 export const PROTOCOL_COLORS: Record<string, string> = {
