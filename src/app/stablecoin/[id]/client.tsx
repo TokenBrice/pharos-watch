@@ -140,9 +140,9 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       )}
 
       {/* HERO CARD */}
-      <Card className="rounded-xl">
+      <Card className="rounded-xl gap-0">
         {/* Top bar: breadcrumb + compare */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-border/40">
+        <div className="flex items-center justify-between px-5 pt-3 pb-2.5 border-b border-border/30">
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
             <span>/</span>
@@ -327,7 +327,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         </div>
 
         {/* Section nav as card bottom bar */}
-        <div className="border-t border-border/40">
+        <div className="border-t border-border/30">
           <DetailSectionNav sections={DETAIL_SECTIONS} />
         </div>
       </Card>
