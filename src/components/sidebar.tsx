@@ -14,13 +14,13 @@ const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
 
 function useExpanded() {
-  const [pinned, setPinned] = useState(false);
+  const [pinned, setPinned] = useState(true);
   const [hovered, setHovered] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") setPinned(true);
+    if (stored === "false") setPinned(false);
   }, []);
 
   const togglePin = useCallback(() => {
