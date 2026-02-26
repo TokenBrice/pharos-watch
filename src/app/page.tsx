@@ -18,7 +18,7 @@ export default function HomePage() {
   const itemListCount = itemListElements.length;
 
   return (
-    <>
+    <div className="space-y-3 sm:space-y-5">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -32,16 +32,14 @@ export default function HomePage() {
           }),
         }}
       />
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Image src="/pharos-icon.png" alt="" width={32} height={32} className="rounded-lg" priority />
-          <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
-          <span className="text-xs text-muted-foreground/60">
-            {total} stablecoins &middot; {PEG_CURRENCY_COUNT} pegs
-          </span>
-        </div>
-        <KpiBar />
+      <div className="flex items-center gap-3">
+        <Image src="/pharos-icon.png" alt="" width={32} height={32} className="rounded-lg" priority />
+        <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
+        <span className="text-xs text-muted-foreground/60">
+          {total} stablecoins &middot; {PEG_CURRENCY_COUNT} pegs
+        </span>
       </div>
+      <KpiBar />
       <Suspense fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
           <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
@@ -49,6 +47,6 @@ export default function HomePage() {
       }>
         <HomepageClient />
       </Suspense>
-    </>
+    </div>
   );
 }
