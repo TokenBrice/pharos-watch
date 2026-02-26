@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { Activity, ClipboardCheck, Droplets, Info, LayoutDashboard, Menu, ShieldBan, Skull, createLucideIcon } from "lucide-react";
+import { ClipboardCheck, Droplets, Info, LayoutDashboard, Menu, ShieldBan, Skull, createLucideIcon } from "lucide-react";
 
 const LighthouseIcon = createLucideIcon("lighthouse", [
   ["path", { d: "M10 22V8l2-6 2 6v14", key: "tower" }],
@@ -27,8 +27,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon },
   { href: "/risk-lab", label: "Risk Lab", icon: ClipboardCheck },
-  { href: "/peg-tracker", label: "Peg Tracker", icon: Activity },
-  { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
+{ href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan },
   { href: "/liquidity", label: "Liquidity", icon: Droplets },
   { href: "/cemetery", label: "Cemetery", icon: Skull },
   { href: "/about", label: "About", icon: Info },
