@@ -184,7 +184,7 @@ export function PegDiversityChart() {
               role="figure"
               aria-label={`Fiat-pegged other than USD stacked area chart showing ${pegCount} peg currencies`}
             >
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <AreaChart
                   data={filteredData}
                   margin={{ top: 5, right: 5, bottom: 20, left: 5 }}

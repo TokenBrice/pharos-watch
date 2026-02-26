@@ -125,7 +125,7 @@ export function TotalMcapChart() {
             </div>
           </div>
           <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Total stablecoin market cap chart showing ${filteredData.length} data points`}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={filteredData} margin={{ top: 5, right: 20, bottom: 20, left: 5 }}>
               <defs>
                 <linearGradient id="usdtGrad" x1="0" y1="0" x2="0" y2="1">
