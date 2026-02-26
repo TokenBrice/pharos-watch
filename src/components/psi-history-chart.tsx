@@ -121,6 +121,31 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
   const isMobile = useIsMobile();
 
+  /* Hide overlapping event labels when zoomed into a tight range */
+  const visibleEvents = useMemo(() => {
+    const min = filteredData[0]?.ts;
+    const max = filteredData[filteredData.length - 1]?.ts;
+    if (!min || !max) return PSI_EVENTS.map((e) => ({ ...e, hideLabel: false }));
+
+    const rangeMs = max - min;
+    const threshold = rangeMs * 0.05; // 5% of visible range
+
+    const sorted = [...PSI_EVENTS]
+      .filter((e) => e.date <= max && (e.dateEnd ?? e.date) >= min)
+      .sort((a, b) => a.date - b.date);
+
+    const result = sorted.map((evt, i) => {
+      if (i > 0 && evt.date - sorted[i - 1].date < threshold)
+        return { ...evt, hideLabel: true };
+      return { ...evt, hideLabel: false };
+    });
+
+    // Events outside the visible range stay hidden
+    return PSI_EVENTS.map(
+      (e) => result.find((r) => r.label === e.label) ?? { ...e, hideLabel: true },
+    );
+  }, [filteredData]);
+
   return (
     <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -152,7 +177,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                     ifOverflow="extendDomain"
                   />
                 ))}
-                {PSI_EVENTS.map((evt) =>
+                {visibleEvents.map((evt) =>
                   evt.dateEnd ? (
                     <ReferenceArea
                       key={evt.label}
@@ -163,7 +188,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                       stroke="#94a3b8"
                       strokeOpacity={0.3}
                       strokeDasharray="4 4"
-                      label={isMobile ? undefined : {
+                      label={isMobile || evt.hideLabel ? undefined : {
                         value: evt.label,
                         position: evt.position === "top" ? "insideTop" : "insideBottomLeft",
                         fontSize: 11,
@@ -177,7 +202,7 @@ export function ScoreChart({ data }: { data: { ts: number; score: number }[] }) 
                       x={evt.date}
                       stroke="#94a3b8"
                       strokeDasharray="4 4"
-                      label={isMobile ? undefined : {
+                      label={isMobile || evt.hideLabel ? undefined : {
                         value: evt.label,
                         position: evt.position,
                         fontSize: 11,

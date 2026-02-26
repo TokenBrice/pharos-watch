@@ -98,9 +98,17 @@ export function PegHeatmap({
     <Card className="rounded-2xl animate-in fade-in duration-300">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Live Peg Deviation
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Live Peg Deviation
+            </CardTitle>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(0)}`} /> &lt;50bps</div>
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(50)}`} /> 50-200</div>
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(200)}`} /> 200-500</div>
+              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(500)}`} /> &gt;500bps</div>
+            </div>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <FilterChips options={PEG_OPTIONS} value={pegFilter} onChange={onPegFilterChange} />
             <FilterChips options={TYPE_OPTIONS} value={typeFilter} onChange={onTypeFilterChange} />
@@ -166,12 +174,6 @@ export function PegHeatmap({
                   </Link>
                 );
               })}
-            </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-3">
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(0)}`} /> &lt;50bps</div>
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(50)}`} /> 50-200</div>
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(200)}`} /> 200-500</div>
-              <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(500)}`} /> &gt;500bps</div>
             </div>
           </>
         )}

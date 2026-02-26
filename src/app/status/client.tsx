@@ -1,10 +1,11 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useStatus } from "@/hooks/use-status";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // --- Status Banner ---
 
@@ -220,21 +221,79 @@ function CacheFreshnessTable({ caches }: { caches: Record<string, { ageSeconds: 
   );
 }
 
+// --- Auth Gate ---
+
+const SESSION_KEY = "pharos-admin-key";
+
+function AdminKeyForm({ onSubmit }: { onSubmit: (key: string) => void }) {
+  const [value, setValue] = useState("");
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = value.trim();
+    if (trimmed) onSubmit(trimmed);
+  }
+
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle>Pharos System Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              type="password"
+              placeholder="Admin key"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              autoFocus
+            />
+            <Button type="submit" className="w-full" disabled={!value.trim()}>
+              Sign in
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // --- Main Page ---
 
-function StatusContent() {
-  const searchParams = useSearchParams();
-  const adminKey = searchParams.get("key") ?? "";
-  const { data, isLoading, error } = useStatus(adminKey);
+export default function StatusClient() {
+  const [adminKey, setAdminKey] = useState("");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) setAdminKey(stored);
+    setReady(true);
+  }, []);
+
+  const handleKeySubmit = useCallback((key: string) => {
+    sessionStorage.setItem(SESSION_KEY, key);
+    setAdminKey(key);
+  }, []);
+
+  const handleSignOut = useCallback(() => {
+    sessionStorage.removeItem(SESSION_KEY);
+    setAdminKey("");
+  }, []);
+
+  if (!ready) {
+    return <div className="py-20 text-center text-muted-foreground">Loading...</div>;
+  }
 
   if (!adminKey) {
-    return (
-      <div className="py-20 text-center">
-        <h1 className="text-xl font-semibold">Pharos System Status</h1>
-        <p className="mt-2 text-muted-foreground">Add <code className="rounded bg-muted px-1">?key=YOUR_ADMIN_KEY</code> to the URL.</p>
-      </div>
-    );
+    return <AdminKeyForm onSubmit={handleKeySubmit} />;
   }
+
+  return <StatusDashboard adminKey={adminKey} onSignOut={handleSignOut} />;
+}
+
+function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
+  const { data, isLoading, error } = useStatus(adminKey);
 
   if (isLoading) {
     return (
@@ -248,6 +307,9 @@ function StatusContent() {
     return (
       <div className="py-20 text-center">
         <div className="text-red-600 dark:text-red-400">{error.message}</div>
+        <Button variant="outline" className="mt-4" onClick={onSignOut}>
+          Try a different key
+        </Button>
       </div>
     );
   }
@@ -256,7 +318,12 @@ function StatusContent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Pharos System Status</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Pharos System Status</h1>
+        <Button variant="outline" size="sm" onClick={onSignOut}>
+          Sign out
+        </Button>
+      </div>
 
       <StatusBanner status={data.overallStatus} timestamp={data.timestamp} />
 
@@ -276,13 +343,5 @@ function StatusContent() {
 
       <CacheFreshnessTable caches={data.caches} />
     </div>
-  );
-}
-
-export default function StatusClient() {
-  return (
-    <Suspense fallback={<div className="py-20 text-center text-muted-foreground">Loading...</div>}>
-      <StatusContent />
-    </Suspense>
   );
 }

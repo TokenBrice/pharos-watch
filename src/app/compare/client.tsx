@@ -22,7 +22,7 @@ import { CompareRadar } from "@/components/radar-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { Share2, Twitter, Download } from "lucide-react";
+import { Share2, Twitter, Download, Search } from "lucide-react";
 import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@/lib/classification";
 import {
@@ -417,7 +417,7 @@ export function CompareClient() {
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
           {toast && (
-            <span className="text-xs text-muted-foreground animate-in fade-in duration-200">
+            <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
               {toast}
             </span>
           )}
@@ -453,9 +453,13 @@ export function CompareClient() {
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
-        <div className="text-center py-12 text-muted-foreground">
-          <p className="text-sm">
+        <div className="flex flex-col items-center justify-center border-dashed border-2 rounded-lg py-12 px-4">
+          <Search className="h-8 w-8 text-muted-foreground/50 mb-3" />
+          <p className="text-sm text-muted-foreground">
             Select at least 2 stablecoins to compare.
+          </p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            Use the slots above to pick stablecoins
           </p>
         </div>
       )}

@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
 import { BLACKLIST_CHART_COLORS } from "@/lib/classification";
+import { CHART_HEIGHT } from "@/lib/chart-colors";
 import type { BlacklistEvent } from "@/lib/types";
 
 const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"] as const;
@@ -95,7 +96,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
           <Skeleton className="h-4 w-72 mt-1" />
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[400px] w-full" />
+          <Skeleton className={`${CHART_HEIGHT} w-full`} />
         </CardContent>
       </Card>
     );
@@ -111,7 +112,8 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
       </CardHeader>
       <CardContent>
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={400}>
+          <div className={CHART_HEIGHT}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
               <XAxis
@@ -150,8 +152,9 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
               ))}
             </BarChart>
           </ResponsiveContainer>
+          </div>
         ) : (
-          <div className="flex h-[400px] items-center justify-center text-muted-foreground">
+          <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
             No blacklist events recorded yet
           </div>
         )}

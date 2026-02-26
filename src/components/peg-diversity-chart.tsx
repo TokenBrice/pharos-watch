@@ -17,6 +17,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
 import { PEG_CHART_COLORS } from "@/lib/classification";
+import { CHART_HEIGHT } from "@/lib/chart-colors";
 
 function pegKeyToCode(key: string): string {
   return key.replace(/^pegged/, "");
@@ -150,7 +151,7 @@ export function PegDiversityChart() {
           <CardTitle as="h2">Fiat-pegged, other than USD</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[200px] sm:h-[280px] w-full" />
+          <Skeleton className={`${CHART_HEIGHT} w-full`} />
         </CardContent>
       </Card>
     );
@@ -179,7 +180,7 @@ export function PegDiversityChart() {
         {filteredData.length > 0 ? (
           <>
             <div
-              className="h-[200px] sm:h-[280px]"
+              className={CHART_HEIGHT}
               role="figure"
               aria-label={`Fiat-pegged other than USD stacked area chart showing ${pegCount} peg currencies`}
             >
@@ -259,7 +260,7 @@ export function PegDiversityChart() {
             </div>
           </>
         ) : (
-          <div className="flex h-[200px] sm:h-[280px] items-center justify-center text-muted-foreground">
+          <div className={`flex ${CHART_HEIGHT} items-center justify-center text-muted-foreground`}>
             No peg diversity data available
           </div>
         )}

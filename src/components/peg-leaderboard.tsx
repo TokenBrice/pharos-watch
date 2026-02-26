@@ -80,7 +80,7 @@ export function PegLeaderboard({ coins, logos, isLoading }: PegLeaderboardProps)
             ))}
           </div>
         ) : (
-          <div className="overflow-x-auto scroll-shadow">
+          <div className="overflow-x-auto scroll-shadow table-striped">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">

@@ -130,7 +130,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
         </TableHeader>
         <TableBody>
           {paged.map((evt, index) => (
-            <TableRow key={evt.id} className="hover:bg-muted/70">
+            <TableRow key={evt.id}>
               <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
                 {(page - 1) * pageSize + index + 1}
               </TableCell>

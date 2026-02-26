@@ -308,7 +308,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
             return (
               <TableRow
                 key={coin.id}
-                className="hover:bg-muted/70 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                 onClick={() => router.push(`/stablecoin/${coin.id}`)}
                 onMouseEnter={() => prefetch(coin.id)}
                 onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/stablecoin/${coin.id}`); } }}

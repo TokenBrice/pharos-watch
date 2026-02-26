@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
-import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol } from "@/lib/dex-constants";
+import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
 import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import type { DexLiquidityPool, DexLiquidityData } from "@/lib/types";
@@ -88,12 +88,13 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
         {entries.map(([chain, tvl]) => {
           const pct = (tvl / total) * 100;
           if (pct < 1) return null;
+          const displayName = normalizeChain(chain);
           return (
             <div
               key={chain}
-              className={CHAIN_COLORS[chain] ?? "bg-muted-foreground"}
+              className={CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}
               style={{ width: `${pct}%` }}
-              title={`${chain}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
+              title={`${displayName}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
             />
           );
         })}
@@ -101,8 +102,8 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {entries.slice(0, 4).map(([chain, tvl]) => (
           <span key={chain} className="flex items-center gap-1.5">
-            <span className={`inline-block h-2 w-2 rounded-full ${CHAIN_COLORS[chain] ?? "bg-muted-foreground"}`} />
-            {chain} {formatCurrency(tvl)}
+            <span className={`inline-block h-2 w-2 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
+            {normalizeChain(chain)} {formatCurrency(tvl)}
           </span>
         ))}
       </div>

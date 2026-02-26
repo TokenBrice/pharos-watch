@@ -310,7 +310,7 @@ export function PortfolioPanel({ portfolio, cards, logos }: PortfolioPanelProps)
               </h3>
               <div className="flex items-center gap-2">
                 {toast && (
-                  <span className="text-xs text-muted-foreground animate-in fade-in duration-200">
+                  <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
                     {toast}
                   </span>
                 )}

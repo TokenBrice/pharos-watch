@@ -8,6 +8,8 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+            <Link href="/stability-index" className="hover:text-foreground transition-colors">Stability Index</Link>
+            <Link href="/risk-lab" className="hover:text-foreground transition-colors">Risk Lab</Link>
             <Link href="/peg-tracker" className="hover:text-foreground transition-colors">Peg Tracker</Link>
             <Link href="/blacklist" className="hover:text-foreground transition-colors">Freeze Tracker</Link>
             <Link href="/liquidity" className="hover:text-foreground transition-colors">Liquidity</Link>

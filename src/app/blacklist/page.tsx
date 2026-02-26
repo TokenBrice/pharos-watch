@@ -4,6 +4,8 @@ import { useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_20MIN } from "@/hooks/use-api-query";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
@@ -22,7 +24,7 @@ const VALID_STABLECOINS = new Set(["all", "USDC", "USDT", "PAXG", "XAUT"]);
 const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]);
 
 function BlacklistPageInner() {
-  const { data, isLoading, isError, error } = useBlacklistEvents();
+  const { data, isLoading, isError, error, dataUpdatedAt } = useBlacklistEvents();
   const events = data?.events;
 
   const { getParam, setParams: updateParams } = useUrlFilters();
@@ -87,6 +89,11 @@ function BlacklistPageInner() {
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           Signal lost. {error instanceof Error ? error.message : "Unknown error"}
         </div>
+      )}
+      {!isError && (
+        <StaleDataBanner
+          queries={[{ label: "Blacklist", dataUpdatedAt, staleTime: CRON_20MIN }]}
+        />
       )}
 
       <BlacklistStats events={events} isLoading={isLoading} />

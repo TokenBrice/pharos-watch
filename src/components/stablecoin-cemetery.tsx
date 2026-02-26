@@ -21,7 +21,7 @@ export function StablecoinCemetery({ coins, expanded, onToggle }: StablecoinCeme
         const logoUrl = coin.logo ? `/logos/cemetery/${coin.logo}` : undefined;
 
         return (
-          <div key={coin.symbol} id={`obituary-${coin.symbol}`} className="transition-all duration-500">
+          <div key={coin.symbol} id={`obituary-${coin.symbol}`} className="transition-all duration-300">
             {/* Collapsed row — always visible */}
             <button
               type="button"

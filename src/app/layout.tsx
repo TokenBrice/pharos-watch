@@ -5,6 +5,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
@@ -96,6 +97,7 @@ export default function RootLayout({
           <Header />
           <main id="main-content" className="container mx-auto px-4 py-8">{children}</main>
           <Footer />
+          <ScrollToTop />
         </Providers>
         <script
           type="application/ld+json"

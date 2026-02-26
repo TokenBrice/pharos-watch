@@ -10,6 +10,9 @@ export const CHART_GREEN = CHART_PALETTE[4]; // #10b981
 export const CHART_TEAL = CHART_PALETTE[9]; // #14b8a6
 export const CHART_RED = "#ef4444";
 
+/** Standard responsive chart container height */
+export const CHART_HEIGHT = "h-[250px] sm:h-[350px]";
+
 /** Standard Recharts tooltip styling (spread into <Tooltip> props) */
 export const RECHARTS_TOOLTIP_STYLES = {
   contentStyle: {

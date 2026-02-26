@@ -20,6 +20,8 @@ import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS } from "@/lib/psi-colors";
 import { trackEvent } from "@/lib/analytics";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_15MIN } from "@/hooks/use-api-query";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
@@ -494,7 +496,7 @@ function ContributorsTable({
 /* ─── Main Client Component ─────────────────────────────────────── */
 
 export function StabilityIndexClient() {
-  const { data, isLoading, isError } = useStabilityIndexDetail();
+  const { data, isLoading, isError, dataUpdatedAt } = useStabilityIndexDetail();
 
   const daysInBand = useMemo(() => {
     if (!data?.current || !data.history.length) return 0;
@@ -597,6 +599,9 @@ export function StabilityIndexClient() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <StaleDataBanner
+        queries={[{ label: "Stability Index", dataUpdatedAt, staleTime: CRON_15MIN }]}
+      />
       {/* Hero — score + components + history stats in one card */}
       <Card className="rounded-2xl">
         <CardContent className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6 py-6">

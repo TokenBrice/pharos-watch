@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/format";
-import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol } from "@/lib/dex-constants";
+import { PROTOCOL_COLORS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@/lib/types";
 
@@ -54,9 +54,9 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
             return (
               <div
                 key={chain}
-                className={`${CHAIN_COLORS[chain] ?? "bg-muted-foreground"} transition-all`}
+                className={`${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"} transition-all`}
                 style={{ width: `${pct}%` }}
-                title={`${chain}: ${formatCurrency(tvl)} (${pct.toFixed(1)}%)`}
+                title={`${normalizeChain(chain)}: ${formatCurrency(tvl)} (${pct.toFixed(1)}%)`}
               />
             );
           })}
@@ -64,9 +64,9 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {chainTotals.slice(0, 10).map(([chain, tvl]) => (
             <div key={chain} className="flex items-center gap-2">
-              <span className={`inline-block h-3 w-3 rounded-full ${CHAIN_COLORS[chain] ?? "bg-muted-foreground"}`} />
+              <span className={`inline-block h-3 w-3 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
               <div>
-                <p className="text-sm font-medium">{chain}</p>
+                <p className="text-sm font-medium">{normalizeChain(chain)}</p>
                 <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>
               </div>
             </div>

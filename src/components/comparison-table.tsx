@@ -207,7 +207,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
       </div>
 
       {/* Desktop: side-by-side table */}
-      <div className="hidden sm:block">
+      <div className="hidden sm:block table-striped">
         <Table>
           <TableHeader>
             <TableRow>

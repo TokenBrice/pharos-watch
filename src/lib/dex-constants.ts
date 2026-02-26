@@ -37,17 +37,36 @@ export const EXTRA_COLORS = [
 ];
 
 export const CHAIN_COLORS: Record<string, string> = {
-  Ethereum: "bg-blue-600",
-  Arbitrum: "bg-sky-500",
-  Base: "bg-blue-400",
-  Polygon: "bg-violet-500",
-  BSC: "bg-amber-500",
-  Optimism: "bg-red-500",
-  Avalanche: "bg-red-600",
-  Solana: "bg-emerald-500",
-  Gnosis: "bg-teal-500",
-  Fantom: "bg-blue-300",
+  ethereum: "bg-blue-600",
+  arbitrum: "bg-sky-500",
+  base: "bg-blue-400",
+  polygon: "bg-violet-500",
+  bsc: "bg-amber-500",
+  optimism: "bg-red-500",
+  avalanche: "bg-red-600",
+  solana: "bg-emerald-500",
+  gnosis: "bg-teal-500",
+  fantom: "bg-blue-300",
 };
+
+const CHAIN_DISPLAY_NAMES: Record<string, string> = {
+  ethereum: "Ethereum",
+  arbitrum: "Arbitrum",
+  base: "Base",
+  polygon: "Polygon",
+  bsc: "BSC",
+  optimism: "Optimism",
+  avalanche: "Avalanche",
+  solana: "Solana",
+  gnosis: "Gnosis",
+  fantom: "Fantom",
+};
+
+/** Normalize a chain name to lowercase for color lookup, returning a canonical display name. */
+export function normalizeChain(chain: string): string {
+  const key = chain.toLowerCase();
+  return CHAIN_DISPLAY_NAMES[key] ?? chain;
+}
 
 /** Prettify a DeFiLlama project slug into a display name */
 export function prettifyProtocol(slug: string): string {
