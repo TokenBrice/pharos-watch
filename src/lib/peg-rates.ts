@@ -68,6 +68,7 @@ export function derivePegRates(
   const rates: Record<string, number> = {};
   const sources: Record<string, PegRateSource> = {};
   for (const [peg, prices] of Object.entries(groups)) {
+    if (prices.length === 0) continue;
     prices.sort((a, b) => a - b);
     const mid = Math.floor(prices.length / 2);
     const median =

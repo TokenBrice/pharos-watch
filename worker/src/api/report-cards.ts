@@ -68,10 +68,21 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     });
   }
 
-  const { peggedAssets, fxFallbackRates } = JSON.parse(stablecoinsCached.value) as {
-    peggedAssets: StablecoinData[];
-    fxFallbackRates?: Record<string, number>;
-  };
+  let peggedAssets: StablecoinData[];
+  let fxFallbackRates: Record<string, number> | undefined;
+  try {
+    const parsed = JSON.parse(stablecoinsCached.value) as {
+      peggedAssets: StablecoinData[];
+      fxFallbackRates?: Record<string, number>;
+    };
+    peggedAssets = parsed.peggedAssets;
+    fxFallbackRates = parsed.fxFallbackRates;
+  } catch {
+    return new Response(JSON.stringify({ error: "Cached stablecoins data is corrupt" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // Build dex liquidity map from table rows (only fields scoreLiquidity needs)
   const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
@@ -84,9 +95,10 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     };
   }
 
-  const bluechipMap: Record<string, BluechipRating> = bluechipCached
-    ? JSON.parse(bluechipCached.value)
-    : {};
+  let bluechipMap: Record<string, BluechipRating> = {};
+  if (bluechipCached) {
+    try { bluechipMap = JSON.parse(bluechipCached.value); } catch { /* fall back to empty */ }
+  }
 
   // 2. Load depeg events (4-year window)
   const fourYearsAgoSec = Math.floor(Date.now() / 1000) - Math.ceil(4 * 365.25 * 86400);

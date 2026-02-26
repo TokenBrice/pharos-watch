@@ -38,7 +38,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     db.prepare(`SELECT COUNT(*) as total FROM blacklist_events${where}`).bind(...filterBindings),
     db.prepare(sql).bind(...filterBindings, ...paginationBindings),
   ]);
-  const total = (countBatch.results as { total: number }[])?.[0]?.total ?? 0;
+  const total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
 
   // Map snake_case DB columns to camelCase to match BlacklistEvent interface
   type BlacklistRow = {

@@ -366,7 +366,7 @@ export async function enrichMissingPrices(
         // Take price from highest-liquidity pair
         candidates.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
         const price = parseFloat(candidates[0].priceUsd);
-        if (isNaN(price)) {
+        if (isNaN(price) || !isFinite(price) || price <= 0) {
           console.warn(`[enrich] DexScreener returned unparseable price for ${m.asset.symbol}: "${candidates[0].priceUsd}"`);
           continue;
         }

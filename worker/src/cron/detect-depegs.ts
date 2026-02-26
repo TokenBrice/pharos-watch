@@ -36,8 +36,11 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     dexPrices = new Map(
       (dexPriceResult.results ?? []).map((r) => [r.stablecoin_id, r])
     );
-  } catch {
-    // dex_prices table may not exist yet (pre-migration 0011)
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[depeg] Unexpected error loading dex_prices:", msg);
+    }
   }
 
   // Load all open events in one query

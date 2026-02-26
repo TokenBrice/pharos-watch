@@ -61,6 +61,12 @@ export function withErrorHandler<T extends unknown[]>(
   };
 }
 
+/** Safely parse JSON, returning fallback on failure */
+export function safeParse<T>(json: string | null | undefined, fallback: T): T {
+  if (json == null) return fallback;
+  try { return JSON.parse(json) as T; } catch { return fallback; }
+}
+
 /** Validates a stablecoin ID: numeric DefiLlama IDs or prefixed commodity/CG IDs */
 export function isValidStablecoinId(id: string): boolean {
   return /^\d+$/.test(id) || /^(?:gold|silver|cg)-/.test(id);

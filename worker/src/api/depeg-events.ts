@@ -32,7 +32,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
     db.prepare(`SELECT COUNT(*) as total FROM depeg_events${where}`).bind(...filterBindings),
     db.prepare(sql).bind(...filterBindings, ...paginationBindings),
   ]);
-  const total = (countBatch.results as { total: number }[])?.[0]?.total ?? 0;
+  const total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
   const events = ((dataBatch.results ?? []) as DepegRow[]).map(rowToDepegEvent);
 
   return new Response(JSON.stringify({ events, total }), {

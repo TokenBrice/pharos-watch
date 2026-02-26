@@ -1,11 +1,5 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, safeParse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-
-/** Safely parse JSON, returning fallback on failure */
-function safeParse<T>(json: string | null | undefined, fallback: T): T {
-  if (json == null) return fallback;
-  try { return JSON.parse(json) as T; } catch { return fallback; }
-}
 
 interface DexLiquidityRow {
   stablecoin_id: string;
@@ -59,7 +53,13 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       )
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400) // 8 days back covers 7d comparison
       .all<DexHistoryRow>(),
-    db.prepare("SELECT * FROM dex_prices").all<DexPriceRow>().catch(() => ({ results: [] as DexPriceRow[] })),
+    db.prepare("SELECT * FROM dex_prices").all<DexPriceRow>().catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("no such table")) {
+        console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
+      }
+      return { results: [] as DexPriceRow[] };
+    }),
   ]);
 
   // Build DEX price lookup

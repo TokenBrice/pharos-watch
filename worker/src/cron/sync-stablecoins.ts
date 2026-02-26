@@ -409,9 +409,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
       .bind(date1d, date7d, date30d)
       .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
 
-    if (histRows.results.length > 0) {
+    if ((histRows.results ?? []).length > 0) {
       const histMap = new Map<string, { day?: number; week?: number; month?: number }>();
-      for (const row of histRows.results) {
+      for (const row of histRows.results ?? []) {
         const entry = histMap.get(row.stablecoin_id) ?? {};
         if (row.snapshot_date === date1d) entry.day = row.circulating_usd;
         else if (row.snapshot_date === date7d) entry.week = row.circulating_usd;

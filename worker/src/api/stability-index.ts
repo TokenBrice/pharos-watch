@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, safeParse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
@@ -24,18 +24,18 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   const current = results[0];
   const history = results.slice(1).map((r) => detail
-    ? { date: r.computed_at, score: r.score, band: r.band, components: JSON.parse(r.components) }
+    ? { date: r.computed_at, score: r.score, band: r.band, components: safeParse(r.components, {}) }
     : { date: r.computed_at, score: r.score, band: r.band }
   );
 
-  const snapshot = current.input_snapshot ? JSON.parse(current.input_snapshot) : {};
+  const snapshot = safeParse(current.input_snapshot, {} as Record<string, unknown>);
   const contributors = Array.isArray(snapshot.contributors) ? snapshot.contributors : [];
 
   return new Response(JSON.stringify({
     current: {
       score: current.score,
       band: current.band,
-      components: JSON.parse(current.components),
+      components: safeParse(current.components, {}),
       contributors,
       totalMcapUsd: snapshot.totalMcapUsd ?? 0,
       computedAt: current.computed_at,

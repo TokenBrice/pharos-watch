@@ -63,8 +63,11 @@ export async function confirmPendingDepegs(
       .prepare("SELECT stablecoin_id, dex_price_usd, updated_at FROM dex_prices")
       .all<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>();
     dexPrices = new Map((dexResult.results ?? []).map((r) => [r.stablecoin_id, r]));
-  } catch {
-    // dex_prices table may not exist yet
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[depeg-confirm] Unexpected error loading dex_prices:", msg);
+    }
   }
 
   // Check for existing open events to avoid duplicates
