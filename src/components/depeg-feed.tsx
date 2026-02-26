@@ -53,6 +53,11 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium group-hover:underline">{evt.symbol}</span>
+                    <span className={`font-mono text-xs font-semibold ${
+                      Math.abs(evt.peakDeviationBps) >= 500 ? "text-red-500" : "text-amber-500"
+                    }`}>
+                      {formatBps(evt.peakDeviationBps)}
+                    </span>
                     <Badge
                       variant="outline"
                       className={`text-[10px] px-1.5 py-0 ${
@@ -79,16 +84,9 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span className={`font-mono text-xs font-semibold ${
-                  Math.abs(evt.peakDeviationBps) >= 500 ? "text-red-500" : "text-amber-500"
-                }`}>
-                  {formatBps(evt.peakDeviationBps)}
-                </span>
-                <span className="text-xs text-muted-foreground font-mono w-10 text-right">
-                  {formatDuration(evt.startedAt, evt.endedAt)}
-                </span>
-              </div>
+              <span className="text-xs text-muted-foreground font-mono flex-shrink-0">
+                {formatDuration(evt.startedAt, evt.endedAt)}
+              </span>
             </Link>
           );
         })}
