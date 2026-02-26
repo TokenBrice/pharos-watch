@@ -92,31 +92,53 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
             {DIMENSION_ORDER.map((key) => {
               const dim = card.dimensions[key];
               return (
-                <div
-                  key={key}
-                  className="flex items-center justify-between rounded-lg border px-3 py-2"
-                >
-                  <span className="text-sm font-medium">
-                    {DIMENSION_LABELS[key]}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
-                    >
-                      {dim.grade}
-                    </Badge>
-                    <span className="w-12 text-right text-sm tabular-nums text-muted-foreground">
-                      {dim.score !== null ? (
-                        <>
-                          {dim.score}
-                          <span className="text-xs">/100</span>
-                        </>
-                      ) : (
-                        "\u2014"
-                      )}
+                <div key={key}>
+                  <div
+                    className="flex items-center justify-between rounded-lg border px-3 py-2"
+                  >
+                    <span className="text-sm font-medium">
+                      {DIMENSION_LABELS[key]}
                     </span>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-semibold ${REPORT_CARD_GRADE_COLORS[dim.grade]}`}
+                      >
+                        {dim.grade}
+                      </Badge>
+                      <span className="w-12 text-right text-sm tabular-nums text-muted-foreground">
+                        {dim.score !== null ? (
+                          <>
+                            {dim.score}
+                            <span className="text-xs">/100</span>
+                          </>
+                        ) : (
+                          "\u2014"
+                        )}
+                      </span>
+                    </div>
                   </div>
+                  {key === "resilience" && dim.score !== null && (
+                    <div className="ml-4 mt-1 space-y-0.5">
+                      {dim.detail.split(". ").map((part) => {
+                        const match = part.match(/^(.+?):\s*(.+?)\s*\((\d+)\)$/);
+                        if (!match) return null;
+                        const [, label, desc, scoreStr] = match;
+                        const subScore = parseInt(scoreStr, 10);
+                        return (
+                          <div
+                            key={label}
+                            className="flex items-center justify-between text-xs text-muted-foreground"
+                          >
+                            <span>
+                              {label}: <span className="text-foreground/70">{desc}</span>
+                            </span>
+                            <span className="tabular-nums">{subScore}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
