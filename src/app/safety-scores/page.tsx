@@ -13,34 +13,34 @@ const reportCardsDescription =
   "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade — plus simulate what happens when a major stablecoin fails.";
 
 export const metadata: Metadata = {
-  title: "Risk Lab — Stablecoin Safety Grades",
+  title: "Safety Scores — Stablecoin Safety Grades",
   description: reportCardsDescription,
   alternates: {
-    canonical: "/risk-lab/",
+    canonical: "/safety-scores/",
   },
   openGraph: {
-    title: "Risk Lab — Stablecoin Safety Grades",
+    title: "Safety Scores — Stablecoin Safety Grades",
     description: reportCardsDescription,
-    url: "/risk-lab/",
-    images: [{ url: "https://pharos.watch/og-risk-lab.png", width: 1200, height: 630 }],
+    url: "/safety-scores/",
+    images: [{ url: "https://pharos.watch/og-safety-scores.png", width: 1200, height: 630 }],
   },
 };
 
 export default function ReportCardsPage() {
   return (
     <div className="space-y-6">
-      <BreadcrumbJsonLd name="Risk Lab" path="/risk-lab/" />
+      <BreadcrumbJsonLd name="Safety Scores" path="/safety-scores/" />
       <div className="space-y-2">
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
           <span>/</span>
-          <span className="text-foreground">Risk Lab</span>
+          <span className="text-foreground">Safety Scores</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Risk Lab</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Safety Scores</h1>
         <p className="text-sm text-muted-foreground">
           Safety grades and contagion simulation for every tracked stablecoin.
         </p>
-        <p className="text-sm text-muted-foreground max-w-2xl">
+        <p className="text-sm text-muted-foreground">
           Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability,
           liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator
           lets you model what happens to the broader market when a major stablecoin fails — revealing

@@ -54,7 +54,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.6,
     },
     {
-      url: "https://pharos.watch/risk-lab/",
+      url: "https://pharos.watch/safety-scores/",
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,

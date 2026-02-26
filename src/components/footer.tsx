@@ -9,7 +9,7 @@ export function Footer() {
           <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
             <Link href="/stability-index" className="hover:text-foreground transition-colors">Stability Index</Link>
-            <Link href="/risk-lab" className="hover:text-foreground transition-colors">Risk Lab</Link>
+            <Link href="/safety-scores" className="hover:text-foreground transition-colors">Safety Scores</Link>
 <Link href="/blacklist" className="hover:text-foreground transition-colors">Freeze Tracker</Link>
             <Link href="/liquidity" className="hover:text-foreground transition-colors">Liquidity</Link>
             <Link href="/cemetery" className="hover:text-foreground transition-colors">Cemetery</Link>

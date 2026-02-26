@@ -35,9 +35,9 @@ export function ReportCardsSummary() {
     <Card className="rounded-xl border-l-[3px] border-l-amber-500">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5"><FlaskConical className="h-4 w-4" />Risk Lab</span>
+          <span className="flex items-center gap-1.5"><FlaskConical className="h-4 w-4" />Safety Scores</span>
           <Link
-            href="/risk-lab"
+            href="/safety-scores"
             className="text-xs font-normal text-muted-foreground hover:text-foreground transition-colors"
           >
             View grades &rarr;

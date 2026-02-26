@@ -105,7 +105,7 @@ export function ReportCardsClient() {
     }
 
     const qs = params.toString();
-    const newPath = qs ? `/risk-lab/?${qs}` : "/risk-lab/";
+    const newPath = qs ? `/safety-scores/?${qs}` : "/safety-scores/";
     router.replace(newPath, { scroll: false });
   }, [stressTest.targetCoinId, stressTest.targetGrade, router]);
 
@@ -244,7 +244,7 @@ export function ReportCardsClient() {
         {/* Grade filter buttons */}
         <div className="flex flex-wrap items-center gap-1">
           <button
-            onClick={() => { trackEvent("filter_applied", { page: "risk-lab", filter_type: "grade", filter_value: "all" }); setGradeFilter("all"); }}
+            onClick={() => { trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: "all" }); setGradeFilter("all"); }}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               gradeFilter === "all"
                 ? "bg-foreground text-background"
@@ -262,7 +262,7 @@ export function ReportCardsClient() {
             return (
               <button
                 key={range}
-                onClick={() => { trackEvent("filter_applied", { page: "risk-lab", filter_type: "grade", filter_value: range }); setGradeFilter(range); }}
+                onClick={() => { trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: range }); setGradeFilter(range); }}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   isActive
                     ? colorClass
@@ -284,7 +284,7 @@ export function ReportCardsClient() {
           {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.key}
-              onClick={() => { trackEvent("sort_changed", { page: "risk-lab", sort_by: opt.key }); setSortKey(opt.key); }}
+              onClick={() => { trackEvent("sort_changed", { page: "safety-scores", sort_by: opt.key }); setSortKey(opt.key); }}
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 sortKey === opt.key
                   ? "bg-foreground text-background"

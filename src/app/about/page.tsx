@@ -279,7 +279,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <FlaskConical className="h-5 w-5 text-emerald-500" />
-                <Link href="/risk-lab" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
+                <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
                   Safety Grades
                 </Link>
               </div>
@@ -293,7 +293,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Network className="h-5 w-5 text-rose-500" />
-                <Link href="/risk-lab" className="font-bold underline underline-offset-4 hover:text-rose-500 transition-colors">
+                <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-rose-500 transition-colors">
                   Contagion Map
                 </Link>
               </div>
@@ -307,7 +307,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Layers className="h-5 w-5 text-violet-500" />
-                <Link href="/risk-lab" className="font-bold underline underline-offset-4 hover:text-violet-500 transition-colors">
+                <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-violet-500 transition-colors">
                   Systemic Risk Scoreboard
                 </Link>
               </div>

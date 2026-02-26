@@ -43,10 +43,10 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "Risk",
+    label: "Risk Lab",
     items: [
       { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Pharos Stability Index" },
-      { href: "/risk-lab", label: "Risk Lab", icon: FlaskConical, description: "Safety grades and contagion simulation" },
+      { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Safety grades and contagion simulation" },
       { href: "/portfolio", label: "Portfolio", icon: Wallet, description: "Personal stablecoin risk view" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Stablecoin collateral dependency graph" },
     ],

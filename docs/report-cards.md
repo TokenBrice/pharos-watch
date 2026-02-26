@@ -127,7 +127,7 @@ Key types:
 
 ## Portfolio Analyzer & Stress Test
 
-Collapsible panel on `/risk-lab` between the grade distribution bar and card grid. Two sections stacked vertically:
+Collapsible panel on `/safety-scores` between the grade distribution bar and card grid. Two sections stacked vertically:
 
 ### Portfolio Analyzer
 
