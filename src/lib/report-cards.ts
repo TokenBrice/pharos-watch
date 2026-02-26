@@ -261,7 +261,7 @@ export function scoreDecentralization(
 /**
  * Dependency Risk: for CeFi-Dependent coins, blend upstream scores by weight.
  * - Non-CeFi-Dependent: 95
- * - CeFi-Dependent with mapped deps: weighted blend of upstream + self-backed scores, -10 if any below 75
+ * - CeFi-Dependent with mapped deps: weighted blend of upstream + self-backed (75) scores, -10 if any below 75
  * - CeFi-Dependent with no deps mapped or scores unavailable: 70
  */
 export function scoreDependencyRisk(
@@ -289,12 +289,15 @@ export function scoreDependencyRisk(
   }
 
   // Blend upstream exposure with self-backed portion (non-stablecoin collateral).
-  // A coin 35% backed by USDC and 65% self-backed blends: 0.35*USDC + 0.65*95.
+  // A coin 35% backed by USDC and 65% self-backed blends: 0.35*USDC + 0.65*75.
   // Without this, dividing by totalWeight cancels out the weight entirely —
   // a 5% USDC coin would get the same dep risk score as a 100% USDC coin.
+  // Self-backed score is 75 (not 95) because CeFi-Dependent coins still carry
+  // systemic coupling risk — their peg mechanisms (PSMs, arbitrage loops) depend
+  // on upstream stablecoin infrastructure even for the non-stablecoin collateral.
   const totalWeight = Math.min(1, resolved.reduce((sum, d) => sum + d.weight, 0));
   const selfBackedFraction = 1 - totalWeight;
-  const SELF_BACKED_SCORE = 95; // same as non-dependent coins
+  const SELF_BACKED_SCORE = 75;
   const blendedScore = resolved.reduce((sum, d) => sum + d.score * d.weight, 0)
     + selfBackedFraction * SELF_BACKED_SCORE;
 

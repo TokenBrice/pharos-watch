@@ -191,9 +191,9 @@ export default function StablecoinDetailClient({ id, summary }: { id: string; su
         <LiquidityBox stablecoinId={id} liquidityMap={liquidityMap} />
       </div>
 
-      {reportCard && <ReportCardDetail card={reportCard} />}
-
       {summary && <AiSummary {...summary} />}
+
+      {reportCard && <ReportCardDetail card={reportCard} />}
 
       <McapChart data={supplyHistory} />
 
