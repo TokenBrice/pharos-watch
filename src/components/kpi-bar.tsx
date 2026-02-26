@@ -91,6 +91,20 @@ export function KpiBar() {
     : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand] ?? "";
 
+  // Count consecutive days in current band
+  const psiDaysInBand = useMemo(() => {
+    if (!psiBand || !psiData?.history) return 0;
+    let days = 1; // today counts
+    for (const point of psiData.history) {
+      if (point.band === psiBand) days++;
+      else break;
+    }
+    return days;
+  }, [psiData, psiBand]);
+  const psiSublabel = psiBand
+    ? `${psiBand} · ${psiDaysInBand}d in band`
+    : "";
+
   // Peg summary
   const summary = pegData?.summary;
   const activeDepegs = summary?.activeDepegCount ?? 0;
@@ -109,7 +123,7 @@ export function KpiBar() {
         <KpiCell
           label="PSI"
           value={psiScore}
-          sublabel={psiBand}
+          sublabel={psiSublabel}
           valueClassName={psiColorClass}
         />
         <KpiCell
