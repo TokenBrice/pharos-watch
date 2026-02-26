@@ -118,7 +118,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
       <Table>
-        <TableHeader className="bg-muted/50">
+        <TableHeader className="bg-muted/80">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
             <TableHead className="w-[70px] xl:w-[200px] max-w-[70px] xl:max-w-none">Name</TableHead>
@@ -327,7 +327,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           })}
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
                 {searchQuery ? `No results for "${searchQuery}"` : "No liquidity data available"}
               </TableCell>
             </TableRow>

@@ -109,7 +109,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
         </Button>
       </div>
       <Table>
-        <TableHeader className="bg-muted/50">
+        <TableHeader className="bg-muted/80 backdrop-blur-sm">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>
             <SortableTableHead
@@ -198,7 +198,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
           ))}
           {paged.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
                 No blacklist events found
               </TableCell>
             </TableRow>

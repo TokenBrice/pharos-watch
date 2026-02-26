@@ -372,7 +372,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
         className="overflow-auto max-h-[50vh] sm:max-h-[70vh] scroll-shadow"
       >
         <table className="w-full caption-bottom text-sm">
-          <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur-sm">
+          <TableHeader className="bg-muted/80 sticky top-0 z-10 backdrop-blur-sm">
             <TableRow>
               {isVisible("rank") && (
                 <TableHead className="w-[50px] text-right">#</TableHead>
@@ -680,7 +680,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
             )}
             {sorted.length === 0 && (
               <TableRow>
-                <TableCell colSpan={99} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
                   <p>{searchQuery ? `No results for "${searchQuery}"` : "No stablecoin data available"}</p>
                   {(searchQuery || activeFilters.length > 0) && (
                     <p className="mt-2 text-sm">
