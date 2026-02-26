@@ -28,8 +28,8 @@ export const METHODOLOGY_VERSION = "3.0";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
-  liquidity: 0.25,
-  resilience: 0.15,
+  liquidity: 0.20,
+  resilience: 0.20,
   decentralization: 0.10,
   dependencyRisk: 0.25,
 };
