@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
   <defs>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&amp;family=Inter:wght@400;500&amp;display=swap');
     </style>
-    <radialGradient id="bgGradient" cx="42%" cy="46%" r="65%">
+    <radialGradient id="bgGradient" cx="28%" cy="50%" r="65%">
       <stop offset="0%" stop-color="#0d1f3c"/>
       <stop offset="100%" stop-color="#050a14"/>
     </radialGradient>
@@ -31,42 +31,39 @@
   </defs>
 
   <!-- Background -->
-  <rect width="1500" height="500" fill="url(#bgGradient)"/>
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
 
-  <!-- Large ambient glow behind lighthouse -->
-  <circle cx="545" cy="200" r="250" fill="url(#lanternAmbient)"/>
+  <!-- Ambient glow behind lighthouse -->
+  <circle cx="315" cy="230" r="240" fill="url(#lanternAmbient)"/>
 
-  <!-- Extended light beams from lantern position (~545, 176) -->
+  <!-- Extended light beams from lantern (~315, 218) -->
   <g filter="url(#beamBlur)">
-    <line x1="545" y1="176" x2="545" y2="0" stroke="#E8DCC4" stroke-width="3.5" opacity="0.14"/>
-    <line x1="545" y1="176" x2="300" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.10"/>
-    <line x1="545" y1="176" x2="790" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.10"/>
-    <line x1="545" y1="176" x2="50" y2="50" stroke="#E8DCC4" stroke-width="2.5" opacity="0.06"/>
-    <line x1="545" y1="176" x2="1050" y2="40" stroke="#E8DCC4" stroke-width="2.5" opacity="0.06"/>
-    <line x1="545" y1="176" x2="0" y2="140" stroke="#E8DCC4" stroke-width="2" opacity="0.035"/>
-    <line x1="545" y1="176" x2="1450" y2="90" stroke="#E8DCC4" stroke-width="2" opacity="0.035"/>
+    <line x1="315" y1="218" x2="315" y2="0" stroke="#E8DCC4" stroke-width="3.5" opacity="0.14"/>
+    <line x1="315" y1="218" x2="110" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.10"/>
+    <line x1="315" y1="218" x2="520" y2="0" stroke="#E8DCC4" stroke-width="3" opacity="0.10"/>
+    <line x1="315" y1="218" x2="0" y2="80" stroke="#E8DCC4" stroke-width="2.5" opacity="0.06"/>
+    <line x1="315" y1="218" x2="820" y2="40" stroke="#E8DCC4" stroke-width="2.5" opacity="0.06"/>
+    <line x1="315" y1="218" x2="0" y2="170" stroke="#E8DCC4" stroke-width="2" opacity="0.035"/>
+    <line x1="315" y1="218" x2="1150" y2="110" stroke="#E8DCC4" stroke-width="2" opacity="0.035"/>
   </g>
 
   <!-- Background stars -->
-  <circle cx="95" cy="72" r="1.2" fill="#E8DCC4" opacity="0.25"/>
-  <circle cx="250" cy="155" r="0.8" fill="#E8DCC4" opacity="0.15"/>
-  <circle cx="430" cy="55" r="1" fill="#E8DCC4" opacity="0.2"/>
-  <circle cx="810" cy="85" r="1.2" fill="#E8DCC4" opacity="0.18"/>
-  <circle cx="980" cy="130" r="0.9" fill="#E8DCC4" opacity="0.22"/>
-  <circle cx="1120" cy="65" r="1.1" fill="#E8DCC4" opacity="0.15"/>
-  <circle cx="1280" cy="110" r="0.8" fill="#E8DCC4" opacity="0.2"/>
-  <circle cx="1400" cy="55" r="1" fill="#E8DCC4" opacity="0.17"/>
-  <circle cx="170" cy="390" r="0.9" fill="#E8DCC4" opacity="0.12"/>
-  <circle cx="1070" cy="410" r="1" fill="#E8DCC4" opacity="0.14"/>
-  <circle cx="1330" cy="360" r="0.8" fill="#E8DCC4" opacity="0.1"/>
-  <circle cx="320" cy="440" r="1.1" fill="#E8DCC4" opacity="0.1"/>
-  <circle cx="1420" cy="210" r="0.9" fill="#E8DCC4" opacity="0.16"/>
-  <circle cx="60" cy="260" r="1" fill="#E8DCC4" opacity="0.12"/>
-  <circle cx="1200" cy="290" r="0.7" fill="#E8DCC4" opacity="0.13"/>
-  <circle cx="500" cy="420" r="0.9" fill="#E8DCC4" opacity="0.08"/>
+  <circle cx="75" cy="60" r="1.2" fill="#E8DCC4" opacity="0.25"/>
+  <circle cx="190" cy="145" r="0.8" fill="#E8DCC4" opacity="0.15"/>
+  <circle cx="460" cy="48" r="1" fill="#E8DCC4" opacity="0.2"/>
+  <circle cx="680" cy="80" r="1.2" fill="#E8DCC4" opacity="0.18"/>
+  <circle cx="870" cy="125" r="0.9" fill="#E8DCC4" opacity="0.22"/>
+  <circle cx="1020" cy="58" r="1.1" fill="#E8DCC4" opacity="0.15"/>
+  <circle cx="1130" cy="105" r="0.8" fill="#E8DCC4" opacity="0.2"/>
+  <circle cx="130" cy="495" r="0.9" fill="#E8DCC4" opacity="0.12"/>
+  <circle cx="890" cy="515" r="1" fill="#E8DCC4" opacity="0.14"/>
+  <circle cx="1090" cy="465" r="0.8" fill="#E8DCC4" opacity="0.1"/>
+  <circle cx="1155" cy="295" r="0.9" fill="#E8DCC4" opacity="0.16"/>
+  <circle cx="52" cy="335" r="1" fill="#E8DCC4" opacity="0.12"/>
+  <circle cx="1040" cy="380" r="0.7" fill="#E8DCC4" opacity="0.13"/>
 
-  <!-- Lighthouse icon — scaled 2.66x, centered at (545, 250) -->
-  <g transform="translate(545, 250) scale(2.66) translate(-44, -44)">
+  <!-- Lighthouse icon — scaled 3.8x, centered at (315, 315) -->
+  <g transform="translate(315, 315) scale(3.8) translate(-44, -44)">
     <!-- Glow behind lantern -->
     <circle cx="44" cy="16" r="16" fill="url(#iconGlow)"/>
 
@@ -107,17 +104,17 @@
   </g>
 
   <!-- "Pharos" title -->
-  <text x="675" y="248"
+  <text x="530" y="308"
         font-family="'Cormorant Garamond', Georgia, serif"
-        font-size="108" font-weight="500"
+        font-size="96" font-weight="500"
         fill="#F5F0E6"
         letter-spacing="0.06em">Pharos</text>
 
   <!-- Decorative separator -->
-  <line x1="678" y1="270" x2="940" y2="270" stroke="#E8DCC4" stroke-width="1.2" opacity="0.18"/>
+  <line x1="533" y1="328" x2="830" y2="328" stroke="#E8DCC4" stroke-width="1.2" opacity="0.18"/>
 
   <!-- Tagline -->
-  <text x="680" y="305"
+  <text x="535" y="363"
         font-family="'Inter', Arial, sans-serif"
         font-size="26" font-weight="400"
         fill="#E8DCC4" opacity="0.50"

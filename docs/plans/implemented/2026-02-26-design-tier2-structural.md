@@ -1,6 +1,7 @@
 # Design Overhaul — Tier 2: Structural Improvements
 
 **Date:** 2026-02-26
+**Updated:** 2026-02-26 (verified against current codebase)
 **Status:** Draft
 **Effort:** 1-2 weeks per item, ~4-6 weeks total
 **Impact:** Transforms the application structure from "polished dashboard" to "professional analytics platform"
@@ -16,11 +17,13 @@ These changes require moderate refactoring — new components, layout restructur
 
 ### Problem
 
-Pharos uses a horizontal sticky top bar (`src/components/header.tsx`) that is 56px tall and contains 8 navigation items with icons + labels. This has three problems:
+Pharos uses a horizontal sticky top bar (`src/components/header.tsx`) that is `h-14` (56px) tall and contains 7 navigation items with icons + labels. This has three problems:
 
-1. **Doesn't scale.** 8 items already crowd the bar. Adding new features (Contagion Map, Portfolio Analyzer, Digest Archive are already under sub-pages) will break the layout.
+1. **Doesn't scale.** 7 items already crowd the bar. Adding new features (Compare, Digest Archive are accessible but not in nav) will break the layout.
 2. **Wastes vertical space.** 56px of vertical screen real estate is permanently consumed. On a 1080p monitor, that's 5.2% of the viewport — space that could display one more KPI row or chart.
-3. **No grouping.** All 8 items sit in a flat list. Risk Lab, Stability Index, and Report Cards are conceptually related but visually equal to Cemetery and About.
+3. **No grouping.** All 7 items sit in a flat list. Risk Lab, Stability Index, and Liquidity are conceptually related but visually equal to Cemetery and About.
+
+**Current nav items (7):** Dashboard, Stability Index, Risk Lab, Liquidity, Freeze Tracker, Cemetery, About
 
 **Competitor pattern:** 4 out of 5 benchmarked competitors use a left sidebar:
 - DefiLlama: 228px full sidebar with categorized groups
@@ -30,7 +33,7 @@ Pharos uses a horizontal sticky top bar (`src/components/header.tsx`) that is 56
 
 ### Design
 
-Implement a **collapsible left sidebar** that defaults to collapsed (icons only) and expands on hover or toggle.
+Implement a **collapsible left sidebar** (desktop only) that defaults to collapsed (icons only) and expands on hover or toggle. On mobile, keep a hamburger top bar.
 
 #### States
 
@@ -38,32 +41,33 @@ Implement a **collapsible left sidebar** that defaults to collapsed (icons only)
 |-------|-------|---------|---------|
 | Collapsed (default) | 56px | Icons only, tooltip on hover | Default on all viewports ≥768px |
 | Expanded | 220px | Icons + labels, grouped sections | User clicks toggle button, or hovers (with 200ms delay) |
-| Hidden | 0px | Off-screen | Viewports <768px (mobile uses hamburger) |
+| Hidden | 0px | Off-screen | Viewports <768px (mobile uses hamburger top bar) |
 
 #### Navigation Groups
 
+All items link to **existing pages** only. Portfolio and Stress Test remain inside Risk Lab — they don't warrant standalone pages since they're tightly coupled with report card data.
+
 ```
 Market
-  ├── Dashboard          (LayoutDashboard icon)
-  ├── Peg Tracker        (Activity icon)
-  └── Liquidity          (Droplets icon)
+  ├── Dashboard          (LayoutDashboard icon)   → /
+  └── Liquidity          (Droplets icon)          → /liquidity
 
 Risk
-  ├── Stability Index    (Lighthouse icon)
-  ├── Report Cards       (ClipboardCheck icon)
-  ├── Portfolio          (Briefcase icon)
-  └── Contagion Map      (Network icon)
+  ├── Stability Index    (Lighthouse icon)        → /stability-index
+  └── Risk Lab           (ClipboardCheck icon)    → /risk-lab
 
 Data
-  ├── Compare            (ArrowLeftRight icon)
-  ├── Freeze Tracker     (ShieldBan icon)
-  ├── Cemetery           (Skull icon)
-  └── Digest Archive     (Newspaper icon)
+  ├── Compare            (ArrowLeftRight icon)    → /compare
+  ├── Freeze Tracker     (ShieldBan icon)         → /blacklist
+  ├── Cemetery           (Skull icon)             → /cemetery
+  └── Digest             (Newspaper icon)         → /digest
 
 ───────────────────
-About                    (Info icon)
+About                    (Info icon)              → /about
 Theme Toggle             (Sun/Moon icon)
 ```
+
+> **Note:** The current header defines `NAV_ITEMS` locally in `header.tsx` (line 26-34). Before building the sidebar, **extract `NAV_ITEMS` to a shared config** (e.g., `src/lib/nav-config.ts`) so both sidebar and mobile header can import it. The shared config should include a `group` field and optional `description` for command palette search.
 
 #### Component Structure
 
@@ -77,7 +81,7 @@ Theme Toggle             (Sun/Moon icon)
 // - Group headers visible only when expanded
 // - Active state: left border accent (3px frost-blue) instead of background fill
 // - Collapsed: show tooltip (shadcn Tooltip) on icon hover with label text
-// - Mobile: hidden, replaced by hamburger dropdown (existing pattern)
+// - Hidden on mobile (<md breakpoint)
 ```
 
 Styling for collapsed state:
@@ -128,54 +132,76 @@ px-3 pt-4 pb-1
 Current layout:
 ```tsx
 <body>
-  <Header />
-  <main className="container mx-auto px-4 py-8">{children}</main>
-  <Footer />
+  <Providers>
+    <Header />
+    <main id="main-content" className="container mx-auto px-4 py-8">{children}</main>
+    <Footer />
+    <ScrollToTop />
+  </Providers>
 </body>
 ```
 
 Proposed layout:
 ```tsx
 <body>
-  <div className="flex min-h-screen">
-    <Sidebar />
-    <div className="flex-1 flex flex-col min-w-0">
-      {/* min-w-0 prevents flex child overflow */}
-      <main className="flex-1 container mx-auto px-4 py-6 lg:px-6">
-        {children}
-      </main>
-      <Footer />
+  <Providers>
+    {/* Mobile: hamburger top bar (visible <md) */}
+    <MobileHeader />
+    <div className="flex min-h-screen">
+      {/* Desktop: sidebar (visible ≥md) */}
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* min-w-0 prevents flex child overflow */}
+        <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">
+          {children}
+        </main>
+        <Footer />
+      </div>
     </div>
-  </div>
+    <ScrollToTop />
+  </Providers>
 </body>
 ```
 
-**File: `src/components/header.tsx`**
+#### Mobile Behavior
 
-The existing header component becomes the **mobile-only** header. On desktop (md+), it is hidden and the sidebar takes over navigation.
+On viewports <768px (`md` breakpoint), the sidebar is hidden entirely. A **mobile header** replaces it:
+
+**File: `src/components/header.tsx`** → becomes mobile-only
+
+The existing header component already has a mobile hamburger dropdown. The change is:
+1. Wrap the entire header in `md:hidden` to hide it on desktop
+2. Update the mobile dropdown to use the same grouped nav structure as the sidebar
+3. Add a search icon trigger for the command palette (§2.2)
 
 ```tsx
-// Wrap the entire header in a responsive container:
-<header className="md:hidden sticky top-0 z-50 border-b bg-background/95 backdrop-blur ...">
-  {/* existing mobile hamburger implementation */}
+<header className="md:hidden sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+  <div className="container mx-auto flex h-14 items-center justify-between px-4">
+    {/* Logo */}
+    {/* Search icon (opens command palette) */}
+    {/* Hamburger menu (opens grouped nav dropdown) */}
+    {/* Theme toggle */}
+  </div>
 </header>
 ```
 
+> **Breakpoint change:** The current header uses `sm:` (640px) for desktop/mobile split. Moving to `md:` (768px) gives more room for the sidebar pattern and is consistent with competitor implementations. Update all responsive nav classes from `sm:` to `md:`.
+
 #### Sticky Table Header Adjustment
 
-The current `.table-header-sticky` uses `--table-header-top` to offset below the 56px header. With the sidebar, the header is removed on desktop, so sticky headers should stick to `top: 0`:
+The current `.table-header-sticky` in `globals.css` uses `--table-header-top` (defaults to `0px`). With the sidebar replacing the header on desktop, sticky headers should stick to `top: 0`:
 
 **File: `src/app/globals.css`**
 
+The current implementation already defaults to `0px`, so **no CSS change is needed**. On mobile where the 56px header persists, set `--table-header-top: 56px` on mobile breakpoints only:
+
 ```css
-.table-header-sticky thead {
-  position: sticky;
-  top: 0;  /* was: var(--table-header-top, 0px) */
-  z-index: 10;
+@media (max-width: 767px) {
+  :root {
+    --table-header-top: 56px;
+  }
 }
 ```
-
-If some components still use `--table-header-top`, set it to `0px` in the `:root` block.
 
 #### Persistence
 
@@ -208,21 +234,22 @@ useEffect(() => {
 
 | File | Change |
 |------|--------|
-| `src/components/sidebar.tsx` | **NEW** — main sidebar component |
-| `src/app/layout.tsx` | Layout restructure (flex row with sidebar) |
-| `src/components/header.tsx` | Restrict to mobile-only, or refactor into `mobile-header.tsx` |
-| `src/app/globals.css` | Update `--table-header-top`, add sidebar transition utilities |
+| `src/lib/nav-config.ts` | **NEW** — shared nav items with groups, icons, descriptions |
+| `src/components/sidebar.tsx` | **NEW** — desktop sidebar component |
+| `src/app/layout.tsx` | Layout restructure (flex row with sidebar + mobile header) |
+| `src/components/header.tsx` | Restrict to mobile-only (`md:hidden`), update breakpoint from `sm:` to `md:`, import from shared nav config |
+| `src/app/globals.css` | Add mobile-only `--table-header-top: 56px` media query |
 | `src/components/footer.tsx` | Remove redundant navigation links (sidebar handles nav) |
 
 ### Verification
 
 - Desktop (≥768px): sidebar visible, no top header, content fills remaining width
-- Mobile (<768px): hamburger menu, no sidebar, full-width content
+- Mobile (<768px): hamburger top bar visible, no sidebar, full-width content
 - Sidebar collapsed: icons only, tooltips on hover, 56px wide
 - Sidebar expanded: icons + labels + group headers, 220px wide
-- Active page highlighted correctly for all routes including nested routes
+- Active page highlighted correctly for all routes including nested routes (e.g., `/stablecoin/tether` highlights Dashboard)
 - `npm run build` passes (static export must not break)
-- Sticky table headers still work (top: 0 without header offset)
+- Sticky table headers still work (top: 0 on desktop, top: 56px on mobile)
 
 ---
 
@@ -230,7 +257,7 @@ useEffect(() => {
 
 ### Problem
 
-With 141 tracked stablecoins across 8+ pages, finding a specific coin or feature requires scrolling through the table or navigating page by page. Competitors like Token Terminal and Artemis offer instant Ctrl/Cmd+K search across all entities. Dune uses it for both content and command search.
+With 141 tracked stablecoins across 9 pages, finding a specific coin or feature requires scrolling through the table or navigating page by page. Competitors like Token Terminal and Artemis offer instant Ctrl/Cmd+K search across all entities. Dune uses it for both content and command search.
 
 ### Design
 
@@ -242,7 +269,7 @@ Implement a **command palette dialog** triggered by Ctrl/Cmd+K (or clicking a se
 2. Type to search → results update in real-time (client-side filtering, no API call)
 3. Results organized in sections:
    - **Stablecoins** (141 entries) — fuzzy match on name, symbol, id
-   - **Pages** (8 entries) — match on page name and description
+   - **Pages** (9 entries) — match on page name and description
    - **Actions** (toggle theme, clear filters)
 4. Arrow keys navigate results, Enter selects, Escape closes
 5. Selected stablecoin → navigates to `/stablecoin/{id}`
@@ -263,22 +290,20 @@ const coinEntries = TRACKED_STABLECOINS.map(coin => ({
   keywords: [coin.name, coin.symbol, coin.id].join(' '),
 }));
 
-// Pages: hardcoded
+// Pages: from shared nav config (extracted in §2.1)
 const pageEntries = NAV_ITEMS.map(item => ({
   type: 'page' as const,
   label: item.label,
   sublabel: item.description,
   href: item.href,
   icon: item.icon,
-  keywords: item.label,
+  keywords: [item.label, item.description].filter(Boolean).join(' '),
 }));
 ```
 
 #### Component Structure
 
 **New file: `src/components/command-palette.tsx`**
-
-Use shadcn's `<Dialog>` as the base (or `cmdk` library if already available):
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -290,9 +315,9 @@ Use shadcn's `<Dialog>` as the base (or `cmdk` library if already available):
 │  [DAI logo]  Dai (DAI)                      │
 │                                             │
 │ Pages                                       │
-│  [icon] Peg Tracker                         │
 │  [icon] Stability Index                     │
-│  [icon] Report Cards                        │
+│  [icon] Risk Lab                            │
+│  [icon] Liquidity                           │
 │                                             │
 │ Actions                                     │
 │  [icon] Toggle dark/light mode              │
@@ -322,18 +347,11 @@ Footer: px-4 py-2 border-t border-border text-xs text-muted-foreground
 
 #### Dependencies
 
-Check if `cmdk` is already installed. If not, consider using it for accessible command palette behavior (keyboard navigation, scoring, grouping). If adding a dependency is undesired, implement with a custom `<Dialog>` + `<input>` + filtered list.
-
-```bash
-# Check existing deps
-grep "cmdk" package.json
-```
-
-If not present, a lightweight implementation using shadcn's `Dialog` + custom fuzzy filter is sufficient.
+`cmdk` is **not installed**. A lightweight implementation using shadcn's `Dialog` + custom fuzzy filter is sufficient for 141 coins + 9 pages. No need for an external library.
 
 #### Fuzzy Search
 
-Simple substring match is adequate for 141 entries + 8 pages. No need for Fuse.js or similar:
+Simple substring match is adequate for 141 entries + 9 pages. No need for Fuse.js or similar:
 
 ```tsx
 function fuzzyMatch(query: string, target: string): boolean {
@@ -370,7 +388,7 @@ useEffect(() => {
 
 | File | Change |
 |------|--------|
-| `src/components/command-palette.tsx` | **NEW** — palette component |
+| `src/components/command-palette.tsx` | **NEW** — palette component (Dialog + input + filtered list) |
 | `src/app/layout.tsx` or `src/components/providers.tsx` | Add global keyboard listener + palette rendering |
 | `src/components/sidebar.tsx` | Add search trigger icon |
 | `src/components/header.tsx` | Add search trigger icon (mobile) |
@@ -379,7 +397,7 @@ useEffect(() => {
 
 - Ctrl/Cmd+K opens the palette from any page
 - Typing "USDT" shows Tether as the first result
-- Typing "peg" shows both Peg Tracker (page) and pegged coins
+- Typing "risk" shows Risk Lab page
 - Arrow keys navigate, Enter selects, Escape closes
 - Clicking outside closes the palette
 - Works on mobile (via search icon, not keyboard shortcut)
@@ -402,6 +420,18 @@ The homepage leads with a marketing tagline ("Shining a Light on Every Peg") and
 [Two-column chart grid - partially visible]
 ```
 
+**Current homepage section order** (in `page.tsx` + `homepage-client.tsx`):
+1. Hero heading + StabilityIndex widget (`page.tsx`)
+2. DailyDigest (`page.tsx`)
+3. Two-column chart grid: TotalMcapChart + PsiHistoryChart
+4. "Pharos' Unique Features" — 5 summary cards (LiquiditySummary, ReportCardsSummary, BlacklistSummary, CemeterySummary, StabilityIndexSummary)
+5. "Key Stablecoin Data" — FilterBar + StablecoinTable
+6. CategoryStats
+7. MarketHighlights
+8. PegHeatmap
+9. DepegFeed
+10. PegDiversityChart
+
 **Competitor pattern:** DefiLlama, Token Terminal, and Artemis all lead immediately with data — KPI metrics, charts, and tables visible within the first viewport.
 
 ### Design
@@ -410,17 +440,20 @@ Restructure the homepage to prioritize live data while preserving the editorial 
 
 ```
 [Sidebar (if implemented) | Content area]
-  ├── KPI Bar: PSI score • Total MCAP • Active Depegs • Coins at Peg • 24h Volume
+  ├── KPI Bar: PSI score • Total MCAP • Active Depegs • Coins at Peg • Worst Depeg
   ├── Two-column chart grid: Total MCAP | PSI History
   ├── Market Highlights: Key Movements (depegs + biggest movers, existing component)
-  ├── Live Dashboard Panels (3-col grid):
-  │     ├── Peg Status (mini heatmap, top 20 coins)
-  │     ├── Recent Freeze Events (last 3)
-  │     └── Grade Distribution (compact)
+  ├── Live Dashboard Panels (2-col / 3-col grid):
+  │     ├── LiquiditySummary
+  │     ├── ReportCardsSummary
+  │     ├── BlacklistSummary
+  │     ├── CemeterySummary
+  │     └── StabilityIndexSummary
   ├── Daily Digest (collapsible card)
   ├── Key Stablecoin Data section:
   │     ├── Filter Bar
   │     └── Stablecoin Table
+  ├── PegHeatmap + DepegFeed + PegDiversityChart
   └── [Footer]
 ```
 
@@ -460,24 +493,17 @@ Replace the hero `<h1>` + PSI widget with a dense, data-first KPI bar:
 
 **New file: `src/components/kpi-bar.tsx`**
 
-A horizontal row of 5-6 key metrics with the PSI score as the anchor:
+A horizontal row of 5 key metrics with the PSI score as the anchor:
 
 ```
 ┌─────────┬─────────────┬──────────────┬─────────────┬────────────┐
 │ PSI     │ Total MCAP  │ Active       │ Coins       │ Worst      │
 │ 96.3    │ $183.66B    │ Depegs: 3    │ at Peg: 138 │ Depeg:     │
-│ BEDROCK │ ▲ +0.2%     │ 🔴           │ / 141       │ -1805 bps  │
+│ BEDROCK │ ▲ +0.2%     │              │ / 141       │ -1805 bps  │
 └─────────┴─────────────┴──────────────┴─────────────┴────────────┘
 ```
 
-Each cell:
-```
-text-xs font-semibold uppercase tracking-wider text-muted-foreground  (label)
-text-2xl font-bold font-mono tabular-nums  (value)
-text-xs text-muted-foreground  (sublabel/delta)
-```
-
-The bar uses a single `<Card>` with `flex` layout and dividers:
+The bar uses a single `<Card>` with `grid` layout and dividers:
 
 ```tsx
 <Card className="p-0 overflow-hidden">
@@ -504,18 +530,18 @@ Data sources: PSI from `useStabilityIndex()`, MCAP from `useStablecoins()`, depe
 
 ##### Daily Digest Repositioning
 
-Move the Daily Digest from position 2 (immediately after hero) to position 5 (after the dashboard panels, before the table). Wrap it in a collapsible card:
+Move the Daily Digest from position 2 (immediately after hero in `page.tsx`) to after the summary cards. Wrap it in a collapsible card:
 
 **File: `src/components/homepage-client.tsx`**
 
-Move `<DailyDigest />` import and rendering below the feature cards section. Add a collapse toggle:
+Move `<DailyDigest />` rendering to after the summary cards section. Add a collapse toggle:
 
 ```tsx
 <section>
   <Card>
     <CardHeader className="flex flex-row items-center justify-between cursor-pointer"
                 onClick={() => setDigestOpen(!digestOpen)}>
-      <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider">
+      <CardTitle className="text-sm font-semibold uppercase tracking-wider">
         Signal & Noise
       </CardTitle>
       <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform",
@@ -534,16 +560,15 @@ Default `digestOpen` to `true` on first visit, persist state in `localStorage`.
 
 ##### Live Dashboard Panels
 
-**Replace the "Pharos' Unique Features" section** (which shows static counts) with **live data panels**:
+Keep the existing "Pharos' Unique Features" section with its **5 summary cards** (LiquiditySummary, ReportCardsSummary, BlacklistSummary, CemeterySummary, StabilityIndexSummary). These already show live data via their respective hooks.
 
-**File: `src/components/homepage-client.tsx`** (lines 78-88)
+**File: `src/components/homepage-client.tsx`**
 
-Current:
+Current (5 cards in 2→3 col grid):
 ```tsx
 <section>
-  <h2 className="text-lg font-semibold tracking-tight mb-4">Pharos' Unique Features</h2>
+  <h2 className="text-xl font-semibold tracking-tight mb-4">Pharos' Unique Features</h2>
   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-    <PegTrackerSummary />
     <LiquiditySummary />
     <ReportCardsSummary />
     <BlacklistSummary />
@@ -553,12 +578,10 @@ Current:
 </section>
 ```
 
-Keep the existing summary components but restructure to show more live data. The current `PegTrackerSummary`, `BlacklistSummary`, etc. already show live counts — verify they show trending/changing data, not just totals.
-
-Consider adding:
-- A mini version of the peg heatmap (top 20 coins only) that links to full Peg Tracker
-- A "Biggest 24h Movers" micro-table (top 3 gainers, top 3 losers)
-- A compact grade distribution bar (already exists in Risk Lab — extract and reuse)
+Consider enhancing:
+- Rename section to something more data-forward (e.g., "Live Indicators")
+- A mini version of the peg heatmap (top 20 coins only) that links to full heatmap section below
+- A compact grade distribution bar (already exists in Risk Lab's `client.tsx` — extract and reuse)
 
 ##### Section Header Consistency
 
@@ -577,11 +600,10 @@ All section headers should follow a single pattern:
 
 | File | Change |
 |------|--------|
-| `src/app/page.tsx` | Replace hero section with compact title + KPI bar |
+| `src/app/page.tsx` | Replace hero section with compact title + KPI bar; move DailyDigest into homepage-client |
 | `src/components/kpi-bar.tsx` | **NEW** — horizontal KPI metrics bar |
-| `src/components/homepage-client.tsx` | Reorder sections, add Daily Digest collapse |
+| `src/components/homepage-client.tsx` | Reorder sections, add Daily Digest collapse, rename summary section |
 | `src/components/daily-digest.tsx` | May need adjustments for collapsible context |
-| Existing summary components | Verify they show live data, not just static counts |
 
 ### Verification
 
@@ -598,9 +620,26 @@ All section headers should follow a single pattern:
 ### Problem
 
 When chart data is loading:
-1. The chart container area shows nothing (empty card with header)
+1. Some chart containers show nothing (empty card with header)
 2. This creates a jarring visual gap and potential layout shift
-3. The table uses skeleton rows but charts have no equivalent
+3. 4 of 10 chart components already have skeleton states, but 5 don't
+
+### Current State
+
+| Chart Component | Has Skeleton? |
+|-----------------|--------------|
+| `total-mcap-chart.tsx` | **Yes** — `<Skeleton className="h-[250px]...">` |
+| `psi-history-chart.tsx` | **Yes** — Skeleton elements |
+| `blacklist-chart.tsx` | **Yes** — `isLoading` prop |
+| `peg-diversity-chart.tsx` | **Yes** — Skeleton elements |
+| `mcap-chart.tsx` | **No** — shows "No market cap data available" text |
+| `comparison-chart.tsx` | **No** — no loading state |
+| `governance-chart.tsx` | **No** — returns null if data missing |
+| `peg-type-chart.tsx` | **No** — returns null if data missing |
+| `cemetery-charts.tsx` | **No** — static data, may not need skeleton |
+| `dex-liquidity-card.tsx` | Has embedded chart — check if history chart section has loading state |
+
+The stablecoin table skeleton (`stablecoin-table.tsx` lines 184-200) **already uses varied widths** (w-8, w-6, w-28, w-16, w-12, w-20, w-14) — no update needed.
 
 ### Design
 
@@ -645,17 +684,16 @@ export function ChartSkeleton({ className = "h-[250px] sm:h-[350px]" }: ChartSke
 
 #### Usage
 
-Replace empty states in all chart components:
+Add `ChartSkeleton` fallback to chart components that **currently lack loading states**:
 
-**File: `src/components/mcap-chart.tsx`**
-
+**`src/components/mcap-chart.tsx`** (detail page market cap chart):
 ```tsx
-/* Current - no loading state */
+/* Current - shows text when empty */
 {filteredData.length > 0 ? (
   <div className="h-[250px] sm:h-[350px]">
     <ResponsiveContainer>...</ResponsiveContainer>
   </div>
-) : null}
+) : <p>No market cap data available</p>}
 
 /* Proposed */
 {filteredData.length > 0 ? (
@@ -667,50 +705,34 @@ Replace empty states in all chart components:
 )}
 ```
 
-Apply to:
-- `src/components/mcap-chart.tsx`
-- `src/components/total-mcap-chart.tsx`
-- `src/components/psi-history-chart.tsx`
-- `src/components/supply-chart.tsx`
-- `src/components/dex-liquidity-history-chart.tsx`
-- Any wrapper component that conditionally renders a chart
+Apply to these components (verify each has no existing loading state first):
+- `src/components/mcap-chart.tsx` — detail page market cap
+- `src/components/comparison-chart.tsx` — compare page charts
+- `src/components/governance-chart.tsx` — homepage/about governance pie
+- `src/components/peg-type-chart.tsx` — homepage/about peg type pie
+- `src/components/dex-liquidity-card.tsx` — embedded liquidity history chart section
 
-#### Improved Table Skeleton
+**Skip** (already have skeletons): `total-mcap-chart.tsx`, `psi-history-chart.tsx`, `blacklist-chart.tsx`, `peg-diversity-chart.tsx`
 
-Also update the table skeleton to vary row widths:
-
-**File: `src/components/stablecoin-table.tsx`** (skeleton section)
-
-```tsx
-// Current: all skeleton bars are same width
-<Skeleton className="h-4 w-20" />
-
-// Proposed: vary widths to approximate column content
-const SKELETON_WIDTHS = [
-  'w-6',   // rank
-  'w-28',  // name
-  'w-16',  // price
-  'w-12',  // peg
-  'w-20',  // mcap
-  'w-14',  // 24h
-  'w-14',  // 7d
-];
-```
+**Skip** (static data): `cemetery-charts.tsx`
 
 ### Files Affected
 
 | File | Change |
 |------|--------|
 | `src/components/chart-skeleton.tsx` | **NEW** — skeleton component |
-| All chart components | Add `ChartSkeleton` fallback for empty/loading states |
-| `src/components/stablecoin-table.tsx` | Improve skeleton row width variance |
+| `src/components/mcap-chart.tsx` | Add `ChartSkeleton` fallback |
+| `src/components/comparison-chart.tsx` | Add `ChartSkeleton` fallback |
+| `src/components/governance-chart.tsx` | Add `ChartSkeleton` fallback |
+| `src/components/peg-type-chart.tsx` | Add `ChartSkeleton` fallback |
+| `src/components/dex-liquidity-card.tsx` | Add `ChartSkeleton` to history chart section |
 
 ### Verification
 
-- Navigate to homepage with slow network: chart areas should show pulsing skeleton
-- Navigate to stability index: PSI chart shows skeleton before data loads
-- Table shows varied-width skeleton bars
+- Navigate to a stablecoin detail page with slow network: chart area shows pulsing skeleton
+- Navigate to compare page with coins selected: chart shows skeleton before data loads
 - Skeletons match the dimensions of the actual charts (no layout shift)
+- `npm run build` passes
 
 ---
 
@@ -718,16 +740,16 @@ const SKELETON_WIDTHS = [
 
 ### Problem
 
-The stablecoin detail page (`/stablecoin/[id]`) is the most data-dense page in the application. It contains 7+ sections stacked vertically:
+The stablecoin detail page (`/stablecoin/[id]`) is the most data-dense page in the application. It contains 8 sections stacked vertically (in `client.tsx`):
 
-1. Coin header + badges
-2. KPI cards (Price, MCAP, Supply)
-3. Score cards (Peg, Bluechip, Liquidity)
-4. Editorial commentary
-5. Report Card (grade + radar + dimension breakdown)
-6. Market Cap chart + Key Information
-7. Contract Addresses
-8. DEX Liquidity (protocol breakdown, pools, chart)
+1. Key Metrics grid (Price, MCAP, Supply, Supply Changes, Peg Score, Bluechip, Liquidity)
+2. AI Summary (editorial commentary)
+3. Report Card (grade + radar + dimension breakdown)
+4. Market Cap Chart
+5. Key Information card (links, governance, backing, collateral, jurisdiction)
+6. Contract Addresses
+7. DEX Liquidity (protocol breakdown, pools, history chart)
+8. Depeg History (event timeline)
 
 On a 1080p monitor, this page scrolls for 4-5 viewport heights. Users frequently want to jump between sections (e.g., check the DEX liquidity section after reading the report card).
 
@@ -739,7 +761,7 @@ Add a **sticky horizontal tab bar** below the coin header that scrolls with the 
 ┌──────────────────────────────────────────────────────┐
 │ [Logo] Tether (USDT)  · USD · Centralized · RWA     │
 ├──────────────────────────────────────────────────────┤
-│ Overview │ Report Card │ Charts │ Info │ Liquidity   │ ← sticky, scrolls horizontally on mobile
+│ Overview │ Report Card │ Chart │ Info │ Liquidity │ History │ ← sticky
 ├──────────────────────────────────────────────────────┤
 │                                                      │
 │ [Current section content]                            │
@@ -751,11 +773,12 @@ Add a **sticky horizontal tab bar** below the coin header that scrolls with the 
 
 | Tab | Scrolls to | Content |
 |-----|-----------|---------|
-| Overview | Top of page | KPI cards + Score cards + Commentary |
+| Overview | Top of page | Key Metrics grid + AI Summary |
 | Report Card | `#report-card` | Grade badge + Radar chart + Dimension breakdown |
-| Charts | `#charts` | Market Cap chart + Supply chart |
+| Chart | `#chart` | Market Cap chart |
 | Info | `#info` | Key Information + Contract Addresses |
 | Liquidity | `#liquidity` | DEX breakdown + Pools + History chart |
+| History | `#history` | Depeg event timeline |
 
 #### Implementation
 
@@ -820,16 +843,29 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
 
 #### Section IDs
 
-Add `id` attributes to each major section in the detail page:
+Add `id` attributes to each major section in the detail client component:
 
-**File: `src/app/stablecoin/[id]/page.tsx`** (or the detail client component)
+**File: `src/app/stablecoin/[id]/client.tsx`**
 
 ```tsx
-<section id="overview">...</section>
-<section id="report-card">...</section>
-<section id="charts">...</section>
-<section id="info">...</section>
-<section id="liquidity">...</section>
+<section id="overview">
+  {/* Key Metrics grid + AI Summary */}
+</section>
+<section id="report-card">
+  {/* ReportCardDetail */}
+</section>
+<section id="chart">
+  {/* McapChart */}
+</section>
+<section id="info">
+  {/* Key Information + Contract Addresses */}
+</section>
+<section id="liquidity">
+  {/* DexLiquidityCard */}
+</section>
+<section id="history">
+  {/* Depeg History */}
+</section>
 ```
 
 ### Files Affected
@@ -837,14 +873,16 @@ Add `id` attributes to each major section in the detail page:
 | File | Change |
 |------|--------|
 | `src/components/detail-section-nav.tsx` | **NEW** — sticky section nav |
-| `src/app/stablecoin/[id]/page.tsx` | Add section IDs, integrate `DetailSectionNav` |
+| `src/app/stablecoin/[id]/client.tsx` | Add section IDs, integrate `DetailSectionNav` |
+| `src/app/stablecoin/[id]/page.tsx` | May need to pass section config to client |
 
 ### Verification
 
 - Scroll down the detail page: tab bar highlights the current section
 - Click a tab: smooth-scrolls to the section
 - Mobile: tab bar scrolls horizontally, doesn't wrap
-- Sticky position doesn't conflict with other sticky elements (sidebar on desktop is horizontal, not vertical)
+- Sticky position doesn't conflict with sidebar (sidebar is vertical, this is horizontal)
+- On mobile, sticky top accounts for the 56px header (use `top: 56px` or `top: var(--table-header-top)` on mobile)
 
 ---
 
@@ -852,11 +890,13 @@ Add `id` attributes to each major section in the detail page:
 
 ### Problem
 
-The Compare page at `/compare` shows a minimal empty state: a magnifying glass icon + "Select at least 2 stablecoins to compare." This gives new users no guidance on what a comparison looks like or which coins are worth comparing.
+The Compare page at `/compare` shows a minimal empty state: a Search icon + "Select at least 2 stablecoins to compare." This gives new users no guidance on what a comparison looks like or which coins are worth comparing.
 
 ### Design
 
-Replace the empty state with **suggested comparison presets** and a preview of what the comparison view looks like:
+Replace the empty state with **suggested comparison presets** and a preview of what the comparison view looks like.
+
+> **Critical implementation note:** The compare page uses **lowercase symbols** (not DefiLlama IDs) in the URL query parameter. E.g., `/compare?coins=usdt,usdc,fdusd` — not `coins=tether,usd-coin,first-digital-usd`. All preset `coins` arrays must use symbols.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -871,14 +911,14 @@ Replace the empty state with **suggested comparison presets** and a preview of w
 │ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐     │
 │ │ The Big Three│ │ DeFi Natives │ │ Gold Pegs    │     │
 │ │ USDT vs USDC │ │ DAI vs LUSD  │ │ PAXG vs XAUT │     │
-│ │ vs FDUSD     │ │ vs BOLD      │ │ vs TGLD      │     │
+│ │ vs FDUSD     │ │ vs BOLD      │ │ vs KAU       │     │
 │ │   [Compare]  │ │   [Compare]  │ │   [Compare]  │     │
 │ └──────────────┘ └──────────────┘ └──────────────┘     │
 │                                                         │
 │ ┌──────────────┐ ┌──────────────┐                      │
 │ │ Euro Pegs    │ │ Yield-bearing│                      │
-│ │ EURS vs EURA │ │ sDAI vs USDS │                      │
-│ │ vs EURe      │ │ vs USDe      │                      │
+│ │ EURS vs EURA │ │ USDS vs USDe │                      │
+│ │ vs EURE      │ │ vs GHO       │                      │
 │ │   [Compare]  │ │   [Compare]  │                      │
 │ └──────────────┘ └──────────────┘                      │
 │                                                         │
@@ -887,51 +927,53 @@ Replace the empty state with **suggested comparison presets** and a preview of w
 
 #### Suggested Presets
 
+All `coins` arrays use **lowercase symbols** matching `SYMBOL_TO_COIN` in `compare/client.tsx`. Every coin below has been verified present in `TRACKED_STABLECOINS`.
+
 ```tsx
 const COMPARISON_PRESETS = [
   {
     title: "The Big Three",
     description: "The three largest USD stablecoins by market cap",
-    coins: ["tether", "usd-coin", "first-digital-usd"],
+    coins: ["usdt", "usdc", "fdusd"],
   },
   {
     title: "DeFi Natives",
     description: "Decentralized, crypto-backed stablecoins",
-    coins: ["dai", "liquity-usd", "bold-dollar"],
+    coins: ["dai", "lusd", "bold"],
   },
   {
     title: "Gold Pegs",
     description: "Tokenized gold stablecoins",
-    coins: ["pax-gold", "tether-gold", "tgold"],
+    coins: ["paxg", "xaut", "kau"],
   },
   {
     title: "Euro Stablecoins",
     description: "EUR-pegged stablecoins",
-    coins: ["stasis-eurs", "ageur", "monerium-eur-money"],
+    coins: ["eurs", "eura", "eure"],
   },
   {
     title: "Yield-Bearing",
     description: "Stablecoins with native yield mechanisms",
-    coins: ["savings-dai", "ethena-usde", "mountain-protocol-usdm"],
+    coins: ["usds", "usde", "gho"],
   },
 ];
 ```
 
-Clicking a preset populates the dropdowns and triggers the comparison view. The preset cards link to `/compare?coins=tether,usd-coin,first-digital-usd`.
+Clicking a preset navigates to `/compare?coins=usdt,usdc,fdusd` (using `router.push`), which the existing `CompareClient` parses via `SYMBOL_TO_COIN`.
 
 ### Files Affected
 
 | File | Change |
 |------|--------|
-| `src/app/compare/page.tsx` (or `client.tsx`) | Add preset cards to empty state |
-| `src/components/comparison-presets.tsx` | **NEW** — preset card grid component |
+| `src/app/compare/client.tsx` | Add preset cards to empty state (inline, or import from separate component) |
 
 ### Verification
 
 - Compare page with no coins selected shows preset cards
-- Clicking a preset populates the dropdowns with the correct coins
+- Clicking a preset updates the URL and populates the dropdowns with the correct coins
 - Comparison table/radar renders correctly after preset selection
-- Preset coin IDs must be valid (cross-reference with `TRACKED_STABLECOINS`)
+- All preset symbols resolve correctly via `SYMBOL_TO_COIN`
+- `npm run build` passes
 
 ---
 
@@ -992,12 +1034,12 @@ export function downloadCsv<T>(
 
 **Components to add CSV export:**
 
-| Table | Columns to Export | Filename |
-|-------|-------------------|----------|
-| Stablecoin table | Rank, Name, Symbol, Price, MCAP, 24h%, 7d%, Peg Score, Liquidity Score, Grade | `pharos-stablecoins` |
-| Peg Leaderboard | Symbol, Peg Score, Current Dev, Peg %, Events, Worst Dev | `pharos-peg-tracker` |
-| Blacklist table | Date, Stablecoin, Chain, Event, Address, Amount, Tx | `pharos-freeze-events` |
-| DEX Liquidity table | Symbol, Score, TVL, Pools, Protocols | `pharos-dex-liquidity` |
+| Table | Component | Filename |
+|-------|-----------|----------|
+| Stablecoin table (homepage) | `src/components/stablecoin-table.tsx` | `pharos-stablecoins` |
+| Peg heatmap | `src/components/peg-heatmap.tsx` | `pharos-peg-data` |
+| Blacklist table | `src/components/blacklist-table.tsx` | `pharos-freeze-events` |
+| DEX Liquidity (liquidity page) | Identify the table component in `src/app/liquidity/` | `pharos-dex-liquidity` |
 
 **Button placement:** Add a `<Button variant="outline" size="xs">` with a Download icon to the filter bar or table header:
 
@@ -1015,13 +1057,9 @@ export function downloadCsv<T>(
 
 #### 2.7b — Chart Screenshot (PNG)
 
-Add a camera/download icon to chart card headers. On click, capture the chart as a PNG using `html-to-image` or the Canvas API.
+Add a camera/download icon to chart card headers. On click, capture the chart as a PNG using `html-to-image`.
 
-**Approach: `html-to-image` library** (lightweight, works with SVG-based Recharts):
-
-```bash
-npm install html-to-image
-```
+**Dependency:** `html-to-image` is **not installed** — requires `npm install html-to-image`.
 
 **New file: `src/lib/chart-export.ts`**
 
@@ -1044,11 +1082,11 @@ export async function downloadChartPng(
 }
 ```
 
-Add a download button to chart card headers using `CardAction`:
+Add a download button to chart card headers using `CardAction` (exists in `src/components/ui/card.tsx`):
 
 ```tsx
 <CardHeader>
-  <CardTitle as="h2">Market Cap</CardTitle>
+  <CardTitle>Market Cap</CardTitle>
   <CardAction>
     <div className="flex items-center gap-1">
       <TimeRangeButtons ... />
@@ -1077,9 +1115,9 @@ const chartRef = useRef<HTMLDivElement>(null);
 | `src/lib/csv-export.ts` | **NEW** — CSV generation utility |
 | `src/lib/chart-export.ts` | **NEW** — chart PNG capture utility |
 | `src/components/stablecoin-table.tsx` | Add CSV download button |
-| `src/components/peg-leaderboard.tsx` | Add CSV download button |
+| `src/components/peg-heatmap.tsx` | Add CSV download button |
 | `src/components/blacklist-table.tsx` | Add CSV download button |
-| All chart components | Add PNG export button + ref |
+| Chart components with CardAction headers | Add PNG export button + ref |
 | `package.json` | Add `html-to-image` dependency |
 
 ### Verification
@@ -1089,6 +1127,7 @@ const chartRef = useRef<HTMLDivElement>(null);
 - Click camera on any chart → downloads a `.png` file with the chart at 2x resolution
 - PNG has correct background color (card color, not transparent)
 - Export buttons don't interfere with existing UI (small, unobtrusive)
+- `npm run build` passes
 
 ---
 
@@ -1096,12 +1135,38 @@ const chartRef = useRef<HTMLDivElement>(null);
 
 Execute in this order to minimize interdependencies:
 
-1. **2.4 Chart skeletons** — independent, no structural changes
-2. **2.6 Compare empty state** — independent, small scope
+1. **2.4 Chart skeletons** — independent, no structural changes, reduced scope (5 components)
+2. **2.6 Compare empty state** — independent, small scope (single file)
 3. **2.5 Detail section nav** — independent, small scope
-4. **2.7 Data export** — independent, adds new files only
+4. **2.7 Data export** — independent, adds new utility files + buttons
 5. **2.3 Homepage redesign** — depends on Tier 1 being complete for visual consistency
-6. **2.2 Command palette** — should be done after or alongside 2.1
-7. **2.1 Sidebar navigation** — largest structural change, do last (or first if prioritized)
+6. **2.1 Sidebar navigation** — largest structural change; creates shared nav config needed by §2.2
+7. **2.2 Command palette** — depends on shared nav config from §2.1
 
 Items 1-4 can be done in parallel. Items 5-7 should be sequential.
+
+---
+
+## Appendix: Discrepancies Corrected from Original Plan
+
+This section documents what changed from the original draft after verifying against the current codebase (2026-02-26):
+
+| Original Assumption | Actual State | Correction |
+|---------------------|-------------|------------|
+| Header has 8 nav items | 7 items (no Peg Tracker in nav) | Updated count and item list |
+| `/peg-tracker` page exists | No such page; peg heatmap is on homepage | Removed from sidebar nav |
+| Portfolio is standalone page | Embedded in Risk Lab (`/risk-lab`) | Kept in Risk Lab, removed from nav |
+| Contagion Map page exists | Does not exist | Removed from sidebar nav |
+| Mobile breakpoint is `md:` (768px) | Header uses `sm:` (640px) | Plan standardizes on `md:` with migration note |
+| `PegTrackerSummary` component exists | Does not exist | Removed; actual components are 5 (not 6) |
+| Compare presets use DefiLlama IDs | Compare page uses lowercase symbols via `SYMBOL_TO_COIN` | All presets rewritten with symbols |
+| Preset coins: tgold, savings-dai, mountain-protocol-usdm | Not in TRACKED_STABLECOINS | Replaced with KAU, USDS, GHO |
+| `supply-chart.tsx` exists | No such file | Removed from chart skeleton targets |
+| `dex-liquidity-history-chart.tsx` is standalone | Embedded in `dex-liquidity-card.tsx` | Updated file reference |
+| 4+ charts need skeletons | total-mcap, psi-history, blacklist, peg-diversity already have them | Reduced scope to 5 components |
+| Table skeleton uses uniform `w-20` | Already uses varied widths (w-8 through w-28) | Removed table skeleton update |
+| `peg-leaderboard.tsx` exists | No such file; peg data is in `peg-heatmap.tsx` | Updated file reference |
+| `cmdk` may be installed | Not installed | Confirmed: use Dialog + custom filter |
+| `html-to-image` may be installed | Not installed | Confirmed: needs `npm install` |
+| Section IDs in `page.tsx` | Detail sections are in `client.tsx` | Updated file reference |
+| `NAV_ITEMS` in shared config | Defined locally in `header.tsx` | Added extraction step to §2.1 |

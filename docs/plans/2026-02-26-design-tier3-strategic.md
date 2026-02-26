@@ -672,27 +672,11 @@ UI: Add a "Columns" dropdown button in the filter bar:
 
 #### 3.5b — Favorite Coins (Watchlist)
 
-```tsx
-interface WatchlistPreferences {
-  favoriteIds: string[];  // ['tether', 'usd-coin', 'dai']
-}
-```
-
-**Storage key:** `pharos:watchlist`
-
-UI: Star icon on each table row and detail page header. Starred coins appear at the top of the table (or in a dedicated "Watchlist" tab/filter).
+REMOVED, REASON = REFUSED. NO USER PREFERENCE TO BE STORED, NO WALLET, NO EMAIL: PURE INFORMATION.
 
 #### 3.5c — Default Time Ranges
 
-```tsx
-interface TimeRangePreferences {
-  defaultRange: '7d' | '30d' | '90d' | '1y' | 'all';
-}
-```
-
-**Storage key:** `pharos:time-range`
-
-When a user changes the time range on any chart, offer a "Set as default" option (small text link below the range buttons).
+REMOVED, REASON = REFUSED. NO USER PREFERENCE TO BE STORED, NO WALLET, NO EMAIL: PURE INFORMATION.
 
 #### 3.5d — Sidebar State
 
