@@ -27,6 +27,15 @@ export function TotalMcapChart() {
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
+    // Build sorted (oldest-first) mcap array
+    const mcapPoints = data.map((point) => ({
+      ts: point.date * 1000,
+      total: Object.values(point.totalCirculatingUSD).reduce(
+        (sum, v) => sum + (v ?? 0),
+        0,
+      ),
+    }));
+
     // Build sorted (oldest-first) PSI array from history + current
     const psiPoints: { ts: number; score: number }[] = [];
     if (psiData?.history) {
@@ -39,23 +48,23 @@ export function TotalMcapChart() {
       psiPoints.push({ ts: psiData.current.computedAt * 1000, score: psiData.current.score });
     }
 
-    // Walk through marketcap points, forward-filling PSI scores
-    let psiIdx = 0;
-    return data.map((point) => {
-      const total = Object.values(point.totalCirculatingUSD).reduce(
-        (sum, v) => sum + (v ?? 0),
-        0
-      );
-      const ts = point.date * 1000;
+    // Merge both timestamp grids so every PSI data point is visible
+    const tsSet = new Set(mcapPoints.map((p) => p.ts));
+    for (const p of psiPoints) tsSet.add(p.ts);
+    const allTs = [...tsSet].sort((a, b) => a - b);
 
-      // Advance PSI index to the most recent point at or before this timestamp
-      while (psiIdx < psiPoints.length - 1 && psiPoints[psiIdx + 1].ts <= ts) {
-        psiIdx++;
-      }
+    let mIdx = 0;
+    let pIdx = 0;
+    return allTs.map((ts) => {
+      // Forward-fill mcap: advance to latest point at or before ts
+      while (mIdx < mcapPoints.length - 1 && mcapPoints[mIdx + 1].ts <= ts) mIdx++;
+      const total = mcapPoints[mIdx].ts <= ts ? mcapPoints[mIdx].total : undefined;
 
+      // Forward-fill PSI: advance to latest point at or before ts
+      while (pIdx < psiPoints.length - 1 && psiPoints[pIdx + 1].ts <= ts) pIdx++;
       const score =
-        psiPoints.length > 0 && psiPoints[psiIdx].ts <= ts
-          ? psiPoints[psiIdx].score
+        psiPoints.length > 0 && psiPoints[pIdx].ts <= ts
+          ? psiPoints[pIdx].score
           : undefined;
 
       return { ts, total, score };
@@ -66,7 +75,7 @@ export function TotalMcapChart() {
 
   const yDomain = useMemo((): [number, number | string] => {
     if (range === "all" || filteredData.length === 0) return [0, "auto"];
-    const values = filteredData.map((d) => d.total);
+    const values = filteredData.map((d) => d.total).filter((v): v is number => v != null);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const padding = (max - min) * 0.15 || max * 0.05;
