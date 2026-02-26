@@ -190,7 +190,7 @@ export function useStressTest(
     return computeStressedGrades(reportData.cards, overrides);
   }, [targetCoinId, targetGrade, reportData]);
 
-  // --- All affected coin IDs (no portfolio filter) — for card grid highlighting ---
+  // --- All affected coin IDs — for card grid highlighting ---
   const allAffectedIds = useMemo((): Set<string> => {
     if (!stressedCards || !reportData) return new Set();
 

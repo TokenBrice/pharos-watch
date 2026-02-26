@@ -308,11 +308,11 @@ export default function AboutPage() {
               <div className="flex items-center gap-2">
                 <Layers className="h-5 w-5 text-violet-500" />
                 <Link href="/risk-lab" className="font-bold underline underline-offset-4 hover:text-violet-500 transition-colors">
-                  Effective Portfolio Exposure
+                  Systemic Risk Scoreboard
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                Traces collateral weights across your holdings to reveal true upstream exposure — see what fraction of your portfolio ultimately rests on each base asset
+                Pre-computes the most damaging single-coin failure scenarios across the ecosystem — see which stablecoin failures would cause the most collateral damage
               </p>
             </CardContent>
           </Card>
@@ -754,55 +754,25 @@ export default function AboutPage() {
         </CardContent>
       </Card>
 
-      {/* Section 8: Portfolio Analyzer & Stress Test Methodology */}
+      {/* Section 8: Contagion Stress Test Methodology */}
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>
-          <CardTitle as="h2">Portfolio Analyzer &amp; Stress Test</CardTitle>
+          <CardTitle as="h2">Contagion Stress Test</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            The portfolio analyzer lets you input stablecoin holdings and receive an aggregate risk
-            assessment. The stress test simulates dependency failures to reveal concentration risk.
+            The stress test simulates dependency failures to reveal systemic concentration risk
+            across the stablecoin ecosystem.
           </p>
 
-          {/* Portfolio Grade */}
+          {/* Systemic Risk Scoreboard */}
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Portfolio Grade</h3>
+            <h3 className="text-foreground font-medium">Systemic Risk Scoreboard</h3>
             <p>
-              The portfolio grade is a USD-weighted average of held coins&apos; overall scores:
-            </p>
-            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
-              portfolioScore = &Sigma;(coinScore &times; coinAmount) / &Sigma;(coinAmount)
-            </p>
-            <p>
-              for all rated coins. Coins with an NR (Not Rated) grade are excluded from the
-              weighted average but flagged in the UI.
-            </p>
-          </div>
-
-          {/* Portfolio Radar */}
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Portfolio Radar</h3>
-            <p>
-              The portfolio radar chart shows the same weighted average applied per dimension
-              (Peg Stability, Liquidity, Resilience, Decentralization, Dependency Risk),
-              revealing the aggregate risk profile shape of the portfolio.
-            </p>
-          </div>
-
-          {/* Upstream Exposure */}
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Upstream Exposure</h3>
-            <p>
-              For each holding, the dashboard traces the dependency graph using researched
-              collateral weights to calculate effective exposure to upstream stablecoins.
-              Direct holdings of centralized stablecoins (e.g., USDC, USDT) attribute 100%
-              to themselves. Dependent coins split their exposure according to their collateral weights.
-            </p>
-            <p>
-              <span className="text-foreground font-medium">Example:</span>{" "}
-              $50K USDC (direct) + $5K DAI (85% USDC) + $2K FRAX (90% USDC)
-              = $56,050 effective USDC exposure out of $57,000 total (98%).
+              On page load, the scoreboard pre-computes the five most damaging single-coin failure
+              scenarios. For each targetable coin (one that has dependents), it simulates a downgrade
+              to D, counts the number of affected coins, and sums their market cap as &ldquo;supply at
+              risk.&rdquo; Results are sorted by supply at risk descending.
             </p>
           </div>
 
@@ -826,7 +796,6 @@ export default function AboutPage() {
             <h3 className="text-foreground font-medium">Limitations</h3>
             <ul className="list-disc list-inside space-y-1">
               <li>Collateral weights are researched estimates that may not reflect real-time ratios</li>
-              <li>Portfolio holdings are self-reported &mdash; no wallet connection or on-chain verification</li>
               <li>The stress test models only the dependency risk channel, not second-order market effects</li>
             </ul>
           </div>
