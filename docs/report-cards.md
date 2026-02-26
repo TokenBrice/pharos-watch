@@ -12,9 +12,9 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 |-----------|--------|--------|---------|
 | **Peg Stability** | 25% | `pegScore` from peg summary | Passthrough. Cap at 65 if active depeg. +3 bonus if no events in 12+ months. NAV tokens → NR |
 | **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough. −5 if HHI > 0.5, −10 if HHI > 0.8 |
-| **Resilience** | 15% | Chain count (60%) + freeze rate (40%) | See sub-scores below |
+| **Resilience** | 10% | Token metadata (blacklist capability) | Not blacklistable → 100, Blacklistable → 0 |
 | **Decentralization** | 10% | Governance type from stablecoin metadata | `decentralized` → 95, `centralized-dependent` → 70, `centralized` → 50 |
-| **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 95), −10 if any < 75. NR if unmapped |
+| **Dependency Risk** | 30% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 95), −10 if any < 75. NR if unmapped |
 
 ### Peg Stability Details
 
@@ -31,23 +31,14 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
   - HHI > 0.8: −10 (nearly single-pool concentration)
   - HHI > 0.5: −5 (moderate concentration)
 
-### Resilience Sub-Scores
+### Resilience Details
 
-**Chain distribution (60% weight):**
+Binary scoring based on whether the token can be blacklisted/frozen by its issuer:
 
-| Chains | Score |
-|--------|-------|
-| 1 | 40 |
-| 2 | 55 |
-| 3 | 65 |
-| 4–5 | 75 |
-| 6–8 | 85 |
-| 9+ | 95 |
+- **Not blacklistable** (decentralized, no admin freeze): score = 100
+- **Blacklistable** (issuer can freeze/seize funds): score = 0
 
-**Freeze event rate (40% weight):**
-- Formula: `100 − (events_per_month × 2)`, clamped 0–100
-- Applies to USDC, USDT, PAXG, XAUT (coins with tracked freeze/blacklist events)
-- Coins without freeze capability: 85 (neutral)
+Data source: `canBeBlacklisted` field on `StablecoinMeta` metadata. Falls back to governance type when not explicitly set (`centralized` → blacklistable, others → not).
 
 ### Dependency Risk Details
 
@@ -97,7 +88,7 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `chainCount`, `freezeEventsPerMonth`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 

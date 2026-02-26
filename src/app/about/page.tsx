@@ -267,7 +267,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Gauge className="h-5 w-5 text-indigo-500" />
-                <span className="font-bold">Stability Index</span>
+                <a href="/stability-index" className="font-bold hover:underline">Pharos Stability Index (PSI)</a>
               </div>
               <p className="text-sm text-muted-foreground">
                 Daily health score for the stablecoin ecosystem: aggregates peg integrity, supply growth, and liquidity depth into a 0&ndash;100 score
@@ -449,9 +449,9 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Resilience</td>
-                    <td className="py-2 pr-4">15%</td>
-                    <td className="py-2 pr-4">Chain count, freeze events</td>
-                    <td className="py-2">Single points of failure and operational risk</td>
+                    <td className="py-2 pr-4">10%</td>
+                    <td className="py-2 pr-4">Blacklist capability</td>
+                    <td className="py-2">Can the issuer freeze or seize holder funds?</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Decentralization</td>
@@ -461,7 +461,7 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
-                    <td className="py-2 pr-4">25%</td>
+                    <td className="py-2 pr-4">30%</td>
                     <td className="py-2 pr-4">Dependencies, upstream grades</td>
                     <td className="py-2">Inherited risk from upstream stablecoins</td>
                   </tr>
@@ -517,13 +517,12 @@ export default function AboutPage() {
               <li>Peg stability only reflects price data &mdash; can&apos;t detect coins &ldquo;stable&rdquo; because nobody trades them</li>
               <li>Decentralization is structural, not a value judgment</li>
               <li>Dependency map is manually maintained &mdash; may not capture every collateral relationship</li>
-              <li>Resilience uses chain count as proxy &mdash; doesn&apos;t account for chain quality or TVL distribution per chain</li>
             </ul>
           </div>
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v2.0. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v2.1. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>

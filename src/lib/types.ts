@@ -85,6 +85,7 @@ export interface StablecoinMeta {
   contracts?: ContractDeployment[];  // On-chain contract deployments per chain
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
   dependencies?: DependencyWeight[];  // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
+  canBeBlacklisted?: boolean;          // Whether the issuer can blacklist/freeze holder addresses
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
@@ -378,9 +379,7 @@ export interface RawDimensionInputs {
   liquidityScore: number | null;
   concentrationHhi: number | null;
   bluechipGrade: BluechipGrade | null;
-  chainCount: number;
-  freezeEventsPerMonth: number | null;
-  hasTrackedFreezeEvents: boolean;
+  canBeBlacklisted: boolean;
   governanceTier: GovernanceType;
   dependencies: DependencyWeight[];
 }

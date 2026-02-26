@@ -20,14 +20,14 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "2.0";
+export const METHODOLOGY_VERSION = "2.1";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
   liquidity: 0.25,
-  resilience: 0.15,
+  resilience: 0.10,
   decentralization: 0.10,
-  dependencyRisk: 0.25,
+  dependencyRisk: 0.30,
 };
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
@@ -220,47 +220,19 @@ export function scoreLiquidity(
 }
 
 /**
- * Resilience: chain distribution (60%) + freeze rate (40%).
+ * Resilience: binary based on whether the token can be blacklisted by its issuer.
  *
- * Chain distribution: 1->40, 2->55, 3->65, 4-5->75, 6-8->85, 9+->95
- * Freeze rate: 100 - events/month * 2, clamped 0-100. Untracked = 85.
+ * Blacklistable tokens (e.g. USDC, USDT) score 0 — the issuer can freeze
+ * or seize funds at any time. Non-blacklistable tokens score 100.
  */
 export function scoreResilience(
-  chainCount: number,
-  freezeEventsPerMonth: number | null,
-  hasTrackedFreezeEvents: boolean,
+  canBeBlacklisted: boolean,
 ): ReportCardDimension {
-  // Chain distribution component (60% weight)
-  let chainScore: number;
-  if (chainCount >= 9) chainScore = 95;
-  else if (chainCount >= 6) chainScore = 85;
-  else if (chainCount >= 4) chainScore = 75;
-  else if (chainCount >= 3) chainScore = 65;
-  else if (chainCount >= 2) chainScore = 55;
-  else chainScore = 40;
-
-  // Freeze rate component (40% weight)
-  let freezeScore: number;
-  if (!hasTrackedFreezeEvents) {
-    // Not a blacklistable token -- give a neutral score
-    freezeScore = 85;
-  } else if (freezeEventsPerMonth === null) {
-    freezeScore = 85;
-  } else {
-    freezeScore = Math.max(0, Math.min(100, 100 - freezeEventsPerMonth * 2));
-  }
-
-  const score = Math.round(chainScore * 0.6 + freezeScore * 0.4);
-
-  const parts: string[] = [];
-  parts.push(`Deployed on ${chainCount} chain${chainCount === 1 ? "" : "s"}`);
-  if (hasTrackedFreezeEvents && freezeEventsPerMonth !== null) {
-    parts.push(`${freezeEventsPerMonth.toFixed(1)} freeze events/month`);
-  } else if (!hasTrackedFreezeEvents) {
-    parts.push("No freeze/blacklist capability tracked");
-  }
-
-  return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
+  const score = canBeBlacklisted ? 0 : 100;
+  const detail = canBeBlacklisted
+    ? "Token can be blacklisted by issuer"
+    : "Token has no blacklist capability";
+  return { grade: scoreToGrade(score), score, detail };
 }
 
 /**

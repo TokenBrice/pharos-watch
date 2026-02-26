@@ -20,6 +20,7 @@ import {
 } from "../../../src/lib/report-cards";
 import type {
   StablecoinData,
+  StablecoinMeta,
   DepegEvent,
   DexLiquidityData,
   BluechipRating,
@@ -32,25 +33,12 @@ import type {
 } from "../../../src/lib/types";
 
 // ---------------------------------------------------------------------------
-// Blacklist freeze-rate helpers
+// Blacklistability helper
 // ---------------------------------------------------------------------------
 
-/** Stablecoin names in blacklist_events -> their tracked IDs */
-const BLACKLIST_NAME_TO_ID: Record<string, string> = {
-  USDT: "1",
-  USDC: "2",
-  PAXG: "gold-paxg",
-  XAUT: "gold-xaut",
-};
-
-/** Set of IDs that have tracked freeze/blacklist events */
-const COINS_WITH_TRACKED_FREEZE = new Set(Object.values(BLACKLIST_NAME_TO_ID));
-
-interface BlacklistAggRow {
-  stablecoin: string;
-  cnt: number;
-  earliest: number;
-  latest: number;
+function isBlacklistable(meta: StablecoinMeta): boolean {
+  if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
+  return meta.flags.governance === "centralized";
 }
 
 // ---------------------------------------------------------------------------
@@ -100,17 +88,12 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     ? JSON.parse(bluechipCached.value)
     : {};
 
-  // 2. Load depeg events (4-year window) and blacklist aggregates in parallel
+  // 2. Load depeg events (4-year window)
   const fourYearsAgoSec = Math.floor(Date.now() / 1000) - Math.ceil(4 * 365.25 * 86400);
 
-  const [eventsResult, blacklistResult] = await Promise.all([
-    db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
-      .bind(fourYearsAgoSec)
-      .all<DepegRow>(),
-    db.prepare(
-      "SELECT stablecoin, COUNT(*) as cnt, MIN(timestamp) as earliest, MAX(timestamp) as latest FROM blacklist_events GROUP BY stablecoin",
-    ).all<BlacklistAggRow>(),
-  ]);
+  const eventsResult = await db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
+    .bind(fourYearsAgoSec)
+    .all<DepegRow>();
 
   const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
 
@@ -122,27 +105,14 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     eventsByCoins.set(e.stablecoinId, list);
   }
 
-  // 3. Compute freeze rates from blacklist aggregates
-  const freezeRateById = new Map<string, number>();
-  for (const row of blacklistResult.results ?? []) {
-    const id = BLACKLIST_NAME_TO_ID[row.stablecoin];
-    if (!id) continue;
-    const spanSec = row.latest - row.earliest;
-    if (spanSec > 0) {
-      const months = spanSec / (30 * 86400);
-      freezeRateById.set(id, row.cnt / months);
-    }
-    // When spanSec === 0: omit entry, coin gets neutral 85 in scoreResilience
-  }
-
-  // 4. Build lookup maps
+  // 3. Build lookup maps (priceById is used for peg summary below)
   const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
   const { rates: pegRates } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
   const now = Math.floor(Date.now() / 1000);
   const fourYearsAgo = now - 4 * 365.25 * 86400;
 
-  // 5. Compute peg summary data per coin (same logic as peg-summary)
+  // 4. Compute peg summary data per coin (same logic as peg-summary)
   const pegDataById = new Map<string, PegSummaryCoin>();
   for (const meta of TRACKED_STABLECOINS) {
     if (meta.flags.navToken) continue;
@@ -188,7 +158,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     });
   }
 
-  // 6. Phase 1: Compute grades for non-dependent coins (centralized + decentralized)
+  // 5. Phase 1: Compute grades for non-dependent coins (centralized + decentralized)
   const phase1Cards: ReportCard[] = [];
   const overallScores = new Map<string, number>(); // id -> overall score (for dependency risk)
   const phase2Metas: typeof TRACKED_STABLECOINS = [];
@@ -199,24 +169,24 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       continue;
     }
 
-    const card = computeCard(meta, pegDataById, priceById, dexLiqMap, bluechipMap, freezeRateById, overallScores);
+    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores);
     phase1Cards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
     }
   }
 
-  // 7. Phase 2: Compute grades for centralized-dependent coins (using Phase 1 scores)
+  // 6. Phase 2: Compute grades for centralized-dependent coins (using Phase 1 scores)
   const phase2Cards: ReportCard[] = [];
   for (const meta of phase2Metas) {
-    const card = computeCard(meta, pegDataById, priceById, dexLiqMap, bluechipMap, freezeRateById, overallScores);
+    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores);
     phase2Cards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
     }
   }
 
-  // 8. Add cemetery coins as permanent F
+  // 7. Add cemetery coins as permanent F
   const defunctCards: ReportCard[] = DEAD_STABLECOINS.map((dead) => {
     const id = dead.llamaId ?? `dead-${dead.symbol.toLowerCase()}`;
     const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
@@ -237,14 +207,14 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       rawInputs: {
         pegScore: null, activeDepeg: false, depegEventCount: 0, lastEventAt: null,
         liquidityScore: null, concentrationHhi: null, bluechipGrade: null,
-        chainCount: 0, freezeEventsPerMonth: null, hasTrackedFreezeEvents: false,
+        canBeBlacklisted: false,
         governanceTier: "centralized" as GovernanceType, dependencies: [],
       },
       isDefunct: true,
     };
   });
 
-  // 9. Combine and sort by overall score descending (NR at bottom)
+  // 8. Combine and sort by overall score descending (NR at bottom)
   const allCards = [...phase1Cards, ...phase2Cards, ...defunctCards];
   allCards.sort((a, b) => {
     // NR (null score) goes to bottom
@@ -254,7 +224,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     return b.overallScore - a.overallScore;
   });
 
-  // 10. Build dependency graph edge list
+  // 9. Build dependency graph edge list
   const edges: { from: string; to: string }[] = [];
   for (const meta of TRACKED_STABLECOINS) {
     if (meta.dependencies) {
@@ -264,7 +234,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     }
   }
 
-  // 11. Return ReportCardsResponse
+  // 10. Return ReportCardsResponse
   const response: ReportCardsResponse = {
     cards: allCards,
     methodology: {
@@ -291,29 +261,21 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
 function computeCard(
   meta: (typeof TRACKED_STABLECOINS)[number],
   pegDataById: Map<string, PegSummaryCoin>,
-  priceById: Map<string, StablecoinData>,
   dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>,
   bluechipMap: Record<string, BluechipRating>,
-  freezeRateById: Map<string, number>,
   overallScores: Map<string, number>,
 ): ReportCard {
   const peg = pegDataById.get(meta.id);
   const liq = dexLiqMap[meta.id];
   const rating = bluechipMap[meta.id];
 
-  // Chain count: from deployment data (how many chains the coin is on), not DEX pools
-  const asset = priceById.get(meta.id);
-  const chainCount = asset?.chains?.length ?? 1;
-
-  // Freeze rate
-  const hasTrackedFreezeEvents = COINS_WITH_TRACKED_FREEZE.has(meta.id);
-  const freezeEventsPerMonth = freezeRateById.get(meta.id) ?? null;
+  const canBeBlacklisted = isBlacklistable(meta);
 
   // Score each dimension
   const dimensions: Record<DimensionKey, ReturnType<typeof scorePegStability>> = {
     pegStability: scorePegStability(peg, meta),
     liquidity: scoreLiquidity(liq),
-    resilience: scoreResilience(chainCount, freezeEventsPerMonth, hasTrackedFreezeEvents),
+    resilience: scoreResilience(canBeBlacklisted),
     decentralization: scoreDecentralization(meta.flags.governance as GovernanceType),
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
@@ -328,9 +290,7 @@ function computeCard(
     liquidityScore: liq?.liquidityScore ?? null,
     concentrationHhi: liq?.concentrationHhi ?? null,
     bluechipGrade: rating?.grade ?? null,
-    chainCount,
-    freezeEventsPerMonth,
-    hasTrackedFreezeEvents,
+    canBeBlacklisted,
     governanceTier: meta.flags.governance as GovernanceType,
     dependencies: meta.dependencies ?? [],
   };

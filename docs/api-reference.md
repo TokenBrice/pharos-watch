@@ -737,9 +737,7 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
 | `liquidityScore` | `number \| null` |
 | `concentrationHhi` | `number \| null` |
 | `bluechipGrade` | `BluechipGrade \| null` |
-| `chainCount` | `number` |
-| `freezeEventsPerMonth` | `number \| null` |
-| `hasTrackedFreezeEvents` | `boolean` |
+| `canBeBlacklisted` | `boolean` |
 | `governanceTier` | `GovernanceType` |
 | `dependencies` | `DependencyWeight[]` |
 
