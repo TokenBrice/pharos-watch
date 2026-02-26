@@ -531,6 +531,8 @@ export interface PegSummaryStats {
   worstCurrent: { id: string; symbol: string; bps: number } | null;
   coinsAtPeg: number;
   totalTracked: number;
+  depegEventsToday: number;
+  depegEventsYesterday: number;
 }
 
 export interface PegSummaryResponse {

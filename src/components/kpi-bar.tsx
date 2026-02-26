@@ -123,7 +123,9 @@ export function KpiBar() {
   const summary = pegData?.summary;
   const coinsAtPeg = summary?.coinsAtPeg ?? 0;
   const totalTracked = summary?.totalTracked ?? 0;
-  const worstBps = summary?.worstCurrent?.bps ?? null;
+  const depegToday = summary?.depegEventsToday ?? 0;
+  const depegYesterday = summary?.depegEventsYesterday ?? 0;
+  const depegDelta = depegToday - depegYesterday;
 
   // Format 24h + 7d change
   const sign24h = mcapChange24hPct >= 0 ? "+" : "";
@@ -154,8 +156,9 @@ export function KpiBar() {
           value={`${coinsAtPeg} / ${totalTracked}`}
         />
         <KpiCell
-          label="Worst Depeg"
-          value={worstBps !== null ? `${worstBps} bps` : "—"}
+          label="Depegs Today"
+          value={depegToday}
+          sublabel={`${depegDelta >= 0 ? "+" : ""}${depegDelta} vs yesterday`}
         />
       </div>
     </Card>

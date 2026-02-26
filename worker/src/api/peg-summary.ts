@@ -174,6 +174,16 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     }
   }
 
+  // Count depeg events started today vs yesterday (UTC day boundaries)
+  const todayStart = Math.floor(now / 86400) * 86400;
+  const yesterdayStart = todayStart - 86400;
+  let depegEventsToday = 0;
+  let depegEventsYesterday = 0;
+  for (const e of allEvents) {
+    if (e.startedAt >= todayStart) depegEventsToday++;
+    else if (e.startedAt >= yesterdayStart) depegEventsYesterday++;
+  }
+
   // Median deviation
   allAbsBps.sort((a, b) => a - b);
   const medianBps = allAbsBps.length > 0
@@ -196,6 +206,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
         worstCurrent,
         coinsAtPeg,
         totalTracked: coins.length,
+        depegEventsToday,
+        depegEventsYesterday,
         ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
       },
     }),
