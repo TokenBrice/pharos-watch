@@ -2408,6 +2408,40 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "institutional",
   }),
+  usd("cg-syrupusdc", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
+    geckoId: "syrupusdc",
+    yieldBearing: true, navToken: true,
+    collateral: "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
+    pegMechanism: "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
+    links: [
+      { label: "Website", url: "https://maple.finance/" },
+      { label: "Twitter", url: "https://x.com/maplefinance" },
+    ],
+    dependencies: [{ id: "2", weight: 1.0 }],
+    contracts: [
+      { chain: "ethereum", address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", decimals: 6 },
+      { chain: "base", address: "0x660975730059246a68521a3e2fbd4740173100f5", decimals: 6 },
+      { chain: "arbitrum", address: "0x41ca7586cc1311807b4605fbb748a3b8862b42b5", decimals: 6 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "onchain",
+  }),
+  usd("cg-syrupusdt", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
+    geckoId: "syrupusdt",
+    yieldBearing: true, navToken: true,
+    collateral: "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
+    pegMechanism: "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
+    links: [
+      { label: "Website", url: "https://maple.finance/" },
+      { label: "Twitter", url: "https://x.com/maplefinance" },
+    ],
+    dependencies: [{ id: "1", weight: 1.0 }],
+    contracts: [
+      { chain: "ethereum", address: "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d", decimals: 6 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "onchain",
+  }),
 ];
 
 // --- Pre-computed lookups (static data, computed once at module level) ---
