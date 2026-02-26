@@ -163,7 +163,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                     {i > 0 && ", "}
                     <Link
                       href={`/stablecoin/${dep.id}`}
-                      className="font-medium text-blue-500 underline underline-offset-2 hover:text-blue-400"
+                      className="font-medium text-blue-500 underline underline-offset-2 hover:text-blue-400 transition-colors"
                     >
                       {name}
                     </Link>

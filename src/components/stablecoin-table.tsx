@@ -685,7 +685,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {(searchQuery || activeFilters.length > 0) && (
                     <p className="mt-2 text-sm">
                       {searchQuery && onClearSearch && (
-                        <button onClick={onClearSearch} className="text-primary hover:underline cursor-pointer text-sm">
+                        <button onClick={onClearSearch} className="text-primary hover:underline cursor-pointer text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 rounded">
                           Clear search
                         </button>
                       )}
@@ -693,7 +693,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                         <span className="mx-1.5">or</span>
                       )}
                       {activeFilters.length > 0 && onClearFilters && (
-                        <button onClick={onClearFilters} className="text-primary hover:underline cursor-pointer text-sm">
+                        <button onClick={onClearFilters} className="text-primary hover:underline cursor-pointer text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 rounded">
                           Clear filters
                         </button>
                       )}

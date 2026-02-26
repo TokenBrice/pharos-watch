@@ -189,7 +189,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   href={evt.explorerTxUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>

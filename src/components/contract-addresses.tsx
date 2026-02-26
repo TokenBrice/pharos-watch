@@ -35,7 +35,7 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
           </span>
           <button
             onClick={() => { navigator.clipboard.writeText(openContract.address); trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain }); }}
-            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
             title="Copy address"
             aria-label="Copy address"
           >
@@ -75,7 +75,7 @@ export function ContractAddresses({ meta }: { meta: StablecoinMeta }) {
               <button
                 key={`${c.chain}-${c.address}`}
                 onClick={() => setOpenChain(isOpen ? null : c.chain)}
-                className={`rounded-full ring-2 transition-colors ${
+                className={`rounded-full ring-2 transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
                   isOpen ? "ring-violet-500" : "ring-transparent hover:ring-muted-foreground/30"
                 }`}
                 title={chain?.name ?? c.chain}

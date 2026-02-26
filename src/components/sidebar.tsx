@@ -87,7 +87,7 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
         setTheme(next);
       }}
       title={expanded ? undefined : label}
-      className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${
+      className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
         expanded ? "w-full mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
       }`}
     >

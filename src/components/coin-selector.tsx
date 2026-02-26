@@ -205,7 +205,7 @@ export function CoinSelector({
                   className={
                     disabled
                       ? "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm opacity-40 cursor-not-allowed"
-                      : `flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent ${focused ? "bg-accent" : ""}`
+                      : `flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm cursor-pointer hover:bg-accent transition-colors ${focused ? "bg-accent" : ""}`
                   }
                   onClick={() => {
                     if (!disabled) {
