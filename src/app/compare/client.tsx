@@ -13,7 +13,7 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
-import { CRON_1H } from "@/hooks/use-api-query";
+import { CRON_1H, CRON_15MIN } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
@@ -42,6 +42,7 @@ import type { CoinOption } from "@/components/coin-selector";
 import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 import type { ReportCard } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
@@ -175,7 +176,7 @@ export function CompareClient() {
   const disabledIds = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   // Global data hooks
-  const { data: listData } = useStablecoins();
+  const { data: listData, dataUpdatedAt } = useStablecoins();
   const { data: pegSummary } = usePegSummary();
   const { data: bluechipData } = useBluechipRatings();
   const { data: dexData } = useDexLiquidity();
@@ -468,6 +469,9 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
+      <StaleDataBanner
+        queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]}
+      />
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
           {toast && (

@@ -8,7 +8,7 @@ import { sumPegBuckets } from "./supply";
  */
 export const COMMODITY_MEDIAN_EXCLUDES = new Set(["gold-dgld"]);
 
-type PegRateSource = "median" | "fallback";
+export type PegRateSource = "median" | "fallback";
 
 export interface PegRatesResult {
   rates: Record<string, number>;

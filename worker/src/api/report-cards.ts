@@ -1,6 +1,6 @@
 import { getCache } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { computePegScore } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
@@ -266,10 +266,10 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   };
 
   return new Response(JSON.stringify(response), {
-    headers: {
+    headers: addFreshnessHeaders({
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.standard,
-    },
+    }, stablecoinsCached.updatedAt, 900),
   });
 });
 

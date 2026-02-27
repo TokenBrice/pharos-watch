@@ -19,6 +19,8 @@ import { DIMENSION_ORDER, scoreToGrade } from "@/lib/report-cards";
 import type { ReportCard } from "@/lib/types";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_15MIN } from "@/hooks/use-api-query";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
@@ -201,7 +203,7 @@ function ExposureBar({
 // ---------------------------------------------------------------------------
 
 export function PortfolioClient() {
-  const { data: reportData, isLoading: isLoadingCards } = useReportCards();
+  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt } = useReportCards();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
 
@@ -319,6 +321,9 @@ export function PortfolioClient() {
 
   return (
     <div className="space-y-6">
+      <StaleDataBanner
+        queries={[{ label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN }]}
+      />
       {/* Holdings editor */}
       <Card>
         <CardHeader>

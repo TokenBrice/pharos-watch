@@ -403,10 +403,12 @@ export function scoreDependencyRisk(
   // Self-backed score is 75 (not 95) because CeFi-Dependent coins still carry
   // systemic coupling risk — their peg mechanisms (PSMs, arbitrage loops) depend
   // on upstream stablecoin infrastructure even for the non-stablecoin collateral.
-  const totalWeight = Math.min(1, resolved.reduce((sum, d) => sum + d.weight, 0));
+  const rawTotal = resolved.reduce((sum, d) => sum + d.weight, 0);
+  const totalWeight = Math.min(1, rawTotal);
   const selfBackedFraction = 1 - totalWeight;
   const SELF_BACKED_SCORE = 75;
-  const blendedScore = resolved.reduce((sum, d) => sum + d.score * d.weight, 0)
+  const normalizer = rawTotal > 1 ? rawTotal : 1;
+  const blendedScore = resolved.reduce((sum, d) => sum + d.score * (d.weight / normalizer), 0)
     + selfBackedFraction * SELF_BACKED_SCORE;
 
   let score = blendedScore;

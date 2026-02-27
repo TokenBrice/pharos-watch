@@ -15,7 +15,7 @@ export function computePegScoreWithWindow(
   const fourYearsAgo = nowSec - 4 * 365.25 * 86400;
   const rawTrackingStart = earliestTrackingDate ? Math.floor(Number(earliestTrackingDate)) : null;
   const trackingStartSec = rawTrackingStart != null
-    ? Math.min(rawTrackingStart, fourYearsAgo)
+    ? Math.max(rawTrackingStart, fourYearsAgo)
     : fourYearsAgo;
   return computePegScore(events, trackingStartSec, nowSec);
 }

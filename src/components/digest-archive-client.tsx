@@ -4,13 +4,15 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestArchive } from "@/hooks/use-digest-archive";
 import { formatDateline } from "@/components/daily-digest";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_24H } from "@/hooks/use-api-query";
 
 function tsToDateSlug(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
 
 export function DigestArchiveClient() {
-  const { data, isLoading } = useDigestArchive();
+  const { data, isLoading, dataUpdatedAt } = useDigestArchive();
 
   if (isLoading) {
     return (
@@ -35,7 +37,11 @@ export function DigestArchiveClient() {
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-4">
+      <StaleDataBanner
+        queries={[{ label: "Digests", dataUpdatedAt, staleTime: CRON_24H }]}
+      />
+      <div className="space-y-0">
       {data.digests.map((d) => (
         <Link key={d.generatedAt} href={`/digest/${tsToDateSlug(d.generatedAt)}/`} className="block border-b border-border/50 py-5 hover:bg-muted/30 transition-colors -mx-2 px-2 rounded-lg">
           <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
@@ -58,6 +64,7 @@ export function DigestArchiveClient() {
           )}
         </Link>
       ))}
+      </div>
     </div>
   );
 }

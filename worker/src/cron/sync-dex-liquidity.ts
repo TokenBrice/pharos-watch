@@ -610,7 +610,7 @@ async function fetchDataSources(graphApiKey: string | null): Promise<DataSources
 
   const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
   const pools = llamaData.data;
-  if (!pools || pools.length < 100) {
+  if (!pools || pools.length < 1000) {
     console.error(`[dex-liquidity] DeFiLlama returned only ${pools?.length ?? 0} pools, skipping`);
     return null;
   }

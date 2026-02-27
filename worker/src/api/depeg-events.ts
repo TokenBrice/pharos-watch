@@ -1,5 +1,5 @@
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 
@@ -35,10 +35,12 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   const total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
   const events = ((dataBatch.results ?? []) as DepegRow[]).map(rowToDepegEvent);
 
+  const latestTs = events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000);
+
   return new Response(JSON.stringify({ events, total }), {
-    headers: {
+    headers: addFreshnessHeaders({
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.realtime,
-    },
+    }, latestTs, 900),
   });
 });

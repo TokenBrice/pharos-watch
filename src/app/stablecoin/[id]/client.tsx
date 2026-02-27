@@ -29,6 +29,8 @@ import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData, StablecoinMeta } from "@/lib/types";
 import { pegScoreColor, getScoreColor, getScoreTier, TIER_BORDER, deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { StaleDataBanner } from "@/components/stale-data-banner";
+import { CRON_15MIN } from "@/hooks/use-api-query";
 
 const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
@@ -54,7 +56,7 @@ interface StablecoinDetailClientProps {
 
 export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
-  const { data: listData, isLoading: listLoading, isError: listError } = useStablecoins();
+  const { data: listData, isLoading: listLoading, isError: listError, dataUpdatedAt: listUpdatedAt } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
   const { data: pegSummaryData } = usePegSummary();
   const { data: liquidityMap } = useDexLiquidity();
@@ -104,7 +106,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const prevDay = getPrevDayRaw(coinData);
   const prevWeek = getPrevWeekRaw(coinData);
   const prevMonth = getPrevMonthRaw(coinData);
-  const { rates: pegRates } = derivePegRates(listData?.peggedAssets ?? [], TRACKED_META_BY_ID, listData?.fxFallbackRates);
+  const { rates: pegRates, sources: pegRateSources } = derivePegRates(listData?.peggedAssets ?? [], TRACKED_META_BY_ID, listData?.fxFallbackRates);
   const pegRef = getPegReference(coinData.pegType, pegRates, coin.commodityOunces);
   const deviationBps = (coinData.price != null && pegRef > 0)
     ? Math.round(((coinData.price - pegRef) / pegRef) * 10000)
@@ -152,6 +154,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           Supply history is temporarily unavailable.
         </div>
       )}
+
+      <StaleDataBanner
+        queries={[{ label: "Prices", dataUpdatedAt: listUpdatedAt, staleTime: CRON_15MIN }]}
+      />
 
       {/* HERO CARD */}
       <Card className="rounded-xl gap-0">
@@ -227,6 +233,11 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                   </div>
                   <p className={`text-sm font-mono ${deviationColorClass(Math.abs(deviationBps))}`}>
                     {formatPegDeviation(coinData.price, pegRef)}
+                    {pegRateSources[coinData.pegType ?? ""] === "fallback" && (
+                      <span className="text-xs text-muted-foreground ml-1" title="Peg reference: ECB FX rate (not market-derived)">
+                        (ECB rate)
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>

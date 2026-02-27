@@ -23,6 +23,7 @@ import { formatDateline } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
+import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
@@ -86,7 +87,7 @@ export function HomepageClient() {
     if (!reportCardsData?.cards) return undefined;
     return Object.fromEntries(reportCardsData.cards.map((c) => [c.id, c]));
   }, [reportCardsData]);
-  const { rates: pegRates } = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
+  const { rates: pegRates, sources: pegRateSources } = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
   const filters = useHomepageFilters();
 
   return (
@@ -108,102 +109,117 @@ export function HomepageClient() {
         />
       )}
 
-      <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+      <SectionErrorBoundary name="highlights">
+        <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+      </SectionErrorBoundary>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TotalMcapChart />
-        <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
-      </div>
-
-      {digestData?.digest && (
-        <section>
-          <Card>
-            <CardHeader
-              className="flex flex-row items-center justify-between cursor-pointer"
-              onClick={toggleDigest}
-            >
-              <CardTitle className="text-sm font-semibold uppercase tracking-wider">
-                {digestData.digestTitle || "Daily Recap"}
-                {digestData.generatedAt && (
-                  <span className="font-normal tracking-wide text-muted-foreground"> · {formatDateline(digestData.generatedAt)}</span>
-                )}
-              </CardTitle>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform flex-shrink-0",
-                  digestOpen && "rotate-180",
-                )}
-              />
-            </CardHeader>
-            {digestOpen && (
-              <CardContent className="animate-in fade-in duration-200">
-                <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-                  {digestData.digest}
-                </p>
-                {digestData.digestExtended && (
-                  <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-                    {digestData.digestExtended}
-                  </p>
-                )}
-                <Link
-                  href="/digest/"
-                  className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Read all previous recaps &rarr;
-                </Link>
-              </CardContent>
-            )}
-          </Card>
-        </section>
-      )}
-
-      <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
-        <FilterBar {...filters} />
-        <div className="mt-6">
-          <StablecoinTable
-            data={data?.peggedAssets}
-            isLoading={isLoading}
-            activeFilters={filters.activeFilters}
-            logos={logos}
-            pegRates={pegRates}
-            searchQuery={filters.searchQuery}
-            pegScores={pegScores}
-            dexLiquidity={dexLiquidity ?? undefined}
-            reportCards={reportCardMap}
-            onClearSearch={() => filters.setSearchQuery("")}
-            onClearFilters={filters.clearAll}
-          />
+      <SectionErrorBoundary name="charts">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TotalMcapChart />
+          <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
         </div>
-      </section>
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="digest">
+        {digestData?.digest && (
+          <section>
+            <Card>
+              <CardHeader
+                className="flex flex-row items-center justify-between cursor-pointer"
+                onClick={toggleDigest}
+              >
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider">
+                  {digestData.digestTitle || "Daily Recap"}
+                  {digestData.generatedAt && (
+                    <span className="font-normal tracking-wide text-muted-foreground"> · {formatDateline(digestData.generatedAt)}</span>
+                  )}
+                </CardTitle>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 text-muted-foreground transition-transform flex-shrink-0",
+                    digestOpen && "rotate-180",
+                  )}
+                />
+              </CardHeader>
+              {digestOpen && (
+                <CardContent className="animate-in fade-in duration-200">
+                  <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+                    {digestData.digest}
+                  </p>
+                  {digestData.digestExtended && (
+                    <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+                      {digestData.digestExtended}
+                    </p>
+                  )}
+                  <Link
+                    href="/digest/"
+                    className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Read all previous recaps &rarr;
+                  </Link>
+                </CardContent>
+              )}
+            </Card>
+          </section>
+        )}
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="table">
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
+          <FilterBar {...filters} />
+          <div className="mt-6">
+            <StablecoinTable
+              data={data?.peggedAssets}
+              isLoading={isLoading}
+              activeFilters={filters.activeFilters}
+              logos={logos}
+              pegRates={pegRates}
+              searchQuery={filters.searchQuery}
+              pegScores={pegScores}
+              dexLiquidity={dexLiquidity ?? undefined}
+              reportCards={reportCardMap}
+              onClearSearch={() => filters.setSearchQuery("")}
+              onClearFilters={filters.clearAll}
+            />
+          </div>
+        </section>
+      </SectionErrorBoundary>
 
       <FeatureHighlights />
 
-      <section>
-        <h2 className="text-xl font-semibold tracking-tight mb-4">Stablecoin Distribution</h2>
-        <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
-      </section>
+      <SectionErrorBoundary name="stats">
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight mb-4">Stablecoin Distribution</h2>
+          <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
+        </section>
+      </SectionErrorBoundary>
 
       <PegDiversityChart />
 
-      <section>
-        <PegHeatmap
-          coins={filteredPegCoins}
-          logos={logos}
-          isLoading={isPegLoading}
-          pegFilter={pegFilter}
-          typeFilter={typeFilter}
-          onPegFilterChange={setPegFilter}
-          onTypeFilterChange={setTypeFilter}
-        />
-      </section>
+      <SectionErrorBoundary name="heatmap">
+        <section>
+          <PegHeatmap
+            coins={filteredPegCoins}
+            logos={logos}
+            isLoading={isPegLoading}
+            pegFilter={pegFilter}
+            typeFilter={typeFilter}
+            onPegFilterChange={setPegFilter}
+            onTypeFilterChange={setTypeFilter}
+            pegRateSources={pegRateSources}
+          />
+        </section>
+      </SectionErrorBoundary>
 
-      <section>
-        <DepegFeed
-          events={eventsData?.events ?? []}
-          logos={logos}
-        />
-      </section>
+      <SectionErrorBoundary name="depeg-feed">
+        <section>
+          <DepegFeed
+            events={eventsData?.events ?? []}
+            logos={logos}
+          />
+        </section>
+      </SectionErrorBoundary>
 
       <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
         Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP,

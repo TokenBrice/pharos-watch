@@ -105,6 +105,11 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
     )
     .run();
 
+  // Prune samples older than 90 days
+  await db.prepare("DELETE FROM stability_index_samples WHERE stored_at < ?")
+    .bind(Math.floor(Date.now() / 1000) - 90 * 86400)
+    .run();
+
   console.log(`[stability-index] score=${result.score} band=${result.band}`);
   return { metadata: `score=${result.score} band=${result.band}` };
 }

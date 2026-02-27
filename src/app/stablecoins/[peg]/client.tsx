@@ -38,7 +38,7 @@ export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) 
     return Object.fromEntries(reportCardsData.cards.map((c) => [c.id, c]));
   }, [reportCardsData]);
 
-  const { rates: pegRates } = useMemo(
+  const { rates: pegRates, sources: pegRateSources } = useMemo(
     () => derivePegRates(data?.peggedAssets ?? [], TRACKED_META_BY_ID, data?.fxFallbackRates),
     [data],
   );
@@ -48,6 +48,11 @@ export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) 
       <StaleDataBanner
         queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]}
       />
+      {pegRateSources[`pegged${pegCurrency}`] === "fallback" && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          Peg reference uses ECB FX rate (not market-derived) — fewer than 3 coins tracked for {pegCurrency}.
+        </p>
+      )}
       <StablecoinTable
         data={data?.peggedAssets}
         isLoading={isLoading}

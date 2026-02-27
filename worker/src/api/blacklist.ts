@@ -1,4 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 
@@ -61,10 +61,12 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     explorerAddressUrl: row.explorer_address_url,
   }));
 
+  const latestTs = events.length > 0 ? Math.max(...events.map((e) => e.timestamp)) : Math.floor(Date.now() / 1000);
+
   return new Response(JSON.stringify({ events, total }), {
-    headers: {
+    headers: addFreshnessHeaders({
       "Content-Type": "application/json",
       "Cache-Control": CACHE_PROFILES.realtime,
-    },
+    }, latestTs, 900),
   });
 });

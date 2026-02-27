@@ -6,7 +6,7 @@ import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { StablecoinData, DepegEvent } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
@@ -212,10 +212,10 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       },
     }),
     {
-      headers: {
+      headers: addFreshnessHeaders({
         "Content-Type": "application/json",
         "Cache-Control": CACHE_PROFILES.realtime,
-      },
+      }, cached.updatedAt, 900),
     },
   );
 });

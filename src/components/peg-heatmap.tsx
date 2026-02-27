@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { deviationBgClass } from "@/lib/severity-colors";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
+import type { PegRateSource } from "@/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 
 interface PegHeatmapProps {
@@ -24,6 +25,7 @@ interface PegHeatmapProps {
   onTypeFilterChange: (v: GovernanceType | "all") => void;
   searchQuery?: string;
   onSearchChange?: (v: string) => void;
+  pegRateSources?: Record<string, PegRateSource>;
 }
 
 const PEG_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
@@ -87,8 +89,17 @@ export function PegHeatmap({
   onTypeFilterChange,
   searchQuery,
   onSearchChange,
+  pegRateSources,
 }: PegHeatmapProps) {
   const prefetch = usePrefetchStablecoin();
+  const fallbackPegs = useMemo(() => {
+    if (!pegRateSources) return new Set<string>();
+    return new Set(
+      Object.entries(pegRateSources)
+        .filter(([, src]) => src === "fallback")
+        .map(([peg]) => peg)
+    );
+  }, [pegRateSources]);
   const sorted = useMemo(() => {
     return [...coins]
       .filter((c) => c.currentDeviationBps !== null)
@@ -136,6 +147,11 @@ export function PegHeatmap({
             )}
           </div>
         </div>
+        {fallbackPegs.size > 0 && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Peg references for some currencies use ECB FX rates (not market-derived).
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (
