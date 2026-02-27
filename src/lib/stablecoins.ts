@@ -1006,7 +1006,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Yield instruments (unspecified)", pct: 5, risk: "high" },
     ],
   }),
-  usd("235", "Frax USD", "FRXUSD", "rwa-backed", "decentralized", {
+  usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "frax-usd",
     dependencies: [{ id: "2", weight: 0.3 }],
     collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
@@ -1656,9 +1656,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH", pct: 100, risk: "very-low" },
     ],
   }),
-  usd("168", "fxUSD", "fxUSD", "crypto-backed", "centralized-dependent", {
+  usd("168", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
     geckoId: "f-x-protocol-fxusd",
-    dependencies: [{ id: "2", weight: 0.15 }],
     collateral: "wstETH and WBTC deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized",
     pegMechanism: "CDP-style with overcollateralization and liquidations; USDC/fxUSD Stability Pool Gauge on Curve acts as peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
     proofOfReserves: { type: "independent-audit", url: "https://www.openzeppelin.com/news/fx-v2-audit", provider: "OpenZeppelin" },
@@ -1868,7 +1867,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "CLOs & Private Credit Funds", pct: 10, risk: "high" },
     ],
   }),
-  usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "decentralized", {
+  usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
     geckoId: "gyroscope-gyd",
     dependencies: [{ id: "2", weight: 0.35 }, { id: "5", weight: 0.35 }],
     collateral: "Diversified reserve of sDAI, USDC, LUSD, and crvUSD in yield-generating vaults",
