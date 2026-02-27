@@ -743,7 +743,7 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
   },
   "methodology": {
     "version": "3.1",
-    "weights": { "pegStability": 0.25, "liquidity": 0.20, "resilience": 0.20, "decentralization": 0.10, "dependencyRisk": 0.25 },
+    "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "thresholds": [{ "grade": "A+", "min": 97 }, { "grade": "A", "min": 93 }, ...]
   },
   "updatedAt": 1771977600

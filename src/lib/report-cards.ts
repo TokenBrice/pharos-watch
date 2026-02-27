@@ -38,8 +38,8 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0,
   liquidity: 0.30,
   resilience: 0.20,
-  decentralization: 0.10,
-  dependencyRisk: 0.30,
+  decentralization: 0.15,
+  dependencyRisk: 0.25,
 };
 
 /** Peg stability multiplier: final = base × (PSI/100)^exponent */
