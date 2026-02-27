@@ -669,7 +669,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other Bank Deposits (EUR)", pct: 1, risk: "very-low" },
     ],
   }),
-  usd("197", "Resolv USD", "USR", "crypto-backed", "decentralized", {
+  usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
     geckoId: "resolv-usr",
     dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
     collateral: "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
