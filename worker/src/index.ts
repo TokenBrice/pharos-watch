@@ -196,12 +196,13 @@ const worker = {
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null)));
         break;
       }
-      case "0 8 * * *":
+      case "0 8 * * *": {
         ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
-        ctx.waitUntil(logCronRun(db, "snapshot-psi", () => snapshotPsiDaily(db)));
+        const psiPromise = logCronRun(db, "snapshot-psi", () => snapshotPsiDaily(db));
+        ctx.waitUntil(psiPromise);
         ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
         ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
-        ctx.waitUntil(logCronRun(db, "daily-digest", () => {
+        ctx.waitUntil(psiPromise.then(() => logCronRun(db, "daily-digest", () => {
           const twitterCreds =
             env.TWITTER_API_KEY &&
             env.TWITTER_API_SECRET &&
@@ -215,8 +216,9 @@ const worker = {
                 }
               : null;
           return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds);
-        }));
+        })));
         break;
+      }
     }
   },
 };

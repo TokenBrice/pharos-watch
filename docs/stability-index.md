@@ -120,7 +120,7 @@ See `docs/api-reference.md` for full response shape.
 
 ## Digest Integration
 
-The daily digest cron (08:00 UTC) queries the latest two stability index rows and passes PSI score, band, components, and yesterday's score to the Sonnet prompt. The digest opens with the current PSI band.
+The daily digest cron (08:00 UTC) queries the latest two stability index rows and passes PSI score, band, components, and yesterday's score to the Sonnet prompt. The digest opens with the current PSI band. The digest job is chained after the PSI snapshot (`snapshot-psi`) via a `.then()` promise — it will not start until the PSI snapshot completes, ensuring it always reads today's score.
 
 ## Key Files
 

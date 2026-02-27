@@ -125,7 +125,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 Cloudflare Worker (API layer)
   ├── Cron: */15 * * * *    → sync stablecoins + charts + FX rates + depeg detection + stability index (PSI)
   ├── Cron: 3,23,43 * * * * → DEX liquidity + blacklist sync
-  └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest
+  └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI)
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, logos) with CAS write guard

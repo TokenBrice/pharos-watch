@@ -25,7 +25,7 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 2. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
 3. **Pass 3:** CoinGecko ID -> CoinGecko direct API
 4. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
-5. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold)
+5. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold, capped at 10 searches per run)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 

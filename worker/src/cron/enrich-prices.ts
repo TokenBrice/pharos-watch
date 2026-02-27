@@ -354,8 +354,8 @@ export async function enrichMissingPrices(
       .map((a, i) => ({ asset: a, index: i }))
       .filter((m) => hasMissingPrice(m.asset));
 
-    // Cap at 30 searches — if more are missing, something is fundamentally broken upstream
-    const DEXSCREENER_MAX_SEARCHES = 30;
+    // Cap at 10 searches — if more are missing, something is fundamentally broken upstream
+    const DEXSCREENER_MAX_SEARCHES = 10;
     if (stillMissing.length > DEXSCREENER_MAX_SEARCHES) {
       console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_SEARCHES}`);
     }
