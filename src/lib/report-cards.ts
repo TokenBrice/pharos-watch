@@ -18,13 +18,14 @@ import type {
   CollateralQuality,
   CustodyModel,
   ReportCard,
+  DependencyType,
 } from "./types";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "3.1";
+export const METHODOLOGY_VERSION = "3.2";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
@@ -386,10 +387,10 @@ export function scoreDependencyRisk(
   }
 
   // Gather upstream scores with weights
-  const resolved: { id: string; weight: number; score: number }[] = [];
+  const resolved: { id: string; weight: number; score: number; type: DependencyType }[] = [];
   for (const dep of deps) {
     const s = overallScores.get(dep.id);
-    if (s !== undefined) resolved.push({ id: dep.id, weight: dep.weight, score: s });
+    if (s !== undefined) resolved.push({ id: dep.id, weight: dep.weight, score: s, type: dep.type ?? "collateral" });
   }
 
   if (resolved.length === 0) {
@@ -419,6 +420,15 @@ export function scoreDependencyRisk(
     score -= 10;
   }
 
+  // Ceiling: wrapper/mechanism deps cap the final score
+  const WRAPPER_PENALTY = 3;
+  let ceiling = Infinity;
+  for (const d of resolved) {
+    if (d.type === "wrapper") ceiling = Math.min(ceiling, d.score - WRAPPER_PENALTY);
+    else if (d.type === "mechanism") ceiling = Math.min(ceiling, d.score);
+  }
+  if (ceiling < Infinity) score = Math.min(score, ceiling);
+
   score = Math.round(Math.max(0, Math.min(100, score)));
 
   const parts: string[] = [];
@@ -426,6 +436,10 @@ export function scoreDependencyRisk(
   parts.push(`blended score: ${Math.round(blendedScore)}`);
   if (weakDeps.length > 0) {
     parts.push(`-10 penalty: ${weakDeps.length} dependenc${weakDeps.length === 1 ? "y" : "ies"} below 75`);
+  }
+  if (ceiling < Infinity) {
+    const ceilingType = resolved.some(d => d.type === "wrapper") ? "wrapper" : "mechanism-critical";
+    parts.push(`capped at ${Math.round(ceiling)} (${ceilingType} dependency ceiling)`);
   }
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
