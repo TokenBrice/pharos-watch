@@ -8,73 +8,53 @@ export interface ReserveResult {
 // ── Default reserve templates by classification ─────────────────────────
 
 const TEMPLATES: Record<string, ReserveSlice[]> = {
-  // Centralized fiat-backed (USDC-like): cash + treasuries + repos
-  // Typical: regulated issuer holding short-duration government securities
   "rwa-centralized": [
-    { name: "U.S. Treasuries / Gov Securities", pct: 70, risk: "low" },
-    { name: "Cash & Bank Deposits", pct: 20, risk: "low" },
-    { name: "Other Reserves", pct: 10, risk: "medium" },
+    { name: "U.S. Treasuries / Gov Securities", pct: 70, risk: "very-low" },
+    { name: "Cash & Bank Deposits", pct: 20, risk: "very-low" },
+    { name: "Other Reserves", pct: 10, risk: "low" },
   ],
-
-  // CeFi-dependent RWA (FRAX v3-like): mix of treasuries + stablecoin PSM
   "rwa-centralized-dependent": [
-    { name: "Tokenized Treasuries / RWA", pct: 50, risk: "low" },
-    { name: "Stablecoin Reserves (USDC/USDT)", pct: 35, risk: "medium" },
-    { name: "Other Assets", pct: 15, risk: "medium" },
+    { name: "Tokenized Treasuries / RWA", pct: 50, risk: "very-low" },
+    { name: "Stablecoin Reserves (USDC/USDT)", pct: 35, risk: "low" },
+    { name: "Other Assets", pct: 15, risk: "low" },
   ],
-
-  // Centralized crypto-backed (rare — Aegis YUSD-like): delta-neutral
   "crypto-centralized": [
-    { name: "Stablecoins (USDC/USDT)", pct: 40, risk: "medium" },
+    { name: "Stablecoins (USDC/USDT)", pct: 40, risk: "low" },
     { name: "BTC / ETH Positions", pct: 40, risk: "medium" },
     { name: "Other Crypto", pct: 20, risk: "high" },
   ],
-
-  // CeFi-dependent crypto-backed (DAI-like): crypto CDPs + stablecoin PSM
   "crypto-centralized-dependent": [
-    { name: "ETH / LSTs", pct: 35, risk: "medium" },
-    { name: "Stablecoin Collateral", pct: 30, risk: "medium" },
+    { name: "ETH / LSTs", pct: 35, risk: "low" },
+    { name: "Stablecoin Collateral", pct: 30, risk: "low" },
     { name: "BTC / wBTC", pct: 15, risk: "medium" },
     { name: "Other Vaults / Assets", pct: 20, risk: "high" },
   ],
-
-  // CeFi-dependent crypto with RWA-quality collateral (DAI/USDS pattern)
   "crypto-centralized-dependent-rwa": [
-    { name: "RWA (Treasuries / Tokenized)", pct: 40, risk: "low" },
-    { name: "Stablecoin PSM", pct: 30, risk: "medium" },
-    { name: "ETH / LSTs", pct: 20, risk: "medium" },
+    { name: "RWA (Treasuries / Tokenized)", pct: 40, risk: "very-low" },
+    { name: "Stablecoin PSM", pct: 30, risk: "low" },
+    { name: "ETH / LSTs", pct: 20, risk: "low" },
     { name: "Other Vaults", pct: 10, risk: "high" },
   ],
-
-  // CeFi-dependent crypto with exotic collateral (USDe pattern)
   "crypto-centralized-dependent-exotic": [
     { name: "Delta-Neutral Positions (CEX)", pct: 50, risk: "high" },
-    { name: "Stablecoins (USDC/USDT)", pct: 25, risk: "medium" },
+    { name: "Stablecoins (USDC/USDT)", pct: 25, risk: "low" },
     { name: "Volatile Crypto", pct: 25, risk: "high" },
   ],
-
-  // Fully decentralized crypto-backed (LUSD-like): ETH-only CDPs
   "crypto-decentralized": [
-    { name: "ETH / LSTs", pct: 80, risk: "medium" },
+    { name: "ETH / LSTs", pct: 80, risk: "low" },
     { name: "Other On-Chain Collateral", pct: 20, risk: "high" },
   ],
-
-  // Algorithmic: no traditional reserves, seigniorage/stability mechanisms
   algorithmic: [
     { name: "Protocol-Owned Reserves", pct: 50, risk: "high" },
-    { name: "Algorithmic Stabilization", pct: 50, risk: "high" },
+    { name: "Algorithmic Stabilization", pct: 50, risk: "very-high" },
   ],
-
-  // Gold-pegged stablecoins
   "commodity-gold": [
-    { name: "Physical Gold Bullion", pct: 95, risk: "medium" },
-    { name: "Cash / Operational", pct: 5, risk: "low" },
+    { name: "Physical Gold Bullion", pct: 95, risk: "very-low" },
+    { name: "Cash / Operational", pct: 5, risk: "very-low" },
   ],
-
-  // Silver-pegged stablecoins
   "commodity-silver": [
-    { name: "Physical Silver Bullion", pct: 95, risk: "medium" },
-    { name: "Cash / Operational", pct: 5, risk: "low" },
+    { name: "Physical Silver Bullion", pct: 95, risk: "very-low" },
+    { name: "Cash / Operational", pct: 5, risk: "very-low" },
   ],
 };
 
