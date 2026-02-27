@@ -28,6 +28,10 @@ interface Env {
   ANTHROPIC_API_KEY?: string;
   CMC_API_KEY?: string;
   COINGECKO_API_KEY?: string;
+  GITHUB_PAT?: string;
+  GITHUB_REPO_NODE_ID?: string;
+  GITHUB_DISCUSSION_CATEGORY_ID?: string;
+  FEEDBACK_IP_SALT?: string;
   TWITTER_API_KEY?: string;
   TWITTER_API_SECRET?: string;
   TWITTER_ACCESS_TOKEN?: string;
@@ -37,7 +41,7 @@ interface Env {
 function corsHeaders(origin: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
     "Access-Control-Max-Age": "86400",
     "X-Content-Type-Options": "nosniff",
@@ -66,6 +70,23 @@ const worker = {
       return new Response(null, { status: 204, headers: corsHeaders(origin) });
     }
 
+    const url = new URL(request.url);
+
+    // POST /api/feedback — in-app feedback submission (public, no edge cache)
+    if (request.method === "POST" && url.pathname === "/api/feedback") {
+      const { handleFeedback } = await import("./api/feedback");
+      const feedbackEnv = {
+        GITHUB_PAT: env.GITHUB_PAT,
+        GITHUB_REPO_NODE_ID: env.GITHUB_REPO_NODE_ID,
+        GITHUB_DISCUSSION_CATEGORY_ID: env.GITHUB_DISCUSSION_CATEGORY_ID,
+        FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
+      };
+      return addCorsHeaders(
+        await handleFeedback(env.DB, request, feedbackEnv),
+        origin
+      );
+    }
+
     if (request.method !== "GET") {
       return addCorsHeaders(
         new Response(JSON.stringify({ error: "Method not allowed" }), {
@@ -75,8 +96,6 @@ const worker = {
         origin
       );
     }
-
-    const url = new URL(request.url);
 
     // Admin-only: trigger digest regeneration on demand (bypasses 1h dedup check)
     if (url.pathname === "/api/trigger-digest") {
