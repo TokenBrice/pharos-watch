@@ -35,9 +35,39 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 | Sub-factor | Scoring | Tiers |
 |---|---|---|
 | **Chain Risk** | Where does the core protocol operate? | Ethereum (100), Stage 1+ L2 (66), Established alt-L1 (20), Unproven (0) |
-| **Collateral Quality** | Trust assumptions in backing assets | Native ETH/BTC (100), Ethereum LSTs (66), RWA/off-chain (50), Alt-L1 LSTs/bridged (20), Exotic/opaque (0) |
+| **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
 | **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
 | **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Blacklistable (0) |
+
+#### Collateral Quality: Reserve-Derived Scoring (v3.3)
+
+For coins with curated reserve compositions, collateral quality is computed as a weighted average of per-slice risk scores:
+
+| Reserve Risk Tier | Score | Description | Examples |
+|---|---|---|---|
+| `very-low` | 100 | No/minimal counterparty risk | Government securities, cash, repos, physical gold/silver |
+| `low` | 75 | Stablecoin/tokenized layer | USDC, BUIDL, USYC, other stablecoins |
+| `medium` | 50 | Wrapped/bridged/structured | wBTC, LSTs, delta-neutral strategies, tokenized ETFs |
+| `high` | 25 | Volatile native assets | SOL, BNB, TRX, alt-chain tokens |
+| `very-high` | 5 | Governance/exotic/opaque | Governance tokens, algorithmic mechanisms, sanctioned assets |
+
+**Formula:** `score = round(Σ(slice_pct × tier_score) / Σ(slice_pct))`
+
+**Display thresholds:** ≥88 → "Very low risk", ≥62 → "Low risk", ≥37 → "Medium risk", ≥15 → "High risk", <15 → "Very high risk"
+
+Reserve compositions are maintained in `StablecoinMeta.reserves` as arrays of `{ name, pct, risk }` slices.
+
+#### Collateral Quality: Enum Fallback
+
+For coins without curated reserves, the legacy enum-based scoring is used:
+
+| Enum Value | Score |
+|---|---|
+| `native` | 100 |
+| `eth-lst` | 66 |
+| `rwa` | 50 |
+| `alt-lst` | 20 |
+| `exotic` | 0 |
 
 **Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:
 
@@ -51,7 +81,7 @@ Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR 
 
 Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody).
 
-Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type).
+Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
 
 ### Decentralization Details
 

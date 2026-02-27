@@ -219,7 +219,7 @@ const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
 };
 
 const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
-  "very-low": 95,
+  "very-low": 100,
   low: 75,
   medium: 50,
   high: 25,
@@ -227,7 +227,7 @@ const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
 };
 
 const COLLATERAL_QUALITY_DISPLAY: [number, string][] = [
-  [85, "Very low risk"],
+  [88, "Very low risk"],
   [62, "Low risk"],
   [37, "Medium risk"],
   [15, "High risk"],

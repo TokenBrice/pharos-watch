@@ -14,7 +14,7 @@ The current 3-tier system (`low` / `medium` / `high`) can't distinguish USDC fro
 
 | Tier | Quality Score | Definition | Examples |
 |------|--------------|-----------|----------|
-| `very-low` | 95 | No/minimal counterparty risk | Native ETH, native BTC, government securities, cash, repos, physical gold/silver |
+| `very-low` | 100 | No/minimal counterparty risk | Native ETH, native BTC, government securities, cash, repos, physical gold/silver |
 | `low` | 75 | One trusted party, well-audited | ETH LSTs (wstETH, rETH), major stablecoins (USDC, USDT), BUIDL, USTB, sDAI |
 | `medium` | 50 | Moderate counterparty/complexity | Wrapped cross-chain (WBTC, tBTC), established DeFi (Aave), transparent tokenized RWAs |
 | `high` | 25 | Significant trust assumptions | Alt-L1 tokens (BNB, SOL, DOT), alt-L1 LSTs, bridged altcoins, opaque RWAs, delta-neutral strategies |
@@ -31,7 +31,7 @@ New function in `src/lib/report-cards.ts`:
 
 ```typescript
 const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
-  "very-low": 95, low: 75, medium: 50, high: 25, "very-high": 5,
+  "very-low": 100, low: 75, medium: 50, high: 25, "very-high": 5,
 };
 
 function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): number {
@@ -71,7 +71,7 @@ Format: `"Collateral: {tier label} ({score}/100)"`. The tier label comes from th
 | `high` | High risk |
 | `very-high` | Very high risk |
 
-The nearest-tier lookup uses score midpoints: ≥85 → very-low, ≥62 → low, ≥37 → medium, ≥15 → high, <15 → very-high.
+The nearest-tier lookup uses score midpoints: ≥88 → very-low, ≥62 → low, ≥37 → medium, ≥15 → high, <15 → very-high.
 
 ### 5. Treemap Visualization (5 colors)
 

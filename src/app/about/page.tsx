@@ -493,8 +493,8 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Collateral Quality</td>
-                    <td className="py-2 pr-4">Trust assumptions in backing assets</td>
-                    <td className="py-2">Native&nbsp;ETH/BTC&nbsp;(100), ETH&nbsp;LSTs&nbsp;(66), RWA/off&#8209;chain&nbsp;(50), Alt&#8209;LST/Bridged/Mixed&nbsp;(20), Exotic&nbsp;(0)</td>
+                    <td className="py-2 pr-4">Reserve composition risk</td>
+                    <td className="py-2">Weighted avg of curated reserve slices: Very&nbsp;Low&nbsp;(100), Low&nbsp;(75), Medium&nbsp;(50), High&nbsp;(25), Very&nbsp;High&nbsp;(5). Falls back to enum scoring for coins without curated reserves.</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Custody Model</td>
@@ -510,8 +510,8 @@ export default function AboutPage() {
               </table>
             </div>
             <p>
-              When sub-factor fields aren&apos;t explicitly set, defaults are inferred from the stablecoin&apos;s backing type and governance model.
-              Explicit overrides exist for coins where defaults are incorrect (e.g., protocols on Solana, coins with CEX custody).
+              Collateral quality is derived from curated reserve compositions when available &mdash; each reserve slice is classified into one of five risk tiers and the score is their weighted average.
+              For coins without curated reserves, a coarser enum-based fallback is used. Explicit overrides exist for coins where defaults are incorrect (e.g., protocols on Solana, coins with CEX custody).
             </p>
           </div>
 
@@ -616,7 +616,7 @@ export default function AboutPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v3.1. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v3.3. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>
