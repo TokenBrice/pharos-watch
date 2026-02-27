@@ -182,6 +182,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
       { chain: "bsc", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
     ],
+    reserves: [
+      // Source: BitGo monthly attestation reports (AICPA criteria). Exact % not published; estimated from collateral description.
+      { name: "U.S. Treasury Bills", pct: 60, risk: "low" },
+      { name: "U.S. Government Money Market Funds", pct: 25, risk: "low" },
+      { name: "Cash Deposits", pct: 15, risk: "low" },
+    ],
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     geckoId: "dai",
@@ -230,6 +236,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x46850ad61c2b7d64d08c9c754f45254596696984", decimals: 6 },
     ],
     supplyMethod: { type: "exclude" }, // Significant Solana supply not coverable on-chain — use DefiLlama
+    reserves: [
+      // Source: Paxos KPMG Feb 2025 attestation ($744.6M repos, $25.6M cash of $770.1M total)
+      { name: "U.S. Treasury Reverse Repos", pct: 97, risk: "low" },
+      { name: "Cash Deposits", pct: 3, risk: "low" },
+    ],
   }),
   usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
     geckoId: "falcon-finance",
@@ -249,6 +260,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0x8210c0634ab8f273806e4b7866e9db353773c44b", decimals: 18 },
     ],
     collateralQuality: "exotic",
+    reserves: [
+      // Source: Falcon Finance transparency dashboard + DWF Labs research (Sep 2025). Approximate from published $ amounts.
+      { name: "BTC (delta-neutral)", pct: 45, risk: "medium" },
+      { name: "Stablecoins (USDC/USDT)", pct: 30, risk: "low" },
+      { name: "Altcoins (DOGE, FET, TRX, TON)", pct: 15, risk: "high" },
+      { name: "ETH (delta-neutral)", pct: 5, risk: "medium" },
+      { name: "Tokenized Treasuries (USTB)", pct: 5, risk: "low" },
+    ],
   }),
   usd("237", "Hashnote USYC", "USYC", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -265,6 +284,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x136471a34f6ef19fe571effc1ca711fdb8e49f2b", decimals: 6 },
       { chain: "bsc", address: "0x8D0fA28f221eB5735BC71d3a0Da67EE5bC821311", decimals: 6 },
     ],
+    reserves: [
+      // Source: Hashnote/Circle SDYF docs + Nansen analysis. Fund invests exclusively in T-bills and reverse repos.
+      { name: "U.S. Treasury Bills", pct: 80, risk: "low" },
+      { name: "Reverse Repo Agreements", pct: 20, risk: "low" },
+    ],
   }),
   usd("286", "Global Dollar", "USDG", "rwa-backed", "centralized", {
     geckoId: "global-dollar",
@@ -278,6 +302,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
     contracts: [
       { chain: "ethereum", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6 },
+    ],
+    reserves: [
+      // Source: Paxos/Enrome LLP monthly attestation (ISCA standards). Exact % not published; estimated from collateral description.
+      { name: "U.S. Government Securities", pct: 50, risk: "low" },
+      { name: "Cash Deposits (DBS/StanChart)", pct: 35, risk: "low" },
+      { name: "Cash Equivalents", pct: 15, risk: "low" },
     ],
   }),
 
@@ -295,6 +325,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed", decimals: 18 },
     ],
+    reserves: [
+      // Source: BPM LLP / Deloitte attestation (Dec 2024 breakdown: ~36% T-bills, ~36% MMF, ~28% cash). NYDFS-regulated.
+      { name: "U.S. Treasury Bills", pct: 36, risk: "low" },
+      { name: "Government Money Market Funds", pct: 36, risk: "low" },
+      { name: "Cash Deposits", pct: 28, risk: "low" },
+    ],
   }),
   usd("129", "Ondo US Dollar Yield", "USDY", "rwa-backed", "centralized", {
     geckoId: "ondo-us-dollar-yield",
@@ -311,6 +347,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x96f6ef951840721adbf46ac996b59e0235cb985c", decimals: 18 },
       { chain: "arbitrum", address: "0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Ondo Finance docs + Ankura Trust daily reports. Ondo targets 99%+ Treasuries; 104% overcollateralized.
+      { name: "Short-Term U.S. Treasuries", pct: 80, risk: "low" },
+      { name: "iShares Short Treasury Bond ETF", pct: 15, risk: "low" },
+      { name: "Bank Demand Deposits", pct: 5, risk: "low" },
     ],
   }),
   usd("173", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
@@ -331,6 +373,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum",  address: "0xa6525ae43edcd03dc08e775774dcabd3bb925872", decimals: 6 },
       { chain: "avalanche", address: "0x53fc82f14f009009b440a706e31c9021e1196a2f", decimals: 6 },
       { chain: "polygon",   address: "0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99", decimals: 6 },
+    ],
+    reserves: [
+      // Source: BlackRock/Securitize prospectus. 100% in cash, T-bills, and repos. Exact % not disclosed; estimated for money market fund.
+      { name: "U.S. Treasury Bills", pct: 60, risk: "low" },
+      { name: "Overnight Repos", pct: 30, risk: "low" },
+      { name: "Cash", pct: 10, risk: "low" },
     ],
   }),
   usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
@@ -458,6 +506,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee", decimals: 18 },
     ],
     proofOfReserves: { type: "independent-audit", url: "https://github.com/aave/gho-core/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
+    reserves: [
+      // Source: Aave V3 Ethereum market data, Eco.com GHO guide, Chaos Labs risk dashboard
+      { name: "wstETH", pct: 34, risk: "medium" },
+      { name: "sDAI", pct: 18, risk: "medium" },
+      { name: "WETH", pct: 16, risk: "medium" },
+      { name: "WBTC", pct: 14, risk: "medium" },
+      { name: "USDC / USDT (GSM)", pct: 13, risk: "medium" },
+      { name: "Other Aave V3 Collateral", pct: 5, risk: "high" },
+    ],
   }),
 
   // ── Rank 21-30 ───────────────────────────────────────────────────────
@@ -598,6 +655,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     supplyMethod: {
       type: "exclude", // totalSupply() includes pre-minted lending capacity; DefiLlama aggregates debt across all factories
     },
+    reserves: [
+      // Source: Curve Finance crvUSD Mint Markets UI (Feb 2026). Based on Mint Markets TVL breakdown.
+      { name: "WBTC / cbBTC", pct: 69, risk: "medium" },
+      { name: "tBTC", pct: 11, risk: "medium" },
+      { name: "wstETH / sfrxETH / weETH", pct: 12, risk: "medium" },
+      { name: "ETH", pct: 8, risk: "medium" },
+    ],
   }),
   usd("310", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
     geckoId: "usx",
