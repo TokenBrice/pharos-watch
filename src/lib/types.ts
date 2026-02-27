@@ -63,9 +63,12 @@ export interface SupplyMethodConfig {
   };
 }
 
+export type DependencyType = "wrapper" | "mechanism" | "collateral";
+
 export interface DependencyWeight {
   id: string;      // DefiLlama ID of upstream stablecoin
   weight: number;  // 0-1, fraction of collateral from this source
+  type?: DependencyType;  // default: 'collateral' — see docs/plans/2026-02-27-dependency-type-ceiling-design.md
 }
 
 /** Structured reserve composition for treemap visualization */
