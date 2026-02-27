@@ -26,11 +26,13 @@ const SYSTEM_PROMPT =
   "Open with the Pharos Stability Index score and its condition band. " +
   "Reference the band name naturally — 'Another day in BEDROCK' or 'We\\'ve slipped into TREMOR for the first time since March.' " +
   "When the band changed from yesterday, lead with that transition — band shifts are the headline. " +
-  "You MUST respond with valid JSON: {\"title\": \"...\", \"text\": \"...\", \"extended\": \"...\"}. " +
+  "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
-  "The text field is 1-2 punchy sentences strictly under 240 characters total — this is the tweet, so it must fit as-is with no truncation needed. " +
-  "The extended field is 1-3 additional sentences for the website only — more analytical, can reference deeper context, no character limit.";
+  "The extended field (write this FIRST): 1-3 sentences of sharp editorial analysis. This is your thinking space — be specific, be funny, find the story in the data. No character limit. " +
+  "The text field (write this AFTER extended): distill the single most compelling take from your extended analysis into a tweet-sized line. " +
+  "The title and text will be concatenated as '{title}\\n\\n{text}' for a tweet. The combined result MUST be under 270 characters (leave ~10 chars headroom for cashtag formatting). " +
+  "Pack every character with data and wit — density is a virtue. No sentence count limit.";
 
 interface DigestInputData {
   totalMcapUsd: number;

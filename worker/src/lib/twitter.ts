@@ -84,7 +84,9 @@ function truncateToFit(text: string, maxLen: number): string {
   return (cut > 0 ? text.slice(0, cut) : text.slice(0, maxLen - 1)) + "…";
 }
 
-/** Build final tweet text: title + digest with inline cashtags injected on first ticker mention. */
+/** Build final tweet text: title + digest with inline cashtags injected on first ticker mention.
+ *  The LLM prompt targets 270 combined chars for title+text, leaving ~10 chars headroom
+ *  for cashtag `$` prefixes injected below. truncateToFit is a safety net for overflow. */
 export function buildTweetText(digestTitle: string, digestText: string): string {
   const MAX = 280;
   const titlePrefix = digestTitle ? `${digestTitle}\n\n` : "";
