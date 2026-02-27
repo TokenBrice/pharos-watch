@@ -52,6 +52,18 @@ const MIN_RADIUS = 10;
 const MAX_RADIUS = 34;
 const RING_WIDTH = 3;
 
+const TYPE_COLORS: Record<string, string> = {
+  collateral: "#64748b",
+  mechanism: "#f59e0b",
+  wrapper: "#8b5cf6",
+};
+
+const TYPE_DASH: Record<string, string | undefined> = {
+  collateral: undefined,
+  mechanism: "6 3",
+  wrapper: "2 3",
+};
+
 function gradeColor(grade: string): string {
   return GRADE_RADAR_COLORS[gradeRange(grade as ReportCardGrade)] ?? GRADE_RADAR_COLORS.NR;
 }
@@ -97,6 +109,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
     return { nodes: graphNodes, links: graphLinks };
   }, [cards, mcapMap]);
+
+  // Fast node lookup by id (avoids O(n) find inside render loops)
+  const nodeMap = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes]);
 
   // Run simulation
   const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(new Map());
@@ -241,15 +256,14 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     const dy = svgP.y - dragStart.current.my;
     setPositions((prev) => {
       const next = new Map(prev);
-      const node = nodes.find((n) => n.id === dragId);
-      const r = node?.r ?? MIN_RADIUS;
+      const r = nodeMap.get(dragId)?.r ?? MIN_RADIUS;
       next.set(dragId, {
         x: Math.max(PAD + r, Math.min(WIDTH - PAD - r, dragStart.current!.nx + dx)),
         y: Math.max(PAD + r, Math.min(HEIGHT - PAD - r, dragStart.current!.ny + dy)),
       });
       return next;
     });
-  }, [dragId, nodes]);
+  }, [dragId, nodeMap]);
 
   const handleMouseUp = useCallback(() => {
     setDragId(null);
@@ -319,20 +333,20 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               })}
               {/* Arrowhead markers */}
               <marker id="arrow-default" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
+                markerWidth="8" markerHeight="5" orient="auto">
                 <path d="M0,0 L10,3 L0,6 Z" fill="currentColor" opacity={0.4} />
               </marker>
               <marker id="arrow-collateral" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
-                <path d="M0,0 L10,3 L0,6 Z" fill="#64748b" />
+                markerWidth="8" markerHeight="5" orient="auto">
+                <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS.collateral} />
               </marker>
               <marker id="arrow-mechanism" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
-                <path d="M0,0 L10,3 L0,6 Z" fill="#f59e0b" />
+                markerWidth="8" markerHeight="5" orient="auto">
+                <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS.mechanism} />
               </marker>
               <marker id="arrow-wrapper" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
-                <path d="M0,0 L10,3 L0,6 Z" fill="#8b5cf6" />
+                markerWidth="8" markerHeight="5" orient="auto">
+                <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS.wrapper} />
               </marker>
             </defs>
 
@@ -344,7 +358,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               // Arrow direction: upstream → dependent, so line goes tgt → src
               const fromPos = positions.get(tgtId); // upstream
               const toPos = positions.get(srcId);   // dependent
-              const toNode = nodes.find((n) => n.id === srcId);
+              const toNode = nodeMap.get(srcId);
               if (!fromPos || !toPos || !toNode) return null;
 
               // Offset endpoint by target node radius so arrowhead touches boundary
@@ -360,12 +374,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const sw = 1 + link.weight * 5;
               const so = 0.15 + link.weight * 0.45;
 
-              const typeColor = link.type === "mechanism" ? "#f59e0b"
-                : link.type === "wrapper" ? "#8b5cf6"
-                : "#64748b";
-              const dashArray = link.type === "mechanism" ? "6 3"
-                : link.type === "wrapper" ? "2 3"
-                : undefined;
+              const typeColor = TYPE_COLORS[link.type];
+              const dashArray = TYPE_DASH[link.type];
 
               // Show type encoding when: toggle on, directly hovered, or connected to hovered node
               const showType = showTypes || isEdgeDirectHovered || (isNodeHovered && isConnected);
@@ -475,7 +485,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
             {/* Node Tooltip (only when no edge is hovered) */}
             {hoveredId && hoveredEdge === null && (() => {
-              const node = nodes.find((n) => n.id === hoveredId);
+              const node = nodeMap.get(hoveredId);
               const pos = positions.get(hoveredId);
               if (!node || !pos) return null;
               const card = cards.find((c) => c.id === hoveredId);
@@ -520,8 +530,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
               const fromPos = positions.get(tgtId);
               const toPos = positions.get(srcId);
-              const fromNode = nodes.find((n) => n.id === tgtId);
-              const toNode = nodes.find((n) => n.id === srcId);
+              const fromNode = nodeMap.get(tgtId);
+              const toNode = nodeMap.get(srcId);
               if (!fromPos || !toPos || !fromNode || !toNode) return null;
 
               const mx = (fromPos.x + toPos.x) / 2;
@@ -575,14 +585,10 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
             ))}
 
             {/* Edge type legend entries */}
-            {[
-              { label: "Collateral", color: "#64748b", dash: undefined as string | undefined },
-              { label: "Mechanism", color: "#f59e0b", dash: "6 3" },
-              { label: "Wrapper", color: "#8b5cf6", dash: "2 3" },
-            ].map(({ label, color, dash }, i) => (
-              <g key={label} transform={`translate(${WIDTH - PAD - 80}, ${PAD + 5 * 18 + 8 + i * 16})`}>
-                <line x1={0} y1={5} x2={16} y2={5} stroke={color} strokeWidth={2} strokeDasharray={dash} />
-                <text x={22} y={9} fill="currentColor" fontSize={9} opacity={0.6}>{label}</text>
+            {(["collateral", "mechanism", "wrapper"] as const).map((type, i) => (
+              <g key={type} transform={`translate(${WIDTH - PAD - 80}, ${PAD + 5 * 18 + 8 + i * 16})`}>
+                <line x1={0} y1={5} x2={16} y2={5} stroke={TYPE_COLORS[type]} strokeWidth={2} strokeDasharray={TYPE_DASH[type]} />
+                <text x={22} y={9} fill="currentColor" fontSize={9} opacity={0.6}>{type[0].toUpperCase() + type.slice(1)}</text>
               </g>
             ))}
 
