@@ -375,13 +375,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <section id="info">
         <KeyInfoCard meta={coin} />
-        <ContractAddresses meta={coin} />
         {coin.reserves && <ReserveTreemap reserves={coin.reserves} />}
       </section>
 
       <section id="liquidity">
         <DexLiquidityCard stablecoinId={id} />
       </section>
+
+      <ContractAddresses meta={coin} />
 
       <section id="history">
         <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
