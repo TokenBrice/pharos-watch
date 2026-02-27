@@ -439,13 +439,13 @@ export default function AboutPage() {
                 <tbody className="divide-y">
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Liquidity</td>
-                    <td className="py-2 pr-4">25%</td>
+                    <td className="py-2 pr-4">30%</td>
                     <td className="py-2 pr-4">DEX liquidity score</td>
                     <td className="py-2">Direct passthrough of the liquidity score (see below)</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Resilience</td>
-                    <td className="py-2 pr-4">25%</td>
+                    <td className="py-2 pr-4">20%</td>
                     <td className="py-2 pr-4">Chain risk, collateral, custody, blacklist</td>
                     <td className="py-2">Structural resilience across 4 equally-weighted sub-factors</td>
                   </tr>
@@ -623,7 +623,7 @@ export default function AboutPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v4.0. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v4.1. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>

@@ -669,7 +669,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other Bank Deposits (EUR)", pct: 1, risk: "very-low" },
     ],
   }),
-  usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
+  usd("197", "Resolv USD", "USR", "crypto-backed", "decentralized", {
     geckoId: "resolv-usr",
     dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
     collateral: "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
@@ -716,7 +716,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low" },
     ],
   }),
-  usd("110", "crvUSD", "crvUSD", "crypto-backed", "centralized-dependent", {
+  usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
     geckoId: "crvusd",
     dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
@@ -1006,7 +1006,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Yield instruments (unspecified)", pct: 5, risk: "high" },
     ],
   }),
-  usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
+  usd("235", "Frax USD", "FRXUSD", "rwa-backed", "decentralized", {
     geckoId: "frax-usd",
     dependencies: [{ id: "2", weight: 0.3 }],
     collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
@@ -1868,7 +1868,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "CLOs & Private Credit Funds", pct: 10, risk: "high" },
     ],
   }),
-  usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
+  usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "decentralized", {
     geckoId: "gyroscope-gyd",
     dependencies: [{ id: "2", weight: 0.35 }, { id: "5", weight: 0.35 }],
     collateral: "Diversified reserve of sDAI, USDC, LUSD, and crvUSD in yield-generating vaults",
@@ -2191,7 +2191,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH", pct: 1, risk: "very-low" },
     ],
   }),
-  usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "centralized-dependent", {
+  usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "decentralized", {
     geckoId: "alchemix-usd",
     dependencies: [{ id: "1", weight: 0.33 }, { id: "2", weight: 0.33 }, { id: "5", weight: 0.33 }],
     collateral: "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",

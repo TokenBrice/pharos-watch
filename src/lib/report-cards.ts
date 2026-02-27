@@ -27,7 +27,7 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "4.0";
+export const METHODOLOGY_VERSION = "4.1";
 
 /**
  * Base dimension weights for the overall grade.
@@ -36,8 +36,8 @@ export const METHODOLOGY_VERSION = "4.0";
  */
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0,
-  liquidity: 0.25,
-  resilience: 0.25,
+  liquidity: 0.30,
+  resilience: 0.20,
   decentralization: 0.10,
   dependencyRisk: 0.30,
 };
