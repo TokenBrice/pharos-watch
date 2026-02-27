@@ -373,7 +373,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         <McapChart data={supplyHistory} />
       </section>
 
-      <section id="info">
+      <section id="info" className="space-y-6">
         <KeyInfoCard meta={coin} />
         {coin.reserves && <ReserveTreemap reserves={coin.reserves} />}
       </section>
