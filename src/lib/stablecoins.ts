@@ -109,7 +109,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       ],
     },
     reserves: [
-      { name: "U.S. Treasuries", pct: 75, risk: "low" },
+      { name: "U.S. Treasuries", pct: 75, risk: "very-low" },
       { name: "Overnight Repos", pct: 18, risk: "very-low" },
       { name: "Cash Deposits", pct: 7, risk: "very-low" },
     ],
@@ -352,7 +352,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Ondo Finance docs + Ankura Trust daily reports. Ondo targets 99%+ Treasuries; 104% overcollateralized.
-      { name: "Short-Term U.S. Treasuries", pct: 80, risk: "low" },
+      { name: "Short-Term U.S. Treasuries", pct: 80, risk: "very-low" },
       { name: "iShares Short Treasury Bond ETF", pct: 15, risk: "very-low" },
       { name: "Bank Demand Deposits", pct: 5, risk: "very-low" },
     ],
