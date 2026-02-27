@@ -2,12 +2,23 @@
 
 ## Supply Pipeline
 
-Supply data uses a simple two-source model:
+Supply data uses a two-source model with automatic fallback:
 
 - **DefiLlama** — primary source for all stablecoins tracked by DefiLlama's stablecoin API
-- **CoinGecko market cap** — used only for gold/silver/fiat tokens that DefiLlama doesn't track (e.g. XAUT, PAXG, KAU)
+- **CoinGecko market cap** — used for gold/silver/fiat tokens that DefiLlama doesn't track (e.g. XAUT, PAXG, KAU), and as a **full supply fallback** when the DefiLlama stablecoins API is down (circuit breaker triggers `fallbackToCgSupply()`)
 
 No on-chain overrides, no CMC supply patches, no manual supply corrections.
+
+### Circuit Breakers
+
+All external data sources are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`.
+
+- **Open threshold**: 3 consecutive failures
+- **Probe interval**: 30 minutes (one request allowed to test recovery)
+- **Alerts**: Webhook alert fires on open and close transitions
+- **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
+
+Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`.
 
 ### DefiLlama list vs detail API
 
@@ -19,7 +30,20 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 
 ## Price Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 5-pass system for assets with missing or zero prices:
+### Dual-Primary Price Validation
+
+Before the enrichment pipeline runs, `fetchDualPrimaryPrices()` fetches prices from both the DefiLlama coins API and CoinGecko `/simple/price` **in parallel** for all assets with a valid `geckoId`. It cross-validates within 50 basis points:
+
+- **Both agree (≤50 bps)** → `priceConfidence: "high"`, use DL price
+- **Disagree (>50 bps)** → `priceConfidence: "low"`, use closer-to-peg value, log divergence
+- **One source down** → `priceConfidence: "single-source"`, use available
+- **Both down** → skip, falls through to enrichment pipeline
+
+Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) and `supplySource` (defillama/coingecko-fallback).
+
+### Enrichment Pipeline
+
+`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 5-pass system for assets still missing prices after dual-primary:
 
 1. **Pass 1:** Contract address -> DefiLlama coins API (with multi-chain fallback)
 2. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
@@ -84,7 +108,7 @@ The live `/price/` endpoint requires no API key and has no documented rate limit
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs daily at 07:55 UTC and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − freezes + trend`. See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth + trend`. See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 

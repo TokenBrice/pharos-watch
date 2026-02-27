@@ -84,7 +84,9 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `gecko_id` | `string \| null` | CoinGecko ID |
 | `pegType` | `string` | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`) |
 | `pegMechanism` | `string` | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc. |
-| `priceSource` | `string` | Source of the current price (`"defillama"`, `"coingecko"`, `"dexscreener"`) |
+| `priceSource` | `string` | Source of the current price (`"defillama"`, `"coingecko"`, `"defillama+coingecko"`, `"dexscreener"`) |
+| `priceConfidence` | `string \| null` | Price confidence level: `"high"` (dual-source agreement), `"single-source"`, `"low"` (sources diverge), `"fallback"` (enrichment pipeline) |
+| `supplySource` | `string \| undefined` | Supply data source: `"defillama"` or `"coingecko-fallback"` |
 | `price` | `number \| null` | Current price in USD |
 | `circulating` | `Record<string, number>` | Current supply in USD, keyed by pegType (e.g. `{ "peggedUSD": 138000000 }`) |
 | `circulatingPrevDay` | `Record<string, number>` | Supply 24 h ago |
@@ -597,6 +599,42 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 
 ---
 
+### `GET /api/digest-snapshot`
+
+Contextual data snapshot for a specific digest date — includes the digest's input data, active depeg events, and blacklist events for that day. Used by SSG builds for individual digest pages.
+
+**Cache:** slow
+
+**Required query parameter**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `date` | `string` | Date in `YYYY-MM-DD` format (required) |
+
+**Response**
+
+```json
+{
+  "date": "2026-02-27",
+  "inputData": { "totalMcapUsd": 230000000000, "mcap7dDelta": 0.012, ... },
+  "prevInputData": { ... },
+  "depegEvents": [{ "stablecoinId": "42", "symbol": "FOO", "direction": "below", "peakDeviationBps": 150, ... }],
+  "blacklistEvents": [{ "stablecoin": "USDT", "chainName": "Ethereum", "eventType": "blacklist", ... }]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | `string` | The requested date |
+| `inputData` | `object \| null` | Digest input data (mcap, depegs, supply changes, PSI) for this date |
+| `prevInputData` | `object \| null` | Previous day's input data for delta computation |
+| `depegEvents` | `array` | Up to 20 depeg events active on that date, ordered by severity |
+| `blacklistEvents` | `array` | Up to 50 blacklist events on that date |
+
+**Error responses:** `400` for missing/invalid date, `404` if no digest exists for that date.
+
+---
+
 ### `GET /api/health`
 
 Worker health check. Reports cache freshness and blacklist table integrity. Not served from Cloudflare edge cache (`no-store`).
@@ -618,6 +656,10 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
   "blacklist": {
     "totalEvents": 13422,
     "missingAmounts": 0
+  },
+  "circuits": {
+    "defillama-stablecoins": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190029 },
+    "coingecko-prices": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190030 }
   }
 }
 ```
@@ -629,6 +671,7 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 | `caches` | `Record<string, CacheStatus>` | Per-cache freshness status |
 | `blacklist.totalEvents` | `number` | Total events in blacklist table |
 | `blacklist.missingAmounts` | `number` | Events where `amount` is null (should be 0) |
+| `circuits` | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`. Empty until first cron run |
 
 **`CacheStatus`**
 
@@ -639,8 +682,8 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 | `healthy` | `boolean` | `true` when `ageSeconds / maxAge ≤ 1.5` |
 
 **Overall status logic:**
-- `healthy` — worst cache ratio ≤ 1.5
-- `degraded` — worst ratio between 1.5 and 2
+- `healthy` — worst cache ratio ≤ 1.5 and no open circuits
+- `degraded` — worst ratio between 1.5 and 2, or any circuit is open
 - `stale` — worst ratio > 2
 
 ---
@@ -664,7 +707,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
   "current": {
     "score": 81.1,
     "band": "STEADY",
-    "components": { "severity": 4.59, "breadth": 15, "freezes": 0, "trend": 0.65 },
+    "components": { "severity": 4.59, "breadth": 15, "trend": 0.65 },
     "computedAt": 1771977600
   },
   "history": [
@@ -678,7 +721,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 | `current` | `object \| null` | Latest PSI score and components. `null` if cron has not yet run |
 | `current.score` | `number` | PSI score 0–100 |
 | `current.band` | `string` | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
-| `current.components` | `object` | Component breakdown: `severity`, `breadth`, `freezes`, `trend` |
+| `current.components` | `object` | Component breakdown: `severity`, `breadth`, `trend` |
 | `current.computedAt` | `number` | Unix seconds of computation |
 | `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
 
@@ -699,7 +742,7 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
     "edges": [{ "from": "2", "to": "5" }, ...]
   },
   "methodology": {
-    "version": "1.0",
+    "version": "3.1",
     "weights": { "pegStability": 0.25, "liquidity": 0.20, "resilience": 0.20, "decentralization": 0.10, "dependencyRisk": 0.25 },
     "thresholds": [{ "grade": "A+", "min": 97 }, { "grade": "A", "min": 93 }, ...]
   },
@@ -737,7 +780,10 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
 | `liquidityScore` | `number \| null` |
 | `concentrationHhi` | `number \| null` |
 | `bluechipGrade` | `BluechipGrade \| null` |
-| `canBeBlacklisted` | `boolean` |
+| `canBeBlacklisted` | `boolean \| "possible"` |
+| `chainRisk` | `ChainRisk` |
+| `collateralQuality` | `CollateralQuality` |
+| `custodyModel` | `CustodyModel` |
 | `governanceTier` | `GovernanceType` |
 | `dependencies` | `DependencyWeight[]` |
 

@@ -36,42 +36,91 @@
 
 ---
 
-## 2. DefiLlama Redundancy and Circuit Breaker
+## 2. ~~Dual-Primary Prices, Supply Fallback, and Circuit Breakers~~ IMPLEMENTED
+
+**Status:** Implemented 2026-02-27 — circuit breakers, dual-primary price validation, CG supply fallback, DEX graceful degradation. See `worker/src/lib/circuit-breaker.ts`, updated `enrich-prices.ts`, `sync-stablecoins.ts`, `sync-dex-liquidity.ts`.
 
 **Severity:** Critical (architectural)
 **Finding:** DefiLlama's stablecoins API and yields API are each single points of failure with no fallback. A 24-hour DefiLlama outage means no fresh supply, price, or liquidity data. The dashboard serves increasingly stale data with only the health endpoint reporting "stale" status — no degradation signal reaches the user or triggers recovery.
 
-**Approach — Phase 1: Circuit breaker (1 day)**
-1. Track consecutive failures per source in a D1 counter table
+Additionally, the current pipeline treats prices as a single-source value (DL primary, CG only as a late fallback). Both DL and CG provide spot prices for nearly all tracked stablecoins — fetching both in parallel enables cross-validation that catches data quality issues during normal operation, not just during outages.
+
+### Phase 1: Circuit breaker framework (1 day)
+
+Generic circuit breaker that wraps any external fetch. Reused across all phases.
+
+1. Track consecutive failures per source in a D1 counter table (`circuit_state`: source, failures, state, last_probe_at)
 2. After N consecutive failures (e.g., 3), enter "circuit open" state
 3. In circuit-open state: skip the fetch, serve stale cache, add a `Warning` header and set health status to "degraded"
 4. Every M minutes (e.g., 30), allow a single "probe" request through
 5. If probe succeeds, close the circuit and resume normal operation
 6. Alert on circuit open/close transitions
 
-**Approach — Phase 2: CoinGecko supply fallback (3–5 days)**
-1. When DefiLlama stablecoins API is unavailable (circuit open), fall back to CoinGecko for supply data
-2. CoinGecko `/coins/markets` can provide market cap and price for coins with `geckoId`
-3. Map CoinGecko mcap to the DefiLlama `circulating` shape
-4. Mark the data as `source: "coingecko-fallback"` so downstream consumers know it is approximate
-5. Limitations: CoinGecko does not provide per-chain breakdown or peg-type-specific circulating. These fields would be null during fallback.
+### Phase 2: Dual-primary price validation (2–3 days)
 
-**Approach — Phase 3: DeFiLlama yields fallback (2 days)**
-1. When yields API is unavailable, fall back to CoinGecko Onchain pool discovery
-2. CG Onchain already runs during `sync-dex-liquidity` — extend it to be the primary source during yields outage
-3. Quality will be lower (no DeFiLlama pool metadata, fewer pools discovered) but liquidity scores will still update
+Upgrade prices from single-source-with-fallback to dual-primary-with-cross-validation. This improves data quality during normal operation and provides seamless resilience during outages.
 
-**Effort:** 3–5 days total across phases
+**How it works:**
+1. In `enrich-prices`, fetch DL (`coins.llama.fi/prices/current`) and CG (`/simple/price`) prices **in parallel** for all coins that have a `geckoId`
+2. **Both agree** (within threshold, e.g., 50bps) → use DL price, mark `priceConfidence: "high"`
+3. **Disagree** (beyond threshold) → flag for investigation, use the value closer to the peg target, mark `priceConfidence: "low"`, log the discrepancy
+4. **One source down** → seamlessly use the other with no degradation, mark `priceConfidence: "single-source"`
+5. **Both down** → fall through to existing pass 3.5 (CMC) and pass 4 (DexScreener)
+6. Store both raw prices in D1 for audit trail and historical divergence analysis
+
+**Changes to existing enrichment pipeline:**
+- Pass 1 (DL address lookup) and Pass 3 (CG direct) currently run sequentially as fallbacks. Instead, run them as parallel primary fetches for all coins with both identifiers.
+- Coins with only a DL address but no `geckoId` → DL single-source (no change)
+- Coins with only a `geckoId` → CG single-source (no change)
+- Keep Pass 3.5 (CMC) and Pass 4 (DexScreener) as late fallbacks for coins that fail both primaries
+
+**Benefits over the current fallback chain:**
+- Catches bad prices from either source during normal operation (not just outages)
+- Provides built-in depeg confirmation for all coins (currently only done for >$1B coins in `confirm-pending-depegs.ts`)
+- Zero-latency failover when one source goes down — no circuit breaker delay needed for prices
+- Price confidence signal available to downstream consumers (PSI, report cards, depeg detection)
+
+**CG API budget consideration:** CG `/simple/price` accepts up to 250 comma-separated IDs per call. With ~143 stablecoins, this is a single API call per cycle. Well within free tier limits, negligible on the paid plan.
+
+### Phase 3: CoinGecko supply fallback (2–3 days)
+
+When the DefiLlama stablecoins API is unavailable (circuit open), fall back to CoinGecko for supply data. This is a **degraded fallback**, not a co-primary — DL provides structured data CG cannot replicate.
+
+**What DL provides that CG cannot:**
+- Per-chain circulating breakdown (`chainCirculating`)
+- Peg-type-specific values (`peggedUSD`, `peggedEUR`, etc.)
+- Day/week/month supply deltas (`circulatingPrevDay/Week/Month`)
+- The stablecoin classification itself (peg type, peg mechanism)
+
+**Fallback approach:**
+1. When DL circuit is open, fetch CG `/simple/price?ids=...&vs_currencies=usd&include_market_cap=true` for all coins with `geckoId`
+2. Map CG `usd_market_cap` → DL `circulating` shape (total only, no chain breakdown)
+3. For non-USD pegs: divide `usd_market_cap` by the FX rate to approximate native-unit circulating (lossy but better than nothing)
+4. Null out fields CG cannot provide: `chainCirculating`, `circulatingPrevDay/Week/Month`
+5. Mark all data as `supplySource: "coingecko-fallback"` so downstream consumers know it is approximate
+6. Downstream impact: chain-level views show "unavailable", supply change columns show "—", but totals and prices remain live
+
+### Phase 4: DeFiLlama yields fallback (1–2 days)
+
+1. When yields API circuit is open, promote CG Onchain to primary source for pool discovery
+2. CG Onchain already runs during `sync-dex-liquidity` — extend it to cover all tracked coins (not just supplemental chains) during yields outage
+3. Quality will be lower (no DeFiLlama pool metadata like `sigma`/`exposure`, fewer pools discovered) but liquidity scores will still update
+4. Mark pools as `poolSource: "coingecko-onchain"` during fallback
+
+**Effort:** 5–7 days total across phases
 **Dependencies:** CoinGecko API key (already configured)
-**Verify:** Simulate DefiLlama downtime by blocking the URLs in wrangler dev. Confirm:
-- Circuit opens after 3 failures
-- Fallback data appears with appropriate source labels
-- Health endpoint shows "degraded"
-- Circuit closes when DeFiLlama comes back
+**Verify:**
+- **Phase 1:** Block DL URLs in wrangler dev → circuit opens after 3 failures, closes on probe success
+- **Phase 2:** Mock DL returning a wrong price for USDT → dual-primary flags the discrepancy, uses CG value. Block DL entirely → CG prices used seamlessly with `single-source` confidence
+- **Phase 3:** Block DL stablecoins endpoint → supply data populated from CG mcap with fallback labels, chain views show "unavailable"
+- **Phase 4:** Block DL yields endpoint → CG Onchain pools used, liquidity scores update with `coingecko-onchain` source label
+- **All phases:** Health endpoint shows "degraded" during fallback, "healthy" when recovered
 
 ---
 
-## 3. Allow DEX Liquidity Cron to Continue Without Protocols API
+## 3. ~~Allow DEX Liquidity Cron to Continue Without Protocols API~~ IMPLEMENTED
+
+**Status:** Implemented 2026-02-27 as part of item 2 (Phase 4). Both DL yields and DL protocols are now circuit-breaker-protected with graceful degradation.
 
 **Severity:** High
 **Finding:** If the DeFiLlama protocols fetch fails, the entire dex-liquidity cron aborts — even though Curve API, subgraph, and CoinGecko Onchain data was already fetched successfully. The protocols list is used for filtering dead/rugged protocols, which is useful but not critical.
@@ -193,7 +242,10 @@ This section summarizes what the dashboard should show users when data is uncert
 ## Checklist
 
 - [ ] Item 1: Runtime schema validation (Zod/valibot) for external API responses
-- [ ] Item 2: Circuit breaker + CoinGecko fallback for DefiLlama
+- [ ] Item 2a: Circuit breaker framework
+- [ ] Item 2b: Dual-primary price validation (DL + CG in parallel)
+- [ ] Item 2c: CoinGecko supply fallback (degraded)
+- [ ] Item 2d: DeFiLlama yields fallback (CG Onchain promoted)
 - [ ] Item 3: DEX liquidity cron resilience without protocols API
 - [ ] Item 4: PSI freshness awareness + stale band
 - [ ] Item 5: Price source transparency in UI

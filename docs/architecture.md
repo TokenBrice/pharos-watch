@@ -17,7 +17,8 @@
 | `GET /api/supply-history` | Per-coin supply history (`?stablecoin=ID&days=N`) |
 | `GET /api/daily-digest` | AI-generated daily market summary (latest) |
 | `GET /api/digest-archive` | All daily digests, newest-first |
-| `GET /api/health` | Worker health check |
+| `GET /api/digest-snapshot` | Digest snapshot for SSG builds (returns latest digest at build time) |
+| `GET /api/health` | Worker health check (includes circuit breaker states) |
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
@@ -225,13 +226,13 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (26 total)
+├── migrations/                   # D1 SQL migrations (28 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
-    │   ├── enrich-prices.ts      # 5-pass price enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
+    │   ├── enrich-prices.ts      # Dual-primary price validation + 5-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
@@ -256,6 +257,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── bluechip.ts           # GET /api/bluechip-ratings
     │   ├── daily-digest.ts       # GET /api/daily-digest
     │   ├── digest-archive.ts    # GET /api/digest-archive
+    │   ├── digest-snapshot.ts   # GET /api/digest-snapshot
     │   ├── dex-liquidity.ts      # GET /api/dex-liquidity (includes HHI, trends)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
@@ -270,7 +272,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
-        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, ETHERSCAN_V2_BASE)
+        ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
+    ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
         ├── alerts.ts             # Alert sending (ntfy push notifications on cron failures)
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)

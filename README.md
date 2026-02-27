@@ -114,9 +114,9 @@ src/                              Frontend (Next.js static export)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (22 handlers, all wrapped with withErrorHandler)
-│   └── lib/                      D1 helpers, shared constants, depeg types, API error handler
-└── migrations/                   D1 SQL migrations (26 total)
+│   ├── api/                      REST endpoints (23 handlers, all wrapped with withErrorHandler)
+│   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
+└── migrations/                   D1 SQL migrations (28 total)
 ```
 
 ## Infrastructure
@@ -163,6 +163,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 - **Freshness header** — `/api/stablecoins` returns `X-Data-Updated-At` so consumers can detect stale data
 - **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
 - **Retry logic** — all external API fetches use exponential backoff with configurable 404 handling
+- **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering downed APIs; dual-primary price validation cross-checks DefiLlama and CoinGecko within 50 bps; CoinGecko supply fallback activates when DefiLlama is unavailable
 
 ## Deployment
 
