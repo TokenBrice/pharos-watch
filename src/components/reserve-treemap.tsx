@@ -29,6 +29,7 @@ function TreemapCell({
   name,
   risk,
   pct,
+  depth,
 }: {
   x: number;
   y: number;
@@ -37,7 +38,11 @@ function TreemapCell({
   name: string;
   risk: ReserveRisk;
   pct: number;
+  depth?: number;
 }) {
+  // Recharts renders the synthetic root node (depth=0) via content too — skip it
+  if (depth === 0) return <g />;
+
   const fill = RISK_COLORS[risk];
   const showLabel = width > 50 && height > 30;
   const showPct = showLabel && width > 40 && height > 40;
@@ -139,7 +144,7 @@ export function ReserveTreemap({ reserves }: ReserveTreemapProps) {
               data={data}
               dataKey="size"
               nameKey="name"
-              content={<TreemapCell x={0} y={0} width={0} height={0} name="" risk="low" pct={0} />}
+              content={<TreemapCell x={0} y={0} width={0} height={0} name="" risk="low" pct={0} depth={1} />}
               isAnimationActive={false}
             >
               <Tooltip content={<ReserveTooltip />} />
