@@ -400,6 +400,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      // Source: Messari Jan 2026, Stablewatch late 2025. Confidence: Medium
+      { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
+      { name: "USDT (PSM vaults)", pct: 16, risk: "medium" },
+      { name: "TRX", pct: 7, risk: "high" },
+      { name: "sTRX / USDT (direct vaults)", pct: 2, risk: "high" },
+    ],
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
     rwa: true,
@@ -417,6 +424,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xc139190f447e929f090edeb554d95abb8b18ac1c", decimals: 18 },
       { chain: "arbitrum", address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
       { chain: "base",     address: "0xc708b6887db46005da033501f8aebee72d191a5d", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Ethena docs, The Block, CoinDesk Mar 2025. Confidence: High
+      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 90, risk: "low" },
+      { name: "USDC (redemption reserve)", pct: 10, risk: "medium" },
     ],
   }),
   usd("213", "M by M0", "M", "rwa-backed", "centralized", {
@@ -439,6 +451,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
       { chain: "base", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
     ],
+    reserves: [
+      // Source: m0.org FAQ, Chainlink integration Jan 2026. Confidence: High
+      { name: "Short-term U.S. Treasury Bills (30-90 day)", pct: 100, risk: "low" },
+    ],
   }),
   usd("336", "United Stables", "U", "rwa-backed", "centralized", {
     geckoId: "united-stables",
@@ -452,6 +468,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "bsc",      address: "0xce24439f2d9c6a2289f741120fe202248b666666", decimals: 18 },
       { chain: "ethereum", address: "0xce24439f2d9c6a2289f741120fe202248b666666", decimals: 18 },
+    ],
+    reserves: [
+      // Source: GlobeNewsWire Dec 2025 launch announcement. Confidence: Low
+      { name: "USDC", pct: 35, risk: "medium" },
+      { name: "USDT", pct: 35, risk: "medium" },
+      { name: "USD1 (WLFI stablecoin)", pct: 15, risk: "medium" },
+      { name: "Fiat USD / U.S. Treasury Bills", pct: 15, risk: "low" },
     ],
   }),
   usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
@@ -470,6 +493,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
       { chain: "base",     address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
     ],
+    reserves: [
+      // Source: USD.AI blog Feb 2026, Stablewatch, CoinDesk Oct 2025. Confidence: Medium
+      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 99, risk: "low" },
+      { name: "GPU-collateralized loans (NVIDIA hardware)", pct: 1, risk: "high" },
+    ],
   }),
   usd("195", "Usual USD", "USD0", "rwa-backed", "centralized-dependent", {
     rwa: true,
@@ -486,6 +514,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5", decimals: 18 },
       { chain: "arbitrum", address: "0x35f1c5cb7fb977e669fd244c567da99d8a3a6850", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Usual docs, RWA.xyz, ChainArgos Feb 2026. Confidence: Medium
+      { name: "Hashnote USYC (tokenized T-bills/reverse repos)", pct: 65, risk: "low" },
+      { name: "M by M^0 (tokenized T-bills)", pct: 15, risk: "low" },
+      { name: "USDtb by Ethena (BUIDL + USDC)", pct: 10, risk: "low" },
+      { name: "BlackRock BUIDL", pct: 5, risk: "low" },
+      { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low" },
+      { name: "USDC (Circle)", pct: 2, risk: "low" },
     ],
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
@@ -532,6 +569,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", decimals: 6 },
       { chain: "tron", address: "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ", decimals: 6 },
     ],
+    reserves: [
+      // Source: Elliptic blog, Crystal Intelligence 2025-2026. Confidence: Medium
+      { name: "Russian ruble deposits at Promsvyazbank (sanctioned)", pct: 100, risk: "high" },
+    ],
   }),
   usd("7", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
     geckoId: "true-usd",
@@ -551,6 +592,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x4d15a3a2286d883af0aa1b3f21367843fac63e07", decimals: 18 },
       { chain: "optimism", address: "0xcb59a0a753fdb7491d5f3d794316f1ade197b21e", decimals: 18 },
     ],
+    reserves: [
+      // Source: Protos investigation, SEC settlement, Moore HK attestation. Confidence: Medium
+      { name: "First Digital Trust fund investments (at cost, opaque)", pct: 99, risk: "high" },
+      { name: "Cash at depository institutions", pct: 1, risk: "low" },
+    ],
   }),
   usd("119", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
     geckoId: "first-digital-usd",
@@ -567,6 +613,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409", decimals: 18 },
       { chain: "arbitrum", address: "0x93c9932e4afa59201f0b5e63f7d816516f1669fe", decimals: 18 },
     ],
+    reserves: [
+      // Source: First Digital Labs transparency, Prescient Jan 31, 2026. Confidence: High
+      { name: "U.S. Treasury Bills", pct: 74, risk: "low" },
+      { name: "Cash", pct: 18, risk: "low" },
+      { name: "Bank Deposits", pct: 6, risk: "low" },
+      { name: "Overnight Reverse Repos", pct: 2, risk: "low" },
+    ],
   }),
   usd("296", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "cap-usd",
@@ -581,6 +634,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Cap docs, Aave blog, blocmates Jan 2026. Confidence: Low
+      { name: "USDC (Circle)", pct: 35, risk: "medium" },
+      { name: "USDT (Tether)", pct: 25, risk: "medium" },
+      { name: "BUIDL (BlackRock tokenized MMF)", pct: 20, risk: "medium" },
+      { name: "BENJI (Franklin Templeton fund)", pct: 10, risk: "medium" },
+      { name: "pyUSD (PayPal)", pct: 10, risk: "medium" },
     ],
   }),
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
@@ -599,6 +660,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", decimals: 6 },
       { chain: "base", address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", decimals: 6 },
       { chain: "avalanche", address: "0xc891eb4cbdeff6e073e859e987815ed1505c2acd", decimals: 6 },
+    ],
+    reserves: [
+      // Source: Circle transparency page Feb 23, 2026. Confidence: High
+      { name: "Deposits at Systemically Important Institutions (EUR)", pct: 99, risk: "low" },
+      { name: "Other Bank Deposits (EUR)", pct: 1, risk: "low" },
     ],
   }),
   usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
@@ -621,6 +687,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "institutional",
+    reserves: [
+      // Source: Resolv docs, Coin Bureau, Binance Academy Q4 2025. Confidence: Medium
+      { name: "ETH + wstETH (delta-neutral via short perps)", pct: 55, risk: "medium" },
+      { name: "BTC (delta-neutral via short perps)", pct: 20, risk: "medium" },
+      { name: "RLP insurance layer (surplus ETH + BTC)", pct: 15, risk: "medium" },
+      { name: "USD stablecoins (USDC/USDT)", pct: 10, risk: "medium" },
+    ],
   }),
   usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -634,6 +707,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.provenance.io/learn/the-ylds-stablecoin" },
     ],
     jurisdiction: { country: "United States", regulator: "SEC", license: "SEC-Registered Security" },
+    reserves: [
+      // Source: Figure Certificate Co. prospectus (SEC), KPMG Q1 2025. Confidence: High
+      { name: "Overnight Treasury repo agreements (UMB Bank)", pct: 86, risk: "low" },
+      { name: "Money market funds", pct: 13, risk: "low" },
+      { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "medium" },
+    ],
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "crvusd",
@@ -676,6 +755,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Switzerland" },
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      // Source: Solstice docs, StablecoinInsider Sep-Dec 2025. Confidence: Medium
+      { name: "USDC", pct: 55, risk: "medium" },
+      { name: "USDT", pct: 45, risk: "medium" },
+    ],
   }),
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
@@ -693,6 +777,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x8a60e489004ca22d775c5f2c657598278d17d9c2", decimals: 18 },
       { chain: "bsc",      address: "0x9356086146be5158e98ad827e21b5cf944699894", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Avalon docs, Decrypt, Wu Blockchain late 2024-2025. Confidence: Low
+      { name: "FBTC (tokenized BTC via Cobo custody)", pct: 45, risk: "medium" },
+      { name: "USDT (1:1 minted deposits)", pct: 40, risk: "medium" },
+      { name: "BTC LSTs (SolvBTC, LBTC, pumpBTC, etc.)", pct: 15, risk: "high" },
     ],
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
@@ -716,6 +806,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40", decimals: 18 },
       { chain: "fantom", address: "0xdc301622e621166bd8e82f2ca0a26c13ad0be355", decimals: 18 },
     ],
+    reserves: [
+      // Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
+      { name: "USTB (Superstate tokenized T-bills)", pct: 50, risk: "low" },
+      { name: "BUIDL (BlackRock tokenized T-bills/cash/repos)", pct: 42, risk: "low" },
+      { name: "USCC (Superstate crypto arbitrage)", pct: 3, risk: "medium" },
+      { name: "Other tokenized assets (WTGXX, AUSD, JTRSY)", pct: 5, risk: "low" },
+    ],
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
     geckoId: "dola-usd",
@@ -734,6 +831,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x6a7661795c374c0bfc635934efaddff3a7ee23b6", decimals: 18 },
       { chain: "base", address: "0x4621b7a9c75199271f773ebd9a499dbd165c3191", decimals: 18 },
       { chain: "optimism", address: "0x8ae125e8653821e851f12a49f7765db9a9ce7384", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Inverse Finance transparency, DefiLlama Feb 2026. Confidence: Medium
+      { name: "wstETH (Lido)", pct: 35, risk: "medium" },
+      { name: "sUSDe / PT-sUSDe (Ethena)", pct: 15, risk: "medium" },
+      { name: "cbBTC (Coinbase wrapped Bitcoin)", pct: 12, risk: "medium" },
+      { name: "WETH", pct: 10, risk: "medium" },
+      { name: "USDS in PSM (peg backstop)", pct: 8, risk: "low" },
+      { name: "LP tokens (Curve, cvxCRV, st-yCRV)", pct: 8, risk: "high" },
+      { name: "Other (sFRAX, INV, st-yETH)", pct: 12, risk: "high" },
     ],
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
@@ -756,6 +863,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
       { chain: "polygon", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6 },
     ],
+    reserves: [
+      // Source: Agora product page, RWA.xyz, PwC attestation. Confidence: Medium
+      { name: "Short-dated U.S. Treasury Bills", pct: 60, risk: "low" },
+      { name: "Overnight Reverse Repurchase Agreements", pct: 25, risk: "low" },
+      { name: "Cash (USD deposits at State Street)", pct: 15, risk: "low" },
+    ],
   }),
   usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "infinifi-usd",
@@ -770,6 +883,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c", decimals: 18 },
+    ],
+    reserves: [
+      // Source: Nansen, Blockworks, 0xmedia Jun-Dec 2025. Confidence: Medium
+      { name: "Ethena sUSDe (yield-bearing staked USDe)", pct: 30, risk: "medium" },
+      { name: "Pendle PT-sUSDe (fixed-term Ethena yield)", pct: 25, risk: "medium" },
+      { name: "Aave USDC (liquid money market)", pct: 20, risk: "medium" },
+      { name: "USDC reserve buffer (liquid)", pct: 15, risk: "low" },
+      { name: "Fluid / Euler USDC (money markets)", pct: 10, risk: "medium" },
     ],
   }),
   usd("219", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
@@ -787,6 +908,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
+    reserves: [
+      // Source: Aster docs, Coin Bureau, IQ.wiki 2025. Confidence: High
+      { name: "USDT (held in Ceffu custody)", pct: 50, risk: "medium" },
+      { name: "Spot crypto (BTC/ETH, delta-hedged via perp shorts)", pct: 25, risk: "high" },
+      { name: "Perpetual short positions margin (Binance via MirrorX)", pct: 25, risk: "high" },
+    ],
   }),
   // FLEXUSD (id 21) removed — CoinFLEX exchange bankruptcy June 2022 (see cemetery)
   usd("252", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
