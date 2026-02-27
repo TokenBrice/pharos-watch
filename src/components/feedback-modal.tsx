@@ -154,7 +154,7 @@ export function FeedbackModal({
               <div className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
                 {stablecoinName && <div><span className="font-medium">Stablecoin:</span> {stablecoinName}</div>}
                 {pegValue && <div><span className="font-medium">Current value:</span> {pegValue}</div>}
-                <div><span className="font-medium">Page:</span> {pageUrl}</div>
+                {pageUrl && <div><span className="font-medium">Page:</span> {pageUrl}</div>}
               </div>
             )}
 
