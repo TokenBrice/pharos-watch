@@ -10,15 +10,19 @@ interface ReserveTreemapProps {
 }
 
 const RISK_COLORS: Record<ReserveRisk, string> = {
+  "very-low": "#16a34a",
   low: "#22c55e",
   medium: "#f59e0b",
-  high: "#ef4444",
+  high: "#f97316",
+  "very-high": "#ef4444",
 };
 
 const RISK_LABELS: Record<ReserveRisk, string> = {
+  "very-low": "Very Low Risk",
   low: "Low Risk",
   medium: "Medium Risk",
   high: "High Risk",
+  "very-high": "Very High Risk",
 };
 
 function TreemapCell({
