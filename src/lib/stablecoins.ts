@@ -2476,7 +2476,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)", pct: 100, risk: "medium" },
     ],
   }),
-  usd("253", "Bima USBD", "USBD", "crypto-backed", "decentralized", {
+  usd("253", "Bima USBD", "USBD", "crypto-backed", "centralized-dependent", {
     geckoId: "usbd",
     dependencies: [],
     collateral: "Overcollateralized Bitcoin LSTs/LRTs via CDP vaults at 150% MCR (160% CCR triggers recovery mode)",
