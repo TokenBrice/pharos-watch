@@ -1,7 +1,8 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, batchExecute } from "../lib/db";
-import { USER_AGENT } from "../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
+import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
   isOnchainAvailable, initOnchainAvailability,
   CG_CHAIN_MAP, CG_CHAIN_REVERSE,
@@ -542,6 +543,8 @@ interface DataSources {
   dexProjects: Set<string>;
   curveResponses: (Response | null)[];
   graphApiKey: string | null;
+  dlYieldsAvailable: boolean;
+  dlProtocolsAvailable: boolean;
 }
 
 interface CurveLookups {
@@ -565,58 +568,92 @@ interface ScoreResult {
 // Extracted sub-functions
 // ---------------------------------------------------------------------------
 
-/** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null on critical failure. */
-async function fetchDataSources(graphApiKey: string | null): Promise<DataSources | null> {
-  const [llamaRes, protocolsRes, ...curveResponses] = await Promise.all([
-    fetchWithRetry(DEFILLAMA_YIELDS_URL, {
-      headers: { "User-Agent": USER_AGENT },
-    }),
-    fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, {
-      headers: { "User-Agent": USER_AGENT },
-    }),
-    ...CURVE_CHAINS.map((chain) =>
-      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, {
-        headers: { "User-Agent": USER_AGENT },
-      })
-    ),
-  ]);
+/** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
+async function fetchDataSources(graphApiKey: string | null, db: D1Database): Promise<DataSources | null> {
+  const dlYieldsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS);
+  const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
-  if (!llamaRes?.ok) {
-    console.error("[dex-liquidity] DeFiLlama yields fetch failed");
-    return null;
+  const fetchPromises: Promise<Response | null>[] = [];
+  // Index 0: DL yields (or null if circuit open)
+  fetchPromises.push(
+    dlYieldsAllowed
+      ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT } })
+      : Promise.resolve(null),
+  );
+  // Index 1: DL protocols (or null if circuit open)
+  fetchPromises.push(
+    dlProtocolsAllowed
+      ? fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT } })
+      : Promise.resolve(null),
+  );
+  // Remaining: Curve API
+  for (const chain of CURVE_CHAINS) {
+    fetchPromises.push(
+      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT } }),
+    );
   }
 
-  // Build set of project slugs categorized as "Dexs" by DeFiLlama
-  const dexProjects = new Set<string>();
-  if (protocolsRes?.ok) {
-    const protocols = (await protocolsRes.json()) as {
-      slug: string;
-      category?: string;
-      deadFrom?: number | null;
-      rugged?: boolean | null;
-      deprecated?: boolean | null;
-    }[];
-    for (const p of protocols) {
-      if (p.category !== "Dexs") continue;
-      // v2: skip dead, rugged, or deprecated protocols
-      if (p.deadFrom || p.rugged || p.deprecated) continue;
-      dexProjects.add(p.slug);
+  const [llamaRes, protocolsRes, ...curveResponses] = await Promise.all(fetchPromises);
+
+  // --- DL Yields ---
+  let pools: LlamaPool[] = [];
+  let dlYieldsAvailable = false;
+
+  if (dlYieldsAllowed) {
+    if (llamaRes?.ok) {
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
+      const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
+      if (llamaData.data && llamaData.data.length >= 1000) {
+        pools = llamaData.data;
+        dlYieldsAvailable = true;
+        console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
+      } else {
+        console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
+      }
+    } else {
+      console.warn("[dex-liquidity] DeFiLlama yields fetch failed — CG/GT will be primary pool source");
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
     }
-    console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects from DeFiLlama protocols`);
   } else {
-    console.error("[dex-liquidity] DeFiLlama protocols fetch failed — cannot filter DEX pools, aborting");
+    console.warn("[dex-liquidity] DL yields circuit open — CG/GT will be primary pool source");
+  }
+
+  // --- DL Protocols ---
+  const dexProjects = new Set<string>();
+  let dlProtocolsAvailable = false;
+
+  if (dlProtocolsAllowed) {
+    if (protocolsRes?.ok) {
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, true);
+      const protocols = (await protocolsRes.json()) as {
+        slug: string;
+        category?: string;
+        deadFrom?: number | null;
+        rugged?: boolean | null;
+        deprecated?: boolean | null;
+      }[];
+      for (const p of protocols) {
+        if (p.category !== "Dexs") continue;
+        if (p.deadFrom || p.rugged || p.deprecated) continue;
+        dexProjects.add(p.slug);
+      }
+      dlProtocolsAvailable = true;
+      console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects from DeFiLlama protocols`);
+    } else {
+      console.warn("[dex-liquidity] DeFiLlama protocols fetch failed — dead-protocol filtering degraded");
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
+    }
+  } else {
+    console.warn("[dex-liquidity] DL protocols circuit open — dead-protocol filtering degraded");
+  }
+
+  // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
+  if (!dlYieldsAvailable && curveResponses.every((r) => !r?.ok)) {
+    console.error("[dex-liquidity] All pool data sources failed — aborting");
     return null;
   }
 
-  const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
-  const pools = llamaData.data;
-  if (!pools || pools.length < 1000) {
-    console.error(`[dex-liquidity] DeFiLlama returned only ${pools?.length ?? 0} pools, skipping`);
-    return null;
-  }
-  console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
-
-  return { pools, dexProjects, curveResponses, graphApiKey };
+  return { pools, dexProjects, curveResponses, graphApiKey, dlYieldsAvailable, dlProtocolsAvailable };
 }
 
 /** Build symbol → stablecoinId and address → stablecoinId lookup maps. */
@@ -2333,8 +2370,11 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   console.log(`[dex-liquidity] Pool discovery source: ${useCg ? "CoinGecko onchain" : "GeckoTerminal fallback"}`);
 
   // 1. Fetch all external data sources
-  const dataSources = await fetchDataSources(graphApiKey);
+  const dataSources = await fetchDataSources(graphApiKey, db);
   if (!dataSources) return;
+  if (!dataSources.dlYieldsAvailable) {
+    console.log("[dex-liquidity] DL yields unavailable — CG/GT pool crawl will be the only pool source");
+  }
 
   // 2. Build symbol/address lookup maps
   const { symbolToIds, addressToId } = buildSymbolLookups();

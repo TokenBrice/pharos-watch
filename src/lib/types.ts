@@ -210,6 +210,10 @@ export function getFilterTags(meta: StablecoinMeta): FilterTag[] {
   return tags;
 }
 
+// --- Price confidence (dual-primary validation) ---
+
+export type PriceConfidence = "high" | "single-source" | "low" | "fallback";
+
 // --- API data types (DefiLlama responses) ---
 
 /** Minimal asset shape shared by PeggedAsset (worker enrichment) and StablecoinData.
@@ -233,6 +237,8 @@ export interface StablecoinData {
   pegMechanism: string;
   price: number | null;
   priceSource: string;
+  priceConfidence: PriceConfidence | null;
+  supplySource?: string;
   circulating: Record<string, number>;
   circulatingPrevDay: Record<string, number>;
   circulatingPrevWeek: Record<string, number>;

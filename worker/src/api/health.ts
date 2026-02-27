@@ -1,10 +1,12 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
+import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
   timestamp: number;
   caches: Record<string, CacheStatus>;
   blacklist: { totalEvents: number; missingAmounts: number };
+  circuits: Record<string, CircuitRecord>;
 }
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
@@ -44,10 +46,22 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     // dex_liquidity table may not exist yet
   }
 
+  // Check circuit breaker states
+  let circuits: Record<string, CircuitRecord> = {};
+  try {
+    circuits = await getCircuitStates(db);
+    const hasOpenCircuit = Object.values(circuits).some((c) => c.state === "open");
+    if (hasOpenCircuit && worstRatioMut < 1.6) {
+      worstRatioMut = 1.6; // degraded
+    }
+  } catch {
+    // Non-blocking
+  }
+
   const status: HealthResponse["status"] =
     worstRatioMut > 2 ? "stale" : worstRatioMut > 1.5 ? "degraded" : "healthy";
 
-  const body: HealthResponse = { status, timestamp: now, caches, blacklist };
+  const body: HealthResponse = { status, timestamp: now, caches, blacklist, circuits };
 
   return new Response(JSON.stringify(body), {
     headers: {

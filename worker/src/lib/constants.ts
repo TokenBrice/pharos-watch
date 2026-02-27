@@ -68,3 +68,14 @@ export const DEPEG_PENDING_EXPIRY_SEC = 2700; // 45 min (3 sync cycles)
 
 /** Secondary source agreement threshold as fraction of primary threshold */
 export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
+
+// --- Circuit breaker source names ---
+
+export const CIRCUIT_SOURCE = {
+  DL_STABLECOINS: "defillama-stablecoins",
+  DL_COINS: "defillama-coins",
+  DL_YIELDS: "defillama-yields",
+  DL_PROTOCOLS: "defillama-protocols",
+  CG_PRICES: "coingecko-prices",
+  CG_MCAP: "coingecko-mcap",
+} as const;

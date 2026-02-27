@@ -1,6 +1,8 @@
-import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD } from "../lib/constants";
+import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
+import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import type { PriceConfidence } from "../../../src/lib/types";
 
 export interface DefiLlamaCoinPrice {
   price: number;
@@ -17,6 +19,9 @@ export interface PeggedAsset {
   geckoId?: string;
   cmcSlug?: string;
   price?: number | null;
+  priceSource?: string;
+  priceConfidence?: string | null;
+  supplySource?: string;
   pegType?: string;
   circulating?: Record<string, number>;
   [key: string]: unknown;
@@ -92,6 +97,168 @@ interface DexScreenerPair {
  *   3. CoinGecko direct API
  *   4. DexScreener search API (best-effort fallback)
  */
+export interface DualPriceResult {
+  price: number;
+  source: string;
+  confidence: PriceConfidence;
+  dlPrice: number | null;
+  cgPrice: number | null;
+}
+
+export interface DualPriceStats {
+  attempted: number;
+  high: number;
+  singleSource: number;
+  low: number;
+  divergences: { id: string; symbol: string; dlPrice: number; cgPrice: number; bps: number }[];
+}
+
+/**
+ * Fetch prices from both DL coins API and CG direct API in parallel,
+ * cross-validate within 50bps, and return a confidence-tagged result per asset.
+ */
+export async function fetchDualPrimaryPrices(
+  assets: PeggedAsset[],
+  db: D1Database,
+): Promise<{ results: Map<string, DualPriceResult>; stats: DualPriceStats }> {
+  const results = new Map<string, DualPriceResult>();
+  const stats: DualPriceStats = { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] };
+
+  // Only consider assets with a valid geckoId (no "wrong" tag)
+  const candidates = assets.filter(
+    (a) => a.geckoId && typeof a.geckoId === "string" && !a.geckoId.includes("wrong"),
+  );
+  if (candidates.length === 0) return { results, stats };
+
+  const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS);
+  const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_PRICES);
+
+  if (!dlAllowed && !cgAllowed) {
+    console.warn("[dual-primary] Both DL coins and CG prices circuits are open, skipping");
+    return { results, stats };
+  }
+
+  // Batch fetch both sources in parallel
+  const geckoIds = candidates.map((a) => a.geckoId!);
+  const BATCH_SIZE = 250; // CG supports 250 IDs per call
+
+  const dlPrices = new Map<string, number>();
+  const cgPrices = new Map<string, number>();
+
+  const fetches: Promise<void>[] = [];
+
+  if (dlAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          // DL coins API accepts coingecko:id format, no batch limit
+          const coinIds = geckoIds.map((id) => `coingecko:${id}`).join(",");
+          const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+          if (res?.ok) {
+            const data = (await res.json()) as { coins: Record<string, { price: number }> };
+            for (const [key, val] of Object.entries(data.coins)) {
+              if (val?.price != null && val.price > 0) {
+                const gId = key.replace("coingecko:", "");
+                dlPrices.set(gId, val.price);
+              }
+            }
+            await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, true);
+          } else {
+            console.warn(`[dual-primary] DL coins API returned ${res?.status ?? "no response"}`);
+            await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
+          }
+        } catch (err) {
+          console.warn("[dual-primary] DL coins API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
+        }
+      })(),
+    );
+  }
+
+  if (cgAllowed) {
+    fetches.push(
+      (async () => {
+        try {
+          // CG /simple/price supports up to 250 IDs per call
+          for (let i = 0; i < geckoIds.length; i += BATCH_SIZE) {
+            const batch = geckoIds.slice(i, i + BATCH_SIZE);
+            const ids = batch.join(",");
+            const res = await fetchWithRetry(
+              cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`),
+              { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) },
+            );
+            if (res?.ok) {
+              const data = (await res.json()) as Record<string, { usd?: number }>;
+              for (const [gId, val] of Object.entries(data)) {
+                if (val?.usd != null && val.usd > 0) {
+                  cgPrices.set(gId, val.usd);
+                }
+              }
+            } else {
+              console.warn(`[dual-primary] CG price API returned ${res?.status ?? "no response"}`);
+            }
+          }
+          await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, true);
+        } catch (err) {
+          console.warn("[dual-primary] CG price API failed:", err);
+          await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, false);
+        }
+      })(),
+    );
+  }
+
+  await Promise.all(fetches);
+
+  // Cross-validate per asset
+  const DIVERGENCE_THRESHOLD_BPS = 50;
+
+  for (const asset of candidates) {
+    const gId = asset.geckoId!;
+    const dl = dlPrices.get(gId) ?? null;
+    const cg = cgPrices.get(gId) ?? null;
+    stats.attempted++;
+
+    if (dl != null && cg != null) {
+      const mid = (dl + cg) / 2;
+      const divergenceBps = mid > 0 ? Math.abs(dl - cg) / mid * 10_000 : Infinity;
+
+      if (divergenceBps <= DIVERGENCE_THRESHOLD_BPS) {
+        // Both agree — high confidence, prefer DL
+        results.set(asset.id, { price: dl, source: "defillama+coingecko", confidence: "high", dlPrice: dl, cgPrice: cg });
+        stats.high++;
+      } else {
+        // Disagree — low confidence, use closer-to-peg if USD, else DL
+        const pegRef = asset.pegType?.includes("USD") ? 1.0 : null;
+        const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : dl;
+        const chosenSource = chosen === dl ? "defillama" : "coingecko";
+        results.set(asset.id, { price: chosen, source: chosenSource, confidence: "low", dlPrice: dl, cgPrice: cg });
+        stats.low++;
+        stats.divergences.push({ id: asset.id, symbol: asset.symbol, dlPrice: dl, cgPrice: cg, bps: Math.round(divergenceBps) });
+      }
+    } else if (dl != null) {
+      results.set(asset.id, { price: dl, source: "defillama", confidence: "single-source", dlPrice: dl, cgPrice: null });
+      stats.singleSource++;
+    } else if (cg != null) {
+      results.set(asset.id, { price: cg, source: "coingecko", confidence: "single-source", dlPrice: null, cgPrice: cg });
+      stats.singleSource++;
+    }
+    // else: both missing — skip, falls through to legacy enrichment
+  }
+
+  if (stats.divergences.length > 0) {
+    console.warn(
+      `[dual-primary] ${stats.divergences.length} price divergences: ` +
+      stats.divergences.slice(0, 5).map((d) => `${d.symbol}(${d.bps}bps)`).join(", ") +
+      (stats.divergences.length > 5 ? ` ...+${stats.divergences.length - 5} more` : ""),
+    );
+  }
+  console.log(
+    `[dual-primary] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
+  );
+
+  return { results, stats };
+}
+
 export interface EnrichmentStats {
   totalMissing: number;
   pass1: number;
