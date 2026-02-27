@@ -2,6 +2,9 @@ name: Deploy to Cloudflare
 on:
   push:
     branches: [main]
+  schedule:
+    # Rebuild daily at 8:15 UTC (after 8 AM digest generation)
+    - cron: "15 8 * * *"
   workflow_dispatch:
 
 jobs:
@@ -38,6 +41,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npx tsx scripts/sync-digests.ts
       - run: npm run build
         env:
           NEXT_PUBLIC_API_BASE: ${{ vars.API_BASE_URL }}
