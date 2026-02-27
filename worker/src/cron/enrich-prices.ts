@@ -290,6 +290,15 @@ export async function enrichMissingPrices(
   const totalMissing = assets.filter(hasMissingPrice).length;
   if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0 };
 
+  // Load FX rates for dynamic price bounds
+  let fxRates: Record<string, number> | undefined;
+  if (db) {
+    try {
+      const fxCache = await db.prepare("SELECT value FROM cache WHERE key = 'fx-rates'").first<{ value: string }>();
+      if (fxCache) fxRates = JSON.parse(fxCache.value);
+    } catch { /* non-blocking */ }
+  }
+
   let pass1Count = 0;
   let pass1bCount = 0;
   let pass2Count = 0;
@@ -501,7 +510,7 @@ export async function enrichMissingPrices(
               for (const m of cmcCandidates) {
                 const cmcEntry = bySlug.get(m.asset.cmcSlug!);
                 if (!cmcEntry) continue;
-                if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined)) {
+                if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined, fxRates)) {
                   assets[m.index].price = cmcEntry.price;
                   passCmcCount++;
                 }
@@ -578,7 +587,7 @@ export async function enrichMissingPrices(
           continue;
         }
         // Sanity check: peg-type-aware range
-        if (isReasonablePrice(price, m.asset.pegType as string | undefined)) {
+        if (isReasonablePrice(price, m.asset.pegType as string | undefined, fxRates)) {
           assets[m.index].price = price;
           pass4Count++;
         }
