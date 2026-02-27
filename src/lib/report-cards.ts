@@ -19,13 +19,15 @@ import type {
   CustodyModel,
   ReportCard,
   DependencyType,
+  ReserveRisk,
+  ReserveSlice,
 } from "./types";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "3.2";
+export const METHODOLOGY_VERSION = "3.3";
 
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0.25,
@@ -216,6 +218,39 @@ const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
   exotic: 0,
 };
 
+const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
+  "very-low": 95,
+  low: 75,
+  medium: 50,
+  high: 25,
+  "very-high": 5,
+};
+
+const COLLATERAL_QUALITY_DISPLAY: [number, string][] = [
+  [85, "Very low risk"],
+  [62, "Low risk"],
+  [37, "Medium risk"],
+  [15, "High risk"],
+  [0, "Very high risk"],
+];
+
+export function computeCollateralQualityFromReserves(reserves: ReserveSlice[]): number {
+  const totalPct = reserves.reduce((s, r) => s + r.pct, 0);
+  if (totalPct === 0) return 0;
+  const weighted = reserves.reduce(
+    (s, r) => s + r.pct * RESERVE_QUALITY_SCORE[r.risk],
+    0,
+  );
+  return Math.round(weighted / totalPct);
+}
+
+function collateralScoreLabel(score: number): string {
+  for (const [threshold, label] of COLLATERAL_QUALITY_DISPLAY) {
+    if (score >= threshold) return label;
+  }
+  return "Very high risk";
+}
+
 const CUSTODY_MODEL_SCORE: Record<CustodyModel, number> = {
   onchain: 100,
   institutional: 50,
@@ -302,17 +337,24 @@ export function scoreResilience(
   const blacklistLabel = canBeBlacklisted === true ? "Yes" : canBeBlacklisted === "possible" ? "Possible (mutable contract)" : "No";
 
   const chainScore = CHAIN_RISK_SCORE[factors.chainRisk];
-  const collateralScore = COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
+
+  // Prefer computed score from curated reserves; fall back to enum
+  const hasReserves = meta.reserves && meta.reserves.length > 0;
+  const collateralScore = hasReserves
+    ? computeCollateralQualityFromReserves(meta.reserves!)
+    : COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
+  const collateralLabel = hasReserves
+    ? collateralScoreLabel(collateralScore)
+    : COLLATERAL_QUALITY_LABEL[factors.collateralQuality];
 
   const score = Math.round(
     (chainScore + collateralScore + custodyScore + blacklistScore) / 4,
   );
 
-  // Build detail: list each sub-factor
   const parts = [
     `Chain: ${CHAIN_RISK_LABEL[factors.chainRisk]} (${chainScore})`,
-    `Collateral: ${COLLATERAL_QUALITY_LABEL[factors.collateralQuality]} (${collateralScore})`,
+    `Collateral: ${collateralLabel} (${collateralScore})`,
     `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
     `Blacklist: ${blacklistLabel} (${blacklistScore})`,
   ];
