@@ -17,7 +17,7 @@ const TEMPLATES: Record<string, ReserveSlice[]> = {
   ],
 
   // CeFi-dependent RWA (FRAX v3-like): mix of treasuries + stablecoin PSM
-  "rwa-cefi-dependent": [
+  "rwa-centralized-dependent": [
     { name: "Tokenized Treasuries / RWA", pct: 50, risk: "low" },
     { name: "Stablecoin Reserves (USDC/USDT)", pct: 35, risk: "medium" },
     { name: "Other Assets", pct: 15, risk: "medium" },
@@ -31,11 +31,26 @@ const TEMPLATES: Record<string, ReserveSlice[]> = {
   ],
 
   // CeFi-dependent crypto-backed (DAI-like): crypto CDPs + stablecoin PSM
-  "crypto-cefi-dependent": [
+  "crypto-centralized-dependent": [
     { name: "ETH / LSTs", pct: 35, risk: "medium" },
     { name: "Stablecoin Collateral", pct: 30, risk: "medium" },
     { name: "BTC / wBTC", pct: 15, risk: "medium" },
     { name: "Other Vaults / Assets", pct: 20, risk: "high" },
+  ],
+
+  // CeFi-dependent crypto with RWA-quality collateral (DAI/USDS pattern)
+  "crypto-centralized-dependent-rwa": [
+    { name: "RWA (Treasuries / Tokenized)", pct: 40, risk: "low" },
+    { name: "Stablecoin PSM", pct: 30, risk: "medium" },
+    { name: "ETH / LSTs", pct: 20, risk: "medium" },
+    { name: "Other Vaults", pct: 10, risk: "high" },
+  ],
+
+  // CeFi-dependent crypto with exotic collateral (USDe pattern)
+  "crypto-centralized-dependent-exotic": [
+    { name: "Delta-Neutral Positions (CEX)", pct: 50, risk: "high" },
+    { name: "Stablecoins (USDC/USDT)", pct: 25, risk: "medium" },
+    { name: "Volatile Crypto", pct: 25, risk: "high" },
   ],
 
   // Fully decentralized crypto-backed (LUSD-like): ETH-only CDPs
@@ -76,8 +91,15 @@ function templateKey(coin: StablecoinMeta): string | null {
   if (backing === "algorithmic") return "algorithmic";
 
   // Cross backing × governance
-  const key = `${backing === "rwa-backed" ? "rwa" : "crypto"}-${governance}`;
-  return TEMPLATES[key] ? key : null;
+  const base = `${backing === "rwa-backed" ? "rwa" : "crypto"}-${governance}`;
+
+  // Refine crypto-centralized-dependent with collateralQuality if available
+  if (base === "crypto-centralized-dependent" && coin.collateralQuality) {
+    const refined = `${base}-${coin.collateralQuality}`;
+    if (TEMPLATES[refined]) return refined;
+  }
+
+  return TEMPLATES[base] ? base : null;
 }
 
 // ── Public API ──────────────────────────────────────────────────────────
