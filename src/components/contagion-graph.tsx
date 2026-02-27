@@ -258,6 +258,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
   // Tooltip state
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
 
   if (nodes.length === 0) return null;
 
@@ -335,21 +336,38 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const endX = dist > 0 ? toPos.x - (dx / dist) * (toNode.r + 4) : toPos.x;
               const endY = dist > 0 ? toPos.y - (dy / dist) * (toNode.r + 4) : toPos.y;
 
+              const isEdgeHovered = hoveredEdge === i;
               const sw = 1 + link.weight * 5;
               const so = 0.15 + link.weight * 0.45;
 
+              const typeColor = link.type === "mechanism" ? "#f59e0b"
+                : link.type === "wrapper" ? "#8b5cf6"
+                : "#64748b";
+              const dashArray = link.type === "mechanism" ? "6 3"
+                : link.type === "wrapper" ? "2 3"
+                : undefined;
+
               return (
-                <line
-                  key={`${srcId}-${tgtId}-${i}`}
-                  x1={fromPos.x}
-                  y1={fromPos.y}
-                  x2={endX}
-                  y2={endY}
-                  stroke="currentColor"
-                  strokeWidth={sw}
-                  opacity={so}
-                  markerEnd="url(#arrow-default)"
-                />
+                <g key={`${srcId}-${tgtId}-${i}`}>
+                  {/* Invisible wide hit area */}
+                  <line
+                    x1={fromPos.x} y1={fromPos.y} x2={endX} y2={endY}
+                    stroke="transparent" strokeWidth={14}
+                    style={{ cursor: "pointer" }}
+                    onMouseEnter={() => setHoveredEdge(i)}
+                    onMouseLeave={() => setHoveredEdge(null)}
+                  />
+                  {/* Visible edge */}
+                  <line
+                    x1={fromPos.x} y1={fromPos.y} x2={endX} y2={endY}
+                    stroke={isEdgeHovered ? typeColor : "currentColor"}
+                    strokeWidth={isEdgeHovered ? sw + 1 : sw}
+                    opacity={isEdgeHovered ? 0.9 : so}
+                    strokeDasharray={isEdgeHovered ? dashArray : undefined}
+                    markerEnd={isEdgeHovered ? `url(#arrow-${link.type})` : "url(#arrow-default)"}
+                    pointerEvents="none"
+                  />
+                </g>
               );
             })}
 
@@ -428,8 +446,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               );
             })}
 
-            {/* Tooltip */}
-            {hoveredId && (() => {
+            {/* Node Tooltip (only when no edge is hovered) */}
+            {hoveredId && hoveredEdge === null && (() => {
               const node = nodes.find((n) => n.id === hoveredId);
               const pos = positions.get(hoveredId);
               if (!node || !pos) return null;
@@ -462,6 +480,39 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                       : node.mcap > 1e6
                         ? `$${(node.mcap / 1e6).toFixed(0)}M`
                         : `$${(node.mcap / 1e3).toFixed(0)}K`}
+                  </text>
+                </g>
+              );
+            })()}
+
+            {/* Edge Tooltip */}
+            {hoveredEdge !== null && (() => {
+              const link = links[hoveredEdge];
+              if (!link) return null;
+              const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
+              const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
+              const fromPos = positions.get(tgtId);
+              const toPos = positions.get(srcId);
+              const fromNode = nodes.find((n) => n.id === tgtId);
+              const toNode = nodes.find((n) => n.id === srcId);
+              if (!fromPos || !toPos || !fromNode || !toNode) return null;
+
+              const mx = (fromPos.x + toPos.x) / 2;
+              const my = (fromPos.y + toPos.y) / 2;
+              const tx = Math.min(Math.max(mx + 8, PAD), WIDTH - 140);
+              const ty = Math.min(Math.max(my - 20, PAD), HEIGHT - 44);
+              const pctText = `${Math.round(link.weight * 100)}%`;
+              const typeLabel = link.type;
+
+              return (
+                <g pointerEvents="none">
+                  <rect x={tx} y={ty} width={130} height={38} rx={6}
+                    fill="var(--color-card, #1c1c1c)" stroke="var(--color-border, #333)" strokeWidth={1} />
+                  <text x={tx + 8} y={ty + 15} fill="currentColor" fontSize={11} fontWeight={600}>
+                    {fromNode.symbol} → {toNode.symbol}
+                  </text>
+                  <text x={tx + 8} y={ty + 30} fill="currentColor" fontSize={10} opacity={0.7}>
+                    {pctText} · {typeLabel}
                   </text>
                 </g>
               );
