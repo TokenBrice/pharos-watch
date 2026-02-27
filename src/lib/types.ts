@@ -72,7 +72,7 @@ export interface DependencyWeight {
 }
 
 /** Structured reserve composition for treemap visualization */
-export type ReserveRisk = "low" | "medium" | "high";
+export type ReserveRisk = "very-low" | "low" | "medium" | "high" | "very-high";
 export interface ReserveSlice {
   name: string;
   pct: number;        // percentage of total reserves (should sum to ~100)
