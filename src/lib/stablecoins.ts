@@ -147,6 +147,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
     dependencies: [{ id: "2", weight: 0.30 }],
+    canBeBlacklisted: "possible",
     collateralQuality: "rwa",
     custodyModel: "institutional",
     collateral: "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
