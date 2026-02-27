@@ -50,7 +50,8 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult {
   }, 0);
   const breadth = Math.min(17, breadthRaw);
 
-  const trend = Math.max(-5, Math.min(5, mcap7dChangePct));
+  const safePct = Number.isFinite(mcap7dChangePct) ? mcap7dChangePct : 0;
+  const trend = Math.max(-5, Math.min(5, safePct));
 
   const raw = 100 - severity - breadth + trend;
   const score = Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10;

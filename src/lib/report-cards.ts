@@ -148,7 +148,8 @@ export function scorePegStability(
     return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
   }
 
-  const score = Math.round(Math.max(0, Math.min(100, peg.pegScore)));
+  let score = Math.round(Math.max(0, Math.min(100, peg.pegScore)));
+  if (peg.activeDepeg) score = Math.min(65, score);
 
   // Build detail string
   const parts: string[] = [];

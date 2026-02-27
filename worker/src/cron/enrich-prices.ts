@@ -290,7 +290,7 @@ export async function enrichMissingPrices(
         if (shouldCall) {
           try {
             const slugs = cmcCandidates.map((m) => m.asset.cmcSlug!).join(",");
-            const cmcRes = await fetch(
+            const cmcRes = await fetchWithRetry(
               `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?slug=${slugs}`,
               {
                 headers: {
@@ -302,7 +302,7 @@ export async function enrichMissingPrices(
               }
             );
 
-            if (cmcRes.ok) {
+            if (cmcRes && cmcRes.ok) {
               const cmcData = (await cmcRes.json()) as {
                 data: Record<string, {
                   slug: string;
@@ -340,7 +340,7 @@ export async function enrichMissingPrices(
                 }
               }
             } else {
-              console.warn(`[enrich] CMC API returned ${cmcRes.status}`);
+              console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
             }
           } catch (err) {
             console.warn("[enrich] CMC API call failed:", err);
@@ -366,10 +366,14 @@ export async function enrichMissingPrices(
         if (pass4Count > 0 || stillMissing.indexOf(m) > 0) {
           await new Promise((r) => setTimeout(r, 200));
         }
-        const res = await fetch(
+        const res = await fetchWithRetry(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
           { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
         );
+        if (!res) {
+          console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
+          continue;
+        }
         if (!res.ok) {
           console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);
           continue;

@@ -107,7 +107,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     if (supply < 1_000_000) continue;
 
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
-    if (pegRef <= 0) continue;
+    if (!Number.isFinite(pegRef) || pegRef <= 0) continue;
 
     const bps = Math.round(((price / pegRef) - 1) * 10000);
     const absBps = Math.abs(bps);
