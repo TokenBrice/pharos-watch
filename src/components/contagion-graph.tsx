@@ -287,7 +287,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           Dependency Map
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Top {nodes.length} stablecoins by market cap. Lines show collateral dependencies. Node size = market cap. Click to view details.
+          Top {nodes.length} stablecoins by market cap. Arrow thickness shows collateral dependency weight. Hover edges for details. Click nodes for detail page.
         </p>
       </CardHeader>
       <CardContent>
