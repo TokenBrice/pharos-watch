@@ -84,6 +84,26 @@ For Phase 2 coins:
 - −10 penalty if any dependency scores below 75 (B-)
 - Falls back to 70 if dependencies aren't mapped or scores unavailable
 
+#### Dependency Type Ceilings
+
+Each dependency relationship can be classified as `wrapper`, `mechanism`, or `collateral` (default). After the blended score is computed, a ceiling is applied based on the most critical upstream dependency.
+
+| Type | Meaning | Ceiling |
+|------|---------|---------|
+| `wrapper` | Thin layer around upstream (e.g., syrupUSDC -> USDC) | upstream_score - 3 |
+| `mechanism` | Critical to peg mechanism (e.g., DAI -> USDC PSM) | upstream_score |
+| `collateral` | Standard collateral (default) | no ceiling |
+
+Formula: `final_score = min(blended_score, min_ceiling_from_wrapper_and_mechanism_deps)`
+
+The ceiling ensures that a coin which fundamentally depends on an upstream stablecoin cannot score higher than that upstream, regardless of how well it performs on other factors.
+
+**Examples:**
+
+- **USDC at 95, DAI (mechanism dep):** blended = 82, ceiling = 95, final = **82** (no change -- blended already below ceiling)
+- **USDC at 60, DAI (mechanism dep):** blended = 69.75, ceiling = 60, final = **60** (ceiling kicks in)
+- **syrupUSDC (wrapper dep on USDC at 95):** ceiling = 95 - 3 = **92** (wrapper penalty reflects thin-layer risk)
+
 ## Grade Thresholds
 
 | Grade | Min Score |
