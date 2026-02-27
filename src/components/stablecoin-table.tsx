@@ -14,7 +14,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Columns3 } from "lucide-react";
+import { Download, Columns3, Flag } from "lucide-react";
+import { FeedbackModal } from "@/components/feedback-modal";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -293,6 +294,8 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
     });
   }, [filtered, sort, effectiveSortKey, pegScores, dexLiquidity, reportCards, pegRates, metaById]);
 
+  const [feedbackCoin, setFeedbackCoin] = useState<{ id: string; name: string } | null>(null);
+
   // Reset scroll when filters, search, or sort change
   const [prev, setPrev] = useState({ filtered, sort });
   if (prev.filtered !== filtered || prev.sort !== sort) {
@@ -518,6 +521,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               {isVisible("flags") && (
                 <TableHead className="hidden md:table-cell text-center">Flags</TableHead>
               )}
+              <TableHead className="w-8" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -537,7 +541,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               return (
                 <TableRow
                   key={coin.id}
-                  className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                   style={{ height: ROW_HEIGHT }}
                   onClick={() => router.push(`/stablecoin/${coin.id}`)}
                   onMouseEnter={() => prefetch(coin.id)}
@@ -700,6 +704,16 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                       </div>
                     </TableCell>
                   )}
+                  <TableCell className="w-8 p-1 text-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setFeedbackCoin({ id: coin.id, name: coin.name }); }}
+                      className="opacity-0 group-hover:opacity-100 rounded p-1 text-muted-foreground hover:text-foreground transition-all"
+                      aria-label={`Report data issue for ${coin.name}`}
+                      title="Report data issue"
+                    >
+                      <Flag className="h-3 w-3" />
+                    </button>
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -741,6 +755,16 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
             Showing {rangeStart}–{rangeEnd} of {sorted.length} stablecoins
           </span>
         </div>
+      )}
+
+      {feedbackCoin && (
+        <FeedbackModal
+          open={!!feedbackCoin}
+          onOpenChange={(open) => { if (!open) setFeedbackCoin(null); }}
+          defaultType="data-correction"
+          stablecoinId={feedbackCoin.id}
+          stablecoinName={feedbackCoin.name}
+        />
       )}
     </div>
   );

@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Flag } from "lucide-react";
+import { FeedbackModal } from "@/components/feedback-modal";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
 import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { usePegSummary } from "@/hooks/use-peg-summary";
@@ -56,6 +58,7 @@ interface StablecoinDetailClientProps {
 }
 
 export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError, dataUpdatedAt: listUpdatedAt } = useStablecoins();
   const { data: depegData } = useDepegEvents(id);
@@ -240,6 +243,13 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                       </span>
                     )}
                   </p>
+                  <button
+                    onClick={() => setFeedbackOpen(true)}
+                    className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Flag className="h-3 w-3" />
+                    Report data issue
+                  </button>
                 </div>
               </div>
             </div>
@@ -403,6 +413,15 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
         </section>
       )}
+
+      <FeedbackModal
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        defaultType="data-correction"
+        stablecoinId={coin.id}
+        stablecoinName={coin.name}
+        pegValue={coinData.price != null ? `$${coinData.price.toFixed(6)}` : undefined}
+      />
     </div>
   );
 }
