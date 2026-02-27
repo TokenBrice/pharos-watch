@@ -22,6 +22,7 @@ import { KeyInfoCard } from "@/components/key-info-card";
 import { ContractAddresses } from "@/components/contract-addresses";
 import { AiSummary } from "@/components/ai-summary";
 import { ReportCardDetail } from "@/components/report-card";
+import { CoinNotices } from "@/components/coin-notice";
 import { DetailSectionNav } from "@/components/detail-section-nav";
 import { PegGauge } from "@/components/peg-gauge";
 import { ReserveTreemap } from "@/components/reserve-treemap";
@@ -375,6 +376,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       <section id="overview">
         {summary && <AiSummary {...summary} />}
       </section>
+
+      {coin.notices && coin.notices.length > 0 && (
+        <CoinNotices notices={coin.notices} />
+      )}
 
       <section id="report-card">
         {reportCard && <ReportCardDetail card={reportCard} />}

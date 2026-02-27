@@ -22,10 +22,11 @@ interface StablecoinOpts {
   collateralQuality?: import("./types").CollateralQuality;
   custodyModel?: import("./types").CustodyModel;
   reserves?: import("./types").ReserveSlice[];
+  notices?: import("./types").CoinNotice[];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, reserves: opts?.reserves };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, reserves: opts?.reserves, notices: opts?.notices };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -931,6 +932,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
+    reserves: [
+      { name: "Spot crypto (BTC/ETH/SOL/BNB, delta-hedged via perp shorts)", pct: 50, risk: "high" },
+      { name: "Perpetual short futures positions (CEX via Ceffu custody)", pct: 45, risk: "high" },
+      { name: "Stability reserve fund (stablecoins, multisig)", pct: 5, risk: "medium" },
+    ],
   }),
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
     geckoId: "satoshi-stablecoin",
@@ -948,6 +954,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
       { chain: "base",     address: "0x70654aad8b7734dc319d0c3608ec7b32e03fa162", decimals: 18 },
       { chain: "bsc",      address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
+    ],
+    reserves: [
+      { name: "BTC (overcollateralized CDP)", pct: 40, risk: "medium" },
+      { name: "ETH (overcollateralized CDP)", pct: 30, risk: "medium" },
+      { name: "BNB (overcollateralized CDP)", pct: 15, risk: "medium" },
+      { name: "Liquid staking tokens (solvBTC, stETH, etc.)", pct: 15, risk: "medium" },
     ],
   }),
 
@@ -987,6 +999,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xaf6186b3521b60e27396b5d23b48abc34bf585c5", decimals: 6 },
     ],
+    reserves: [
+      { name: "Short-term U.S. Treasury bonds", pct: 70, risk: "low" },
+      { name: "USDT/USDC deposits (minting collateral)", pct: 25, risk: "medium" },
+      { name: "Yield instruments (unspecified)", pct: 5, risk: "high" },
+    ],
   }),
   usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "frax-usd",
@@ -1009,6 +1026,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
       { chain: "bsc",      address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
     ],
+    reserves: [
+      { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low" },
+      { name: "Superstate USTB (tokenized T-bills)", pct: 20, risk: "low" },
+      { name: "Circle USDC", pct: 10, risk: "low" },
+      { name: "Superstate USCC (U.S. government securities + crypto carry)", pct: 5, risk: "medium" },
+      { name: "Other custodians (AUSD, JTRSY, WTGXX, USDB)", pct: 10, risk: "low" },
+    ],
   }),
   usd("340", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
     rwa: true,
@@ -1027,6 +1051,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4", decimals: 6 },
     ],
+    reserves: [
+      { name: "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)", pct: 50, risk: "low" },
+      { name: "Treasury-backed stablecoins (100+ aggregated)", pct: 25, risk: "medium" },
+      { name: "Tokenized gold assets (10+ aggregated)", pct: 15, risk: "medium" },
+      { name: "Market-neutral fund units (Nomura, Fasanara, Edge Capital)", pct: 10, risk: "high" },
+    ],
   }),
   usd("271", "Avant USD", "avUSD", "rwa-backed", "centralized", {
     geckoId: "avant-usd",
@@ -1043,6 +1073,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0x24de8771bc5ddb3362db529fc3358f2df3a0e346", decimals: 18 },
       { chain: "ethereum", address: "0xf4c13d631450de6b12a19829e37c8e2826891dc4", decimals: 18 },
     ],
+    reserves: [
+      { name: "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)", pct: 95, risk: "medium" },
+      { name: "Reserve fund (loss absorption buffer)", pct: 5, risk: "medium" },
+    ],
   }),
   usd("341", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "pleasing-usd",
@@ -1057,6 +1091,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "arbitrum", address: "0xc8fb643d18f1e53698cfda5c8fdf0cdc03c1dbec", decimals: 18 },
+    ],
+    reserves: [
+      { name: "USDT deposits (1:1 minting collateral)", pct: 90, risk: "medium" },
+      { name: "Tokenized gold exposure (PGOLD interoperability)", pct: 10, risk: "medium" },
     ],
   }),
   usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
@@ -1081,6 +1119,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ink", address: "0x5bcf6b008bf80b9296238546bace1797657b05d6", decimals: 18 },
     ],
     collateralQuality: "exotic",
+    reserves: [
+      { name: "Delta-neutral ETH basis trade positions (via sUSDe/USDe)", pct: 50, risk: "high" },
+      { name: "Short-duration U.S. Treasury bills", pct: 30, risk: "low" },
+      { name: "USDC reserves (instant redemption buffer)", pct: 20, risk: "low" },
+    ],
   }),
   usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized", {
     geckoId: "precious-metals-usd",
@@ -1095,6 +1138,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf", decimals: 18 },
+    ],
+    reserves: [
+      { name: "ION.au tokenized gold (I-ON Digital, Chainlink PoR attested)", pct: 100, risk: "medium" },
     ],
   }),
   usd("202", "Anzen USDz", "USDz", "rwa-backed", "centralized", {
@@ -1114,6 +1160,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938", decimals: 18 },
       { chain: "arbitrum", address: "0x5018609ab477cc502e170a5accf5312b86a4b94f", decimals: 18 },
     ],
+    reserves: [
+      { name: "U.S. private credit ABS (SMB receivables, auto leases, consumer lending, litigation finance via Percent)", pct: 80, risk: "high" },
+      { name: "Superstate USTB/USCC (tokenized T-bills and crypto carry)", pct: 15, risk: "medium" },
+      { name: "Cash and cash equivalents", pct: 5, risk: "low" },
+    ],
   }),
   usd("316", "CASH", "CASH", "rwa-backed", "centralized", {
     geckoId: "cash-4",
@@ -1124,6 +1175,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/usecash" },
     ],
     jurisdiction: { country: "United States", regulator: "FinCEN / state MTL authorities", license: "Money Services Business (NMLS #2450917)" },
+    reserves: [
+      { name: "U.S. Treasury bills (<=3mo maturity)", pct: 50, risk: "low" },
+      { name: "Reverse repos (overnight, UST-collateralized)", pct: 15, risk: "low" },
+      { name: "U.S. government money-market funds", pct: 15, risk: "low" },
+      { name: "Bank deposit accounts", pct: 10, risk: "low" },
+      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 10, risk: "medium" },
+    ],
   }),
 
   // ── Rank 51-60 ───────────────────────────────────────────────────────
@@ -1141,6 +1199,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x8ccedbae4916b79da7f3f612efb2eb93a2bfd6cf", decimals: 18 },
     ],
+    reserves: [
+      { name: "U.S. Treasury bills (<=90-day duration)", pct: 85, risk: "low" },
+      { name: "USD cash at qualified custodian", pct: 15, risk: "low" },
+    ],
   }),
   usd("257", "OpenEden TBILL", "TBILL", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -1157,6 +1219,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a", decimals: 6 },
       { chain: "arbitrum", address: "0xf84d28a8d28292842dd73d1c5f99476a80b6666a", decimals: 6 },
+    ],
+    reserves: [
+      { name: "Short-dated U.S. Treasury bills (WAM <3mo)", pct: 95, risk: "low" },
+      { name: "USD cash buffer", pct: 5, risk: "low" },
     ],
   }),
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
@@ -1193,6 +1259,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "bsc", address: "0xea953ea6634d55dac6697c436b1e81a679db5882", decimals: 18 },
     ],
+    reserves: [
+      { name: "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)", pct: 80, risk: "high" },
+      { name: "Short perp margin (Copper/Ceffu off-exchange)", pct: 20, risk: "high" },
+    ],
   }),
   // DEUSD removed — collapsed Nov 2025 when Stream Finance failed
   usd("321", "USDH Stablecoin", "USDH", "rwa-backed", "centralized", {
@@ -1207,6 +1277,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Github", url: "https://github.com/native-markets" },
     ],
     jurisdiction: { country: "United States", regulator: "FinCEN", license: "Money Services Business (Bridge Building, Inc.)" },
+    reserves: [
+      { name: "Short-term U.S. Treasuries (BlackRock-managed, JP Morgan custody)", pct: 40, risk: "low" },
+      { name: "Cash deposits (JP Morgan, Lead Bank)", pct: 20, risk: "low" },
+      { name: "Repo agreements (UST-collateralized)", pct: 10, risk: "low" },
+      { name: "Treasury-focused funds (BlackRock TTTXX)", pct: 10, risk: "low" },
+      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 20, risk: "medium" },
+    ],
   }),
   usd("79", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "helio-protocol-hay",
@@ -1223,6 +1300,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "bsc", address: "0x0782b6d8c4551b9760e74c0545a9bcd90bdc41e5", decimals: 18 },
+    ],
+    reserves: [
+      { name: "BNB (native)", pct: 35, risk: "high" },
+      { name: "slisBNB (Lista BNB LST)", pct: 25, risk: "high" },
+      { name: "ETH / wBETH (Binance ETH LST)", pct: 15, risk: "medium" },
+      { name: "BTCB (Binance-wrapped BTC)", pct: 10, risk: "medium" },
+      { name: "USDT / USDC / FDUSD (via PSM)", pct: 15, risk: "medium" },
     ],
   }),
   usd("241", "OpenDollar USDO", "USDO", "rwa-backed", "centralized", {
@@ -1241,6 +1325,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0", decimals: 18 },
       { chain: "bsc", address: "0x302e52aff9815b9d1682473dbfb9c74f9b750aa8", decimals: 18 },
     ],
+    reserves: [
+      { name: "OpenEden TBILL tokens (tokenized U.S. T-bills)", pct: 70, risk: "low" },
+      { name: "BlackRock BUIDL (tokenized money market fund)", pct: 15, risk: "medium" },
+      { name: "Franklin Templeton BENJI (tokenized govt money fund)", pct: 5, risk: "medium" },
+      { name: "USDC cash buffer", pct: 10, risk: "medium" },
+    ],
   }),
   usd("166", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
     geckoId: "cygnus-finance-global-usd",
@@ -1253,6 +1343,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "base", address: "0xca72827a3d211cfd8f6b00ac98824872b72cab49", decimals: 6 },
+    ],
+    reserves: [
+      { name: "Short-term U.S. Treasury bills (off-chain)", pct: 80, risk: "low" },
+      { name: "On-chain stablecoins (USDC/USDT)", pct: 15, risk: "medium" },
+      { name: "Accrued interest", pct: 5, risk: "low" },
     ],
   }),
 
@@ -1270,6 +1365,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
     ],
+    reserves: [
+      { name: "Euro cash deposits at Societe Generale", pct: 100, risk: "low" },
+    ],
   }),
   // USP (id 97) removed — Platypus exploited in 2023, protocol defunct (see cemetery)
   eur("147", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
@@ -1284,6 +1382,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18 },
       { chain: "bsc", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18 },
+    ],
+    notices: [
+      { type: "danger", title: "Winding down", message: "FlowBank SA (reserve partner) declared bankruptcy in June 2024. A portion of AEUR collateral is locked in bankruptcy proceedings. Anchored Coins has ceased new issuance and was delisted from Binance EEA in March 2025." },
+    ],
+    reserves: [
+      { name: "Euro deposits at Swissquote Bank SA", pct: 85, risk: "low" },
+      { name: "Euro deposits at FlowBank SA (bankruptcy recovery)", pct: 15, risk: "high" },
     ],
   }),
   // BUSD (id 4) removed — regulatory shutdown Feb 2023 (see cemetery)
@@ -1303,6 +1408,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xc83e27f270cce0a3a3a29521173a83f402c1768b", decimals: 6 },
       { chain: "polygon", address: "0xb291996477504506bf5f583102b5b5ea5d1e40e0", decimals: 6 },
     ],
+    reserves: [
+      { name: "Government bonds (NL, DE, US)", pct: 69, risk: "low" },
+      { name: "Cash deposits at Tier 1 European banks", pct: 31, risk: "low" },
+    ],
   }),
   usd("256", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "resupply-usd",
@@ -1319,6 +1428,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 },
     ],
+    reserves: [
+      { name: "Curve Lend vault shares (crvUSD lending positions)", pct: 60, risk: "high" },
+      { name: "Fraxlend vault shares (frxUSD lending positions)", pct: 40, risk: "high" },
+    ],
   }),
   eur("325", "Eurite", "EURI", "rwa-backed", "centralized", {
     geckoId: "eurite",
@@ -1333,6 +1446,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18 },
       { chain: "bsc", address: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18 },
+    ],
+    reserves: [
+      { name: "Euro cash in segregated fiduciary accounts", pct: 70, risk: "low" },
+      { name: "Low-risk liquid assets (EU government securities)", pct: 30, risk: "low" },
     ],
   }),
   usd("19", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
@@ -1349,6 +1466,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", decimals: 2 },
     ],
+    reserves: [
+      { name: "U.S. Treasury bills (<=3 month maturity)", pct: 62, risk: "low" },
+      { name: "Cash deposits (State Street, Western Alliance Bank)", pct: 38, risk: "low" },
+    ],
   }),
   usd("11", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
     geckoId: "paxos-standard",
@@ -1364,6 +1485,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x8e870d67f660d95d5be530380d0ec0bd388289e1", decimals: 18 },
     ],
+    reserves: [
+      { name: "U.S. Treasury bills (<90 day maturity)", pct: 60, risk: "low" },
+      { name: "Overnight reverse repos (secured by Treasuries)", pct: 20, risk: "low" },
+      { name: "Cash in FDIC-insured bank accounts", pct: 20, risk: "low" },
+    ],
   }),
   usd("263", "Hex Trust USDX", "USDX", "rwa-backed", "centralized", {
     geckoId: "hex-trust-usdx",
@@ -1376,6 +1502,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Hong Kong", regulator: "Companies Registry", license: "TCSP License" },
     contracts: [
       { chain: "ethereum", address: "0xf8750b54d86be7ae9e32b4a0c826811198d63313", decimals: 18 },
+    ],
+    reserves: [
+      { name: "U.S. Treasury bills (1-3 month maturity)", pct: 80, risk: "low" },
+      { name: "Cash and cash equivalents", pct: 20, risk: "low" },
     ],
   }),
 
@@ -1394,6 +1524,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xc08e7e23c235073c6807c2efe7021304cb7c2815", decimals: 6 },
       { chain: "bsc", address: "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9", decimals: 6 },
     ],
+    reserves: [
+      { name: "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)", pct: 50, risk: "low" },
+      { name: "Short-term U.S. / MAS government securities", pct: 50, risk: "low" },
+    ],
   }),
   usd("313", "Metamask USD", "MUSD", "rwa-backed", "centralized", {
     geckoId: "metamask-usd",
@@ -1408,6 +1542,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://dashboard.m0.org", provider: "M0 Protocol" },
     contracts: [
       { chain: "ethereum", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
+    ],
+    reserves: [
+      { name: "U.S. Treasury bills (0-180 day maturity)", pct: 85, risk: "low" },
+      { name: "Cash in bankruptcy-remote custody", pct: 15, risk: "low" },
     ],
   }),
   usd("255", "Aegis YUSD", "YUSD", "crypto-backed", "centralized", {
@@ -1428,6 +1566,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
+    reserves: [
+      { name: "BTC spot (held at Fireblocks, Copper, CEFFU)", pct: 50, risk: "medium" },
+      { name: "BTC-margined perpetual futures (short positions)", pct: 50, risk: "high" },
+    ],
   }),
   usd("22", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "nusd",
@@ -1445,6 +1587,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9", decimals: 18 },
     ],
     collateralQuality: "exotic",
+    reserves: [
+      { name: "SNX (via legacy V2 420 pool, 200% C-ratio)", pct: 50, risk: "high" },
+      { name: "USDC / stataUSDC (V3 Base pool collateral)", pct: 25, risk: "medium" },
+      { name: "ETH and LSTs (V3 multi-collateral)", pct: 15, risk: "medium" },
+      { name: "Protocol treasury buybacks / SLP vault activity", pct: 10, risk: "high" },
+    ],
+    notices: [
+      { type: "warning", title: "Prolonged depeg", message: "sUSD has been trading at ~$0.83-0.85 since the SIP-420 C-ratio reduction in late 2024. Peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy." },
+    ],
   }),
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
     geckoId: "liquity-bold-2",
@@ -1463,6 +1614,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
       { chain: "avalanche", address: "0x03569cc076654f82679c4ba2124d64774781b01d", decimals: 18 },
     ],
+    reserves: [
+      { name: "wstETH (Lido)", pct: 50, risk: "medium" },
+      { name: "WETH", pct: 30, risk: "medium" },
+      { name: "rETH (Rocket Pool)", pct: 20, risk: "medium" },
+    ],
   }),
   usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "decentralized", {
     geckoId: "hylo-usd",
@@ -1476,6 +1632,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "JitoSOL", pct: 90, risk: "medium" },
+      { name: "Other Solana LSTs (mSOL, bSOL, JupSOL)", pct: 10, risk: "medium" },
+    ],
   }),
   usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
     geckoId: "liquity-usd",
@@ -1490,6 +1650,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 },
       { chain: "optimism", address: "0xc40f949f8a4e094d1b49a23ea9241d289b7b2819", decimals: 18 },
       { chain: "arbitrum", address: "0x93b346b6bc2548da6a1e7d98e9a421b42541425b", decimals: 18 },
+    ],
+    reserves: [
+      { name: "ETH", pct: 100, risk: "medium" },
     ],
   }),
   usd("168", "fxUSD", "fxUSD", "crypto-backed", "centralized-dependent", {
@@ -1506,6 +1669,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x085780639cc2cacd35e474e71f4d000e2405d8f6", decimals: 18 },
     ],
+    reserves: [
+      { name: "wstETH (Lido)", pct: 75, risk: "medium" },
+      { name: "WBTC", pct: 25, risk: "medium" },
+    ],
   }),
   usd("282", "Noble Dollar", "USDN", "rwa-backed", "centralized", {
     geckoId: "noble-dollar-usdn",
@@ -1517,6 +1684,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://noble.xyz/usdn" },
       { label: "Twitter", url: "https://x.com/noble_xyz" },
       { label: "Docs", url: "https://docs.noble.xyz/" },
+    ],
+    reserves: [
+      { name: "Short-term U.S. Treasury Bills (via M0 SPVs)", pct: 100, risk: "low" },
     ],
   }),
 
@@ -1544,6 +1714,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       type: "exclude", // totalSupply() includes unborrowed MIM across 45+ Cauldron contracts; DefiLlama tracks actual debt
     },
     collateralQuality: "exotic",
+    reserves: [
+      { name: "Yield-bearing tokens (yvWETH, yvUSDC, yvUSDT, yvDAI)", pct: 35, risk: "high" },
+      { name: "wstETH / stETH", pct: 20, risk: "medium" },
+      { name: "WBTC / WETH", pct: 15, risk: "medium" },
+      { name: "GM tokens (GMX V2 LP)", pct: 15, risk: "high" },
+      { name: "Other exotic collateral (xSUSHI, Super OETH, etc.)", pct: 15, risk: "high" },
+    ],
   }),
   usd("307", "USD CoinVertible", "USDCV", "rwa-backed", "centralized", {
     geckoId: "usd-coinvertible",
@@ -1559,6 +1736,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x5422374b27757da72d5265cc745ea906e0446634", decimals: 18 },
     ],
+    reserves: [
+      { name: "USD cash deposits at BNY Mellon (segregated)", pct: 100, risk: "low" },
+    ],
   }),
   usd("231", "Honey", "HONEY", "crypto-backed", "centralized-dependent", {
     geckoId: "honey-3",
@@ -1573,6 +1753,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Discord", url: "https://discord.gg/berachain" },
     ],
     chainRisk: "unproven",
+    reserves: [
+      { name: "USDC (Circle)", pct: 40, risk: "medium" },
+      { name: "USDT0 (Tether via LayerZero)", pct: 25, risk: "medium" },
+      { name: "pyUSD / BYUSD (PayPal)", pct: 20, risk: "medium" },
+      { name: "USDe (Ethena)", pct: 15, risk: "high" },
+    ],
   }),
   other("226", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
     geckoId: "frankencoin",
@@ -1589,6 +1775,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0x4f8a84c442f9675610c680990eddb2ccddb8ab6f", decimals: 18 },
       { chain: "gnosis", address: "0xd4dd9e2f021bb459d5a5f6c24c12fe09c5d45553", decimals: 18 },
     ],
+    reserves: [
+      { name: "Wrapped Bitcoin (WBTC, cbBTC)", pct: 45, risk: "medium" },
+      { name: "ETH / wstETH / LsETH", pct: 30, risk: "medium" },
+      { name: "Gold tokens (PAXG, XAUt)", pct: 10, risk: "medium" },
+      { name: "Tokenized RWAs (SPYon, LENDS, REALU)", pct: 10, risk: "high" },
+      { name: "Other (CRV, GNO, governance tokens)", pct: 5, risk: "high" },
+    ],
   }),
   usd("172", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
@@ -1603,6 +1796,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.blast.io/" },
     ],
     chainRisk: "stage1-l2",
+    reserves: [
+      { name: "DAI / sDAI (via MakerDAO DSR)", pct: 60, risk: "medium" },
+      { name: "USDC (bridged)", pct: 25, risk: "medium" },
+      { name: "USDT (bridged)", pct: 15, risk: "medium" },
+    ],
   }),
   usd("225", "Zoth ZeUSD", "ZeUSD", "rwa-backed", "centralized", {
     rwa: true,
@@ -1620,6 +1818,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761", decimals: 6 },
     ],
+    reserves: [
+      { name: "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)", pct: 70, risk: "medium" },
+      { name: "Other tokenized RWAs (USD0++, Wrapped M)", pct: 30, risk: "medium" },
+    ],
   }),
   eur("101", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
     geckoId: "monerium-eur-money-2",
@@ -1635,6 +1837,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x39b8b6385416f4ca36a20319f70d28621895279d", decimals: 18 },
       { chain: "gnosis", address: "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430", decimals: 18 },
+    ],
+    reserves: [
+      { name: "State Street EUR Liquidity LVNAV Fund (AAA-rated)", pct: 70, risk: "low" },
+      { name: "EUR bank deposits (Arion Bank, LHV Bank)", pct: 30, risk: "low" },
     ],
   }),
   usd("230", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
@@ -1654,6 +1860,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
     ],
+    reserves: [
+      { name: "USDC/USDT (1:1 backing)", pct: 40, risk: "medium" },
+      { name: "U.S. Treasury Bills", pct: 30, risk: "low" },
+      { name: "Delta-neutral funding rate arbitrage positions", pct: 20, risk: "high" },
+      { name: "CLOs & Private Credit Funds", pct: 10, risk: "high" },
+    ],
   }),
   usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
     geckoId: "gyroscope-gyd",
@@ -1670,6 +1882,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon",  address: "0xca5d8f8a8d49439357d3cf46ca2e720702f132b8", decimals: 18 },
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "sDAI (DAI Savings Rate)", pct: 40, risk: "medium" },
+      { name: "USDC (via Aave/Flux)", pct: 30, risk: "medium" },
+      { name: "LUSD (AMM strategies)", pct: 15, risk: "medium" },
+      { name: "crvUSD (AMM strategies)", pct: 15, risk: "medium" },
+    ],
   }),
   usd("329", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
     geckoId: "nectar",
@@ -1684,6 +1902,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Croatia" },
     chainRisk: "unproven",
     collateralQuality: "exotic",
+    reserves: [
+      { name: "iBGT (Infrared liquid staked BGT)", pct: 40, risk: "high" },
+      { name: "iBERA / WBERA (Berachain native)", pct: 25, risk: "high" },
+      { name: "Wrapped BTC variants (pumpBTC, solvBTC, uniBTC)", pct: 15, risk: "high" },
+      { name: "ETH variants (beraETH, WETH, ylstETH, rsETH)", pct: 10, risk: "high" },
+      { name: "Kodiak LP positions (WBTC-HONEY, WETH-HONEY, WETH-WBTC)", pct: 10, risk: "high" },
+    ],
   }),
 
   // ── Rank 91-100 ──────────────────────────────────────────────────────
@@ -1704,6 +1929,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     proofOfReserves: { type: "real-time", url: "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview" },
     collateralQuality: "exotic",
+    reserves: [
+      { name: "Compound V3 USDC (cUSDCv3)", pct: 33, risk: "medium" },
+      { name: "Aave V3 USDC (aUSDCv3)", pct: 33, risk: "medium" },
+      { name: "Compound V3 USDT (cUSDTv3)", pct: 34, risk: "medium" },
+    ],
   }),
   usd("154", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
     geckoId: "bucket-protocol-buck-stablecoin",
@@ -1717,6 +1947,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "SUI (native token CDPs)", pct: 45, risk: "high" },
+      { name: "USDC/USDT (via PSM)", pct: 25, risk: "medium" },
+      { name: "BTC (wrapped, via CDPs)", pct: 15, risk: "medium" },
+      { name: "ETH & LSTs (via CDPs)", pct: 15, risk: "medium" },
+    ],
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
     geckoId: "ageur",
@@ -1740,6 +1976,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "celo", address: "0xc16b81af351ba9e64c1a069e3ab18c244a1e3049", decimals: 18 },
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "bC3M (Amundi Euro Govt Bills 0-6M ETF, tokenized by Backed)", pct: 40, risk: "medium" },
+      { name: "bERNX (BlackRock Euro Corp Bonds ETF, tokenized by Backed)", pct: 20, risk: "medium" },
+      { name: "EURC (Circle Euro stablecoin)", pct: 20, risk: "low" },
+      { name: "wETH, wBTC (crypto collateral from Borrowing Module)", pct: 15, risk: "medium" },
+      { name: "bHIGH (BlackRock Euro High Yield Corp Bonds ETF, tokenized)", pct: 5, risk: "medium" },
+    ],
   }),
   usd("303", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
     geckoId: "mezo-usd",
@@ -1756,6 +1999,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)", pct: 100, risk: "medium" },
+    ],
   }),
   usd("305", "XSY UTY", "UTY", "crypto-backed", "centralized-dependent", {
     geckoId: "unity-2",
@@ -1773,6 +2019,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     chainRisk: "established-alt-l1",
     collateralQuality: "exotic",
     custodyModel: "cex",
+    reserves: [
+      { name: "USDC deposits (initial user deposits)", pct: 30, risk: "medium" },
+      { name: "Long AVAX spot positions", pct: 35, risk: "high" },
+      { name: "Short AVAX perpetual futures (delta-neutral hedge)", pct: 35, risk: "high" },
+    ],
   }),
   eur("51", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
     geckoId: "stasis-eurs",
@@ -1808,6 +2059,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base",     address: "0x526728dbc96689597f85ae4cd716d4f7fccbae9d", decimals: 18 },
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "USDC", pct: 30, risk: "low" },
+      { name: "DAI", pct: 20, risk: "medium" },
+      { name: "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)", pct: 25, risk: "high" },
+      { name: "ETH / WBTC / sfrxETH", pct: 20, risk: "medium" },
+      { name: "FRAX / vaFRAX (inactive)", pct: 5, risk: "high" },
+    ],
   }),
   // ── Additional tracked ─────────────────────────────────────────────
   usd("346", "Neutrl USD", "NUSD", "crypto-backed", "centralized-dependent", {
@@ -1826,6 +2084,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
     ],
     proofOfReserves: { type: "real-time", url: "https://accountable.neutrl.fi/", provider: "Accountable" },
+    reserves: [
+      { name: "Delta-neutral basis/funding trades (perp futures)", pct: 60, risk: "high" },
+      { name: "Liquid stablecoin reserves (USDC, USDT, USDS, USDe)", pct: 20, risk: "medium" },
+      { name: "Hedged OTC locked-token positions (via STIX)", pct: 20, risk: "high" },
+    ],
   }),
   usd("344", "Yuzu USD", "YZUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "yuzu-usd",
@@ -1841,6 +2104,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://yuzu.accountable.capital/", provider: "Accountable" },
     chainRisk: "unproven",
     collateralQuality: "exotic",
+    reserves: [
+      { name: "Pendle PT/LP positions (leveraged DeFi yield)", pct: 50, risk: "high" },
+      { name: "Euler/Morpho lending positions", pct: 20, risk: "high" },
+      { name: "Other DeFi strategies (Equilibria, Penpie, AutoFinance, TermFinance)", pct: 20, risk: "high" },
+      { name: "USDT0 / stablecoin liquidity buffer", pct: 10, risk: "medium" },
+    ],
   }),
   usd("335", "JupUSD", "JUPUSD", "rwa-backed", "centralized-dependent", {
     rwa: true,
@@ -1855,6 +2124,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "established-alt-l1",
     custodyModel: "institutional",
+    reserves: [
+      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low" },
+      { name: "USDC liquidity buffer", pct: 10, risk: "low" },
+    ],
   }),
   usd("342", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
     rwa: true, geckoId: "megausd",
@@ -1867,6 +2140,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.megaeth.com" },
     ],
     custodyModel: "institutional",
+    reserves: [
+      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)", pct: 90, risk: "low" },
+      { name: "Liquid stablecoins (USDC/USDT) for redemptions", pct: 10, risk: "low" },
+    ],
   }),
   usd("343", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
     geckoId: "usa",
@@ -1879,6 +2156,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
     contracts: [
       { chain: "ethereum", address: "0x07041776f5007aca2a54844f50503a18a72a8b68", decimals: 6 },
+    ],
+    reserves: [
+      { name: "U.S. Treasury bills", pct: 80, risk: "low" },
+      { name: "Cash deposits", pct: 20, risk: "low" },
     ],
   }),
   usd("24", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
@@ -1898,6 +2179,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "self-reported", url: "https://reserve.mento.org/" },
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "sUSDS (Sky/Maker yield-bearing stablecoin)", pct: 56, risk: "medium" },
+      { name: "EURC (Circle euro stablecoin)", pct: 22, risk: "low" },
+      { name: "CELO (native token)", pct: 12, risk: "high" },
+      { name: "USDGLO (Glo Dollar)", pct: 4, risk: "medium" },
+      { name: "stETH (Lido staked ETH)", pct: 2, risk: "medium" },
+      { name: "USDC", pct: 1, risk: "low" },
+      { name: "USDT", pct: 1, risk: "low" },
+      { name: "ETH", pct: 1, risk: "medium" },
+    ],
   }),
   usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "alchemix-usd",
@@ -1916,6 +2207,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
     ],
     collateralQuality: "exotic",
+    reserves: [
+      { name: "DAI (in Yearn/Aave yield strategies)", pct: 35, risk: "medium" },
+      { name: "USDC (in Yearn/Aave yield strategies)", pct: 35, risk: "medium" },
+      { name: "USDT (in Yearn/Aave yield strategies)", pct: 30, risk: "medium" },
+    ],
   }),
   usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "decentralized", {
     geckoId: "felix-feusd",
@@ -1929,6 +2225,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)", pct: 60, risk: "high" },
+      { name: "BTC (bridged UBTC)", pct: 15, risk: "medium" },
+      { name: "ETH (bridged)", pct: 15, risk: "medium" },
+      { name: "SOL (bridged)", pct: 10, risk: "medium" },
+    ],
   }),
   usd("348", "Fidelity Digital Dollar", "FIDD", "rwa-backed", "centralized", {
     geckoId: "fidelity-digital-dollar",
@@ -1944,6 +2246,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d", decimals: 18 },
     ],
+    reserves: [
+      { name: "U.S. Treasury securities (short-term)", pct: 80, risk: "low" },
+      { name: "Cash and cash equivalents", pct: 20, risk: "low" },
+    ],
   }),
   usd("347", "USDGO", "USDGO", "rwa-backed", "centralized", {
     geckoId: "usdgo",
@@ -1954,6 +2260,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/osldotcom" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
+    reserves: [
+      { name: "U.S. Treasury bills", pct: 80, risk: "low" },
+      { name: "Cash and cash equivalents", pct: 20, risk: "low" },
+    ],
   }),
   usd("297", "Main Street USD", "MSUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "main-street-usd",
@@ -1970,6 +2280,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
+    reserves: [
+      { name: "USDC (1:1 backing)", pct: 100, risk: "medium" },
+    ],
   }),
   usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
     geckoId: "usdm-2",
@@ -1982,6 +2295,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     jurisdiction: { country: "Norway", regulator: "Finanstilsynet", license: "MiCA E-Money Token (EMT)" },
     chainRisk: "established-alt-l1",
+    reserves: [
+      { name: "USD bank deposits", pct: 40, risk: "low" },
+      { name: "Money market funds (Fidelity / Amundi)", pct: 60, risk: "low" },
+    ],
   }),
   usd("312", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
     geckoId: "hydrated-dollar",
@@ -1996,6 +2313,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "DOT", pct: 40, risk: "high" },
+      { name: "ETH", pct: 15, risk: "medium" },
+      { name: "vDOT (liquid staked DOT)", pct: 15, risk: "high" },
+      { name: "WBTC / tBTC", pct: 10, risk: "medium" },
+      { name: "USDT / USDC (stablecoins)", pct: 15, risk: "medium" },
+      { name: "GIGADOT / GIGAETH", pct: 5, risk: "high" },
+    ],
   }),
   usd("245", "Anzens USDA", "USDA", "rwa-backed", "centralized", {
     geckoId: "anzens-usda",
@@ -2006,6 +2331,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/AnzensOfficial" },
     ],
     jurisdiction: { country: "United States", regulator: "FinCEN", license: "Money Service Business (MSB)" },
+    reserves: [
+      { name: "USD cash deposits", pct: 60, risk: "low" },
+      { name: "U.S. Treasury securities", pct: 40, risk: "low" },
+    ],
   }),
   usd("75", "Youves uUSD", "UUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "youves-uusd",
@@ -2019,6 +2348,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "XTZ (Tezos)", pct: 60, risk: "high" },
+      { name: "USDt (Tether on Tezos)", pct: 20, risk: "medium" },
+      { name: "tzBTC (wrapped Bitcoin)", pct: 10, risk: "medium" },
+      { name: "SIRS (XTZ/tzBTC LP tokens)", pct: 10, risk: "high" },
+    ],
   }),
   usd("327", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
@@ -2033,6 +2368,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Proof of Reserve", url: "https://mu.accountable.capital/" },
     ],
     proofOfReserves: { type: "real-time", url: "https://mu.accountable.capital/", provider: "Accountable" },
+    reserves: [
+      { name: "Asian sovereign bonds (BBB+ min)", pct: 30, risk: "medium" },
+      { name: "Investment-grade Asian corporate/bank bonds (BBB- min)", pct: 35, risk: "medium" },
+      { name: "High-yield industrial bonds (BB min)", pct: 15, risk: "high" },
+      { name: "Private credit / direct lending", pct: 20, risk: "high" },
+    ],
   }),
   usd("266", "Plume USD", "pUSD", "rwa-backed", "centralized", {
     geckoId: "plume-usd",
@@ -2047,6 +2388,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6 },
     ],
     custodyModel: "onchain",
+    reserves: [
+      { name: "USDC (via Nucleus BoringVault)", pct: 100, risk: "medium" },
+    ],
   }),
   usd("234", "Worldwide USD", "WUSD", "rwa-backed", "centralized", {
     geckoId: "worldwide-usd",
@@ -2061,6 +2405,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18 },
       { chain: "polygon", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18 },
+    ],
+    reserves: [
+      { name: "Cash and cash equivalents", pct: 40, risk: "low" },
+      { name: "Short-term U.S. Treasury bills", pct: 55, risk: "low" },
+      { name: "Basel III liquidity buffer (6% of non-cash)", pct: 5, risk: "low" },
     ],
   }),
   usd("324", "Brale SBC", "SBC", "rwa-backed", "centralized", {
@@ -2084,6 +2433,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "celo",     address: "0xde093684c796204224bc081f937aa059d903c52a", decimals: 18 },
     ],
     proofOfReserves: { type: "independent-audit", url: "https://brale.xyz/stablecoins/SBC", provider: "Abdo" },
+    reserves: [
+      { name: "Cash and cash equivalents", pct: 50, risk: "low" },
+      { name: "Short-duration U.S. Treasury securities", pct: 50, risk: "low" },
+    ],
   }),
   usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
@@ -2100,6 +2453,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86", decimals: 18 },
     ],
     collateralQuality: "exotic",
+    reserves: [
+      { name: "USDC (via Morpho/Yearn vault)", pct: 65, risk: "medium" },
+      { name: "USDC (via Curve AMO LP)", pct: 35, risk: "medium" },
+    ],
   }),
   usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
     geckoId: "bitcoin-usd-btcfi",
@@ -2115,6 +2472,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4", decimals: 18 },
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)", pct: 100, risk: "medium" },
+    ],
   }),
   usd("253", "Bima USBD", "USBD", "crypto-backed", "decentralized", {
     geckoId: "usbd",
@@ -2131,6 +2491,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18 },
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "Bitcoin LSTs/LRTs (Lorenzo, Lombard, pStake, Bedrock, etc.)", pct: 100, risk: "high" },
+    ],
   }),
   usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
     yieldBearing: true, navToken: true,
@@ -2148,6 +2511,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "institutional",
+    reserves: [
+      { name: "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)", pct: 50, risk: "high" },
+      { name: "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)", pct: 40, risk: "high" },
+      { name: "Cash stablecoins (USDC/USDT buffer)", pct: 10, risk: "low" },
+    ],
   }),
   usd("240", "StablR USD", "USDR", "rwa-backed", "centralized", {
     geckoId: "stablr-usd",
@@ -2161,6 +2529,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Malta", regulator: "MFSA", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8", decimals: 6 },
+    ],
+    reserves: [
+      { name: "Cash and short-term government bonds (EU financial institutions)", pct: 100, risk: "low" },
     ],
   }),
   usd("304", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
@@ -2176,6 +2547,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xdde3ec717f220fc6a29d6a4be73f91da5b718e55", decimals: 18 },
     ],
     collateralQuality: "exotic",
+    reserves: [
+      { name: "Curve USDC/USDU LP tokens", pct: 35, risk: "medium" },
+      { name: "TermMax fixed-rate lending vault shares", pct: 35, risk: "high" },
+      { name: "Morpho USDU Core vault shares", pct: 30, risk: "medium" },
+    ],
+    notices: [
+      { type: "danger", title: "Undercollateralized by design", message: "USDU Finance's transparency page shows a ~43% collateralization ratio. The protocol is minted through DAO-approved adapters and is intentionally undercollateralized for professional market participants." },
+    ],
   }),
 
   // ── Additional non-USD pegs ────────────────────────────────────────
@@ -2284,6 +2663,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6 },
     ],
+    reserves: [
+      { name: "Physical gold bars (LBMA Good Delivery, Swiss vaults)", pct: 100, risk: "low" },
+    ],
   }),
   other("gold-paxg", "PAX Gold", "PAXG", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "pax-gold", protocolSlug: "paxos-gold",
@@ -2300,6 +2682,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x45804880de22913dafe09f4980848ece6ecbaf78", decimals: 18 },
     ],
+    reserves: [
+      { name: "Physical gold bars (LBMA Good Delivery, Brink's London vaults)", pct: 100, risk: "low" },
+    ],
   }),
   other("gold-kau", "Kinesis Gold", "KAU", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "kinesis-gold",
@@ -2311,6 +2696,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/KinesisMonetary" },
     ],
     jurisdiction: { country: "Cayman Islands", regulator: "CIMA", license: "VASP Registration" },
+    reserves: [
+      { name: "Physical gold bullion (LBMA-approved, ABX/Brink's/Loomis vaults)", pct: 100, risk: "low" },
+    ],
   }),
   other("gold-xaum", "Matrixdock Gold", "XAUm", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "matrixdock-gold",
@@ -2327,6 +2715,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x2103e845c5e135493bb6c2a4f0b8651956ea8682", decimals: 18 },
       { chain: "bsc", address: "0x23ae4fd8e7844cdbc97775496ebd0e8248656028", decimals: 18 },
     ],
+    reserves: [
+      { name: "Physical gold bars (LBMA-certified 99.99%, Brink's & Malca-Amit, Singapore & Hong Kong)", pct: 100, risk: "low" },
+    ],
   }),
   other("gold-vro", "VeraOne", "VRO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "veraone",
@@ -2341,6 +2732,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x10bc518c32fbae5e38ecb50a612160571bd81e44", decimals: 8 },
     ],
+    reserves: [
+      { name: "Physical gold (LBMA 999.9, Geneva Free Ports)", pct: 100, risk: "low" },
+    ],
   }),
   other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "comtech-gold",
@@ -2352,6 +2746,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/ComTechOfficial" },
     ],
     jurisdiction: { country: "United Arab Emirates", regulator: "DAFZA", license: "DAFZA; endorsed by DMCC" },
+    reserves: [
+      { name: "Physical gold (24K 999.9, Transguard vaults UAE)", pct: 100, risk: "low" },
+    ],
   }),
   other("gold-dgld", "DGLD Tokenized Gold", "DGLD", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1, geckoId: "gold-token-sa-dgld-tokenized-gold",
@@ -2366,6 +2763,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xa9299c296d7830a99414d1e5546f5171fa01e9c8", decimals: 18 },
       { chain: "base", address: "0xd02f50e1017f493ffffa70c8fcf09e349e11d6c9", decimals: 18 },
+    ],
+    reserves: [
+      { name: "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)", pct: 100, risk: "low" },
     ],
   }),
 
@@ -2383,6 +2783,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Cayman Islands", regulator: "CIMA", license: "VASP License (conditional)" },
     contracts: [
       { chain: "ethereum", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9 },
+    ],
+    reserves: [
+      { name: "Physical silver bullion (999 fine, ABX global vaults)", pct: 100, risk: "low" },
     ],
   }),
 
@@ -2405,6 +2808,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
+    reserves: [
+      { name: "sUSDS (Sky savings USDS)", pct: 56, risk: "medium" },
+      { name: "EURC (Circle euro stablecoin)", pct: 22, risk: "medium" },
+      { name: "CELO", pct: 12, risk: "high" },
+      { name: "USDGLO (Glo Dollar)", pct: 4, risk: "medium" },
+      { name: "stETH (Lido staked ETH)", pct: 2, risk: "medium" },
+      { name: "USDC", pct: 2, risk: "medium" },
+      { name: "USDT", pct: 1, risk: "medium" },
+      { name: "ETH", pct: 1, risk: "medium" },
+    ],
   }),
   // PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
   // IBEUR removed — liquidity drain Dec 2023 (see cemetery)
@@ -2427,6 +2840,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon",   address: "0xe4095d9372e68d108225c306a4491cacfb33b097", decimals: 18 },
       { chain: "celo",      address: "0x9346f43c1588b6df1d52bdd6bf846064f92d9cba", decimals: 18 },
     ],
+    reserves: [
+      { name: "Euro cash and cash equivalents (bank/custody accounts)", pct: 100, risk: "low" },
+    ],
   }),
   eur("239", "StablR Euro", "EURR", "rwa-backed", "centralized", {
     geckoId: "stablr-euro",
@@ -2440,6 +2856,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Malta", regulator: "MFSA", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x50753cfaf86c094925bf976f218d043f8791e408", decimals: 6 },
+    ],
+    reserves: [
+      { name: "Fiat reserves (euro cash at regulated financial institutions)", pct: 100, risk: "low" },
     ],
   }),
   eur("247", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
@@ -2457,6 +2876,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
       { chain: "polygon", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
     ],
+    reserves: [
+      { name: "Euro cash and cash equivalents (EU banks incl. Societe Generale)", pct: 98, risk: "low" },
+      { name: "Additional reserve fund", pct: 2, risk: "low" },
+    ],
   }),
   eur("cg-eurq", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {
     geckoId: "quantoz-eurq",
@@ -2471,6 +2894,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x8df723295214ea6f21026eeeb4382d475f146f9f", decimals: 6 },
     ],
     proofOfReserves: { type: "self-reported", url: "https://quantoz.com/transparency" },
+    reserves: [
+      { name: "Government bonds (NL, DE, US)", pct: 68, risk: "low" },
+      { name: "Cash deposits (Tier 1 European banks)", pct: 32, risk: "low" },
+    ],
   }),
   eur("319", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
     geckoId: "allunity-eur",
@@ -2489,6 +2916,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
     ],
     proofOfReserves: { type: "self-reported", url: "https://allunity.com/trust-center/" },
+    reserves: [
+      { name: "Euro bank deposits (CRR credit institutions, EU)", pct: 100, risk: "low" },
+    ],
   }),
   eur("cg-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
     geckoId: "decentralized-euro",
@@ -2506,6 +2936,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x5e85faf503621830ca857a5f38b982e0cc57d537", decimals: 18 },
       { chain: "optimism", address: "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264", decimals: 18 },
       { chain: "base", address: "0x1b5f7fa46ed0f487f049c42f374ca4827d65a264", decimals: 18 },
+    ],
+    reserves: [
+      { name: "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)", pct: 40, risk: "medium" },
+      { name: "WETH (wrapped Ether)", pct: 25, risk: "medium" },
+      { name: "USDC / DAI (stablecoins)", pct: 15, risk: "low" },
+      { name: "XAUT (tokenized gold)", pct: 10, risk: "medium" },
+      { name: "UNI / ZCHF (governance / other)", pct: 10, risk: "high" },
     ],
   }),
 
@@ -2632,6 +3069,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     custodyModel: "institutional",
+    reserves: [
+      { name: "apcxUSDT (custodial 1:1 USDT wrapper)", pct: 100, risk: "high" },
+    ],
   }),
   usd("cg-syrupusdc", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
     geckoId: "syrupusdc",
@@ -2650,6 +3090,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "rwa",
     custodyModel: "onchain",
+    reserves: [
+      { name: "Overcollateralized institutional loans (BTC/ETH collateral, Blue Chip pool)", pct: 55, risk: "medium" },
+      { name: "Overcollateralized institutional loans (SOL/XRP/altcoin collateral, High Yield pool)", pct: 35, risk: "high" },
+      { name: "Liquidity buffer (USDC idle)", pct: 10, risk: "low" },
+    ],
   }),
   usd("cg-syrupusdt", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
     geckoId: "syrupusdt",
@@ -2666,6 +3111,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "rwa",
     custodyModel: "onchain",
+    reserves: [
+      { name: "Overcollateralized institutional loans (BTC/ETH collateral, Blue Chip pool)", pct: 55, risk: "medium" },
+      { name: "Overcollateralized institutional loans (SOL/XRP/altcoin collateral, High Yield pool)", pct: 35, risk: "high" },
+      { name: "Liquidity buffer (USDT idle)", pct: 10, risk: "low" },
+    ],
   }),
 ];
 

@@ -85,6 +85,13 @@ export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-
 /** Where collateral is held and who controls it */
 export type CustodyModel = "onchain" | "institutional" | "cex";
 
+/** Important notice displayed on a stablecoin's detail page */
+export interface CoinNotice {
+  type: "danger" | "warning" | "info";
+  title: string;
+  message: string;
+}
+
 export interface StablecoinMeta {
   id: string; // DefiLlama numeric ID
   name: string;
@@ -107,6 +114,7 @@ export interface StablecoinMeta {
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   reserves?: ReserveSlice[];  // Structured reserve composition (manually curated)
+  notices?: CoinNotice[];     // Important alerts (winding down, depegged, etc.)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
