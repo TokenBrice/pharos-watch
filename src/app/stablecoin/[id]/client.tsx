@@ -23,6 +23,7 @@ import { ReportCardDetail } from "@/components/report-card";
 import { DetailSectionNav } from "@/components/detail-section-nav";
 import { PegGauge } from "@/components/peg-gauge";
 import { ReserveTreemap } from "@/components/reserve-treemap";
+import { getReserves } from "@/lib/reserve-templates";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
@@ -375,7 +376,20 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <section id="info" className="space-y-6">
         <KeyInfoCard meta={coin} />
-        {coin.reserves && <ReserveTreemap reserves={coin.reserves} />}
+        {(() => {
+          const result = getReserves(coin);
+          if (!result) return null;
+          return (
+            <div>
+              <ReserveTreemap reserves={result.reserves} />
+              {result.estimated && (
+                <p className="mt-1 text-center text-xs text-muted-foreground">
+                  Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </section>
 
       <section id="liquidity">
