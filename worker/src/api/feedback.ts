@@ -1,6 +1,7 @@
 // worker/src/api/feedback.ts
 
 import { getCache } from "../lib/db";
+import { isValidStablecoinId } from "../lib/api-utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,8 @@ async function checkRateLimit(
     .bind(ipHash, now - 600)
     .first<{ cnt: number }>();
 
+  // Note: D1 lacks row-level locking, so concurrent requests can both pass this check.
+  // In practice, this allows a small burst above the limit (harmless for our use case).
   if ((row?.cnt ?? 0) >= 3) return false;
 
   await db
@@ -56,7 +59,7 @@ async function checkRateLimit(
   db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
     .bind(now - 3600)
     .run()
-    .catch(() => {});
+    .catch((e) => console.warn("[feedback] rate-limit prune failed:", e));
 
   return true;
 }
@@ -91,6 +94,8 @@ async function verifyDataCorrection(
 
     const cacheAgeSec = Math.floor(Date.now() / 1000) - cached.updatedAt;
     const pegRef = 1.0;
+    // pegRef is hardcoded to 1.0; non-USD stablecoins will show inflated deviation.
+    // The snapshot still provides useful price/supply data for triage.
 
     let deviationStr = "N/A";
     let verifiedLabel: VerificationResult["verifiedLabel"] = "verified: unconfirmed";
@@ -108,7 +113,8 @@ async function verifyDataCorrection(
           ? `$${(totalUSD / 1e6).toFixed(0)}M`
           : `$${totalUSD.toFixed(0)}`;
 
-    const resultEmoji =
+    // "Confirmed" = data issue is real (warning); "Unconfirmed" = data looks OK (checkmark)
+    const verificationSummary =
       verifiedLabel === "verified: confirmed"
         ? "⚠️ Confirmed"
         : "✅ Unconfirmed";
@@ -119,7 +125,7 @@ async function verifyDataCorrection(
       totalUSD > 0 ? `**Circulating supply:** ${mcapStr}` : "",
       `**Peg deviation:** ${deviationStr}`,
       `**Cache age:** ${cacheAgeSec}s`,
-      `**Verification result:** ${resultEmoji}`,
+      `**Verification result:** ${verificationSummary}`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -194,7 +200,10 @@ async function createGitHubDiscussion(
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return false;
+    if (!res.ok) {
+      console.warn("[feedback] GraphQL HTTP error:", res.status);
+      return false;
+    }
     const data = (await res.json()) as { errors?: unknown[] };
     if (data.errors?.length) {
       console.warn("[feedback] GraphQL errors:", JSON.stringify(data.errors));
@@ -217,12 +226,13 @@ function formatBody(fb: FeedbackBody, verificationBlock?: string): string {
   );
 
   if (fb.stablecoinName || fb.stablecoinId) {
-    const name = fb.stablecoinName ?? "";
+    const name = (fb.stablecoinName ?? "").replace(/[\r\n]/g, " ").slice(0, 100);
     const id = fb.stablecoinId ? ` (${fb.stablecoinId})` : "";
     lines.push(`**Stablecoin:** ${name}${id}`);
   }
 
-  lines.push(`**Page:** ${fb.pageUrl}`);
+  const safePageUrl = fb.pageUrl.replace(/[\r\n]/g, " ").slice(0, 200);
+  lines.push(`**Page:** ${safePageUrl}`);
 
   if (fb.pegValue) lines.push(`**Current value:** ${fb.pegValue}`);
   if (fb.expectedValue) lines.push(`**Expected value / source:** ${fb.expectedValue}`);
@@ -257,6 +267,10 @@ export async function handleFeedback(
     return json({ error: "Invalid JSON body" }, 400);
   }
 
+  if (typeof fb !== "object" || fb === null) {
+    return json({ error: "Invalid JSON body" }, 400);
+  }
+
   // Honeypot: silently accept but do nothing
   if (fb.website) return json({ ok: true });
 
@@ -284,6 +298,11 @@ export async function handleFeedback(
     return json({ error: "Invalid pageUrl" }, 400);
   }
 
+  // Validate stablecoinId if provided
+  if (fb.stablecoinId && !isValidStablecoinId(fb.stablecoinId)) {
+    fb.stablecoinId = undefined; // strip invalid ID, don't reject (may still be useful feedback)
+  }
+
   // Rate limiting
   const ip =
     request.headers.get("CF-Connecting-IP") ??
@@ -304,7 +323,7 @@ export async function handleFeedback(
 
   try {
     if (fb.type === "feature-request") {
-      const title = `[Feature Request] ${fb.title!.trim()}`;
+      const title = `[Feature Request] ${(fb.title ?? "").trim()}`;
       const body = formatBody(fb);
 
       const repoNodeId = env.GITHUB_REPO_NODE_ID;
@@ -319,7 +338,7 @@ export async function handleFeedback(
       }
     } else {
       let verificationBlock: string | undefined;
-      let verifiedLabel = "verified: pending";
+      let verifiedLabel: "verified: confirmed" | "verified: unconfirmed" | "verified: pending" = "verified: pending";
 
       if (fb.type === "data-correction" && fb.stablecoinId) {
         const result = await verifyDataCorrection(db, fb.stablecoinId);
@@ -333,7 +352,7 @@ export async function handleFeedback(
 
       const title =
         fb.type === "bug"
-          ? `[Bug] ${fb.title!.trim()}`
+          ? `[Bug] ${(fb.title ?? "").trim()}`
           : `[Data Correction] ${stablecoinPart}${shortDesc}${ellipsis}`;
 
       const labels =
