@@ -152,7 +152,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       left: WIDTH - PAD - 88,
       top: PAD - 10,
       right: WIDTH - PAD + 6,
-      bottom: PAD + 5 * 18 + 3 * 16 + 50,
+      bottom: PAD + 5 * 18 + 3 * 16 + 26,
     };
 
     // Post-simulation overlap resolution — guarantees no overlapping nodes
@@ -273,7 +273,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   // Tooltip state
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
-  const [showTypes, setShowTypes] = useState(false);
 
   // Compute connected nodes/edges for node-hover spotlight
   const { connectedNodes, connectedEdges } = useMemo(() => {
@@ -331,23 +330,13 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   </clipPath>
                 );
               })}
-              {/* Arrowhead markers */}
-              <marker id="arrow-default" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto">
-                <path d="M0,0 L10,3 L0,6 Z" fill="currentColor" opacity={0.4} />
-              </marker>
-              <marker id="arrow-collateral" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto">
-                <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS.collateral} />
-              </marker>
-              <marker id="arrow-mechanism" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto">
-                <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS.mechanism} />
-              </marker>
-              <marker id="arrow-wrapper" viewBox="0 0 10 6" refX="10" refY="3"
-                markerWidth="8" markerHeight="5" orient="auto">
-                <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS.wrapper} />
-              </marker>
+              {/* Arrowhead markers — markerUnits="userSpaceOnUse" so size is fixed regardless of stroke width */}
+              {(["collateral", "mechanism", "wrapper"] as const).map((type) => (
+                <marker key={type} id={`arrow-${type}`} viewBox="0 0 10 6" refX="10" refY="3"
+                  markerWidth="7" markerHeight="5" markerUnits="userSpaceOnUse" orient="auto">
+                  <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS[type]} />
+                </marker>
+              ))}
             </defs>
 
             {/* Edges — arrow direction: upstream (target in data) → dependent (source in data) */}
@@ -377,8 +366,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const typeColor = TYPE_COLORS[link.type];
               const dashArray = TYPE_DASH[link.type];
 
-              // Show type encoding when: toggle on, directly hovered, or connected to hovered node
-              const showType = showTypes || isEdgeDirectHovered || (isNodeHovered && isConnected);
               const edgeOpacity = isNodeHovered && !isConnected && !isEdgeDirectHovered
                 ? 0.05
                 : isEdgeDirectHovered ? 0.9 : so;
@@ -396,11 +383,11 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   {/* Visible edge */}
                   <line
                     x1={fromPos.x} y1={fromPos.y} x2={endX} y2={endY}
-                    stroke={showType ? typeColor : "currentColor"}
+                    stroke={typeColor}
                     strokeWidth={isEdgeDirectHovered ? sw + 1 : sw}
                     opacity={edgeOpacity}
-                    strokeDasharray={showType ? dashArray : undefined}
-                    markerEnd={showType ? `url(#arrow-${link.type})` : "url(#arrow-default)"}
+                    strokeDasharray={dashArray}
+                    markerEnd={`url(#arrow-${link.type})`}
                     pointerEvents="none"
                   />
                 </g>
@@ -560,7 +547,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               x={WIDTH - PAD - 88}
               y={PAD - 10}
               width={94}
-              height={5 * 18 + 3 * 16 + 50}
+              height={5 * 18 + 3 * 16 + 26}
               rx={6}
               fill="var(--color-card, #1a1a2e)"
               fillOpacity={0.85}
@@ -592,19 +579,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               </g>
             ))}
 
-            {/* Show types toggle */}
-            <g
-              transform={`translate(${WIDTH - PAD - 80}, ${PAD + 5 * 18 + 8 + 3 * 16 + 4})`}
-              style={{ cursor: "pointer" }}
-              onClick={() => setShowTypes((v) => !v)}
-            >
-              <rect x={-4} y={-2} width={76} height={16} rx={4}
-                fill={showTypes ? "var(--color-accent, #3b82f6)" : "var(--color-muted, #333)"}
-                fillOpacity={showTypes ? 0.2 : 0.4} />
-              <text x={4} y={10} fill="currentColor" fontSize={9} opacity={0.7} fontWeight={500}>
-                {showTypes ? "\u25b8 Types on" : "\u25b9 Show types"}
-              </text>
-            </g>
           </svg>
         </div>
       </CardContent>
