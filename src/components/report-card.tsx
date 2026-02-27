@@ -158,6 +158,9 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                   (s) => s.id === dep.id,
                 );
                 const name = depMeta?.name ?? dep.id;
+                const typeLabel = dep.type === "wrapper" ? " (wrapper)"
+                  : dep.type === "mechanism" ? " (mechanism-critical)"
+                  : "";
                 return (
                   <span key={dep.id}>
                     {i > 0 && ", "}
@@ -167,6 +170,9 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                     >
                       {name}
                     </Link>
+                    {typeLabel && (
+                      <span className="text-xs text-blue-500/70">{typeLabel}</span>
+                    )}
                   </span>
                 );
               })}
