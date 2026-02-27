@@ -6,8 +6,9 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCenter,
   forceCollide,
+  forceX,
+  forceY,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force";
@@ -105,41 +106,105 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     const simNodes = nodes.map((n) => ({ ...n }));
     const simLinks = links.map((l) => ({ ...l }));
 
+    // Stronger repulsion scaled by node size — big nodes claim more space
     const sim = forceSimulation(simNodes)
-      .force("link", forceLink<GraphNode, GraphLink>(simLinks).id((d) => d.id).distance(80).strength((l) => (l as GraphLink).weight * 0.5))
-      .force("charge", forceManyBody().strength(-180))
-      .force("center", forceCenter(WIDTH / 2, HEIGHT / 2))
-      .force("collide", forceCollide<GraphNode>().radius((d) => d.r + 10))
+      .force(
+        "link",
+        forceLink<GraphNode, GraphLink>(simLinks)
+          .id((d) => d.id)
+          .distance(100)
+          .strength((l) => (l as GraphLink).weight * 0.4),
+      )
+      .force(
+        "charge",
+        forceManyBody().strength((d) => -200 - (d as GraphNode).r * 4),
+      )
+      .force("x", forceX(WIDTH / 2).strength(0.05))
+      .force("y", forceY(HEIGHT / 2).strength(0.05))
+      .force(
+        "collide",
+        forceCollide<GraphNode>()
+          .radius((d) => d.r + 14)
+          .iterations(3),
+      )
       .stop();
 
     for (let i = 0; i < 300; i++) sim.tick();
 
-    // Clamp positions within padded area
-    const posMap = new Map<string, { x: number; y: number }>();
-    for (const n of simNodes) {
-      posMap.set(n.id, {
-        x: Math.max(PAD + n.r, Math.min(WIDTH - PAD - n.r, n.x ?? WIDTH / 2)),
-        y: Math.max(PAD + n.r, Math.min(HEIGHT - PAD - n.r, n.y ?? HEIGHT / 2)),
-      });
-    }
-    // Push nodes out of the legend area (top-right corner)
+    // Legend box (top-right corner) — nodes must avoid this
     const legendBox = {
       left: WIDTH - PAD - 88,
       top: PAD - 10,
       right: WIDTH - PAD + 6,
       bottom: PAD + 4 * 18 + 20,
     };
-    for (const n of simNodes) {
-      const pos = posMap.get(n.id)!;
-      if (
-        pos.x + n.r > legendBox.left &&
-        pos.x - n.r < legendBox.right &&
-        pos.y + n.r > legendBox.top &&
-        pos.y - n.r < legendBox.bottom
-      ) {
-        pos.x = legendBox.left - n.r - 2;
-        if (pos.x < PAD + n.r) pos.x = PAD + n.r;
+
+    // Post-simulation overlap resolution — guarantees no overlapping nodes
+    const MIN_GAP = 6;
+    const MAX_PASSES = 60;
+
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      let overlaps = 0;
+
+      // Push overlapping node pairs apart
+      for (let i = 0; i < simNodes.length; i++) {
+        for (let j = i + 1; j < simNodes.length; j++) {
+          const a = simNodes[i];
+          const b = simNodes[j];
+          const dx = (b.x ?? 0) - (a.x ?? 0);
+          const dy = (b.y ?? 0) - (a.y ?? 0);
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = a.r + b.r + MIN_GAP;
+
+          if (dist < minDist) {
+            overlaps++;
+            if (dist > 0.1) {
+              const push = (minDist - dist) / 2;
+              const nx = dx / dist;
+              const ny = dy / dist;
+              a.x = (a.x ?? 0) - nx * push;
+              a.y = (a.y ?? 0) - ny * push;
+              b.x = (b.x ?? 0) + nx * push;
+              b.y = (b.y ?? 0) + ny * push;
+            } else {
+              // Coincident nodes — nudge in a deterministic direction
+              const angle = ((i * 7 + j * 13) % 100) / 100 * Math.PI * 2;
+              const push = minDist / 2;
+              a.x = (a.x ?? 0) - Math.cos(angle) * push;
+              a.y = (a.y ?? 0) - Math.sin(angle) * push;
+              b.x = (b.x ?? 0) + Math.cos(angle) * push;
+              b.y = (b.y ?? 0) + Math.sin(angle) * push;
+            }
+          }
+        }
       }
+
+      // Push nodes out of legend box
+      for (const n of simNodes) {
+        const x = n.x ?? WIDTH / 2;
+        const y = n.y ?? HEIGHT / 2;
+        if (
+          x + n.r > legendBox.left &&
+          x - n.r < legendBox.right &&
+          y + n.r > legendBox.top &&
+          y - n.r < legendBox.bottom
+        ) {
+          n.x = legendBox.left - n.r - 2;
+        }
+      }
+
+      // Clamp to padded bounds
+      for (const n of simNodes) {
+        n.x = Math.max(PAD + n.r, Math.min(WIDTH - PAD - n.r, n.x ?? WIDTH / 2));
+        n.y = Math.max(PAD + n.r, Math.min(HEIGHT - PAD - n.r, n.y ?? HEIGHT / 2));
+      }
+
+      if (overlaps === 0) break;
+    }
+
+    const posMap = new Map<string, { x: number; y: number }>();
+    for (const n of simNodes) {
+      posMap.set(n.id, { x: n.x ?? WIDTH / 2, y: n.y ?? HEIGHT / 2 });
     }
 
     setPositions(posMap);
