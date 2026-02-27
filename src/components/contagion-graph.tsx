@@ -137,7 +137,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       left: WIDTH - PAD - 88,
       top: PAD - 10,
       right: WIDTH - PAD + 6,
-      bottom: PAD + 4 * 18 + 20,
+      bottom: PAD + 5 * 18 + 3 * 16 + 50,
     };
 
     // Post-simulation overlap resolution — guarantees no overlapping nodes
@@ -259,6 +259,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   // Tooltip state
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
+  const [showTypes, setShowTypes] = useState(false);
 
   // Compute connected nodes/edges for node-hover spotlight
   const { connectedNodes, connectedEdges } = useMemo(() => {
@@ -366,8 +367,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 : link.type === "wrapper" ? "2 3"
                 : undefined;
 
-              // Show type encoding when: directly hovered, or connected to hovered node
-              const showType = isEdgeDirectHovered || (isNodeHovered && isConnected);
+              // Show type encoding when: toggle on, directly hovered, or connected to hovered node
+              const showType = showTypes || isEdgeDirectHovered || (isNodeHovered && isConnected);
               const edgeOpacity = isNodeHovered && !isConnected && !isEdgeDirectHovered
                 ? 0.05
                 : isEdgeDirectHovered ? 0.9 : so;
@@ -549,7 +550,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               x={WIDTH - PAD - 88}
               y={PAD - 10}
               width={94}
-              height={4 * 18 + 30}
+              height={5 * 18 + 3 * 16 + 50}
               rx={6}
               fill="var(--color-card, #1a1a2e)"
               fillOpacity={0.85}
@@ -557,7 +558,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               strokeWidth={1}
             />
 
-            {/* Legend */}
+            {/* Grade legend */}
             {[
               { label: "A", color: GRADE_RADAR_COLORS.A },
               { label: "B", color: GRADE_RADAR_COLORS.B },
@@ -572,6 +573,32 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 </text>
               </g>
             ))}
+
+            {/* Edge type legend entries */}
+            {[
+              { label: "Collateral", color: "#64748b", dash: undefined as string | undefined },
+              { label: "Mechanism", color: "#f59e0b", dash: "6 3" },
+              { label: "Wrapper", color: "#8b5cf6", dash: "2 3" },
+            ].map(({ label, color, dash }, i) => (
+              <g key={label} transform={`translate(${WIDTH - PAD - 80}, ${PAD + 5 * 18 + 8 + i * 16})`}>
+                <line x1={0} y1={5} x2={16} y2={5} stroke={color} strokeWidth={2} strokeDasharray={dash} />
+                <text x={22} y={9} fill="currentColor" fontSize={9} opacity={0.6}>{label}</text>
+              </g>
+            ))}
+
+            {/* Show types toggle */}
+            <g
+              transform={`translate(${WIDTH - PAD - 80}, ${PAD + 5 * 18 + 8 + 3 * 16 + 4})`}
+              style={{ cursor: "pointer" }}
+              onClick={() => setShowTypes((v) => !v)}
+            >
+              <rect x={-4} y={-2} width={76} height={16} rx={4}
+                fill={showTypes ? "var(--color-accent, #3b82f6)" : "var(--color-muted, #333)"}
+                fillOpacity={showTypes ? 0.2 : 0.4} />
+              <text x={4} y={10} fill="currentColor" fontSize={9} opacity={0.7} fontWeight={500}>
+                {showTypes ? "\u25b8 Types on" : "\u25b9 Show types"}
+              </text>
+            </g>
           </svg>
         </div>
       </CardContent>
