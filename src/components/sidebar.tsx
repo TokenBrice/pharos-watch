@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,7 +13,27 @@ import { trackEvent } from "@/lib/analytics";
 const STORAGE_KEY = "pharos-sidebar-expanded";
 const HOVER_DELAY = 200;
 
-function useExpanded() {
+/* ------------------------------------------------------------------ */
+/*  Context — shares pinned state between Sidebar and SidebarSpacer   */
+/* ------------------------------------------------------------------ */
+
+interface SidebarState {
+  expanded: boolean;
+  pinned: boolean;
+  togglePin: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+}
+
+const SidebarContext = createContext<SidebarState | null>(null);
+
+function useSidebar() {
+  const ctx = useContext(SidebarContext);
+  if (!ctx) throw new Error("useSidebar must be used within <SidebarProvider>");
+  return ctx;
+}
+
+function useExpanded(): SidebarState {
   const [pinned, setPinned] = useState(true);
   const [hovered, setHovered] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,6 +65,20 @@ function useExpanded() {
   const expanded = pinned || hovered;
 
   return { expanded, pinned, togglePin, onMouseEnter, onMouseLeave };
+}
+
+export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const value = useExpanded();
+  return <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>;
+}
+
+export function SidebarSpacer() {
+  const { pinned } = useSidebar();
+  return (
+    <div
+      className={`hidden md:block shrink-0 transition-all duration-200 ${pinned ? "w-[220px]" : "w-14"}`}
+    />
+  );
 }
 
 function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded: boolean; isActive: boolean }) {
@@ -98,7 +132,7 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
 }
 
 export function Sidebar() {
-  const { expanded, pinned, togglePin, onMouseEnter, onMouseLeave } = useExpanded();
+  const { expanded, pinned, togglePin, onMouseEnter, onMouseLeave } = useSidebar();
   const pathname = usePathname();
 
   useEffect(() => {

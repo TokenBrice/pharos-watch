@@ -4,7 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Header } from "@/components/header";
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar, SidebarProvider, SidebarSpacer } from "@/components/sidebar";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
@@ -96,15 +96,16 @@ export default function RootLayout({
         </a>
         <Providers>
           <Header />
-          <div className="flex min-h-screen">
-            <Sidebar />
-            {/* Spacer matches collapsed sidebar width on desktop */}
-            <div className="hidden md:block w-14 shrink-0" />
-            <div className="flex-1 flex flex-col min-w-0">
-              <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">{children}</main>
-              <Footer />
+          <SidebarProvider>
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <SidebarSpacer />
+              <div className="flex-1 flex flex-col min-w-0">
+                <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">{children}</main>
+                <Footer />
+              </div>
             </div>
-          </div>
+          </SidebarProvider>
           <ScrollToTop />
         </Providers>
         <script
