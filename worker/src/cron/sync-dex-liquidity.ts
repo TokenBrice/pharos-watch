@@ -2157,7 +2157,8 @@ async function persistScores(
     );
   }
 
-  // Write zero-score rows for tracked stablecoins with no DEX presence
+  // Write placeholder rows for tracked stablecoins with no DEX presence
+  // liquidity_score = NULL so report cards treat them as NR (not rated)
   for (const meta of TRACKED_STABLECOINS) {
     if (!metrics.has(meta.id)) {
       stmts.push(
@@ -2167,7 +2168,7 @@ async function persistScores(
               (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
                pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json,
                top_pools_json, liquidity_score, effective_tvl_usd, updated_at)
-            VALUES (?, ?, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, 0, 0, ?)`
+            VALUES (?, ?, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, 0, ?)`
           )
           .bind(meta.id, meta.symbol, nowSec),
       );
@@ -2204,7 +2205,7 @@ async function writeHistoricalSnapshots(
             .bind(id, data.tvl, data.vol24h, data.score, todayMidnight)
         );
       }
-      // Also insert zero rows for coins without DEX presence
+      // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
       for (const meta of TRACKED_STABLECOINS) {
         if (!scoreMap.has(meta.id)) {
           snapStmts.push(
@@ -2212,7 +2213,7 @@ async function writeHistoricalSnapshots(
               .prepare(
                 `INSERT OR IGNORE INTO dex_liquidity_history
                   (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date)
-                VALUES (?, 0, 0, 0, ?)`
+                VALUES (?, 0, 0, NULL, ?)`
               )
               .bind(meta.id, todayMidnight)
           );
