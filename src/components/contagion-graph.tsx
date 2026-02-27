@@ -286,7 +286,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
           >
-            {/* Clip paths for circular logo masking */}
+            {/* Clip paths for circular logo masking + arrowhead markers */}
             <defs>
               {nodes.map((node) => {
                 const pos = positions.get(node.id);
@@ -298,25 +298,57 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   </clipPath>
                 );
               })}
+              {/* Arrowhead markers */}
+              <marker id="arrow-default" viewBox="0 0 10 6" refX="10" refY="3"
+                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,3 L0,6 Z" fill="currentColor" opacity={0.4} />
+              </marker>
+              <marker id="arrow-collateral" viewBox="0 0 10 6" refX="10" refY="3"
+                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,3 L0,6 Z" fill="#64748b" />
+              </marker>
+              <marker id="arrow-mechanism" viewBox="0 0 10 6" refX="10" refY="3"
+                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,3 L0,6 Z" fill="#f59e0b" />
+              </marker>
+              <marker id="arrow-wrapper" viewBox="0 0 10 6" refX="10" refY="3"
+                markerWidth="8" markerHeight="5" orient="auto-start-reverse">
+                <path d="M0,0 L10,3 L0,6 Z" fill="#8b5cf6" />
+              </marker>
             </defs>
 
-            {/* Edges */}
+            {/* Edges — arrow direction: upstream (target in data) → dependent (source in data) */}
             {links.map((link, i) => {
               const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
               const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
-              const srcPos = positions.get(srcId);
-              const tgtPos = positions.get(tgtId);
-              if (!srcPos || !tgtPos) return null;
+              // srcId = dependent, tgtId = upstream (from data model)
+              // Arrow direction: upstream → dependent, so line goes tgt → src
+              const fromPos = positions.get(tgtId); // upstream
+              const toPos = positions.get(srcId);   // dependent
+              const toNode = nodes.find((n) => n.id === srcId);
+              if (!fromPos || !toPos || !toNode) return null;
+
+              // Offset endpoint by target node radius so arrowhead touches boundary
+              const dx = toPos.x - fromPos.x;
+              const dy = toPos.y - fromPos.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const endX = dist > 0 ? toPos.x - (dx / dist) * (toNode.r + 4) : toPos.x;
+              const endY = dist > 0 ? toPos.y - (dy / dist) * (toNode.r + 4) : toPos.y;
+
+              const sw = 1 + link.weight * 5;
+              const so = 0.15 + link.weight * 0.45;
+
               return (
                 <line
                   key={`${srcId}-${tgtId}-${i}`}
-                  x1={srcPos.x}
-                  y1={srcPos.y}
-                  x2={tgtPos.x}
-                  y2={tgtPos.y}
+                  x1={fromPos.x}
+                  y1={fromPos.y}
+                  x2={endX}
+                  y2={endY}
                   stroke="currentColor"
-                  strokeWidth={Math.max(1, link.weight * 3)}
-                  opacity={0.15}
+                  strokeWidth={sw}
+                  opacity={so}
+                  markerEnd="url(#arrow-default)"
                 />
               );
             })}
