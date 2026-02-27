@@ -32,11 +32,23 @@ export function hasMissingPrice(a: PeggedAsset): boolean {
 }
 
 /** Guard against corrupted API prices that would break peg deviation calculations */
-export function isReasonablePrice(price: number, pegType: string | undefined): boolean {
+export function isReasonablePrice(price: number, pegType: string | undefined, fxRates?: Record<string, number>): boolean {
   if (!pegType) return price > 0 && price < 100_000;
+
+  // USD is the base currency — no FX rate, keep tight hardcoded bounds
   if (pegType.includes("USD")) {
     return price > 0.01 && price < 1.19; // USD stablecoins never legitimately trade above $1.19 — higher values are CG data artifacts
   }
+
+  // Dynamic bounds from live FX rates: 0.01x to 2x
+  if (fxRates) {
+    const fxRate = fxRates[pegType];
+    if (fxRate && fxRate > 0) {
+      return price > 0.01 * fxRate && price < 2 * fxRate;
+    }
+  }
+
+  // Hardcoded fallback when FX rates unavailable (first boot, cache miss)
   if (pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL") || pegType.includes("REAL")) {
     return price > 0.01 && price < 2;
   }
