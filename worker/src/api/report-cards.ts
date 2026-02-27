@@ -10,6 +10,7 @@ import { DEAD_STABLECOINS } from "../../../src/lib/dead-stablecoins";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
+  PEG_MULTIPLIER_EXPONENT,
   GRADE_THRESHOLDS,
   scorePegStability,
   scoreLiquidity,
@@ -259,6 +260,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     methodology: {
       version: METHODOLOGY_VERSION,
       weights: DIMENSION_WEIGHTS,
+      pegMultiplierExponent: PEG_MULTIPLIER_EXPONENT,
       thresholds: GRADE_THRESHOLDS,
     },
     dependencyGraph: { edges },

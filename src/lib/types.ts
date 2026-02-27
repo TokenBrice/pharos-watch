@@ -443,6 +443,7 @@ export interface ReportCardsResponse {
   methodology: {
     version: string;
     weights: Record<DimensionKey, number>;
+    pegMultiplierExponent: number;
     thresholds: { grade: ReportCardGrade; min: number }[];
   };
   dependencyGraph: {

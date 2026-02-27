@@ -284,7 +284,7 @@ export default function AboutPage() {
                 </Link>
               </div>
               <p className="text-sm text-muted-foreground">
-                Comprehensive A+&ndash;F stablecoin grades with five dimensions: peg, liquidity, resilience, decentralization, and dependency risk
+                Comprehensive A+&ndash;F stablecoin grades: four base dimensions (liquidity, resilience, decentralization, dependency risk) with a peg stability multiplier
               </p>
             </CardContent>
           </Card>
@@ -417,15 +417,15 @@ export default function AboutPage() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             Pharos synthesizes multiple data signals into a single transparent grade per stablecoin.
-            Each safety score distills peg stability, liquidity depth, resilience,
-            decentralization, and dependency risk into a letter grade so you can compare stablecoins at a glance.
-            The overall score is a weighted sum of 5 dimension scores (each 0&ndash;100), mapped to a letter grade.
-            When some dimensions lack data (NR), their weight is redistributed proportionally among rated ones.
+            The overall score is computed in two steps: first, a weighted average of four base dimensions
+            (liquidity, resilience, decentralization, dependency risk), then a peg stability multiplier
+            that penalizes coins with poor pegs while barely affecting well-pegged ones.
+            When some base dimensions lack data (NR), their weight is redistributed proportionally among rated ones.
           </p>
 
           {/* Dimensions table */}
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Grading Dimensions</h3>
+            <h3 className="text-foreground font-medium">Base Dimensions (weighted average)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -438,20 +438,14 @@ export default function AboutPage() {
                 </thead>
                 <tbody className="divide-y">
                   <tr>
-                    <td className="py-2 pr-4 text-foreground">Peg Stability</td>
-                    <td className="py-2 pr-4">25%</td>
-                    <td className="py-2 pr-4">Peg score</td>
-                    <td className="py-2">Direct passthrough of the peg score (see below). NAV tokens receive NR</td>
-                  </tr>
-                  <tr>
                     <td className="py-2 pr-4 text-foreground">Liquidity</td>
-                    <td className="py-2 pr-4">20%</td>
+                    <td className="py-2 pr-4">25%</td>
                     <td className="py-2 pr-4">DEX liquidity score</td>
                     <td className="py-2">Direct passthrough of the liquidity score (see below)</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Resilience</td>
-                    <td className="py-2 pr-4">20%</td>
+                    <td className="py-2 pr-4">25%</td>
                     <td className="py-2 pr-4">Chain risk, collateral, custody, blacklist</td>
                     <td className="py-2">Structural resilience across 4 equally-weighted sub-factors</td>
                   </tr>
@@ -463,13 +457,25 @@ export default function AboutPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
-                    <td className="py-2 pr-4">25%</td>
+                    <td className="py-2 pr-4">30%</td>
                     <td className="py-2 pr-4">Upstream grades, collateral weights</td>
                     <td className="py-2">Inherited risk from upstream stablecoins, weighted by exposure</td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Peg multiplier */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Peg Stability Multiplier</h3>
+            <p>
+              After computing the base score, peg stability is applied as a power-curve multiplier:
+              final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(PSI&nbsp;/&nbsp;100)<sup>0.20</sup>.
+              Coins with strong pegs (90+) are barely affected (~2% penalty), while coins with broken pegs
+              are properly penalized (e.g. PSI&nbsp;10 &rarr; 37% penalty). NAV tokens (PSI&nbsp;=&nbsp;NR) receive
+              multiplier&nbsp;1.0 since peg tracking does not apply to them.
+            </p>
           </div>
 
           {/* Resilience sub-factors */}
@@ -576,17 +582,17 @@ export default function AboutPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr><td className="py-1.5 pr-8 text-foreground">A+</td><td className="py-1.5">97&ndash;100</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">A</td><td className="py-1.5">93&ndash;96</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">A&minus;</td><td className="py-1.5">90&ndash;92</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">B+</td><td className="py-1.5">85&ndash;89</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">B</td><td className="py-1.5">80&ndash;84</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">B&minus;</td><td className="py-1.5">75&ndash;79</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">C+</td><td className="py-1.5">70&ndash;74</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">C</td><td className="py-1.5">65&ndash;69</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">C&minus;</td><td className="py-1.5">60&ndash;64</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">D</td><td className="py-1.5">50&ndash;59</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">F</td><td className="py-1.5">0&ndash;49</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A+</td><td className="py-1.5">92&ndash;100</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A</td><td className="py-1.5">88&ndash;91</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A&minus;</td><td className="py-1.5">85&ndash;87</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B+</td><td className="py-1.5">80&ndash;84</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B</td><td className="py-1.5">75&ndash;79</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B&minus;</td><td className="py-1.5">70&ndash;74</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C+</td><td className="py-1.5">65&ndash;69</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C</td><td className="py-1.5">60&ndash;64</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C&minus;</td><td className="py-1.5">55&ndash;59</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">D</td><td className="py-1.5">45&ndash;54</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">F</td><td className="py-1.5">0&ndash;44</td></tr>
                   <tr><td className="py-1.5 pr-8 text-foreground">NR</td><td className="py-1.5">Not enough data</td></tr>
                 </tbody>
               </table>
@@ -597,8 +603,9 @@ export default function AboutPage() {
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Key Design Decisions</h3>
             <ul className="list-disc list-inside space-y-1">
-              <li><span className="text-foreground font-medium">NR (Not Rated)</span> is used when fewer than 3 dimensions have data &mdash; no misleading partial grades</li>
-              <li>Weight is redistributed proportionally among rated dimensions when some are NR</li>
+              <li><span className="text-foreground font-medium">NR (Not Rated)</span> is used when fewer than 2 base dimensions have data &mdash; no misleading partial grades</li>
+              <li>Weight is redistributed proportionally among rated base dimensions when some are NR</li>
+              <li>Peg stability acts as a multiplier, not a base dimension &mdash; maintaining a peg is table stakes, not a differentiator</li>
               <li>Cemetery (defunct) coins receive a permanent F</li>
               <li>Decentralization score is structural, not a value judgment</li>
             </ul>
@@ -616,7 +623,7 @@ export default function AboutPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v3.3. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v4.0. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>

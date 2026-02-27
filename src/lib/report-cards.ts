@@ -27,15 +27,23 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "3.3";
+export const METHODOLOGY_VERSION = "4.0";
 
+/**
+ * Base dimension weights for the overall grade.
+ * Peg Stability has weight 0 here — it is applied as a post-hoc power-curve
+ * multiplier via PEG_MULTIPLIER_EXPONENT instead (see computeOverallGrade).
+ */
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
-  pegStability: 0.25,
-  liquidity: 0.20,
-  resilience: 0.20,
+  pegStability: 0,
+  liquidity: 0.25,
+  resilience: 0.25,
   decentralization: 0.10,
-  dependencyRisk: 0.25,
+  dependencyRisk: 0.30,
 };
+
+/** Peg stability multiplier: final = base × (PSI/100)^exponent */
+export const PEG_MULTIPLIER_EXPONENT = 0.20;
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg Stability",
@@ -53,18 +61,19 @@ export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
   dependencyRisk: "Dep.",
 };
 
-/** Sorted descending by min — first match wins. */
+/** Sorted descending by min — first match wins. Lowered 5pts in v4.0 to
+ *  compensate for structural deflation from removing peg from the base. */
 export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
-  { grade: "A+", min: 97 },
-  { grade: "A", min: 93 },
-  { grade: "A-", min: 90 },
-  { grade: "B+", min: 85 },
-  { grade: "B", min: 80 },
-  { grade: "B-", min: 75 },
-  { grade: "C+", min: 70 },
-  { grade: "C", min: 65 },
-  { grade: "C-", min: 60 },
-  { grade: "D", min: 50 },
+  { grade: "A+", min: 92 },
+  { grade: "A", min: 88 },
+  { grade: "A-", min: 85 },
+  { grade: "B+", min: 80 },
+  { grade: "B", min: 75 },
+  { grade: "B-", min: 70 },
+  { grade: "C+", min: 65 },
+  { grade: "C", min: 60 },
+  { grade: "C-", min: 55 },
+  { grade: "D", min: 45 },
   { grade: "F", min: 0 },
 ];
 
@@ -516,38 +525,56 @@ export function scoreDependencyRisk(
 // ---------------------------------------------------------------------------
 
 /**
- * Weighted sum of rated dimensions. NR dimensions have their weight redistributed.
- * Requires at least 3 rated dimensions for an overall grade, else NR.
+ * 4-factor base score (liquidity, resilience, decentralization, dependency risk)
+ * with peg stability applied as a post-hoc power-curve multiplier.
+ *
+ * Base = weighted average of rated non-peg dimensions (NR dimensions redistribute).
+ * Final = base × (PSI / 100) ^ PEG_MULTIPLIER_EXPONENT
+ *
+ * PSI = null (NAV token / no data) → multiplier = 1.0 (no penalty).
+ * PSI = 0 (dead coin) → multiplier = 0.
+ *
+ * Requires at least 2 rated base dimensions for an overall grade, else NR.
  */
 export function computeOverallGrade(
   dimensions: Record<DimensionKey, ReportCardDimension>,
 ): { grade: ReportCardGrade; score: number | null; ratedDimensions: number } {
   const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
-  // Separate rated vs unrated
+  // Compute base score from non-peg dimensions
   let ratedWeight = 0;
   let weightedSum = 0;
-  let ratedCount = 0;
+  let baseRatedCount = 0;
 
   for (const key of keys) {
+    if (key === "pegStability") continue; // applied as multiplier below
     const dim = dimensions[key];
     if (dim.score !== null) {
       ratedWeight += DIMENSION_WEIGHTS[key];
       weightedSum += dim.score * DIMENSION_WEIGHTS[key];
-      ratedCount++;
+      baseRatedCount++;
     }
   }
 
-  // Need at least 3 rated dimensions
-  if (ratedCount < 3 || ratedWeight === 0) {
-    return { grade: "NR", score: null, ratedDimensions: ratedCount };
+  // Need at least 2 rated base dimensions
+  if (baseRatedCount < 2 || ratedWeight === 0) {
+    return { grade: "NR", score: null, ratedDimensions: baseRatedCount };
   }
 
   // Redistribute weight from NR dimensions proportionally
-  const score = Math.round(weightedSum / ratedWeight);
-  const clamped = Math.max(0, Math.min(100, score));
+  let score = weightedSum / ratedWeight;
 
-  return { grade: scoreToGrade(clamped), score: clamped, ratedDimensions: ratedCount };
+  // Apply peg stability as a power-curve multiplier
+  const pegScore = dimensions.pegStability.score;
+  if (pegScore !== null) {
+    score *= pegScore === 0 ? 0 : Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
+  }
+  // pegScore === null → multiplier 1.0, no change
+
+  const clamped = Math.max(0, Math.min(100, Math.round(score)));
+  const ratedDimensions = baseRatedCount + (pegScore !== null ? 1 : 0);
+
+  return { grade: scoreToGrade(clamped), score: clamped, ratedDimensions };
 }
 
 // ---------------------------------------------------------------------------

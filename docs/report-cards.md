@@ -2,24 +2,36 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade
+## Overall Grade (v4.0)
 
-Weighted sum of 5 dimension scores (each 0–100), mapped to a letter grade. NR dimensions have their weight redistributed proportionally among rated dimensions. Requires at least 3 rated dimensions; otherwise overall = NR. Cemetery coins get a permanent F.
+Two-step computation:
+
+1. **Base score**: weighted average of 4 base dimensions (each 0–100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
+2. **Peg multiplier**: `final = base × (PSI / 100) ^ 0.20`. Coins with good pegs (90+) barely affected (~2% penalty). Coins with broken pegs get properly penalized (PSI 10 → 37% penalty). PSI = NR (NAV tokens) → multiplier 1.0 (no penalty). PSI = 0 → multiplier 0.
+
+Cemetery coins get a permanent F.
 
 ## Dimensions
 
+### Base dimensions (weighted sum)
+
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
-| **Peg Stability** | 25% | `pegScore` from peg summary | Direct passthrough of composite peg score. NAV tokens → NR |
-| **Liquidity** | 20% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
-| **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
+| **Liquidity** | 25% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
+| **Resilience** | 25% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 10% | Governance type + chain risk | Base: `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0. Chain-risk penalty applied for non-Ethereum chains |
-| **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
+| **Dependency Risk** | 30% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
+
+### Peg Stability (multiplier)
+
+| Source | Scoring |
+|--------|---------|
+| `pegScore` from peg summary | Applied as `(PSI/100)^0.20` multiplier to base score. NAV tokens → 1.0 (no penalty) |
 
 ### Peg Stability Details
 
 - Direct passthrough of `computePegScore()` output (see `docs/stability-index.md` for the composite formula)
-- NAV tokens (yield-accruing, price-appreciating) receive NR — peg tracking not applicable
+- NAV tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
 - Yield-bearing annotation added to detail text
 
 ### Liquidity Details
@@ -136,18 +148,20 @@ The ceiling ensures that a coin which fundamentally depends on an upstream stabl
 
 ## Grade Thresholds
 
+Lowered 5 points in v4.0 to compensate for structural deflation from removing peg from the base.
+
 | Grade | Min Score |
 |-------|-----------|
-| A+ | 97 |
-| A | 93 |
-| A- | 90 |
-| B+ | 85 |
-| B | 80 |
-| B- | 75 |
-| C+ | 70 |
-| C | 65 |
-| C- | 60 |
-| D | 50 |
+| A+ | 92 |
+| A | 88 |
+| A- | 85 |
+| B+ | 80 |
+| B | 75 |
+| B- | 70 |
+| C+ | 65 |
+| C | 60 |
+| C- | 55 |
+| D | 45 |
 | F | 0 |
 | NR | null score |
 
