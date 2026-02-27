@@ -260,6 +260,23 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
 
+  // Compute connected nodes/edges for node-hover spotlight
+  const { connectedNodes, connectedEdges } = useMemo(() => {
+    if (!hoveredId) return { connectedNodes: new Set<string>(), connectedEdges: new Set<number>() };
+    const cNodes = new Set<string>();
+    const cEdges = new Set<number>();
+    links.forEach((link, i) => {
+      const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
+      const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
+      if (srcId === hoveredId || tgtId === hoveredId) {
+        cNodes.add(srcId);
+        cNodes.add(tgtId);
+        cEdges.add(i);
+      }
+    });
+    return { connectedNodes: cNodes, connectedEdges: cEdges };
+  }, [hoveredId, links]);
+
   if (nodes.length === 0) return null;
 
   return (
@@ -336,7 +353,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const endX = dist > 0 ? toPos.x - (dx / dist) * (toNode.r + 4) : toPos.x;
               const endY = dist > 0 ? toPos.y - (dy / dist) * (toNode.r + 4) : toPos.y;
 
-              const isEdgeHovered = hoveredEdge === i;
+              const isEdgeDirectHovered = hoveredEdge === i;
+              const isConnected = connectedEdges.has(i);
+              const isNodeHovered = !!hoveredId;
               const sw = 1 + link.weight * 5;
               const so = 0.15 + link.weight * 0.45;
 
@@ -346,6 +365,12 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const dashArray = link.type === "mechanism" ? "6 3"
                 : link.type === "wrapper" ? "2 3"
                 : undefined;
+
+              // Show type encoding when: directly hovered, or connected to hovered node
+              const showType = isEdgeDirectHovered || (isNodeHovered && isConnected);
+              const edgeOpacity = isNodeHovered && !isConnected && !isEdgeDirectHovered
+                ? 0.05
+                : isEdgeDirectHovered ? 0.9 : so;
 
               return (
                 <g key={`${srcId}-${tgtId}-${i}`}>
@@ -360,11 +385,11 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   {/* Visible edge */}
                   <line
                     x1={fromPos.x} y1={fromPos.y} x2={endX} y2={endY}
-                    stroke={isEdgeHovered ? typeColor : "currentColor"}
-                    strokeWidth={isEdgeHovered ? sw + 1 : sw}
-                    opacity={isEdgeHovered ? 0.9 : so}
-                    strokeDasharray={isEdgeHovered ? dashArray : undefined}
-                    markerEnd={isEdgeHovered ? `url(#arrow-${link.type})` : "url(#arrow-default)"}
+                    stroke={showType ? typeColor : "currentColor"}
+                    strokeWidth={isEdgeDirectHovered ? sw + 1 : sw}
+                    opacity={edgeOpacity}
+                    strokeDasharray={showType ? dashArray : undefined}
+                    markerEnd={showType ? `url(#arrow-${link.type})` : "url(#arrow-default)"}
                     pointerEvents="none"
                   />
                 </g>
@@ -376,6 +401,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const pos = positions.get(node.id);
               if (!pos) return null;
               const isHovered = hoveredId === node.id;
+              const isNodeDimmed = hoveredId !== null && hoveredId !== node.id && !connectedNodes.has(node.id);
               const color = gradeColor(node.grade);
               const innerR = node.r - RING_WIDTH;
               const logoUrl = logos?.[node.id];
@@ -385,7 +411,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   key={node.id}
                   style={{ cursor: "pointer" }}
                   onMouseDown={(e) => handleMouseDown(e, node.id)}
-                  onMouseEnter={() => setHoveredId(node.id)}
+                  onMouseEnter={() => { setHoveredId(node.id); setHoveredEdge(null); }}
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => { if (!dragId) router.push(`/stablecoin/${node.id}`); }}
                 >
@@ -398,7 +424,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     fillOpacity={logoUrl ? 1 : 0.6}
                     stroke={color}
                     strokeWidth={RING_WIDTH}
-                    opacity={isHovered ? 1 : 0.85}
+                    opacity={isNodeDimmed ? 0.4 : (isHovered ? 1 : 0.85)}
                   />
 
                   {/* Logo image (clipped to circle) or text fallback */}
