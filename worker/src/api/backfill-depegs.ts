@@ -257,12 +257,14 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   // Get peg rates from cached stablecoin data
   const cached = await getCache(db, "stablecoins");
   let pegRates: Record<string, number> = { peggedUSD: 1 };
+  let fxRates: Record<string, number> | undefined;
 
   if (cached) {
     try {
       const data = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
       const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
       ({ rates: pegRates } = derivePegRates(data.peggedAssets, metaById, data.fxFallbackRates));
+      fxRates = data.fxFallbackRates;
     } catch (err) {
       console.error("[backfill-depegs] Failed to parse peg rates from cache:", err);
     }
@@ -366,7 +368,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     }
 
     try {
-      const events = await backfillCoin(meta, geckoId, getPegRef, supplyByDate);
+      const events = await backfillCoin(meta, geckoId, getPegRef, supplyByDate, fxRates);
 
       // null = CG had no price data → preserve existing events
       if (events === null) {
@@ -441,7 +443,8 @@ async function backfillCoin(
   meta: StablecoinMeta,
   geckoId: string,
   getPegRef: (timestamp: number) => number,
-  supplyByDate: Map<number, number>
+  supplyByDate: Map<number, number>,
+  fxRates?: Record<string, number>,
 ): Promise<BackfillEvent[] | null> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
   let prices = await fetchCgPriceHistoryHourly(geckoId);
@@ -475,7 +478,7 @@ async function backfillCoin(
     });
   }
 
-  return extractDepegEvents(prices, getPegRef, pegType, supplyByDate);
+  return extractDepegEvents(prices, getPegRef, pegType, supplyByDate, fxRates);
 }
 
 async function fetchCgPriceHistoryDaily(geckoId: string): Promise<PricePoint[]> {
@@ -614,7 +617,8 @@ function extractDepegEvents(
   prices: PricePoint[],
   getPegRef: (timestamp: number) => number,
   pegType: string,
-  supplyByDate: Map<number, number>
+  supplyByDate: Map<number, number>,
+  fxRates?: Record<string, number>,
 ): BackfillEvent[] {
   const threshold = getDepegThresholdBps(pegType);
   const events: BackfillEvent[] = [];
@@ -652,7 +656,7 @@ function extractDepegEvents(
   for (const point of prices) {
     const { timestamp, price } = point;
     if (price <= 0) continue;
-    if (!isReasonablePrice(price, pegType)) continue;
+    if (!isReasonablePrice(price, pegType, fxRates)) continue;
 
     if (supplyByDate.size > 0) {
       const supply = findNearestSupply(supplyByDate, timestamp);
