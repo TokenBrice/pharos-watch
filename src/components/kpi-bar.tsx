@@ -145,29 +145,29 @@ export function KpiBar() {
     <Card className="p-0 overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border/50">
         <KpiCell
-          label="PSI"
+          label="Pharos Stability Index"
           value={psiScore}
           sublabel={psiSublabel}
           valueClassName={psiColorClass}
         />
         <KpiCell
-          label="Total MCAP"
+          label="Total Stablecoin Mcap"
           value={formatCurrency(totalMcap, 1)}
           sublabel={changeSublabel}
           sublabelClassName={deltaColor(mcapChange24hPct)}
         />
         <KpiCell
-          label="24H DEX Vol"
+          label="Tracked 24H DEX Vol"
           value={formatCurrency(totalVol24h, 1)}
           sublabel={`${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}% vs 7d avg`}
           sublabelClassName={deltaColor(volVs7dAvgPct)}
         />
         <KpiCell
-          label="Coins at Peg"
+          label="Stablecoins at Peg"
           value={`${coinsAtPeg} / ${totalTracked}`}
         />
         <KpiCell
-          label="Depegs Today"
+          label="Depeg Events Today"
           value={depegToday}
           sublabel={`${depegDelta >= 0 ? "+" : ""}${depegDelta} vs yesterday`}
           sublabelClassName={deltaColor(-depegDelta)}
