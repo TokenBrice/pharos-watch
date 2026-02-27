@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { GRADE_RADAR_COLORS, gradeRange } from "@/lib/report-cards";
-import type { ReportCard, ReportCardGrade } from "@/lib/types";
+import type { DependencyType, ReportCard, ReportCardGrade } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,6 +31,7 @@ interface GraphNode extends SimulationNodeDatum {
 
 interface GraphLink extends SimulationLinkDatum<GraphNode> {
   weight: number;
+  type: DependencyType;
 }
 
 interface ContagionGraphProps {
@@ -89,7 +90,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       if (!idSet.has(meta.id) || !meta.dependencies) continue;
       for (const dep of meta.dependencies) {
         if (idSet.has(dep.id)) {
-          graphLinks.push({ source: meta.id, target: dep.id, weight: dep.weight });
+          graphLinks.push({ source: meta.id, target: dep.id, weight: dep.weight, type: dep.type ?? "collateral" });
         }
       }
     }
