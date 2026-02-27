@@ -193,7 +193,7 @@ export function scoreLiquidity(
   liq: Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount"> | undefined,
 ): ReportCardDimension {
   if (!liq || liq.liquidityScore === null) {
-    return { grade: "NR", score: null, detail: "No DEX liquidity data available" };
+    return { grade: scoreToGrade(66), score: 66, detail: "No DEX liquidity data — assumed average (66)" };
   }
 
   const score = Math.round(Math.max(0, Math.min(100, liq.liquidityScore)));

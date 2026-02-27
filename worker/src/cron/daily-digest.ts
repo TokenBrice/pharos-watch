@@ -1,9 +1,21 @@
-import type { StablecoinData } from "../../../src/lib/types";
+import type { StablecoinData, DexLiquidityData, PegSummaryCoin } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
-import { TRACKED_IDS } from "../../../src/lib/stablecoins";
+import { TRACKED_IDS, TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { formatCurrency } from "../../../src/lib/format";
+import { computePegScore } from "../../../src/lib/peg-score";
+import { derivePegRates } from "../../../src/lib/peg-rates";
+import {
+  scorePegStability,
+  scoreLiquidity,
+  scoreResilience,
+  scoreDecentralization,
+  scoreDependencyRisk,
+  computeOverallGrade,
+  scoreToGrade,
+} from "../../../src/lib/report-cards";
 import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
+import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 
 const SYSTEM_PROMPT =
@@ -26,6 +38,14 @@ const SYSTEM_PROMPT =
   "Open with the Pharos Stability Index score and its condition band. " +
   "Reference the band name naturally — 'Another day in BEDROCK' or 'We\\'ve slipped into TREMOR for the first time since March.' " +
   "When the band changed from yesterday, lead with that transition — band shifts are the headline. " +
+  "You may also receive enrichment data: safety scores, blacklist activity, supply velocity, " +
+  "and recently resolved depegs. Use these to add depth, not length. Pick the 1-2 most " +
+  "interesting stories from all available data. Safety scores reveal structural fragility " +
+  "that prices miss — a B-rated coin freezing $145M is more interesting than the grade alone. " +
+  "Don't list grades mechanically — weave them into observations. A 'D' for an $8M coin is " +
+  "not worth mentioning. Blacklist destroy events and direction reversals in supply flows are " +
+  "high-signal — use them when they contrast with PSI calm. Resolved depegs are only " +
+  "interesting if the recovery was dramatic or the coin is large. " +
   "You MUST respond with valid JSON: {\"title\": \"...\", \"extended\": \"...\", \"text\": \"...\"}. " +
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
@@ -48,6 +68,31 @@ interface DigestInputData {
   } | null;
   stabilityIndex: { score: number; band: string; components: { severity: number; breadth: number; trend: number } } | null;
   yesterdayIndex: { score: number; band: string } | null;
+
+  // Enrichment signals (all optional — omitted when below threshold)
+  blacklistActivity?: {
+    eventCount: number;
+    totalAmountUsd: number;
+    topEvents: { symbol: string; chain: string; type: "blacklist" | "destroy"; amountUsd: number }[];
+  };
+  supplyVelocity?: {
+    coin: string;
+    change1d: number;
+    change7d: number;
+    signal: string;
+  }[];
+  safetyScores?: {
+    mentionedCoins: { symbol: string; grade: string; score: number; peg: number | null; liq: number | null }[];
+    medianGrade: string;
+    aboveBCount: number;
+    fCount: number;
+  };
+  resolvedDepegs?: {
+    symbol: string;
+    peakBps: number;
+    durationHours: number;
+    mcapUsd: number;
+  }[];
 }
 
 function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): string {
@@ -81,6 +126,49 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
     lines.push(
       `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`,
     );
+  }
+
+  // Enrichment: blacklist activity
+  if (data.blacklistActivity) {
+    const { eventCount, totalAmountUsd, topEvents } = data.blacklistActivity;
+    lines.push("", `Blacklist activity (last 24h): ${eventCount} events, ${formatCurrency(totalAmountUsd)} affected`);
+    for (const e of topEvents) {
+      lines.push(`  ${e.symbol} on ${e.chain}: ${e.type} (${formatCurrency(e.amountUsd)})`);
+    }
+  }
+
+  // Enrichment: supply velocity
+  if (data.supplyVelocity && data.supplyVelocity.length > 0) {
+    lines.push("", "Supply velocity (1d vs 7d):");
+    for (const v of data.supplyVelocity) {
+      const d1 = `${v.change1d >= 0 ? "+" : ""}${formatCurrency(v.change1d)} yesterday`;
+      const d7 = `${v.change7d >= 0 ? "+" : ""}${formatCurrency(v.change7d)}/week`;
+      lines.push(`  ${v.coin}: ${d1} vs ${d7} — ${v.signal}`);
+    }
+  }
+
+  // Enrichment: safety scores
+  if (data.safetyScores) {
+    const { mentionedCoins, medianGrade, aboveBCount, fCount } = data.safetyScores;
+    lines.push("");
+    if (mentionedCoins.length > 0) {
+      lines.push("Safety Scores:");
+      for (const c of mentionedCoins) {
+        const parts = [`${c.symbol}: ${c.grade} (${c.score}`];
+        if (c.peg !== null) parts.push(`peg=${c.peg}`);
+        if (c.liq !== null) parts.push(`liq=${c.liq}`);
+        lines.push(`  ${parts.join(", ")})`);
+      }
+    }
+    lines.push(`  Distribution: median ${medianGrade}, ${aboveBCount} above B, ${fCount} rated F`);
+  }
+
+  // Enrichment: resolved depegs
+  if (data.resolvedDepegs && data.resolvedDepegs.length > 0) {
+    lines.push("");
+    for (const r of data.resolvedDepegs) {
+      lines.push(`Recently resolved: ${r.symbol} recovered from ${r.peakBps}bps after ${r.durationHours}h (${formatCurrency(r.mcapUsd)} mcap)`);
+    }
   }
 
   if (recentDigests.length > 0) {
@@ -227,6 +315,317 @@ export async function generateDailyDigest(
     ? { score: yesterdayRow.score, band: yesterdayRow.band }
     : null;
 
+  // --- Enrichment data collection ---
+
+  // 4a. Blacklist events (last 24h)
+  let blacklistActivity: DigestInputData["blacklistActivity"];
+  try {
+    const blRows = await db
+      .prepare(
+        "SELECT stablecoin AS symbol, chain_name, event_type, amount FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount DESC",
+      )
+      .bind(todayTs - 86400, todayTs)
+      .all<{ symbol: string; chain_name: string; event_type: string; amount: number | null }>();
+    const blEvents = blRows.results ?? [];
+    if (blEvents.length > 0) {
+      const eventCount = blEvents.length;
+      const totalAmountUsd = blEvents.reduce((s, e) => s + (e.amount ?? 0), 0);
+      const hasLargeEvent = blEvents.some((e) => (e.amount ?? 0) > 10_000_000);
+      if (eventCount >= 2 || hasLargeEvent) {
+        blacklistActivity = {
+          eventCount,
+          totalAmountUsd,
+          topEvents: blEvents
+            .filter((e) => e.event_type === "blacklist" || e.event_type === "destroy")
+            .slice(0, 5)
+            .map((e) => ({
+              symbol: e.symbol,
+              chain: e.chain_name,
+              type: e.event_type as "blacklist" | "destroy",
+              amountUsd: e.amount ?? 0,
+            })),
+        };
+      }
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to query blacklist events:", e);
+  }
+
+  // 4b. Supply velocity (1d vs 7d for top 10 coins by mcap)
+  let supplyVelocity: DigestInputData["supplyVelocity"];
+  try {
+    // Get top 10 coins by mcap
+    const top10: { id: string; symbol: string; mcap: number }[] = [];
+    if (stablecoinsCache) {
+      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
+      const tracked = parsed.peggedAssets
+        .filter((c) => TRACKED_IDS.has(c.id))
+        .map((c) => ({ id: c.id, symbol: c.symbol, mcap: getCirculatingRaw(c) }))
+        .sort((a, b) => b.mcap - a.mcap)
+        .slice(0, 10);
+      top10.push(...tracked);
+    }
+
+    if (top10.length > 0) {
+      const yesterday = todayTs - 86400;
+      const weekAgo = todayTs - 7 * 86400;
+      // Query supply snapshots for today, yesterday, and 7 days ago
+      const placeholders = top10.map(() => "?").join(",");
+      const supplyRows = await db
+        .prepare(
+          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${placeholders}) AND snapshot_date IN (?, ?, ?)`,
+        )
+        .bind(...top10.map((c) => c.id), todayTs, yesterday, weekAgo)
+        .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
+
+      const snapMap = new Map<string, Map<number, number>>();
+      for (const row of supplyRows.results ?? []) {
+        let byDate = snapMap.get(row.stablecoin_id);
+        if (!byDate) { byDate = new Map(); snapMap.set(row.stablecoin_id, byDate); }
+        byDate.set(row.snapshot_date, row.circulating_usd);
+      }
+
+      const velocitySignals: NonNullable<DigestInputData["supplyVelocity"]> = [];
+      for (const coin of top10) {
+        const byDate = snapMap.get(coin.id);
+        if (!byDate) continue;
+        const todayVal = byDate.get(todayTs);
+        const yesterdayVal = byDate.get(yesterday);
+        const weekAgoVal = byDate.get(weekAgo);
+        if (todayVal == null || yesterdayVal == null || weekAgoVal == null) continue;
+
+        const change1d = todayVal - yesterdayVal;
+        const change7d = todayVal - weekAgoVal;
+        const dailyAvg7d = change7d / 7;
+
+        // Threshold: day is 2.5x weekly average OR direction reversed
+        const directionReversed = (change1d > 0 && change7d < 0) || (change1d < 0 && change7d > 0);
+        const velocityRatio = dailyAvg7d !== 0 ? Math.abs(change1d / dailyAvg7d) : 0;
+
+        if (directionReversed || velocityRatio > 2.5) {
+          let signal: string;
+          if (directionReversed) signal = "reversed";
+          else if (velocityRatio > 2.5 && Math.abs(change1d) > Math.abs(dailyAvg7d)) signal = "accelerating";
+          else signal = "decelerating";
+
+          velocitySignals.push({ coin: coin.symbol, change1d, change7d, signal });
+        }
+      }
+
+      if (velocitySignals.length > 0) {
+        supplyVelocity = velocitySignals;
+      }
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to compute supply velocity:", e);
+  }
+
+  // 4c. Safety scores (for mentioned coins + distribution)
+  let safetyScores: DigestInputData["safetyScores"];
+  try {
+    // Collect IDs of coins already mentioned in other data sections
+    const mentionedSymbols = new Set<string>();
+    for (const d of topDepegs) mentionedSymbols.add(d.symbol);
+    if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
+    if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
+
+    // Load peg + liquidity data needed for scoring
+    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
+    let peggedAssets: StablecoinData[] = [];
+    let fxFallbackRates: Record<string, number> | undefined;
+    if (stablecoinsCache) {
+      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
+      peggedAssets = parsed.peggedAssets;
+      fxFallbackRates = parsed.fxFallbackRates;
+    }
+    const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
+    const { rates: pegRates } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
+
+    // Load depeg events (4-year window) + dex liquidity
+    const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
+    const [eventsResult, dexLiqResult] = await Promise.all([
+      db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
+        .bind(fourYearsAgoSec)
+        .all<DepegRow>(),
+      db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
+        .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; pool_count: number; chain_count: number }>(),
+    ]);
+
+    const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
+    const eventsByCoin = new Map<string, typeof allEvents>();
+    for (const e of allEvents) {
+      const list = eventsByCoin.get(e.stablecoinId) ?? [];
+      list.push(e);
+      eventsByCoin.set(e.stablecoinId, list);
+    }
+
+    const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
+    for (const row of dexLiqResult.results ?? []) {
+      dexLiqMap[row.stablecoin_id] = {
+        liquidityScore: row.liquidity_score,
+        concentrationHhi: row.concentration_hhi,
+        poolCount: row.pool_count,
+        chainCount: row.chain_count,
+      };
+    }
+
+    // Compute grades for all tracked coins
+    type GradeInfo = { id: string; symbol: string; grade: string; score: number; pegScore: number | null; liqScore: number | null };
+    const allGrades: GradeInfo[] = [];
+    const overallScores = new Map<string, number>();
+
+    // Phase 1: non-dependent coins
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.flags.navToken) continue;
+      if (meta.flags.governance === "centralized-dependent") continue;
+
+      const asset = priceById.get(meta.id);
+      const events = eventsByCoin.get(meta.id) ?? [];
+      const trackingStart = events.length > 0
+        ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgoSec)
+        : fourYearsAgoSec;
+      const scoreResult = computePegScore(events, trackingStart, nowSec);
+
+      const pegData: PegSummaryCoin = {
+        id: meta.id, symbol: meta.symbol, name: meta.name,
+        pegType: asset?.pegType ?? "", pegCurrency: meta.flags.pegCurrency,
+        governance: meta.flags.governance,
+        currentDeviationBps: null, pegScore: scoreResult.pegScore,
+        pegPct: scoreResult.pegPct, severityScore: scoreResult.severityScore,
+        spreadPenalty: scoreResult.spreadPenalty, eventCount: scoreResult.eventCount,
+        worstDeviationBps: scoreResult.worstDeviationBps,
+        activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
+        trackingSpanDays: scoreResult.trackingSpanDays,
+      };
+
+      const canBl = meta.canBeBlacklisted !== undefined ? meta.canBeBlacklisted : (meta.flags.governance as string) === "centralized";
+      const dims = {
+        pegStability: scorePegStability(pegData, meta),
+        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
+        resilience: scoreResilience(meta, canBl),
+        decentralization: scoreDecentralization(meta.flags.governance, meta),
+        dependencyRisk: scoreDependencyRisk(meta, overallScores),
+      };
+      const overall = computeOverallGrade(dims);
+      if (overall.score !== null) overallScores.set(meta.id, overall.score);
+      allGrades.push({
+        id: meta.id, symbol: meta.symbol,
+        grade: overall.grade, score: overall.score ?? 0,
+        pegScore: scoreResult.pegScore,
+        liqScore: dexLiqMap[meta.id]?.liquidityScore ?? null,
+      });
+    }
+
+    // Phase 2: dependent coins
+    for (const meta of TRACKED_STABLECOINS) {
+      if (meta.flags.navToken) continue;
+      if (meta.flags.governance !== "centralized-dependent") continue;
+
+      const asset = priceById.get(meta.id);
+      const events = eventsByCoin.get(meta.id) ?? [];
+      const trackingStart = events.length > 0
+        ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgoSec)
+        : fourYearsAgoSec;
+      const scoreResult = computePegScore(events, trackingStart, nowSec);
+
+      const pegData: PegSummaryCoin = {
+        id: meta.id, symbol: meta.symbol, name: meta.name,
+        pegType: asset?.pegType ?? "", pegCurrency: meta.flags.pegCurrency,
+        governance: meta.flags.governance,
+        currentDeviationBps: null, pegScore: scoreResult.pegScore,
+        pegPct: scoreResult.pegPct, severityScore: scoreResult.severityScore,
+        spreadPenalty: scoreResult.spreadPenalty, eventCount: scoreResult.eventCount,
+        worstDeviationBps: scoreResult.worstDeviationBps,
+        activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
+        trackingSpanDays: scoreResult.trackingSpanDays,
+      };
+
+      const canBl = meta.canBeBlacklisted !== undefined ? meta.canBeBlacklisted : (meta.flags.governance as string) === "centralized";
+      const dims = {
+        pegStability: scorePegStability(pegData, meta),
+        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
+        resilience: scoreResilience(meta, canBl),
+        decentralization: scoreDecentralization(meta.flags.governance, meta),
+        dependencyRisk: scoreDependencyRisk(meta, overallScores),
+      };
+      const overall = computeOverallGrade(dims);
+      if (overall.score !== null) overallScores.set(meta.id, overall.score);
+      allGrades.push({
+        id: meta.id, symbol: meta.symbol,
+        grade: overall.grade, score: overall.score ?? 0,
+        pegScore: scoreResult.pegScore,
+        liqScore: dexLiqMap[meta.id]?.liquidityScore ?? null,
+      });
+    }
+
+    // Distribution stats
+    const scores = allGrades.map((g) => g.score).sort((a, b) => a - b);
+    const medianScore = scores.length > 0 ? scores[Math.floor(scores.length / 2)] : 0;
+    const medianGrade = scoreToGrade(medianScore);
+    const aboveBCount = allGrades.filter((g) => g.score >= 75).length;
+    const fCount = allGrades.filter((g) => g.grade === "F").length;
+
+    // Per-coin grades for mentioned coins + up to 2 "notable tension" coins
+    const mentionedCoinGrades = allGrades.filter((g) => mentionedSymbols.has(g.symbol));
+    const tensionCoins = allGrades
+      .filter((g) => !mentionedSymbols.has(g.symbol) && g.pegScore !== null && g.pegScore > 90 && g.score < 50)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+    const reportCoins = [...mentionedCoinGrades, ...tensionCoins];
+
+    safetyScores = {
+      mentionedCoins: reportCoins.map((g) => ({
+        symbol: g.symbol, grade: g.grade, score: g.score,
+        peg: g.pegScore, liq: g.liqScore,
+      })),
+      medianGrade,
+      aboveBCount,
+      fCount,
+    };
+  } catch (e) {
+    console.error("[daily-digest] Failed to compute safety scores:", e);
+  }
+
+  // 4d. Recently resolved depegs (last 48h)
+  let resolvedDepegs: DigestInputData["resolvedDepegs"];
+  try {
+    const cutoff48h = nowSec - 48 * 3600;
+    const resolvedRows = await db
+      .prepare(
+        `SELECT symbol, peak_deviation_bps, started_at, ended_at, stablecoin_id
+         FROM depeg_events
+         WHERE ended_at IS NOT NULL AND ended_at >= ?
+         ORDER BY peak_deviation_bps DESC
+         LIMIT 5`,
+      )
+      .bind(cutoff48h)
+      .all<{ symbol: string; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
+
+    const mcapById = new Map<string, number>();
+    if (stablecoinsCache) {
+      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
+      for (const coin of parsed.peggedAssets) {
+        mcapById.set(coin.id, getCirculatingRaw(coin));
+      }
+    }
+
+    const candidates = (resolvedRows.results ?? [])
+      .map((r) => ({
+        symbol: r.symbol,
+        peakBps: Math.abs(r.peak_deviation_bps),
+        durationHours: Math.round((r.ended_at - r.started_at) / 3600),
+        mcapUsd: mcapById.get(r.stablecoin_id) ?? 0,
+      }))
+      .filter((r) => r.peakBps > 200 && r.mcapUsd > 50_000_000)
+      .slice(0, 3);
+
+    if (candidates.length > 0) {
+      resolvedDepegs = candidates;
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to query resolved depegs:", e);
+  }
+
   // --- Build input data ---
   const inputData: DigestInputData = {
     totalMcapUsd,
@@ -236,6 +635,10 @@ export async function generateDailyDigest(
     biggestSupplyChange,
     stabilityIndex,
     yesterdayIndex,
+    blacklistActivity,
+    supplyVelocity,
+    safetyScores,
+    resolvedDepegs,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentDigests);

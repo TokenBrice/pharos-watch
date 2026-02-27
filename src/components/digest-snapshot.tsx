@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestSnapshot } from "@/hooks/use-digest-snapshot";
 import { formatCurrency, formatAddress, formatPercentChange } from "@/lib/format";
 import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES } from "@/lib/psi-colors";
-import { Activity, BarChart3, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
+import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
 /* ---------- sub-section wrapper ---------- */
 
@@ -239,6 +239,81 @@ export function DigestSnapshot({ date }: { date: string }) {
               )}
             </SnapshotCard>
           </div>
+        )}
+
+        {/* 6. Safety Scores */}
+        {inputData.safetyScores && (
+          <SnapshotCard
+            title="Safety Scores"
+            icon={<Shield className="h-4 w-4" aria-hidden="true" />}
+            borderClass="border-l-violet-500"
+          >
+            {inputData.safetyScores.mentionedCoins.length > 0 && (
+              <ul className="space-y-0.5">
+                {inputData.safetyScores.mentionedCoins.map((c) => (
+                  <li key={c.symbol} className="text-xs text-foreground/90">
+                    <span className="font-medium">{c.symbol}</span>:{" "}
+                    <span className="font-medium">{c.grade}</span>{" "}
+                    <span className="text-muted-foreground">
+                      ({c.score}
+                      {c.peg !== null && `, peg=${c.peg}`}
+                      {c.liq !== null && `, liq=${c.liq}`})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Median {inputData.safetyScores.medianGrade},{" "}
+              {inputData.safetyScores.aboveBCount} above B,{" "}
+              {inputData.safetyScores.fCount} rated F
+            </p>
+          </SnapshotCard>
+        )}
+
+        {/* 7. Supply Velocity */}
+        {inputData.supplyVelocity && inputData.supplyVelocity.length > 0 && (
+          <SnapshotCard
+            title="Supply Velocity"
+            icon={<ArrowDownUp className="h-4 w-4" aria-hidden="true" />}
+            borderClass="border-l-emerald-500"
+          >
+            <ul className="space-y-0.5">
+              {inputData.supplyVelocity.map((v) => (
+                <li key={v.coin} className="text-xs text-foreground/90">
+                  <span className="font-medium">{v.coin}</span>:{" "}
+                  <span className={deltaColor(v.change1d)}>
+                    {v.change1d >= 0 ? "+" : ""}{formatCurrency(v.change1d)}/1d
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    vs {v.change7d >= 0 ? "+" : ""}{formatCurrency(v.change7d)}/7d
+                  </span>{" "}
+                  <span className="text-muted-foreground italic">{v.signal}</span>
+                </li>
+              ))}
+            </ul>
+          </SnapshotCard>
+        )}
+
+        {/* 8. Resolved Depegs */}
+        {inputData.resolvedDepegs && inputData.resolvedDepegs.length > 0 && (
+          <SnapshotCard
+            title="Resolved Depegs"
+            icon={<CheckCircle className="h-4 w-4" aria-hidden="true" />}
+            borderClass="border-l-teal-500"
+          >
+            <ul className="space-y-0.5">
+              {inputData.resolvedDepegs.map((r) => (
+                <li key={`${r.symbol}-${r.peakBps}`} className="text-xs text-foreground/90">
+                  <span className="font-medium">{r.symbol}</span>{" "}
+                  recovered from {r.peakBps}bps after {r.durationHours}h{" "}
+                  <span className="text-muted-foreground">
+                    ({formatCurrency(r.mcapUsd)} mcap)
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </SnapshotCard>
         )}
       </div>
     </section>

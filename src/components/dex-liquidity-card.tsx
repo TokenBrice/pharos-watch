@@ -347,7 +347,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   }
 
   const liq = liquidityMap?.[stablecoinId];
-  if (!liq || (liq.liquidityScore === 0 && liq.poolCount === 0)) return null;
+  if (!liq || liq.liquidityScore === null || (liq.liquidityScore === 0 && liq.poolCount === 0)) return null;
 
   const score = liq.liquidityScore ?? 0;
   const tier = getScoreTier(score);
