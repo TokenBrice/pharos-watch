@@ -1304,8 +1304,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("168", "fxUSD", "fxUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "f-x-protocol-fxusd",
     dependencies: [{ id: "2", weight: 0.15 }],
-    collateral: "wstETH and WBTC held in protocol pools; each pool backs both fxUSD (stable component) and xPOSITIONs (leveraged component), maintaining 100% collateralization via the f(x) invariant",
-    pegMechanism: "Stability Pool holds USDC and fxUSD acting as a peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for wstETH or WBTC when below peg; xPOSITION volatility absorption via the f(x) invariant; automatic rebalancing and liquidation of under-collateralized positions",
+    collateral: "wstETH and WBTC deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized",
+    pegMechanism: "CDP-style with overcollateralization and liquidations; USDC/fxUSD Stability Pool Gauge on Curve acts as peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
     proofOfReserves: { type: "independent-audit", url: "https://www.openzeppelin.com/news/fx-v2-audit", provider: "OpenZeppelin" },
     links: [
       { label: "Website", url: "https://fx.aladdin.club" },

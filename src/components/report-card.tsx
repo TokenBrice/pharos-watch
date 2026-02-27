@@ -152,7 +152,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
               CeFi-Dependent
             </p>
             <p className="text-sm text-muted-foreground">
-              This stablecoin depends on{" "}
+              This stablecoin has exposure to{" "}
               {card.dependencies.map((dep, i) => {
                 const depMeta = TRACKED_STABLECOINS.find(
                   (s) => s.id === dep.id,
@@ -170,8 +170,8 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                   </span>
                 );
               })}
-              . Its dependency risk score reflects the health of these upstream
-              assets.
+              . Its dependency risk score reflects the health and stability of
+              these assets.
             </p>
           </div>
         )}
