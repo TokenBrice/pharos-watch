@@ -691,16 +691,6 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                             {meta?.flags.pegCurrency}
                           </Badge>
                         )}
-                        {meta?.flags.yieldBearing && (
-                          <Badge variant="secondary" className="text-xs bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                            Yield
-                          </Badge>
-                        )}
-                        {meta?.flags.rwa && (
-                          <Badge variant="secondary" className="text-xs bg-sky-500/10 text-sky-500 border-sky-500/20">
-                            RWA
-                          </Badge>
-                        )}
                       </div>
                     </TableCell>
                   )}
