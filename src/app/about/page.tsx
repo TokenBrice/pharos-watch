@@ -553,6 +553,12 @@ export default function AboutPage() {
               </li>
               <li><span className="text-foreground">CeFi-Dependent, unmapped</span> &mdash; falls back to 70 when dependencies aren&apos;t mapped or scores are unavailable</li>
             </ul>
+            <p className="mt-2">
+              <span className="text-foreground font-medium">Dependency type ceilings</span> &mdash; each dependency is classified as <em>wrapper</em>, <em>mechanism-critical</em>, or <em>collateral</em> (default).
+              Wrappers (e.g., syrupUSDC &rarr; USDC) are thin layers around the upstream &mdash; their score is capped at <code className="text-xs">upstream &minus; 3</code>.
+              Mechanism-critical dependencies (e.g., DAI &rarr; USDC via PSM) are essential to the peg &mdash; score is capped at the upstream&apos;s score.
+              Collateral dependencies use the blended formula with no ceiling.
+            </p>
             <p className="text-xs">
               The self-backed portion scores 75 (not 95) because CeFi-Dependent coins still carry systemic coupling risk &mdash; their peg mechanisms depend on upstream stablecoin infrastructure even for non-stablecoin collateral.
             </p>
