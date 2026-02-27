@@ -150,7 +150,7 @@ function ColumnVisibilityDropdown({
 
 
 export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, dexLiquidity, reportCards, onClearSearch, onClearFilters }: StablecoinTableProps) {
-  type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "liquidity" | "grade";
+  type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "liquidity" | "grade" | "peg";
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("mcap", "desc");
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const router = useRouter();
@@ -177,6 +177,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
       stability: "stability",
       liquidity: "liquidity",
       grade: "grade",
+      peg: "peg",
     };
     const colId = SORT_KEY_TO_COLUMN[sortKey];
     return visibleSet.has(colId) ? sortKey : "mcap" as SortKey;
@@ -267,13 +268,30 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
           bVal = bGrade;
           break;
         }
+        case "peg": {
+          const getAbsBps = (coin: (typeof filtered)[0]) => {
+            const m = metaById.get(coin.id);
+            if (m?.flags.navToken) return null;
+            const ref = getPegReference(coin.pegType, pegRates, m?.commodityOunces);
+            const price = coin.price;
+            return price != null && ref > 0 ? Math.abs(price / ref - 1) * 10_000 : null;
+          };
+          const aDev = getAbsBps(a);
+          const bDev = getAbsBps(b);
+          if (aDev === null && bDev === null) return 0;
+          if (aDev === null) return 1;
+          if (bDev === null) return -1;
+          aVal = aDev;
+          bVal = bDev;
+          break;
+        }
         default:
           aVal = getCirculatingRaw(a);
           bVal = getCirculatingRaw(b);
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
     });
-  }, [filtered, sort, effectiveSortKey, pegScores, dexLiquidity, reportCards]);
+  }, [filtered, sort, effectiveSortKey, pegScores, dexLiquidity, reportCards, pegRates, metaById]);
 
   // Reset scroll when filters, search, or sort change
   const [prev, setPrev] = useState({ filtered, sort });
@@ -402,7 +420,17 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                 />
               )}
               {isVisible("peg") && (
-                <TableHead className="text-right" title="Current peg deviation from target price">Peg</TableHead>
+                <SortableTableHead
+                  sortKey="peg"
+                  currentSortKey={sortKey}
+                  sortDirection={sortDirection}
+                  label="Peg"
+                  toggleSort={toggleSort}
+                  getAriaSortValue={getAriaSortValue}
+                  handleSortKeyDown={handleSortKeyDown}
+                  className="text-right"
+                  title="Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first"
+                />
               )}
               {isVisible("mcap") && (
                 <SortableTableHead
