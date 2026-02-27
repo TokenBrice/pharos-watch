@@ -398,9 +398,11 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <ContractAddresses meta={coin} />
 
-      <section id="history">
-        <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
-      </section>
+      {!isNavToken && (
+        <section id="history">
+          <DepegHistory stablecoinId={id} earliestTrackingDate={earliestTrackingDate} />
+        </section>
+      )}
     </div>
   );
 }
