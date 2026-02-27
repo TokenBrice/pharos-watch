@@ -23,10 +23,11 @@ interface StablecoinOpts {
   custodyModel?: import("./types").CustodyModel;
   reserves?: import("./types").ReserveSlice[];
   notices?: import("./types").CoinNotice[];
+  tags?: string[];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, reserves: opts?.reserves, notices: opts?.notices };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -941,6 +942,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
     geckoId: "satoshi-stablecoin",
+    tags: ["Liquity v1 fork"],
     dependencies: [],
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
@@ -1986,6 +1988,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("303", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
     geckoId: "mezo-usd",
+    tags: ["Liquity v1 fork"],
     dependencies: [],
     collateral: "Bitcoin only; minimum 110% collateral ratio",
     pegMechanism: "BTC-only overcollateralized CDP with direct $1 BTC redemption; operates on Mezo (Bitcoin L2, not Ethereum or a Stage 1 L2)",
@@ -2215,6 +2218,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "decentralized", {
     geckoId: "felix-feusd",
+    tags: ["Liquity v2 fork"],
     dependencies: [],
     collateral: "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
     pegMechanism: "Overcollateralized CDP (Liquity V2 fork) with direct redemption for $1 of collateral; interest-rate-sorted redemption queue (lower-rate positions redeemed first); stability pools absorb liquidations",
@@ -2460,6 +2464,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
     geckoId: "bitcoin-usd-btcfi",
+    tags: ["Liquity v1 fork"],
     dependencies: [],
     collateral: "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
     pegMechanism: "Overcollateralized CDP with liquidation mechanisms",
@@ -2478,6 +2483,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("253", "Bima USBD", "USBD", "crypto-backed", "centralized-dependent", {
     geckoId: "usbd",
+    tags: ["Liquity v1 fork"],
     dependencies: [],
     collateral: "Overcollateralized Bitcoin LSTs/LRTs via CDP vaults at 150% MCR (160% CCR triggers recovery mode)",
     pegMechanism: "Overcollateralized CDP (Liquity-style TroveManager) with automated liquidation",

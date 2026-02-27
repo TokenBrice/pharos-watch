@@ -222,6 +222,15 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                   {" \u00b7 "}
                   {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
                 </p>
+                {coin.tags && coin.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {coin.tags.map((tag) => (
+                      <span key={tag} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground border-border/60 bg-muted/40">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Price + Gauge */}

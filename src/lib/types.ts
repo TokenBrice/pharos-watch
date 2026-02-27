@@ -118,6 +118,7 @@ export interface StablecoinMeta {
   custodyModel?: CustodyModel;
   reserves?: ReserveSlice[];  // Structured reserve composition (manually curated)
   notices?: CoinNotice[];     // Important alerts (winding down, depegged, etc.)
+  tags?: string[];            // Protocol lineage / fork tags (e.g. "Liquity v1 fork")
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
