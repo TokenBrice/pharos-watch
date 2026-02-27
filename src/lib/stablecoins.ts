@@ -146,7 +146,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
-    dependencies: [{ id: "2", weight: 0.30 }],
+    dependencies: [{ id: "2", weight: 0.30, type: "mechanism" }],
     canBeBlacklisted: "possible",
     collateralQuality: "rwa",
     custodyModel: "institutional",

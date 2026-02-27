@@ -300,7 +300,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           Dependency Map
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Top {nodes.length} stablecoins by market cap. Arrow thickness shows collateral dependency weight. Hover edges for details. Click nodes for detail page.
+          Top {nodes.length} stablecoins by market cap. Edge thickness shows dependency weight; color and dash encode type. Hover edges for details.
         </p>
       </CardHeader>
       <CardContent>
@@ -330,32 +330,15 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   </clipPath>
                 );
               })}
-              {/* Arrowhead markers — markerUnits="userSpaceOnUse" so size is fixed regardless of stroke width */}
-              {(["collateral", "mechanism", "wrapper"] as const).map((type) => (
-                <marker key={type} id={`arrow-${type}`} viewBox="0 0 10 6" refX="10" refY="3"
-                  markerWidth="7" markerHeight="5" markerUnits="userSpaceOnUse" orient="auto">
-                  <path d="M0,0 L10,3 L0,6 Z" fill={TYPE_COLORS[type]} />
-                </marker>
-              ))}
             </defs>
 
-            {/* Edges — arrow direction: upstream (target in data) → dependent (source in data) */}
+            {/* Edges */}
             {links.map((link, i) => {
               const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
               const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
-              // srcId = dependent, tgtId = upstream (from data model)
-              // Arrow direction: upstream → dependent, so line goes tgt → src
-              const fromPos = positions.get(tgtId); // upstream
-              const toPos = positions.get(srcId);   // dependent
-              const toNode = nodeMap.get(srcId);
-              if (!fromPos || !toPos || !toNode) return null;
-
-              // Offset endpoint by target node radius so arrowhead touches boundary
-              const dx = toPos.x - fromPos.x;
-              const dy = toPos.y - fromPos.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const endX = dist > 0 ? toPos.x - (dx / dist) * (toNode.r + 4) : toPos.x;
-              const endY = dist > 0 ? toPos.y - (dy / dist) * (toNode.r + 4) : toPos.y;
+              const posA = positions.get(srcId);
+              const posB = positions.get(tgtId);
+              if (!posA || !posB) return null;
 
               const isEdgeDirectHovered = hoveredEdge === i;
               const isConnected = connectedEdges.has(i);
@@ -374,7 +357,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 <g key={`${srcId}-${tgtId}-${i}`}>
                   {/* Invisible wide hit area */}
                   <line
-                    x1={fromPos.x} y1={fromPos.y} x2={endX} y2={endY}
+                    x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
                     stroke="transparent" strokeWidth={14}
                     style={{ cursor: "pointer" }}
                     onMouseEnter={() => setHoveredEdge(i)}
@@ -382,12 +365,11 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   />
                   {/* Visible edge */}
                   <line
-                    x1={fromPos.x} y1={fromPos.y} x2={endX} y2={endY}
+                    x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
                     stroke={typeColor}
                     strokeWidth={isEdgeDirectHovered ? sw + 1 : sw}
                     opacity={edgeOpacity}
                     strokeDasharray={dashArray}
-                    markerEnd={`url(#arrow-${link.type})`}
                     pointerEvents="none"
                   />
                 </g>
