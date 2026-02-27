@@ -445,6 +445,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     }
   }
 
+  // Load FX rates early for dynamic price bounds in isReasonablePrice
+  let fxRates: Record<string, number> | undefined;
+  const fxCacheEarly = await getCache(db, "fx-rates");
+  if (fxCacheEarly) {
+    try { fxRates = JSON.parse(fxCacheEarly.value); } catch { /* ignore */ }
+  }
+
   // --- Dual-primary price validation ---
   // Cross-validate DL coins API and CG prices for higher confidence
   const { results: dualPriceResults, stats: dualPriceStats } = await fetchDualPrimaryPrices(
@@ -454,7 +461,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   // Apply dual-primary results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
     const dual = dualPriceResults.get(asset.id);
-    if (dual && isReasonablePrice(dual.price, asset.pegType as string | undefined)) {
+    if (dual && isReasonablePrice(dual.price, asset.pegType as string | undefined, fxRates)) {
       asset.price = dual.price;
       asset.priceSource = dual.source;
       asset.priceConfidence = dual.confidence;
@@ -478,7 +485,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
       asset.price != null &&
       typeof asset.price === "number" &&
       asset.price !== 0 &&
-      !isReasonablePrice(asset.price, asset.pegType as string | undefined)
+      !isReasonablePrice(asset.price, asset.pegType as string | undefined, fxRates)
     ) {
       console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
       asset.price = 0; // hasMissingPrice() treats 0 as missing
@@ -503,7 +510,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   // Must run before savePriceCache so bad prices don't persist for 24h
   let rejectedCount = 0;
   for (const asset of llamaData.peggedAssets) {
-    if (asset.price != null && typeof asset.price === "number" && !isReasonablePrice(asset.price, asset.pegType as string | undefined)) {
+    if (asset.price != null && typeof asset.price === "number" && !isReasonablePrice(asset.price, asset.pegType as string | undefined, fxRates)) {
       console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
       asset.price = null;
       rejectedCount++;
@@ -534,7 +541,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     let fallbackCount = 0;
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
-      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePrice(cached.price, asset.pegType as string | undefined)) {
+      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePrice(cached.price, asset.pegType as string | undefined, fxRates)) {
         asset.price = cached.price;
         fallbackCount++;
       }
@@ -646,12 +653,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     // Non-blocking — never prevent cache write
   }
 
-  // Embed live FX fallback rates if available
-  const fxCache = await getCache(db, "fx-rates");
-  if (fxCache) {
-    try {
-      llamaData.fxFallbackRates = JSON.parse(fxCache.value);
-    } catch { /* ignore malformed cache */ }
+  // Embed live FX fallback rates if available (reuse earlier fetch)
+  if (fxRates) {
+    llamaData.fxFallbackRates = fxRates;
   }
 
   await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
