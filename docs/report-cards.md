@@ -177,6 +177,8 @@ Examples: BOLD (dao-governance, Ethereum, third-party-bridge → infra 60) = 85 
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `src/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta` (7 coins currently use this fallback).
+
 **Scoring:**
 - **No dependencies**: 95 (any governance tier)
 - **With dependencies**: `score = sum(weight_i × upstream_score_i) + (1 − totalWeight) × SELF_BACKED_SCORE`

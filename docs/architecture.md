@@ -202,7 +202,8 @@ src/                              # Next.js frontend (static export)
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
-    ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, RawDimensionInputs, CacheStatus (shared with worker)
+    ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, ReserveSlice (with coinId/depType), RawDimensionInputs, CacheStatus (shared with worker)
+    ├── reserve-templates.ts      # Reserve composition templates, getReserves(), deriveDependencies() (reserve slices → DependencyWeight[])
     ├── stablecoins.ts            # Master list of ~145 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
     ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
