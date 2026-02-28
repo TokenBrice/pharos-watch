@@ -24,7 +24,8 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
-import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+import { BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+import { PsiStrataChart } from "@/components/psi-strata-chart";
 import { PsiAtmosphere } from "@/components/psi-atmosphere";
 import { PsiSeismograph } from "@/components/psi-seismograph";
 import type { ConditionBand } from "@/lib/psi-colors";
@@ -657,8 +658,8 @@ export function StabilityIndexClient() {
         </CardContent>
       </Card>
 
-      {/* Score History */}
-      <ScoreChart data={chartData} />
+      {/* Geological Record */}
+      <PsiStrataChart data={chartData} />
 
       {/* Notable Events */}
       <EventTimeline data={chartData} />
