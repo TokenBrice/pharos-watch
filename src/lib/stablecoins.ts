@@ -571,8 +571,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: GlobeNewsWire Dec 2025 launch announcement. Confidence: Low
-      { name: "USDC", pct: 35, risk: "low" },
-      { name: "USDT", pct: 35, risk: "low" },
+      { name: "USDC", pct: 35, risk: "low", coinId: "2" },
+      { name: "USDT", pct: 35, risk: "low", coinId: "1" },
       { name: "USD1 (WLFI stablecoin)", pct: 15, risk: "medium" },
       { name: "Fiat USD / U.S. Treasury Bills", pct: 15, risk: "very-low" },
     ],
@@ -835,7 +835,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       // Source: Figure Certificate Co. prospectus (SEC), KPMG Q1 2025. Confidence: High
       { name: "Overnight Treasury repo agreements (UMB Bank)", pct: 86, risk: "very-low" },
       { name: "Money market funds", pct: 13, risk: "very-low" },
-      { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low" },
+      { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low", coinId: "2" },
     ],
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
@@ -1156,7 +1156,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "Short-term U.S. Treasury bonds", pct: 70, risk: "very-low" },
-      { name: "USDT/USDC deposits (minting collateral)", pct: 25, risk: "low" },
+      { name: "USDT/USDC deposits (minting collateral)", pct: 25, risk: "low", coinId: "1" },
       { name: "Yield instruments (unspecified)", pct: 5, risk: "high" },
     ],
   }),
@@ -1248,7 +1248,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xf4c13d631450de6b12a19829e37c8e2826891dc4", decimals: 18 },
     ],
     reserves: [
-      { name: "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)", pct: 95, risk: "medium" },
+      { name: "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)", pct: 95, risk: "medium", coinId: "2" },
       { name: "Reserve fund (loss absorption buffer)", pct: 5, risk: "medium" },
     ],
   }),
@@ -1535,7 +1535,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "Short-term U.S. Treasury bills (off-chain)", pct: 80, risk: "very-low" },
-      { name: "On-chain stablecoins (USDC/USDT)", pct: 15, risk: "low" },
+      { name: "On-chain stablecoins (USDC/USDT)", pct: 15, risk: "low", coinId: "2" },
       { name: "Accrued interest", pct: 5, risk: "very-low" },
     ],
   }),
@@ -2041,7 +2041,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761", decimals: 6 },
     ],
     reserves: [
-      { name: "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)", pct: 70, risk: "low" },
+      { name: "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)", pct: 70, risk: "low", coinId: "237" },
       { name: "Other tokenized RWAs (USD0++, Wrapped M)", pct: 30, risk: "medium" },
     ],
   }),
@@ -2660,7 +2660,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     custodyModel: "onchain",
     reserves: [
-      { name: "USDC (via Nucleus BoringVault)", pct: 100, risk: "medium" },
+      { name: "USDC (via Nucleus BoringVault)", pct: 100, risk: "medium", coinId: "2" },
     ],
   }),
   usd("234", "Worldwide USD", "WUSD", "rwa-backed", "centralized", {
