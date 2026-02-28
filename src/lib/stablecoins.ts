@@ -2476,6 +2476,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "base", address: "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4", decimals: 18 },
     ],
+    chainRisk: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)", pct: 100, risk: "medium" },
