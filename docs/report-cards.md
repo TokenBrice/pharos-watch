@@ -160,7 +160,7 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 
 **Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
 
-**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to non-single-entity governance only):
+**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance only — centralized issuers are exempt):
 
 | Combined Score Range | Penalty |
 |---|---|

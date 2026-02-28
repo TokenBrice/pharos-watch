@@ -532,7 +532,7 @@ export default function AboutPage() {
               <li><span className="text-foreground">Single entity</span> &mdash; 20 (unregulated or unverified issuer)</li>
               <li><span className="text-foreground">Wrapper</span> &mdash; 10 (inherits upstream governance)</li>
             </ul>
-            <p className="font-medium text-foreground mt-2">Chain-risk penalty (non-single-entity governance only):</p>
+            <p className="font-medium text-foreground mt-2">Chain-risk penalty (DAO and multisig governance only):</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Ethereum &mdash; no penalty</li>
               <li>Stage 1+ L2 &mdash; &minus;15</li>

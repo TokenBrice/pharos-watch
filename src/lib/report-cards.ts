@@ -501,7 +501,7 @@ export function scoreDecentralization(
   else if (infraScore >= 15) penalty = -50;
   else penalty = -65;
 
-  if (quality !== "single-entity" && penalty < 0) {
+  if (quality !== "single-entity" && quality !== "regulated-entity" && penalty < 0) {
     score = Math.max(0, score + penalty);
   }
 
