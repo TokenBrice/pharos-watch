@@ -15,7 +15,8 @@ import type {
   GovernanceType,
   GovernanceQuality,
   BackingType,
-  ChainRisk,
+  ChainTier,
+  DeploymentModel,
   CollateralQuality,
   CustodyModel,
   ReportCard,
@@ -213,11 +214,18 @@ export function scoreLiquidity(
 // Resilience: 4-factor model
 // ---------------------------------------------------------------------------
 
-const CHAIN_RISK_SCORE: Record<ChainRisk, number> = {
+const CHAIN_TIER_SCORE: Record<ChainTier, number> = {
   ethereum: 100,
   "stage1-l2": 66,
   "established-alt-l1": 20,
   unproven: 0,
+};
+
+const DEPLOYMENT_MULT: Record<DeploymentModel, number> = {
+  "single-chain": 1.0,
+  "canonical-bridge": 0.85,
+  "third-party-bridge": 0.60,
+  "native-multichain": 0.40,
 };
 
 const COLLATERAL_QUALITY_SCORE: Record<CollateralQuality, number> = {
@@ -291,11 +299,18 @@ const CUSTODY_MODEL_SCORE: Record<CustodyModel, number> = {
   cex: 0,
 };
 
-const CHAIN_RISK_LABEL: Record<ChainRisk, string> = {
+const CHAIN_TIER_LABEL: Record<ChainTier, string> = {
   ethereum: "Ethereum mainnet",
   "stage1-l2": "Stage 1+ L2",
   "established-alt-l1": "Established alt-L1",
   unproven: "Unproven chain",
+};
+
+const DEPLOYMENT_MODEL_LABEL: Record<DeploymentModel, string> = {
+  "single-chain": "",
+  "canonical-bridge": "canonical bridge",
+  "third-party-bridge": "third-party bridge",
+  "native-multichain": "native multichain",
 };
 
 const COLLATERAL_QUALITY_LABEL: Record<CollateralQuality, string> = {
@@ -312,6 +327,18 @@ const CUSTODY_MODEL_LABEL: Record<CustodyModel, string> = {
   cex: "CEX / off-exchange custody",
 };
 
+/** Combined chain infrastructure score: tier base × deployment multiplier */
+export function chainInfraScore(tier: ChainTier, model: DeploymentModel): number {
+  return Math.round(CHAIN_TIER_SCORE[tier] * DEPLOYMENT_MULT[model]);
+}
+
+/** Two-part label: "Ethereum mainnet (third-party bridge)" */
+export function chainInfraLabel(tier: ChainTier, model: DeploymentModel): string {
+  const base = CHAIN_TIER_LABEL[tier];
+  const suffix = DEPLOYMENT_MODEL_LABEL[model];
+  return suffix ? `${base} (${suffix})` : base;
+}
+
 /**
  * Infer default resilience sub-factors from backing + governance.
  * Only used when the field is not explicitly set on StablecoinMeta.
@@ -319,21 +346,20 @@ const CUSTODY_MODEL_LABEL: Record<CustodyModel, string> = {
 export function inferResilienceDefaults(
   backing: BackingType,
   governance: GovernanceType,
-): { chainRisk: ChainRisk; collateralQuality: CollateralQuality; custodyModel: CustodyModel } {
+): { chainTier: ChainTier; deploymentModel: DeploymentModel; collateralQuality: CollateralQuality; custodyModel: CustodyModel } {
   if (backing === "rwa-backed" && governance === "centralized") {
-    return { chainRisk: "ethereum", collateralQuality: "rwa", custodyModel: "institutional" };
+    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional" };
   }
   if (backing === "rwa-backed" && governance === "centralized-dependent") {
-    return { chainRisk: "ethereum", collateralQuality: "rwa", custodyModel: "institutional" };
+    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "rwa", custodyModel: "institutional" };
   }
   if (backing === "crypto-backed" && governance === "decentralized") {
-    return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "onchain" };
+    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "native", custodyModel: "onchain" };
   }
   if (backing === "crypto-backed" && governance === "centralized-dependent") {
-    return { chainRisk: "ethereum", collateralQuality: "eth-lst", custodyModel: "onchain" };
+    return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "eth-lst", custodyModel: "onchain" };
   }
-  // algorithmic + any, or any remaining combo
-  return { chainRisk: "ethereum", collateralQuality: "native", custodyModel: "onchain" };
+  return { chainTier: "ethereum", deploymentModel: "single-chain", collateralQuality: "native", custodyModel: "onchain" };
 }
 
 /**
@@ -341,13 +367,15 @@ export function inferResilienceDefaults(
  * Explicit overrides on meta take priority; otherwise, infer from backing + governance.
  */
 export function resolveResilienceFactors(meta: StablecoinMeta): {
-  chainRisk: ChainRisk;
+  chainTier: ChainTier;
+  deploymentModel: DeploymentModel;
   collateralQuality: CollateralQuality;
   custodyModel: CustodyModel;
 } {
   const defaults = inferResilienceDefaults(meta.flags.backing, meta.flags.governance);
   return {
-    chainRisk: meta.chainRisk ?? defaults.chainRisk,
+    chainTier: meta.chainTier ?? defaults.chainTier,
+    deploymentModel: meta.deploymentModel ?? defaults.deploymentModel,
     collateralQuality: meta.collateralQuality ?? defaults.collateralQuality,
     custodyModel: meta.custodyModel ?? defaults.custodyModel,
   };
@@ -370,10 +398,9 @@ export function scoreResilience(
   const blacklistScore = canBeBlacklisted === true ? 0 : canBeBlacklisted === "possible" ? 50 : 100;
   const blacklistLabel = canBeBlacklisted === true ? "Yes" : canBeBlacklisted === "possible" ? "Possible (mutable contract)" : "No";
 
-  const chainScore = CHAIN_RISK_SCORE[factors.chainRisk];
+  const chainScore = chainInfraScore(factors.chainTier, factors.deploymentModel);
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
 
-  // Prefer computed score from curated reserves; fall back to enum
   const hasReserves = meta.reserves && meta.reserves.length > 0;
   const collateralScore = hasReserves
     ? computeCollateralQualityFromReserves(meta.reserves!)
@@ -387,7 +414,7 @@ export function scoreResilience(
   );
 
   const parts = [
-    `Chain: ${CHAIN_RISK_LABEL[factors.chainRisk]} (${chainScore})`,
+    `Chain: ${chainInfraLabel(factors.chainTier, factors.deploymentModel)} (${chainScore})`,
     `Collateral: ${collateralLabel} (${collateralScore})`,
     `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
     `Blacklist: ${blacklistLabel} (${blacklistScore})`,
@@ -445,22 +472,25 @@ export function scoreDecentralization(
   const quality = resolveGovernanceQuality(governance, meta);
   let score = GOVERNANCE_QUALITY_SCORE[quality];
 
-  // Chain-risk penalty (only meaningful for non-single-entity governance)
-  const chainPenalty: Record<ChainRisk, number> = {
-    ethereum: 0,
-    "stage1-l2": -15,
-    "established-alt-l1": -50,
-    unproven: -65,
-  };
-  const chainRisk = meta?.chainRisk;
-  const penalty = chainRisk ? (chainPenalty[chainRisk] ?? 0) : 0;
+  // Chain infrastructure penalty (threshold-based on combined score)
+  const factors = meta ? resolveResilienceFactors(meta) : undefined;
+  const infraScore = factors
+    ? chainInfraScore(factors.chainTier, factors.deploymentModel)
+    : 100;
+
+  let penalty = 0;
+  if (infraScore >= 80) penalty = 0;
+  else if (infraScore >= 50) penalty = -15;
+  else if (infraScore >= 15) penalty = -50;
+  else penalty = -65;
+
   if (quality !== "single-entity" && penalty < 0) {
     score = Math.max(0, score + penalty);
   }
 
   let detail = GOVERNANCE_QUALITY_LABEL[quality];
-  if (penalty < 0) {
-    detail += ` (${CHAIN_RISK_LABEL[chainRisk!]}: ${penalty} penalty)`;
+  if (penalty < 0 && factors) {
+    detail += ` (${chainInfraLabel(factors.chainTier, factors.deploymentModel)}: ${penalty} penalty)`;
   }
 
   return { grade: scoreToGrade(score), score, detail };
@@ -553,13 +583,15 @@ export function scoreDependencyRisk(
  * Base = weighted average of rated non-peg dimensions (NR dimensions redistribute).
  * Final = base × (PSI / 100) ^ PEG_MULTIPLIER_EXPONENT
  *
- * PSI = null (NAV token / no data) → multiplier = 1.0 (no penalty).
+ * PSI = null + navToken → multiplier 1.0 (NAV token, peg tracking not applicable).
+ * PSI = null + non-NAV → overall NR (no price/peg data available).
  * PSI = 0 (dead coin) → multiplier = 0.
  *
  * Requires at least 2 rated base dimensions for an overall grade, else NR.
  */
 export function computeOverallGrade(
   dimensions: Record<DimensionKey, ReportCardDimension>,
+  opts?: { navToken?: boolean },
 ): { grade: ReportCardGrade; score: number | null; ratedDimensions: number } {
   const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
@@ -590,8 +622,11 @@ export function computeOverallGrade(
   const pegScore = dimensions.pegStability.score;
   if (pegScore !== null) {
     score *= pegScore === 0 ? 0 : Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
+  } else if (!opts?.navToken) {
+    // Non-NAV coin with no peg data → overall NR (can't evaluate peg health)
+    return { grade: "NR", score: null, ratedDimensions: baseRatedCount };
   }
-  // pegScore === null → multiplier 1.0, no change
+  // NAV token with null peg → multiplier 1.0, no change
 
   const clamped = Math.max(0, Math.min(100, Math.round(score)));
   const ratedDimensions = baseRatedCount + (pegScore !== null ? 1 : 0);
@@ -658,7 +693,7 @@ export function computeStressedGrades(
       } as StablecoinMeta;
       const newDepRisk = scoreDependencyRisk(meta, overallScores);
       const newDimensions = { ...card.dimensions, dependencyRisk: newDepRisk };
-      const overall = computeOverallGrade(newDimensions);
+      const overall = computeOverallGrade(newDimensions, { navToken: card.rawInputs.navToken });
       return {
         ...card,
         dimensions: newDimensions,

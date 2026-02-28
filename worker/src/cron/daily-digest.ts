@@ -506,7 +506,7 @@ export async function generateDailyDigest(
         decentralization: scoreDecentralization(meta.flags.governance, meta),
         dependencyRisk: scoreDependencyRisk(meta, overallScores),
       };
-      const overall = computeOverallGrade(dims);
+      const overall = computeOverallGrade(dims, { navToken: !!meta.flags.navToken });
       if (overall.score !== null) overallScores.set(meta.id, overall.score);
       allGrades.push({
         id: meta.id, symbol: meta.symbol,
@@ -548,7 +548,7 @@ export async function generateDailyDigest(
         decentralization: scoreDecentralization(meta.flags.governance, meta),
         dependencyRisk: scoreDependencyRisk(meta, overallScores),
       };
-      const overall = computeOverallGrade(dims);
+      const overall = computeOverallGrade(dims, { navToken: false });
       if (overall.score !== null) overallScores.set(meta.id, overall.score);
       allGrades.push({
         id: meta.id, symbol: meta.symbol,

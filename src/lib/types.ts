@@ -79,8 +79,11 @@ export interface ReserveSlice {
   risk: ReserveRisk;  // risk tier for coloring
 }
 
-/** Chain where the core protocol operates and collateral is held */
-export type ChainRisk = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
+/** Maturity tier of the primary chain where the protocol operates */
+export type ChainTier = "ethereum" | "stage1-l2" | "established-alt-l1" | "unproven";
+
+/** How the stablecoin extends across multiple chains */
+export type DeploymentModel = "single-chain" | "canonical-bridge" | "third-party-bridge" | "native-multichain";
 
 /** Trust assumptions in the backing assets */
 export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-or-mixed" | "exotic";
@@ -116,7 +119,8 @@ export interface StablecoinMeta {
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
   dependencies?: DependencyWeight[];  // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
   canBeBlacklisted?: boolean | "possible";  // true = active blacklist, "possible" = mutable contract / governance-upgradeable, false/undefined = no
-  chainRisk?: ChainRisk;
+  chainTier?: ChainTier;
+  deploymentModel?: DeploymentModel;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
@@ -423,12 +427,14 @@ export interface RawDimensionInputs {
   concentrationHhi: number | null;
   bluechipGrade: BluechipGrade | null;
   canBeBlacklisted: boolean | "possible";
-  chainRisk: ChainRisk;
+  chainTier: ChainTier;
+  deploymentModel: DeploymentModel;
   collateralQuality: CollateralQuality;
   custodyModel: CustodyModel;
   governanceTier: GovernanceType;
   governanceQuality: GovernanceQuality;
   dependencies: DependencyWeight[];
+  navToken: boolean;
 }
 
 export interface ReportCard {

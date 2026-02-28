@@ -34,7 +34,8 @@ import type {
   GovernanceType,
   GovernanceQuality,
   RawDimensionInputs,
-  ChainRisk,
+  ChainTier,
+  DeploymentModel,
   CollateralQuality,
   CustodyModel,
 } from "../../../src/lib/types";
@@ -212,12 +213,14 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
         pegScore: null, activeDepeg: false, depegEventCount: 0, lastEventAt: null,
         liquidityScore: null, concentrationHhi: null, bluechipGrade: null,
         canBeBlacklisted: false,
-        chainRisk: "ethereum" as ChainRisk,
+        chainTier: "ethereum" as ChainTier,
+        deploymentModel: "single-chain" as DeploymentModel,
         collateralQuality: "native" as CollateralQuality,
         custodyModel: "onchain" as CustodyModel,
         governanceTier: "centralized" as GovernanceType,
         governanceQuality: "single-entity" as GovernanceQuality,
         dependencies: [],
+        navToken: false,
       },
       isDefunct: true,
     };
@@ -291,7 +294,8 @@ function computeCard(
     dependencyRisk: scoreDependencyRisk(meta, overallScores),
   };
 
-  const overall = computeOverallGrade(dimensions);
+  const navToken = !!meta.flags.navToken;
+  const overall = computeOverallGrade(dimensions, { navToken });
 
   const rawInputs: RawDimensionInputs = {
     pegScore: peg?.pegScore ?? null,
@@ -302,12 +306,14 @@ function computeCard(
     concentrationHhi: liq?.concentrationHhi ?? null,
     bluechipGrade: rating?.grade ?? null,
     canBeBlacklisted,
-    chainRisk: resilienceFactors.chainRisk,
+    chainTier: resilienceFactors.chainTier,
+    deploymentModel: resilienceFactors.deploymentModel,
     collateralQuality: resilienceFactors.collateralQuality,
     custodyModel: resilienceFactors.custodyModel,
     governanceTier: meta.flags.governance as GovernanceType,
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
     dependencies: meta.dependencies ?? [],
+    navToken,
   };
 
   return {
