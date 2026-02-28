@@ -37,6 +37,13 @@ export default function DigestArchivePage() {
           trends across the stablecoin landscape. Browse the full archive to track how conditions have evolved
           over time.
         </p>
+        <p className="text-sm text-muted-foreground">
+          Digests are also published daily on the{" "}
+          <a href="https://t.me/pharoswatch" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+            Pharos Telegram channel
+          </a>
+          .
+        </p>
       </div>
 
       <DigestArchiveClient />
