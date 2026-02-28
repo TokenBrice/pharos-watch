@@ -40,4 +40,5 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   hedera:    { name: "Hedera",    explorerUrl: "https://hashscan.io",              evmChainId: null,  type: "other", logoPath: "/chains/hedera.png"    },
   polkadot:  { name: "Polkadot",  explorerUrl: "https://polkadot.subscan.io",     evmChainId: null,  type: "other", logoPath: "/chains/polkadot.png"  },
   xrpl:      { name: "XRP Ledger",explorerUrl: "https://xrpscan.com",             evmChainId: null,  type: "other", logoPath: "/chains/xrpl.png"      },
+  kava:      { name: "Kava",     explorerUrl: "https://kavascan.com",             evmChainId: 2222,  type: "evm",   logoPath: "/chains/kava.png"      },
 };

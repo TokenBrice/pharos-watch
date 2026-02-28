@@ -68,6 +68,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6 },
       { chain: "bsc", address: "0x55d398326f99059ff775485246999027b3197955", decimals: 18 },
       { chain: "celo", address: "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e", decimals: 6 },
+      { chain: "solana", address: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", decimals: 6 },
+      { chain: "ton", address: "EQCxE6mUtQJKFnGfaROTKOt1lZbDiiX1kCixRv7Nw2Id_sDs", decimals: 6 },
+      { chain: "near", address: "usdt.tether-token.near", decimals: 6 },
+      { chain: "aptos", address: "0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b", decimals: 6 },
+      { chain: "klaytn", address: "0xd077a400968890eacc75cdc901f0356c943e4fdb", decimals: 6 },
+      { chain: "kava", address: "0x919c1c267bc06a7039e03fcc2ef738525769109c", decimals: 6 },
     ],
     supplyMethod: {
       type: "totalSupply-minus-addresses",
