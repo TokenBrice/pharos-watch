@@ -182,8 +182,8 @@ export default function MethodologyPage() {
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Resilience</td>
                     <td className="py-2 pr-4">20%</td>
-                    <td className="py-2 pr-4">Chain risk, collateral, custody, blacklist</td>
-                    <td className="py-2">Structural resilience across 4 equally-weighted sub-factors</td>
+                    <td className="py-2 pr-4">Collateral, custody, blacklist</td>
+                    <td className="py-2">Structural resilience across 3 equally-weighted sub-factors</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Decentralization</td>
@@ -217,7 +217,7 @@ export default function MethodologyPage() {
           {/* Resilience sub-factors */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Resilience Scoring</h3>
-            <p>Average of four equally-weighted sub-factors (25% each):</p>
+            <p>Average of three equally-weighted sub-factors (~33% each). Chain infrastructure is scored exclusively in the Decentralization dimension.</p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -228,11 +228,6 @@ export default function MethodologyPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr>
-                    <td className="py-2 pr-4 text-foreground">Chain Risk</td>
-                    <td className="py-2 pr-4">Where does the core protocol operate?</td>
-                    <td className="py-2">Ethereum&nbsp;(100), Stage&nbsp;1+&nbsp;L2&nbsp;(66), Established&nbsp;alt&#8209;L1&nbsp;(20), Unproven&nbsp;(0)</td>
-                  </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Collateral Quality</td>
                     <td className="py-2 pr-4">Reserve composition risk</td>

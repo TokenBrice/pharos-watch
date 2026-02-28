@@ -30,7 +30,7 @@ import { deriveDependencies } from "./reserve-templates";
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "5.2";
+export const METHODOLOGY_VERSION = "5.3";
 
 /**
  * Base dimension weights for the overall grade.
@@ -390,13 +390,15 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
 }
 
 /**
- * Resilience: 4-factor weighted average.
+ * Resilience: 3-factor weighted average.
  *
- * Sub-factors (each 25% of the resilience score):
- * 1. Chain Risk — where does the protocol live?
- * 2. Collateral Quality — trust assumptions in backing assets
- * 3. Custody Model — who holds the collateral?
- * 4. Blacklist Capability — can the issuer freeze funds?
+ * Sub-factors (each 1/3 of the resilience score):
+ * 1. Collateral Quality — trust assumptions in backing assets
+ * 2. Custody Model — who holds the collateral?
+ * 3. Blacklist Capability — can the issuer freeze funds?
+ *
+ * Chain infrastructure is scored exclusively in the Decentralization
+ * dimension to avoid double-counting.
  */
 export function scoreResilience(
   meta: StablecoinMeta,
@@ -406,7 +408,6 @@ export function scoreResilience(
   const blacklistScore = canBeBlacklisted === true ? 33 : canBeBlacklisted === "possible" ? 66 : 100;
   const blacklistLabel = canBeBlacklisted === true ? "Yes" : canBeBlacklisted === "possible" ? "Possible (mutable contract)" : "No";
 
-  const chainScore = chainInfraScore(factors.chainTier, factors.deploymentModel);
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
 
   const hasReserves = meta.reserves && meta.reserves.length > 0;
@@ -418,11 +419,10 @@ export function scoreResilience(
     : COLLATERAL_QUALITY_LABEL[factors.collateralQuality];
 
   const score = Math.round(
-    (chainScore + collateralScore + custodyScore + blacklistScore) / 4,
+    (collateralScore + custodyScore + blacklistScore) / 3,
   );
 
   const parts = [
-    `Chain: ${chainInfraLabel(factors.chainTier, factors.deploymentModel)} (${chainScore})`,
     `Collateral: ${collateralLabel} (${collateralScore})`,
     `Custody: ${CUSTODY_MODEL_LABEL[factors.custodyModel]} (${custodyScore})`,
     `Blacklist: ${blacklistLabel} (${blacklistScore})`,

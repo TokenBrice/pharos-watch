@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.1)
+## Overall Grade (v5.3)
 
 Two-step computation:
 
@@ -18,7 +18,7 @@ Cemetery coins get a permanent F.
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
 | **Liquidity** | 30% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
-| **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain infrastructure (tier × deployment model), collateral quality, custody model, and blacklist capability |
+| **Resilience** | 20% | Token metadata (3 sub-factors) | Weighted avg of collateral quality, custody model, and blacklist capability |
 | **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → 95. With deps → blended score (upstream × weight + self-backed), −10 if any < 75. Self-backed varies by governance (90/75/95) |
 
@@ -42,61 +42,13 @@ Cemetery coins get a permanent F.
 
 ### Resilience Details
 
-4-factor weighted average (each sub-factor 25% of the resilience score):
+3-factor weighted average (each sub-factor 1/3 of the resilience score). Chain infrastructure is scored exclusively in the Decentralization dimension to avoid double-counting.
 
 | Sub-factor | Scoring | Tiers |
 |---|---|---|
-| **Chain Infrastructure** | Two-axis: `chainTier × deploymentModel` (see below) | Combined score 0–100 |
 | **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
 | **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
 | **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Possible (66), Blacklistable (33) |
-
-#### Chain Infrastructure: Two-Axis Scoring (v5.1)
-
-The chain infrastructure score combines **primary chain maturity** with **deployment model risk** via multiplicative scoring:
-
-`chainInfraScore = CHAIN_TIER_SCORE[chainTier] × DEPLOYMENT_MULT[deploymentModel]`
-
-**Chain tier** (where core minting/logic lives):
-
-| Tier | Score |
-|------|-------|
-| `ethereum` | 100 |
-| `stage1-l2` | 66 |
-| `established-alt-l1` | 20 |
-| `unproven` | 0 |
-
-**Deployment model** (how the token extends to other chains):
-
-| Model | Multiplier | Description |
-|-------|-----------|-------------|
-| `single-chain` | 1.00 | No multichain presence, or irrelevant bridged copies |
-| `canonical-bridge` | 0.85 | Bridges via L2 canonical rollup bridges (inherits rollup security) |
-| `third-party-bridge` | 0.60 | Bridges via CCIP, LayerZero, Wormhole, etc. |
-| `native-multichain` | 0.40 | Independent minting/redeeming on multiple chains |
-
-**Combined score matrix:**
-
-| Deployment Model | ETH (100) | L2 (66) | Alt-L1 (20) | Unproven (0) |
-|------------------|-----------|---------|-------------|--------------|
-| single-chain | 100 | 66 | 20 | 0 |
-| canonical-bridge | 85 | 56 | 17 | 0 |
-| third-party-bridge | 60 | 40 | 12 | 0 |
-| native-multichain | 40 | 26 | 8 | 0 |
-
-**Classification decision tree:**
-
-```
-Can the protocol mint/redeem on >1 chain independently?
-  YES → native-multichain
-  NO → Is the token on >1 chain?
-    NO → single-chain
-    YES → Does cross-chain transfer use the L2's canonical rollup bridge?
-      YES → canonical-bridge
-      NO → third-party-bridge
-```
-
-Display labels: `"{ChainTier label}"` with optional deployment suffix. Single-chain gets no suffix. Example: "Ethereum mainnet (third-party bridge)".
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
@@ -140,7 +92,7 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 
 Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
 
-Data sources: `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
+Data sources: `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
 
 ### Decentralization Details
 
@@ -170,9 +122,42 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 | 15–49 | −50 |
 | 0–14 | −65 |
 
-`immutable-code` is exempt because there is no governance to undermine — chain centralization risks are already fully captured by the Resilience dimension. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
+`immutable-code` is exempt because there is no governance to undermine — chain centralization cannot compromise non-existent governance keys. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
 
-The combined score is computed from `chainTier × deploymentModel` (see Chain Infrastructure above). Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
+#### Chain Infrastructure: Two-Axis Scoring
+
+The chain infrastructure score combines **primary chain maturity** with **deployment model risk** via multiplicative scoring:
+
+`chainInfraScore = CHAIN_TIER_SCORE[chainTier] × DEPLOYMENT_MULT[deploymentModel]`
+
+**Chain tier** (where core minting/logic lives):
+
+| Tier | Score |
+|------|-------|
+| `ethereum` | 100 |
+| `stage1-l2` | 66 |
+| `established-alt-l1` | 20 |
+| `unproven` | 0 |
+
+**Deployment model** (how the token extends to other chains):
+
+| Model | Multiplier | Description |
+|-------|-----------|-------------|
+| `single-chain` | 1.00 | No multichain presence, or irrelevant bridged copies |
+| `canonical-bridge` | 0.85 | Bridges via L2 canonical rollup bridges (inherits rollup security) |
+| `third-party-bridge` | 0.60 | Bridges via CCIP, LayerZero, Wormhole, etc. |
+| `native-multichain` | 0.40 | Independent minting/redeeming on multiple chains |
+
+**Combined score matrix:**
+
+| Deployment Model | ETH (100) | L2 (66) | Alt-L1 (20) | Unproven (0) |
+|------------------|-----------|---------|-------------|--------------|
+| single-chain | 100 | 66 | 20 | 0 |
+| canonical-bridge | 85 | 56 | 17 | 0 |
+| third-party-bridge | 60 | 40 | 12 | 0 |
+| native-multichain | 40 | 26 | 8 | 0 |
+
+Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
 Examples: BOLD (immutable-code) = **100** (no chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
 

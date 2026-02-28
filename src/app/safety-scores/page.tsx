@@ -57,8 +57,8 @@ export default function ReportCardsPage() {
           </summary>
           <p className="px-4 pb-4 text-sm text-muted-foreground">
             Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events),
-            liquidity depth (DEX pool size, volume, and protocol diversity), resilience (chain risk, collateral quality,
-            and custody model), decentralization (governance type, blacklist capability, and Bluechip rating), and
+            liquidity depth (DEX pool size, volume, and protocol diversity), resilience (collateral quality,
+            custody model, and blacklist capability), decentralization (governance type and chain infrastructure), and
             dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a
             composite 0–100 score, then mapped to a letter grade from A+ to F.
           </p>
@@ -87,7 +87,7 @@ export default function ReportCardsPage() {
                 name: "How are stablecoin safety grades calculated?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events), liquidity depth (DEX pool size, volume, and protocol diversity), resilience (chain risk, collateral quality, and custody model), decentralization (governance type, blacklist capability, and Bluechip rating), and dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a composite 0–100 score, then mapped to a letter grade from A+ to F.",
+                  text: "Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events), liquidity depth (DEX pool size, volume, and protocol diversity), resilience (collateral quality, custody model, and blacklist capability), decentralization (governance type and chain infrastructure), and dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a composite 0–100 score, then mapped to a letter grade from A+ to F.",
                 },
               },
               {
