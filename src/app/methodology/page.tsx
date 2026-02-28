@@ -116,6 +116,11 @@ export default function MethodologyPage() {
               <p className="text-xs text-muted-foreground mt-0.5">(PSI / 100)<sup>0.20</sup></p>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border border-amber-500/40 p-3 text-center w-64">
+              <p className="text-foreground font-medium">&times; No-Liquidity Penalty</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX data</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="rounded-lg border p-3 text-center w-64">
               <p className="text-foreground font-medium">Final Grade</p>
               <p className="text-xs text-muted-foreground mt-0.5">A+ through F</p>
@@ -151,6 +156,11 @@ export default function MethodologyPage() {
             <div className="w-full rounded-lg border p-3 text-center">
               <p className="text-foreground font-medium">&times; Peg Multiplier</p>
               <p className="text-xs text-muted-foreground mt-0.5">(PSI / 100)<sup>0.20</sup></p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border border-amber-500/40 p-3 text-center">
+              <p className="text-foreground font-medium">&times; No-Liquidity Penalty</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0.9&times; if no DEX data</p>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="w-full rounded-lg border p-3 text-center">
@@ -211,6 +221,18 @@ export default function MethodologyPage() {
               Coins with strong pegs (90+) are barely affected (~2% penalty), while coins with broken pegs
               are properly penalized (e.g. PSI&nbsp;10 &rarr; 37% penalty). NAV tokens (PSI&nbsp;=&nbsp;NR) receive
               multiplier&nbsp;1.0 since peg tracking does not apply to them.
+            </p>
+          </div>
+
+          {/* No-liquidity penalty */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">No-Liquidity-Data Penalty</h3>
+            <p>
+              A further 0.9&times; multiplier is applied when a coin has no DEX liquidity score (NR).
+              No free pass — as DEX liquidity coverage matures, the absence of liquidity data is
+              increasingly suspicious. The 30% weight would normally be redistributed to other
+              dimensions, effectively inflating the overall score; this multiplier corrects for that
+              by applying a flat 10% penalty instead.
             </p>
           </div>
 
@@ -356,7 +378,7 @@ export default function MethodologyPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v5.1. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v5.4. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>

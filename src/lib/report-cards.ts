@@ -30,7 +30,7 @@ import { deriveDependencies } from "./reserve-templates";
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "5.3";
+export const METHODOLOGY_VERSION = "5.4";
 
 /**
  * Base dimension weights for the overall grade.
@@ -47,6 +47,13 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
 
 /** Peg stability multiplier: final = base × (PSI/100)^exponent */
 export const PEG_MULTIPLIER_EXPONENT = 0.20;
+
+/**
+ * Penalty multiplier applied to the overall score when a coin has no DEX
+ * liquidity data. No free pass — missing liquidity coverage is increasingly
+ * suspicious as our data pipeline matures.
+ */
+export const NO_LIQUIDITY_PENALTY = 0.9;
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
   pegStability: "Peg Stability",
@@ -660,6 +667,11 @@ export function computeOverallGrade(
     return { grade: "NR", score: null, ratedDimensions: baseRatedCount };
   }
   // NAV token with null peg → multiplier 1.0, no change
+
+  // No liquidity data → 10% penalty (no free pass)
+  if (dimensions.liquidity.score === null) {
+    score *= NO_LIQUIDITY_PENALTY;
+  }
 
   const clamped = Math.max(0, Math.min(100, Math.round(score)));
   const ratedDimensions = baseRatedCount + (pegScore !== null ? 1 : 0);

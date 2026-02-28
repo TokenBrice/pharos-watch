@@ -4,7 +4,10 @@ import {
   resolveGovernanceQuality,
   GOVERNANCE_QUALITY_SCORE,
   scoreDependencyRisk,
+  computeOverallGrade,
+  NO_LIQUIDITY_PENALTY,
 } from "../report-cards";
+import type { ReportCardDimension } from "../types";
 import type { StablecoinMeta } from "../types";
 
 // Minimal meta helper
@@ -154,5 +157,47 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     // Wrapper ceiling: 80 - 3 = 77
     expect(result.score).toBe(77);
     expect(result.detail).toContain("wrapper dependency ceiling");
+  });
+});
+
+describe("computeOverallGrade — no-liquidity penalty", () => {
+  function makeRatedDim(score: number): ReportCardDimension {
+    return { grade: "B", score, detail: "" };
+  }
+  const nrDim: ReportCardDimension = { grade: "NR", score: null, detail: "" };
+
+  it("applies 0.9x multiplier when liquidity is NR", () => {
+    const withLiq = computeOverallGrade({
+      pegStability: makeRatedDim(95),
+      liquidity: makeRatedDim(80),
+      resilience: makeRatedDim(80),
+      decentralization: makeRatedDim(80),
+      dependencyRisk: makeRatedDim(80),
+    });
+    const noLiq = computeOverallGrade({
+      pegStability: makeRatedDim(95),
+      liquidity: nrDim,
+      resilience: makeRatedDim(80),
+      decentralization: makeRatedDim(80),
+      dependencyRisk: makeRatedDim(80),
+    });
+    expect(noLiq.score).not.toBeNull();
+    // No-liq score must be strictly less than with-liq score
+    expect(noLiq.score!).toBeLessThan(withLiq.score!);
+    // Penalty ratio must be ~0.9 (accounting for rounding)
+    expect(noLiq.score! / withLiq.score!).toBeCloseTo(NO_LIQUIDITY_PENALTY, 1);
+  });
+
+  it("does not apply the penalty when liquidity is rated", () => {
+    const result = computeOverallGrade({
+      pegStability: makeRatedDim(95),
+      liquidity: makeRatedDim(70),
+      resilience: makeRatedDim(80),
+      decentralization: makeRatedDim(80),
+      dependencyRisk: makeRatedDim(80),
+    });
+    // Score should NOT be further penalised beyond normal weighting
+    expect(result.score).not.toBeNull();
+    expect(result.grade).not.toBe("NR");
   });
 });

@@ -2,12 +2,13 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.3)
+## Overall Grade (v5.4)
 
-Two-step computation:
+Three-step computation:
 
 1. **Base score**: weighted average of 4 base dimensions (each 0–100). NR dimensions have their weight redistributed proportionally among rated ones. Requires at least 2 rated base dimensions; otherwise overall = NR.
 2. **Peg multiplier**: `final = base × (PSI / 100) ^ 0.20`. Coins with good pegs (90+) barely affected (~2% penalty). Coins with broken pegs get properly penalized (PSI 10 → 37% penalty). PSI = NR (NAV tokens) → multiplier 1.0 (no penalty). PSI = 0 → multiplier 0.
+3. **No-liquidity penalty**: `final × 0.9` when the Liquidity dimension is NR (no DEX data). No free pass — as DEX coverage matures, absence of liquidity data is increasingly suspicious. Implemented via `NO_LIQUIDITY_PENALTY = 0.9` constant in `report-cards.ts`.
 
 Cemetery coins get a permanent F.
 
