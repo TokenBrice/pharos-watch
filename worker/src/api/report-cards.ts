@@ -19,6 +19,7 @@ import {
   scoreDependencyRisk,
   computeOverallGrade,
   resolveResilienceFactors,
+  resolveGovernanceQuality,
 } from "../../../src/lib/report-cards";
 import type {
   StablecoinData,
@@ -31,6 +32,7 @@ import type {
   PegSummaryCoin,
   DimensionKey,
   GovernanceType,
+  GovernanceQuality,
   RawDimensionInputs,
   ChainRisk,
   CollateralQuality,
@@ -175,35 +177,20 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     });
   }
 
-  // 5. Phase 1: Compute grades for non-dependent coins (centralized + decentralized)
-  const phase1Cards: ReportCard[] = [];
-  const overallScores = new Map<string, number>(); // id -> overall score (for dependency risk)
-  const phase2Metas: typeof TRACKED_STABLECOINS = [];
+  // 5. Score all coins in dependency order (upstream first)
+  const sortedMetas = topologicalOrder([...TRACKED_STABLECOINS]);
+  const overallScores = new Map<string, number>();
+  const liveCards: ReportCard[] = [];
 
-  for (const meta of TRACKED_STABLECOINS) {
-    if (meta.flags.governance === "centralized-dependent") {
-      phase2Metas.push(meta);
-      continue;
-    }
-
+  for (const meta of sortedMetas) {
     const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores);
-    phase1Cards.push(card);
+    liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
     }
   }
 
-  // 6. Phase 2: Compute grades for centralized-dependent coins (using Phase 1 scores)
-  const phase2Cards: ReportCard[] = [];
-  for (const meta of phase2Metas) {
-    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores);
-    phase2Cards.push(card);
-    if (card.overallScore !== null) {
-      overallScores.set(card.id, card.overallScore);
-    }
-  }
-
-  // 7. Add cemetery coins as permanent F
+  // 6. Add cemetery coins as permanent F
   const defunctCards: ReportCard[] = DEAD_STABLECOINS.map((dead) => {
     const id = dead.llamaId ?? `dead-${dead.symbol.toLowerCase()}`;
     const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
@@ -228,14 +215,16 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
         chainRisk: "ethereum" as ChainRisk,
         collateralQuality: "native" as CollateralQuality,
         custodyModel: "onchain" as CustodyModel,
-        governanceTier: "centralized" as GovernanceType, dependencies: [],
+        governanceTier: "centralized" as GovernanceType,
+        governanceQuality: "single-entity" as GovernanceQuality,
+        dependencies: [],
       },
       isDefunct: true,
     };
   });
 
-  // 8. Combine and sort by overall score descending (NR at bottom)
-  const allCards = [...phase1Cards, ...phase2Cards, ...defunctCards];
+  // 7. Combine and sort by overall score descending (NR at bottom)
+  const allCards = [...liveCards, ...defunctCards];
   allCards.sort((a, b) => {
     // NR (null score) goes to bottom
     if (a.overallScore === null && b.overallScore === null) return 0;
@@ -244,7 +233,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     return b.overallScore - a.overallScore;
   });
 
-  // 9. Build dependency graph edge list
+  // 8. Build dependency graph edge list
   const edges: { from: string; to: string }[] = [];
   for (const meta of TRACKED_STABLECOINS) {
     if (meta.dependencies) {
@@ -254,7 +243,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     }
   }
 
-  // 10. Return ReportCardsResponse
+  // 9. Return ReportCardsResponse
   const response: ReportCardsResponse = {
     cards: allCards,
     methodology: {
@@ -317,6 +306,7 @@ function computeCard(
     collateralQuality: resilienceFactors.collateralQuality,
     custodyModel: resilienceFactors.custodyModel,
     governanceTier: meta.flags.governance as GovernanceType,
+    governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
     dependencies: meta.dependencies ?? [],
   };
 
@@ -332,4 +322,28 @@ function computeCard(
     ...(meta.dependencies && meta.dependencies.length > 0 ? { dependencies: meta.dependencies } : {}),
     isDefunct: false,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Topological sort — ensures every coin is scored after all its upstreams
+// ---------------------------------------------------------------------------
+
+function topologicalOrder(metas: StablecoinMeta[]): StablecoinMeta[] {
+  const metaMap = new Map(metas.map(m => [m.id, m]));
+  const visited = new Set<string>();
+  const result: StablecoinMeta[] = [];
+
+  function visit(id: string) {
+    if (visited.has(id)) return;
+    visited.add(id);
+    const meta = metaMap.get(id);
+    if (!meta) return;
+    for (const dep of meta.dependencies ?? []) {
+      if (metaMap.has(dep.id)) visit(dep.id);
+    }
+    result.push(meta);
+  }
+
+  for (const meta of metas) visit(meta.id);
+  return result;
 }
