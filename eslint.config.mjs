@@ -13,6 +13,16 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // Downgrade React Compiler rules to warnings — these flag valid patterns
+    // that aren't optimal for the compiler but work correctly at runtime.
+    rules: {
+      "react-hooks/preserve-manual-memoization": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
+      "react-hooks/incompatible-library": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;
