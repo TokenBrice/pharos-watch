@@ -399,7 +399,23 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 
 ### GET /api/status
 
-Returns recent `cron_runs` rows for operational monitoring.
+Returns recent `cron_runs` rows for operational monitoring. Tracks 11 cron jobs via the `CRON_INTERVALS` map:
+
+| Job | Interval | Trigger |
+|-----|----------|---------|
+| `sync-stablecoins` | 900s (15min) | `*/15 * * * *` |
+| `sync-stablecoin-charts` | 900s (15min) | `*/15 * * * *` |
+| `sync-fx-rates` | 900s (15min) | `*/15 * * * *` |
+| `stability-index` | 900s (15min) | `*/15 * * * *` |
+| `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
+| `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
+| `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
+| `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
+| `daily-digest` | 86,400s (24h) | `0 8 * * *` |
+| `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
+| `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
+
+A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago.
 
 ---
 
