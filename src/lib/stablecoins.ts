@@ -952,6 +952,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "satoshi-stablecoin",
     tags: ["Liquity v1 fork"],
     dependencies: [],
+    chainRisk: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
     pegMechanism: "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
