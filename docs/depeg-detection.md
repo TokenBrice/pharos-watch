@@ -1,0 +1,334 @@
+# Depeg Detection Pipeline
+
+Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs every 15 minutes as part of the `sync-stablecoins` cron. Stage 2 (confirmation) runs immediately after, promoting or rejecting candidates for large-cap coins that require multi-source agreement.
+
+## Thresholds & Constants
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `DEPEG_THRESHOLD_BPS` | 100 (1%) | USD peg deviation threshold |
+| `DEPEG_THRESHOLD_BPS_NON_USD` | 150 (1.5%) | Non-USD peg threshold (accounts for FX noise + thin liquidity) |
+| `DEPEG_CONFIRMATION_SUPPLY_THRESHOLD` | $1,000,000,000 | Coins above this require multi-source confirmation |
+| `DEPEG_PENDING_MIN_AGE_SEC` | 900 (15 min) | Minimum time before a pending record can be promoted |
+| `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Maximum time before a pending record expires |
+| `DEPEG_SECONDARY_THRESHOLD_RATIO` | 0.5 | Secondary source agreement bar (50% of primary threshold) |
+| `DEX_FRESHNESS_SEC` | 1200 (20 min) | DEX prices older than this are ignored |
+
+`getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
+
+## Database Schema
+
+### depeg_events (migration 0006)
+
+```sql
+CREATE TABLE IF NOT EXISTS depeg_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stablecoin_id TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  peg_type TEXT NOT NULL,
+  direction TEXT NOT NULL,              -- "above" | "below"
+  peak_deviation_bps INTEGER NOT NULL,
+  started_at INTEGER NOT NULL,          -- Unix seconds
+  ended_at INTEGER,                     -- NULL = ongoing
+  start_price REAL NOT NULL,
+  peak_price REAL,
+  recovery_price REAL,
+  peg_reference REAL NOT NULL,
+  source TEXT NOT NULL DEFAULT 'live'   -- "live" | "backfill"
+);
+
+CREATE INDEX idx_depeg_stablecoin ON depeg_events(stablecoin_id);
+CREATE INDEX idx_depeg_started ON depeg_events(started_at DESC);
+```
+
+Uniqueness and open-event indexes (migration 0008):
+
+```sql
+CREATE UNIQUE INDEX idx_depeg_unique ON depeg_events(stablecoin_id, started_at, source);
+CREATE INDEX idx_depeg_open ON depeg_events(stablecoin_id) WHERE ended_at IS NULL;
+```
+
+### depeg_pending (migration 0023)
+
+```sql
+CREATE TABLE IF NOT EXISTS depeg_pending (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stablecoin_id TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  peg_type TEXT NOT NULL,
+  direction TEXT NOT NULL,
+  first_seen_bps INTEGER NOT NULL,
+  first_seen_at INTEGER NOT NULL,
+  first_price REAL NOT NULL,
+  peg_reference REAL NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
+```
+
+One row per coin maximum. Holds depeg candidates awaiting multi-source confirmation.
+
+### Migration 0016
+
+Cleaned up non-USD depeg events with `peak_deviation_bps < 150` when the non-USD threshold was raised from 100 to 150.
+
+## Cron Scheduling
+
+Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins()` enriches prices, it calls:
+
+1. `detectDepegEvents(db, peggedAssets, fxFallbackRates)` -- detection
+2. `confirmPendingDepegs(db, peggedAssets, fxFallbackRates)` -- confirmation
+
+Both calls are in `worker/src/cron/sync-stablecoins.ts` (lines 667 and 675). Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
+
+## Stage 1 -- Detection
+
+### Initialization
+
+1. Load PSI-eligible stablecoins into `metaById` map
+2. Derive peg rates (handles FX lookups once)
+3. Load DEX prices from `dex_prices` table (silently skip if table missing)
+4. Merge duplicate open events: for each coin with multiple open events, keep earliest, absorb worst peak, delete rest
+
+### Per-Asset Processing
+
+Validation gates (skip if any fail):
+
+- Must be in `PSI_ELIGIBLE_STABLECOINS`
+- Not a NAV token (`meta.flags.navToken`)
+- Price valid: non-null, is a number, not NaN, > 0
+- Supply >= $1M (via `sumPegBuckets`)
+- Peg reference valid: finite and > 0
+
+Deviation calculation:
+
+```
+bps = Math.round(((price / pegRef) - 1) * 10000)
+direction = bps >= 0 ? "above" : "below"
+```
+
+### Three State Paths
+
+**Path A -- Deviation >= threshold AND event already open**
+
+- If direction changed (was above, now below or vice versa): close old event, open new one
+- Same direction: mark as legitimately open (add to `seen` set), update peak if worse
+- DEX cross-validation for ongoing events: if DEX disagrees AND event is >= 30 min old AND DEX has >= $1M TVL, auto-close the event
+
+**Path B -- Deviation >= threshold AND no event open**
+
+- Supply >= $1B: insert into `depeg_pending` (`ON CONFLICT DO NOTHING`) for multi-source confirmation
+- Supply < $1B: check DEX cross-validation. If DEX disagrees, suppress (skip). Otherwise, insert into `depeg_events` immediately
+
+**Path C -- Deviation < threshold AND event open**
+
+- Price recovered: close event with `recovery_price` = current price
+
+### Orphan Cleanup
+
+After the main loop, load all open events. Close any that were not in the `seen` set and were not created during the current run. These are "orphans" -- the coin was removed from tracking, has missing price, dropped below $1M supply, or became a NAV token. Orphans are closed with `recovery_price = NULL`.
+
+## Stage 2 -- Confirmation
+
+Processes all rows in `depeg_pending`. Only applies to coins with supply >= $1B.
+
+### Per-Record Processing
+
+Guards (delete pending + skip):
+
+1. Invalid `peg_reference` (<= 0)
+2. Open event already exists for this coin (another path created it)
+
+Recovery check: if current price is valid and deviation now < threshold, delete pending (transient noise).
+
+Age checks:
+
+- If age < 15 minutes: skip (wait for next cycle)
+- If age > 45 minutes: delete (expired without confirmation)
+
+### Secondary Source Checks
+
+**CoinGecko check:**
+
+- Fetch `/simple/price` for the coin's `geckoId`
+- Calculate deviation against `peg_reference`
+- Agrees if deviation >= `secondaryBar` (50% of primary threshold)
+- Non-fatal: if fetch fails, `cgAgrees = null`
+
+**DEX check:**
+
+- Read from `dex_prices` table (same data as Stage 1)
+- Must be within 20-minute freshness window
+- Agrees if deviation >= `secondaryBar`
+
+### Decision Matrix
+
+| CG agrees | DEX agrees | Action |
+|-----------|-----------|--------|
+| true | any | PROMOTE to `depeg_events` |
+| any | true | PROMOTE to `depeg_events` |
+| false | false | REJECT (both disagree) |
+| false | null | REJECT (CG disagrees, no DEX) |
+| null | false | Keep pending (retry next cycle) |
+| null | null | Keep pending (retry next cycle) |
+
+Promotion inserts into `depeg_events` with `started_at` = original `first_seen_at`, peak = worst of current vs `first_seen`, then deletes from `depeg_pending`.
+
+## Event Lifecycle
+
+```
+Price crosses threshold
+        |
+        +-- Supply < $1B --> DEX agrees? --> INSERT depeg_events (source='live')
+        |                       | no
+        |                       +-> Suppress (skip)
+        |
+        +-- Supply >= $1B --> INSERT depeg_pending
+                                |
+                           (next cycle, 15+ min later)
+                                |
+                           Secondary sources agree? --> PROMOTE to depeg_events
+                                | both disagree
+                                +-> REJECT (delete pending)
+
+While event is open:
+  - Peak deviation updated if worse price seen
+  - Direction change: close old, open new
+  - DEX disagrees + event >= 30min + DEX TVL >= $1M: auto-close
+  - Price recovers below threshold: close with recovery_price
+
+Orphan cleanup:
+  - Open event not processed in current run: close with recovery_price=NULL
+```
+
+## Types
+
+### DepegRow to DepegEvent
+
+`rowToDepegEvent()` converts D1 snake_case rows to frontend camelCase. It validates:
+
+- `direction` must be `"above"` or `"below"` (defaults to `"below"`)
+- `source` must be `"live"` or `"backfill"` (defaults to `"live"`)
+
+Frontend type (`src/lib/types.ts`):
+
+```typescript
+interface DepegEvent {
+  id: number
+  stablecoinId: string
+  symbol: string
+  pegType: string
+  direction: "above" | "below"
+  peakDeviationBps: number
+  startedAt: number
+  endedAt: number | null
+  startPrice: number
+  peakPrice: number | null
+  recoveryPrice: number | null
+  pegReference: number
+  source: "live" | "backfill"
+}
+```
+
+## API
+
+### GET /api/depeg-events
+
+Query params:
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | string | -- | Filter by `stablecoin_id` |
+| `active` | string | -- | If `"true"`, only events where `ended_at IS NULL` |
+| `limit` | number | 100 | Max results (clamped 1--1000) |
+| `offset` | number | 0 | Pagination offset |
+
+Response:
+
+```json
+{
+  "events": [{ "...DepegEvent fields..." }],
+  "total": 42
+}
+```
+
+Cache: realtime profile (`s-maxage=60`, `max-age=10`). Freshness headers based on latest `startedAt`, 900s TTL.
+
+## Frontend
+
+### Hook: useDepegEvents (`use-depeg-events.ts`)
+
+- Fetches `/api/depeg-events` with optional `?stablecoin=` filter
+- TanStack Query: `staleTime` = 15 min, `refetchInterval` = 30 min
+
+### Component: DepegFeed (`depeg-feed.tsx`)
+
+- 2-column grid of recent events (page size 20)
+- Sorted by `startedAt` DESC
+- Shows: logo, symbol, peak deviation (red >= 500bps, amber < 500bps), direction badge, LIVE pulsing indicator if ongoing, date, duration
+- Click navigates to `/stablecoin/{id}`
+
+### Component: DepegHistory (`depeg-history.tsx`)
+
+- Table of all events for a single coin (used on stablecoin detail page)
+- Summary metrics: event count, worst deviation, current streak (days at peg or "Depegged now")
+- Table columns: Date, Direction (badge), Peak Deviation (signed, colored), Duration (or "Ongoing"), Start Price, Peak Price, Recovery Price
+- Uses `computePegStability()` for metrics
+
+## Peg Stability Metrics (`peg-stability.ts`)
+
+| Metric | Description |
+|--------|-------------|
+| `pegPct` | Percentage of tracked history at peg (merges overlapping intervals) |
+| `trackingSpan` | Human-readable span ("3y 8mo", "45d") |
+| `limited` | `true` if < 30 days history |
+| `currentStreakDays` | Days since last event ended |
+| `depeggedNow` | Boolean (any ongoing event?) |
+
+## Peg Score (`peg-score.ts`)
+
+Used in report cards. Formula:
+
+```
+pegPct = (1 - totalDepegSec / spanSec) * 100
+severityScore = 100 - sum of per-event penalties (peak x duration x recency decay)
+spreadPenalty = min(15, (stddev of peaks / 1000) * 15)
+activeDepegPenalty = if ongoing: min(50, max(2, |peakBps| / 200))
+
+pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
+```
+
+Returns `null` if < 30 days tracking.
+
+## Edge Cases & Guardrails
+
+| Scenario | Handling |
+|----------|----------|
+| Duplicate events | Unique index (`stablecoin_id`, `started_at`, `source`) + merge at run start |
+| NAV tokens | Skipped (expected to appreciate, depeg detection N/A) |
+| Supply < $1M | Skipped (prevents micro-cap noise) |
+| Missing/invalid prices | Multiple null/NaN/<= 0 checks |
+| Peg reference validation | Must be finite and > 0 |
+| DEX freshness | Prices > 20 min old ignored |
+| Orphaned events | Closed with `recovery_price = NULL` when coin drops off tracking |
+| Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
+
+## File Index
+
+| File | Role |
+|------|------|
+| `worker/src/cron/detect-depegs.ts` | Stage 1: detection, peak tracking, DEX cross-validation, orphan cleanup |
+| `worker/src/cron/confirm-pending-depegs.ts` | Stage 2: multi-source confirmation for large coins |
+| `worker/src/cron/sync-stablecoins.ts` | Parent cron that calls both stages after price enrichment |
+| `worker/src/lib/depeg-helpers.ts` | `DepegRow` type, `rowToDepegEvent()` converter |
+| `worker/src/api/depeg-events.ts` | `GET /api/depeg-events` handler |
+| `worker/migrations/0006_depeg_events.sql` | Initial `depeg_events` table |
+| `worker/migrations/0008_depeg_dedup.sql` | Uniqueness + open events indexes |
+| `worker/migrations/0023_depeg_pending.sql` | `depeg_pending` table for multi-source confirmation |
+| `worker/migrations/0016_cleanup_non_usd_depeg_events.sql` | Cleanup when non-USD threshold raised |
+| `src/lib/types.ts` | `DepegEvent` frontend type |
+| `src/lib/peg-score.ts` | Peg score computation for report cards |
+| `src/lib/peg-stability.ts` | Peg stability metrics (`pegPct`, streak, tracking span) |
+| `src/hooks/use-depeg-events.ts` | TanStack Query hook |
+| `src/components/depeg-feed.tsx` | Recent events grid (homepage) |
+| `src/components/depeg-history.tsx` | Event history table (detail page) |
