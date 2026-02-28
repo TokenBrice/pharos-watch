@@ -28,7 +28,7 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "4.1";
+export const METHODOLOGY_VERSION = "5.0";
 
 /**
  * Base dimension weights for the overall grade.
@@ -467,22 +467,26 @@ export function scoreDecentralization(
 }
 
 /**
- * Dependency Risk: for CeFi-Dependent coins, blend upstream scores by weight.
- * - Non-CeFi-Dependent: 95
- * - CeFi-Dependent with mapped deps: weighted blend of upstream + self-backed (75) scores, -10 if any below 75
- * - CeFi-Dependent with no deps mapped or scores unavailable: 70
+ * Dependency Risk: universal scoring across all governance tiers.
+ * - Coins with no dependencies: 95
+ * - Coins with mapped deps: weighted blend of upstream + self-backed scores
+ * - Self-backed score varies by governance type (90/75/95)
+ * - Coins with deps but scores unavailable: 70
  */
+
+const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
+  decentralized: 90,
+  "centralized-dependent": 75,
+  centralized: 95,
+};
+
 export function scoreDependencyRisk(
   meta: StablecoinMeta,
   overallScores: Map<string, number>,
 ): ReportCardDimension {
-  if (meta.flags.governance !== "centralized-dependent") {
-    return { grade: scoreToGrade(95), score: 95, detail: "Not dependent on upstream stablecoins" };
-  }
-
   const deps = meta.dependencies;
   if (!deps || deps.length === 0) {
-    return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent but no upstream dependencies mapped" };
+    return { grade: scoreToGrade(95), score: 95, detail: "Not dependent on upstream stablecoins" };
   }
 
   // Gather upstream scores with weights
@@ -493,20 +497,14 @@ export function scoreDependencyRisk(
   }
 
   if (resolved.length === 0) {
-    return { grade: scoreToGrade(70), score: 70, detail: "CeFi-Dependent; upstream dependency scores unavailable" };
+    return { grade: scoreToGrade(70), score: 70, detail: "Upstream dependency scores unavailable" };
   }
 
-  // Blend upstream exposure with self-backed portion (non-stablecoin collateral).
-  // A coin 35% backed by USDC and 65% self-backed blends: 0.35*USDC + 0.65*75.
-  // Without this, dividing by totalWeight cancels out the weight entirely —
-  // a 5% USDC coin would get the same dep risk score as a 100% USDC coin.
-  // Self-backed score is 75 (not 95) because CeFi-Dependent coins still carry
-  // systemic coupling risk — their peg mechanisms (PSMs, arbitrage loops) depend
-  // on upstream stablecoin infrastructure even for the non-stablecoin collateral.
+  const governance = meta.flags.governance;
+  const SELF_BACKED_SCORE = SELF_BACKED_SCORE_BY_GOVERNANCE[governance];
   const rawTotal = resolved.reduce((sum, d) => sum + d.weight, 0);
   const totalWeight = Math.min(1, rawTotal);
   const selfBackedFraction = 1 - totalWeight;
-  const SELF_BACKED_SCORE = 75;
   const normalizer = rawTotal > 1 ? rawTotal : 1;
   const blendedScore = resolved.reduce((sum, d) => sum + d.score * (d.weight / normalizer), 0)
     + selfBackedFraction * SELF_BACKED_SCORE;
@@ -532,7 +530,7 @@ export function scoreDependencyRisk(
 
   const parts: string[] = [];
   parts.push(`Based on ${resolved.length} upstream dependenc${resolved.length === 1 ? "y" : "ies"} (${Math.round(totalWeight * 100)}% stablecoin-backed)`);
-  parts.push(`blended score: ${Math.round(blendedScore)}`);
+  parts.push(`blended score: ${Math.round(blendedScore)}, self-backed: ${SELF_BACKED_SCORE}`);
   if (weakDeps.length > 0) {
     parts.push(`-10 penalty: ${weakDeps.length} dependenc${weakDeps.length === 1 ? "y" : "ies"} below 75`);
   }
