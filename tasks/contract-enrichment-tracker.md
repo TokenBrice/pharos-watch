@@ -25,362 +25,352 @@
 
 ## Summary
 
-- **Total gaps:** 88 across 34 coins
-- **Mapped (actionable):** 77
-- **Unmapped DL chains:** 11 (need DL_CHAIN_MAP update first)
-- **Total untracked supply:** $7.0B
+- **Total gaps identified:** 88 across 34 coins
+- **Contracts added:** 78
+- **Skipped:** 10 (unmapped/deprecated/unverified)
+- **New CHAIN_META entries:** 18 (15 EVM + 3 non-EVM)
+- **New chain logos:** 17
 - **Data snapshot:** 2026-02-28
-
-## Status Legend
-
-- `todo` — gap identified, not yet addressed
-- `in-progress` — currently being populated
-- `done` — address found, verified, written to stablecoins.ts
-- `skipped-cg-missing` — CG doesn't have this platform, needs manual research
-- `skipped-unmapped` — DL chain name not in our DL_CHAIN_MAP
-- `skipped-manual` — needs manual research (CG has no data)
+- **Completion date:** 2026-02-28
 
 ## Coins
 
 ### USDT — Tether (id: 1, geckoId: tether)
 
-**Gaps: 21 | Total untracked: $3075M**
+**Gaps: 21 | Added: 17 | Skipped: 4**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Plasma | plasma | $1310.0M | | |
-| todo | Mantle | mantle | $713.1M | | |
-| todo | Ink | ink | $210.1M | | |
-| todo | Hyperliquid L1 | hyperevm | $155.8M | | |
-| todo | Monad | monad | $97.2M | | |
-| todo | Fantom | fantom | $83.0M | | |
-| skipped-unmapped | Omni | UNMAPPED:Omni | $80.1M | | |
-| todo | X Layer | xlayer | $50.0M | | |
-| todo | Flare | flare | $49.1M | | |
-| todo | Berachain | berachain | $45.2M | | |
-| todo | Tezos | tezos | $42.3M | | |
-| todo | MegaETH | megaeth | $38.6M | | |
-| todo | Polkadot | polkadot | $37.0M | | |
-| todo | Unichain | unichain | $34.0M | | |
-| skipped-unmapped | Mixin | UNMAPPED:Mixin | $31.9M | | |
-| skipped-unmapped | Stable | UNMAPPED:Stable | $25.5M | | |
-| todo | Sui | sui | $22.1M | | |
-| todo | Injective | injective | $16.0M | | |
-| skipped-unmapped | Katana | UNMAPPED:Katana | $12.3M | | |
-| todo | Corn | corn | $11.8M | | |
-| todo | Scroll | scroll | $10.5M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Plasma | plasma | $1310.0M | USDT0 via LayerZero |
+| done | Mantle | mantle | $713.1M | USDT0 |
+| done | Ink | ink | $210.1M | USDT0 |
+| done | Hyperliquid L1 | hyperevm | $155.8M | USDT0 |
+| done | Monad | monad | $97.2M | USDT0 |
+| done | Fantom | fantom | $83.0M | fUSDT (bridged) |
+| skipped | Omni | — | $80.1M | Legacy frozen chain |
+| done | X Layer | xlayer | $50.0M | USDT0 |
+| done | Flare | flare | $49.1M | USDT0 |
+| done | Berachain | berachain | $45.2M | USDT0 |
+| done | Tezos | tezos | $42.3M | Native FA2 token |
+| done | MegaETH | megaeth | $38.6M | USDT0 |
+| done | Polkadot | polkadot | $37.0M | Asset Hub (ID: 1984) |
+| done | Unichain | unichain | $34.0M | USDT0 |
+| skipped | Mixin | — | $31.9M | Non-standard network |
+| skipped | Stable | — | $25.5M | Insufficient research |
+| done | Sui | sui | $22.1M | |
+| done | Injective | injective | $16.0M | Peggy bridge |
+| skipped | Katana | — | $12.3M | vbUSDT IOU, not native |
+| done | Corn | corn | $11.8M | USDT0 |
+| done | Scroll | scroll | $10.5M | |
 
 ### USDC — USD Coin (id: 2, geckoId: usd-coin)
 
-**Gaps: 16 | Total untracked: $2305M**
+**Gaps: 16 | Added: 16 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | BSC | bsc | $1280.4M | | |
-| todo | Stellar | stellar | $219.1M | | |
-| todo | Fantom | fantom | $181.5M | | |
-| todo | Cronos | cronos | $179.4M | | |
-| todo | Noble | noble | $167.9M | | |
-| todo | Mantle | mantle | $55.8M | | |
-| todo | Linea | linea | $35.0M | | |
-| todo | Scroll | scroll | $30.9M | | |
-| skipped-unmapped | Katana | UNMAPPED:Katana | $29.3M | | |
-| todo | Osmosis | osmosis | $27.2M | | |
-| todo | Stacks | stacks | $25.0M | | |
-| todo | Etherlink | etherlink | $18.8M | | |
-| todo | Cardano | cardano | $17.4M | | |
-| todo | PulseChain | pulsechain | $14.5M | | |
-| todo | Abstract | abstract | $11.5M | | |
-| todo | Berachain | berachain | $11.3M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | BSC | bsc | $1280.4M | Binance-Peg, 18 decimals |
+| done | Stellar | stellar | $219.1M | 7 decimals (Stellar standard) |
+| done | Fantom | fantom | $181.5M | Depegged ~$0.02 (Multichain exploit) |
+| done | Cronos | cronos | $179.4M | |
+| done | Noble | noble | $167.9M | Cosmos native (uusdc) |
+| done | Mantle | mantle | $55.8M | |
+| done | Linea | linea | $35.0M | |
+| done | Scroll | scroll | $30.9M | |
+| done | Katana | katana | $29.3M | vbUSDC |
+| done | Osmosis | osmosis | $27.2M | IBC transfer |
+| done | Stacks | stacks | $25.0M | USDCx (SIP-010) |
+| done | Etherlink | etherlink | $18.8M | |
+| done | Cardano | cardano | $17.4M | Policy ID format |
+| done | PulseChain | pulsechain | $14.5M | |
+| done | Abstract | abstract | $11.5M | |
+| done | Berachain | berachain | $11.3M | |
 
 ### YLDS — YLDS (id: 272, geckoId: ylds)
 
-**Gaps: 2 | Total untracked: $588M**
+**Gaps: 2 | Added: 2 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Solana | solana | $341.6M | | |
-| todo | Provenance | provenance | $246.7M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Solana | solana | $341.6M | |
+| done | Provenance | provenance | $246.7M | uylds.fcc denom |
 
 ### RLUSD — Ripple USD (id: 250, geckoId: ripple-usd)
 
-**Gaps: 1 | Total untracked: $256M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | XRPL | xrpl | $256.3M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | XRPL | xrpl | $256.3M | Trust line format |
 
 ### USDS — Sky Dollar (id: 209, geckoId: usds)
 
-**Gaps: 2 | Total untracked: $200M**
+**Gaps: 2 | Added: 2 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | OP Mainnet | optimism | $100.3M | | |
-| todo | Unichain | unichain | $100.0M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | OP Mainnet | optimism | $100.3M | |
+| done | Unichain | unichain | $100.0M | |
 
 ### AUSD — Agora Dollar (id: 205, geckoId: agora-dollar)
 
-**Gaps: 6 | Total untracked: $112M**
+**Gaps: 6 | Added: 6 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Monad | monad | $47.2M | | |
-| todo | Solana | solana | $33.8M | | |
-| skipped-unmapped | Katana | UNMAPPED:Katana | $9.3M | | |
-| todo | Immutable zkEVM | immutable-zkevm | $8.7M | | |
-| todo | Sui | sui | $7.8M | | |
-| todo | Mantle | mantle | $5.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Monad | monad | $47.2M | CREATE2 same address |
+| done | Solana | solana | $33.8M | |
+| done | Katana | katana | $9.3M | CREATE2 same address |
+| done | Immutable zkEVM | immutable-zkevm | $8.7M | CREATE2 same address |
+| done | Sui | sui | $7.8M | |
+| done | Mantle | mantle | $5.2M | CREATE2 same address |
 
 ### TBILL — OpenEden TBILL (id: 257, geckoId: openeden-tbill)
 
-**Gaps: 1 | Total untracked: $62M**
+**Gaps: 1 | Added: 0 | Skipped: 1**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | XRPL | xrpl | $61.9M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| skipped | XRPL | xrpl | $61.9M | Currency code unclear |
 
 ### USDA — Avalon USDa (id: 220, geckoId: usda-2)
 
-**Gaps: 5 | Total untracked: $58M**
+**Gaps: 5 | Added: 4 | Skipped: 1**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Movement | movement | $36.6M | | |
-| todo | Cardano | cardano | $8.8M | | |
-| todo | Kaia | klaytn | $7.5M | | |
-| todo | Berachain | berachain | $2.7M | | |
-| skipped-unmapped | Nibiru | UNMAPPED:Nibiru | $2.4M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Movement | movement | $36.6M | |
+| skipped | Cardano | cardano | $8.8M | DL misattribution (Anzens USDA) |
+| done | Kaia | klaytn | $7.5M | |
+| done | Berachain | berachain | $2.7M | |
+| done | Nibiru | nibiru | $2.4M | |
 
 ### USDTB — Ethena USDtb (id: 221, geckoId: usdtb)
 
-**Gaps: 1 | Total untracked: $55M**
+**Gaps: 1 | Added: 0 | Skipped: 1**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Solana | solana | $55.1M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| skipped | Solana | solana | $55.1M | Decimals unverified |
 
 ### USDX — Hex Trust USDX (id: 263, geckoId: hex-trust-usdx)
 
-**Gaps: 2 | Total untracked: $43M**
+**Gaps: 2 | Added: 2 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Flare | flare | $42.2M | | |
-| todo | Songbird | songbird | $1.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Flare | flare | $42.2M | |
+| done | Songbird | songbird | $1.2M | |
 
 ### M — M by M0 (id: 213, geckoId: m)
 
-**Gaps: 3 | Total untracked: $42M**
+**Gaps: 3 | Added: 2 | Skipped: 1**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Noble | noble | $25.2M | | |
-| todo | Solana | solana | $15.5M | | |
-| todo | Hyperliquid L1 | hyperevm | $1.4M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| skipped | Noble | noble | $25.2M | Wrong denom (uusdn = USDN) |
+| done | Solana | solana | $15.5M | |
+| done | Hyperliquid L1 | hyperevm | $1.4M | |
 
 ### BRZ — Brazilian Digital (id: 249, geckoId: brz)
 
-**Gaps: 1 | Total untracked: $39M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Solana | solana | $38.6M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Solana | solana | $38.6M | 4 decimals |
 
 ### DAI — Dai (id: 5, geckoId: dai)
 
-**Gaps: 5 | Total untracked: $27M**
+**Gaps: 5 | Added: 4 | Skipped: 1**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | PulseChain | pulsechain | $14.4M | | |
-| todo | Kaia | klaytn | $8.2M | | |
-| todo | Kava | kava | $1.9M | | |
-| skipped-unmapped | zkSync Lite | UNMAPPED:zkSync Lite | $1.7M | | |
-| todo | Near | near | $1.1M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | PulseChain | pulsechain | $14.4M | |
+| done | Kaia | klaytn | $8.2M | |
+| done | Kava | kava | $1.9M | |
+| skipped | zkSync Lite | — | $1.7M | Chain deprecated |
+| done | Near | near | $1.1M | Rainbow bridge |
 
 ### USDN — Noble Dollar (id: 282, geckoId: noble-dollar-usdn)
 
-**Gaps: 1 | Total untracked: $25M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Noble | noble | $25.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Noble | noble | $25.2M | uusdn denom |
 
 ### HYUSD — Hylo HYUSD (id: 302, geckoId: hylo-usd)
 
-**Gaps: 1 | Total untracked: $17M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Solana | solana | $17.0M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Solana | solana | $17.0M | |
 
 ### meUSD — Mezo USD (id: 303, geckoId: mezo-usd)
 
-**Gaps: 1 | Total untracked: $16M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Mezo | mezo | $16.4M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Mezo | mezo | $16.4M | CREATE2 same address |
 
 ### FRAX — Frax (id: 6, geckoId: frax)
 
-**Gaps: 1 | Total untracked: $16M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Fraxtal | fraxtal | $15.6M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Fraxtal | fraxtal | $15.6M | WFRAX wrapper (native gas token) |
 
 ### USDM — Moneta (id: 215, geckoId: usdm-2)
 
-**Gaps: 1 | Total untracked: $15M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Cardano | cardano | $14.5M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Cardano | cardano | $14.5M | |
 
 ### PYUSD — PayPal USD (id: 120, geckoId: paypal-usd)
 
-**Gaps: 1 | Total untracked: $10M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Flow | flow | $10.0M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Flow | flow | $10.0M | |
 
 ### TRYB — BiLira (id: 300, geckoId: bilira)
 
-**Gaps: 1 | Total untracked: $6M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Plasma | plasma | $6.3M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Plasma | plasma | $6.3M | |
 
 ### USBD — Bima USBD (id: 253, geckoId: usbd)
 
-**Gaps: 1 | Total untracked: $5M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Hemi | hemi | $5.4M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Hemi | hemi | $5.4M | CREATE2 same address |
 
 ### AUDD — AUDD (id: 165, geckoId: novatti-australian-digital-dollar)
 
-**Gaps: 1 | Total untracked: $5M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Stellar | stellar | $5.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Stellar | stellar | $5.2M | 7 decimals (Stellar standard) |
 
 ### satUSD — River Stablecoin (id: 218, geckoId: satoshi-stablecoin)
 
-**Gaps: 1 | Total untracked: $5M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| skipped-unmapped | Bsquared | UNMAPPED:Bsquared | $4.9M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Bsquared | bsquared | $4.9M | |
 
 ### USD1 — World Liberty Financial USD (id: 262, geckoId: usd1-wlfi)
 
-**Gaps: 1 | Total untracked: $3M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| skipped-unmapped | Abcore | UNMAPPED:Abcore | $3.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Abcore | abcore | $3.2M | AB Chain |
 
 ### MIM — Magic Internet Money (id: 10, geckoId: magic-internet-money)
 
-**Gaps: 2 | Total untracked: $3M**
+**Gaps: 2 | Added: 2 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Kava | kava | $1.8M | | |
-| todo | Blast | blast | $1.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Kava | kava | $1.8M | |
+| done | Blast | blast | $1.2M | |
 
 ### BtcUSD — Bitcoin USD (id: 183, geckoId: bitcoin-usd-btcfi)
 
-**Gaps: 1 | Total untracked: $3M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| skipped-unmapped | Bifrost Network | UNMAPPED:Bifrost Network | $2.9M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Bifrost Network | bifrost | $2.9M | |
 
 ### EUROP — Schuman EUROP (id: 247, geckoId: schuman-europ)
 
-**Gaps: 1 | Total untracked: $3M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Plasma | plasma | $2.6M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Plasma | plasma | $2.6M | |
 
 ### ISC — International Stable Currency (id: 186, geckoId: international-stable-currency)
 
-**Gaps: 1 | Total untracked: $3M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Solana | solana | $2.5M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Solana | solana | $2.5M | |
 
 ### ZeUSD — Zoth ZeUSD (id: 225, geckoId: zeusd)
 
-**Gaps: 1 | Total untracked: $2M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Manta | manta | $2.0M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Manta | manta | $2.0M | CREATE2 same address |
 
 ### VCHF — VNX Swiss Franc (id: 157, geckoId: vnx-swiss-franc)
 
-**Gaps: 1 | Total untracked: $2M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Solana | solana | $1.8M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Solana | solana | $1.8M | 9 decimals |
 
 ### USDP — Pax Dollar (id: 11, geckoId: paxos-standard)
 
-**Gaps: 1 | Total untracked: $1M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | BSC | bsc | $1.4M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | BSC | bsc | $1.4M | |
 
 ### USN — Noon USN (id: 230, geckoId: noon-usn)
 
-**Gaps: 1 | Total untracked: $1M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Sophon | sophon | $1.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Sophon | sophon | $1.2M | |
 
 ### EURS — Stasis Euro (id: 51, geckoId: stasis-eurs)
 
-**Gaps: 1 | Total untracked: $1M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Stellar | stellar | $1.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Stellar | stellar | $1.2M | 7 decimals (Stellar standard) |
 
 ### ZCHF — Frankencoin (id: 226, geckoId: frankencoin)
 
-**Gaps: 1 | Total untracked: $1M**
+**Gaps: 1 | Added: 1 | Skipped: 0**
 
-| Status | DL Chain | Internal Chain | Supply | Address | Notes |
-|--------|----------|---------------|--------|---------|-------|
-| todo | Base | base | $1.2M | | |
+| Status | DL Chain | Internal Chain | Supply | Notes |
+|--------|----------|---------------|--------|-------|
+| done | Base | base | $1.2M | |
 
-## Unmapped DL Chains
+## Skipped Items
 
-These DL chain names need to be added to the DL_CHAIN_MAP in `.claude/skills/contract-enrich/SKILL.md` before they can be processed.
-
-| DL Chain | Coins Affected | Max Supply |
-|----------|---------------|------------|
-| Abcore | USD1 | $3.2M |
-| Bifrost Network | BtcUSD | $2.9M |
-| Bsquared | satUSD | $4.9M |
-| Katana | AUSD, USDC, USDT | $29.3M |
-| Mixin | USDT | $31.9M |
-| Nibiru | USDA | $2.4M |
-| Omni | USDT | $80.1M |
-| Stable | USDT | $25.5M |
-| zkSync Lite | DAI | $1.7M |
-
+| Coin | Chain | Supply | Reason |
+|------|-------|--------|--------|
+| USDT | Omni | $80.1M | Legacy frozen chain |
+| USDTB | Solana | $55.1M | Decimals unverified |
+| USDT | Mixin | $31.9M | Non-standard network |
+| USDT | Stable | $25.5M | Insufficient research |
+| M | Noble | $25.2M | Wrong denom returned (uusdn = USDN, not M) |
+| USDT | Katana | $12.3M | vbUSDT IOU, not native USDT |
+| USDA | Cardano | $8.8M | DL misattribution (Anzens USDA, not Avalon) |
+| TBILL | XRPL | $61.9M | Currency code unclear |
+| DAI | zkSync Lite | $1.7M | Chain deprecated |
