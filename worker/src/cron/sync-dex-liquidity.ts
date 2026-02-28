@@ -671,11 +671,14 @@ function buildSymbolLookups(): SymbolLookups {
     console.log(`[dex-liquidity] Symbol collisions detected: ${[...collidingSymbols].join(", ")}`);
   }
 
-  // Seed with known addresses for colliding symbols (e.g. reUSD vs REUSD)
-  const addressToId = new Map<string, string>([
-    ["0x5086bf358635b81d8c47c66d1c8b9e567db70c72", "339"], // Re Protocol reUSD
-    ["0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a", "256"], // Resupply REUSD
-  ]);
+  // Auto-seed from all contract addresses — resolves symbol collisions automatically
+  const addressToId = new Map<string, string>();
+  for (const meta of TRACKED_STABLECOINS) {
+    if (!meta.contracts) continue;
+    for (const c of meta.contracts) {
+      addressToId.set(c.address.toLowerCase(), meta.id);
+    }
+  }
 
   return { symbolToIds, addressToId };
 }
