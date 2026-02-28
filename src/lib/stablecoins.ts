@@ -180,6 +180,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ton", address: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f", decimals: 6 },
       { chain: "aptos", address: "0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9", decimals: 6 },
       { chain: "solana", address: "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT", decimals: 9 },
+      { chain: "plasma", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "zircuit", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "metis", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "morph-l2", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "swellchain", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "xlayer", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "fraxtal", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
     ],
     deploymentModel: "third-party-bridge",
     collateralQuality: "exotic",
@@ -420,6 +427,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "solana", address: "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6", decimals: 6 },
       { chain: "aptos", address: "0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc", decimals: 6 },
       { chain: "stellar", address: "USDY-GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6", decimals: 7 },
+      { chain: "noble", address: "ausdy", decimals: 18 },
+      { chain: "osmosis", address: "ibc/23104D411A6EB6031FA92FB75F227422B84989969E91DCAD56A535DD7FF0A373", decimals: 18 },
+      { chain: "mantra", address: "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A", decimals: 6 },
     ],
     reserves: [
       // Source: Ondo Finance docs + Ankura Trust daily reports. Ondo targets 99%+ Treasuries; 104% overcollateralized.
@@ -475,6 +485,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "near", address: "0c10bf8fcb7bf5412187a595ab97a3609160b5c6.factory.bridge.near", decimals: 18 },
       { chain: "avalanche", address: "0xb514cabd09ef5b169ed3fe0fa8dbd590741e81c2", decimals: 18 },
       { chain: "arbitrum", address: "0x680447595e8b7b3aa1b43beb9f6098c79ac2ab3f", decimals: 18 },
+      { chain: "bittorrent", address: "0x392004bee213f1ff580c867359c246924f21e6ad", decimals: 18 },
     ],
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -783,6 +794,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "berachain", address: "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9", decimals: 18 },
       { chain: "hyperevm", address: "0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77", decimals: 18 },
       { chain: "arbitrum", address: "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9", decimals: 18 },
+      { chain: "soneium", address: "0xb1b385542b6e80f77b94393ba8342c3af699f15c", decimals: 18 },
     ],
     collateralQuality: "exotic",
     custodyModel: "institutional",
@@ -834,6 +846,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon", address: "0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6", decimals: 18 },
       { chain: "bsc", address: "0xe2fb3f127f5450dee44afe054385d74c392bdef4", decimals: 18 },
       { chain: "optimism", address: "0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6", decimals: 18 },
+      { chain: "taiko", address: "0xc8f4518ed4bab9a972808a493107926ce8237068", decimals: 18 },
+      { chain: "fraxtal", address: "0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3", decimals: 18 },
     ],
     supplyMethod: {
       type: "exclude", // totalSupply() includes pre-minted lending capacity; DefiLlama aggregates debt across all factories
@@ -917,6 +931,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc", address: "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40", decimals: 18 },
       { chain: "fantom", address: "0xdc301622e621166bd8e82f2ca0a26c13ad0be355", decimals: 18 },
       { chain: "moonriver", address: "0x1a93b23281cc1cde4c4741353f3064709a16197d", decimals: 18 },
+      { chain: "polygon-zkevm", address: "0xff8544fed5379d9ffa8d47a74ce6b91e632ac44d", decimals: 18 },
+      { chain: "moonbeam", address: "0x322e86852e492a7ee17f28a78c663da38fb33bfb", decimals: 18 },
+      { chain: "boba", address: "0x7562f525106f5d54e891e005867bf489b5988cd9", decimals: 18 },
+      { chain: "aurora", address: "0xe4b9e004389d91e4134a28f19bd833cba1d994b6", decimals: 18 },
     ],
     reserves: [
       // Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
