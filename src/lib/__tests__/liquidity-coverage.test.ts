@@ -11,6 +11,11 @@ const UNSUPPORTED_CHAINS = new Set([
   "near", "noble", "osmosis", "plasma", "polkadot", "polygon-zkevm",
   "starknet", "stellar", "swellchain", "tezos", "ton", "viction",
   "xdc", "xlayer", "xrpl", "zircuit", "bitlayer", "apechain",
+  // Added with 78-contract enrichment batch — not yet mapped to CG/DS liquidity sources
+  "injective", "flare", "corn", "cronos", "stacks", "etherlink",
+  "cardano", "pulsechain", "abstract", "katana", "abcore", "flow",
+  "provenance", "movement", "nibiru", "immutable-zkevm", "bsquared",
+  "songbird", "sophon", "mezo", "bifrost", "hemi",
 ]);
 
 describe("liquidity coverage", () => {
