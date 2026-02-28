@@ -320,6 +320,25 @@ export default function ScoringChangelogPage() {
 
       {/* ──────────── v4 ──────────── */}
       <VersionCard
+        version="v4.1"
+        title="Liquidity weight increase + reclassifications"
+        date="Feb 27"
+        accent="border-l-cyan-500"
+      >
+        <p>
+          Liquidity 25%&rarr;30% (&ldquo;swappability is the most defining
+          aspect of a stablecoin&rdquo;), resilience 25%&rarr;20%.
+        </p>
+        <p>
+          5 coins reclassified from centralized-dependent to decentralized:
+          crvUSD, FRXUSD, USR, GYD, ALUSD.
+        </p>
+        <WeightRow
+          values={["multiplier", "30%", "\u2014", "20%", "15%", "25%"]}
+        />
+      </VersionCard>
+
+      <VersionCard
         version="v4.0"
         title="Peg stability becomes a multiplier"
         date="Feb 27"
@@ -384,26 +403,78 @@ export default function ScoringChangelogPage() {
         />
       </VersionCard>
 
+      {/* ──────────── v3 ──────────── */}
       <VersionCard
-        version="v4.1"
-        title="Liquidity weight increase + reclassifications"
+        version="v3.3"
+        title="Reserve-derived collateral quality"
         date="Feb 27"
-        accent="border-l-cyan-500"
+        accent="border-l-emerald-500"
       >
         <p>
-          Liquidity 25%&rarr;30% (&ldquo;swappability is the most defining
-          aspect of a stablecoin&rdquo;), resilience 25%&rarr;20%.
+          For coins with curated reserve composition data, collateral quality is
+          computed as a weighted average of per-slice risk scores instead of
+          using the enum fallback:
         </p>
-        <p>
-          5 coins reclassified from centralized-dependent to decentralized:
-          crvUSD, FRXUSD, USR, GYD, ALUSD.
-        </p>
-        <WeightRow
-          values={["multiplier", "30%", "\u2014", "20%", "15%", "25%"]}
-        />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="py-2 pr-4 font-medium text-foreground">
+                  Reserve risk tier
+                </th>
+                <th className="py-2 font-medium text-foreground">Score</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {[
+                ["very-low", "100"],
+                ["low", "75"],
+                ["medium", "50"],
+                ["high", "25"],
+                ["very-high", "5"],
+              ].map(([tier, score]) => (
+                <tr key={tier}>
+                  <td className="py-2 pr-4 text-foreground">{tier}</td>
+                  <td className="py-2">{score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </VersionCard>
 
-      {/* ──────────── v3 ──────────── */}
+      <VersionCard
+        version="v3.2"
+        title="Dependency type ceilings"
+        date="Feb 27"
+        accent="border-l-emerald-500"
+      >
+        <p>
+          New dependency types: <code className="text-xs bg-muted px-1 py-0.5 rounded">wrapper</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">mechanism</code>,{" "}
+          <code className="text-xs bg-muted px-1 py-0.5 rounded">collateral</code> (default).
+          After blended score is computed, ceilings apply:
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <span className="text-foreground font-medium">wrapper</span>{" "}
+            &rarr; ceiling = upstream &minus; 3
+          </li>
+          <li>
+            <span className="text-foreground font-medium">mechanism</span>{" "}
+            &rarr; ceiling = upstream
+          </li>
+          <li>
+            <span className="text-foreground font-medium">collateral</span>{" "}
+            &rarr; no ceiling
+          </li>
+        </ul>
+        <p>
+          Prevents thin wrappers (e.g. a USDC wrapper) from scoring higher than
+          their upstream.
+        </p>
+      </VersionCard>
+
       <VersionCard
         version="v3.0"
         title="Resilience 4-factor model"
@@ -460,77 +531,6 @@ export default function ScoringChangelogPage() {
         <WeightRow
           values={["25%", "20%", "\u2014", "20%", "10%", "25%"]}
         />
-      </VersionCard>
-
-      <VersionCard
-        version="v3.2"
-        title="Dependency type ceilings"
-        date="Feb 27"
-        accent="border-l-emerald-500"
-      >
-        <p>
-          New dependency types: <code className="text-xs bg-muted px-1 py-0.5 rounded">wrapper</code>,{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">mechanism</code>,{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">collateral</code> (default).
-          After blended score is computed, ceilings apply:
-        </p>
-        <ul className="list-disc list-inside space-y-1">
-          <li>
-            <span className="text-foreground font-medium">wrapper</span>{" "}
-            &rarr; ceiling = upstream &minus; 3
-          </li>
-          <li>
-            <span className="text-foreground font-medium">mechanism</span>{" "}
-            &rarr; ceiling = upstream
-          </li>
-          <li>
-            <span className="text-foreground font-medium">collateral</span>{" "}
-            &rarr; no ceiling
-          </li>
-        </ul>
-        <p>
-          Prevents thin wrappers (e.g. a USDC wrapper) from scoring higher than
-          their upstream.
-        </p>
-      </VersionCard>
-
-      <VersionCard
-        version="v3.3"
-        title="Reserve-derived collateral quality"
-        date="Feb 27"
-        accent="border-l-emerald-500"
-      >
-        <p>
-          For coins with curated reserve composition data, collateral quality is
-          computed as a weighted average of per-slice risk scores instead of
-          using the enum fallback:
-        </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium text-foreground">
-                  Reserve risk tier
-                </th>
-                <th className="py-2 font-medium text-foreground">Score</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {[
-                ["very-low", "100"],
-                ["low", "75"],
-                ["medium", "50"],
-                ["high", "25"],
-                ["very-high", "5"],
-              ].map(([tier, score]) => (
-                <tr key={tier}>
-                  <td className="py-2 pr-4 text-foreground">{tier}</td>
-                  <td className="py-2">{score}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </VersionCard>
 
       {/* ──────────── v2 ──────────── */}
