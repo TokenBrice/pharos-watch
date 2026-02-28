@@ -56,7 +56,9 @@ cd worker && npx tsc --noEmit      # Worker type-check
 - **DL list vs detail API**: The list endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values already in USD for all peg types. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs. Do NOT multiply list endpoint values by price — that double-converts.
 - **No supply overrides**: Supply data comes from DefiLlama only. No on-chain, CMC, or DEX overrides. Prices fall back to CG → CMC → DexScreener when DL has no price.
 
-## Topic References
+## Topic References & Documentation
+
+All the codebase is documented. While working, make sure to update the corresponding documentation before pushing your change. After updating a scoring methodology (Pharos Stability Index, PegScore, LiquidityScore, Report Cards), update the /methodology page as well. 
 
 Read these when working on related code:
 
@@ -75,3 +77,4 @@ Read these when working on related code:
 - **`docs/depeg-detection.md`** — Two-stage depeg detection, thresholds, confirmation flow, event lifecycle, peg score formula
 - **`docs/supply-snapshot.md`** — Daily supply snapshot cron, supply_history schema, supply helpers, backfill endpoint
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
+- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 11 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)

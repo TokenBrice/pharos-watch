@@ -2,7 +2,7 @@
 
 ## DEX Liquidity Score
 
-`syncDexLiquidity()` in `sync-dex-liquidity.ts` runs every 20 minutes (on the `3,23,43 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 6 components:
+`syncDexLiquidity()` in `sync-dex-liquidity.ts` runs every 30 minutes (on the `10,40 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 6 components:
 
 | Component | Weight | Source | How Computed |
 |-----------|--------|--------|-------------|
@@ -100,7 +100,7 @@ Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin a
 
 ## DEX Price Cross-Validation
 
-`dex_prices` table (migration 0011) stores DEX-implied USD prices extracted from multiple DEX sources. Updated every 15 minutes during `syncDexLiquidity()`.
+`dex_prices` table (migration 0011) stores DEX-implied USD prices extracted from multiple DEX sources. Updated every 30 minutes during `syncDexLiquidity()`.
 
 **Price observation sources:**
 
