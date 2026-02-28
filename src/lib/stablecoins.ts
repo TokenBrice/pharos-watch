@@ -831,6 +831,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
     geckoId: "crvusd",
+    dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
     deploymentModel: "third-party-bridge",
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
@@ -1051,6 +1052,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // FLEXUSD (id 21) removed — CoinFLEX exchange bankruptcy June 2022 (see cemetery)
   usd("252", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "standx-dusd",
+    dependencies: [{ id: "1", weight: 0.5 }, { id: "2", weight: 0.5 }],
     deploymentModel: "native-multichain",
     collateral: "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
     pegMechanism: "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
@@ -1389,6 +1391,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
     geckoId: "frax-price-index",
+    dependencies: [{ id: "6", weight: 1.0, type: "wrapper" }],
     navToken: true,
     governanceQuality: "wrapper",
     collateralQuality: "rwa",
@@ -1406,6 +1409,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("283", "Unitas", "USDU", "crypto-backed", "centralized-dependent", {
     geckoId: "usdu",
+    dependencies: [{ id: "2", weight: 0.8 }],
     deploymentModel: "native-multichain",
     collateralQuality: "exotic",
     custodyModel: "institutional",
@@ -2089,6 +2093,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("329", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
     geckoId: "nectar",
+    dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
     collateral: "Berachain-native assets: WBERA, iBGT, pumpBTC, solvBTC, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
     pegMechanism: "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
     links: [
@@ -2158,6 +2163,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
     geckoId: "ageur",
+    dependencies: [{ id: "2", weight: 0.30 }],
     deploymentModel: "third-party-bridge",
     collateral: "Overcollateralized basket of Euro-denominated RWAs (tokenized T-bills and government/corporate bonds via Backed Finance: bC3M, bERNX, bIB01), EURC, and crypto assets (wETH, wBTC) managed via the Transmuter module",
     pegMechanism: "Transmuter module enables 1:1 slippage-free swaps between EURA and whitelisted Euro collateral assets; dynamic fees and circuit breakers rebalance reserves; over-collateralization from Borrowing Module CDPs provides additional buffer",
@@ -3262,6 +3268,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
     geckoId: "international-stable-currency",
+    dependencies: [{ id: "2", weight: 0.20 }],
     navToken: true,
     collateral: "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
     pegMechanism: "RWA-indexed basket tracking purchasing power; price appreciates over time",
