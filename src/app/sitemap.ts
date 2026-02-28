@@ -11,6 +11,7 @@ const LAST_EDITED: Record<string, string> = {
   "/cemetery/": "2026-02-26",
   "/privacy/": "2026-02-26",
   "/compare/": "2026-02-26",
+  "/methodology/": "2026-02-28",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -76,6 +77,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,
+    },
+    {
+      url: "https://pharos.watch/methodology/",
+      lastModified: new Date(LAST_EDITED["/methodology/"]!),
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     {
       url: "https://pharos.watch/about/",

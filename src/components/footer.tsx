@@ -13,6 +13,7 @@ export function Footer() {
 <Link href="/blacklist" className="hover:text-foreground transition-colors">Freeze Tracker</Link>
             <Link href="/liquidity" className="hover:text-foreground transition-colors">Liquidity</Link>
             <Link href="/cemetery" className="hover:text-foreground transition-colors">Cemetery</Link>
+            <Link href="/methodology" className="hover:text-foreground transition-colors">Methodology</Link>
             <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
           </nav>

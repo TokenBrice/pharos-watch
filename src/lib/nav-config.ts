@@ -5,6 +5,7 @@ import {
   ShieldBan,
   Skull,
   Info,
+  BookOpen,
   FlaskConical,
   ArrowLeftRight,
   Newspaper,
@@ -59,6 +60,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/cemetery", label: "Cemetery", icon: Skull, description: "Dead stablecoins" },
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily market digest" },
+      { href: "/methodology", label: "Methodology", icon: BookOpen, description: "How Pharos grades stablecoins" },
       { href: "/about", label: "About", icon: Info, description: "About Pharos" },
     ],
   },
