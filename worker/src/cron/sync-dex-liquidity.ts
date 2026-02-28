@@ -91,6 +91,9 @@ const GT_CHAIN_MAP: Record<string, string> = {
   celo: "celo",
   gnosis: "xdai",
   fantom: "ftm",
+  solana: "solana",
+  berachain: "berachain",
+  sui: "sui-network",
 };
 
 /** Reverse map: GT network ID → our chain name */

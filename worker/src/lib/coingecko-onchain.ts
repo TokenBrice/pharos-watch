@@ -24,6 +24,9 @@ export const CG_CHAIN_MAP: Record<string, string> = {
   fantom: "ftm",
   tron: "tron",
   ink: "ink",
+  solana: "solana",
+  berachain: "berachain",
+  sui: "sui-network",
 };
 
 /** Reverse map: CG network ID → our chain name */
