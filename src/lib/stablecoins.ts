@@ -1075,6 +1075,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "bsc",      address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
       { chain: "sonic",    address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
       { chain: "bob",      address: "0xecf21b335b41f9d5a89f6186a99c19a3c467871f", decimals: 18 },
+      { chain: "bitlayer", address: "0xba50ddac6b2f5482ca064efac621e0c7c0f6a783", decimals: 18 },
     ],
     reserves: [
       { name: "BTC (overcollateralized CDP)", pct: 40, risk: "medium" },
@@ -1160,6 +1161,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ink",      address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
       { chain: "sei",      address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
       { chain: "berachain", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "fraxtal",       address: "0xfc00000000000000000000000000000000000001", decimals: 18 },
+      { chain: "aurora",        address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "polygon-zkevm", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "xlayer",        address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
     ],
     reserves: [
       { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low" },
@@ -2009,6 +2014,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "scroll", address: "0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21", decimals: 18 },
       { chain: "arbitrum", address: "0x0c06ccf38114ddfc35e07427b9424adcca9f44f8", decimals: 18 },
       { chain: "polygon", address: "0xe0aea583266584dafbb3f9c3211d5588c73fea8d", decimals: 18 },
+      { chain: "osmosis", address: "ibc/92AE2F53284505223A1BB80D132F859A00E190C6A738772F0B3EF65E20BA484F", decimals: 6 },
     ],
     reserves: [
       { name: "State Street EUR Liquidity LVNAV Fund (AAA-rated)", pct: 70, risk: "very-low" },
@@ -2389,6 +2395,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
       { chain: "optimism", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
       { chain: "fantom", address: "0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e", decimals: 18 },
+      { chain: "metis",   address: "0x303241e2b3b4aed0bb0f8623e7442368fed8faf3", decimals: 18 },
     ],
     collateralQuality: "exotic",
     reserves: [
@@ -2537,6 +2544,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.youves.com" },
       { label: "GitHub", url: "https://github.com/youves-com" },
     ],
+    contracts: [
+      { chain: "tezos", address: "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW", decimals: 12 },
+    ],
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
@@ -2600,6 +2610,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18 },
       { chain: "polygon", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18 },
+      { chain: "viction", address: "0xba73e59f11597c1c13b0d9114688efb6a6d430f6", decimals: 18 },
     ],
     reserves: [
       { name: "Cash and cash equivalents", pct: 40, risk: "very-low" },
@@ -2648,6 +2659,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86", decimals: 18 },
+      { chain: "astar",    address: "0x29f6e49c6e3397c3a84f715885f9f233a441165c", decimals: 18 },
     ],
     collateralQuality: "exotic",
     reserves: [
@@ -3041,6 +3053,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "celo",      address: "0x9346f43c1588b6df1d52bdd6bf846064f92d9cba", decimals: 18 },
       { chain: "solana", address: "C4Kkr9NZU3VbyedcgutU6LKmi6MKz81sx6gRmk5pX519", decimals: 9 },
       { chain: "xrpl", address: "VEUR-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3", decimals: 6 },
+      { chain: "tezos",  address: "KT1FenS7BCUjn1otfFyfrfxguiGnL4UTF3aG", decimals: 13 },
+      { chain: "fraxtal", address: "0x4c0bd74da8237c08840984fdb33a84b4586aaee6", decimals: 18 },
+      { chain: "icp",     address: "wu6g4-6qaaa-aaaan-qmrza-cai", decimals: 8 },
     ],
     reserves: [
       { name: "Euro cash and cash equivalents (bank/custody accounts)", pct: 100, risk: "very-low" },
