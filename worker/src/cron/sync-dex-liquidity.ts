@@ -78,7 +78,7 @@ const QUALITY_MULTIPLIERS: Record<string, number> = {
 // GeckoTerminal API
 const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
 const GT_RATE_LIMIT_MS = 2000; // 30 req/min = 1 every 2s
-const GT_CRAWL_BUDGET_MS = 7 * 60 * 1000; // Max wall time for pool crawl (7 min of ~15 min cron)
+const GT_CRAWL_BUDGET_MS = 15 * 60 * 1000; // Max wall time for pool crawl (15 min of 30 min cron)
 
 /** Map our chain names (from stablecoins.ts contracts) to GT network IDs */
 const GT_CHAIN_MAP: Record<string, string> = {
@@ -577,27 +577,22 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
   const dlYieldsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS);
   const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
-  const fetchPromises: Promise<Response | null>[] = [];
-  // Index 0: DL yields (or null if circuit open)
-  fetchPromises.push(
+  // Fetch in two batches to stay under the Workers 6-connection limit
+  // (leaves headroom for retries within fetchWithRetry)
+  const [llamaRes, protocolsRes] = await Promise.all([
     dlYieldsAllowed
       ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT } })
       : Promise.resolve(null),
-  );
-  // Index 1: DL protocols (or null if circuit open)
-  fetchPromises.push(
     dlProtocolsAllowed
       ? fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT } })
       : Promise.resolve(null),
-  );
-  // Remaining: Curve API
-  for (const chain of CURVE_CHAINS) {
-    fetchPromises.push(
-      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT } }),
-    );
-  }
+  ]);
 
-  const [llamaRes, protocolsRes, ...curveResponses] = await Promise.all(fetchPromises);
+  const curveResponses = await Promise.all(
+    CURVE_CHAINS.map((chain) =>
+      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT } }),
+    ),
+  );
 
   // --- DL Yields ---
   let pools: LlamaPool[] = [];
@@ -1143,7 +1138,9 @@ function buildChainAddresses(): Map<string, { address: string; stablecoinId: str
       const mappedChain = chainMap[c.chain.toLowerCase()];
       if (!mappedChain) continue;
       const list = result.get(mappedChain) ?? [];
-      list.push({ address: c.address.toLowerCase(), stablecoinId: meta.id });
+      // Keep original case — Solana/Sui addresses are case-sensitive base58/base64
+      // EVM addresses are case-insensitive so lowercasing at comparison time is safe.
+      list.push({ address: c.address, stablecoinId: meta.id });
       result.set(mappedChain, list);
     }
   }
@@ -1185,7 +1182,7 @@ async function fetchGtTokenBatch(
         for (const token of json.data) {
           const a = token.attributes;
           const addr = a.address.toLowerCase();
-          const stablecoinId = batch.find((t) => t.address === addr)?.stablecoinId
+          const stablecoinId = batch.find((t) => t.address.toLowerCase() === addr)?.stablecoinId
             ?? addressToId.get(addr);
           if (!stablecoinId) continue;
 
@@ -1269,7 +1266,7 @@ async function fetchCgTokenBatchPrices(
         for (const token of cgTokens) {
           const a = token.attributes;
           const addr = a.address.toLowerCase();
-          const stablecoinId = batch.find((t) => t.address === addr)?.stablecoinId
+          const stablecoinId = batch.find((t) => t.address.toLowerCase() === addr)?.stablecoinId
             ?? addressToId.get(addr);
           if (!stablecoinId) continue;
 
@@ -1338,8 +1335,9 @@ async function fetchCgPools(
         // Resolve which token is our stablecoin
         const baseAddr = pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "";
         const quoteAddr = pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "";
-        let isBase = baseAddr === address;
-        let isQuote = quoteAddr === address;
+        const addressLower = address.toLowerCase();
+        let isBase = baseAddr === addressLower;
+        let isQuote = quoteAddr === addressLower;
         if (!isBase && !isQuote) {
           const baseId = addressToId.get(baseAddr);
           const quoteId = addressToId.get(quoteAddr);
@@ -1605,8 +1603,9 @@ async function fetchGtPools(
           // GT pool relationship IDs are formatted as "{network}_{address}"
           const baseAddr = pool.relationships.base_token.data.id.split("_").pop()?.toLowerCase() ?? "";
           const quoteAddr = pool.relationships.quote_token.data.id.split("_").pop()?.toLowerCase() ?? "";
-          let isBase = baseAddr === address;
-          let isQuote = quoteAddr === address;
+          const addressLower = address.toLowerCase();
+          let isBase = baseAddr === addressLower;
+          let isQuote = quoteAddr === addressLower;
           if (!isBase && !isQuote) {
             // Neither token matches directly — try addressToId fallback
             const baseId = addressToId.get(baseAddr);

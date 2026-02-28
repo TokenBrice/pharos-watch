@@ -188,6 +188,7 @@ const worker = {
     initCoinGecko(env.COINGECKO_API_KEY);
     const db = env.DB;
     const cron = event.cron;
+    console.log(`[scheduled] cron="${cron}" scheduledTime=${event.scheduledTime}`);
 
     switch (cron) {
       case "*/15 * * * *": {
@@ -213,14 +214,17 @@ const worker = {
         })());
         break;
       }
-      // Blacklist + DEX liquidity on a separate 20-min cycle (offset at :03/:23/:43
-      // to avoid colliding with the 15-min trigger)
+      // Blacklist on a 20-min cycle (offset at :03/:23/:43 to avoid colliding with the 15-min trigger)
       case "3,23,43 * * * *": {
         ctx.waitUntil(
           logCronRun(db, "sync-blacklist", () =>
             syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
           )
         );
+        break;
+      }
+      // DEX liquidity on its own 30-min cycle (offset at :10/:40)
+      case "10,40 * * * *": {
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null)));
         break;
       }
@@ -251,6 +255,8 @@ const worker = {
         })));
         break;
       }
+      default:
+        console.warn(`[scheduled] Unmatched cron: "${cron}"`);
     }
   },
 };

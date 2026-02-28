@@ -26,7 +26,8 @@ const SYSTEM_PROMPT =
   "CRITICAL — rank everything by market impact (deviation × market cap). " +
   "A 30 bps wobble on USDT is front-page news. A 2000 bps depeg on a $15M coin is a footnote at best — mention it only if nothing more interesting happened. " +
   "Do not lead with small illiquid coins that have been off-peg for weeks; that is not news. " +
-  "No emojis, no clickbait, no hedging, no exclamation marks, no em dashes. " +
+  "No emojis, no clickbait, no hedging, no exclamation marks. " +
+  "NEVER use em dashes (\u2014) or en dashes (\u2013). Use commas, semicolons, colons, or periods instead. Any dash that is not a hyphen is forbidden. " +
   "When nothing happened, make the calm sound ominous or amusing. " +
   "When something did happen, make the reader feel it. " +
   "VARIETY IS MANDATORY. " +
@@ -696,6 +697,12 @@ export async function generateDailyDigest(
     digestText = rawText.trim();
     digestExtended = "";
   }
+
+  // Post-process: replace em/en dashes the model may still produce
+  const stripDashes = (s: string) => s.replace(/[\u2013\u2014]/g, ",");
+  digestTitle = stripDashes(digestTitle);
+  digestText = stripDashes(digestText);
+  digestExtended = stripDashes(digestExtended);
 
   // --- Store result ---
   const now = Math.floor(Date.now() / 1000);
