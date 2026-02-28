@@ -36,6 +36,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   ton:       { name: "TON",       explorerUrl: "https://tonviewer.com",            evmChainId: null,  type: "other", logoPath: "/chains/ton.png"       },
   near:      { name: "NEAR",      explorerUrl: "https://nearblocks.io",            evmChainId: null,  type: "other", logoPath: "/chains/near.png"      },
   algorand:  { name: "Algorand",  explorerUrl: "https://explorer.perawallet.app",  evmChainId: null,  type: "other", logoPath: "/chains/algorand.png"  },
+  stellar:   { name: "Stellar",  explorerUrl: "https://stellar.expert",           evmChainId: null,  type: "other", logoPath: "/chains/stellar.png"  },
   starknet:  { name: "Starknet",  explorerUrl: "https://starkscan.co",             evmChainId: null,  type: "other", logoPath: "/chains/starknet.png"  },
   hedera:    { name: "Hedera",    explorerUrl: "https://hashscan.io",              evmChainId: null,  type: "other", logoPath: "/chains/hedera.png"    },
   polkadot:  { name: "Polkadot",  explorerUrl: "https://polkadot.subscan.io",     evmChainId: null,  type: "other", logoPath: "/chains/polkadot.png"  },

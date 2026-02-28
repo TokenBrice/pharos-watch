@@ -430,6 +430,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "tron", address: "TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz", decimals: 18 },
       { chain: "ethereum", address: "0x4f8e5de400de08b164e7421b3ee387f461becd1a", decimals: 18 },
       { chain: "bsc", address: "0x45e51bc23d592eb2dba86da3985299f7895d66ba", decimals: 18 },
+      { chain: "near", address: "0c10bf8fcb7bf5412187a595ab97a3609160b5c6.factory.bridge.near", decimals: 18 },
+      { chain: "avalanche", address: "0xb514cabd09ef5b169ed3fe0fa8dbd590741e81c2", decimals: 18 },
+      { chain: "arbitrum", address: "0x680447595e8b7b3aa1b43beb9f6098c79ac2ab3f", decimals: 18 },
     ],
     chainRisk: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -625,6 +628,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon", address: "0x2e1ad108ff1d8c782fcbbb89aad783ac49586756", decimals: 18 },
       { chain: "arbitrum", address: "0x4d15a3a2286d883af0aa1b3f21367843fac63e07", decimals: 18 },
       { chain: "optimism", address: "0xcb59a0a753fdb7491d5f3d794316f1ade197b21e", decimals: 18 },
+      { chain: "bsc", address: "0x40af3827f39d0eacbf4a168f8d4ee67c121d11c9", decimals: 18 },
     ],
     reserves: [
       // Source: Protos investigation, SEC settlement, Moore HK attestation. Confidence: Medium
@@ -695,6 +699,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", decimals: 6 },
       { chain: "base", address: "0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42", decimals: 6 },
       { chain: "avalanche", address: "0xc891eb4cbdeff6e073e859e987815ed1505c2acd", decimals: 6 },
+      { chain: "worldchain", address: "0x1c60ba0a0ed1019e8eb035e6daf4155a5ce2380b", decimals: 6 },
+      { chain: "stellar", address: "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2", decimals: 7 },
+      { chain: "solana", address: "HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr", decimals: 6 },
     ],
     reserves: [
       // Source: Circle transparency page Feb 23, 2026. Confidence: High
@@ -765,6 +772,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", decimals: 18 },
       { chain: "arbitrum", address: "0x498bf2b1e120fed3ad3d42ea2165e9b73f99c1e5", decimals: 18 },
       { chain: "base", address: "0x417ac0e078398c154edfadd9ef675d30be60af93", decimals: 18 },
+      { chain: "gnosis", address: "0xabef652195f98a91e490f047a5006b71c85f058d", decimals: 18 },
+      { chain: "polygon", address: "0xc4ce1d6f5d98d65ee25cf85e9f2e9dcfee6cb5d6", decimals: 18 },
+      { chain: "bsc", address: "0xe2fb3f127f5450dee44afe054385d74c392bdef4", decimals: 18 },
+      { chain: "optimism", address: "0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6", decimals: 18 },
     ],
     supplyMethod: {
       type: "exclude", // totalSupply() includes pre-minted lending capacity; DefiLlama aggregates debt across all factories
@@ -842,6 +853,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0xd24c2ad096400b6fbcd2ad8b24e7acbc21a1da64", decimals: 18 },
       { chain: "bsc", address: "0x90c97f71e18723b0cf0dfa30ee176ab653e89f40", decimals: 18 },
       { chain: "fantom", address: "0xdc301622e621166bd8e82f2ca0a26c13ad0be355", decimals: 18 },
+      { chain: "moonriver", address: "0x1a93b23281cc1cde4c4741353f3064709a16197d", decimals: 18 },
     ],
     reserves: [
       // Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
