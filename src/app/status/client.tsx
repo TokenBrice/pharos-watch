@@ -2,10 +2,23 @@
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useStatus } from "@/hooks/use-status";
+import { useHealth } from "@/hooks/use-health";
+import { useEndpointProbes, ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
+import { API_BASE } from "@/lib/api";
+import type { EndpointProbeResult, CircuitRecord } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // --- Status Banner ---
 
@@ -221,6 +234,306 @@ function CacheFreshnessTable({ caches }: { caches: Record<string, { ageSeconds: 
   );
 }
 
+// --- Refresh Countdown ---
+
+function RefreshCountdown({ onRefresh }: { onRefresh: () => void }) {
+  const [secondsLeft, setSecondsLeft] = useState(60);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) return 60;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">{"\u27F3"} {secondsLeft}s</span>
+      <Button variant="outline" size="sm" onClick={onRefresh}>
+        Refresh
+      </Button>
+    </div>
+  );
+}
+
+// --- Endpoint Health Grid ---
+
+const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
+  { key: "public", label: "Public" },
+  { key: "admin", label: "Admin" },
+  { key: "inlineAdmin", label: "Inline Admin" },
+];
+
+function EndpointHealthGrid({ probes, isLoading }: { probes: EndpointProbeResult[] | undefined; isLoading: boolean }) {
+  if (isLoading && !probes) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Endpoint Health</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Probing endpoints...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const probeMap = new Map<string, EndpointProbeResult>();
+  if (probes) {
+    for (const p of probes) probeMap.set(p.path, p);
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Endpoint Health</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {GROUP_LABELS.map(({ key, label }) => {
+          const paths = [...ENDPOINT_GROUPS[key]];
+          const isInline = key === "inlineAdmin";
+
+          // Sort probed endpoints: errors first, then by path
+          if (!isInline) {
+            paths.sort((a, b) => {
+              const pa = probeMap.get(a);
+              const pb = probeMap.get(b);
+              const aErr = pa ? (pa.status === null || pa.status >= 400 ? 0 : 1) : 1;
+              const bErr = pb ? (pb.status === null || pb.status >= 400 ? 0 : 1) : 1;
+              if (aErr !== bErr) return aErr - bErr;
+              return a.localeCompare(b);
+            });
+          }
+
+          return (
+            <div key={key}>
+              <h3 className="mb-2 text-sm font-medium text-muted-foreground">{label}</h3>
+              <div className="space-y-1">
+                {paths.map((path) => {
+                  const probe = probeMap.get(path);
+                  const display = path.replace(/^\/api\//, "");
+
+                  if (isInline) {
+                    return (
+                      <div key={path} className="flex items-center justify-between py-1">
+                        <span className="font-mono text-xs">{display}</span>
+                        <span className="text-xs text-muted-foreground">Not probed</span>
+                      </div>
+                    );
+                  }
+
+                  const isOk = probe?.status != null && probe.status >= 200 && probe.status < 300;
+                  const isError = probe?.status != null && probe.status >= 400;
+
+                  return (
+                    <div key={path} className="flex items-center justify-between py-1">
+                      <span className="font-mono text-xs">{display}</span>
+                      <div className="flex items-center gap-2">
+                        {probe ? (
+                          <>
+                            {isOk && (
+                              <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 text-xs">
+                                {probe.status}
+                              </Badge>
+                            )}
+                            {isError && (
+                              <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 text-xs">
+                                {probe.status}
+                              </Badge>
+                            )}
+                            {probe.status === null && (
+                              <Badge className="bg-muted text-muted-foreground text-xs">
+                                {"\u2014"}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground tabular-nums">{probe.latencyMs}ms</span>
+                          </>
+                        ) : (
+                          <Badge className="bg-muted text-muted-foreground text-xs">{"\u2014"}</Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// --- Circuit Breaker Table ---
+
+function CircuitBreakerTable({ circuits }: { circuits: Record<string, CircuitRecord> | undefined }) {
+  if (!circuits || Object.keys(circuits).length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Circuit Breakers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No circuit breakers registered</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Circuit Breakers</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="pb-2 font-medium">Name</th>
+              <th className="pb-2 font-medium">State</th>
+              <th className="pb-2 font-medium">Failures</th>
+              <th className="pb-2 font-medium">Last Success</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(circuits).map(([name, circuit]) => (
+              <tr key={name} className="border-b last:border-0">
+                <td className="py-2 font-mono text-xs">{name}</td>
+                <td className="py-2">
+                  {circuit.state === "closed" && (
+                    <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 text-xs">closed</Badge>
+                  )}
+                  {circuit.state === "half-open" && (
+                    <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-400 text-xs">half-open</Badge>
+                  )}
+                  {circuit.state === "open" && (
+                    <Badge className="bg-red-500/15 text-red-700 dark:text-red-400 text-xs">open</Badge>
+                  )}
+                </td>
+                <td className="py-2 font-mono tabular-nums">{circuit.consecutiveFailures}</td>
+                <td className="py-2 text-muted-foreground">
+                  {circuit.lastSuccessAt ? new Date(circuit.lastSuccessAt * 1000).toLocaleString() : "\u2014"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+// --- Admin Actions ---
+
+interface AdminAction {
+  label: string;
+  path: string;
+  confirm: string;
+  destructive: boolean;
+}
+
+const ADMIN_ACTIONS: AdminAction[] = [
+  { label: "Trigger Digest", path: "/api/trigger-digest", confirm: "Trigger daily digest? Bypasses 1h dedup window.", destructive: false },
+  { label: "Reset Blacklist Sync", path: "/api/reset-blacklist-sync", confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.", destructive: true },
+  { label: "Debug Sync State", path: "/api/debug-sync-state", confirm: "Fetch sync state debug dump?", destructive: false },
+  { label: "Backfill Depegs", path: "/api/backfill-depegs", confirm: "Run depeg backfill? This may take several minutes.", destructive: false },
+  { label: "Backfill Supply", path: "/api/backfill-supply-history", confirm: "Backfill supply history snapshots?", destructive: false },
+  { label: "Backfill CG Prices", path: "/api/backfill-cg-prices", confirm: "Backfill CoinGecko prices?", destructive: false },
+  { label: "Backfill PSI", path: "/api/backfill-stability-index", confirm: "Backfill stability index history?", destructive: false },
+  { label: "Audit Depegs", path: "/api/audit-depeg-history?dry-run=true", confirm: "Run depeg history audit (dry-run)?", destructive: false },
+];
+
+function AdminActionButton({ action, adminKey }: { action: AdminAction; adminKey: string }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    setResult(null);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}${action.path}`, {
+        headers: { "X-Admin-Key": adminKey },
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        setError(`${res.status}: ${text}`);
+      } else {
+        try {
+          const json = JSON.parse(text);
+          setResult(JSON.stringify(json, null, 2));
+        } catch {
+          setResult(text);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant={action.destructive ? "destructive" : "outline"}
+          size="sm"
+          className="w-full"
+        >
+          {action.label}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{action.label}</DialogTitle>
+          <DialogDescription>{action.confirm}</DialogDescription>
+        </DialogHeader>
+        {result && (
+          <pre className="max-h-60 overflow-auto rounded bg-muted p-3 text-xs">{result}</pre>
+        )}
+        {error && (
+          <pre className="max-h-60 overflow-auto rounded bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-400">{error}</pre>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant={action.destructive ? "destructive" : "default"}
+            onClick={handleConfirm}
+            disabled={loading}
+          >
+            {loading ? "Running..." : "Confirm"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AdminActionsPanel({ adminKey }: { adminKey: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Admin Actions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {ADMIN_ACTIONS.map((action) => (
+            <AdminActionButton key={action.path} action={action} adminKey={adminKey} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // --- Auth Gate ---
 
 const SESSION_KEY = "pharos-admin-key";
@@ -293,7 +606,15 @@ export default function StatusClient() {
 }
 
 function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
-  const { data, isLoading, error } = useStatus(adminKey);
+  const { data, isLoading, error, refetch: refetchStatus } = useStatus(adminKey);
+  const { data: healthData, refetch: refetchHealth } = useHealth();
+  const { data: probes, isLoading: probesLoading, refetch: refetchProbes } = useEndpointProbes(adminKey);
+
+  const handleRefresh = useCallback(() => {
+    refetchStatus();
+    refetchHealth();
+    refetchProbes();
+  }, [refetchStatus, refetchHealth, refetchProbes]);
 
   if (isLoading) {
     return (
@@ -318,15 +639,34 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold tracking-tighter">Pharos System Status</h1>
-        <Button variant="outline" size="sm" onClick={onSignOut}>
-          Sign out
-        </Button>
+        <div className="flex items-center gap-3">
+          <RefreshCountdown onRefresh={handleRefresh} />
+          <Button variant="outline" size="sm" onClick={onSignOut}>Sign out</Button>
+        </div>
       </div>
 
       <StatusBanner status={data.overallStatus} timestamp={data.timestamp} />
 
+      {/* New sections */}
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Endpoint Health</h2>
+        <EndpointHealthGrid probes={probes} isLoading={probesLoading} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Circuit Breakers</h2>
+        <CircuitBreakerTable circuits={healthData?.circuits} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Admin Actions</h2>
+        <AdminActionsPanel adminKey={adminKey} />
+      </section>
+
+      {/* Existing sections unchanged */}
       <section>
         <h2 className="mb-3 text-xl font-semibold">Cron Jobs</h2>
         <div className="grid gap-4 md:grid-cols-2">
