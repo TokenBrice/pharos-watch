@@ -1,4 +1,4 @@
-import type { ReserveSlice, StablecoinMeta } from "./types";
+import type { DependencyWeight, ReserveSlice, StablecoinMeta } from "./types";
 
 export interface ReserveResult {
   reserves: ReserveSlice[];
@@ -100,4 +100,25 @@ export function getReserves(coin: StablecoinMeta): ReserveResult | null {
   if (!key) return null;
 
   return { reserves: TEMPLATES[key], estimated: true };
+}
+
+// ── Dependency derivation from reserves ───────────────────────────────
+
+/**
+ * Derives dependency weights from reserve composition.
+ * Reserve slices with `coinId` are converted to DependencyWeight entries.
+ * Falls back to manual `meta.dependencies` when no reserves have coinId links.
+ */
+export function deriveDependencies(meta: StablecoinMeta): DependencyWeight[] {
+  const reserves = meta.reserves;
+  if (!reserves?.length) return meta.dependencies ?? [];
+
+  const linked = reserves.filter((r) => r.coinId);
+  if (linked.length === 0) return meta.dependencies ?? [];
+
+  return linked.map((r) => ({
+    id: r.coinId!,
+    weight: r.pct / 100,
+    type: r.depType ?? "collateral",
+  }));
 }

@@ -77,6 +77,8 @@ export interface ReserveSlice {
   name: string;
   pct: number;        // percentage of total reserves (should sum to ~100)
   risk: ReserveRisk;  // risk tier for coloring
+  coinId?: string;           // DefiLlama ID of a tracked stablecoin (links to dependency graph)
+  depType?: DependencyType;  // dependency type when coinId is set; defaults to "collateral"
 }
 
 /** Maturity tier of the primary chain where the protocol operates */
