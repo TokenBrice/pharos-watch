@@ -16,6 +16,7 @@ import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
+import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -188,6 +189,7 @@ export async function generateDailyDigest(
   anthropicApiKey: string | null,
   twitterCreds: TwitterCreds | null = null,
   force = false,
+  telegramCreds: TelegramCreds | null = null,
 ): Promise<CronResult> {
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
@@ -714,6 +716,19 @@ export async function generateDailyDigest(
     }
   }
 
-  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars + ${digestExtended.length} extended), tweet: ${tweetStatus}`);
-  return { itemCount: 1, metadata: `${digestText.length} chars, tweet: ${tweetStatus}` };
+  // Post to Telegram if credentials are available
+  let telegramStatus = "no-creds";
+  if (telegramCreds) {
+    try {
+      const date = new Date(now * 1000).toISOString().slice(0, 10);
+      await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds);
+      telegramStatus = "ok";
+    } catch (err) {
+      console.error("[daily-digest] Failed to post to Telegram (non-fatal):", err);
+      telegramStatus = `failed: ${String(err).slice(0, 100)}`;
+    }
+  }
+
+  console.log(`[daily-digest] Generated and stored digest: "${digestTitle}" (${digestText.length} chars + ${digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}`);
+  return { itemCount: 1, metadata: `${digestText.length} chars, tweet: ${tweetStatus}, telegram: ${telegramStatus}` };
 }
