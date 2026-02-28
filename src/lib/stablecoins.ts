@@ -229,6 +229,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
       { chain: "bsc", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18 },
+      { chain: "tron", address: "TPFqcBAaaUMCSVRCqPaQ9QnzKhmuoLR6Rc", decimals: 18 },
+      { chain: "solana", address: "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB", decimals: 6 },
+      { chain: "plume", address: "0x111111d2bf19e43c34263401e0cad979ed1cdb61", decimals: 18 },
+      { chain: "monad", address: "0x111111d2bf19e43c34263401e0cad979ed1cdb61", decimals: 6 },
+      { chain: "mantle", address: "0x111111d2bf19e43c34263401e0cad979ed1cdb61", decimals: 18 },
+      { chain: "aptos", address: "0x05fabd1b12e39967a3c24e91b7b8f67719a6dacee74f3c8b9fb7d93e855437d2", decimals: 6 },
     ],
     reserves: [
       // Source: BitGo monthly attestation reports (AICPA criteria). Exact % not published; estimated from collateral description.
@@ -309,6 +315,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xfa2b947eec368f42195f24f36d2af29f7c24cec2", decimals: 18 },
       { chain: "bsc", address: "0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2", decimals: 18 },
       { chain: "base", address: "0x8210c0634ab8f273806e4b7866e9db353773c44b", decimals: 18 },
+      { chain: "xdc", address: "0x8210c0634ab8f273806e4b7866e9db353773c44b", decimals: 18 },
     ],
     collateralQuality: "exotic",
     reserves: [
@@ -1017,6 +1024,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "bsc", address: "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122", decimals: 18 },
+      { chain: "solana", address: "DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM", decimals: 6 },
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
@@ -1312,6 +1320,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a", decimals: 6 },
       { chain: "arbitrum", address: "0xf84d28a8d28292842dd73d1c5f99476a80b6666a", decimals: 6 },
+      { chain: "solana", address: "4MmJVdwYN8LwvbGeCowYjSx7KoEi6BJWg8XXnW4fDDp6", decimals: 6 },
     ],
     reserves: [
       { name: "Short-dated U.S. Treasury bills (WAM <3mo)", pct: 95, risk: "very-low" },
@@ -1458,6 +1467,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
+      { chain: "xrpl", address: "4555524356000000000000000000000000000000.rUNaS5sqRuxZz6V7rBGhoSaZiVYA3ut4UL", decimals: 0 },
+      { chain: "stellar", address: "GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G", decimals: 7 },
+      { chain: "solana", address: "DghpMkatCiUsofbTmid3M3kAbDTPqDwKiYHnudXeGG52", decimals: 2 },
     ],
     reserves: [
       { name: "Euro cash deposits at Societe Generale", pct: 100, risk: "very-low" },
@@ -1501,6 +1513,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xc83e27f270cce0a3a3a29521173a83f402c1768b", decimals: 6 },
       { chain: "polygon", address: "0xb291996477504506bf5f583102b5b5ea5d1e40e0", decimals: 6 },
+      { chain: "xrpl", address: "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs", decimals: 0 },
+      { chain: "algorand", address: "2768603795", decimals: 6 },
     ],
     reserves: [
       { name: "Government bonds (NL, DE, US)", pct: 69, risk: "very-low" },
@@ -1657,6 +1671,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a", decimals: 18 },
       { chain: "bsc", address: "0xab3dbcd9b096c3ff76275038bf58eac10d22c61f", decimals: 18 },
+      { chain: "avalanche", address: "0xca2671dcd031a72359f456c212f62a9bda737cd7", decimals: 18 },
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
@@ -2319,6 +2334,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/felixprotocol" },
       { label: "Docs", url: "https://usefelix.gitbook.io/docs" },
     ],
+    contracts: [
+      { chain: "hyperevm", address: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70", decimals: 18 },
+    ],
     chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
@@ -2482,6 +2500,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "ethereum", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6 },
+      { chain: "plume", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6 },
     ],
     custodyModel: "onchain",
     reserves: [
@@ -2975,6 +2994,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
       { chain: "polygon", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6 },
+      { chain: "avalanche", address: "0x8835a2f66a7aaccb297cb985831a616b75e2e16c", decimals: 6 },
+      { chain: "xrpl", address: "rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK", decimals: 6 },
     ],
     reserves: [
       { name: "Euro cash and cash equivalents (EU banks incl. Societe Generale)", pct: 98, risk: "very-low" },
