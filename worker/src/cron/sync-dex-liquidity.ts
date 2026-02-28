@@ -547,6 +547,8 @@ interface SymbolLookups {
 interface DataSources {
   pools: LlamaPool[];
   dexProjects: Set<string>;
+  /** DL protocol slug → total protocol TVL. Used to cap inflated CG/GT per-pool TVL. */
+  protocolTvlCaps: Map<string, number>;
   curveResponses: (Response | null)[];
   graphApiKey: string | null;
   dlYieldsAvailable: boolean;
@@ -621,6 +623,7 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
 
   // --- DL Protocols ---
   const dexProjects = new Set<string>();
+  const protocolTvlCaps = new Map<string, number>();
   let dlProtocolsAvailable = false;
 
   if (dlProtocolsAllowed) {
@@ -629,6 +632,7 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
       const protocols = (await protocolsRes.json()) as {
         slug: string;
         category?: string;
+        tvl?: number | null;
         deadFrom?: number | null;
         rugged?: boolean | null;
         deprecated?: boolean | null;
@@ -637,9 +641,14 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
         if (p.category !== "Dexs") continue;
         if (p.deadFrom || p.rugged || p.deprecated) continue;
         dexProjects.add(p.slug);
+        // Store TVL cap keyed by normalized protocol name for CG/GT pool sanity checks
+        if (p.tvl && p.tvl > 0) {
+          const norm = normalizeProtocol(p.slug);
+          protocolTvlCaps.set(norm, (protocolTvlCaps.get(norm) ?? 0) + p.tvl);
+        }
       }
       dlProtocolsAvailable = true;
-      console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects from DeFiLlama protocols`);
+      console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`);
     } else {
       console.warn("[dex-liquidity] DeFiLlama protocols fetch failed — dead-protocol filtering degraded");
       await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
@@ -654,7 +663,7 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
     return null;
   }
 
-  return { pools, dexProjects, curveResponses, graphApiKey, dlYieldsAvailable, dlProtocolsAvailable };
+  return { pools, dexProjects, protocolTvlCaps, curveResponses, graphApiKey, dlYieldsAvailable, dlProtocolsAvailable };
 }
 
 /** Build symbol → stablecoinId and address → stablecoinId lookup maps. */
@@ -1309,6 +1318,7 @@ async function fetchCgTokenBatchPrices(
 async function fetchCgPools(
   addressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
+  protocolTvlCaps: Map<string, number>,
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -1387,6 +1397,13 @@ async function fetchCgPools(
           continue;
         }
 
+        // Per-pool TVL sanity cap: CG/GT concentrated liquidity pools can report
+        // virtual reserves (e.g. $4.6B for a single Raydium CLMM pool). Cap individual
+        // pool TVL at the protocol's total DL TVL — no single pool can exceed its protocol.
+        const protoNorm = normalizeProtocol(dexId);
+        const protoCap = protocolTvlCaps.get(protoNorm);
+        const cappedTvl = protoCap != null && tvl > protoCap ? protoCap : tvl;
+
         // Quality multiplier (use fee percentage if available, else DEX-based)
         const feePct = a.pool_fee_percentage != null ? parseFloat(a.pool_fee_percentage) : null;
         let qualMult: number;
@@ -1432,7 +1449,7 @@ async function fetchCgPools(
           chain: ourChain,
           dexId,
           name: a.name,
-          tvlUsd: tvl,
+          tvlUsd: cappedTvl,
           volume24hUsd: vol24h,
           qualityMultiplier: qualMult,
           maturityDays,
@@ -1551,6 +1568,7 @@ function mergeCgPools(
 async function fetchGtPools(
   addressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
+  protocolTvlCaps: Map<string, number>,
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -1662,6 +1680,11 @@ async function fetchGtPools(
             continue;
           }
 
+          // Per-pool TVL sanity cap (see fetchCgPools for rationale)
+          const protoNorm = normalizeProtocol(dexId);
+          const protoCap = protocolTvlCaps.get(protoNorm);
+          const cappedTvl = protoCap != null && tvl > protoCap ? protoCap : tvl;
+
           const qualMult = getGtDexQuality(dexId);
 
           let maturityDays = 0;
@@ -1682,7 +1705,7 @@ async function fetchGtPools(
             chain: ourChain,
             dexId,
             name: a.name,
-            tvlUsd: tvl,
+            tvlUsd: cappedTvl,
             volume24hUsd: vol24h,
             qualityMultiplier: qualMult,
             maturityDays,
@@ -2803,11 +2826,11 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   let crawlPriceObs = new Map<string, DexPriceObs[]>();
   try {
     if (useCg) {
-      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs);
+      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps);
       crawlNewPools = cgResult.newPools;
       crawlPriceObs = cgResult.priceObs;
     } else {
-      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs);
+      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps);
       crawlNewPools = gtResult.newPools;
       crawlPriceObs = gtResult.priceObs;
     }
