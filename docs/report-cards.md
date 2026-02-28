@@ -18,8 +18,8 @@ Cemetery coins get a permanent F.
 | Dimension | Weight | Source | Scoring |
 |-----------|--------|--------|---------|
 | **Liquidity** | 30% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
-| **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
-| **Decentralization** | 15% | Governance quality + chain risk | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `single-entity` → 20, `wrapper` → 10. Chain-risk penalty for non-Ethereum chains |
+| **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain infrastructure (tier × deployment model), collateral quality, custody model, and blacklist capability |
+| **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → 95. With deps → blended score (upstream × weight + self-backed), −10 if any < 75. Self-backed varies by governance (90/75/95) |
 
 ### Peg Stability (multiplier)
@@ -46,10 +46,57 @@ Cemetery coins get a permanent F.
 
 | Sub-factor | Scoring | Tiers |
 |---|---|---|
-| **Chain Risk** | Where does the core protocol operate? | Ethereum (100), Stage 1+ L2 (66), Established alt-L1 (20), Unproven (0) |
+| **Chain Infrastructure** | Two-axis: `chainTier × deploymentModel` (see below) | Combined score 0–100 |
 | **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
 | **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
 | **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Blacklistable (0) |
+
+#### Chain Infrastructure: Two-Axis Scoring (v5.1)
+
+The chain infrastructure score combines **primary chain maturity** with **deployment model risk** via multiplicative scoring:
+
+`chainInfraScore = CHAIN_TIER_SCORE[chainTier] × DEPLOYMENT_MULT[deploymentModel]`
+
+**Chain tier** (where core minting/logic lives):
+
+| Tier | Score |
+|------|-------|
+| `ethereum` | 100 |
+| `stage1-l2` | 66 |
+| `established-alt-l1` | 20 |
+| `unproven` | 0 |
+
+**Deployment model** (how the token extends to other chains):
+
+| Model | Multiplier | Description |
+|-------|-----------|-------------|
+| `single-chain` | 1.00 | No multichain presence, or irrelevant bridged copies |
+| `canonical-bridge` | 0.85 | Bridges via L2 canonical rollup bridges (inherits rollup security) |
+| `third-party-bridge` | 0.60 | Bridges via CCIP, LayerZero, Wormhole, etc. |
+| `native-multichain` | 0.40 | Independent minting/redeeming on multiple chains |
+
+**Combined score matrix:**
+
+| Deployment Model | ETH (100) | L2 (66) | Alt-L1 (20) | Unproven (0) |
+|------------------|-----------|---------|-------------|--------------|
+| single-chain | 100 | 66 | 20 | 0 |
+| canonical-bridge | 85 | 56 | 17 | 0 |
+| third-party-bridge | 60 | 40 | 12 | 0 |
+| native-multichain | 40 | 26 | 8 | 0 |
+
+**Classification decision tree:**
+
+```
+Can the protocol mint/redeem on >1 chain independently?
+  YES → native-multichain
+  NO → Is the token on >1 chain?
+    NO → single-chain
+    YES → Does cross-chain transfer use the L2's canonical rollup bridge?
+      YES → canonical-bridge
+      NO → third-party-bridge
+```
+
+Display labels: `"{ChainTier label}"` with optional deployment suffix. Single-chain gets no suffix. Example: "Ethereum mainnet (third-party bridge)".
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
@@ -83,21 +130,21 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 
 **Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:
 
-| Backing + Governance | Chain Risk | Collateral Quality | Custody Model |
-|---|---|---|---|
-| `rwa-backed` + `centralized` | ethereum | rwa | institutional |
-| `rwa-backed` + `centralized-dependent` | ethereum | rwa | institutional |
-| `crypto-backed` + `decentralized` | ethereum | native | onchain |
-| `crypto-backed` + `centralized-dependent` | ethereum | eth-lst | onchain |
-| `algorithmic` + any | ethereum | native | onchain |
+| Backing + Governance | Chain Tier | Deployment Model | Collateral Quality | Custody Model |
+|---|---|---|---|---|
+| `rwa-backed` + `centralized` | ethereum | single-chain | rwa | institutional |
+| `rwa-backed` + `centralized-dependent` | ethereum | single-chain | rwa | institutional |
+| `crypto-backed` + `decentralized` | ethereum | single-chain | native | onchain |
+| `crypto-backed` + `centralized-dependent` | ethereum | single-chain | eth-lst | onchain |
+| `algorithmic` + any | ethereum | single-chain | native | onchain |
 
-Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody).
+Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
 
-Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
+Data sources: `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
 
 ### Decentralization Details
 
-Score from `GovernanceQuality` tier (v5.0), with chain-risk penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 4-tier quality classification that can be explicitly overridden per coin.
+Score from `GovernanceQuality` tier (v5.0), with chain infrastructure penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 4-tier quality classification that can be explicitly overridden per coin.
 
 **Governance Quality Tiers:**
 
@@ -110,18 +157,18 @@ Score from `GovernanceQuality` tier (v5.0), with chain-risk penalty for protocol
 
 Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.
 
-**Chain-risk penalty** (applied to non-single-entity governance only):
+**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to non-single-entity governance only):
 
-| Chain Risk | Penalty |
+| Combined Score Range | Penalty |
 |---|---|
-| Ethereum | 0 |
-| Stage 1+ L2 | −15 |
-| Established alt-L1 | −50 |
-| Unproven | −65 |
+| 80–100 | 0 |
+| 50–79 | −15 |
+| 15–49 | −50 |
+| 0–14 | −65 |
 
-The chain risk comes from the coin's explicit `chainRisk` override on `StablecoinMeta`. Coins without an override (defaulting to Ethereum) are unaffected.
+The combined score is computed from `chainTier × deploymentModel` (see Chain Infrastructure above). Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
-Examples: hyUSD (dao-governance, Solana) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
+Examples: BOLD (dao-governance, Ethereum, third-party-bridge → infra 60) = 85 − 15 = **70**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
 
 ### Dependency Risk Details
 
@@ -199,7 +246,7 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainRisk`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, etc.) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, etc.) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 

@@ -781,11 +781,14 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
 | `concentrationHhi` | `number \| null` |
 | `bluechipGrade` | `BluechipGrade \| null` |
 | `canBeBlacklisted` | `boolean \| "possible"` |
-| `chainRisk` | `ChainRisk` |
+| `chainTier` | `ChainTier` |
+| `deploymentModel` | `DeploymentModel` |
 | `collateralQuality` | `CollateralQuality` |
 | `custodyModel` | `CustodyModel` |
 | `governanceTier` | `GovernanceType` |
+| `governanceQuality` | `GovernanceQuality` |
 | `dependencies` | `DependencyWeight[]` |
+| `navToken` | `boolean` |
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
 

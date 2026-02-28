@@ -1,6 +1,6 @@
 ---
 name: resilience-classify
-description: Research and classify stablecoins for resilience sub-factor overrides (chainRisk, collateralQuality, custodyModel). Run after types/defaults are implemented to identify coins needing explicit overrides.
+description: Research and classify stablecoins for resilience sub-factor overrides (chainTier, deploymentModel, collateralQuality, custodyModel). Run after types/defaults are implemented to identify coins needing explicit overrides.
 ---
 
 # Resilience Classification Skill
@@ -22,8 +22,10 @@ Read all coins from `src/lib/stablecoins.ts`. For each, apply the default infere
 - `collateral` text containing keywords: "Solana", "tBTC", "WBTC", "delta-neutral", "perpetual", "CEX", "off-exchange", "Copper", "Ceffu", "Fireblocks", "bridged"
 - `pegMechanism` text containing: "Solana", "Bitcoin L2", "not Ethereum", "Tron"
 - `contracts[]` listing only non-Ethereum chains
+- `contracts[]` listing multiple chains (candidate for `deploymentModel` override)
 - `backing` = `crypto-backed` but collateral text mentions RWAs, bridges, or exotic strategies
-- Coins on this known-override list: HYUSD, USDe, meUSD, USDD, sUSD (Synthetix), USDJ
+- Coins on this known-override list: HYUSD, USDe, meUSD, USDD, sUSD (Synthetix), USDJ, BOLD, rwaUSDi, satUSD
+- `collateral` or `pegMechanism` text mentioning: "LayerZero", "OFT", "CCIP", "Wormhole", "Axelar", "multichain", "cross-chain"
 
 ### Step 2 — Research each candidate
 
@@ -38,12 +40,23 @@ For each coin, determine the correct tier:
 
 | Sub-factor | Question | Tiers |
 |---|---|---|
-| `chainRisk` | Where does the core protocol live and where is collateral held? | `ethereum` (100), `stage1-l2` (66), `established-alt-l1` (33), `unproven` (0) |
-| `collateralQuality` | What are the trust assumptions in backing assets? | `native` (100), `eth-lst` (66), `alt-lst-bridged-or-mixed` (33), `exotic` (0) |
+| `chainTier` | Where does the core protocol live and where is collateral held? | `ethereum` (100), `stage1-l2` (66), `established-alt-l1` (20), `unproven` (0) |
+| `deploymentModel` | How does the token extend to other chains? | `single-chain` (×1.0), `canonical-bridge` (×0.85), `third-party-bridge` (×0.60), `native-multichain` (×0.40) |
+| `collateralQuality` | What are the trust assumptions in backing assets? | `native` (100), `eth-lst` (66), `rwa` (50), `alt-lst-bridged-or-mixed` (20), `exotic` (0) |
 | `custodyModel` | Who holds the collateral and can it be verified on-chain? | `onchain` (100), `institutional` (50), `cex` (0) |
 
 **Classification rules:**
-- **chainRisk**: Based on where the protocol's smart contracts and collateral vaults live, NOT where the token is bridged to
+- **chainTier**: Based on where the protocol's smart contracts and collateral vaults live, NOT where the token is bridged to
+- **deploymentModel**: Use the decision tree:
+  ```
+  Can the protocol mint/redeem on >1 chain independently?
+    YES → native-multichain
+    NO → Is the token on >1 chain?
+      NO → single-chain
+      YES → Does cross-chain transfer use the L2's canonical rollup bridge?
+        YES → canonical-bridge
+        NO → third-party-bridge (CCIP, LayerZero, Wormhole, etc.)
+  ```
 - **collateralQuality**: For mixed collateral, use the tier of the riskiest significant component (>15% of backing). Stablecoin portions don't count here (handled by dependency risk)
 - **custodyModel**: If ANY significant portion is held off-chain by a non-institutional custodian, classify as `cex`
 - When uncertain between two tiers, choose the riskier (lower score) tier
@@ -56,7 +69,8 @@ For each coin needing an override, present:
 ## {Name} ({Symbol}) — ID: {id}
 
 ### Default inference
-- chainRisk: {inferred} — {correct/wrong because...}
+- chainTier: {inferred} — {correct/wrong because...}
+- deploymentModel: {inferred} — {correct/wrong because...}
 - collateralQuality: {inferred} — {correct/wrong because...}
 - custodyModel: {inferred} — {correct/wrong because...}
 
@@ -74,8 +88,9 @@ After user approval, edit `src/lib/stablecoins.ts` to add only the override fiel
 ```typescript
 usd("123", "Example", "EX", "crypto-backed", "decentralized", {
   // ... existing fields ...
-  chainRisk: "established-alt-l1",
-  collateralQuality: "alt-lst-bridged",
+  chainTier: "established-alt-l1",
+  deploymentModel: "third-party-bridge",
+  collateralQuality: "alt-lst-bridged-or-mixed",
 }),
 ```
 
