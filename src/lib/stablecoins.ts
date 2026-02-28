@@ -18,7 +18,8 @@ interface StablecoinOpts {
   supplyMethod?: import("./types").SupplyMethodConfig;
   dependencies?: import("./types").DependencyWeight[];
   canBeBlacklisted?: boolean | "possible";
-  chainRisk?: import("./types").ChainRisk;
+  chainTier?: import("./types").ChainTier;
+  deploymentModel?: import("./types").DeploymentModel;
   collateralQuality?: import("./types").CollateralQuality;
   custodyModel?: import("./types").CustodyModel;
   governanceQuality?: import("./types").GovernanceQuality;
@@ -28,7 +29,7 @@ interface StablecoinOpts {
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -163,6 +164,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "optimism", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
       { chain: "bsc", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
       { chain: "polygon", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "avalanche", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "zksync", address: "0x39fe7a0dacce31bd90418e3e659fb0b5f0b3db0d", decimals: 18 },
+      { chain: "mantle", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "linea", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "scroll", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "blast", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "mode", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "manta", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "berachain", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "kava", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "hyperevm", address: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", decimals: 18 },
+      { chain: "ton", address: "EQAIb6KmdfdDR7CN1GBqVJuP25iCnLKCvBlJ07Evuu2dzP5f", decimals: 6 },
+      { chain: "aptos", address: "0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9", decimals: 6 },
+      { chain: "solana", address: "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT", decimals: 9 },
     ],
     collateralQuality: "exotic",
     custodyModel: "cex",
@@ -267,6 +282,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x6c3ea9036406852006290770bedfcaba0e23a0e8", decimals: 6 },
       { chain: "arbitrum", address: "0x46850ad61c2b7d64d08c9c754f45254596696984", decimals: 6 },
+      { chain: "solana", address: "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo", decimals: 6 },
+      { chain: "stellar", address: "PYUSD-GDQE7IXJ4HUHV6RQHIUPRJSEZE4DRS5WY577O2FY6YQ5LVWZ7JZTU2V5", decimals: 7 },
     ],
     supplyMethod: { type: "exclude" }, // Significant Solana supply not coverable on-chain — use DefiLlama
     reserves: [
@@ -380,6 +397,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x96f6ef951840721adbf46ac996b59e0235cb985c", decimals: 18 },
       { chain: "arbitrum", address: "0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d", decimals: 18 },
+      { chain: "mantle", address: "0x5be26527e817998a7206475496fde1e68957c5a6", decimals: 18 },
+      { chain: "plume", address: "0xd2b65e851be3d80d3c2ce795eb2e78f16cb088b2", decimals: 18 },
+      { chain: "sei", address: "0x54cd901491aef397084453f4372b93c33260e2a6", decimals: 18 },
+      { chain: "sui", address: "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY", decimals: 6 },
+      { chain: "solana", address: "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6", decimals: 6 },
+      { chain: "aptos", address: "0xcfea864b32833f157f042618bd845145256b1bf4c0da34a7013b76e42daa53cc", decimals: 6 },
+      { chain: "stellar", address: "USDY-GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6", decimals: 7 },
     ],
     reserves: [
       // Source: Ondo Finance docs + Ankura Trust daily reports. Ondo targets 99%+ Treasuries; 104% overcollateralized.
@@ -406,6 +430,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum",  address: "0xa6525ae43edcd03dc08e775774dcabd3bb925872", decimals: 6 },
       { chain: "avalanche", address: "0x53fc82f14f009009b440a706e31c9021e1196a2f", decimals: 6 },
       { chain: "polygon",   address: "0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99", decimals: 6 },
+      { chain: "solana", address: "GyWgeqpy5GueU2YbkE8xqUeVEokCMMCEeUrfbtMw6phr", decimals: 6 },
+      { chain: "aptos", address: "0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89", decimals: 6 },
     ],
     reserves: [
       // Source: BlackRock/Securitize prospectus. 100% in cash, T-bills, and repos. Exact % not disclosed; estimated for money market fund.
@@ -434,7 +460,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0xb514cabd09ef5b169ed3fe0fa8dbd590741e81c2", decimals: 18 },
       { chain: "arbitrum", address: "0x680447595e8b7b3aa1b43beb9f6098c79ac2ab3f", decimals: 18 },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       // Source: Messari Jan 2026, Stablewatch late 2025. Confidence: Medium
@@ -578,6 +604,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f", decimals: 18 },
       { chain: "arbitrum", address: "0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33", decimals: 18 },
       { chain: "base", address: "0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee", decimals: 18 },
+      { chain: "gnosis", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
+      { chain: "ink", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
+      { chain: "avalanche", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
     ],
     proofOfReserves: { type: "independent-audit", url: "https://github.com/aave/gho-core/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
     reserves: [
@@ -650,6 +679,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409", decimals: 18 },
       { chain: "bsc", address: "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409", decimals: 18 },
       { chain: "arbitrum", address: "0x93c9932e4afa59201f0b5e63f7d816516f1669fe", decimals: 18 },
+      { chain: "sui", address: "0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD", decimals: 6 },
+      { chain: "ton", address: "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89", decimals: 6 },
+      { chain: "solana", address: "9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u", decimals: 6 },
     ],
     reserves: [
       // Source: First Digital Labs transparency, Prescient Jan 31, 2026. Confidence: High
@@ -800,7 +832,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.solstice.finance" },
     ],
     jurisdiction: { country: "Switzerland" },
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       // Source: Solstice docs, StablecoinInsider Sep-Dec 2025. Confidence: Medium
@@ -991,7 +1023,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "satoshi-stablecoin",
     tags: ["Liquity v1 fork"],
     dependencies: [],
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
     pegMechanism: "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
@@ -1087,6 +1119,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("340", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
+    deploymentModel: "native-multichain",
     rwa: true,
     dependencies: [{ id: "1", weight: 0.3 }, { id: "2", weight: 0.3 }],
     collateralQuality: "rwa",
@@ -1341,7 +1374,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("79", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "helio-protocol-hay",
     dependencies: [{ id: "1", weight: 0.25 }, { id: "2", weight: 0.25 }],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BNB, ETH, and LSTs via CDPs; USDT/USDC/FDUSD via Peg Stability Module",
     pegMechanism: "PSM enabling 1:1 swaps with centralized stablecoins; CDP overcollateralization and liquidation",
@@ -1651,6 +1684,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
+    deploymentModel: "third-party-bridge",
     geckoId: "liquity-bold-2",
     collateral: "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
     pegMechanism: "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",
@@ -1683,7 +1717,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/hylo_so" },
       { label: "Docs", url: "https://docs.hylo.so/protocol-overview/hyUSD-&-xSOL" },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "JitoSOL", pct: 90, risk: "high" },
@@ -1804,7 +1838,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.berachain.com/learn/pol/tokens/honey" },
       { label: "Discord", url: "https://discord.gg/berachain" },
     ],
-    chainRisk: "unproven",
+    chainTier: "unproven",
     reserves: [
       { name: "USDC (Circle)", pct: 40, risk: "low" },
       { name: "USDT0 (Tether via LayerZero)", pct: 25, risk: "low" },
@@ -1847,7 +1881,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/Blast_L2" },
       { label: "Docs", url: "https://docs.blast.io/" },
     ],
-    chainRisk: "stage1-l2",
+    chainTier: "stage1-l2",
     reserves: [
       { name: "DAI / sDAI (via MakerDAO DSR)", pct: 60, risk: "low" },
       { name: "USDC (bridged)", pct: 25, risk: "low" },
@@ -1952,7 +1986,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://beraborrow.gitbook.io/docs" },
     ],
     jurisdiction: { country: "Croatia" },
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "exotic",
     reserves: [
       { name: "iBGT (Infrared liquid staked BGT)", pct: 40, risk: "high" },
@@ -1997,7 +2031,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/bucket_protocol" },
       { label: "Docs", url: "https://docs.bucketprotocol.io/" },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "SUI (native token CDPs)", pct: 45, risk: "high" },
@@ -2050,7 +2084,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
     ],
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)", pct: 100, risk: "medium" },
@@ -2069,7 +2103,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "avalanche", address: "0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a", decimals: 18 },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "exotic",
     custodyModel: "cex",
     reserves: [
@@ -2155,7 +2189,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Proof of Reserve", url: "https://yuzu.accountable.capital/" },
     ],
     proofOfReserves: { type: "real-time", url: "https://yuzu.accountable.capital/", provider: "Accountable" },
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "exotic",
     reserves: [
       { name: "Pendle PT/LP positions (leveraged DeFi yield)", pct: 50, risk: "high" },
@@ -2175,7 +2209,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://jupusd.money/" },
       { label: "Twitter", url: "https://x.com/JupiterExchange" },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     custodyModel: "institutional",
     reserves: [
       { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low" },
@@ -2230,7 +2264,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "celo", address: "0x765de816845861e75a25fca122bb6898b8b1282a", decimals: 18 },
     ],
     proofOfReserves: { type: "self-reported", url: "https://reserve.mento.org/" },
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "sUSDS (Sky/Maker yield-bearing stablecoin)", pct: 56, risk: "low" },
@@ -2277,7 +2311,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/felixprotocol" },
       { label: "Docs", url: "https://usefelix.gitbook.io/docs" },
     ],
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "HYPE / kHYPE / wstHYPE (Hyperliquid native + LSTs)", pct: 60, risk: "very-high" },
@@ -2348,7 +2382,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/USDMOfficial" },
     ],
     jurisdiction: { country: "Norway", regulator: "Finanstilsynet", license: "MiCA E-Money Token (EMT)" },
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     reserves: [
       { name: "USD bank deposits", pct: 40, risk: "very-low" },
       { name: "Money market funds (Fidelity / Amundi)", pct: 60, risk: "very-low" },
@@ -2365,7 +2399,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.hydration.net/quick_start/hollar/" },
       { label: "GitHub", url: "https://github.com/galacticcouncil" },
     ],
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "DOT", pct: 40, risk: "high" },
@@ -2400,7 +2434,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.youves.com" },
       { label: "GitHub", url: "https://github.com/youves-com" },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "XTZ (Tezos)", pct: 60, risk: "high" },
@@ -2527,7 +2561,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "base", address: "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4", decimals: 18 },
     ],
-    chainRisk: "unproven",
+    chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)", pct: 100, risk: "medium" },
@@ -2864,7 +2898,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "celo", address: "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73", decimals: 18 },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "sUSDS (Sky savings USDS)", pct: 56, risk: "low" },
@@ -3088,7 +3122,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/ISC_money" },
       { label: "Docs",    url: "https://wp.isc.money/" },
     ],
-    chainRisk: "established-alt-l1",
+    chainTier: "established-alt-l1",
   }), // no EVM contract — Solana-only
 
   // ── CAD / CNY / PHP / MXN / UAH / ARS pegs ───────────────────────────
