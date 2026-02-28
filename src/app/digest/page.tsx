@@ -22,31 +22,21 @@ export default function DigestArchivePage() {
   return (
     <div className="space-y-6">
       <BreadcrumbJsonLd name="Daily Digest Archive" path="/digest/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Daily Digest Archive</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Daily Digest Archive</h1>
-        <p className="text-sm text-muted-foreground">
-          Every daily recap, newest first.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging
-          trends across the stablecoin landscape. Browse the full archive to track how conditions have evolved
-          over time.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Digests are also published daily on the{" "}
-          <a href="https://t.me/pharoswatch" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
-            Pharos Telegram channel
-          </a>
-          .
-        </p>
-      </div>
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+        <span>/</span>
+        <span className="text-foreground">Daily Digest Archive</span>
+      </nav>
 
       <DigestArchiveClient />
+
+      <p className="text-xs text-muted-foreground text-center max-w-2xl mx-auto pt-4">
+        Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging
+        trends across the stablecoin landscape. Also published on the{" "}
+        <a href="https://t.me/pharoswatch" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+          Pharos Telegram channel
+        </a>.
+      </p>
     </div>
   );
 }

@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
@@ -18,40 +16,16 @@ import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
-import { useDailyDigest } from "@/hooks/use-daily-digest";
-import { formatDateline } from "@/components/daily-digest";
+import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
-import { cn } from "@/lib/utils";
 import { derivePegRates } from "@/lib/peg-rates";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
-
-const DIGEST_STORAGE_KEY = "pharos-digest-open";
-
-function useDigestOpen() {
-  const [open, setOpen] = useState(true);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(DIGEST_STORAGE_KEY);
-    if (stored === "false") setOpen(false);
-  }, []);
-
-  const toggle = () => {
-    setOpen((prev) => {
-      const next = !prev;
-      localStorage.setItem(DIGEST_STORAGE_KEY, String(next));
-      return next;
-    });
-  };
-
-  return [open, toggle] as const;
-}
 
 export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
@@ -60,10 +34,8 @@ export function HomepageClient() {
   const { data: dexLiquidity } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();
   const { data: eventsData } = useDepegEvents();
-  const { data: digestData } = useDailyDigest();
   const [pegFilter, setPegFilter] = useState<PegCurrency | "all">("all");
   const [typeFilter, setTypeFilter] = useState<GovernanceType | "all">("all");
-  const [digestOpen, toggleDigest] = useDigestOpen();
 
   const filteredPegCoins = useMemo(
     () =>
@@ -121,47 +93,7 @@ export function HomepageClient() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="digest">
-        {digestData?.digest && (
-          <section>
-            <Card>
-              <CardHeader
-                className="flex flex-row items-center justify-between cursor-pointer"
-                onClick={toggleDigest}
-              >
-                <CardTitle className="text-sm font-semibold uppercase tracking-wider">
-                  {digestData.digestTitle || "Daily Recap"}
-                  {digestData.generatedAt && (
-                    <span className="font-normal tracking-wide text-muted-foreground"> · {formatDateline(digestData.generatedAt)}</span>
-                  )}
-                </CardTitle>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-muted-foreground transition-transform flex-shrink-0",
-                    digestOpen && "rotate-180",
-                  )}
-                />
-              </CardHeader>
-              {digestOpen && (
-                <CardContent className="animate-in fade-in duration-200">
-                  <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-                    {digestData.digest}
-                  </p>
-                  {digestData.digestExtended && (
-                    <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-                      {digestData.digestExtended}
-                    </p>
-                  )}
-                  <Link
-                    href="/digest/"
-                    className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Read all previous recaps &rarr;
-                  </Link>
-                </CardContent>
-              )}
-            </Card>
-          </section>
-        )}
+        <DailyDigest />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="table">

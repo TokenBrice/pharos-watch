@@ -166,13 +166,20 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 
 ## Frontend
 
-### Homepage
+### Broadsheet (shared component)
 
 **Component:** `src/components/daily-digest.tsx`
 **Hook:** `src/hooks/use-daily-digest.ts` → `GET /api/daily-digest`
 **Cache:** `staleTime: 86400s`, `refetchInterval: 172800s`
 
-Displays the latest digest title and text with a link to the archive.
+The latest digest is presented in a broadsheet newspaper style:
+- **Masthead:** "PHAROS DAILY DIGEST" centered in small-caps with the full date below, bordered by horizontal rules
+- **Headline:** Digest title in large serif font (Georgia)
+- **Body:** Extended text paragraphs in serif italic
+
+The `text` field (tweet-sized copy) is **never rendered on the website** — it exists solely for Twitter distribution. Only `title` and `extended` appear on the site.
+
+Used in two places: the homepage (with "Read all previous recaps" link) and the `/digest/` archive page (without the link, since the wire table follows).
 
 ### Archive page
 
@@ -181,7 +188,11 @@ Displays the latest digest title and text with a link to the archive.
 **Component:** `src/components/digest-archive-client.tsx`
 **Hook:** `src/hooks/use-digest-archive.ts` → `GET /api/digest-archive`
 
-Lists all digests newest-first.
+The archive page has two zones:
+1. **Broadsheet** — today's digest in full broadsheet layout (via `DailyDigest`)
+2. **Wire table** — all historical digests in a dense, wire-service style list
+
+The wire table shows each digest as a compact row: **date** (monospace, e.g. "27 FEB"), **title**, **PSI badge** (pill colored by condition band), and **total market cap**. A month picker dropdown filters the table by month. PSI and mcap data are served from the enriched archive API response (`psiScore`, `psiBand`, `totalMcapUsd` — parsed from the stored `input_data` JSON).
 
 ### Detail pages
 
@@ -234,8 +245,8 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/migrations/0018_daily_digest.sql` | Initial `daily_digest` table |
 | `worker/migrations/0021_digest_title.sql` | Added `digest_title` column |
 | `worker/migrations/0027_digest_extended.sql` | Added `digest_extended` column |
-| `src/components/daily-digest.tsx` | Homepage digest widget |
-| `src/components/digest-archive-client.tsx` | Archive list (client component) |
+| `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
+| `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
 | `src/components/digest-snapshot.tsx` | Date-specific data cards (8 categories) |
 | `src/app/digest/page.tsx` | Archive page (SSR) |
 | `src/app/digest/[date]/page.tsx` | Detail page (SSG, JSON-LD, prev/next nav) |
