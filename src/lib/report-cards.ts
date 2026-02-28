@@ -508,9 +508,13 @@ export function scoreDecentralization(
     score = Math.max(0, score + penalty);
   }
 
-  let detail = GOVERNANCE_QUALITY_LABEL[quality];
-  if (penalty < 0 && factors) {
-    detail += ` (${chainInfraLabel(factors.chainTier, factors.deploymentModel)}: ${penalty} penalty)`;
+  const govScore = GOVERNANCE_QUALITY_SCORE[quality];
+  let detail: string;
+  if (factors) {
+    const chainDesc = chainInfraLabel(factors.chainTier, factors.deploymentModel);
+    detail = `Governance: ${GOVERNANCE_QUALITY_LABEL[quality]} (${govScore}). Chain: ${chainDesc} (${penalty})`;
+  } else {
+    detail = `Governance: ${GOVERNANCE_QUALITY_LABEL[quality]} (${govScore})`;
   }
 
   return { grade: scoreToGrade(score), score, detail };
@@ -578,15 +582,21 @@ export function scoreDependencyRisk(
 
   score = Math.round(Math.max(0, Math.min(100, score)));
 
+  const GOV_LABEL: Record<GovernanceType, string> = {
+    decentralized: "Decentralized",
+    "centralized-dependent": "Partially centralized",
+    centralized: "Centralized",
+  };
+
   const parts: string[] = [];
-  parts.push(`Based on ${resolved.length} upstream dependenc${resolved.length === 1 ? "y" : "ies"} (${Math.round(totalWeight * 100)}% stablecoin-backed)`);
-  parts.push(`blended score: ${Math.round(blendedScore)}, self-backed: ${SELF_BACKED_SCORE}`);
+  parts.push(`Upstream: ${resolved.length} upstream dep${resolved.length === 1 ? "" : "s"} (${Math.round(totalWeight * 100)}% weight) (${Math.round(blendedScore)})`);
+  parts.push(`Self-backed: ${GOV_LABEL[governance]} (${SELF_BACKED_SCORE})`);
   if (weakDeps.length > 0) {
-    parts.push(`-10 penalty: ${weakDeps.length} dependenc${weakDeps.length === 1 ? "y" : "ies"} below 75`);
+    parts.push(`Penalty: ${weakDeps.length} weak dep${weakDeps.length === 1 ? "" : "s"} below 75 (-10)`);
   }
   if (ceiling < Infinity) {
     const ceilingType = resolved.some(d => d.type === "wrapper") ? "wrapper" : "mechanism-critical";
-    parts.push(`capped at ${Math.round(ceiling)} (${ceilingType} dependency ceiling)`);
+    parts.push(`Ceiling: ${ceilingType} dependency ceiling (${Math.round(ceiling)})`);
   }
 
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };

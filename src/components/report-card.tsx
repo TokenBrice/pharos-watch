@@ -118,13 +118,14 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                       </span>
                     </div>
                   </div>
-                  {key === "resilience" && dim.score !== null && (
+                  {(key === "resilience" || key === "decentralization" || key === "dependencyRisk") && dim.score !== null && (
                     <div className="ml-4 mt-1 space-y-0.5">
                       {dim.detail.split(". ").map((part) => {
-                        const match = part.match(/^(.+?):\s*(.+?)\s*\((\d+)\)$/);
+                        const match = part.match(/^(.+?):\s*(.+?)\s*\((-?\d+)\)$/);
                         if (!match) return null;
                         const [, label, desc, scoreStr] = match;
                         const subScore = parseInt(scoreStr, 10);
+                        const isNegative = subScore < 0;
                         return (
                           <div
                             key={label}
@@ -133,7 +134,9 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                             <span>
                               {label}: <span className="text-foreground/70">{desc}</span>
                             </span>
-                            <span className="tabular-nums">{subScore}</span>
+                            <span className={`tabular-nums ${isNegative ? "text-amber-500" : ""}`}>
+                              {isNegative ? subScore : subScore === 0 ? "—" : subScore}
+                            </span>
                           </div>
                         );
                       })}
