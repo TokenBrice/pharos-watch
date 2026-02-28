@@ -13,6 +13,7 @@ import type {
   DexLiquidityData,
   StablecoinMeta,
   GovernanceType,
+  GovernanceQuality,
   BackingType,
   ChainRisk,
   CollateralQuality,
@@ -395,10 +396,44 @@ export function scoreResilience(
   return { grade: scoreToGrade(score), score, detail: parts.join(". ") };
 }
 
+// ---------------------------------------------------------------------------
+// Governance quality scoring
+// ---------------------------------------------------------------------------
+
+export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
+  "dao-governance": 85,
+  "multisig": 55,
+  "single-entity": 20,
+  "wrapper": 10,
+};
+
+const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
+  "dao-governance": "DAO governance",
+  "multisig": "Multisig governance",
+  "single-entity": "Single-entity governance",
+  "wrapper": "Wrapper (inherits upstream)",
+};
+
+function inferGovernanceQuality(governance: GovernanceType): GovernanceQuality {
+  switch (governance) {
+    case "decentralized": return "dao-governance";
+    case "centralized-dependent": return "multisig";
+    case "centralized": return "single-entity";
+  }
+}
+
+export function resolveGovernanceQuality(
+  governance: GovernanceType,
+  meta?: StablecoinMeta,
+): GovernanceQuality {
+  return meta?.governanceQuality ?? inferGovernanceQuality(governance);
+}
+
 /**
- * Decentralization: governance type + chain-risk modifier.
+ * Decentralization: governance quality + chain-risk modifier.
  *
- * Base scores: decentralized 100, centralized-dependent 50, centralized 0.
+ * Governance quality tiers replace the old 3-level GovernanceType scores:
+ *   dao-governance 85, multisig 55, single-entity 20, wrapper 10.
  * Chain penalty: protocols on less decentralized chains get a reduction
  * because governance decentralization is undermined when the underlying
  * chain itself has centralisation concerns (validator set, halt risk, etc.).
@@ -407,15 +442,10 @@ export function scoreDecentralization(
   governance: GovernanceType,
   meta?: StablecoinMeta,
 ): ReportCardDimension {
-  const scoreMap: Record<GovernanceType, number> = {
-    decentralized: 100,
-    "centralized-dependent": 50,
-    centralized: 0,
-  };
+  const quality = resolveGovernanceQuality(governance, meta);
+  let score = GOVERNANCE_QUALITY_SCORE[quality];
 
-  let score = scoreMap[governance];
-
-  // Chain-risk penalty (only meaningful for non-centralized governance)
+  // Chain-risk penalty (only meaningful for non-single-entity governance)
   const chainPenalty: Record<ChainRisk, number> = {
     ethereum: 0,
     "stage1-l2": -15,
@@ -424,17 +454,11 @@ export function scoreDecentralization(
   };
   const chainRisk = meta?.chainRisk;
   const penalty = chainRisk ? (chainPenalty[chainRisk] ?? 0) : 0;
-  if (governance !== "centralized" && penalty < 0) {
+  if (quality !== "single-entity" && penalty < 0) {
     score = Math.max(0, score + penalty);
   }
 
-  const labelMap: Record<GovernanceType, string> = {
-    decentralized: "Decentralized governance",
-    "centralized-dependent": "CeFi-Dependent governance",
-    centralized: "Centralized governance",
-  };
-
-  let detail = labelMap[governance];
+  let detail = GOVERNANCE_QUALITY_LABEL[quality];
   if (penalty < 0) {
     detail += ` (${CHAIN_RISK_LABEL[chainRisk!]}: ${penalty} penalty)`;
   }
