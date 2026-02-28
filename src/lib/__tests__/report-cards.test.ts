@@ -19,7 +19,7 @@ function makeMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
     decimals: {},
     contracts: {},
     links: {},
-    flags: { governance: "centralized", backing: "rwa-backed" },
+    flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: false },
     ...overrides,
   } as StablecoinMeta;
 }
@@ -77,7 +77,7 @@ describe("resolveGovernanceQuality — regulated-entity auto-promotion", () => {
 
   it("does not promote decentralized governance", () => {
     const meta = makeMeta({
-      flags: { governance: "decentralized", backing: "crypto-backed" },
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       jurisdiction: { country: "United States", regulator: "NYDFS", license: "BitLicense" },
       proofOfReserves: { type: "independent-audit", url: "https://example.com" },
     });
