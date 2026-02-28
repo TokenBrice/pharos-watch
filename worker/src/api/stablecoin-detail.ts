@@ -3,6 +3,7 @@ import { withErrorHandler } from "../lib/api-utils";
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, CACHE_PROFILES, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { binarySearchNearest } from "../lib/binary-search";
+import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
@@ -99,17 +100,39 @@ async function fetchCommodityDetail(config: {
     });
   }
 
-  // Fallback: no protocol TVL → use CoinGecko market_chart directly
+  // Fallback: no protocol TVL → use CoinGecko market_chart with sanity check.
+  // Fetch market_chart + coin detail (for circulating_supply) in parallel so we can
+  // detect frozen/corrupt usd_market_cap values via supply×price divergence.
   if (tokens.length === 0) {
-    const cgRes = await fetch(
-      cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
-      { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
-    );
-    if (cgRes.ok) {
+    const [cgRes, coinRes] = await Promise.all([
+      fetch(
+        cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
+      ),
+      fetch(
+        cgUrl(`/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`),
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
+      ),
+    ]);
+
+    if (!cgRes.ok) {
+      coinRes.body?.cancel();
+    } else {
       const cgData = (await cgRes.json()) as {
         market_caps: [number, number][];
         prices?: [number, number][];
       };
+
+      let circulatingSupply: number | undefined;
+      if (coinRes.ok) {
+        const coinData = (await coinRes.json()) as {
+          market_data?: { circulating_supply?: number };
+        };
+        circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
+      } else {
+        coinRes.body?.cancel();
+      }
+
       const priceMap = new Map<string, number>();
       if (cgData.prices) {
         for (const [ts, p] of cgData.prices) {
@@ -122,10 +145,11 @@ async function fetchCommodityDetail(config: {
           const date = Math.floor(ts / 1000);
           const dateKey = new Date(ts).toISOString().slice(0, 10);
           const price = priceMap.get(dateKey) ?? 0;
+          const resolvedMcap = price > 0 ? resolveMarketCap(mcap, circulatingSupply, price) : mcap;
           return {
             date,
-            totalCirculatingUSD: { [config.pegType]: mcap },
-            totalCirculating: { [config.pegType]: price > 0 ? mcap / price : 0 },
+            totalCirculatingUSD: { [config.pegType]: resolvedMcap },
+            totalCirculating: { [config.pegType]: price > 0 ? resolvedMcap / price : 0 },
           };
         });
     }
