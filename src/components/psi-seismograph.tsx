@@ -57,6 +57,12 @@ export function PsiSeismograph({ score, band }: PsiSeismographProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // DPR scaling for crisp rendering on retina displays
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = CANVAS_W * dpr;
+    canvas.height = CANVAS_H * dpr;
+    ctx.scale(dpr, dpr);
+
     if (reducedMotion) {
       // Static render: grid + flat line
       drawGrid(ctx);
@@ -132,7 +138,7 @@ export function PsiSeismograph({ score, band }: PsiSeismographProps) {
     return () => {
       cancelAnimationFrame(anim.rafId);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <canvas
