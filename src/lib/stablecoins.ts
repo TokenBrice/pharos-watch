@@ -207,6 +207,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xdc035d45d973e3ec169d2276ddab16f1e407384f", decimals: 18 },
       { chain: "arbitrum", address: "0x6491c05a82219b8d1479057361ff1654749b876b", decimals: 18 },
       { chain: "base", address: "0x820c137fa70c8691f0e44dc420a5e53c168921dc", decimals: 18 },
+      { chain: "solana", address: "USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA", decimals: 6 },
     ],
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
@@ -576,6 +577,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5", decimals: 18 },
       { chain: "arbitrum", address: "0x35f1c5cb7fb977e669fd244c567da99d8a3a6850", decimals: 18 },
+      { chain: "base", address: "0x758a3e0b1f842c9306b783f8a4078c6c8c03a270", decimals: 18 },
+      { chain: "bsc", address: "0x758a3e0b1f842c9306b783f8a4078c6c8c03a270", decimals: 18 },
     ],
     reserves: [
       // Source: Usual docs, RWA.xyz, ChainArgos Feb 2026. Confidence: Medium
@@ -758,6 +761,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x66a1e37c9b0eaddca17d3662d6c05f4decf3e110", decimals: 18 },
       { chain: "base", address: "0x35e5db674d8e93a03d814fa0ada70731efe8a4b9", decimals: 18 },
       { chain: "bsc", address: "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9", decimals: 18 },
+      { chain: "berachain", address: "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9", decimals: 18 },
+      { chain: "hyperevm", address: "0x0ad339d66bf4aed5ce31c64bc37b3244b6394a77", decimals: 18 },
+      { chain: "arbitrum", address: "0x2492d0006411af6c8bbb1c8afc1b0197350a79e9", decimals: 18 },
     ],
     collateralQuality: "exotic",
     custodyModel: "institutional",
@@ -856,6 +862,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x8a60e489004ca22d775c5f2c657598278d17d9c2", decimals: 18 },
       { chain: "bsc",      address: "0x9356086146be5158e98ad827e21b5cf944699894", decimals: 18 },
+      { chain: "mantle",   address: "0x075df695b8e7f4361fa7f8c1426c63f11b06e326", decimals: 18 },
     ],
     reserves: [
       // Source: Avalon docs, Decrypt, Wu Blockchain late 2024-2025. Confidence: Low
@@ -1024,6 +1031,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     tags: ["Liquity v1 fork"],
     dependencies: [],
     chainTier: "unproven",
+    deploymentModel: "third-party-bridge",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC, ETH, BNB, and liquid staking tokens; no centralized stablecoin collateral accepted",
     pegMechanism: "Omni-CDP overcollateralized by BTC, ETH, BNB, or LSTs; collateral stays on its source chain and satUSD is minted natively on the destination chain via LayerZero OFT messaging; peg maintained through stability pools, on-chain liquidations, and $1-of-collateral redemption arbitrage",
