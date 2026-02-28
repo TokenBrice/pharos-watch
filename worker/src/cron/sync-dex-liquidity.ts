@@ -1099,14 +1099,26 @@ function buildKnownPoolAddresses(
   aerodromeIsStable: Map<string, boolean>,
 ): Set<string> {
   const known = new Set<string>();
+  let fingerprintCount = 0;
 
   // DeFiLlama pools (all matched DEX pools)
   for (const pool of pools) {
     if (!pool.tvlUsd || pool.tvlUsd < 10_000) continue;
     if (!dexProjects.has(pool.project)) continue;
     if (pool.exposure === "single") continue;
+    // UUID-based key (DL uses UUIDs, not on-chain addresses)
     const key = `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`;
     known.add(key);
+    // Token-pair fingerprint so CG/GT pools (which use on-chain addresses)
+    // can match against DL pools despite the UUID/address format mismatch.
+    // Format: fp:<chain>:<normalized_protocol>:<sorted_token_addresses>
+    if (pool.underlyingTokens && pool.underlyingTokens.length >= 2) {
+      const chain = pool.chain.toLowerCase();
+      const proto = normalizeProtocol(pool.project);
+      const sorted = pool.underlyingTokens.map((t) => t.toLowerCase()).sort().join(":");
+      known.add(`fp:${chain}:${proto}:${sorted}`);
+      fingerprintCount++;
+    }
   }
 
   // Curve pools (keyed as chain:address in the map)
@@ -1126,7 +1138,7 @@ function buildKnownPoolAddresses(
     known.add(key);
   }
 
-  console.log(`[dex-liquidity] Built known pool set: ${known.size} pool addresses from existing sources`);
+  console.log(`[dex-liquidity] Built known pool set: ${known.size} entries (${fingerprintCount} token-pair fingerprints)`);
   return known;
 }
 
@@ -1359,9 +1371,11 @@ async function fetchCgPools(
           priceObs.set(stablecoinId, obs);
         }
 
-        // Skip known pools for TVL/volume accounting
+        // Skip known pools for TVL/volume accounting (address match OR token-pair fingerprint)
         const poolKey = `${ourChain}:${poolAddr}`;
-        if (knownPoolAddrs.has(poolKey)) {
+        const sortedTokens = [baseAddr, quoteAddr].sort().join(":");
+        const fpKey = `fp:${ourChain}:${normalizeProtocol(dexId)}:${sortedTokens}`;
+        if (knownPoolAddrs.has(poolKey) || knownPoolAddrs.has(fpKey)) {
           stats.poolsSkippedKnown++;
           continue;
         }
@@ -1629,9 +1643,11 @@ async function fetchGtPools(
             priceObs.set(stablecoinId, obs);
           }
 
-          // Rule 2: Skip TVL/volume for known pools
+          // Rule 2: Skip TVL/volume for known pools (address match OR token-pair fingerprint)
           const poolKey = `${ourChain}:${poolAddr}`;
-          if (knownPoolAddrs.has(poolKey)) {
+          const sortedTokens = [baseAddr, quoteAddr].sort().join(":");
+          const fpKey = `fp:${ourChain}:${normalizeProtocol(dexId)}:${sortedTokens}`;
+          if (knownPoolAddrs.has(poolKey) || knownPoolAddrs.has(fpKey)) {
             stats.poolsSkippedKnown++;
             continue;
           }
@@ -2496,13 +2512,17 @@ async function fetchDsFallbackPools(
         const vol24h = pair.volume?.h24 ?? 0;
         if (vol24h === 0 && tvl < 10_000) continue;
 
-        // Dedup against known pool addresses (use our chain name for consistency with main pipeline)
+        // Dedup against known pool addresses + token-pair fingerprints
         const poolKey = `${contract.chain}:${pair.pairAddress.toLowerCase()}`;
-        if (knownPoolAddrs.has(poolKey)) continue;
+        const baseAddr = pair.baseToken.address.toLowerCase();
+        const quoteAddr = pair.quoteToken.address.toLowerCase();
+        const sortedTokens = [baseAddr, quoteAddr].sort().join(":");
+        const fpKey = `fp:${contract.chain}:${normalizeProtocol(pair.dexId)}:${sortedTokens}`;
+        if (knownPoolAddrs.has(poolKey) || knownPoolAddrs.has(fpKey)) continue;
         knownPoolAddrs.add(poolKey);
 
         // Ensure our token is the base token (not some random meme pairing)
-        const isBase = pair.baseToken.address.toLowerCase() === contract.address.toLowerCase();
+        const isBase = baseAddr === contract.address.toLowerCase();
         if (!isBase) continue;
 
         // Compute maturity

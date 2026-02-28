@@ -105,6 +105,10 @@ Per-stablecoin durability metric combining: organic fee fraction (35%), TVL stab
 
 Each `PoolEntry` carries a `poolId` field formatted as `chain:address` (lowercase). This uniquely identifies a physical pool across stablecoins. A single pool (e.g., USDC/USDT on Raydium) may appear under multiple stablecoin entries — `poolId` enables deduplication for global aggregates.
 
+### Cross-Source Deduplication
+
+DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-...`), while CoinGecko/GeckoTerminal/DexScreener return on-chain pool addresses. Since these formats never match, `buildKnownPoolAddresses()` also stores **token-pair fingerprints** in the format `fp:<chain>:<normalized_protocol>:<sorted_token_addresses>`. When CG/GT/DS discover a pool, they compute the same fingerprint from their base/quote token addresses and check against the known set. This prevents the same physical pool from being counted twice across data sources.
+
 ### Storage
 
 Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`. Stablecoins with no DEX presence get score 0.
