@@ -78,7 +78,7 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 | `native` | 100 |
 | `eth-lst` | 66 |
 | `rwa` | 50 |
-| `alt-lst` | 20 |
+| `alt-lst-bridged-or-mixed` | 20 |
 | `exotic` | 0 |
 
 **Default inference:** When sub-factor fields aren't explicitly set on `StablecoinMeta`, defaults are inferred from `backing` + `governance`:

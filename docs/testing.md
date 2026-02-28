@@ -45,8 +45,11 @@ resolve: { alias: { "@": "src" }} // Same path alias as Next.js
 | `supply.test.ts` | `src/lib/supply.ts` | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw` |
 | `classification.test.ts` | `src/lib/classification.ts` | Label maps (`GOVERNANCE_LABELS`, `BACKING_LABELS`, `PEG_LABELS`), short label consistency, color map key/value integrity, `PEG_CURRENCY_COUNT` |
 | `report-cards.test.ts` | `src/lib/report-cards.ts` | Grade computation, dimension scorers, peg multiplier, dependency risk blending, stress test recomputation |
+| `reserve-templates.test.ts` | `src/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
+| `reserve-coinid-validation.test.ts` | `src/lib/reserve-templates.ts` | Validates reserve slice `coinId` references match tracked stablecoin IDs |
+| `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | Validates DEX pool configs cover all stablecoins with DEX presence |
 
-All four suites test pure functions from `src/lib/` — no DOM, no React, no network.
+All seven suites test pure functions from `src/lib/` — no DOM, no React, no network.
 
 ## Conventions
 

@@ -11,7 +11,7 @@
 | **Pool Quality** | 20% | Curve API + DeFiLlama | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below) |
 | **Durability** | 15% | DeFiLlama Yields + History | 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity |
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
-| **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain->15, 2->40, 3->60, 5->80, 8+->100 |
+| **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100) |
 
 Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (15 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins with no on-chain AMM presence, e.g. KAG/KAU on Kinesis Exchange).
 

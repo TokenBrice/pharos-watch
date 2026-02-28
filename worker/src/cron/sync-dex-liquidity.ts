@@ -321,7 +321,7 @@ interface ScoreComponents {
 
 /**
  * Compute durability score for a stablecoin (0-100).
- * 40% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity.
+ * 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity.
  */
 function computeDurabilityScore(
   m: LiquidityMetrics,

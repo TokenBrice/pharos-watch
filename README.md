@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 143 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 145 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -40,17 +40,17 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | Source | Purpose | Refresh |
 |--------|---------|---------|
 | [DefiLlama](https://defillama.com/) | Stablecoin supply, price, chain distribution, history | 15 min |
-| [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 20 min |
-| [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 20 min |
-| [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 20 min |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (12 chains), locked liquidity %, fee tiers, balance approximation | 20 min |
-| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 20 min |
-| [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 20 min |
+| [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 30 min |
+| [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 30 min |
+| [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 30 min |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (15 chains), locked liquidity %, fee tiers, balance approximation | 30 min |
+| [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 30 min |
+| [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 30 min |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains) | 20 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 20 min |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Archive RPC for L2 balance lookups at historical block heights | 20 min |
+| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Multi-chain RPC for L2 balance lookups at historical block heights | 20 min |
 | [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 15 min |
 | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 15 min |
 | [gold-api.com](https://gold-api.com/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | 15 min |
@@ -114,9 +114,9 @@ src/                              Frontend (Next.js static export)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (23 handlers, all wrapped with withErrorHandler)
+│   ├── api/                      REST endpoints (24 handlers, all wrapped with withErrorHandler)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (28 total)
+└── migrations/                   D1 SQL migrations (30 total)
 ```
 
 ## Infrastructure
@@ -124,7 +124,8 @@ worker/                           Cloudflare Worker (API + cron jobs)
 ```
 Cloudflare Worker (API layer)
   ├── Cron: */15 * * * *    → sync stablecoins + charts + FX rates + depeg detection + stability index (PSI)
-  ├── Cron: 3,23,43 * * * * → DEX liquidity + blacklist sync
+  ├── Cron: 3,23,43 * * * * → blacklist sync
+  ├── Cron: 10,40 * * * *   → DEX liquidity sync
   └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI)
 
 Cloudflare D1 (SQLite database)
@@ -142,7 +143,8 @@ Cloudflare D1 (SQLite database)
   ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
   ├── cron_runs            → cron execution log for health monitoring
-  └── daily_digest         → AI-generated daily market summaries
+  ├── daily_digest         → AI-generated daily market summaries
+  └── feedback_rate_limit  → IP-based rate limiting for feedback submissions
 
 Cloudflare Pages
   └── Static export from Next.js
@@ -160,7 +162,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 - **BigInt precision** — blacklist amounts use BigInt division to avoid JavaScript floating-point precision loss above 2^53
 - **Cross-currency totals** — non-USD stablecoin supplies are converted via derived FX rates, not summed at face value
 - **Thin peg group fallbacks** — currencies with <3 qualifying coins fall back to approximate FX rates when the median appears depegged
-- **Freshness header** — `/api/stablecoins` returns `X-Data-Updated-At` so consumers can detect stale data
+- **Freshness header** — `/api/stablecoins` returns `X-Data-Age` so consumers can detect stale data
 - **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
 - **Retry logic** — all external API fetches use exponential backoff with configurable 404 handling
 - **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering downed APIs; dual-primary price validation cross-checks DefiLlama and CoinGecko within 50 bps; CoinGecko supply fallback activates when DefiLlama is unavailable
@@ -175,7 +177,7 @@ Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 Required GitHub variable: `API_BASE_URL`
 
-Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`
+Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
 
 ## License
 

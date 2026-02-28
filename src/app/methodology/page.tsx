@@ -98,11 +98,11 @@ export default function MethodologyPage() {
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium">Decentralization</p>
-                <p className="text-xs text-muted-foreground mt-0.5">10%</p>
+                <p className="text-xs text-muted-foreground mt-0.5">15%</p>
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium">Dependency Risk</p>
-                <p className="text-xs text-muted-foreground mt-0.5">30%</p>
+                <p className="text-xs text-muted-foreground mt-0.5">25%</p>
               </div>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -140,11 +140,11 @@ export default function MethodologyPage() {
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium text-xs">Decentralization</p>
-                <p className="text-xs text-muted-foreground">10%</p>
+                <p className="text-xs text-muted-foreground">15%</p>
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium text-xs">Dep. Risk</p>
-                <p className="text-xs text-muted-foreground">30%</p>
+                <p className="text-xs text-muted-foreground">25%</p>
               </div>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -197,13 +197,13 @@ export default function MethodologyPage() {
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Decentralization</td>
-                    <td className="py-2 pr-4">10%</td>
+                    <td className="py-2 pr-4">15%</td>
                     <td className="py-2 pr-4">Governance type, chain risk</td>
                     <td className="py-2">Governance structure with chain-risk penalty</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Dependency Risk</td>
-                    <td className="py-2 pr-4">30%</td>
+                    <td className="py-2 pr-4">25%</td>
                     <td className="py-2 pr-4">Upstream grades, collateral weights</td>
                     <td className="py-2">Inherited risk from upstream stablecoins, weighted by exposure</td>
                   </tr>
@@ -279,13 +279,14 @@ export default function MethodologyPage() {
             <h3 className="text-foreground font-medium">Decentralization Scoring</h3>
             <p>Base score from governance quality tier, then a chain-risk penalty for protocols on less decentralized chains &mdash; governance decentralization is undermined when the underlying chain has centralisation concerns:</p>
             <ul className="list-disc list-inside space-y-1">
-              <li><span className="text-foreground">DAO governance</span> &mdash; 85 (e.g.&nbsp;DAI, LUSD)</li>
+              <li><span className="text-foreground">Immutable code</span> &mdash; 100 (no admin keys, no upgrade path &mdash; e.g.&nbsp;LUSD, BOLD). Exempt from chain-risk penalty</li>
+              <li><span className="text-foreground">DAO governance</span> &mdash; 85 (e.g.&nbsp;DAI)</li>
               <li><span className="text-foreground">Multisig</span> &mdash; 55 (e.g.&nbsp;GHO, FRAX)</li>
               <li><span className="text-foreground">Regulated entity</span> &mdash; 40 (named regulator, license, and independent audit &mdash; e.g.&nbsp;USDC, USDT)</li>
               <li><span className="text-foreground">Single entity</span> &mdash; 20 (unregulated or unverified issuer)</li>
               <li><span className="text-foreground">Wrapper</span> &mdash; 10 (inherits upstream governance)</li>
             </ul>
-            <p className="font-medium text-foreground mt-2">Chain-risk penalty (DAO and multisig governance only):</p>
+            <p className="font-medium text-foreground mt-2">Chain-risk penalty (DAO, multisig, and wrapper governance &mdash; exempt for immutable-code, regulated-entity, single-entity):</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Ethereum &mdash; no penalty</li>
               <li>Stage 1+ L2 &mdash; &minus;15</li>
@@ -308,11 +309,12 @@ export default function MethodologyPage() {
             <ul className="list-disc list-inside space-y-1">
               <li><span className="text-foreground">Non-dependent coins</span> &mdash; score 95 (no upstream risk)</li>
               <li>
-                <span className="text-foreground">CeFi-Dependent with mapped dependencies</span> &mdash; blended score:
-                each upstream&apos;s grade is weighted by its collateral fraction, and the self-backed portion (non-stablecoin collateral) scores 75.
+                <span className="text-foreground">With mapped dependencies</span> &mdash; blended score:
+                each upstream&apos;s grade is weighted by its collateral fraction, and the self-backed portion (non-stablecoin collateral) scores vary by governance type
+                (decentralized&nbsp;90, centralized-dependent&nbsp;75, centralized&nbsp;95).
                 A &minus;10 penalty applies if any upstream dependency scores below 75
               </li>
-              <li><span className="text-foreground">CeFi-Dependent, unmapped</span> &mdash; falls back to 70 when dependencies aren&apos;t mapped or scores are unavailable</li>
+              <li><span className="text-foreground">Unmapped dependencies</span> &mdash; falls back to 70 when dependencies aren&apos;t mapped or scores are unavailable</li>
             </ul>
             <p className="mt-2">
               <span className="text-foreground font-medium">Dependency type ceilings</span> &mdash; each dependency is classified as <em>wrapper</em>, <em>mechanism-critical</em>, or <em>collateral</em> (default).
@@ -321,7 +323,7 @@ export default function MethodologyPage() {
               Collateral dependencies use the blended formula with no ceiling.
             </p>
             <p className="text-xs">
-              The self-backed portion scores 75 (not 95) because CeFi-Dependent coins still carry systemic coupling risk &mdash; their peg mechanisms depend on upstream stablecoin infrastructure even for non-stablecoin collateral.
+              Self-backed scores vary by governance type: centralized-dependent coins score 75 (systemic coupling risk), decentralized coins 90, and centralized coins 95. Centralized-dependent coins score lower because their peg mechanisms depend on upstream stablecoin infrastructure even for non-stablecoin collateral.
             </p>
           </div>
 
@@ -337,17 +339,17 @@ export default function MethodologyPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr><td className="py-1.5 pr-8 text-foreground">A+</td><td className="py-1.5">92&ndash;100</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">A</td><td className="py-1.5">88&ndash;91</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">A&minus;</td><td className="py-1.5">85&ndash;87</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">B+</td><td className="py-1.5">80&ndash;84</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">B</td><td className="py-1.5">75&ndash;79</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">B&minus;</td><td className="py-1.5">70&ndash;74</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">C+</td><td className="py-1.5">65&ndash;69</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">C</td><td className="py-1.5">60&ndash;64</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">C&minus;</td><td className="py-1.5">55&ndash;59</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">D</td><td className="py-1.5">45&ndash;54</td></tr>
-                  <tr><td className="py-1.5 pr-8 text-foreground">F</td><td className="py-1.5">0&ndash;44</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A+</td><td className="py-1.5">87&ndash;100</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A</td><td className="py-1.5">83&ndash;86</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">A&minus;</td><td className="py-1.5">80&ndash;82</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B+</td><td className="py-1.5">75&ndash;79</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B</td><td className="py-1.5">70&ndash;74</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">B&minus;</td><td className="py-1.5">65&ndash;69</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C+</td><td className="py-1.5">60&ndash;64</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C</td><td className="py-1.5">55&ndash;59</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">C&minus;</td><td className="py-1.5">50&ndash;54</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">D</td><td className="py-1.5">40&ndash;49</td></tr>
+                  <tr><td className="py-1.5 pr-8 text-foreground">F</td><td className="py-1.5">0&ndash;39</td></tr>
                   <tr><td className="py-1.5 pr-8 text-foreground">NR</td><td className="py-1.5">Not enough data</td></tr>
                 </tbody>
               </table>
@@ -510,7 +512,7 @@ export default function MethodologyPage() {
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 20 minutes.
+            Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes.
             Aggregates pool data across all major DEXes and chains.
           </p>
 
@@ -625,7 +627,7 @@ export default function MethodologyPage() {
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Cross-chain</td>
                     <td className="py-2 pr-4">7.5%</td>
-                    <td className="py-2">Number of chains with liquidity: 1&rarr;15, 2&rarr;40, 3&rarr;60, 5&rarr;80, 8+&rarr;100</td>
+                    <td className="py-2">Number of chains with liquidity: 1&rarr;15, then +12 per chain, capped at 100 (e.g. 2&rarr;27, 5&rarr;63, 9+&rarr;100)</td>
                   </tr>
                 </tbody>
               </table>

@@ -20,7 +20,7 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, blacklist, cemetery, liquidity, compare, digest, stability-index, safety-scores, dependency-map, portfolio, status, about, stablecoin/[id], stablecoins/[peg])
+src/app/         — Pages (homepage, blacklist, cemetery, liquidity, compare, digest, stability-index, stability-index-alt, safety-scores, dependency-map, portfolio, methodology, privacy, status, about, stablecoin/[id], stablecoins/[peg])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
@@ -44,13 +44,14 @@ cd worker && npx tsc --noEmit      # Worker type-check
 ## Web Fetching
 
 - **APIs first**: When fetching data from CoinGecko, Etherscan, DefiLlama, etc., always prefer their API endpoints over scraping web pages. APIs are structured, reliable, and rarely return 403s.
+- **Wave terminal**: Detect with `$WAVETERM=1` env var. When running inside Wave, prefer `wsh web open <url>` to open URLs in the built-in browser widget — it's native and lightweight. For actual interaction/scraping, still fall back to `agent-browser`.
 - **agent-browser for everything else**: For websites, docs pages, and any URL that returns a 403 with `WebFetch`, use `agent-browser` (headless browser CLI, globally installed). It bypasses bot detection and renders JS-heavy pages.
 
 ## Key Gotchas
 
 - **Tailwind classes must be static strings** — never construct dynamically (purge won't find them)
 - **Classification labels/colors**: all in `src/lib/classification.ts` — never define locally
-- **Supply helpers**: use `getCirculatingRaw/USD()` from `src/lib/supply.ts`; all values are in USD
+- **Supply helpers**: use `getCirculatingRaw()` from `src/lib/supply.ts`; all values are already in USD (DL converts)
 - **Hook timing**: `staleTime = cron interval`, `refetchInterval = 2× cron interval`
 - **Worker imports `src/lib/`** — root tsconfig excludes `worker/` to avoid D1 type conflicts
 - **DL list vs detail API**: The list endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values already in USD for all peg types. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs. Do NOT multiply list endpoint values by price — that double-converts.

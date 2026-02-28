@@ -17,7 +17,7 @@
 | `GET /api/supply-history` | Per-coin supply history (`?stablecoin=ID&days=N`) |
 | `GET /api/daily-digest` | AI-generated daily market summary (latest) |
 | `GET /api/digest-archive` | All daily digests, newest-first |
-| `GET /api/digest-snapshot` | Digest snapshot for SSG builds (returns latest digest at build time) |
+| `GET /api/digest-snapshot` | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds |
 | `GET /api/health` | Worker health check (includes circuit breaker states) |
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
@@ -60,7 +60,8 @@ src/                              # Next.js frontend (static export)
 │   │   └── error.tsx
 │   ├── methodology/              # Detailed methodology documentation
 │   │   ├── page.tsx
-│   │   └── error.tsx
+│   │   ├── error.tsx
+│   │   └── scoring-changelog/page.tsx  # Historical scoring methodology changes
 │   ├── portfolio/                # Portfolio stress testing & upstream exposure
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -81,6 +82,9 @@ src/                              # Next.js frontend (static export)
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
 │   │   └── error.tsx
+│   ├── stability-index-alt/      # Alternative PSI visualization (seismograph, strata)
+│   │   ├── page.tsx
+│   │   └── client.tsx
 │   ├── status/                   # Admin status dashboard (not in nav)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
@@ -114,6 +118,8 @@ src/                              # Next.js frontend (static export)
 │   ├── market-pulse.tsx          # AI daily digest display
 │   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
 │   ├── digest-archive-client.tsx # Digest archive list (client component)
+│   ├── digest-archive-summary.tsx # Digest archive summary stats
+│   ├── digest-snapshot.tsx       # Digest snapshot context display
 │   ├── mcap-chart.tsx            # Market cap area chart (detail page)
 │   ├── key-info-card.tsx         # Key info card: peg mechanism, issuer, collateral (detail page)
 │   ├── ai-summary.tsx            # AI-generated editorial summary (detail page)
@@ -136,6 +142,9 @@ src/                              # Next.js frontend (static export)
 │   ├── cemetery-charts.tsx       # Cemetery statistics charts
 │   ├── cemetery-summary.tsx      # Homepage cemetery summary card
 │   ├── stablecoin-logo.tsx       # Logo component with fallback
+│   ├── coin-notice.tsx           # Coin-specific warning/info notices (detail page)
+│   ├── feature-highlights.tsx    # Homepage feature highlight cards
+│   ├── section-error-boundary.tsx # Section-level error boundary wrapper
 │   ├── bluechip-rating-card.tsx  # Bluechip safety rating card (detail page)
 │   ├── bluechip-box.tsx          # Bluechip rating box (homepage)
 │   ├── bluechip-header-badge.tsx # Bluechip grade badge in header
@@ -159,8 +168,13 @@ src/                              # Next.js frontend (static export)
 │   ├── stability-index.tsx       # Stability index visualizations (sparklines, lighthouse icon)
 │   ├── stability-index-summary.tsx # PSI summary stats for homepage
 │   ├── psi-history-chart.tsx     # PSI historical score chart
+│   ├── psi-atmosphere.tsx        # PSI atmospheric particle visualization
+│   ├── psi-seismograph.tsx       # PSI seismograph waveform visualization
+│   ├── psi-strata-chart.tsx      # PSI strata (geological layers) breakdown chart
 │   ├── chart-skeleton.tsx        # Loading skeleton for charts
 │   ├── severity-icon.tsx         # Severity level icon
+│   ├── feedback-button.tsx        # Feedback FAB button (bottom-right)
+│   ├── feedback-modal.tsx        # Feedback submission modal (bug, data-correction, feature-request)
 │   ├── page-error.tsx            # Shared error boundary component
 │   ├── stale-data-banner.tsx     # Stale data warning banner
 │   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
@@ -185,7 +199,6 @@ src/                              # Next.js frontend (static export)
 │   ├── use-daily-digest.ts       # GET /api/daily-digest
 │   ├── use-digest-archive.ts    # GET /api/digest-archive
 │   ├── use-digest-snapshot.ts    # GET /api/digest-snapshot (per-date context)
-│   ├── use-supply-history.ts     # GET /api/supply-history (per-coin supply + price history)
 │   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
@@ -274,7 +287,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-supply-history.ts # GET /api/backfill-supply-history (admin)
     │   ├── backfill-stability-index.ts # GET /api/backfill-stability-index (admin)
     │   ├── backfill-cg-prices.ts # GET /api/backfill-cg-prices (admin)
-    │   └── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
+    │   ├── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
+    │   └── feedback.ts          # POST /api/feedback (public, handled in index.ts not router)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
@@ -293,7 +307,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── twitter.ts             # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
-        └── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
+        ├── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
+        ├── dexscreener.ts        # DexScreener API client (token price + pool search)
+        ├── resolve-market-cap.ts # Multi-source market cap resolution (DL → CG → CMC → DexScreener)
+        └── telegram.ts           # Telegram Bot API client for daily digest distribution
 
 data/
 ├── logos.json                    # Static stablecoin logo URLs (from CoinGecko)

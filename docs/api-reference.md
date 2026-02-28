@@ -35,8 +35,9 @@ Endpoints backed by the cron cache include these additional headers:
 
 | Profile | `Cache-Control` | Used by |
 |---------|----------------|---------|
-| realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin/:id, blacklist, depeg-events, peg-summary |
+| realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary |
 | standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index |
+| per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
 | slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings |
 | no-store | `no-store` | health |
 
