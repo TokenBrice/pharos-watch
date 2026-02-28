@@ -195,6 +195,8 @@ interface PoolEntry {
   symbol: string;
   volumeUsd1d: number;
   poolType: string;
+  /** Data source: "dl" = DeFiLlama, "cg" = CoinGecko, "gt" = GeckoTerminal, "ds" = DexScreener */
+  source: "dl" | "cg" | "gt" | "ds";
   extra?: {
     amplificationCoefficient?: number;
     balanceRatio?: number;
@@ -1543,6 +1545,7 @@ function mergeCgPools(
         symbol: pool.symbol,
         volumeUsd1d: pool.volume24hUsd,
         poolType: pool.poolType,
+        source: "cg",
         extra: {
           ...(pool.balanceRatio != null ? { balanceRatio: Math.round(pool.balanceRatio * 100) / 100 } : {}),
           ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 10000) } : {}),
@@ -1783,6 +1786,7 @@ function mergeGtPools(
         symbol: pool.symbol,
         volumeUsd1d: pool.volume24hUsd,
         poolType: pool.poolType,
+        source: "gt",
         extra: {
           effectiveTvl: Math.round(poolEffTvl),
           organicFraction,
@@ -1998,6 +2002,7 @@ function processPoolMetrics(
         symbol: pool.symbol,
         volumeUsd1d: vol1d,
         poolType: resolvedPoolType,
+        source: "dl",
         extra: {
           ...(curveData
             ? {
@@ -2041,6 +2046,7 @@ type FullScoreResult = ScoreResult & { hhi: number; durability: number; componen
 async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
+  protocolTvlCaps: Map<string, number>,
 ): Promise<{ scores: Map<string, FullScoreResult>; globalAgg: GlobalAgg }> {
   // Pre-fetch depth stability for durability computation
   const stabilityMap = new Map<string, number>();
@@ -2106,6 +2112,45 @@ async function computeStablecoinScores(
       if (p.tvlUsd > 100_000_000 && vol < 50_000) return false;
       return true;
     });
+
+    // Protocol-level TVL cap: CG/GT CLMM pools systematically report inflated
+    // virtual reserves. Scale down non-DL pools per protocol when their aggregate
+    // exceeds the DL protocol TVL. DL pools are trusted and kept as-is.
+    if (protocolTvlCaps.size > 0) {
+      // Sum secondary-source TVL per normalized protocol
+      const secondaryTvlByProto = new Map<string, number>();
+      for (const p of m.topPools) {
+        if (p.source === "dl") continue;
+        const proto = normalizeProtocol(p.project);
+        secondaryTvlByProto.set(proto, (secondaryTvlByProto.get(proto) ?? 0) + p.tvlUsd);
+      }
+      // Sum DL-source TVL per protocol (to know remaining cap headroom)
+      const dlTvlByProto = new Map<string, number>();
+      for (const p of m.topPools) {
+        if (p.source !== "dl") continue;
+        const proto = normalizeProtocol(p.project);
+        dlTvlByProto.set(proto, (dlTvlByProto.get(proto) ?? 0) + p.tvlUsd);
+      }
+      // Scale down secondary pools where they exceed cap headroom
+      for (const [proto, secTvl] of secondaryTvlByProto) {
+        const cap = protocolTvlCaps.get(proto);
+        if (cap == null || cap <= 0) continue;
+        const dlTvl = dlTvlByProto.get(proto) ?? 0;
+        const headroom = Math.max(0, cap - dlTvl);
+        if (secTvl > headroom && secTvl > 0) {
+          const scale = headroom / secTvl;
+          for (const p of m.topPools) {
+            if (p.source === "dl") continue;
+            if (normalizeProtocol(p.project) !== proto) continue;
+            p.tvlUsd = Math.round(p.tvlUsd * scale);
+            if (p.extra) {
+              const ex = p.extra as Record<string, number>;
+              if (ex.effectiveTvl != null) ex.effectiveTvl = Math.round(ex.effectiveTvl * scale);
+            }
+          }
+        }
+      }
+    }
 
     // Recompute aggregates from filtered pools so bogus data
     // (e.g. fake-TVL exchanges like Dnax) doesn't pollute breakdown or scores.
@@ -2901,7 +2946,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   }
 
   // 6. Compute composite scores per stablecoin
-  const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics);
+  const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
 
   // 7. Persist scores to D1
   const nowSec = Math.floor(Date.now() / 1000);
