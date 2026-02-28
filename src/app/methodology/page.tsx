@@ -85,6 +85,80 @@ export default function MethodologyPage() {
             When some base dimensions lack data (NR), their weight is redistributed proportionally among rated ones.
           </p>
 
+          {/* Scoring pipeline diagram — desktop: horizontal dimension row then vertical flow */}
+          <div className="hidden md:flex flex-col items-center gap-3">
+            <div className="grid grid-cols-4 gap-3 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Liquidity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">30%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Resilience</p>
+                <p className="text-xs text-muted-foreground mt-0.5">20%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Decentralization</p>
+                <p className="text-xs text-muted-foreground mt-0.5">10%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Dependency Risk</p>
+                <p className="text-xs text-muted-foreground mt-0.5">30%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">Weighted Average</p>
+              <p className="text-xs text-muted-foreground mt-0.5">base score</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">&times; Peg Multiplier</p>
+              <p className="text-xs text-muted-foreground mt-0.5">(PSI / 100)<sup>0.20</sup></p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">Final Grade</p>
+              <p className="text-xs text-muted-foreground mt-0.5">A+ through F</p>
+            </div>
+          </div>
+
+          {/* Scoring pipeline diagram — mobile: vertical stack */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Liquidity</p>
+                <p className="text-xs text-muted-foreground">30%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Resilience</p>
+                <p className="text-xs text-muted-foreground">20%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Decentralization</p>
+                <p className="text-xs text-muted-foreground">10%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Dep. Risk</p>
+                <p className="text-xs text-muted-foreground">30%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Weighted Average</p>
+              <p className="text-xs text-muted-foreground mt-0.5">base score</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">&times; Peg Multiplier</p>
+              <p className="text-xs text-muted-foreground mt-0.5">(PSI / 100)<sup>0.20</sup></p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Final Grade</p>
+              <p className="text-xs text-muted-foreground mt-0.5">A+ through F</p>
+            </div>
+          </div>
+
           {/* Dimensions table */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Base Dimensions (weighted average)</h3>
@@ -311,6 +385,54 @@ export default function MethodologyPage() {
             </p>
           </div>
 
+          {/* Peg score flow diagram — desktop */}
+          <div className="hidden md:flex flex-col items-center gap-3">
+            <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Time-at-Peg</p>
+                <p className="text-xs text-muted-foreground mt-0.5">50%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Event Severity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">50%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">&minus; Penalties</p>
+              <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">Peg Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
+            </div>
+          </div>
+
+          {/* Peg score flow diagram — mobile */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Time-at-Peg</p>
+                <p className="text-xs text-muted-foreground">50%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Event Severity</p>
+                <p className="text-xs text-muted-foreground">50%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">&minus; Penalties</p>
+              <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Peg Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
+            </div>
+          </div>
+
           {/* Components */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Components</h3>
@@ -370,6 +492,76 @@ export default function MethodologyPage() {
             Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 20 minutes.
             Aggregates pool data across all major DEXes and chains.
           </p>
+
+          {/* Liquidity component diagram — desktop: 3×2 grid */}
+          <div className="hidden md:flex flex-col items-center gap-3">
+            <div className="grid grid-cols-3 gap-3 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">TVL Depth</p>
+                <p className="text-xs text-muted-foreground mt-0.5">30%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Volume Activity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">20%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Pool Quality</p>
+                <p className="text-xs text-muted-foreground mt-0.5">20%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Durability</p>
+                <p className="text-xs text-muted-foreground mt-0.5">15%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Pair Diversity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">7.5%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Cross-chain</p>
+                <p className="text-xs text-muted-foreground mt-0.5">7.5%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">Liquidity Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
+            </div>
+          </div>
+
+          {/* Liquidity component diagram — mobile: 2-col grid */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">TVL Depth</p>
+                <p className="text-xs text-muted-foreground">30%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Vol. Activity</p>
+                <p className="text-xs text-muted-foreground">20%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Pool Quality</p>
+                <p className="text-xs text-muted-foreground">20%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Durability</p>
+                <p className="text-xs text-muted-foreground">15%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Pair Diversity</p>
+                <p className="text-xs text-muted-foreground">7.5%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Cross-chain</p>
+                <p className="text-xs text-muted-foreground">7.5%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Liquidity Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
+            </div>
+          </div>
 
           {/* Components */}
           <div className="space-y-2">
@@ -441,6 +633,52 @@ export default function MethodologyPage() {
             The stress test simulates dependency failures to reveal systemic concentration risk
             across the stablecoin ecosystem.
           </p>
+
+          {/* Stress test pipeline diagram — desktop: horizontal */}
+          <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] gap-4 items-start">
+            <div className="rounded-lg border p-3 text-center self-center">
+              <p className="text-foreground font-medium">Select Target</p>
+              <p className="text-xs text-muted-foreground mt-0.5">pick a coin</p>
+            </div>
+            <div className="flex items-center self-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            <div className="rounded-lg border p-3 text-center self-center">
+              <p className="text-foreground font-medium">Override to D</p>
+              <p className="text-xs text-muted-foreground mt-0.5">force downgrade</p>
+            </div>
+            <div className="flex items-center self-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            <div className="rounded-lg border p-3 text-center self-center">
+              <p className="text-foreground font-medium">Recompute Dep. Risk</p>
+              <p className="text-xs text-muted-foreground mt-0.5">cascade upstream</p>
+            </div>
+            <div className="flex items-center self-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            <div className="rounded-lg border p-3 text-center self-center">
+              <p className="text-foreground font-medium">Impact Report</p>
+              <p className="text-xs text-muted-foreground mt-0.5">coins &amp; $ at risk</p>
+            </div>
+          </div>
+
+          {/* Stress test pipeline diagram — mobile: vertical */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Select Target</p>
+              <p className="text-xs text-muted-foreground mt-0.5">pick a coin</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Override to D</p>
+              <p className="text-xs text-muted-foreground mt-0.5">force downgrade</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Recompute Dep. Risk</p>
+              <p className="text-xs text-muted-foreground mt-0.5">cascade upstream</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Impact Report</p>
+              <p className="text-xs text-muted-foreground mt-0.5">coins &amp; $ at risk</p>
+            </div>
+          </div>
 
           {/* Systemic Risk Scoreboard */}
           <div className="space-y-2">
