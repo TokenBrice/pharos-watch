@@ -34,6 +34,9 @@ worker/src/lib/  — DB helpers, constants, shared utilities
 ```bash
 npm run dev                        # Frontend dev server
 npm run build                      # Build + type-check
+npm run lint                       # ESLint (frontend + worker)
+npm test                           # Vitest (run once)
+npm run test:watch                 # Vitest (watch mode)
 cd worker && npx wrangler dev      # Worker dev server (binds to localhost:8787)
 cd worker && npx tsc --noEmit      # Worker type-check
 ```
@@ -64,3 +67,4 @@ Read these when working on related code:
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
 - **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation, portfolio analyzer, stress test
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
+- **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
