@@ -42,6 +42,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm test
       - run: npx tsx scripts/sync-digests.ts
       - run: npm run build
         env:
