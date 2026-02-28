@@ -51,13 +51,15 @@ async function fetchSilverTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> 
     // Parse circulating_supply per geckoId from CG markets response
     const cgSupplyMap = new Map<string, number>();
     if (cgMarketsRes?.ok) {
-      const cgMarketsData = (await cgMarketsRes.json()) as {
-        id: string;
-        circulating_supply?: number;
-      }[];
-      for (const item of cgMarketsData) {
-        if (item.circulating_supply != null && item.circulating_supply > 0) {
-          cgSupplyMap.set(item.id, item.circulating_supply);
+      const cgMarketsRaw = await cgMarketsRes.json();
+      if (!Array.isArray(cgMarketsRaw)) {
+        console.warn("[silver] CG markets returned unexpected shape, falling back to cgData mcap");
+      } else {
+        const cgMarketsData = cgMarketsRaw as { id: string; circulating_supply?: number }[];
+        for (const item of cgMarketsData) {
+          if (item.circulating_supply != null && item.circulating_supply > 0) {
+            cgSupplyMap.set(item.id, item.circulating_supply);
+          }
         }
       }
     } else {
