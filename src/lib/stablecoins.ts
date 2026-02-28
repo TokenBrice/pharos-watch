@@ -525,8 +525,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Ethena docs, The Block, CoinDesk Mar 2025. Confidence: High
-      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 90, risk: "low" },
-      { name: "USDC (redemption reserve)", pct: 10, risk: "low" },
+      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 90, risk: "low", coinId: "173" },
+      { name: "USDC (redemption reserve)", pct: 10, risk: "low", coinId: "2" },
     ],
   }),
   usd("213", "M by M0", "M", "rwa-backed", "centralized", {
@@ -605,7 +605,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     rwa: true,
     geckoId: "usual-usd",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "2", weight: 0.15 }],
     collateral: "Tokenized short-term U.S. Treasury bills and reverse repos, primarily via Hashnote USYC; also M by M0, USDtb by Ethena, OUSG by Ondo, and BUIDL by BlackRock",
     pegMechanism: "1:1 minting by depositing approved RWA tokens (e.g. USYC) directly, or depositing USDC via a gateway; redeemable 1:1 for underlying RWA assets via the DaoCollateral contract at any time; arbitrageurs enforce the peg",
     links: [
@@ -622,12 +621,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Usual docs, RWA.xyz, ChainArgos Feb 2026. Confidence: Medium
-      { name: "Hashnote USYC (tokenized T-bills/reverse repos)", pct: 65, risk: "low" },
-      { name: "M by M^0 (tokenized T-bills)", pct: 15, risk: "low" },
-      { name: "USDtb by Ethena (BUIDL + USDC)", pct: 10, risk: "low" },
-      { name: "BlackRock BUIDL", pct: 5, risk: "low" },
+      { name: "Hashnote USYC (tokenized T-bills/reverse repos)", pct: 65, risk: "low", coinId: "237" },
+      { name: "M by M^0 (tokenized T-bills)", pct: 15, risk: "low", coinId: "213" },
+      { name: "USDtb by Ethena (BUIDL + USDC)", pct: 10, risk: "low", coinId: "221" },
+      { name: "BlackRock BUIDL", pct: 5, risk: "low", coinId: "173" },
       { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low" },
-      { name: "USDC (Circle)", pct: 2, risk: "low" },
+      { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "2" },
     ],
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
@@ -740,7 +739,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("296", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "cap-usd",
     governanceQuality: "wrapper",
-    dependencies: [{ id: "1", weight: 0.35 }, { id: "2", weight: 0.35 }],
     collateral: "Basket of regulated stablecoins: USDC, USDT, pyUSD, BUIDL, and BENJI (max 40% each)",
     pegMechanism: "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
     proofOfReserves: { type: "real-time", url: "https://cap.app/vault/reserves/cUSD" },
@@ -754,11 +752,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Cap docs, Aave blog, blocmates Jan 2026. Confidence: Low
-      { name: "USDC (Circle)", pct: 35, risk: "low" },
-      { name: "USDT (Tether)", pct: 25, risk: "low" },
-      { name: "BUIDL (BlackRock tokenized MMF)", pct: 20, risk: "low" },
+      { name: "USDC (Circle)", pct: 35, risk: "low", coinId: "2" },
+      { name: "USDT (Tether)", pct: 25, risk: "low", coinId: "1" },
+      { name: "BUIDL (BlackRock tokenized MMF)", pct: 20, risk: "low", coinId: "173" },
       { name: "BENJI (Franklin Templeton fund)", pct: 10, risk: "low" },
-      { name: "pyUSD (PayPal)", pct: 10, risk: "low" },
+      { name: "pyUSD (PayPal)", pct: 10, risk: "low", coinId: "120" },
     ],
   }),
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
@@ -929,7 +927,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "frax",
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
-    dependencies: [{ id: "2", weight: 0.35, type: "mechanism" }],
     collateral: "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
     pegMechanism: "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
     links: [
@@ -955,7 +952,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
       { name: "USTB (Superstate tokenized T-bills)", pct: 50, risk: "low" },
-      { name: "BUIDL (BlackRock tokenized T-bills/cash/repos)", pct: 42, risk: "low" },
+      { name: "BUIDL (BlackRock tokenized T-bills/cash/repos)", pct: 42, risk: "low", coinId: "173" },
       { name: "USCC (Superstate crypto arbitrage)", pct: 3, risk: "medium" },
       { name: "Other tokenized assets (WTGXX, AUSD, JTRSY)", pct: 5, risk: "low" },
     ],
@@ -1167,7 +1164,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "frax-usd",
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
-    dependencies: [{ id: "2", weight: 0.3 }],
     collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
     pegMechanism: "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
     jurisdiction: { country: "United States" },
@@ -1204,9 +1200,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "xlayer",        address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
     ],
     reserves: [
-      { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low" },
+      { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low", coinId: "173" },
       { name: "Superstate USTB (tokenized T-bills)", pct: 20, risk: "low" },
-      { name: "Circle USDC", pct: 10, risk: "low" },
+      { name: "Circle USDC", pct: 10, risk: "low", coinId: "2" },
       { name: "Superstate USCC (U.S. government securities + crypto carry)", pct: 5, risk: "medium" },
       { name: "Other custodians (AUSD, JTRSY, WTGXX, USDB)", pct: 10, risk: "low" },
     ],
@@ -1214,7 +1210,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("340", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
     deploymentModel: "native-multichain",
     rwa: true,
-    dependencies: [{ id: "1", weight: 0.3 }, { id: "2", weight: 0.3 }],
     collateralQuality: "rwa",
     collateral: "Basket of 100+ Treasury-backed stablecoins and tokenized gold assets aggregated by Multipli; peg stability backed by Lloyd's insurance covering de-pegging risk",
     pegMechanism: "NAV-based valuation of underlying RWA basket; KYB-gated 1:1 minting and redemption restricted to verified institutional counterparties",
@@ -1230,7 +1225,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4", decimals: 6 },
     ],
     reserves: [
-      { name: "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)", pct: 50, risk: "low" },
+      { name: "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)", pct: 50, risk: "low", coinId: "173" },
       { name: "Treasury-backed stablecoins (100+ aggregated)", pct: 25, risk: "medium" },
       { name: "Tokenized gold assets (10+ aggregated)", pct: 15, risk: "medium" },
       { name: "Market-neutral fund units (Nomura, Fasanara, Edge Capital)", pct: 10, risk: "high" },
@@ -1365,7 +1360,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Reverse repos (overnight, UST-collateralized)", pct: 15, risk: "very-low" },
       { name: "U.S. government money-market funds", pct: 15, risk: "very-low" },
       { name: "Bank deposit accounts", pct: 10, risk: "very-low" },
-      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 10, risk: "low" },
+      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 10, risk: "low", coinId: "173" },
     ],
   }),
 
@@ -1475,7 +1470,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash deposits (JP Morgan, Lead Bank)", pct: 20, risk: "very-low" },
       { name: "Repo agreements (UST-collateralized)", pct: 10, risk: "very-low" },
       { name: "Treasury-focused funds (BlackRock TTTXX)", pct: 10, risk: "very-low" },
-      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 20, risk: "low" },
+      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 20, risk: "low", coinId: "173" },
     ],
   }),
   usd("79", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
@@ -1521,9 +1516,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "OpenEden TBILL tokens (tokenized U.S. T-bills)", pct: 70, risk: "low" },
-      { name: "BlackRock BUIDL (tokenized money market fund)", pct: 15, risk: "low" },
+      { name: "BlackRock BUIDL (tokenized money market fund)", pct: 15, risk: "low", coinId: "173" },
       { name: "Franklin Templeton BENJI (tokenized govt money fund)", pct: 5, risk: "low" },
-      { name: "USDC cash buffer", pct: 10, risk: "low" },
+      { name: "USDC cash buffer", pct: 10, risk: "low", coinId: "2" },
     ],
   }),
   usd("166", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
@@ -2364,7 +2359,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     rwa: true,
     geckoId: "jupusd",
     cmcSlug: "jupusd",
-    dependencies: [{ id: "2", weight: 0.1 }],
     collateral: "90% USDtb (BlackRock BUIDL tokenized U.S. Treasuries issued by Ethena under GENIUS-compliant framework, custodied by Porto/Anchorage Digital) and 10% USDC liquidity buffer",
     pegMechanism: "Reserve-backed 1:1 mint and redeem on Solana against USDC; Ethena manages day-to-day reserve operations (custody, bridging, rebalancing between USDtb and USDC)",
     links: [
@@ -2377,13 +2371,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "solana", address: "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD", decimals: 6 },
     ],
     reserves: [
-      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low" },
-      { name: "USDC liquidity buffer", pct: 10, risk: "low" },
+      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low", coinId: "221" },
+      { name: "USDC liquidity buffer", pct: 10, risk: "low", coinId: "2" },
     ],
   }),
   usd("342", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
     rwa: true, geckoId: "megausd",
-    dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
     collateral: "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions",
     pegMechanism: "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
     links: [
@@ -2396,8 +2389,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "megaeth", address: "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7", decimals: 18 },
     ],
     reserves: [
-      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)", pct: 90, risk: "low" },
-      { name: "Liquid stablecoins (USDC/USDT) for redemptions", pct: 10, risk: "low" },
+      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)", pct: 90, risk: "low", coinId: "221" },
+      { name: "Liquid stablecoins (USDC/USDT) for redemptions", pct: 10, risk: "low", coinId: "2" },
     ],
   }),
   usd("343", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
