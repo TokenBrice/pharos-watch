@@ -185,7 +185,7 @@ export default function AboutPage() {
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-red-500" />
-                <Link href="/blacklist" className="font-bold underline underline-offset-4 hover:text-red-500 transition-colors">Freeze Tracking</Link>
+                <Link href="/blacklist" className="font-bold underline underline-offset-4 hover:text-red-500 transition-colors">Blacklist Tracker</Link>
               </div>
               <p className="text-sm text-muted-foreground">
                 USDC, USDT, PAXG &amp; XAUT blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron

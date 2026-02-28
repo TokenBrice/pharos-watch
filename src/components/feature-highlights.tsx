@@ -32,7 +32,7 @@ const FEATURES = [
     linkLabel: "View grades",
   },
   {
-    title: "Freeze Tracker",
+    title: "Blacklist Tracker",
     description: "On-chain freeze & destroy events across issuer blacklists.",
     href: "/blacklist",
     icon: ShieldBan,

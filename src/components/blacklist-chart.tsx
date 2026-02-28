@@ -117,7 +117,7 @@ export function BlacklistChart({ events, isLoading }: BlacklistChartProps) {
             role="figure"
             aria-label={`Blacklisted funds stacked bar chart showing ${chartData.length} quarters of freeze events by stablecoin issuer`}
           >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
               <XAxis

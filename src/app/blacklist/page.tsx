@@ -77,9 +77,9 @@ function BlacklistPageInner() {
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
           <span>/</span>
-          <span className="text-foreground">Freeze & Blacklist Tracker</span>
+          <span className="text-foreground">Blacklist Tracker</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Freeze & Blacklist Tracker</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Blacklist Tracker</h1>
         <p className="text-sm text-muted-foreground">
           Who got frozen. When. Why it matters.
         </p>

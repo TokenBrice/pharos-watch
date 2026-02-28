@@ -52,7 +52,7 @@ export function ReportCardRadar({
       role="figure"
       aria-label={`Safety score radar chart for ${card.symbol}`}
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "70%" : "80%"}>
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
@@ -103,7 +103,7 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
       role="figure"
       aria-label={`Safety score comparison for ${cards.map(({ card }) => card.symbol).join(", ")}`}
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis

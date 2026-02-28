@@ -51,7 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Data",
     items: [
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
-      { href: "/blacklist", label: "Freeze Tracker", icon: ShieldBan, description: "Frozen address events" },
+      { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
     ],
   },

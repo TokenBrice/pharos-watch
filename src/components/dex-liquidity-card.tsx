@@ -218,7 +218,7 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">TVL History (90d)</p>
       <div className="h-32" role="figure" aria-label="TVL trend chart">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
               <linearGradient id="tvlGradient" x1="0" y1="0" x2="0" y2="1">

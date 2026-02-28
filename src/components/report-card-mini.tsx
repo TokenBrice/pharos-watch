@@ -58,6 +58,7 @@ export function ReportCardMini({
                 src={logo}
                 alt={`${card.name} logo`}
                 className="w-6 h-6 rounded-full shrink-0"
+                loading="lazy"
               />
             )}
             <span className="truncate text-sm font-medium">{card.name}</span>

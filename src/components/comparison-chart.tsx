@@ -182,7 +182,7 @@ export function ComparisonChart({
             role="figure"
             aria-label={`${title} comparison chart with ${series.length} series`}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <LineChart
                 data={displayData}
                 margin={{ top: 5, right: 5, bottom: 20, left: 5 }}

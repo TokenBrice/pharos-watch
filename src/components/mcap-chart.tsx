@@ -150,7 +150,7 @@ export function McapChart({ data, isLoading }: McapChartProps) {
       <CardContent>
         {filteredData.length > 0 ? (
           <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Market cap chart showing ${filteredData.length} data points`}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: range === "all" ? 32 : 20, left: 5 }}>
               <defs>
                 <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">

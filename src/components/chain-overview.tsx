@@ -72,7 +72,7 @@ export function ChainOverview({ data }: ChainOverviewProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[250px] sm:h-[350px]" role="figure" aria-label="Chain distribution bar chart">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
             <XAxis

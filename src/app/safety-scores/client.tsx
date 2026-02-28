@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,6 +54,32 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "dependencyRisk", label: "Depend." },
   { key: "mcap", label: "MCap" },
 ];
+
+// ---------------------------------------------------------------------------
+// LazyCard — renders a placeholder until scrolled into view
+// ---------------------------------------------------------------------------
+
+function LazyCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={className}>
+      {visible ? children : <div className="h-[340px] rounded-xl border bg-muted/20 animate-pulse" />}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -338,15 +364,16 @@ export function ReportCardsClient() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {filteredCards.map((card) => (
-            <ReportCardMini
-              key={card.id}
-              card={card}
-              logo={logos?.[card.id]}
-              isSimulated={affectedIds.has(card.id)}
-              isSimulating={isSimulating}
-              originalGrade={originalCardMap.get(card.id)?.overallGrade}
-              originalScore={originalCardMap.get(card.id)?.overallScore}
-            />
+            <LazyCard key={card.id}>
+              <ReportCardMini
+                card={card}
+                logo={logos?.[card.id]}
+                isSimulated={affectedIds.has(card.id)}
+                isSimulating={isSimulating}
+                originalGrade={originalCardMap.get(card.id)?.overallGrade}
+                originalScore={originalCardMap.get(card.id)?.overallScore}
+              />
+            </LazyCard>
           ))}
         </div>
       )}

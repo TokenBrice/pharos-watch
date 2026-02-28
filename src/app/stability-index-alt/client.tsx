@@ -144,7 +144,7 @@ function ComponentChart({
             role="figure"
             aria-label={`PSI component breakdown chart showing ${filteredData.length} data points`}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
                 <defs>
                   <linearGradient id="psiSeverityGrad" x1="0" y1="0" x2="0" y2="1">
