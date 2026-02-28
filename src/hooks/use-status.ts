@@ -6,7 +6,7 @@ import type { StatusResponse } from "@/lib/types";
 
 /**
  * Fetches /api/status with admin key auth.
- * No auto-refetch — manual refresh only (admin page).
+ * Auto-refreshes every 60s for live ops monitoring.
  */
 export function useStatus(adminKey: string): UseQueryResult<StatusResponse, Error> {
   return useQuery<StatusResponse, Error>({

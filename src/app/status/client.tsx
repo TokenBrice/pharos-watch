@@ -236,18 +236,16 @@ function CacheFreshnessTable({ caches }: { caches: Record<string, { ageSeconds: 
 
 // --- Refresh Countdown ---
 
-function RefreshCountdown({ onRefresh }: { onRefresh: () => void }) {
-  const [secondsLeft, setSecondsLeft] = useState(60);
+function RefreshCountdown({ lastUpdated, onRefresh }: { lastUpdated: number; onRefresh: () => void }) {
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) return 60;
-        return prev - 1;
-      });
-    }, 1000);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  const elapsed = Math.floor((now - lastUpdated) / 1000);
+  const secondsLeft = Math.max(0, 60 - elapsed);
 
   return (
     <div className="flex items-center gap-2">
@@ -395,6 +393,7 @@ function CircuitBreakerTable({ circuits }: { circuits: Record<string, CircuitRec
               <th className="pb-2 font-medium">Name</th>
               <th className="pb-2 font-medium">State</th>
               <th className="pb-2 font-medium">Failures</th>
+              <th className="pb-2 font-medium">Last Failure</th>
               <th className="pb-2 font-medium">Last Success</th>
             </tr>
           </thead>
@@ -414,6 +413,9 @@ function CircuitBreakerTable({ circuits }: { circuits: Record<string, CircuitRec
                   )}
                 </td>
                 <td className="py-2 font-mono tabular-nums">{circuit.consecutiveFailures}</td>
+                <td className="py-2 text-muted-foreground">
+                  {circuit.lastFailureAt ? new Date(circuit.lastFailureAt * 1000).toLocaleString() : "\u2014"}
+                </td>
                 <td className="py-2 text-muted-foreground">
                   {circuit.lastSuccessAt ? new Date(circuit.lastSuccessAt * 1000).toLocaleString() : "\u2014"}
                 </td>
@@ -479,7 +481,13 @@ function AdminActionButton({ action, adminKey }: { action: AdminAction; adminKey
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (isOpen) {
+        setResult(null);
+        setError(null);
+      }
+    }}>
       <DialogTrigger asChild>
         <Button
           variant={action.destructive ? "destructive" : "outline"}
@@ -606,9 +614,11 @@ export default function StatusClient() {
 }
 
 function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
-  const { data, isLoading, error, refetch: refetchStatus } = useStatus(adminKey);
-  const { data: healthData, refetch: refetchHealth } = useHealth();
-  const { data: probes, isLoading: probesLoading, refetch: refetchProbes } = useEndpointProbes(adminKey);
+  const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminKey);
+  const { data: healthData, refetch: refetchHealth, dataUpdatedAt: healthUpdatedAt } = useHealth();
+  const { data: probes, isLoading: probesLoading, refetch: refetchProbes, dataUpdatedAt: probesUpdatedAt } = useEndpointProbes(adminKey);
+
+  const lastUpdated = Math.max(statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0);
 
   const handleRefresh = useCallback(() => {
     refetchStatus();
@@ -643,7 +653,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold tracking-tighter">Pharos System Status</h1>
         <div className="flex items-center gap-3">
-          <RefreshCountdown onRefresh={handleRefresh} />
+          <RefreshCountdown lastUpdated={lastUpdated} onRefresh={handleRefresh} />
           <Button variant="outline" size="sm" onClick={onSignOut}>Sign out</Button>
         </div>
       </div>
