@@ -23,7 +23,7 @@ export function resolveMarketCap(
 
   const computed = circulatingSupply * price;
 
-  if (!cgMcap || cgMcap <= 0) {
+  if (cgMcap == null || cgMcap <= 0) {
     return computed;
   }
 
