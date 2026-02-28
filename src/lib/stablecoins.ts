@@ -1361,6 +1361,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // DEUSD removed — collapsed Nov 2025 when Stream Finance failed
   usd("321", "USDH Stablecoin", "USDH", "rwa-backed", "centralized", {
     geckoId: "usdh-2",
+    contracts: [
+      { chain: "hyperevm", address: "0x111111a1a0667d36bd57c0a9f569b98057111111", decimals: 6 },
+    ],
     collateral: "Cash, short-term U.S. Treasuries, repo agreements, treasury-focused funds (e.g., BlackRock TTTXX), and tokenized treasury products (e.g., BlackRock BUIDL, Superstate USTB); cash custodied at US-regulated banks, TradFi assets custodied at JP Morgan Chase; on-chain reserves managed by Superstate and custodied in Bridge's MPC infrastructure via Fireblocks; designed by Native Markets, issued by Bridge Building Inc (a Stripe company)",
     pegMechanism: "Direct 1:1 redemption through Bridge (a Stripe company); high-quality liquid reserves (cash, U.S. Treasuries) maintain the peg; monthly third-party reserve attestations beginning November 2025",
     proofOfReserves: { type: "independent-audit", url: "https://www.usdh.com/transparency", provider: "BPM LLP" },
@@ -1996,6 +1999,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Croatia" },
     chainTier: "unproven",
     collateralQuality: "exotic",
+    contracts: [
+      { chain: "berachain", address: "0x1ce0a25d13ce4d52071ae7e02cf1f6606f4c79d3", decimals: 18 },
+    ],
     reserves: [
       { name: "iBGT (Infrared liquid staked BGT)", pct: 40, risk: "high" },
       { name: "iBERA / WBERA (Berachain native)", pct: 25, risk: "high" },
@@ -2219,6 +2225,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     chainTier: "established-alt-l1",
     custodyModel: "institutional",
+    contracts: [
+      { chain: "solana", address: "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD", decimals: 6 },
+    ],
     reserves: [
       { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low" },
       { name: "USDC liquidity buffer", pct: 10, risk: "low" },
@@ -2356,6 +2365,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/osldotcom" },
     ],
     jurisdiction: { country: "United States", regulator: "OCC", license: "Federal Bank Charter" },
+    contracts: [
+      { chain: "solana", address: "72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu", decimals: 6 },
+    ],
     reserves: [
       { name: "U.S. Treasury bills", pct: 80, risk: "very-low" },
       { name: "Cash and cash equivalents", pct: 20, risk: "very-low" },
@@ -2464,6 +2476,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Proof of Reserve", url: "https://mu.accountable.capital/" },
     ],
     proofOfReserves: { type: "real-time", url: "https://mu.accountable.capital/", provider: "Accountable" },
+    contracts: [
+      { chain: "monad", address: "0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8", decimals: 18 },
+    ],
     reserves: [
       { name: "Asian sovereign bonds (BBB+ min)", pct: 30, risk: "high" },
       { name: "Investment-grade Asian corporate/bank bonds (BBB- min)", pct: 35, risk: "high" },
@@ -2527,6 +2542,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon",  address: "0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798", decimals: 18 },
       { chain: "avalanche", address: "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16", decimals: 18 },
       { chain: "celo",     address: "0xde093684c796204224bc081f937aa059d903c52a", decimals: 18 },
+      { chain: "solana",   address: "DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA", decimals: 9 },
     ],
     proofOfReserves: { type: "independent-audit", url: "https://brale.xyz/stablecoins/SBC", provider: "Abdo" },
     reserves: [
