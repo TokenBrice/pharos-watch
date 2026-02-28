@@ -71,3 +71,4 @@ Read these when working on related code:
 - **`docs/design-language.md`** — Typography, spacing, cards, tables, charts, interactive states, loading/error patterns
 - **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
 - **`docs/feedback-pipeline.md`** — Feedback widget, POST /api/feedback, rate limiting, auto-verification, GitHub routing, env vars
+- **`docs/digest-pipeline.md`** — Daily digest generation, LLM call, D1 storage, Twitter + Telegram distribution, API endpoints, frontend, SSG pipeline
