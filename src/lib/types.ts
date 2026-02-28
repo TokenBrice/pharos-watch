@@ -94,7 +94,7 @@ export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-
 export type CustodyModel = "onchain" | "institutional" | "cex";
 
 /** Quality of governance decentralization (overrides coarse GovernanceType) */
-export type GovernanceQuality = "dao-governance" | "multisig" | "regulated-entity" | "single-entity" | "wrapper";
+export type GovernanceQuality = "immutable-code" | "dao-governance" | "multisig" | "regulated-entity" | "single-entity" | "wrapper";
 
 /** Important notice displayed on a stablecoin's detail page */
 export interface CoinNotice {

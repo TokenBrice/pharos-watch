@@ -1786,6 +1786,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
+    governanceQuality: "immutable-code",
     deploymentModel: "third-party-bridge",
     geckoId: "liquity-bold-2",
     collateral: "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
@@ -1826,6 +1827,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
+    governanceQuality: "immutable-code",
     geckoId: "liquity-usd",
     deploymentModel: "canonical-bridge",
     collateral: "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",

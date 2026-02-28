@@ -30,7 +30,7 @@ import { deriveDependencies } from "./reserve-templates";
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "5.1";
+export const METHODOLOGY_VERSION = "5.2";
 
 /**
  * Base dimension weights for the overall grade.
@@ -436,6 +436,7 @@ export function scoreResilience(
 // ---------------------------------------------------------------------------
 
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
+  "immutable-code": 100,
   "dao-governance": 85,
   "multisig": 55,
   "regulated-entity": 40,
@@ -444,6 +445,7 @@ export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
 };
 
 const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
+  "immutable-code": "Immutable code (no governance)",
   "dao-governance": "DAO governance",
   "multisig": "Multisig governance",
   "regulated-entity": "Regulated entity",
@@ -504,7 +506,7 @@ export function scoreDecentralization(
   else if (infraScore >= 15) penalty = -50;
   else penalty = -65;
 
-  if (quality !== "single-entity" && quality !== "regulated-entity" && penalty < 0) {
+  if (quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity" && penalty < 0) {
     score = Math.max(0, score + penalty);
   }
 

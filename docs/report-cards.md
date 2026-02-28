@@ -144,13 +144,14 @@ Data sources: `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel
 
 ### Decentralization Details
 
-Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 5-tier quality classification that can be explicitly overridden per coin.
+Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 6-tier quality classification that can be explicitly overridden per coin.
 
 **Governance Quality Tiers:**
 
 | Tier | Score | Default for GovernanceType | Examples |
 |---|---|---|---|
-| `dao-governance` | 85 | `decentralized` | crvUSD, LUSD, BOLD; overrides: USDS, DAI, GHO, FRAX, DOLA |
+| `immutable-code` | 100 | — (must be explicit) | LUSD, BOLD |
+| `dao-governance` | 85 | `decentralized` | crvUSD; overrides: USDS, DAI, GHO, FRAX, DOLA |
 | `multisig` | 55 | `centralized-dependent` | Most CeFi-dep coins without explicit override |
 | `regulated-entity` | 40 | — (auto-promoted) | Centralized issuers with verified regulatory oversight |
 | `single-entity` | 20 | `centralized` | USDT, USDC, PYUSD |
@@ -160,7 +161,7 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 
 **Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
 
-**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance only — centralized issuers are exempt):
+**Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to DAO and multisig governance only — immutable-code and centralized issuers are exempt):
 
 | Combined Score Range | Penalty |
 |---|---|
@@ -169,9 +170,11 @@ Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governa
 | 15–49 | −50 |
 | 0–14 | −65 |
 
+`immutable-code` is exempt because there is no governance to undermine — chain centralization risks are already fully captured by the Resilience dimension. Centralized issuers (`single-entity`, `regulated-entity`) are exempt because their governance score already reflects the centralization.
+
 The combined score is computed from `chainTier × deploymentModel` (see Chain Infrastructure above). Coins without overrides default to Ethereum + single-chain (score 100, penalty 0).
 
-Examples: BOLD (dao-governance, Ethereum, third-party-bridge → infra 60) = 85 − 15 = **70**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
+Examples: BOLD (immutable-code) = **100** (no chain penalty). LUSD (immutable-code) = **100**. hyUSD (dao-governance, Solana → infra 20) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
 
 ### Dependency Risk Details
 
