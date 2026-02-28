@@ -36,6 +36,8 @@ interface Env {
   TWITTER_API_SECRET?: string;
   TWITTER_ACCESS_TOKEN?: string;
   TWITTER_ACCESS_TOKEN_SECRET?: string;
+  TELEGRAM_BOT_TOKEN?: string;
+  TELEGRAM_CHAT_ID?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -108,8 +110,12 @@ const worker = {
         env.TWITTER_API_KEY && env.TWITTER_API_SECRET && env.TWITTER_ACCESS_TOKEN && env.TWITTER_ACCESS_TOKEN_SECRET
           ? { apiKey: env.TWITTER_API_KEY, apiSecret: env.TWITTER_API_SECRET, accessToken: env.TWITTER_ACCESS_TOKEN, accessTokenSecret: env.TWITTER_ACCESS_TOKEN_SECRET }
           : null;
+      const telegramCreds =
+        env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
+          ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
+          : null;
       try {
-        const result = await generateDailyDigest(env.DB, env.ANTHROPIC_API_KEY ?? null, twitterCreds, true);
+        const result = await generateDailyDigest(env.DB, env.ANTHROPIC_API_KEY ?? null, twitterCreds, true, telegramCreds);
         return addCorsHeaders(new Response(JSON.stringify({ ok: true, result }), { headers: { "Content-Type": "application/json" } }), origin);
       } catch (err) {
         return addCorsHeaders(new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { "Content-Type": "application/json" } }), origin);
@@ -237,7 +243,11 @@ const worker = {
                   accessTokenSecret: env.TWITTER_ACCESS_TOKEN_SECRET,
                 }
               : null;
-          return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds);
+          const telegramCreds =
+            env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
+              ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
+              : null;
+          return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds, false, telegramCreds);
         })));
         break;
       }
