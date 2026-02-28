@@ -366,6 +366,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Singapore", regulator: "MAS", license: "Major Payment Institution" },
     contracts: [
       { chain: "ethereum", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6 },
+      { chain: "solana", address: "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", decimals: 6 },
+      { chain: "ink", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6 },
     ],
     reserves: [
       // Source: Paxos/Enrome LLP monthly attestation (ISCA standards). Exact % not published; estimated from collateral description.
@@ -856,6 +858,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.solstice.finance" },
     ],
     jurisdiction: { country: "Switzerland" },
+    contracts: [
+      { chain: "solana", address: "6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG", decimals: 6 },
+    ],
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
@@ -1304,6 +1309,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/usecash" },
     ],
     jurisdiction: { country: "United States", regulator: "FinCEN / state MTL authorities", license: "Money Services Business (NMLS #2450917)" },
+    contracts: [
+      { chain: "solana", address: "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH", decimals: 6 },
+    ],
     reserves: [
       { name: "U.S. Treasury bills (<=3mo maturity)", pct: 50, risk: "very-low" },
       { name: "Reverse repos (overnight, UST-collateralized)", pct: 15, risk: "very-low" },
@@ -1389,6 +1397,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "bsc", address: "0xea953ea6634d55dac6697c436b1e81a679db5882", decimals: 18 },
+      { chain: "solana", address: "9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy", decimals: 6 },
     ],
     reserves: [
       { name: "JLP (Jupiter Perps LP: BTC, ETH, SOL, USDC basket)", pct: 80, risk: "high" },
@@ -1678,6 +1687,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://dashboard.m0.org", provider: "M0 Protocol" },
     contracts: [
       { chain: "ethereum", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
+      { chain: "linea", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
     ],
     reserves: [
       { name: "U.S. Treasury bills (0-180 day maturity)", pct: 85, risk: "very-low" },
@@ -1874,6 +1884,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "France", regulator: "ACPR", license: "EMI (MiCA)" },
     contracts: [
       { chain: "ethereum", address: "0x5422374b27757da72d5265cc745ea906e0446634", decimals: 18 },
+      { chain: "solana", address: "8smindLdDuySY6i2bStQX9o8DVhALCXCMbNxD98unx35", decimals: 2 },
     ],
     reserves: [
       { name: "USD cash deposits at BNY Mellon (segregated)", pct: 100, risk: "very-low" },
@@ -3071,6 +3082,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
       { chain: "optimism", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
       { chain: "base", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
+      { chain: "polygon", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6 },
     ],
     proofOfReserves: { type: "self-reported", url: "https://allunity.com/trust-center/" },
     reserves: [
