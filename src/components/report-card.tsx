@@ -157,7 +157,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                 const depMeta = TRACKED_STABLECOINS.find(
                   (s) => s.id === dep.id,
                 );
-                const name = depMeta?.name ?? dep.id;
+                const name = depMeta?.symbol ?? dep.id;
                 const typeLabel = dep.type === "wrapper" ? " (wrapper)"
                   : dep.type === "mechanism" ? " (mechanism-critical)"
                   : "";
