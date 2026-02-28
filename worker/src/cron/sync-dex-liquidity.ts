@@ -2046,6 +2046,16 @@ async function computeStablecoinScores(
 
   const results = new Map<string, FullScoreResult>();
 
+  // Global dedup accumulators — accumulated per-coin BEFORE top-10 truncation
+  const globalSeenPools = new Set<string>();
+  const globalProtocolTvl: Record<string, number> = {};
+  const globalChainTvl: Record<string, number> = {};
+  let globalTotalTvl = 0;
+  let globalTotalVol24h = 0;
+  let globalTotalVol7d = 0;
+  let globalPoolCount = 0;
+  const globalChains = new Set<string>();
+
   for (const [id, m] of metrics) {
     // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
     // before sorting — bad data from any source (DL, GT) gets dropped.
@@ -2076,6 +2086,22 @@ async function computeStablecoinScores(
       m.chains.add(p.chain);
       m.pairs.add(p.symbol);
     }
+
+    // Global dedup: accumulate from ALL pools (pre-truncation) so every physical
+    // pool is counted once even when shared by multiple stablecoins.
+    for (const p of m.topPools) {
+      if (globalSeenPools.has(p.poolId)) continue;
+      globalSeenPools.add(p.poolId);
+      globalTotalTvl += p.tvlUsd;
+      globalTotalVol24h += p.volumeUsd1d;
+      globalPoolCount++;
+      const chainKey = p.chain.toLowerCase();
+      globalChains.add(chainKey);
+      const proto = normalizeProtocol(p.project);
+      globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + p.tvlUsd;
+      globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + p.tvlUsd;
+    }
+    globalTotalVol7d += m.totalVolume7dUsd;
 
     // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
     m.topPools.sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd);
@@ -2125,32 +2151,6 @@ async function computeStablecoinScores(
       avgStress,
       lockedLiqPct,
     });
-  }
-
-  // Compute global deduped aggregates: each physical pool counted only once,
-  // even when it appears under multiple stablecoins (e.g., USDT/USDC pool).
-  const globalSeenPools = new Set<string>();
-  const globalProtocolTvl: Record<string, number> = {};
-  const globalChainTvl: Record<string, number> = {};
-  let globalTotalTvl = 0;
-  let globalTotalVol24h = 0;
-  let globalTotalVol7d = 0;
-  let globalPoolCount = 0;
-  const globalChains = new Set<string>();
-
-  for (const [, m] of metrics) {
-    for (const p of m.topPools) {
-      if (globalSeenPools.has(p.poolId)) continue;
-      globalSeenPools.add(p.poolId);
-      globalTotalTvl += p.tvlUsd;
-      globalTotalVol24h += p.volumeUsd1d;
-      globalPoolCount++;
-      globalChains.add(p.chain);
-      const proto = normalizeProtocol(p.project);
-      globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + p.tvlUsd;
-      globalChainTvl[p.chain] = (globalChainTvl[p.chain] ?? 0) + p.tvlUsd;
-    }
-    globalTotalVol7d += m.totalVolume7dUsd;
   }
 
   const globalAgg: GlobalAgg = {
