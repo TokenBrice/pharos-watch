@@ -22,7 +22,8 @@ export function useStatus(adminKey: string): UseQueryResult<StatusResponse, Erro
       return res.json() as Promise<StatusResponse>;
     },
     enabled: !!adminKey,
-    staleTime: Infinity,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
     retry: 0,
   });
 }
