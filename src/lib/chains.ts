@@ -27,7 +27,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   klaytn:    { name: "Klaytn",    explorerUrl: "https://klaytnscope.com",          evmChainId: 8217,  type: "evm",  logoPath: "/chains/klaytn.png"    },
   plume:     { name: "Plume",     explorerUrl: "https://explorer.plumenetwork.xyz",evmChainId: 98866, type: "evm",  logoPath: "/chains/plume.png"     },
   hyperevm:  { name: "HyperEVM",  explorerUrl: "https://purrsec.com",             evmChainId: 999,   type: "evm",  logoPath: "/chains/hyperevm.png"  },
-  monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 10143, type: "evm",  logoPath: "/chains/monad.png"     },
+  monad:     { name: "Monad",     explorerUrl: "https://explorer.monad.xyz",       evmChainId: 143,   type: "evm",  logoPath: "/chains/monad.png"     },
   xdc:       { name: "XDC Network",explorerUrl: "https://xdcscan.io",             evmChainId: 50,    type: "evm",  logoPath: "/chains/xdc.png"       },
   tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png"      },
   aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png"     },
