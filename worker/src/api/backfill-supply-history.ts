@@ -5,6 +5,7 @@ import { batchExecute } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
+import { resolveMarketCap } from "../lib/resolve-market-cap";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -27,17 +28,32 @@ async function backfillCommodity(
   id: string,
   config: { geckoId: string; protocolSlug?: string },
 ): Promise<{ rows: number; error?: string }> {
-  // Try CoinGecko market_chart first — provides actual historical market caps.
-  const cgRes = await fetch(
-    cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
-    { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
-  );
+  // Fetch market_chart (prices + market_caps) and current circulating_supply in parallel
+  const [cgRes, coinRes] = await Promise.all([
+    fetch(
+      cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+    ),
+    fetch(
+      cgUrl(`/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`),
+      { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+    ),
+  ]);
 
   if (cgRes.ok) {
     const cgData = (await cgRes.json()) as {
       market_caps: [number, number][];
       prices?: [number, number][];
     };
+
+    // Extract circulating_supply for sanity check
+    let circulatingSupply: number | undefined;
+    if (coinRes.ok) {
+      const coinData = (await coinRes.json()) as {
+        market_data?: { circulating_supply?: number };
+      };
+      circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
+    }
 
     const mcaps = cgData.market_caps ?? [];
     if (mcaps.length > 0) {
@@ -54,12 +70,18 @@ async function backfillCommodity(
         if (mcap <= 0) continue;
         const snapshotDate = Math.floor(ts / 1000 / 86400) * 86400;
         const price = priceMap.get(snapshotDate) ?? null;
+
+        // Validate historical mcap via supply×price when price is available
+        const resolvedMcap = price != null
+          ? resolveMarketCap(mcap, circulatingSupply, price)
+          : mcap;
+
         stmts.push(
           db
             .prepare(
               "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)",
             )
-            .bind(id, snapshotDate, mcap, price),
+            .bind(id, snapshotDate, resolvedMcap, price),
         );
       }
 
