@@ -400,7 +400,7 @@ export function scoreResilience(
   canBeBlacklisted: boolean | "possible",
 ): ReportCardDimension {
   const factors = resolveResilienceFactors(meta);
-  const blacklistScore = canBeBlacklisted === true ? 0 : canBeBlacklisted === "possible" ? 50 : 100;
+  const blacklistScore = canBeBlacklisted === true ? 33 : canBeBlacklisted === "possible" ? 66 : 100;
   const blacklistLabel = canBeBlacklisted === true ? "Yes" : canBeBlacklisted === "possible" ? "Possible (mutable contract)" : "No";
 
   const chainScore = chainInfraScore(factors.chainTier, factors.deploymentModel);
@@ -435,6 +435,7 @@ export function scoreResilience(
 export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
   "dao-governance": 85,
   "multisig": 55,
+  "regulated-entity": 40,
   "single-entity": 20,
   "wrapper": 10,
 };
@@ -442,6 +443,7 @@ export const GOVERNANCE_QUALITY_SCORE: Record<GovernanceQuality, number> = {
 const GOVERNANCE_QUALITY_LABEL: Record<GovernanceQuality, string> = {
   "dao-governance": "DAO governance",
   "multisig": "Multisig governance",
+  "regulated-entity": "Regulated entity",
   "single-entity": "Single-entity governance",
   "wrapper": "Wrapper (inherits upstream)",
 };
@@ -458,7 +460,17 @@ export function resolveGovernanceQuality(
   governance: GovernanceType,
   meta?: StablecoinMeta,
 ): GovernanceQuality {
-  return meta?.governanceQuality ?? inferGovernanceQuality(governance);
+  if (meta?.governanceQuality) return meta.governanceQuality;
+  const base = inferGovernanceQuality(governance);
+  // Auto-promote single-entity → regulated-entity when metadata confirms regulation
+  if (base === "single-entity" && meta) {
+    const j = meta.jurisdiction;
+    const p = meta.proofOfReserves;
+    if (j?.regulator && j?.license && p?.type === "independent-audit") {
+      return "regulated-entity";
+    }
+  }
+  return base;
 }
 
 /**
