@@ -149,7 +149,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
     geckoId: "ethena-usde",
-    dependencies: [{ id: "1", weight: 0.15 }, { id: "2", weight: 0.15 }],
     collateral: "ETH (including stETH), BTC, and SOL in delta-neutral positions (spot long + short perpetual futures), plus liquid stablecoins (USDC, USDT, USDtb) as non-hedged backing",
     pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
@@ -195,13 +194,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH / stETH", pct: 45, risk: "low" },
       { name: "BTC", pct: 25, risk: "very-low" },
       { name: "SOL", pct: 10, risk: "high" },
-      { name: "Stablecoins (USDC/USDT)", pct: 20, risk: "low" },
+      { name: "Stablecoins (USDC/USDT)", pct: 20, risk: "low", coinId: "2" },
     ],
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
     governanceQuality: "dao-governance",
-    dependencies: [{ id: "2", weight: 0.30, type: "mechanism" }],
     canBeBlacklisted: "possible",
     deploymentModel: "third-party-bridge",
     collateralQuality: "rwa",
@@ -222,7 +220,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
-      { name: "USDC via PSM", pct: 30, risk: "low" },
+      { name: "USDC via PSM", pct: 30, risk: "low", coinId: "2", depType: "mechanism" },
       { name: "ETH / wstETH", pct: 20, risk: "low" },
       { name: "Other Vaults", pct: 10, risk: "high" },
     ],
@@ -258,7 +256,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     geckoId: "dai",
     governanceQuality: "dao-governance",
-    dependencies: [{ id: "2", weight: 0.35, type: "mechanism" }],
     deploymentModel: "canonical-bridge",
     collateralQuality: "rwa",
     custodyModel: "institutional",
@@ -282,7 +279,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
-      { name: "USDC via PSM", pct: 33, risk: "low" },
+      { name: "USDC via PSM", pct: 33, risk: "low", coinId: "2", depType: "mechanism" },
       { name: "ETH / wstETH", pct: 20, risk: "low" },
       { name: "WBTC", pct: 5, risk: "medium" },
       { name: "Other Vaults", pct: 2, risk: "high" },
@@ -316,7 +313,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
     geckoId: "falcon-finance",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "1", weight: 0.4 }, { id: "2", weight: 0.4 }],
     collateral: "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
     pegMechanism: "Overcollateralized synthetic dollar; liquidation mechanisms and arbitrage maintain the $1 peg; delta-neutral strategies power sUSDf yield",
     proofOfReserves: { type: "real-time", url: "https://app.falcon.finance/transparency", provider: "ht.digital" },
@@ -336,7 +332,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Falcon Finance transparency dashboard + DWF Labs research (Sep 2025). Approximate from published $ amounts.
       { name: "BTC (delta-neutral)", pct: 45, risk: "medium" },
-      { name: "Stablecoins (USDC/USDT)", pct: 30, risk: "low" },
+      { name: "Stablecoins (USDC/USDT)", pct: 30, risk: "low", coinId: "2" },
       { name: "Altcoins (DOGE, FET, TRX, TON)", pct: 15, risk: "high" },
       { name: "ETH (delta-neutral)", pct: 5, risk: "medium" },
       { name: "Tokenized Treasuries (USTB)", pct: 5, risk: "low" },
@@ -476,7 +472,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
     geckoId: "usdd",
     deploymentModel: "native-multichain",
-    dependencies: [{ id: "1", weight: 0.3 }, { id: "2", weight: 0.1 }],
     collateral: "Over-collateralized by TRX, sTRX, and USDT locked in CDP vaults; Bitcoin removed from reserves in August 2024",
     pegMechanism: "CDP model with minimum 130% collateral ratio; Peg Stability Module enables 1:1 minting/redemption against USDT and USDC",
     proofOfReserves: { type: "self-reported", url: "https://usdd.io/" },
@@ -500,7 +495,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Messari Jan 2026, Stablewatch late 2025. Confidence: Medium
       { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
-      { name: "USDT (PSM vaults)", pct: 16, risk: "low" },
+      { name: "USDT (PSM vaults)", pct: 16, risk: "low", coinId: "1" },
       { name: "TRX", pct: 7, risk: "high" },
       { name: "sTRX / USDT (direct vaults)", pct: 2, risk: "high" },
     ],
@@ -533,7 +528,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     rwa: true,
     geckoId: "m",
     deploymentModel: "third-party-bridge",
-    dependencies: [],
     collateral: "Short-term U.S. Treasury bills (30–90 day) held in bankruptcy-remote SPVs by permissioned Minters; Validators independently attest collateral sufficiency on-chain before minting",
     pegMechanism: "Permissioned Minters lock eligible T-bill collateral in bankruptcy-remote SPVs; Validators cryptographically attest off-chain collateral sufficiency, enabling on-chain minting of M 1:1 against attested reserves; POWER token holders govern eligible collateral and Minter/Validator permissions",
     proofOfReserves: { type: "self-reported", url: "https://dashboard.m0.org/", provider: "M0 Protocol (on-chain Validator attestations)" },
@@ -580,7 +574,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
     geckoId: "usdai",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "1", weight: 0.3 }, { id: "2", weight: 0.3 }],
     collateral: "GPU-backed infrastructure loans (NVIDIA hardware tokenized as on-chain warehouse receipts under UCC law via the CALIBER framework); base USDai is backed 1:1 by wM (M0 Protocol T-bills) while sUSDai earns yield from hardware-collateralized credit to AI compute operators",
     pegMechanism: "Minted 1:1 by depositing USDC/USDT converted to wM (M0 T-bill tokens); redeemable 1:1 in fixed 30-day processing windows; sUSDai is an ERC-4626 vault accruing yield from GPU-backed loans; QEV auction mechanism manages redemptions against illiquid collateral",
     jurisdiction: { country: "United States" },
@@ -597,7 +590,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: USD.AI blog Feb 2026, Stablewatch, CoinDesk Oct 2025. Confidence: Medium
-      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 99, risk: "low" },
+      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 99, risk: "low", coinId: "213" },
       { name: "GPU-collateralized loans (NVIDIA hardware)", pct: 1, risk: "high" },
     ],
   }),
@@ -633,7 +626,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "gho",
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
-    dependencies: [{ id: "1", weight: 0.20 }, { id: "2", weight: 0.20 }],
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
     pegMechanism: "Overcollateralized minting via Aave V3 facilitator model; GHO Stability Module (GSM) enables 1:1 conversions with USDC and USDT; dynamic borrow rate adjustments by GHO Stewards reinforce the peg",
@@ -655,10 +647,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Aave V3 Ethereum market data, Eco.com GHO guide, Chaos Labs risk dashboard
       { name: "wstETH", pct: 34, risk: "low" },
-      { name: "sDAI", pct: 18, risk: "low" },
+      { name: "sDAI", pct: 18, risk: "low", coinId: "5" },
       { name: "WETH", pct: 16, risk: "medium" },
       { name: "WBTC", pct: 14, risk: "medium" },
-      { name: "USDC / USDT (GSM)", pct: 13, risk: "low" },
+      { name: "USDC / USDT (GSM)", pct: 13, risk: "low", coinId: "2" },
       { name: "Other Aave V3 Collateral", pct: 5, risk: "high" },
     ],
   }),
@@ -789,7 +781,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
     geckoId: "resolv-usr",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
     collateral: "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
     pegMechanism: "Delta-neutral portfolio: long spot ETH/BTC on-chain balanced by equal short perpetual futures on CEXs (Binance, Hyperliquid, Deribit) via Fireblocks Off-Exchange; USR redeemable 1:1 at any time; RLP (Resolv Liquidity Pool) absorbs negative funding-rate and liquidation risk",
     proofOfReserves: { type: "real-time", url: "https://info.apostro.xyz/resolv-reserves", provider: "Apostro" },
@@ -816,7 +807,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH + wstETH (delta-neutral via short perps)", pct: 55, risk: "medium" },
       { name: "BTC (delta-neutral via short perps)", pct: 20, risk: "medium" },
       { name: "RLP insurance layer (surplus ETH + BTC)", pct: 15, risk: "medium" },
-      { name: "USD stablecoins (USDC/USDT)", pct: 10, risk: "low" },
+      { name: "USD stablecoins (USDC/USDT)", pct: 10, risk: "low", coinId: "2" },
     ],
   }),
   usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
@@ -841,7 +832,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
     geckoId: "crvusd",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     links: [
@@ -876,7 +866,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("310", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
     geckoId: "usx",
     governanceQuality: "wrapper",
-    dependencies: [{ id: "1", weight: 0.5, type: "wrapper" }, { id: "2", weight: 0.5, type: "wrapper" }],
     collateral: "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
     pegMechanism: "1:1 collateralization with multi-oracle pricing via Chainlink and Pyth; Chainlink Proof of Reserve provides real-time on-chain verification of reserves; institutional minting ($500K minimum, KYC-gated); permissionless access via Solana DEXs",
     links: [
@@ -892,8 +881,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       // Source: Solstice docs, StablecoinInsider Sep-Dec 2025. Confidence: Medium
-      { name: "USDC", pct: 55, risk: "low" },
-      { name: "USDT", pct: 45, risk: "low" },
+      { name: "USDC", pct: 55, risk: "low", coinId: "2", depType: "wrapper" },
+      { name: "USDT", pct: 45, risk: "low", coinId: "1", depType: "wrapper" },
     ],
   }),
 
@@ -901,7 +890,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("220", "Avalon USDa", "USDA", "crypto-backed", "centralized-dependent", {
     geckoId: "usda-2",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "1", weight: 0.4 }],
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "BTC and BTC LSTs (e.g. FBTC) deposited as overcollateralized CDP; USDT can also be deposited 1:1; $2B institutional credit lines via Cobo, Ceffu, and Coinbase Prime",
     pegMechanism: "1:1 USDT convertibility; dynamic supply scaling against BTC collateral; liquidation via proprietary HFT algorithm through Ceffu/Coinbase Prime custody; cross-chain via LayerZero OFT",
@@ -918,7 +906,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Avalon docs, Decrypt, Wu Blockchain late 2024-2025. Confidence: Low
       { name: "FBTC (tokenized BTC via Cobo custody)", pct: 45, risk: "medium" },
-      { name: "USDT (1:1 minted deposits)", pct: 40, risk: "low" },
+      { name: "USDT (1:1 minted deposits)", pct: 40, risk: "low", coinId: "1" },
       { name: "BTC LSTs (SolvBTC, LBTC, pumpBTC, etc.)", pct: 15, risk: "high" },
     ],
   }),
@@ -960,7 +948,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
     geckoId: "dola-usd",
     deploymentModel: "third-party-bridge",
-    dependencies: [{ id: "209", weight: 0.08, type: "mechanism" }],
     governanceQuality: "dao-governance",
     collateral: "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
     pegMechanism: "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
@@ -982,12 +969,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Inverse Finance transparency, DefiLlama Feb 2026. Confidence: Medium
       { name: "wstETH (Lido)", pct: 35, risk: "low" },
-      { name: "sUSDe / PT-sUSDe (Ethena)", pct: 15, risk: "medium" },
+      { name: "sUSDe / PT-sUSDe (Ethena)", pct: 15, risk: "medium", coinId: "146" },
       { name: "cbBTC (Coinbase wrapped Bitcoin)", pct: 12, risk: "medium" },
       { name: "WETH", pct: 10, risk: "medium" },
-      { name: "USDS in PSM (peg backstop)", pct: 8, risk: "low" },
+      { name: "USDS in PSM (peg backstop)", pct: 8, risk: "low", coinId: "209", depType: "mechanism" },
       { name: "LP tokens (Curve, cvxCRV, st-yCRV)", pct: 8, risk: "high" },
-      { name: "Other (sFRAX, INV, st-yETH)", pct: 12, risk: "very-high" },
+      { name: "Other (sFRAX, INV, st-yETH)", pct: 12, risk: "very-high", coinId: "6" },
     ],
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
@@ -1020,7 +1007,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "infinifi-usd",
-    dependencies: [{ id: "2", weight: 1.0, type: "wrapper" }],
     collateralQuality: "exotic",
     collateral: "USDC; deployed across liquid DeFi yield strategies (Aave, Fluid, Euler) and illiquid strategies (Pendle PTs, Ethena/sUSDe), duration-matched to user lock-up periods",
     pegMechanism: "1:1 mint/redeem against USDC with no fees; on-chain fractional reserve — liquid portion held for instant redemptions, remainder deployed to higher-yielding DeFi farms; redemptions queue when liquid reserves are insufficient",
@@ -1034,16 +1020,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Nansen, Blockworks, 0xmedia Jun-Dec 2025. Confidence: Medium
-      { name: "Ethena sUSDe (yield-bearing staked USDe)", pct: 30, risk: "medium" },
-      { name: "Pendle PT-sUSDe (fixed-term Ethena yield)", pct: 25, risk: "medium" },
-      { name: "Aave USDC (liquid money market)", pct: 20, risk: "low" },
-      { name: "USDC reserve buffer (liquid)", pct: 15, risk: "low" },
-      { name: "Fluid / Euler USDC (money markets)", pct: 10, risk: "low" },
+      { name: "Ethena sUSDe (yield-bearing staked USDe)", pct: 30, risk: "medium", coinId: "146" },
+      { name: "Pendle PT-sUSDe (fixed-term Ethena yield)", pct: 25, risk: "medium", coinId: "146" },
+      { name: "Aave USDC (liquid money market)", pct: 20, risk: "low", coinId: "2", depType: "wrapper" },
+      { name: "USDC reserve buffer (liquid)", pct: 15, risk: "low", coinId: "2", depType: "wrapper" },
+      { name: "Fluid / Euler USDC (money markets)", pct: 10, risk: "low", coinId: "2", depType: "wrapper" },
     ],
   }),
   usd("219", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
     geckoId: "astherus-usdf",
-    dependencies: [{ id: "1", weight: 1.0, type: "wrapper" }],
     collateral: "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
     pegMechanism: "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
     links: [
@@ -1058,7 +1043,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "cex",
     reserves: [
       // Source: Aster docs, Coin Bureau, IQ.wiki 2025. Confidence: High
-      { name: "USDT (held in Ceffu custody)", pct: 50, risk: "low" },
+      { name: "USDT (held in Ceffu custody)", pct: 50, risk: "low", coinId: "1", depType: "wrapper" },
       { name: "Spot crypto (BTC/ETH, delta-hedged via perp shorts)", pct: 25, risk: "high" },
       { name: "Perpetual short positions margin (Binance via MirrorX)", pct: 25, risk: "high" },
     ],
@@ -1067,7 +1052,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("252", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "standx-dusd",
     deploymentModel: "native-multichain",
-    dependencies: [{ id: "1", weight: 0.5 }, { id: "2", weight: 0.5 }],
     collateral: "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
     pegMechanism: "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
     links: [
@@ -1090,7 +1074,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
     geckoId: "satoshi-stablecoin",
     tags: ["Liquity v1 fork"],
-    dependencies: [],
     chainTier: "unproven",
     deploymentModel: "third-party-bridge",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -1254,7 +1237,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("341", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "pleasing-usd",
-    dependencies: [{ id: "1", weight: 1.0, type: "wrapper" }],
     collateral: "USDT deposits held by Pleasing International; ecosystem interoperability with tokenized gold (PGOLD)",
     pegMechanism: "1:1 mint and redemption against USDT through the Pleasing Golden platform",
     jurisdiction: { country: "Hong Kong" },
@@ -1268,7 +1250,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "apechain", address: "0x764387ae46fc504b0682bc1ad31963250007e58e", decimals: 18 },
     ],
     reserves: [
-      { name: "USDT deposits (1:1 minting collateral)", pct: 90, risk: "low" },
+      { name: "USDT deposits (1:1 minting collateral)", pct: 90, risk: "low", coinId: "1", depType: "wrapper" },
       { name: "Tokenized gold exposure (PGOLD interoperability)", pct: 10, risk: "medium" },
     ],
   }),
@@ -3411,6 +3393,34 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Overcollateralized institutional loans (BTC/ETH collateral, Blue Chip pool)", pct: 55, risk: "medium" },
       { name: "Overcollateralized institutional loans (SOL/XRP/altcoin collateral, High Yield pool)", pct: 35, risk: "high" },
       { name: "Liquidity buffer (USDT idle)", pct: 10, risk: "low" },
+    ],
+  }),
+  usd("cg-yousd", "Yield Optimizer USD", "yoUSD", "crypto-backed", "centralized-dependent", {
+    geckoId: "yield-optimizer-usd",
+    yieldBearing: true, navToken: true,
+    collateral: "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
+    pegMechanism: "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
+    links: [
+      { label: "Website", url: "https://yo.xyz/" },
+      { label: "Twitter", url: "https://x.com/yield" },
+      { label: "Docs", url: "https://docs.yo.xyz" },
+    ],
+    dependencies: [{ id: "2", weight: 1.0, type: "wrapper" }],
+    contracts: [
+      { chain: "base", address: "0x0000000f2eb9f69274678c76222b35eec7588a65", decimals: 6 },
+    ],
+    collateralQuality: "exotic",
+    custodyModel: "onchain",
+    governanceQuality: "single-entity",
+    reserves: [
+      // Snapshot: 2026-02-28. Allocation rebalances dynamically across 50+ pools.
+      { name: "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)", pct: 39, risk: "medium" },
+      { name: "Auto Finance (autoUSD, baseUSD)", pct: 21, risk: "high" },
+      { name: "Aave markets (sGHO, RLUSD)", pct: 9, risk: "medium" },
+      { name: "InfiniFi liUSD (1-week lock)", pct: 8, risk: "high" },
+      { name: "Liquid USDC buffer (undeployed)", pct: 7, risk: "low" },
+      { name: "Avantis avUSDC (perpetuals collateral)", pct: 6, risk: "high" },
+      { name: "Other DeFi (Fluid, Resolv RLP, Euler, Revert Lend)", pct: 10, risk: "high" },
     ],
   }),
   usd("353", "GAIB AID", "AID", "rwa-backed", "centralized", {

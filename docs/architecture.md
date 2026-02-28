@@ -203,7 +203,7 @@ src/                              # Next.js frontend (static export)
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, RawDimensionInputs, CacheStatus (shared with worker)
-    ├── stablecoins.ts            # Master list of ~143 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── stablecoins.ts            # Master list of ~145 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
     ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
