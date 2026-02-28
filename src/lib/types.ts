@@ -512,6 +512,33 @@ export interface StatusResponse {
   dataQuality: DataQuality;
 }
 
+// --- Health endpoint types ---
+
+export interface CircuitRecord {
+  state: "closed" | "half-open" | "open";
+  consecutiveFailures: number;
+  lastFailureAt: number | null;
+  lastSuccessAt: number | null;
+  openedAt: number | null;
+}
+
+export interface HealthResponse {
+  status: "healthy" | "degraded" | "stale";
+  timestamp: number;
+  caches: Record<string, CacheStatus>;
+  blacklist: { totalEvents: number; missingAmounts: number };
+  circuits: Record<string, CircuitRecord>;
+}
+
+// --- Endpoint probe types ---
+
+export interface EndpointProbeResult {
+  path: string;
+  status: number | null; // null = timeout/network error
+  latencyMs: number;
+  error?: string;
+}
+
 // --- Depeg event types ---
 
 export interface DepegEvent {
