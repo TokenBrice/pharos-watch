@@ -1058,6 +1058,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
       { chain: "base",     address: "0x70654aad8b7734dc319d0c3608ec7b32e03fa162", decimals: 18 },
       { chain: "bsc",      address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
+      { chain: "sonic",    address: "0xb4818bb69478730ef4e33cc068dd94278e2766cb", decimals: 18 },
+      { chain: "bob",      address: "0xecf21b335b41f9d5a89f6186a99c19a3c467871f", decimals: 18 },
     ],
     reserves: [
       { name: "BTC (overcollateralized CDP)", pct: 40, risk: "medium" },
@@ -1130,6 +1132,19 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon",  address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
       { chain: "avalanche", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
       { chain: "bsc",      address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "solana",   address: "GzX1ireZDU865FiMaKrdVB1H6AE8LAqWYCg6chrMrfBw", decimals: 9 },
+      { chain: "aptos",    address: "0xe067037681385b86d8344e6b7746023604c6ac90ddc997ba3c58396c258ad17b", decimals: 6 },
+      { chain: "sonic",    address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "linea",    address: "0xc7346783f5e645aa998b106ef9e7f499528673d8", decimals: 18 },
+      { chain: "scroll",   address: "0x397f939c3b91a74c321ea7129396492ba9cdce82", decimals: 18 },
+      { chain: "blast",    address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "mode",     address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "zksync",   address: "0xea77c590bb36c43ef7139ce649cfbcfd6163170d", decimals: 18 },
+      { chain: "plume",    address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "unichain", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "ink",      address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "sei",      address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
+      { chain: "berachain", address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
     ],
     reserves: [
       { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low" },
@@ -1862,6 +1877,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Discord", url: "https://discord.gg/berachain" },
     ],
     chainTier: "unproven",
+    contracts: [
+      { chain: "berachain", address: "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce", decimals: 18 },
+    ],
     reserves: [
       { name: "USDC (Circle)", pct: 40, risk: "low" },
       { name: "USDT0 (Tether via LayerZero)", pct: 25, risk: "low" },
@@ -1905,6 +1923,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.blast.io/" },
     ],
     chainTier: "stage1-l2",
+    contracts: [
+      { chain: "blast", address: "0x4300000000000000000000000000000000000003", decimals: 18 },
+    ],
     reserves: [
       { name: "DAI / sDAI (via MakerDAO DSR)", pct: 60, risk: "low" },
       { name: "USDC (bridged)", pct: 25, risk: "low" },

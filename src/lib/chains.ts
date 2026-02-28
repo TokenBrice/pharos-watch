@@ -36,6 +36,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   mode:      { name: "Mode",     explorerUrl: "https://modescan.io",              evmChainId: 34443, type: "evm",  logoPath: "/chains/mode.png"      },
   manta:     { name: "Manta",    explorerUrl: "https://pacific-explorer.manta.network", evmChainId: 169, type: "evm", logoPath: "/chains/manta.png"  },
   berachain: { name: "Berachain",explorerUrl: "https://berascan.com",             evmChainId: 80094, type: "evm",  logoPath: "/chains/berachain.png" },
+  bob:       { name: "BOB",     explorerUrl: "https://explorer.gobob.xyz",        evmChainId: 60808, type: "evm",  logoPath: "/chains/bob.png"       },
   tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png"      },
   aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png"     },
   sui:       { name: "Sui",       explorerUrl: "https://suiscan.xyz",              evmChainId: null,  type: "other", logoPath: "/chains/sui.png"       },
