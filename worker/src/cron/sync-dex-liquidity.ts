@@ -2418,8 +2418,8 @@ async function fetchDsFallbackPools(
         const vol24h = pair.volume?.h24 ?? 0;
         if (vol24h === 0 && tvl < 10_000) continue;
 
-        // Dedup against known pool addresses
-        const poolKey = `${pair.chainId}:${pair.pairAddress.toLowerCase()}`;
+        // Dedup against known pool addresses (use our chain name for consistency with main pipeline)
+        const poolKey = `${contract.chain}:${pair.pairAddress.toLowerCase()}`;
         if (knownPoolAddrs.has(poolKey)) continue;
         knownPoolAddrs.add(poolKey);
 
@@ -2467,7 +2467,7 @@ async function fetchDsFallbackPools(
         poolsFound++;
 
         // Price observation
-        if (price > 0 && price >= 0.5 && price <= 2.0 && tvl >= 10_000) {
+        if (price >= 0.5 && price <= 2.0 && tvl >= 10_000) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({ price, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
           priceObs.set(meta.id, obs);
