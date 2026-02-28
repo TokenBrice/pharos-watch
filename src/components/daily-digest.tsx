@@ -14,43 +14,73 @@ export function formatDateline(ts: number): string {
   });
 }
 
-export function DailyDigest() {
+function formatMasthead(ts: number): string {
+  return new Date(ts * 1000).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
+
+export function DailyDigest({ showArchiveLink = true }: { showArchiveLink?: boolean }) {
   const { data, isLoading } = useDailyDigest();
 
   if (!isLoading && (!data || !data.digest)) return null;
 
   if (isLoading) {
     return (
-      <div className="border-t border-b border-border/50 py-5 space-y-2">
-        <Skeleton className="h-3 w-40" />
-        <Skeleton className="h-4 w-full" />
+      <div className="border-t border-b border-border py-6 space-y-3">
+        <Skeleton className="h-3 w-48 mx-auto" />
+        <Skeleton className="h-3 w-36 mx-auto" />
+        <Skeleton className="h-6 w-72 mt-4" />
+        <Skeleton className="h-4 w-full mt-2" />
         <Skeleton className="h-4 w-4/5" />
       </div>
     );
   }
 
   return (
-    <div className="border-t border-b border-border/50 py-5 animate-in fade-in duration-300">
-      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-        {data?.digestTitle || "Signal & Noise"}
-        {data?.generatedAt && (
-          <span className="font-normal tracking-wide"> · {formatDateline(data.generatedAt)}</span>
-        )}
-      </p>
-      <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-        {data?.digest}
-      </p>
-      {data?.digestExtended && data.digestExtended.split("\n\n").map((para, i) => (
-        <p key={i} className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-          {para}
+    <div className="animate-in fade-in duration-300">
+      {/* Masthead */}
+      <div className="border-t border-b border-border py-3 text-center">
+        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+          Pharos Daily Digest
         </p>
-      ))}
-      <Link
-        href="/digest/"
-        className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-      >
-        Read all previous recaps &rarr;
-      </Link>
+        {data?.generatedAt && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {formatMasthead(data.generatedAt)}
+          </p>
+        )}
+      </div>
+
+      {/* Headline + Body */}
+      <div className="py-5 space-y-3">
+        <h2 className="text-2xl sm:text-3xl font-bold" style={SERIF}>
+          {data?.digestTitle || "Signal & Noise"}
+        </h2>
+
+        {data?.digestExtended && data.digestExtended.split("\n\n").map((para, i) => (
+          <p
+            key={i}
+            className="text-[1.1rem] leading-relaxed text-foreground/90 italic"
+            style={SERIF}
+          >
+            {para}
+          </p>
+        ))}
+
+        {showArchiveLink && (
+          <Link
+            href="/digest/"
+            className="inline-block mt-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Read all previous recaps &rarr;
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
