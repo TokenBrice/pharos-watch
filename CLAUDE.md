@@ -67,4 +67,5 @@ Read these when working on related code:
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
 - **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation, portfolio analyzer, stress test
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
+- **`docs/design-tokens.md`** — 3-layer design token architecture (primitives, semantic, component tokens)
 - **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
