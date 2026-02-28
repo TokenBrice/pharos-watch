@@ -24,6 +24,7 @@ import type {
   ReserveRisk,
   ReserveSlice,
 } from "./types";
+import { deriveDependencies } from "./reserve-templates";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -533,7 +534,7 @@ export function scoreDependencyRisk(
   meta: StablecoinMeta,
   overallScores: Map<string, number>,
 ): ReportCardDimension {
-  const deps = meta.dependencies;
+  const deps = deriveDependencies(meta);
   if (!deps || deps.length === 0) {
     return { grade: scoreToGrade(95), score: 95, detail: "Not dependent on upstream stablecoins" };
   }

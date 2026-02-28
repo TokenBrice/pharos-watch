@@ -6,6 +6,7 @@ import { computePegScore } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { sumPegBuckets } from "../../../src/lib/supply";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { deriveDependencies } from "../../../src/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "../../../src/lib/dead-stablecoins";
 import {
   METHODOLOGY_VERSION,
@@ -239,10 +240,8 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   // 8. Build dependency graph edge list
   const edges: { from: string; to: string }[] = [];
   for (const meta of TRACKED_STABLECOINS) {
-    if (meta.dependencies) {
-      for (const dep of meta.dependencies) {
-        edges.push({ from: dep.id, to: meta.id });
-      }
+    for (const dep of deriveDependencies(meta)) {
+      edges.push({ from: dep.id, to: meta.id });
     }
   }
 
@@ -312,7 +311,7 @@ function computeCard(
     custodyModel: resilienceFactors.custodyModel,
     governanceTier: meta.flags.governance as GovernanceType,
     governanceQuality: resolveGovernanceQuality(meta.flags.governance as GovernanceType, meta),
-    dependencies: meta.dependencies ?? [],
+    dependencies: deriveDependencies(meta),
     navToken,
   };
 
@@ -325,7 +324,7 @@ function computeCard(
     dimensions,
     ratedDimensions: overall.ratedDimensions,
     rawInputs,
-    ...(meta.dependencies && meta.dependencies.length > 0 ? { dependencies: meta.dependencies } : {}),
+    ...(() => { const d = deriveDependencies(meta); return d.length > 0 ? { dependencies: d } : {}; })(),
     isDefunct: false,
   };
 }
@@ -344,7 +343,7 @@ function topologicalOrder(metas: StablecoinMeta[]): StablecoinMeta[] {
     visited.add(id);
     const meta = metaMap.get(id);
     if (!meta) return;
-    for (const dep of meta.dependencies ?? []) {
+    for (const dep of deriveDependencies(meta)) {
       if (metaMap.has(dep.id)) visit(dep.id);
     }
     result.push(meta);
