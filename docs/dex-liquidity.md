@@ -13,7 +13,7 @@
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain->15, 2->40, 3->60, 5->80, 8+->100 |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (15 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (15 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins with no on-chain AMM presence, e.g. KAG/KAU on Kinesis Exchange).
 
 ### Quality Multipliers (v2)
 
@@ -31,6 +31,7 @@ Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve F
 | Balancer Stable | 0.85x | project contains `balancer` + stable pattern |
 | Balancer Weighted | 0.4x | project contains `balancer`, non-stable |
 | Generic AMM | 0.3x | fallback |
+| Orderbook | 0.6x | CoinGecko tickers fallback (centralized exchange, no AMM) |
 
 ### Pool Quality Adjustments
 
@@ -76,6 +77,21 @@ Quality gates:
 - Generic quality multiplier (0.3x) unless the DEX ID matches a known protocol (same `GT_DEX_QUALITY` lookup)
 
 DexScreener pools are merged using the same `mergeGtPools()` logic — no balance ratio data, neutral organic fraction default (0.5).
+
+### CoinGecko Tickers Fallback (Orderbook DEXes)
+
+After DexScreener, any coin still at zero pools that has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange).
+
+Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-denominated quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
+
+Per-exchange aggregation: all valid tickers from the same exchange are summed into one synthetic pool entry:
+- `syntheticTvl = totalVolume × 3` (assumes ~33% daily turnover — conservative for precious-metals orderbooks)
+- `poolType: "orderbook"`, quality multiplier 0.6x
+- Maturity defaults to 365 days (established exchange)
+
+The 0.6x quality multiplier reflects that orderbook exchanges are legitimate but centralized (not fully on-chain), placing them between Aerodrome volatile (0.4x) and Balancer stable (0.85x).
+
+Uses the same `mergeGtPools()` merge path — no new data structures required.
 
 ### Pool Stress Index (0-100)
 

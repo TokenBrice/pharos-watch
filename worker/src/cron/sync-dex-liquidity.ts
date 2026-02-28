@@ -73,6 +73,7 @@ const QUALITY_MULTIPLIERS: Record<string, number> = {
   "balancer-stable": 0.85,
   "balancer-weighted": 0.4,
   "generic": 0.3,
+  "orderbook": 0.6,
 };
 
 // GeckoTerminal API
@@ -2482,6 +2483,164 @@ async function fetchDsFallbackPools(
 }
 
 // ---------------------------------------------------------------------------
+// CoinGecko tickers fallback for orderbook DEXes
+// ---------------------------------------------------------------------------
+
+const CG_TICKERS_BASE = "https://api.coingecko.com/api/v3/coins";
+const CG_TICKERS_RATE_MS = 2500; // conservative: ~24 req/min well under free-tier limit
+
+/**
+ * Synthetic TVL factor for orderbook exchanges.
+ * volume × factor = estimated standing order-book depth.
+ * 3× assumes ~33% daily turnover, conservative for precious-metals markets.
+ */
+const ORDERBOOK_TVL_FACTOR = 3;
+
+/** CoinGecko coin IDs we accept as USD-equivalent quote assets */
+const USD_QUOTE_COIN_IDS = new Set([
+  "tether", "usd-coin", "dai", "true-usd", "frax", "c1usd",
+  "binance-usd", "paxos-standard",
+]);
+
+interface CgTicker {
+  base: string;
+  target: string;
+  market: { name: string; identifier: string };
+  converted_last: { usd: number };
+  converted_volume: { usd: number };
+  bid_ask_spread_percentage: number;
+  is_anomaly: boolean;
+  is_stale: boolean;
+  trust_score: string | null;
+  target_coin_id?: string;
+}
+
+/**
+ * CoinGecko tickers fallback: fetch trading data for zero-pool coins that
+ * are listed on orderbook exchanges tracked by CoinGecko (e.g. Kinesis Money).
+ *
+ * Runs after DexScreener; only targets coins that still have 0 pools AND
+ * have a geckoId configured. Creates one synthetic GtNewPool per exchange,
+ * aggregating all non-stale USD-denominated pairs.
+ *
+ * Synthetic TVL = totalVolume × ORDERBOOK_TVL_FACTOR (order-book depth proxy).
+ */
+async function fetchCgTickersFallback(
+  metrics: Map<string, LiquidityMetrics>,
+): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
+  const newPools = new Map<string, GtNewPool[]>();
+  const priceObs = new Map<string, DexPriceObs[]>();
+
+  const targetCoins = TRACKED_STABLECOINS.filter((meta) => {
+    if (!meta.geckoId) return false;
+    const m = metrics.get(meta.id);
+    return !m || m.poolCount === 0;
+  });
+
+  if (targetCoins.length === 0) {
+    console.log("[dex-liquidity] CG tickers fallback: no zero-pool coins with geckoId, skipping");
+    return { newPools, priceObs };
+  }
+
+  console.log(`[dex-liquidity] CG tickers fallback: querying ${targetCoins.length} coins`);
+
+  for (const meta of targetCoins) {
+    try {
+      const url = `${CG_TICKERS_BASE}/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`;
+      const res = await fetchWithRetry(url, {
+        headers: { "User-Agent": USER_AGENT },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res?.ok) {
+        await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));
+        continue;
+      }
+
+      const data = (await res.json()) as { tickers?: CgTicker[] };
+      const tickers = data?.tickers ?? [];
+
+      // Keep: non-stale, non-anomaly, has trust score, USD-denominated quote, min $1k volume
+      const valid = tickers.filter((t) => {
+        if (t.is_stale || t.is_anomaly || !t.trust_score) return false;
+        const isUsdQuote =
+          t.target === "USD" ||
+          (t.target_coin_id && USD_QUOTE_COIN_IDS.has(t.target_coin_id));
+        return isUsdQuote && t.converted_volume.usd >= 1_000;
+      });
+
+      if (valid.length === 0) {
+        await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));
+        continue;
+      }
+
+      // Aggregate by exchange identifier
+      const byExchange = new Map<string, { name: string; volume: number; price: number }>();
+      for (const t of valid) {
+        const id = t.market.identifier;
+        const entry = byExchange.get(id);
+        if (entry) {
+          entry.volume += t.converted_volume.usd;
+        } else {
+          byExchange.set(id, {
+            name: t.market.name,
+            volume: t.converted_volume.usd,
+            price: t.converted_last.usd,
+          });
+        }
+      }
+
+      const pools: GtNewPool[] = [];
+      for (const [exchangeId, exch] of byExchange) {
+        const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
+
+        // Price observation (only if price is plausible — skip if near 0)
+        if (exch.price > 0) {
+          const obs = priceObs.get(meta.id) ?? [];
+          obs.push({
+            price: exch.price,
+            tvl: syntheticTvl,
+            chain: "orderbook",
+            protocol: `cg-ticker-${exchangeId}`,
+          });
+          priceObs.set(meta.id, obs);
+        }
+
+        pools.push({
+          address: `orderbook-${exchangeId}`,
+          chain: "orderbook",
+          dexId: exchangeId,
+          name: exch.name,
+          tvlUsd: syntheticTvl,
+          volume24hUsd: exch.volume,
+          qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
+          maturityDays: 365,
+          poolType: "orderbook",
+          price: exch.price,
+          // Use "USDC" as quote symbol so computePoolPairQuality returns 1.0
+          symbol: `${meta.symbol} / USDC`,
+        });
+      }
+
+      if (pools.length > 0) {
+        newPools.set(meta.id, pools);
+        const totalVol = pools.reduce((s, p) => s + p.volume24hUsd, 0);
+        console.log(
+          `[dex-liquidity] CG tickers fallback: ${meta.symbol} → ${pools.length} exchange(s), ` +
+          `$${Math.round(totalVol).toLocaleString()} vol/day`,
+        );
+      }
+
+      await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));
+    } catch (err) {
+      console.warn(`[dex-liquidity] CG tickers fallback error for ${meta.symbol}:`, err);
+    }
+  }
+
+  console.log(`[dex-liquidity] CG tickers fallback: done, ${newPools.size} coins with orderbook data`);
+  return { newPools, priceObs };
+}
+
+// ---------------------------------------------------------------------------
 // Main orchestrator
 // ---------------------------------------------------------------------------
 
@@ -2605,6 +2764,19 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
     }
   } catch (err) {
     console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
+  }
+
+  // 5d. CoinGecko tickers fallback for orderbook DEXes (e.g. Kinesis Exchange for KAG/KAU)
+  try {
+    const cgTickersFallback = await fetchCgTickersFallback(metrics);
+    mergeGtPools(metrics, cgTickersFallback.newPools);
+    for (const [id, obs] of cgTickersFallback.priceObs) {
+      const existing = priceObservations.get(id) ?? [];
+      existing.push(...obs);
+      priceObservations.set(id, existing);
+    }
+  } catch (err) {
+    console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
   }
 
   // 6. Compute composite scores per stablecoin
