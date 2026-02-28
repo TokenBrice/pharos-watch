@@ -945,6 +945,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x6a7661795c374c0bfc635934efaddff3a7ee23b6", decimals: 18 },
       { chain: "base", address: "0x4621b7a9c75199271f773ebd9a499dbd165c3191", decimals: 18 },
       { chain: "optimism", address: "0x8ae125e8653821e851f12a49f7765db9a9ce7384", decimals: 18 },
+      { chain: "fantom", address: "0x3129662808bec728a27ab6a6b9afd3cbaca8a43c", decimals: 18 },
+      { chain: "bsc", address: "0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840", decimals: 18 },
     ],
     reserves: [
       // Source: Inverse Finance transparency, DefiLlama Feb 2026. Confidence: Medium
@@ -1613,6 +1615,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "NYDFS", license: "Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", decimals: 2 },
+      { chain: "near", address: "056fd409e1d7a124bd7017459dfea2f387b6d5cd.factory.bridge.near", decimals: 2 },
     ],
     reserves: [
       { name: "U.S. Treasury bills (<=3 month maturity)", pct: 62, risk: "very-low" },
@@ -1632,6 +1635,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "OCC", license: "National Trust Charter" },
     contracts: [
       { chain: "ethereum", address: "0x8e870d67f660d95d5be530380d0ec0bd388289e1", decimals: 18 },
+      { chain: "solana", address: "HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM", decimals: 6 },
     ],
     reserves: [
       { name: "U.S. Treasury bills (<90 day maturity)", pct: 60, risk: "very-low" },
@@ -1735,6 +1739,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x57ab1ec28d129707052df4df418d58a2d46d5f51", decimals: 18 },
       { chain: "optimism", address: "0x8c6f28f2f1a3c87f0f938b96d27520d9751ec8d9", decimals: 18 },
+      { chain: "fantom", address: "0x0e1694483ebb3b74d3054e383840c6cf011e518e", decimals: 18 },
+      { chain: "arbitrum", address: "0xa970af1a584579b618be4d69ad6f73459d112f95", decimals: 18 },
     ],
     collateralQuality: "exotic",
     reserves: [
@@ -1802,6 +1808,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 },
       { chain: "optimism", address: "0xc40f949f8a4e094d1b49a23ea9241d289b7b2819", decimals: 18 },
       { chain: "arbitrum", address: "0x93b346b6bc2548da6a1e7d98e9a421b42541425b", decimals: 18 },
+      { chain: "zksync", address: "0x503234f203fc7eb888eec8513210612a43cf6115", decimals: 18 },
+      { chain: "base", address: "0x368181499736d0c0cc614dbb145e2ec1ac86b8c6", decimals: 18 },
+      { chain: "polygon", address: "0x23001f892c0c82b79303edc9b9033cd190bb21c7", decimals: 18 },
     ],
     reserves: [
       { name: "ETH", pct: 100, risk: "very-low" },
@@ -1996,6 +2005,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0x39b8b6385416f4ca36a20319f70d28621895279d", decimals: 18 },
       { chain: "gnosis", address: "0x420ca0f9b9b604ce0fd9c18ef134c705e5fa3430", decimals: 18 },
+      { chain: "linea", address: "0x3ff47c5bf409c86533fe1f4907524d304062428d", decimals: 18 },
+      { chain: "scroll", address: "0xd7bb130a48595fcdf9480e36c1ae97ff2938ac21", decimals: 18 },
+      { chain: "arbitrum", address: "0x0c06ccf38114ddfc35e07427b9424adcca9f44f8", decimals: 18 },
+      { chain: "polygon", address: "0xe0aea583266584dafbb3f9c3211d5588c73fea8d", decimals: 18 },
     ],
     reserves: [
       { name: "State Street EUR Liquidity LVNAV Fund (AAA-rated)", pct: 70, risk: "very-low" },
@@ -2106,6 +2119,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://www.bucketprotocol.io/" },
       { label: "Twitter", url: "https://x.com/bucket_protocol" },
       { label: "Docs", url: "https://docs.bucketprotocol.io/" },
+    ],
+    contracts: [
+      { chain: "sui", address: "0xce7ff77a83ea0cb6fd39bd8748e2ec89a3f41e8efdc3f4eb123e0ca37b184db2::buck::BUCK", decimals: 9 },
     ],
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -2341,6 +2357,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "Germany" },
     contracts: [
       { chain: "celo", address: "0x765de816845861e75a25fca122bb6898b8b1282a", decimals: 18 },
+      { chain: "near", address: "cusd.token.a11bd.near", decimals: 24 },
     ],
     proofOfReserves: { type: "self-reported", url: "https://reserve.mento.org/" },
     chainTier: "established-alt-l1",
@@ -2371,6 +2388,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
       { chain: "arbitrum", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
       { chain: "optimism", address: "0xcb8fa9a76b8e203d8c3797bf438d8fb81ea3326a", decimals: 18 },
+      { chain: "fantom", address: "0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e", decimals: 18 },
     ],
     collateralQuality: "exotic",
     reserves: [
@@ -3021,6 +3039,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base",      address: "0x4ed9df25d38795a47f52614126e47f564d37f347", decimals: 18 },
       { chain: "polygon",   address: "0xe4095d9372e68d108225c306a4491cacfb33b097", decimals: 18 },
       { chain: "celo",      address: "0x9346f43c1588b6df1d52bdd6bf846064f92d9cba", decimals: 18 },
+      { chain: "solana", address: "C4Kkr9NZU3VbyedcgutU6LKmi6MKz81sx6gRmk5pX519", decimals: 9 },
+      { chain: "xrpl", address: "VEUR-rLPtwF4FZi8bNVmbQ8JgoDUooozhwMNXr3", decimals: 6 },
     ],
     reserves: [
       { name: "Euro cash and cash equivalents (bank/custody accounts)", pct: 100, risk: "very-low" },
