@@ -50,6 +50,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 1-10 ────────────────────────────────────────────────────────
   usd("1", "Tether", "USDT", "rwa-backed", "centralized", {
     geckoId: "tether",
+    deploymentModel: "native-multichain",
     collateral: "U.S. Treasury bills and repurchase agreements (~92%), secured loans, gold, Bitcoin, and other investments; quarterly attestations by BDO Italia",
     pegMechanism: "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
     proofOfReserves: { type: "independent-audit", url: "https://tether.to/en/transparency", provider: "BDO Italia" },
@@ -92,6 +93,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("2", "USD Coin", "USDC", "rwa-backed", "centralized", {
     geckoId: "usd-coin",
+    deploymentModel: "native-multichain",
     collateral: "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
     pegMechanism: "Direct 1:1 redemption through Circle",
     proofOfReserves: { type: "independent-audit", url: "https://www.circle.com/transparency", provider: "Deloitte" },
@@ -179,6 +181,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "aptos", address: "0xf37a8864fe737eb8ec2c2931047047cbaed1beed3fb0e5b7c5526dafd3b9c2e9", decimals: 6 },
       { chain: "solana", address: "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT", decimals: 9 },
     ],
+    deploymentModel: "third-party-bridge",
     collateralQuality: "exotic",
     custodyModel: "cex",
     reserves: [
@@ -193,6 +196,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.30, type: "mechanism" }],
     canBeBlacklisted: "possible",
+    deploymentModel: "third-party-bridge",
     collateralQuality: "rwa",
     custodyModel: "institutional",
     collateral: "RWA (U.S. Treasuries ~40%), USDC via PSM (~30%), crypto (ETH/wstETH ~20%), other vaults; USDS is the upgraded DAI (1:1 swap), same vault system",
@@ -241,6 +245,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "dai",
     governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.35, type: "mechanism" }],
+    deploymentModel: "canonical-bridge",
     collateralQuality: "rwa",
     custodyModel: "institutional",
     collateral: "Multi-collateral: RWA (U.S. Treasuries via Spark/BlockTower ~40%), USDC via LitePSM (~33%), ETH/wstETH (~20%), WBTC (~5%), other vaults; managed by Sky/MakerDAO governance",
@@ -271,6 +276,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("120", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
     geckoId: "paypal-usd",
+    deploymentModel: "third-party-bridge",
     collateral: "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
     pegMechanism: "Direct 1:1 redemption through PayPal/Paxos",
     proofOfReserves: { type: "independent-audit", url: "https://www.paxos.com/pyusd-transparency", provider: "KPMG" },
@@ -474,6 +480,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
     rwa: true,
     geckoId: "usdtb",
+    deploymentModel: "third-party-bridge",
     collateral: "~90% BlackRock USD Institutional Digital Liquidity Fund (BUIDL), investing in cash, U.S. Treasury Bills/Notes, and repurchase agreements; remainder in USDC stablecoin reserve for rapid redemptions; issued by Anchorage Digital Bank N.A.; U.S. Bank acts as reserve custodian",
     pegMechanism: "Direct 1:1 mint and redemption; BUIDL shares redeemable 24/7 via atomic swap with Securitize; LayerZero OFT cross-chain transfers",
     proofOfReserves: { type: "independent-audit", url: "https://www.anchorage.com/platform/usdtb-reserve-attestations", provider: "Big Four accounting firm via Anchorage Digital Bank" },
@@ -592,6 +599,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     geckoId: "gho",
+    deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
     dependencies: [{ id: "1", weight: 0.20 }, { id: "2", weight: 0.20 }],
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -670,6 +678,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("119", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
     geckoId: "first-digital-usd",
+    deploymentModel: "native-multichain",
     collateral: "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
     pegMechanism: "Direct 1:1 redemption through FD121 (BVI) Limited; reserves custodied by First Digital Trust Limited",
     proofOfReserves: { type: "independent-audit", url: "https://www.firstdigitallabs.com/transparency", provider: "IAPA International / Prism" },
@@ -721,6 +730,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
   eur("50", "EURC", "EURC", "rwa-backed", "centralized", {
     geckoId: "euro-coin",
+    deploymentModel: "native-multichain",
     collateral: "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
     pegMechanism: "Direct 1:1 redemption through Circle Internet Financial Europe SAS (licensed EMI under MiCA); Circle Mint enables institutional mint/redeem at zero fees with near-instant settlement",
     proofOfReserves: { type: "independent-audit", url: "https://www.circle.com/transparency", provider: "Deloitte" },
@@ -796,6 +806,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
     geckoId: "crvusd",
+    deploymentModel: "third-party-bridge",
     dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
@@ -874,6 +885,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
   usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
     geckoId: "frax",
+    deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.35, type: "mechanism" }],
     collateral: "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
@@ -904,6 +916,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
     geckoId: "dola-usd",
+    deploymentModel: "third-party-bridge",
     dependencies: [{ id: "209", weight: 0.08, type: "mechanism" }],
     governanceQuality: "dao-governance",
     collateral: "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
@@ -1734,6 +1747,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
     geckoId: "liquity-usd",
+    deploymentModel: "canonical-bridge",
     collateral: "ETH only; 110% minimum collateralization ratio per Trove (CDP), with a one-time borrowing fee instead of ongoing interest",
     pegMechanism: "Overcollateralized ETH CDPs (Troves) with three peg mechanisms: (1) hard floor at $1 via direct on-chain redemption of LUSD for $1 of ETH from the riskiest Trove; (2) Stability Pool absorbs liquidations at 110% collateral ratio; (3) algorithmically adjusted borrowing and redemption fees throttle arbitrage volume",
     links: [
@@ -1787,6 +1801,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 81-90 ───────────────────────────────────────────────────────
   usd("10", "Magic Internet Money", "MIM", "crypto-backed", "centralized-dependent", {
     geckoId: "magic-internet-money",
+    deploymentModel: "third-party-bridge",
     dependencies: [{ id: "1", weight: 0.2 }, { id: "2", weight: 0.2 }, { id: "5", weight: 0.2 }],
     collateral: "Interest-bearing tokens (yvWETH, yvUSDC, yvDAI, yvUSDT, xSUSHI, stETH, WBTC, WETH) deposited as collateral into Abracadabra cauldrons (isolated lending markets)",
     pegMechanism: "CDP-style cauldrons with overcollateralization and automatic liquidations (4% liquidation fee); borrowers are incentivized to buy MIM below $1 to repay debt; 0.5% borrow/interest fees accrue to sSPELL stakers and governance treasury",
