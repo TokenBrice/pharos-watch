@@ -24,7 +24,7 @@ CG Platform Name         → Our Chain ID
 ethereum                 → ethereum
 arbitrum-one             → arbitrum
 base                     → base
-optimism                 → optimism
+optimistic-ethereum      → optimism
 polygon-pos              → polygon
 avalanche                → avalanche
 binance-smart-chain      → bsc
@@ -49,7 +49,7 @@ world-chain              → worldchain
 unichain                 → unichain
 ink                      → ink
 polkadot                 → polkadot
-xrp-ledger               → xrpl
+xrp                      → xrpl
 moonriver                → moonriver
 klay-token               → klaytn
 plume-network            → plume
