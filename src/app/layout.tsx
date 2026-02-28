@@ -61,6 +61,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: "@PharosWatch",
+    creator: "@TokenBrice",
   },
   alternates: {
     canonical: "https://pharos.watch/",
