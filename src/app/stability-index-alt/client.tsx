@@ -25,6 +25,8 @@ import { CRON_15MIN } from "@/hooks/use-api-query";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+import { PsiAtmosphere } from "@/components/psi-atmosphere";
+import type { ConditionBand } from "@/lib/psi-colors";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -599,7 +601,9 @@ export function StabilityIndexClient() {
   const hexColor = PSI_HEX_COLORS[displayBand] ?? "#888";
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="relative">
+      <PsiAtmosphere band={displayBand as ConditionBand} />
+      <div className="space-y-6 animate-in fade-in duration-300">
       <StaleDataBanner
         queries={[{ label: "Stability Index", dataUpdatedAt, staleTime: CRON_15MIN }]}
       />
@@ -668,6 +672,7 @@ export function StabilityIndexClient() {
 
       {/* Methodology */}
       <Methodology />
+      </div>
     </div>
   );
 }
