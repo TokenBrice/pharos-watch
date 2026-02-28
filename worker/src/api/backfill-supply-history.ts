@@ -48,7 +48,9 @@ async function backfillCommodity(
       prices?: [number, number][];
     };
 
-    // Extract circulating_supply for sanity check
+    // Extract current circulating_supply as proxy for historical sanity check.
+    // Works for slow-growth RWAs (e.g. physical silver vaults) where today's
+    // supply is a reliable anchor against corrupt historical market_caps.
     let circulatingSupply: number | undefined;
     if (coinRes.ok) {
       const coinData = (await coinRes.json()) as {
