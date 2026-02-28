@@ -145,11 +145,11 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
           </div>
         </div>
 
-        {/* Dependency callout for CeFi-Dependent coins */}
+        {/* Dependency callout */}
         {card.dependencies && card.dependencies.length > 0 && (
           <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
             <p className="mb-2 text-sm font-medium text-blue-500">
-              CeFi-Dependent
+              Dependencies
             </p>
             <p className="text-sm text-muted-foreground">
               This stablecoin has exposure to{" "}
