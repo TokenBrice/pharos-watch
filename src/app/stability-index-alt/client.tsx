@@ -638,7 +638,7 @@ export function StabilityIndexClient() {
           </div>
 
           {/* Component breakdown + history stats */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/50 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 lg:border-t lg:border-border/50 lg:pt-4">
             <div className="flex items-center gap-5">
               {COMPONENT_DETAIL.map((c) => (
                 <div key={c.label} className="flex flex-col items-center gap-0.5">
