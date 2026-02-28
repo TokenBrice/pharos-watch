@@ -262,12 +262,14 @@ export function PortfolioClient() {
         concentrationHhi: null,
         bluechipGrade: null,
         canBeBlacklisted: false,
-        chainRisk: "ethereum",
+        chainTier: "ethereum",
+        deploymentModel: "single-chain",
         collateralQuality: "native",
         custodyModel: "onchain",
         governanceTier: "centralized",
         governanceQuality: "single-entity",
         dependencies: [],
+        navToken: false,
       },
     };
   }, [
