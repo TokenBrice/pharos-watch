@@ -64,18 +64,20 @@ export const DIMENSION_SHORT_LABELS: Record<DimensionKey, string> = {
 };
 
 /** Sorted descending by min — first match wins. Lowered 5pts in v4.0 to
- *  compensate for structural deflation from removing peg from the base. */
+ *  compensate for structural deflation from removing peg from the base.
+ *  Lowered another 5pts in v5.1 to fix C-range overcrowding after
+ *  blacklist/decentralization scoring adjustments. */
 export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
-  { grade: "A+", min: 92 },
-  { grade: "A", min: 88 },
-  { grade: "A-", min: 85 },
-  { grade: "B+", min: 80 },
-  { grade: "B", min: 75 },
-  { grade: "B-", min: 70 },
-  { grade: "C+", min: 65 },
-  { grade: "C", min: 60 },
-  { grade: "C-", min: 55 },
-  { grade: "D", min: 45 },
+  { grade: "A+", min: 87 },
+  { grade: "A", min: 83 },
+  { grade: "A-", min: 80 },
+  { grade: "B+", min: 75 },
+  { grade: "B", min: 70 },
+  { grade: "B-", min: 65 },
+  { grade: "C+", min: 60 },
+  { grade: "C", min: 55 },
+  { grade: "C-", min: 50 },
+  { grade: "D", min: 40 },
   { grade: "F", min: 0 },
 ];
 

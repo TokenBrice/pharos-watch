@@ -213,20 +213,20 @@ The ceiling ensures that a coin which fundamentally depends on an upstream stabl
 
 ## Grade Thresholds
 
-Lowered 5 points in v4.0 to compensate for structural deflation from removing peg from the base.
+Lowered 5 points in v4.0 to compensate for structural deflation from removing peg from the base. Lowered another 5 points in v5.1 to fix C-range overcrowding after blacklist/decentralization scoring adjustments.
 
 | Grade | Min Score |
 |-------|-----------|
-| A+ | 92 |
-| A | 88 |
-| A- | 85 |
-| B+ | 80 |
-| B | 75 |
-| B- | 70 |
-| C+ | 65 |
-| C | 60 |
-| C- | 55 |
-| D | 45 |
+| A+ | 87 |
+| A | 83 |
+| A- | 80 |
+| B+ | 75 |
+| B | 70 |
+| B- | 65 |
+| C+ | 60 |
+| C | 55 |
+| C- | 50 |
+| D | 40 |
 | F | 0 |
 | NR | null score |
 
