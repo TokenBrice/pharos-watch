@@ -43,6 +43,7 @@ export const DS_CHAIN_MAP: Record<string, string> = {
   soneium: "soneium",
   worldchain: "worldchain",
   taiko: "taiko",
+  megaeth: "megaeth",
 };
 
 /** Response shape from GET /tokens/v1/{chainId}/{address} */

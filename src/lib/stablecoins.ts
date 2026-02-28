@@ -2392,6 +2392,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Docs", url: "https://docs.megaeth.com" },
     ],
     custodyModel: "institutional",
+    contracts: [
+      { chain: "megaeth", address: "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7", decimals: 18 },
+    ],
     reserves: [
       { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)", pct: 90, risk: "low" },
       { name: "Liquid stablecoins (USDC/USDT) for redemptions", pct: 10, risk: "low" },
