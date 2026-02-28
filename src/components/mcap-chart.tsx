@@ -12,11 +12,75 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
-import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
+import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+
+function McapXTick({
+  x,
+  y,
+  payload,
+  range,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value: number };
+  range: TimeRangeOption;
+}) {
+  if (x === undefined || y === undefined || !payload) return null;
+  const d = new Date(payload.value);
+  const isJan = d.getMonth() === 0;
+
+  if (range === "all") {
+    const month = d.toLocaleDateString("en-US", { month: "short" });
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0} y={0} dy={12}
+          textAnchor="middle"
+          fontSize={11}
+          fontFamily="var(--font-mono, monospace)"
+          fill={isJan ? "var(--color-foreground)" : "var(--color-muted-foreground)"}
+          fontWeight={isJan ? 600 : 400}
+        >
+          {month}
+        </text>
+        {isJan && (
+          <text
+            x={0} y={0} dy={23}
+            textAnchor="middle"
+            fontSize={10}
+            fontFamily="var(--font-mono, monospace)"
+            fill="var(--color-muted-foreground)"
+          >
+            {d.getFullYear()}
+          </text>
+        )}
+      </g>
+    );
+  }
+
+  const label =
+    range === "7d" || range === "30d"
+      ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0} y={0} dy={12}
+        textAnchor="middle"
+        fontSize={12}
+        fontFamily="var(--font-mono, monospace)"
+        fill="var(--color-muted-foreground)"
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
 
 interface McapChartProps {
   data: SupplyHistoryPoint[];
@@ -37,6 +101,37 @@ export function McapChart({ data, isLoading }: McapChartProps) {
 
   const { range, setRange, filteredData, options } = useTimeRangeFilter(chartData, "ts");
 
+  // Compute explicit monthly ticks for "all" range with adaptive spacing.
+  // Cursor always snaps to the first January on or after the data start,
+  // so year boundaries always fall on a tick regardless of step size.
+  const xTicks = useMemo(() => {
+    if (range !== "all" || filteredData.length === 0) return undefined;
+    const first = filteredData[0].ts;
+    const last = filteredData[filteredData.length - 1].ts;
+    const spanDays = (last - first) / 86400000;
+
+    let step = 1;
+    if (spanDays > 4 * 365) step = 6;
+    else if (spanDays > 2 * 365) step = 3;
+    else if (spanDays > 365) step = 2;
+
+    const ticks: number[] = [];
+    const d = new Date(first);
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    // For multi-year spans (step > 1), snap to the first January so year
+    // boundaries always land on a tick. For < 1 year, start from the first
+    // data month so the whole range gets labels.
+    if (step > 1 && d.getMonth() !== 0) {
+      d.setFullYear(d.getFullYear() + 1, 0, 1);
+    }
+    while (d.getTime() <= last) {
+      ticks.push(d.getTime());
+      d.setMonth(d.getMonth() + step);
+    }
+    return ticks;
+  }, [range, filteredData]);
+
   const yDomain = useMemo((): [number, number | string] => {
     if (range === "all" || filteredData.length === 0) return [0, "auto"];
     const values = filteredData.map((d) => d.mcap);
@@ -56,7 +151,7 @@ export function McapChart({ data, isLoading }: McapChartProps) {
         {filteredData.length > 0 ? (
           <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Market cap chart showing ${filteredData.length} data points`}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
+            <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: range === "all" ? 32 : 20, left: 5 }}>
               <defs>
                 <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
@@ -69,16 +164,12 @@ export function McapChart({ data, isLoading }: McapChartProps) {
                 type="number"
                 scale="time"
                 domain={["dataMin", "dataMax"]}
-                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+                ticks={xTicks}
+                interval={range === "all" ? 0 : "preserveStartEnd"}
+                tick={<McapXTick range={range} />}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(ts: number) => {
-                  const d = new Date(ts);
-                  if (range === "7d" || range === "30d") {
-                    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  }
-                  return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-                }}
+                height={range === "all" ? 44 : 30}
               />
               <YAxis
                 tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}

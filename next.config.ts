@@ -8,6 +8,16 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["recharts", "lucide-react"],
   },
+  // Rewrites are ignored in static exports — only active during `next dev`.
+  // Proxies /api/* to the prod worker so local dev has real data without CORS issues.
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://api.pharos.watch/api/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
