@@ -162,6 +162,11 @@ export function scorePegStability(
     return { grade: "NR", score: null, detail: "Insufficient peg tracking data" };
   }
 
+  // No current price data AND no historical depeg events → no peg signal at all
+  if (peg.currentDeviationBps === null && peg.eventCount === 0) {
+    return { grade: "NR", score: null, detail: "No price data available for peg evaluation" };
+  }
+
   let score = Math.round(Math.max(0, Math.min(100, peg.pegScore)));
   if (peg.activeDepeg) score = Math.min(65, score);
 
