@@ -6,7 +6,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { GradeBadge } from "@/components/grade-badge";
 import { formatCurrency } from "@/lib/format";
 import type { StressTestState } from "@/hooks/use-stress-test";
-import type { ReportCard, ReportCardGrade } from "@/lib/types";
+import type { ReportCardGrade } from "@/lib/types";
 import { Network, Play } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 
@@ -28,7 +28,6 @@ function severityArrow(delta: number): string {
 
 interface StressTestPanelProps {
   stressTest: StressTestState;
-  cards: ReportCard[] | undefined;
   mcapMap: Map<string, number>;
   logos?: Record<string, string>;
 }
@@ -37,7 +36,7 @@ interface StressTestPanelProps {
 // StressTestPanel
 // ---------------------------------------------------------------------------
 
-export function StressTestPanel({ stressTest, cards, mcapMap, logos }: StressTestPanelProps) {
+export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelProps) {
   return (
     <Card>
       {/* Header */}

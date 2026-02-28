@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Wrangler auto-generated build artifacts
+    "worker/.wrangler/**",
   ]),
   {
     // Downgrade React Compiler rules to warnings — these flag valid patterns

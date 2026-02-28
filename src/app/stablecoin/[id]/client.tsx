@@ -6,7 +6,6 @@ import Link from "next/link";
 import { ArrowLeft, ArrowLeftRight, Flag } from "lucide-react";
 import { FeedbackModal } from "@/components/feedback-modal";
 import { useSupplyHistory, useStablecoins } from "@/hooks/use-stablecoins";
-import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange, formatSupply } from "@/lib/format";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
@@ -62,7 +61,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError, dataUpdatedAt: listUpdatedAt } = useStablecoins();
-  const { data: depegData } = useDepegEvents(id);
   const { data: pegSummaryData } = usePegSummary();
   const { data: liquidityMap } = useDexLiquidity();
   const { data: reportCardsData } = useReportCards();

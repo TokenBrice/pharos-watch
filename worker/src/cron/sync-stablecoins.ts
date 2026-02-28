@@ -2,7 +2,7 @@ import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice, fetchDualPrimaryPrices } from "./enrich-prices";
-import type { PeggedAsset, DefiLlamaCoinPrice, EnrichmentStats, DualPriceStats } from "./enrich-prices";
+import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
@@ -10,7 +10,7 @@ import { confirmPendingDepegs } from "./confirm-pending-depegs";
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import type { StablecoinMeta, PriceConfidence } from "../../../src/lib/types";
+import type { StablecoinMeta } from "../../../src/lib/types";
 
 // Derive commodity + CG-only fiat token lists from the central registry
 const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(

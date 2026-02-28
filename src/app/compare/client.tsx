@@ -266,7 +266,7 @@ export function CompareClient() {
         };
       })
       .filter((s): s is NonNullable<typeof s> => s !== null);
-  }, [selectedIds, detailQueries]);
+  }, [selectedIds, detailQueries, CHART_COLORS]);
 
   const detailLoading = detailQueries.some((q) => q.isLoading);
 
@@ -448,7 +448,7 @@ export function CompareClient() {
     } finally {
       setShareLoading(false);
     }
-  }, [buildShareData]);
+  }, [buildShareData, comparisonCoins]);
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
   const slots = [];

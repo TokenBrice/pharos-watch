@@ -257,7 +257,7 @@ export function CommandPalette() {
   let flatIndex = 0;
 
   return createPortal(
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+     
     <div
       className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
       onClick={closePalette}
@@ -265,7 +265,7 @@ export function CommandPalette() {
         if (e.key === "Escape") closePalette();
       }}
     >
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      { }
       <div
         className="w-full max-w-lg mx-auto mt-[20vh] bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}

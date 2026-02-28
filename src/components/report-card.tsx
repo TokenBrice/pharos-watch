@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { ReportCard as ReportCardType, DimensionKey } from "@/lib/types";
+import type { ReportCard as ReportCardType } from "@/lib/types";
 import {
   REPORT_CARD_GRADE_COLORS,
   DIMENSION_LABELS,

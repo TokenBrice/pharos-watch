@@ -14,7 +14,6 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const peg = PEG_BADGE_STYLES[meta.flags.pegCurrency];
   const hasDescription = meta.collateral || meta.pegMechanism;
   const isDecentralized = meta.flags.governance === "decentralized";
-  const hasJurisdiction = !isDecentralized && meta.jurisdiction;
   const hasLinks = meta.links && meta.links.length > 0;
 
   return (

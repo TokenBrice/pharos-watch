@@ -3,7 +3,6 @@ import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { TRACKED_IDS, TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { formatCurrency } from "../../../src/lib/format";
 import { computePegScore } from "../../../src/lib/peg-score";
-import { derivePegRates } from "../../../src/lib/peg-rates";
 import {
   scorePegStability,
   scoreLiquidity,
@@ -430,16 +429,12 @@ export async function generateDailyDigest(
     if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
 
     // Load peg + liquidity data needed for scoring
-    const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
     let peggedAssets: StablecoinData[] = [];
-    let fxFallbackRates: Record<string, number> | undefined;
     if (stablecoinsCache) {
-      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
+      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
       peggedAssets = parsed.peggedAssets;
-      fxFallbackRates = parsed.fxFallbackRates;
     }
     const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-    const { rates: pegRates } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
 
     // Load depeg events (4-year window) + dex liquidity
     const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);

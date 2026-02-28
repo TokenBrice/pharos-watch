@@ -229,7 +229,6 @@ export function ReportCardsClient() {
       {/* Contagion Map panel */}
       <StressTestPanel
         stressTest={stressTest}
-        cards={reportData?.cards}
         mcapMap={mcapMap}
         logos={logos}
       />

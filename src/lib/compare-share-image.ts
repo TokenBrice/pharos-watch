@@ -220,7 +220,7 @@ function drawRadarSection(
       const angle = startAngle + i * angleStep;
       const px = cx + r * Math.cos(angle);
       const py = radarCY + r * Math.sin(angle);
-      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      if (i === 0) { ctx.moveTo(px, py); } else { ctx.lineTo(px, py); }
     }
     ctx.closePath();
     ctx.strokeStyle = ring === 5 ? "rgba(148, 163, 184, 0.25)" : "rgba(148, 163, 184, 0.1)";
@@ -259,7 +259,7 @@ function drawRadarSection(
       const r = ((coin.scores[i] ?? 0) / 100) * RADAR_R;
       const px = cx + r * Math.cos(angle);
       const py = radarCY + r * Math.sin(angle);
-      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      if (i === 0) { ctx.moveTo(px, py); } else { ctx.lineTo(px, py); }
     }
     ctx.closePath();
     ctx.fillStyle = coin.color + "33"; // ~20 % opacity

@@ -7,7 +7,7 @@ import {
   PolarAngleAxis,
   ResponsiveContainer,
 } from "recharts";
-import type { ReportCard, DimensionKey } from "@/lib/types";
+import type { ReportCard } from "@/lib/types";
 import { DIMENSION_LABELS, DIMENSION_SHORT_LABELS, DIMENSION_ORDER, gradeRange, GRADE_RADAR_COLORS } from "@/lib/report-cards";
 
 // ---------------------------------------------------------------------------
