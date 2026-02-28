@@ -65,6 +65,49 @@ ronin                    → ronin
 bob-network              → bob
 corn-network             → corn
 berachain                → berachain
+kava                     → kava
+fraxtal                  → fraxtal
+taiko                    → taiko
+polygon-zkevm            → polygon-zkevm
+aurora                   → aurora
+moonbeam                 → moonbeam
+boba                     → boba
+soneium                  → soneium
+zircuit                  → zircuit
+metis-andromeda          → metis
+astar                    → astar
+plasma                   → plasma
+morph-l2                 → morph-l2
+swellchain               → swellchain
+x-layer                  → xlayer
+apechain                 → apechain
+bittorrent               → bittorrent
+tomochain                → viction
+flare-network            → flare
+songbird                 → songbird
+bitlayer                 → bitlayer
+tezos                    → tezos
+cardano                  → cardano
+internet-computer        → icp
+noble                    → noble
+osmosis                  → osmosis
+mantra                   → mantra
+provenance               → provenance
+hydration                → hydration
+xdai                     → gnosis
+```
+
+### CG Platforms to Skip (dead/deprecated/legacy)
+
+These CG platform names should be silently skipped — do not log them as unmapped:
+
+```
+harmony-shard-0          (Harmony — effectively dead)
+evmos                    (Evmos — mostly dead)
+terra                    (Terra Classic — dead)
+terra-2                  (Terra 2 — dead)
+q-mainnet                (Q — obscure, negligible activity)
+binancecoin              (BNB Beacon Chain / BEP2 — legacy, not smart contract)
 ```
 
 ### Process (Per Coin)
