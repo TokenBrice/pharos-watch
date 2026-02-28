@@ -12,6 +12,7 @@ const LAST_EDITED: Record<string, string> = {
   "/privacy/": "2026-02-26",
   "/compare/": "2026-02-26",
   "/methodology/": "2026-02-28",
+  "/methodology/scoring-changelog/": "2026-02-28",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -83,6 +84,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(LAST_EDITED["/methodology/"]!),
       changeFrequency: "monthly",
       priority: 0.6,
+    },
+    {
+      url: "https://pharos.watch/methodology/scoring-changelog/",
+      lastModified: new Date(LAST_EDITED["/methodology/scoring-changelog/"]!),
+      changeFrequency: "monthly",
+      priority: 0.4,
     },
     {
       url: "https://pharos.watch/about/",

@@ -34,7 +34,7 @@ export default function MethodologyPage() {
                 name: "How does Pharos grade stablecoins?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (10%), and Dependency Risk (30%) — then applies a peg stability power-curve multiplier. When some dimensions lack data, their weight is redistributed proportionally. Grades range from A+ (92–100) to F (0–44), with NR for insufficient data.",
+                  text: "Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied instead of redistributing the weight. Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at v5.4.",
                 },
               },
               {
@@ -74,7 +74,7 @@ export default function MethodologyPage() {
       {/* Grading Methodology */}
       <Card className="rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader>
-          <CardTitle as="h2">Grading Methodology</CardTitle>
+          <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
@@ -379,6 +379,10 @@ export default function MethodologyPage() {
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
             Methodology version v5.4. Version increments when weights, thresholds, or dimension definitions change.
+            {" "}
+            <Link href="/methodology/scoring-changelog" className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
+              View full version history &rarr;
+            </Link>
           </p>
         </CardContent>
       </Card>
