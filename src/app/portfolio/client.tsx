@@ -266,6 +266,7 @@ export function PortfolioClient() {
         collateralQuality: "native",
         custodyModel: "onchain",
         governanceTier: "centralized",
+        governanceQuality: "single-entity",
         dependencies: [],
       },
     };

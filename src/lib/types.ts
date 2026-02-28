@@ -88,6 +88,9 @@ export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-
 /** Where collateral is held and who controls it */
 export type CustodyModel = "onchain" | "institutional" | "cex";
 
+/** Quality of governance decentralization (overrides coarse GovernanceType) */
+export type GovernanceQuality = "dao-governance" | "multisig" | "single-entity" | "wrapper";
+
 /** Important notice displayed on a stablecoin's detail page */
 export interface CoinNotice {
   type: "danger" | "warning" | "info";
@@ -116,6 +119,7 @@ export interface StablecoinMeta {
   chainRisk?: ChainRisk;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
+  governanceQuality?: GovernanceQuality;
   reserves?: ReserveSlice[];  // Structured reserve composition (manually curated)
   notices?: CoinNotice[];     // Important alerts (winding down, depegged, etc.)
   tags?: string[];            // Protocol lineage / fork tags (e.g. "Liquity v1 fork")
@@ -423,6 +427,7 @@ export interface RawDimensionInputs {
   collateralQuality: CollateralQuality;
   custodyModel: CustodyModel;
   governanceTier: GovernanceType;
+  governanceQuality: GovernanceQuality;
   dependencies: DependencyWeight[];
 }
 
