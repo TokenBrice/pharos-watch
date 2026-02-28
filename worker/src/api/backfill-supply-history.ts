@@ -40,7 +40,9 @@ async function backfillCommodity(
     ),
   ]);
 
-  if (cgRes.ok) {
+  if (!cgRes.ok) {
+    coinRes.body?.cancel();
+  } else {
     const cgData = (await cgRes.json()) as {
       market_caps: [number, number][];
       prices?: [number, number][];
@@ -53,6 +55,8 @@ async function backfillCommodity(
         market_data?: { circulating_supply?: number };
       };
       circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
+    } else {
+      console.warn(`[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${coinRes.status}), sanity check skipped`);
     }
 
     const mcaps = cgData.market_caps ?? [];
