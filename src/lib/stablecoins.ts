@@ -368,6 +368,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6 },
       { chain: "solana", address: "2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH", decimals: 6 },
       { chain: "ink", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6 },
+      { chain: "xlayer", address: "0x4ae46a509f6b1d9056937ba4500cb143933d2dc8", decimals: 6 },
     ],
     reserves: [
       // Source: Paxos/Enrome LLP monthly attestation (ISCA standards). Exact % not published; estimated from collateral description.
@@ -571,6 +572,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
       { chain: "arbitrum", address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
       { chain: "base",     address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
+      { chain: "plasma",   address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
     ],
     reserves: [
       // Source: USD.AI blog Feb 2026, Stablewatch, CoinDesk Oct 2025. Confidence: Medium
@@ -1227,6 +1229,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     contracts: [
       { chain: "arbitrum", address: "0xc8fb643d18f1e53698cfda5c8fdf0cdc03c1dbec", decimals: 18 },
+      { chain: "apechain", address: "0x764387ae46fc504b0682bc1ad31963250007e58e", decimals: 18 },
     ],
     reserves: [
       { name: "USDT deposits (1:1 minting collateral)", pct: 90, risk: "low" },
@@ -2236,6 +2239,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
       { chain: "optimism", address: "0x9dabae7274d28a45f0b65bf8ed201a5731492ca0", decimals: 18 },
       { chain: "base",     address: "0x526728dbc96689597f85ae4cd716d4f7fccbae9d", decimals: 18 },
+      { chain: "plasma",   address: "0x29ad7fe4516909b9e498b5a65339e54791293234", decimals: 18 },
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
@@ -2281,6 +2285,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Proof of Reserve", url: "https://yuzu.accountable.capital/" },
     ],
     proofOfReserves: { type: "real-time", url: "https://yuzu.accountable.capital/", provider: "Accountable" },
+    contracts: [
+      { chain: "plasma", address: "0x6695c0f8706c5ace3bdf8995073179cca47926dc", decimals: 18 },
+    ],
     chainTier: "unproven",
     collateralQuality: "exotic",
     reserves: [
@@ -2501,6 +2508,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Twitter", url: "https://x.com/hydration_net" },
       { label: "Docs", url: "https://docs.hydration.net/quick_start/hollar/" },
       { label: "GitHub", url: "https://github.com/galacticcouncil" },
+    ],
+    contracts: [
+      { chain: "hydration", address: "0x531a654d1696ed52e7275a8cede955e82620f99a", decimals: 18 },
     ],
     chainTier: "unproven",
     collateralQuality: "alt-lst-bridged-or-mixed",
