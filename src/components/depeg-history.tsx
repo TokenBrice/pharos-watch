@@ -28,7 +28,7 @@ function sortEvents(events: DepegEvent[]): DepegEvent[] {
   });
 }
 
-export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoinId: string; earliestTrackingDate?: string | null }) {
+export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData = true }: { stablecoinId: string; earliestTrackingDate?: string | null; hasPriceData?: boolean }) {
   const { data, isLoading } = useDepegEvents(stablecoinId);
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
@@ -39,15 +39,20 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate }: { stablecoi
 
   const events = data?.events;
   if (!events || events.length === 0) {
+    const noData = !hasPriceData;
     return (
-      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+      <Card className={`rounded-xl ${noData ? "" : "border-l-[3px] border-l-emerald-500"}`}>
         <CardHeader className="pb-1">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Depeg History
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-emerald-500 font-medium">No depeg events recorded. This stablecoin has maintained its peg.</p>
+          {noData ? (
+            <p className="text-sm text-muted-foreground">No depeg events recorded. No price data available to verify peg status.</p>
+          ) : (
+            <p className="text-sm text-emerald-500 font-medium">No depeg events recorded. This stablecoin has maintained its peg.</p>
+          )}
         </CardContent>
       </Card>
     );
