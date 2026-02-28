@@ -50,7 +50,7 @@ const SYSTEM_PROMPT =
   "Output ONLY the raw JSON object — no markdown code fences, no preamble, no trailing text. " +
   "The title is 2-6 words that capture the day's theme — punchy, catchy, like a newspaper column header. " +
   "The extended field (write this FIRST): 1-3 sentences of sharp editorial analysis. This is your thinking space — be specific, be funny, find the story in the data. No character limit. " +
-  "The text field (write this AFTER extended): distill the single most compelling take from your extended analysis into a tweet-sized line. " +
+  "The text field (write this AFTER extended): distill the single most compelling take from your extended analysis into a tweet-sized line. Do NOT start or repeat the title in this field — the title is prepended automatically. " +
   "The title and text will be concatenated as '{title}\\n\\n{text}' for a tweet. The combined result MUST be under 270 characters (leave ~10 chars headroom for cashtag formatting). " +
   "Pack every character with data and wit — density is a virtue. No sentence count limit.";
 

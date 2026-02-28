@@ -90,8 +90,13 @@ function truncateToFit(text: string, maxLen: number): string {
 export function buildTweetText(digestTitle: string, digestText: string): string {
   const MAX = 280;
   const titlePrefix = digestTitle ? `${digestTitle}\n\n` : "";
+  // Strip title if the LLM accidentally repeated it at the start of the text
+  let text = digestText;
+  if (digestTitle && text.toLowerCase().startsWith(digestTitle.toLowerCase())) {
+    text = text.slice(digestTitle.length).replace(/^[\s\n:–—-]+/, "").trim();
+  }
   const available = MAX - titlePrefix.length;
-  const fittedText = truncateToFit(injectCashtags(digestText), available);
+  const fittedText = truncateToFit(injectCashtags(text), available);
   return `${titlePrefix}${fittedText}`;
 }
 
