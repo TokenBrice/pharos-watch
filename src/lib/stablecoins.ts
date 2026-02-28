@@ -3417,6 +3417,26 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Liquidity buffer (USDT idle)", pct: 10, risk: "low" },
     ],
   }),
+  usd("353", "GAIB AID", "AID", "rwa-backed", "centralized", {
+    geckoId: "gaib-aid",
+    rwa: true,
+    collateral: "U.S. Treasury bills and accepted stablecoins (USDC, USDT); the companion sAID token accrues yield from GPU/AI infrastructure financing agreements",
+    pegMechanism: "1:1 mint and burn against accepted stablecoins; AID itself is non-yield-bearing",
+    jurisdiction: { country: "Singapore" },
+    links: [
+      { label: "Website", url: "https://gaib.ai" },
+      { label: "Twitter", url: "https://x.com/gaib_ai" },
+      { label: "Docs", url: "https://docs.gaib.ai" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x18f52b3fb465118731d9e0d276d4eb3599d57596", decimals: 18 },
+      { chain: "arbitrum", address: "0x18f52b3fb465118731d9e0d276d4eb3599d57596", decimals: 18 },
+      { chain: "base", address: "0x18f52b3fb465118731d9e0d276d4eb3599d57596", decimals: 18 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "single-entity",
+  }),
 ];
 
 // --- Pre-computed lookups (static data, computed once at module level) ---

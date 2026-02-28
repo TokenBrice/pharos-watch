@@ -1130,6 +1130,21 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceUrl: "https://defillama.com/stablecoin/reservoir-stablecoin",
     sourceLabel: "DefiLlama",
   },
+  {
+    name: "US Permissionless Dollar",
+    symbol: "USPD",
+    llamaId: "315",
+    logo: "uspd.png",
+    pegCurrency: "USD",
+    causeOfDeath: "counterparty-failure",
+    deathDate: "2025-12",
+    peakMcap: 480_000,
+    epitaph: "Proxy had one too many hands",
+    obituary:
+      "Over-collateralized stETH-backed CDP exploited via a CPIMP (Clandestine Proxy In the Middle of Proxy) attack on December 4, 2025, allowing the attacker to mint ~98M fraudulent USPD tokens and drain ~237 stETH. Legitimate supply never exceeded $500K; V2 was announced but never launched.",
+    sourceUrl: "https://en.cryptonomist.ch/2025/12/05/uspd-stablecoin-proxy-attack/",
+    sourceLabel: "Cryptonomist",
+  },
 
   // ── 2026 ────────────────────────────────────────────────────────────
   {
