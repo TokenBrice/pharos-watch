@@ -510,7 +510,7 @@ export default function AboutPage() {
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Blacklist Capability</td>
                     <td className="py-2 pr-4">Can the issuer freeze holder funds?</td>
-                    <td className="py-2">No&nbsp;(100), Possible&nbsp;(mutable&nbsp;contract)&nbsp;(50), Yes&nbsp;(0)</td>
+                    <td className="py-2">No&nbsp;(100), Possible&nbsp;(mutable&nbsp;contract)&nbsp;(66), Yes&nbsp;(33)</td>
                   </tr>
                 </tbody>
               </table>
@@ -524,13 +524,15 @@ export default function AboutPage() {
           {/* Decentralization scoring */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Decentralization Scoring</h3>
-            <p>Base score from governance type, then a chain-risk penalty for protocols on less decentralized chains &mdash; governance decentralization is undermined when the underlying chain has centralisation concerns:</p>
+            <p>Base score from governance quality tier, then a chain-risk penalty for protocols on less decentralized chains &mdash; governance decentralization is undermined when the underlying chain has centralisation concerns:</p>
             <ul className="list-disc list-inside space-y-1">
-              <li><span className="text-foreground">Decentralized</span> &mdash; 100 (e.g.&nbsp;DAI, LUSD)</li>
-              <li><span className="text-foreground">CeFi-Dependent</span> &mdash; 50 (wraps or depends on centralized stablecoins, e.g.&nbsp;FRAX, GHO)</li>
-              <li><span className="text-foreground">Centralized</span> &mdash; 0 (single issuer, e.g.&nbsp;USDT, USDC)</li>
+              <li><span className="text-foreground">DAO governance</span> &mdash; 85 (e.g.&nbsp;DAI, LUSD)</li>
+              <li><span className="text-foreground">Multisig</span> &mdash; 55 (e.g.&nbsp;GHO, FRAX)</li>
+              <li><span className="text-foreground">Regulated entity</span> &mdash; 40 (named regulator, license, and independent audit &mdash; e.g.&nbsp;USDC, USDT)</li>
+              <li><span className="text-foreground">Single entity</span> &mdash; 20 (unregulated or unverified issuer)</li>
+              <li><span className="text-foreground">Wrapper</span> &mdash; 10 (inherits upstream governance)</li>
             </ul>
-            <p className="font-medium text-foreground mt-2">Chain-risk penalty (non-centralized governance only):</p>
+            <p className="font-medium text-foreground mt-2">Chain-risk penalty (non-single-entity governance only):</p>
             <ul className="list-disc list-inside space-y-1">
               <li>Ethereum &mdash; no penalty</li>
               <li>Stage 1+ L2 &mdash; &minus;15</li>
@@ -538,8 +540,8 @@ export default function AboutPage() {
               <li>Unproven chain &mdash; &minus;65</li>
             </ul>
             <p className="text-xs">
-              Example: hyUSD (decentralized, Solana) = 100 &minus; 50 = <span className="text-foreground">50</span>.
-              USDB (CeFi-Dependent, Blast L2) = 50 &minus; 15 = <span className="text-foreground">35</span>.
+              Example: hyUSD (DAO governance, Solana) = 85 &minus; 50 = <span className="text-foreground">35</span>.
+              USDB (multisig, Blast L2) = 55 &minus; 15 = <span className="text-foreground">40</span>.
             </p>
           </div>
 
@@ -623,7 +625,7 @@ export default function AboutPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v4.1. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v5.1. Version increments when weights, thresholds, or dimension definitions change.
           </p>
         </CardContent>
       </Card>
