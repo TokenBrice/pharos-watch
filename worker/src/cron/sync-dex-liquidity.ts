@@ -2237,6 +2237,21 @@ async function computeStablecoinScores(
     });
   }
 
+  // Global protocol-level TVL cap: clamp deduped protocol totals at DL protocol TVL.
+  // After cross-stablecoin dedup, a protocol can still exceed its real TVL when
+  // CG/GT virtual reserves are inflated across many pools. The per-coin cap allows
+  // up to protocolTvl PER stablecoin, but globally the protocol total must not
+  // exceed DL's reported TVL.
+  let globalCapReduction = 0;
+  for (const proto of Object.keys(globalProtocolTvl)) {
+    const cap = protocolTvlCaps.get(proto);
+    if (cap != null && cap > 0 && globalProtocolTvl[proto] > cap) {
+      globalCapReduction += globalProtocolTvl[proto] - cap;
+      globalProtocolTvl[proto] = cap;
+    }
+  }
+  globalTotalTvl -= globalCapReduction;
+
   const globalAgg: GlobalAgg = {
     totalTvl: globalTotalTvl,
     totalVol24h: globalTotalVol24h,
