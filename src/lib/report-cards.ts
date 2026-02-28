@@ -29,7 +29,7 @@ import type {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "5.0";
+export const METHODOLOGY_VERSION = "5.1";
 
 /**
  * Base dimension weights for the overall grade.
