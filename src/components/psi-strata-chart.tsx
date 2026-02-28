@@ -9,7 +9,8 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Customized,
+  usePlotArea,
+  useXAxisDomain,
 } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { downloadChartPng } from "@/lib/chart-export";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { trackEvent } from "@/lib/analytics";
 import { PSI_EVENTS, BAND_ZONES } from "@/components/psi-history-chart";
 
@@ -60,34 +61,38 @@ function wavyPath(
   return `M ${topPoints[0]} L ${topPoints.join(" L ")} L ${bottomPoints.join(" L ")} Z`;
 }
 
-/* ─── StrataBackground (Customized renderer) ───────────────────── */
+/* ─── StrataBackground (hooks-based) ───────────────────────────── */
 
-function StrataBackground(props: Record<string, unknown>) {
-  const { yAxisMap, offset } = props as {
-    yAxisMap?: Record<string, { scale: (v: number) => number }>;
-    offset?: { left: number; top: number; width: number; height: number };
-  };
-  if (!yAxisMap || !offset) return null;
-  const yAxis = Object.values(yAxisMap)[0];
-  if (!yAxis?.scale) return null;
+/** Map a Y data value (0–100) to SVG pixel Y (inverted: 100→top, 0→bottom). */
+function yScale(value: number, plotY: number, plotH: number): number {
+  return plotY + plotH * (1 - value / 100);
+}
 
-  const xStart = offset.left;
-  const xEnd = offset.left + offset.width;
+function StrataBackground() {
+  const plotArea = usePlotArea();
+  if (!plotArea) return null;
+
+  const xStart = plotArea.x;
+  const xEnd = plotArea.x + plotArea.width;
 
   return (
-    <g>
-      {BAND_ZONES.map((zone, bandIndex) => {
-        const yTop = yAxis.scale(zone.y2);
-        const yBottom = yAxis.scale(zone.y1);
-        const seed = bandIndex * 17;
-        // Don't wave the very top edge (y2=100) or very bottom edge (y1=0)
-        const topWave = zone.y2 < 100;
-        const bottomWave = zone.y1 > 0;
-        const d = wavyPath(xStart, xEnd, yTop, yBottom, topWave, bottomWave, seed);
+    <g className="strata-bands">
+      {BAND_ZONES.map((zone, i) => {
+        const yTop = yScale(zone.y2, plotArea.y, plotArea.height);
+        const yBottom = yScale(zone.y1, plotArea.y, plotArea.height);
+        const isTopEdge = i === 0;
+        const isBottomEdge = i === BAND_ZONES.length - 1;
+
         return (
           <path
             key={zone.label}
-            d={d}
+            d={wavyPath(
+              xStart, xEnd,
+              yTop, yBottom,
+              !isTopEdge,
+              !isBottomEdge,
+              i * 17,
+            )}
             fill={zone.color}
             fillOpacity={0.12}
             stroke="none"
@@ -98,66 +103,60 @@ function StrataBackground(props: Record<string, unknown>) {
   );
 }
 
-/* ─── FaultLines (Customized renderer) ─────────────────────────── */
+/* ─── FaultLines (hooks-based) ──────────────────────────────────── */
 
-function FaultLines(props: Record<string, unknown>) {
-  const { xAxisMap, offset } = props as {
-    xAxisMap?: Record<string, { scale: (v: number) => number }>;
-    offset?: { left: number; top: number; width: number; height: number };
-  };
-  if (!xAxisMap || !offset) return null;
-  const xAxis = Object.values(xAxisMap)[0];
-  if (!xAxis?.scale) return null;
+function FaultLines() {
+  const plotArea = usePlotArea();
+  const xDomain = useXAxisDomain();
+  if (!plotArea || !xDomain || xDomain.length < 2) return null;
 
-  const yTop = offset.top;
-  const yBottom = offset.top + offset.height;
-  const xLeft = offset.left;
-  const xRight = offset.left + offset.width;
+  const domainMin = Number(xDomain[0]);
+  const domainMax = Number(xDomain[xDomain.length - 1]);
+  if (domainMax <= domainMin) return null;
+
+  const yTop = plotArea.y;
+  const yBottom = plotArea.y + plotArea.height;
 
   return (
-    <g>
+    <g className="fault-lines">
       {PSI_EVENTS.map((evt) => {
-        const x = xAxis.scale(evt.date);
-        // Skip events outside visible range
-        if (x < xLeft || x > xRight) return null;
+        const t = (evt.date - domainMin) / (domainMax - domainMin);
+        const x = plotArea.x + t * plotArea.width;
+        if (x < plotArea.x || x > plotArea.x + plotArea.width) return null;
 
         const faultOffset = 4;
         const y30 = yTop + (yBottom - yTop) * 0.3;
         const y70 = yTop + (yBottom - yTop) * 0.7;
-        const tickLen = 6;
 
         return (
           <g key={evt.label}>
-            {/* Diagonal fault line with displacement */}
             <line
               x1={x - faultOffset}
               y1={yTop}
               x2={x + faultOffset}
               y2={yBottom}
               stroke={CHART_SLATE}
-              strokeOpacity={0.25}
               strokeWidth={1.5}
+              strokeOpacity={0.25}
               strokeDasharray="6 3"
             />
-            {/* Displacement tick at 30% */}
             <line
-              x1={x - faultOffset * 0.4 - tickLen}
+              x1={x - faultOffset - 3}
               y1={y30}
-              x2={x - faultOffset * 0.4 + tickLen}
+              x2={x - faultOffset + 3}
               y2={y30}
               stroke={CHART_SLATE}
-              strokeOpacity={0.2}
               strokeWidth={1}
+              strokeOpacity={0.2}
             />
-            {/* Displacement tick at 70% */}
             <line
-              x1={x + faultOffset * 0.4 - tickLen}
+              x1={x + faultOffset - 3}
               y1={y70}
-              x2={x + faultOffset * 0.4 + tickLen}
+              x2={x + faultOffset + 3}
               y2={y70}
               stroke={CHART_SLATE}
-              strokeOpacity={0.2}
               strokeWidth={1}
+              strokeOpacity={0.2}
             />
           </g>
         );
@@ -253,8 +252,8 @@ export function PsiStrataChart({ data }: { data: { ts: number; score: number }[]
                       />
                     </linearGradient>
                   </defs>
-                  <Customized component={StrataBackground} />
-                  <Customized component={FaultLines} />
+                  <StrataBackground />
+                  <FaultLines />
                   <CartesianGrid
                     strokeDasharray="3 3"
                     stroke="var(--color-border)"
