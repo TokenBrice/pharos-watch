@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.0)
+## Overall Grade (v5.1)
 
 Two-step computation:
 
@@ -19,7 +19,7 @@ Cemetery coins get a permanent F.
 |-----------|--------|--------|---------|
 | **Liquidity** | 30% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
 | **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain infrastructure (tier × deployment model), collateral quality, custody model, and blacklist capability |
-| **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
+| **Decentralization** | 15% | Governance quality + chain infrastructure | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `regulated-entity` → 40, `single-entity` → 20, `wrapper` → 10. Threshold-based penalty from combined chain infrastructure score |
 | **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → 95. With deps → blended score (upstream × weight + self-backed), −10 if any < 75. Self-backed varies by governance (90/75/95) |
 
 ### Peg Stability (multiplier)
@@ -49,7 +49,7 @@ Cemetery coins get a permanent F.
 | **Chain Infrastructure** | Two-axis: `chainTier × deploymentModel` (see below) | Combined score 0–100 |
 | **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
 | **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
-| **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Blacklistable (0) |
+| **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Possible (66), Blacklistable (33) |
 
 #### Chain Infrastructure: Two-Axis Scoring (v5.1)
 
@@ -144,7 +144,7 @@ Data sources: `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel
 
 ### Decentralization Details
 
-Score from `GovernanceQuality` tier (v5.0), with chain infrastructure penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 4-tier quality classification that can be explicitly overridden per coin.
+Score from `GovernanceQuality` tier (v5.1), with chain infrastructure penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 5-tier quality classification that can be explicitly overridden per coin.
 
 **Governance Quality Tiers:**
 
@@ -152,10 +152,13 @@ Score from `GovernanceQuality` tier (v5.0), with chain infrastructure penalty fo
 |---|---|---|---|
 | `dao-governance` | 85 | `decentralized` | crvUSD, LUSD, BOLD; overrides: USDS, DAI, GHO, FRAX, DOLA |
 | `multisig` | 55 | `centralized-dependent` | Most CeFi-dep coins without explicit override |
+| `regulated-entity` | 40 | — (auto-promoted) | Centralized issuers with verified regulatory oversight |
 | `single-entity` | 20 | `centralized` | USDT, USDC, PYUSD |
 | `wrapper` | 10 | — (must be explicit) | syrupUSDC, Cap cUSD, USX, OUSD, FPI |
 
 Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.
+
+**Auto-promotion to `regulated-entity`:** A `single-entity` coin is automatically promoted to `regulated-entity` (40) when all three conditions are met: `jurisdiction.regulator` is set, `jurisdiction.license` is set, and `proofOfReserves.type === "independent-audit"`. This recognizes that regulated, audited centralized issuers carry less governance risk than unregulated single entities.
 
 **Chain infrastructure penalty** (threshold-based on combined `chainInfraScore`, applied to non-single-entity governance only):
 
@@ -172,7 +175,7 @@ Examples: BOLD (dao-governance, Ethereum, third-party-bridge → infra 60) = 85 
 
 ### Dependency Risk Details
 
-**Universal scoring (v5.0):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
+**Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
 **Scoring:**
 - **No dependencies**: 95 (any governance tier)
