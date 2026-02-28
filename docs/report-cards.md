@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v4.1)
+## Overall Grade (v5.0)
 
 Two-step computation:
 
@@ -19,8 +19,8 @@ Cemetery coins get a permanent F.
 |-----------|--------|--------|---------|
 | **Liquidity** | 30% | `liquidityScore` from DEX liquidity | Passthrough (composite score already factors pool quality, diversity, durability) |
 | **Resilience** | 20% | Token metadata (4 sub-factors) | Weighted avg of chain risk, collateral quality, custody model, and blacklist capability |
-| **Decentralization** | 15% | Governance type + chain risk | Base: `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0. Chain-risk penalty applied for non-Ethereum chains |
-| **Dependency Risk** | 25% | Upstream stablecoin scores | Non-dependent → 95. CeFi-Dependent → blended score (upstream × weight + self-backed × 75), −10 if any < 75. NR if unmapped |
+| **Decentralization** | 15% | Governance quality + chain risk | `GovernanceQuality` tiers: `dao-governance` → 85, `multisig` → 55, `single-entity` → 20, `wrapper` → 10. Chain-risk penalty for non-Ethereum chains |
+| **Dependency Risk** | 25% | Upstream stablecoin scores | No deps → 95. With deps → blended score (upstream × weight + self-backed), −10 if any < 75. Self-backed varies by governance (90/75/95) |
 
 ### Peg Stability (multiplier)
 
@@ -97,11 +97,20 @@ Data sources: `chainRisk`, `collateralQuality`, `custodyModel` optional fields o
 
 ### Decentralization Details
 
-Base score from governance type, then a chain-risk penalty for protocols on less decentralized chains. Governance decentralization is undermined when the underlying chain itself has centralisation concerns (validator set, halt risk, etc.).
+Score from `GovernanceQuality` tier (v5.0), with chain-risk penalty for protocols on less decentralized chains. The coarse 3-level `GovernanceType` is replaced by a 4-tier quality classification that can be explicitly overridden per coin.
 
-**Base scores:** `decentralized` → 100, `centralized-dependent` → 50, `centralized` → 0.
+**Governance Quality Tiers:**
 
-**Chain-risk penalty** (applied to non-centralized governance only):
+| Tier | Score | Default for GovernanceType | Examples |
+|---|---|---|---|
+| `dao-governance` | 85 | `decentralized` | crvUSD, LUSD, BOLD; overrides: USDS, DAI, GHO, FRAX, DOLA |
+| `multisig` | 55 | `centralized-dependent` | Most CeFi-dep coins without explicit override |
+| `single-entity` | 20 | `centralized` | USDT, USDC, PYUSD |
+| `wrapper` | 10 | — (must be explicit) | syrupUSDC, Cap cUSD, USX, OUSD, FPI |
+
+Resolution: `meta.governanceQuality ?? inferGovernanceQuality(meta.flags.governance)`. Override via `governanceQuality` field on `StablecoinMeta`.
+
+**Chain-risk penalty** (applied to non-single-entity governance only):
 
 | Chain Risk | Penalty |
 |---|---|
@@ -112,19 +121,25 @@ Base score from governance type, then a chain-risk penalty for protocols on less
 
 The chain risk comes from the coin's explicit `chainRisk` override on `StablecoinMeta`. Coins without an override (defaulting to Ethereum) are unaffected.
 
-Examples: hyUSD (decentralized, Solana) = 100 − 50 = **50**. USDB (centralized-dependent, Blast L2) = 50 − 15 = **35**.
+Examples: hyUSD (dao-governance, Solana) = 85 − 50 = **35**. USDB (multisig, Blast L2) = 55 − 15 = **40**. cUSD (wrapper) = **10** (no chain penalty).
 
 ### Dependency Risk Details
 
-Two-phase computation ensures upstream scores are available before dependent coins are graded:
+**Universal scoring (v5.0):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-1. **Phase 1**: Grade `centralized` + `decentralized` coins (no upstream dependencies)
-2. **Phase 2**: Grade `centralized-dependent` coins using Phase 1 scores
-
-For Phase 2 coins:
-- Score = blended: `sum(weight_i × upstream_score_i) + (1 − totalWeight) × 75`. The self-backed fraction (non-stablecoin collateral) scores 75, reflecting that dependent coins inherently carry more risk than independent ones. This ensures weights matter — a coin 10% backed by USDC has much lower contagion risk than one 100% backed by USDC.
+**Scoring:**
+- **No dependencies**: 95 (any governance tier)
+- **With dependencies**: `score = sum(weight_i × upstream_score_i) + (1 − totalWeight) × SELF_BACKED_SCORE`
 - −10 penalty if any dependency scores below 75 (B-)
-- Falls back to 70 if dependencies aren't mapped or scores unavailable
+- Falls back to 70 if dependency scores unavailable
+
+**Self-backed score by governance type:**
+
+| Governance Type | Self-Backed Score | Rationale |
+|---|---|---|
+| `decentralized` | 90 | Own peg mechanisms (CDPs, LLAMMA) function independently |
+| `centralized-dependent` | 75 | PSMs/arbitrage loops coupled to upstream infrastructure |
+| `centralized` | 95 | Standalone RWA-backed, minimal coupling |
 
 #### Dependency Type Ceilings
 
@@ -184,7 +199,7 @@ Response includes `cards` (array of `ReportCard` with `rawInputs` for client-sid
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
-- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainRisk`, `collateralQuality`, `custodyModel`, `governanceTier`, `dependencies`, etc.) — enables client-side stress test recomputation.
+- **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainRisk`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, etc.) — enables client-side stress test recomputation.
 
 ## Portfolio Analyzer & Stress Test
 
@@ -226,7 +241,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 | File | Purpose |
 |------|---------|
 | `src/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
-| `worker/src/api/report-cards.ts` | API handler: data loading, two-phase computation, `rawInputs`, `dependencyGraph`, response |
+| `worker/src/api/report-cards.ts` | API handler: data loading, topological sort computation, `rawInputs`, `dependencyGraph`, response |
 | `src/components/stress-test-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
 | `src/components/report-card.tsx` | Full detail card with radar |
 | `src/components/report-card-mini.tsx` | Compact grid tile with simulation mode support |
