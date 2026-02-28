@@ -14,6 +14,7 @@ import {
 } from "d3-force";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { deriveDependencies } from "@/lib/reserve-templates";
 import { GRADE_RADAR_COLORS, gradeRange } from "@/lib/report-cards";
 import type { DependencyType, ReportCard, ReportCardGrade } from "@/lib/types";
 
@@ -99,8 +100,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
     const graphLinks: GraphLink[] = [];
     for (const meta of TRACKED_STABLECOINS) {
-      if (!idSet.has(meta.id) || !meta.dependencies) continue;
-      for (const dep of meta.dependencies) {
+      if (!idSet.has(meta.id)) continue;
+      const deps = deriveDependencies(meta);
+      for (const dep of deps) {
         if (idSet.has(dep.id)) {
           graphLinks.push({ source: meta.id, target: dep.id, weight: dep.weight, type: dep.type ?? "collateral" });
         }
