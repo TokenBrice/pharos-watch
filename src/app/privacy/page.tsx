@@ -35,8 +35,8 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">What We Collect</h2>
           <p>
-            Pharos collects anonymized usage analytics through Google Analytics 4 (GA4) and Cloudflare
-            Web Analytics. This includes page views, session duration, approximate geographic region, and
+            Pharos collects anonymized usage analytics through Google Analytics 4 (GA4).
+            This includes page views, session duration, approximate geographic region, and
             device/browser type. We do not collect personally identifiable information (PII).
           </p>
         </section>
@@ -61,8 +61,8 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">Data Retention</h2>
           <p>
-            GA4 data is retained for 14 months per Google&apos;s default settings. Cloudflare Analytics
-            data is retained for 6 months. We do not maintain any additional databases of visitor information.
+            GA4 data is retained for 14 months per Google&apos;s default settings.
+            We do not maintain any additional databases of visitor information.
           </p>
         </section>
 
@@ -70,8 +70,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-foreground">Third-Party Services</h2>
           <p>
             Pharos is hosted on Cloudflare Pages with API endpoints served by Cloudflare Workers.
-            Analytics data is processed by Google (GA4) and Cloudflare. No data is shared with any other
-            third parties.
+            Analytics data is processed by Google (GA4). No data is shared with any other third parties.
           </p>
         </section>
 
