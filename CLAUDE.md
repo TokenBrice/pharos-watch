@@ -68,4 +68,5 @@ Read these when working on related code:
 - **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation, portfolio analyzer, stress test
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
 - **`docs/design-tokens.md`** — 3-layer design token architecture (primitives, semantic, component tokens)
+- **`docs/design-language.md`** — Typography, spacing, cards, tables, charts, interactive states, loading/error patterns
 - **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
