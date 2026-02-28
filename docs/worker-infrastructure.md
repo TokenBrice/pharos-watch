@@ -395,6 +395,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 | `usds-status` | 86,400s (24h) |
 | `fx-rates` | 1,800s (30 min) |
 | `bluechip-ratings` | 86,400s (24h) |
+| `dex-liquidity` | 43,200s (12h) |
 
 ### GET /api/status
 

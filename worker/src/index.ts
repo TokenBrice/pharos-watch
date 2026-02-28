@@ -188,7 +188,6 @@ const worker = {
     initCoinGecko(env.COINGECKO_API_KEY);
     const db = env.DB;
     const cron = event.cron;
-    console.log(`[scheduled] cron="${cron}" scheduledTime=${event.scheduledTime}`);
 
     switch (cron) {
       case "*/15 * * * *": {
@@ -255,8 +254,6 @@ const worker = {
         })));
         break;
       }
-      default:
-        console.warn(`[scheduled] Unmatched cron: "${cron}"`);
     }
   },
 };

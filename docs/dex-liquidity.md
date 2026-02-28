@@ -53,11 +53,11 @@ When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko's `/onchai
 | Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
 |---------|--------------------------|--------------------------|
 | Rate limit | 30 req/min | ~240 req/min |
-| Chain coverage | 13 chains | 15 chains (adds tron, ink, solana, berachain, sui) |
+| Chain coverage | 13 chains | 15 chains (adds tron, ink beyond GT's set) |
 | Balance data | Not available (defaults to 1.0) | Approximated from token prices |
 | Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
 | Locked liquidity | Not available | `locked_liquidity_percentage` field |
-| Time budget | 7 min (partial coverage) | Not needed (full coverage) |
+| Time budget | 15 min (partial coverage) | Not needed (full coverage) |
 
 The CG integration extracts three signals unavailable from GeckoTerminal:
 1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.
