@@ -307,6 +307,7 @@ Print a structured report:
   - {DL chain name} → {internal chain ID} (${supply} supply)
   - {DL chain name} → [UNMAPPED] (${supply} supply)
   - {DL chain name} → {internal chain ID} [NEW CHAIN] (${supply} supply)
+  - {DL chain name} → {internal chain ID} [NO CG MAP] (${supply} supply)
 
 ...
 
@@ -315,6 +316,7 @@ Summary:
   On known chains (in CHAIN_META): {N}
   On new chains (need CHAIN_META entry): {N}
   On unmapped DL chains (need DL_CHAIN_MAP update): {N}
+  Cannot auto-populate (no CG platform mapping): {N}
   On skipped dead chains: {N}
 ```
 
@@ -371,7 +373,33 @@ For each address found:
 
 If the gap chain is not in `CHAIN_META`:
 1. Add it to `src/lib/chains.ts` following the pattern from contract-populate skill
-2. Research the chain's:
+2. Use this reference table for common new chains:
+
+Common new chains reference:
+
+```
+Chain ID       | Name          | Explorer URL                              | EVM Chain ID | Type
+───────────────|───────────────|───────────────────────────────────────────|──────────────|──────
+ronin          | Ronin         | https://app.roninchain.com                | 2020         | evm
+cronos         | Cronos        | https://cronoscan.com                     | 25           | evm
+lisk           | Lisk          | https://blockscout.lisk.com               | 1135         | evm
+rootstock      | Rootstock     | https://rootstock.blockscout.com          | 30           | evm
+pulsechain     | PulseChain    | https://scan.pulsechain.com               | 369          | evm
+eos            | EOS EVM       | https://explorer.evm.eosnetwork.com       | 17777        | evm
+conflux        | Conflux       | https://evm.confluxscan.io                | 1030         | evm
+zilliqa        | Zilliqa       | https://evmx.zilliqa.com                  | 32769        | evm
+iotex          | IoTeX         | https://iotexscan.io                      | 4689         | evm
+etherlink      | Etherlink     | https://explorer.etherlink.com            | 42793        | evm
+heco           | HECO          | https://hecoscan.io                       | 128          | evm
+okxchain       | OKX Chain     | https://www.oklink.com/oktc               | 66           | evm
+multiversx     | MultiversX    | https://explorer.multiversx.com           | null         | other
+injective      | Injective     | https://explorer.injective.network        | null         | other
+flow           | Flow          | https://flowscan.io                       | 747          | evm
+stacks         | Stacks        | https://explorer.hiro.so                  | null         | other
+vechain        | VeChain       | https://explore.vechain.org               | null         | other
+```
+
+3. Research the chain's:
    - Human-readable name
    - Block explorer URL
    - EVM chain ID (if EVM), null otherwise

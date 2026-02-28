@@ -95,6 +95,17 @@ mantra                   → mantra
 provenance               → provenance
 hydration                → hydration
 xdai                     → gnosis
+cronos                   → cronos
+lisk                     → lisk
+rootstock                → rootstock
+eos                      → eos
+flow                     → flow
+iotex                    → iotex
+multiversx               → multiversx
+injective                → injective
+zilliqa                  → zilliqa
+conflux                  → conflux
+pulsechain               → pulsechain
 ```
 
 ### CG Platforms to Skip (dead/deprecated/legacy)
