@@ -511,8 +511,9 @@ export function scoreDecentralization(
   }
 
   const govScore = GOVERNANCE_QUALITY_SCORE[quality];
+  const penaltyApplied = penalty < 0 && quality !== "immutable-code" && quality !== "single-entity" && quality !== "regulated-entity";
   let detail: string;
-  if (factors) {
+  if (factors && penaltyApplied) {
     const chainDesc = chainInfraLabel(factors.chainTier, factors.deploymentModel);
     detail = `Governance: ${GOVERNANCE_QUALITY_LABEL[quality]} (${govScore}). Chain: ${chainDesc} (${penalty})`;
   } else {
