@@ -43,13 +43,14 @@ Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) 
 
 ### Enrichment Pipeline
 
-`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 5-pass system for assets still missing prices after dual-primary:
+`enrichMissingPrices()` in `worker/src/cron/enrich-prices.ts` uses a 6-pass system for assets still missing prices after dual-primary:
 
-1. **Pass 1:** Contract address -> DefiLlama coins API (with multi-chain fallback)
-2. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
-3. **Pass 3:** CoinGecko ID -> CoinGecko direct API
-4. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
-5. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold, capped at 10 searches per run)
+1. **Pass 1:** Contract address -> DefiLlama coins API
+2. **Pass 1b:** Multi-chain contract address fallback (tries alternate chain addresses via DefiLlama coins API)
+3. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
+4. **Pass 3:** CoinGecko ID -> CoinGecko direct API
+5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
+6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold, capped at 10 searches per run)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 
@@ -112,7 +113,7 @@ The live `/price/` endpoint requires no API key and has no documented rate limit
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 
-**Storage:** `stability_index` table (migration 0022) with `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON).
+**Storage:** 15-min samples go into `stability_index_samples` (migration 0026); daily averages are aggregated by `snapshotPsiDaily()` into `stability_index` (migration 0022). Both tables store `score`, `band`, `components` (JSON), `input_snapshot` (JSON).
 
 ## Pending Depeg Confirmation
 

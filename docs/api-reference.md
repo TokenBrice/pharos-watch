@@ -36,8 +36,8 @@ Endpoints backed by the cron cache include these additional headers:
 | Profile | `Cache-Control` | Used by |
 |---------|----------------|---------|
 | realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin/:id, blacklist, depeg-events, peg-summary |
-| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards |
-| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, stability-index |
+| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index |
+| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings |
 | no-store | `no-store` | health |
 
 ---
@@ -692,7 +692,7 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 
 Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) aggregating peg integrity, supply growth, and liquidity depth across all tracked stablecoins.
 
-**Cache:** slow — `X-Data-Age` and `Warning` headers included.
+**Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
 **Optional query parameters**
 
@@ -742,9 +742,9 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
     "edges": [{ "from": "2", "to": "5" }, ...]
   },
   "methodology": {
-    "version": "3.1",
+    "version": "5.1",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
-    "thresholds": [{ "grade": "A+", "min": 97 }, { "grade": "A", "min": 93 }, ...]
+    "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
   },
   "updatedAt": 1771977600
 }
@@ -837,11 +837,26 @@ Backfills historical depeg events from stored price data.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | `string` | — | Process a single stablecoin ID |
+| `batch` | `integer` | `0` | Batch offset (3 coins per batch) |
+
 ### `GET /api/backfill-supply-history`
 
 Backfills per-coin supply history snapshots.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | `string` | — | Process a single stablecoin ID |
+| `batch` | `integer` | `0` | Batch offset for chunked processing |
+| `batchSize` | `integer` | `10` | Coins per batch |
 
 ### `GET /api/backfill-stability-index`
 
@@ -874,9 +889,12 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | `stablecoin` | `string` | — | Audit a single stablecoin ID |
-| `limit` | `integer` | `50` | Max events to audit |
+| `limit` | `integer` | `200` | Max events to audit |
 | `offset` | `integer` | `0` | Pagination offset |
-| `dryRun` | `"false"` | `"true"` | Set to `"false"` to actually delete false positives |
+| `delete` | `string` | — | Comma-separated event IDs to delete directly (skips CG audit) |
+| `dry-run` | `"true"` | — | When `"true"`, preview deletions without touching DB. Default behavior deletes false positives |
+| `min-supply` | `number` | `0` | Minimum supply (USD) to include in audit |
+| `symbol` | `string` | — | Filter by symbol (case-insensitive) |
 
 ### `GET /api/trigger-digest`
 

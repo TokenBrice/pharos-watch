@@ -44,8 +44,9 @@ resolve: { alias: { "@": "src" }} // Same path alias as Next.js
 | `format.test.ts` | `src/lib/format.ts` | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
 | `supply.test.ts` | `src/lib/supply.ts` | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw` |
 | `classification.test.ts` | `src/lib/classification.ts` | Label maps (`GOVERNANCE_LABELS`, `BACKING_LABELS`, `PEG_LABELS`), short label consistency, color map key/value integrity, `PEG_CURRENCY_COUNT` |
+| `report-cards.test.ts` | `src/lib/report-cards.ts` | Grade computation, dimension scorers, peg multiplier, dependency risk blending, stress test recomputation |
 
-All three suites test pure functions from `src/lib/` — no DOM, no React, no network.
+All four suites test pure functions from `src/lib/` — no DOM, no React, no network.
 
 ## Conventions
 

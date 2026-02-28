@@ -58,6 +58,9 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
+│   ├── methodology/              # Detailed methodology documentation
+│   │   ├── page.tsx
+│   │   └── error.tsx
 │   ├── portfolio/                # Portfolio stress testing & upstream exposure
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -181,6 +184,8 @@ src/                              # Next.js frontend (static export)
 │   ├── use-usds-status.ts        # GET /api/usds-status
 │   ├── use-daily-digest.ts       # GET /api/daily-digest
 │   ├── use-digest-archive.ts    # GET /api/digest-archive
+│   ├── use-digest-snapshot.ts    # GET /api/digest-snapshot (per-date context)
+│   ├── use-supply-history.ts     # GET /api/supply-history (per-coin supply + price history)
 │   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
@@ -226,13 +231,13 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (28 total)
+├── migrations/                   # D1 SQL migrations (30 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
-    │   ├── enrich-prices.ts      # Dual-primary price validation + 5-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
+    │   ├── enrich-prices.ts      # Dual-primary price validation + 6-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)

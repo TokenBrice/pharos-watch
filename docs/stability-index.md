@@ -102,13 +102,14 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 
 ## Cron & Storage
 
-- **Cron**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs and trend from 7-day market cap change. Uses midnight-rounded `computed_at` with `ON CONFLICT DO UPDATE` so only one row per day is stored.
+- **15-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs and trend from 7-day market cap change. Stores each sample in the `stability_index_samples` table (migration 0026). Old samples (>90 days) are pruned automatically.
+- **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 15-min samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
-- **Table**: `stability_index` (migration 0022) — `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON)
+- **Tables**: `stability_index_samples` (migration 0026) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON). `stability_index` (migration 0022) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON)
 
 ## API
 
-`GET /api/stability-index` — latest score + 90-day history (default). With `?detail=true`, full history with per-day component breakdowns. Cache: slow (1-hour edge, 5-min browser).
+`GET /api/stability-index` — latest score + 90-day history (default). With `?detail=true`, full history with per-day component breakdowns. Cache: standard (5-min edge, 1-min browser).
 
 See `docs/api-reference.md` for full response shape.
 
