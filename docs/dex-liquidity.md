@@ -13,7 +13,7 @@
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain->15, 2->40, 3->60, 5->80, 8+->100 |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (12 chains, with GeckoTerminal free API as fallback when no CG API key is configured).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (15 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources).
 
 ### Quality Multipliers (v2)
 
@@ -53,7 +53,7 @@ When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko's `/onchai
 | Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
 |---------|--------------------------|--------------------------|
 | Rate limit | 30 req/min | ~240 req/min |
-| Chain coverage | 10 chains | 12 chains (adds tron, ink) |
+| Chain coverage | 13 chains | 15 chains (adds tron, ink, solana, berachain, sui) |
 | Balance data | Not available (defaults to 1.0) | Approximated from token prices |
 | Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
 | Locked liquidity | Not available | `locked_liquidity_percentage` field |
@@ -63,6 +63,19 @@ The CG integration extracts three signals unavailable from GeckoTerminal:
 1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.
 2. **Fee tier classification**: `pool_fee_percentage` enables proper quality multipliers for non-Uniswap concentrated liquidity pools (PancakeSwap V3, SushiSwap V3, etc.).
 3. **Locked liquidity**: Weighted into durability scoring at 5% weight.
+
+### DexScreener Fallback
+
+After the primary pipeline (DeFiLlama + CG/GT + Curve + UniV3 + Aerodrome), any tracked stablecoin with zero pools is queried via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains.
+
+Quality gates:
+- Pool TVL must exceed $1,000
+- Pool must have 24h volume > 0 or TVL > $10,000
+- Only pools where our token is the base token are counted
+- Pools already discovered by the primary pipeline are deduplicated by `chainId:pairAddress`
+- Generic quality multiplier (0.3x) unless the DEX ID matches a known protocol (same `GT_DEX_QUALITY` lookup)
+
+DexScreener pools are merged using the same `mergeGtPools()` logic — no balance ratio data, neutral organic fraction default (0.5).
 
 ### Pool Stress Index (0-100)
 
@@ -96,7 +109,7 @@ Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin a
 | **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin | TVL >= $50K, balance ratio >= 0.3 |
 | **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. |
 | **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3 |
-| **DexScreener** | Ethereum, Base, Arbitrum, Polygon, Solana | Batch token API `priceUsd` | Pair liquidity >= $50K |
+| **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K (prices), >= $1K (pool discovery) |
 
 **Price extraction pipeline:**
 1. Collect price observations from all four sources during data fetching phase
