@@ -442,6 +442,7 @@ function ContributorsTable({
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4">
           Which stablecoins are currently pushing the score below 100, ranked by total impact.
+          Long-lasting depegs (over 30 days) receive a scoring depreciation — the percentage in parentheses next to the age shows the remaining impact weight.
         </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

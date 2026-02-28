@@ -40,11 +40,11 @@ export function DailyDigest() {
       <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
         {data?.digest}
       </p>
-      {data?.digestExtended && (
-        <p className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
-          {data.digestExtended}
+      {data?.digestExtended && data.digestExtended.split("\n\n").map((para, i) => (
+        <p key={i} className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+          {para}
         </p>
-      )}
+      ))}
       <Link
         href="/digest/"
         className="inline-block mt-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"

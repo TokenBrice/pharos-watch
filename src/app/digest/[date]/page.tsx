@@ -124,14 +124,15 @@ export default async function DigestDetailPage({
         >
           {digest.text}
         </p>
-        {digest.extended && (
+        {digest.extended && digest.extended.split("\n\n").map((para, i) => (
           <p
+            key={i}
             className="text-[1.15rem] leading-relaxed text-foreground/90 italic mt-4"
             style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
-            {digest.extended}
+            {para}
           </p>
-        )}
+        ))}
       </article>
 
       <DigestSnapshot date={digest.date} />

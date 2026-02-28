@@ -54,14 +54,15 @@ export function DigestArchiveClient() {
           >
             {d.digestText}
           </p>
-          {d.digestExtended && (
+          {d.digestExtended && d.digestExtended.split("\n\n").map((para, i) => (
             <p
+              key={i}
               className="text-[1.1rem] leading-relaxed text-foreground/90 italic mt-3"
               style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
             >
-              {d.digestExtended}
+              {para}
             </p>
-          )}
+          ))}
         </Link>
       ))}
       </div>
