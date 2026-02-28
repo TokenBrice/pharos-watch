@@ -21,13 +21,14 @@ interface StablecoinOpts {
   chainRisk?: import("./types").ChainRisk;
   collateralQuality?: import("./types").CollateralQuality;
   custodyModel?: import("./types").CustodyModel;
+  governanceQuality?: import("./types").GovernanceQuality;
   reserves?: import("./types").ReserveSlice[];
   notices?: import("./types").CoinNotice[];
   tags?: string[];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainRisk: opts?.chainRisk, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -147,6 +148,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
+    governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.30, type: "mechanism" }],
     canBeBlacklisted: "possible",
     collateralQuality: "rwa",
@@ -194,6 +196,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     geckoId: "dai",
+    governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.35, type: "mechanism" }],
     collateralQuality: "rwa",
     custodyModel: "institutional",
@@ -530,6 +533,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     geckoId: "gho",
+    governanceQuality: "dao-governance",
     dependencies: [{ id: "1", weight: 0.20 }, { id: "2", weight: 0.20 }],
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "Any Aave V3 Ethereum market collateral asset (ETH, wBTC, USDC, USDT, and others), overcollateralized per Aave's risk parameters",
@@ -626,6 +630,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("296", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "cap-usd",
+    governanceQuality: "wrapper",
     dependencies: [{ id: "1", weight: 0.35 }, { id: "2", weight: 0.35 }],
     collateral: "Basket of regulated stablecoins: USDC, USDT, pyUSD, BUIDL, and BENJI (max 40% each)",
     pegMechanism: "Dynamic-fee vault: users deposit whitelisted reserve assets to mint cUSD at oracle-determined value; redemptions return a proportional basket of all underlying assets, socializing any reserve depeg across redeemers; dynamic interest rates prevent full utilization so redemptions remain atomic; secured by EigenLayer AVS",
@@ -747,6 +752,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("310", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
     geckoId: "usx",
+    governanceQuality: "wrapper",
     dependencies: [{ id: "1", weight: 0.5, type: "wrapper" }, { id: "2", weight: 0.5, type: "wrapper" }],
     collateral: "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
     pegMechanism: "1:1 collateralization with multi-oracle pricing via Chainlink and Pyth; Chainlink Proof of Reserve provides real-time on-chain verification of reserves; institutional minting ($500K minimum, KYC-gated); permissionless access via Solana DEXs",
@@ -791,6 +797,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
   usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
     geckoId: "frax",
+    governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.35, type: "mechanism" }],
     collateral: "Short-dated U.S. Treasury bills, Federal Reserve overnight repurchase agreements, FDIC-insured deposits, and USDC held off-chain by FinresPBC (a Delaware public benefit corporation) on behalf of the Frax DAO; fully collateralized since FIP-188 (2023)",
     pegMechanism: "AMO smart contracts maintain ≥100% collateral ratio; peg tracked via Chainlink oracles and governance-approved USD reference rates; defended by recollateralization through RWA purchases and on-chain AMO rebalancing",
@@ -819,7 +826,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
     geckoId: "dola-usd",
-    dependencies: [{ id: "2", weight: 0.2 }],
+    dependencies: [{ id: "209", weight: 0.08, type: "mechanism" }],
+    governanceQuality: "dao-governance",
     collateral: "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
     pegMechanism: "Fed contracts govern DOLA supply: FiRM Fed mints/burns DOLA in overcollateralized lending markets (~98% of supply); PSM Fed enables 1:1 swaps with USDS as a peg floor; DEX Liquidity Feds adjust supply in AMM pools",
     proofOfReserves: { type: "self-reported", url: "https://www.inverse.finance/transparency" },
@@ -1010,6 +1018,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "frax-usd",
+    governanceQuality: "dao-governance",
     dependencies: [{ id: "2", weight: 0.3 }],
     collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
     pegMechanism: "1:1 mint and redemption through governance-approved enshrined custodians; each custodian holds provable on-chain reserves and can mint or burn frxUSD 1:1; redeemable from any custodian with available collateral",
@@ -1231,6 +1240,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
     geckoId: "frax-price-index",
     navToken: true,
+    governanceQuality: "wrapper",
     dependencies: [{ id: "6", weight: 1.0, type: "wrapper" }],
     collateralQuality: "rwa",
     collateral: "FRAX stablecoins held at 100% collateral ratio, with AMOs generating yield; FPIS tokens sold via TWAMM when AMO yield falls below CPI inflation rate",
@@ -2445,6 +2455,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
     geckoId: "origin-dollar",
+    governanceQuality: "wrapper",
     dependencies: [{ id: "2", weight: 1.0, type: "wrapper" }],
     collateral: "USDC deployed into DeFi strategies (Morpho, Curve)",
     pegMechanism: "1:1 minting/redemption backed by stablecoins; yield distributed via rebasing",
@@ -3082,6 +3093,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("cg-syrupusdc", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
     geckoId: "syrupusdc",
+    governanceQuality: "wrapper",
     yieldBearing: true, navToken: true,
     collateral: "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     pegMechanism: "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
@@ -3105,6 +3117,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("cg-syrupusdt", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
     geckoId: "syrupusdt",
+    governanceQuality: "wrapper",
     yieldBearing: true, navToken: true,
     collateral: "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     pegMechanism: "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
