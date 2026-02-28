@@ -1,3 +1,5 @@
+"use client";
+
 import type { ConditionBand } from "@/lib/psi-colors";
 
 /* ─── Deterministic crack SVG paths ───────────────────────────── */
@@ -18,52 +20,16 @@ const BAND_CONFIG: Record<
     bg: string;
     showCracks: boolean;
     crackOpacity: string;
-    animateCracks: boolean;
+    pulseClass: string;
     vignette: boolean;
   }
 > = {
-  BEDROCK: {
-    bg: "",
-    showCracks: false,
-    crackOpacity: "opacity-0",
-    animateCracks: false,
-    vignette: false,
-  },
-  STEADY: {
-    bg: "bg-blue-500/[0.015]",
-    showCracks: false,
-    crackOpacity: "opacity-0",
-    animateCracks: false,
-    vignette: false,
-  },
-  TREMOR: {
-    bg: "bg-amber-500/[0.025]",
-    showCracks: false,
-    crackOpacity: "opacity-0",
-    animateCracks: false,
-    vignette: false,
-  },
-  FRACTURE: {
-    bg: "bg-orange-500/[0.04]",
-    showCracks: true,
-    crackOpacity: "opacity-[0.04]",
-    animateCracks: false,
-    vignette: false,
-  },
-  CRISIS: {
-    bg: "bg-red-500/[0.03]",
-    showCracks: true,
-    crackOpacity: "opacity-[0.07]",
-    animateCracks: false,
-    vignette: false,
-  },
-  MELTDOWN: {
-    bg: "bg-red-500/[0.05]",
-    showCracks: true,
-    crackOpacity: "opacity-[0.12]",
-    animateCracks: true,
-    vignette: true,
-  },
+  BEDROCK:  { bg: "",                      showCracks: false, crackOpacity: "opacity-0",      pulseClass: "",                          vignette: false },
+  STEADY:   { bg: "bg-blue-500/[0.015]",   showCracks: false, crackOpacity: "opacity-0",      pulseClass: "",                          vignette: false },
+  TREMOR:   { bg: "bg-amber-500/[0.025]",  showCracks: false, crackOpacity: "opacity-0",      pulseClass: "",                          vignette: false },
+  FRACTURE: { bg: "bg-orange-500/[0.04]",  showCracks: true,  crackOpacity: "opacity-[0.04]", pulseClass: "",                          vignette: false },
+  CRISIS:   { bg: "bg-red-500/[0.03]",     showCracks: true,  crackOpacity: "opacity-[0.07]", pulseClass: "",                          vignette: false },
+  MELTDOWN: { bg: "bg-red-500/[0.05]",     showCracks: true,  crackOpacity: "opacity-[0.12]", pulseClass: "motion-safe:animate-pulse", vignette: true  },
 };
 
 /* ─── Component ───────────────────────────────────────────────── */
@@ -79,7 +45,7 @@ export function PsiAtmosphere({ band }: { band: ConditionBand }) {
       {/* Crack SVG overlay */}
       {config.showCracks && (
         <svg
-          className={`absolute inset-0 h-full w-full text-foreground ${config.crackOpacity} ${config.animateCracks ? "animate-pulse" : ""} transition-opacity duration-1000`}
+          className={`absolute inset-0 h-full w-full text-foreground ${config.crackOpacity} ${config.pulseClass} transition-opacity duration-1000`}
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           fill="none"
