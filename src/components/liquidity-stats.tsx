@@ -8,6 +8,7 @@ import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyPr
 import { CHAIN_META } from "@/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@/lib/types";
+import { DEX_GLOBAL_KEY } from "@/lib/types";
 
 export interface LiquidityStatsData {
   totalTvl: number;
@@ -29,13 +30,9 @@ const MAX_VISIBLE_PROTOCOLS = 10;
 
 function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
   const chainTotals = useMemo(() => {
-    const totals: Record<string, number> = {};
-    for (const liq of Object.values(data)) {
-      for (const [chain, tvl] of Object.entries(liq.chainTvl)) {
-        const key = chain.toLowerCase();
-        totals[key] = (totals[key] ?? 0) + tvl;
-      }
-    }
+    // Use global deduped row to avoid double-counting multi-stablecoin pools
+    const globalData = data[DEX_GLOBAL_KEY];
+    const totals: Record<string, number> = globalData?.chainTvl ? { ...globalData.chainTvl } : {};
     return Object.entries(totals).sort((a, b) => b[1] - a[1]);
   }, [data]);
 
@@ -88,14 +85,10 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
 }
 
 function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
-  // Aggregate protocol TVL across all stablecoins
+  // Use global deduped row to avoid double-counting multi-stablecoin pools
   const { displayEntries, colorMap, total } = useMemo(() => {
-    const totals: Record<string, number> = {};
-    for (const liq of Object.values(data)) {
-      for (const [protocol, tvl] of Object.entries(liq.protocolTvl)) {
-        totals[protocol] = (totals[protocol] ?? 0) + tvl;
-      }
-    }
+    const globalData = data[DEX_GLOBAL_KEY];
+    const totals: Record<string, number> = globalData?.protocolTvl ? { ...globalData.protocolTvl } : {};
     const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]) as [string, number][];
     const t = sorted.reduce((sum, [, v]) => sum + v, 0);
 

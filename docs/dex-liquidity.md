@@ -101,9 +101,21 @@ Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmat
 
 Per-stablecoin durability metric combining: organic fee fraction (35%), TVL stability from 30-day CV (25%), volume consistency from 30-day CV (20%), oldest pool maturity (15%), and locked liquidity fraction (5%). Stored as `durability_score`.
 
+### Pool Identity (`poolId`)
+
+Each `PoolEntry` carries a `poolId` field formatted as `chain:address` (lowercase). This uniquely identifies a physical pool across stablecoins. A single pool (e.g., USDC/USDT on Raydium) may appear under multiple stablecoin entries — `poolId` enables deduplication for global aggregates.
+
 ### Storage
 
 Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`. Stablecoins with no DEX presence get score 0.
+
+### Global Deduped Aggregates (`__global__`)
+
+A sentinel row with `stablecoin_id = '__global__'` stores cross-stablecoin aggregates where each physical pool is counted only once (deduped by `poolId`). This prevents double-counting when a pool contains multiple tracked stablecoins (e.g., a USDT/USDC pool would otherwise add its full TVL to both USDT and USDC rows).
+
+The `__global__` row contains deduped `total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `pool_count`, `chain_count`, `protocol_tvl_json`, and `chain_tvl_json`. Score-related fields (`liquidity_score`, `concentration_hhi`, etc.) are NULL.
+
+The frontend reads `__global__` for overview stats (total DEX TVL, 24h volume, protocol/chain breakdown bars) instead of naively summing per-stablecoin values. The constant `DEX_GLOBAL_KEY` (`src/lib/types.ts`) provides the key.
 
 ### Additional Liquidity Metrics
 

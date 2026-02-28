@@ -18,6 +18,7 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats";
 import type { PegCurrency } from "@/lib/types";
+import { DEX_GLOBAL_KEY } from "@/lib/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
@@ -57,8 +58,10 @@ export function LiquidityClient() {
   // Summary stats computed from full (unfiltered) data
   const summaryStats = useMemo((): LiquidityStatsData | null => {
     if (!liquidityMap) return null;
-    let totalTvl = 0;
-    let totalVol = 0;
+    // Use global deduped row for TVL/vol (avoids double-counting multi-stablecoin pools)
+    const globalData = liquidityMap[DEX_GLOBAL_KEY];
+    const totalTvl = globalData?.totalTvlUsd ?? 0;
+    const totalVol = globalData?.totalVolume24hUsd ?? 0;
     let scoreSum = 0;
     let scoreCount = 0;
     let withLiquidity = 0;
@@ -72,8 +75,6 @@ export function LiquidityClient() {
     for (const meta of TRACKED_STABLECOINS) {
       const liq = liquidityMap[meta.id];
       if (!liq) continue;
-      totalTvl += liq.totalTvlUsd;
-      totalVol += liq.totalVolume24hUsd;
       if (liq.liquidityScore != null && liq.liquidityScore > 0) {
         scoreSum += liq.liquidityScore;
         scoreCount++;

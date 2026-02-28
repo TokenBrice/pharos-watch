@@ -408,6 +408,9 @@ export interface DexLiquidityHistoryPoint {
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
 
+/** Sentinel key for global deduped aggregates in DexLiquidityMap */
+export const DEX_GLOBAL_KEY = "__global__";
+
 // --- Report Card types ---
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";

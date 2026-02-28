@@ -7,18 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/format";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { DEX_GLOBAL_KEY } from "@/lib/types";
 
 export function LiquiditySummary() {
   const { data, isLoading } = useDexLiquidity();
 
   const stats = useMemo(() => {
     if (!data) return null;
-    let totalTvl = 0;
-    let totalVol24h = 0;
+    // Use global deduped row for TVL/vol (avoids double-counting multi-stablecoin pools)
+    const globalData = data[DEX_GLOBAL_KEY];
+    const totalTvl = globalData?.totalTvlUsd ?? 0;
+    const totalVol24h = globalData?.totalVolume24hUsd ?? 0;
     let activeCount = 0;
-    for (const v of Object.values(data)) {
-      totalTvl += v.totalTvlUsd;
-      totalVol24h += v.totalVolume24hUsd;
+    for (const [key, v] of Object.entries(data)) {
+      if (key === DEX_GLOBAL_KEY) continue;
       if (v.liquidityScore && v.liquidityScore > 0) activeCount++;
     }
     return { totalTvl, totalVol24h, activeCount };

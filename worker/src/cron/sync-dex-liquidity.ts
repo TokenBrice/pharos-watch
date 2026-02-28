@@ -188,6 +188,7 @@ interface LiquidityMetrics {
 }
 
 interface PoolEntry {
+  poolId: string;
   project: string;
   chain: string;
   tvlUsd: number;
@@ -1504,6 +1505,7 @@ function mergeCgPools(
 
       // Add to top pools
       m.topPools.push({
+        poolId: `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`,
         project: pool.dexId,
         chain: pool.chain,
         tvlUsd: pool.tvlUsd,
@@ -1735,6 +1737,7 @@ function mergeGtPools(
 
       // Add to top pools
       m.topPools.push({
+        poolId: `${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`,
         project: pool.dexId,
         chain: pool.chain,
         tvlUsd: pool.tvlUsd,
@@ -1949,6 +1952,7 @@ function processPoolMetrics(
 
       // Pool entry with enriched extra
       m.topPools.push({
+        poolId: `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`,
         project: pool.project,
         chain: pool.chain,
         tvlUsd: pool.tvlUsd,
@@ -1981,11 +1985,24 @@ function processPoolMetrics(
   return metrics;
 }
 
+/** Global deduped aggregate for the __global__ sentinel row. */
+interface GlobalAgg {
+  totalTvl: number;
+  totalVol24h: number;
+  totalVol7d: number;
+  poolCount: number;
+  chainCount: number;
+  protocolTvl: Record<string, number>;
+  chainTvl: Record<string, number>;
+}
+
+type FullScoreResult = ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null };
+
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
 async function computeStablecoinScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
-): Promise<Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null }>> {
+): Promise<{ scores: Map<string, FullScoreResult>; globalAgg: GlobalAgg }> {
   // Pre-fetch depth stability for durability computation
   const stabilityMap = new Map<string, number>();
   try {
@@ -2027,7 +2044,7 @@ async function computeStablecoinScores(
     }
   } catch { /* first run has no data */ }
 
-  const results = new Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null }>();
+  const results = new Map<string, FullScoreResult>();
 
   for (const [id, m] of metrics) {
     // Filter pools with absurd volume/TVL ratios (e.g. $183M vol on $52K TVL)
@@ -2110,14 +2127,51 @@ async function computeStablecoinScores(
     });
   }
 
-  return results;
+  // Compute global deduped aggregates: each physical pool counted only once,
+  // even when it appears under multiple stablecoins (e.g., USDT/USDC pool).
+  const globalSeenPools = new Set<string>();
+  const globalProtocolTvl: Record<string, number> = {};
+  const globalChainTvl: Record<string, number> = {};
+  let globalTotalTvl = 0;
+  let globalTotalVol24h = 0;
+  let globalTotalVol7d = 0;
+  let globalPoolCount = 0;
+  const globalChains = new Set<string>();
+
+  for (const [, m] of metrics) {
+    for (const p of m.topPools) {
+      if (globalSeenPools.has(p.poolId)) continue;
+      globalSeenPools.add(p.poolId);
+      globalTotalTvl += p.tvlUsd;
+      globalTotalVol24h += p.volumeUsd1d;
+      globalPoolCount++;
+      globalChains.add(p.chain);
+      const proto = normalizeProtocol(p.project);
+      globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + p.tvlUsd;
+      globalChainTvl[p.chain] = (globalChainTvl[p.chain] ?? 0) + p.tvlUsd;
+    }
+    globalTotalVol7d += m.totalVolume7dUsd;
+  }
+
+  const globalAgg: GlobalAgg = {
+    totalTvl: globalTotalTvl,
+    totalVol24h: globalTotalVol24h,
+    totalVol7d: globalTotalVol7d,
+    poolCount: globalPoolCount,
+    chainCount: globalChains.size,
+    protocolTvl: globalProtocolTvl,
+    chainTvl: globalChainTvl,
+  };
+
+  return { scores: results, globalAgg };
 }
 
 /** Persist liquidity scores to D1 (both data rows and zero-score rows). */
 async function persistScores(
   db: D1Database,
   metrics: Map<string, LiquidityMetrics>,
-  scoreResults: Map<string, ScoreResult & { hhi: number; durability: number; components: ScoreComponents; weightedBalanceRatio: number | null; organicFrac: number | null; avgStress: number | null; lockedLiqPct: number | null }>,
+  scoreResults: Map<string, FullScoreResult>,
+  globalAgg: GlobalAgg,
   nowSec: number,
 ): Promise<void> {
   const stmts: D1PreparedStatement[] = [];
@@ -2182,10 +2236,34 @@ async function persistScores(
     }
   }
 
+  // Write __global__ sentinel row with deduped cross-stablecoin aggregates
+  stmts.push(
+    db
+      .prepare(
+        `INSERT OR REPLACE INTO dex_liquidity
+          (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
+           pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json,
+           top_pools_json, liquidity_score, effective_tvl_usd, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, 0, ?)`
+      )
+      .bind(
+        "__global__",
+        "__global__",
+        globalAgg.totalTvl,
+        globalAgg.totalVol24h,
+        globalAgg.totalVol7d,
+        globalAgg.poolCount,
+        globalAgg.chainCount,
+        JSON.stringify(globalAgg.protocolTvl),
+        JSON.stringify(globalAgg.chainTvl),
+        nowSec,
+      ),
+  );
+
   // D1 batch limit — chunk
   await batchExecute(db, stmts);
 
-  console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${stmts.length - metrics.size} zero)`);
+  console.log(`[dex-liquidity] Wrote ${stmts.length} rows (${metrics.size} with data, ${stmts.length - metrics.size} zero, 1 global)`);
 }
 
 /** Write daily snapshot rows (first sync invocation after UTC midnight). */
@@ -2780,11 +2858,11 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   }
 
   // 6. Compute composite scores per stablecoin
-  const scoreResults = await computeStablecoinScores(db, metrics);
+  const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics);
 
   // 7. Persist scores to D1
   const nowSec = Math.floor(Date.now() / 1000);
-  await persistScores(db, metrics, scoreResults, nowSec);
+  await persistScores(db, metrics, scoreResults, globalAgg, nowSec);
 
   // 8. Write daily historical snapshots
   await writeHistoricalSnapshots(db, scoreResults);
