@@ -45,6 +45,9 @@ function corsHeaders(origin: string): Record<string, string> {
     "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
     "Access-Control-Max-Age": "86400",
     "X-Content-Type-Options": "nosniff",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
   };
 }
 
