@@ -6,6 +6,12 @@ import {
   getPrevWeekRaw,
   getPrevMonthRaw,
 } from "../supply";
+import type { StablecoinData } from "../types";
+
+/** Minimal mock — only the fields each function accesses */
+function mockCoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
+  return overrides as StablecoinData;
+}
 
 // ---------------------------------------------------------------------------
 // sumPegBuckets
@@ -60,20 +66,20 @@ describe("sumPegBuckets", () => {
 // ---------------------------------------------------------------------------
 describe("getCirculatingRaw", () => {
   it("sums circulating peg buckets", () => {
-    const mockCoin = {
+    const coin = mockCoin({
       circulating: { peggedUSD: 1_000_000, peggedEUR: 500_000 },
-    } as any;
-    expect(getCirculatingRaw(mockCoin)).toBe(1_500_000);
+    });
+    expect(getCirculatingRaw(coin)).toBe(1_500_000);
   });
 
   it("returns 0 when circulating is undefined", () => {
-    const mockCoin = {} as any;
-    expect(getCirculatingRaw(mockCoin)).toBe(0);
+    const coin = mockCoin();
+    expect(getCirculatingRaw(coin)).toBe(0);
   });
 
   it("returns 0 when circulating is empty", () => {
-    const mockCoin = { circulating: {} } as any;
-    expect(getCirculatingRaw(mockCoin)).toBe(0);
+    const coin = mockCoin({ circulating: {} });
+    expect(getCirculatingRaw(coin)).toBe(0);
   });
 });
 
@@ -82,15 +88,15 @@ describe("getCirculatingRaw", () => {
 // ---------------------------------------------------------------------------
 describe("getPrevDayRaw", () => {
   it("sums circulatingPrevDay peg buckets", () => {
-    const mockCoin = {
+    const coin = mockCoin({
       circulatingPrevDay: { peggedUSD: 900_000 },
-    } as any;
-    expect(getPrevDayRaw(mockCoin)).toBe(900_000);
+    });
+    expect(getPrevDayRaw(coin)).toBe(900_000);
   });
 
   it("returns 0 when circulatingPrevDay is undefined", () => {
-    const mockCoin = {} as any;
-    expect(getPrevDayRaw(mockCoin)).toBe(0);
+    const coin = mockCoin();
+    expect(getPrevDayRaw(coin)).toBe(0);
   });
 });
 
@@ -99,15 +105,15 @@ describe("getPrevDayRaw", () => {
 // ---------------------------------------------------------------------------
 describe("getPrevWeekRaw", () => {
   it("sums circulatingPrevWeek peg buckets", () => {
-    const mockCoin = {
+    const coin = mockCoin({
       circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
-    } as any;
-    expect(getPrevWeekRaw(mockCoin)).toBe(900_000);
+    });
+    expect(getPrevWeekRaw(coin)).toBe(900_000);
   });
 
   it("returns 0 when circulatingPrevWeek is undefined", () => {
-    const mockCoin = {} as any;
-    expect(getPrevWeekRaw(mockCoin)).toBe(0);
+    const coin = mockCoin();
+    expect(getPrevWeekRaw(coin)).toBe(0);
   });
 });
 
@@ -116,14 +122,14 @@ describe("getPrevWeekRaw", () => {
 // ---------------------------------------------------------------------------
 describe("getPrevMonthRaw", () => {
   it("sums circulatingPrevMonth peg buckets", () => {
-    const mockCoin = {
+    const coin = mockCoin({
       circulatingPrevMonth: { peggedUSD: 700_000 },
-    } as any;
-    expect(getPrevMonthRaw(mockCoin)).toBe(700_000);
+    });
+    expect(getPrevMonthRaw(coin)).toBe(700_000);
   });
 
   it("returns 0 when circulatingPrevMonth is undefined", () => {
-    const mockCoin = {} as any;
-    expect(getPrevMonthRaw(mockCoin)).toBe(0);
+    const coin = mockCoin();
+    expect(getPrevMonthRaw(coin)).toBe(0);
   });
 });
