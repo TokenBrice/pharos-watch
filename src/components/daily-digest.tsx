@@ -4,16 +4,6 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/use-daily-digest";
 
-export function formatDateline(ts: number): string {
-  return new Date(ts * 1000).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function formatMasthead(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString("en-US", {
     weekday: "long",

@@ -99,13 +99,16 @@ export function DigestArchiveClient() {
       {/* Broadsheet: today's digest */}
       <DailyDigest showArchiveLink={false} />
 
-      {/* Archive divider */}
-      <div className="flex items-center gap-3 my-6">
-        <div className="flex-1 border-t border-border" />
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Archive
-        </span>
-        <div className="flex-1 border-t border-border" />
+      {/* Archive divider (double-rule) */}
+      <div className="my-6 space-y-0.5">
+        <div className="border-t border-border" />
+        <div className="flex items-center gap-3">
+          <div className="flex-1 border-t border-border" />
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Archive
+          </span>
+          <div className="flex-1 border-t border-border" />
+        </div>
       </div>
 
       {/* Month picker */}
@@ -136,14 +139,30 @@ export function DigestArchiveClient() {
           <Link
             key={d.generatedAt}
             href={`/digest/${tsToDateSlug(d.generatedAt)}/`}
-            className="flex items-center gap-3 sm:gap-4 py-2.5 border-b border-border/30 hover:bg-muted/20 transition-colors -mx-2 px-2 rounded"
+            className="flex items-start sm:items-center gap-3 sm:gap-4 py-2.5 border-b border-border/30 hover:bg-muted/20 transition-colors -mx-2 px-2 rounded"
           >
-            <span className="font-mono text-xs text-muted-foreground w-14 shrink-0">
+            <span className="font-mono text-xs text-muted-foreground w-14 shrink-0 mt-0.5 sm:mt-0">
               {formatWireDate(d.generatedAt)}
             </span>
-            <span className="text-sm font-medium truncate flex-1">
-              {d.digestTitle || "Signal & Noise"}
-            </span>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium truncate block">
+                {d.digestTitle || "Signal & Noise"}
+              </span>
+              {(d.psiBand || d.totalMcapUsd != null) && (
+                <div className="flex items-center gap-2 mt-0.5 sm:hidden">
+                  {d.psiBand && d.psiScore != null && (
+                    <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand] ?? ""}`}>
+                      {d.psiBand} {d.psiScore.toFixed(1)}
+                    </span>
+                  )}
+                  {d.totalMcapUsd != null && (
+                    <span className="text-xs font-mono text-muted-foreground">
+                      {formatCurrency(d.totalMcapUsd, 0)}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
             {d.psiBand && d.psiScore != null && (
               <span
                 className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand] ?? ""}`}
@@ -156,7 +175,7 @@ export function DigestArchiveClient() {
                 {formatCurrency(d.totalMcapUsd, 0)}
               </span>
             )}
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
           </Link>
         ))}
       </div>
