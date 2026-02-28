@@ -26,6 +26,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
 import { PsiAtmosphere } from "@/components/psi-atmosphere";
+import { PsiSeismograph } from "@/components/psi-seismograph";
 import type { ConditionBand } from "@/lib/psi-colors";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
@@ -607,48 +608,51 @@ export function StabilityIndexClient() {
       <StaleDataBanner
         queries={[{ label: "Stability Index", dataUpdatedAt, staleTime: CRON_15MIN }]}
       />
-      {/* Hero — score + components + history stats in one card */}
-      <Card className="rounded-xl">
-        <CardContent className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6 py-6" aria-live="polite">
-          {/* Score + delta */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            <PsiLighthouse band={displayBand} color={hexColor} size={72} />
-            <div className="flex flex-col items-center sm:items-start gap-0.5">
-              <div className="flex items-baseline gap-2">
-                <span className={`text-4xl font-extrabold font-mono tabular-nums ${colorClass}`}>
-                  {displayScore.toFixed(1)}
+      {/* Hero — score + seismograph + components + history stats */}
+      <Card className="rounded-xl overflow-hidden">
+        <CardContent className="py-6 space-y-4" aria-live="polite">
+          {/* Score row — compact */}
+          <div className="flex flex-wrap items-center gap-4">
+            <PsiLighthouse band={displayBand} color={hexColor} size={48} />
+            <div className="flex items-baseline gap-2">
+              <span className={`text-4xl font-extrabold font-mono tabular-nums ${colorClass}`}>
+                {displayScore.toFixed(1)}
+              </span>
+              <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
+                {displayBand}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              {delta !== null && (
+                <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
                 </span>
-                <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
-                  {displayBand}
-                </span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                {delta !== null && (
-                  <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-500" : "text-red-500"}`}>
-                    {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
-                  </span>
-                )}
-                <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {displayBand}</span>
-              </div>
+              )}
+              <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {displayBand}</span>
             </div>
           </div>
-          {/* Component breakdown — fills the middle */}
-          <div className="hidden lg:flex flex-1 items-center justify-center gap-5">
-            <div className="h-10 w-px bg-border" />
-            {COMPONENT_DETAIL.map((c) => (
-              <div key={c.label} className="flex flex-col items-center gap-0.5">
-                <span className="text-xs text-muted-foreground">{c.label}</span>
-                <span className="text-lg font-extrabold tabular-nums" style={{ color: c.color }}>
-                  {c.sign}{components[c.label.toLowerCase() as keyof typeof components].toFixed(1)}
-                </span>
-              </div>
-            ))}
+
+          {/* Seismograph trace */}
+          <div className="rounded-lg border border-border/30 bg-muted/20 p-2">
+            <PsiSeismograph score={displayScore} band={displayBand} />
           </div>
-          {/* History stats — right edge */}
-          <div className="hidden lg:flex items-center gap-5">
-            <HistoryStats history={data.history} />
+
+          {/* Component breakdown + history stats */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border/50 pt-4">
+            <div className="flex items-center gap-5">
+              {COMPONENT_DETAIL.map((c) => (
+                <div key={c.label} className="flex flex-col items-center gap-0.5">
+                  <span className="text-xs text-muted-foreground">{c.label}</span>
+                  <span className="text-lg font-extrabold tabular-nums" style={{ color: c.color }}>
+                    {c.sign}{components[c.label.toLowerCase() as keyof typeof components].toFixed(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="hidden lg:flex items-center gap-5">
+              <HistoryStats history={data.history} />
+            </div>
           </div>
-          {/* History stats — mobile only */}
           <HistoryStatsMobile history={data.history} />
         </CardContent>
       </Card>
