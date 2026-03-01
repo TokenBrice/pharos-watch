@@ -4,7 +4,7 @@ import {
   getDepreciationFactor,
   getConditionBand,
 } from "../stability-index";
-import type { StabilityInput, StabilityResult } from "../stability-index";
+import type { StabilityInput } from "../stability-index";
 
 // ---------------------------------------------------------------------------
 // Helpers
