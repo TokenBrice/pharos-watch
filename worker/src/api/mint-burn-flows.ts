@@ -203,9 +203,6 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     coinAgg.set(row.stablecoin_id, agg);
   }
 
-  // Build config lookup
-  const configById = new Map(MINT_BURN_CONFIGS.map((c) => [c.stablecoinId, c]));
-
   // Compute FIS and build coin responses
   const coins: Array<{
     stablecoinId: string;
