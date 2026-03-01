@@ -1132,6 +1132,49 @@ Backfills `amount_usd` for all mint-burn events with NULL values using current p
 }
 ```
 
+### `GET /api/stress-signals`
+
+Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
+
+**All coins (no params):** Latest DEWS score + signal breakdown per coin.
+
+**Single coin:** Add `?stablecoin=ID&days=30` for latest + daily history.
+
+**Cache:** standard (`public, s-maxage=300, max-age=60`)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | `string` | — | Single coin mode: return latest + daily history |
+| `days` | `integer` | `30` | History lookback (max 365) |
+
+**Response (all coins)**
+
+```json
+{
+  "signals": {
+    "1": { "score": 5, "band": "CALM", "signals": { "supply": { "value": 2, "available": true }, ... }, "computedAt": 1740000000 }
+  },
+  "updatedAt": 1740000000
+}
+```
+
+**Response (single coin)**
+
+```json
+{
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+  "history": [{ "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... } }]
+}
+```
+
+### `GET /api/backfill-dews`
+
+Validates DEWS against historical depeg events. Reports true-positive rate and average lead time.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
 ### `GET /api/audit-depeg-history`
 
 Audits existing depeg events against CoinGecko historical price data to detect false positives. Supports dry-run mode.

@@ -283,3 +283,33 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   PAXG: "#eab308",
   XAUT: "#f59e0b",
 };
+
+// ---------------------------------------------------------------------------
+// Depeg Early Warning Score (DEWS) threat bands
+// ---------------------------------------------------------------------------
+
+export type ThreatBand = "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
+
+export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {
+  CALM: "Calm",
+  WATCH: "Watch",
+  ALERT: "Alert",
+  WARNING: "Warning",
+  DANGER: "Danger",
+};
+
+export const THREAT_BAND_COLORS: Record<ThreatBand, string> = {
+  CALM:    "bg-green-500/10 text-green-500 border-green-500/20",
+  WATCH:   "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  ALERT:   "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+  WARNING: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  DANGER:  "bg-red-500/10 text-red-500 border-red-500/20",
+};
+
+export const THREAT_BAND_HEX: Record<ThreatBand, string> = {
+  CALM:    "#22c55e",
+  WATCH:   "#14b8a6",
+  ALERT:   "#eab308",
+  WARNING: "#f97316",
+  DANGER:  "#ef4444",
+};

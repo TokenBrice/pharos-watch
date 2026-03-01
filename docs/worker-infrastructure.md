@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 14 cron jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 15 cron jobs across 4 trigger slots.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -142,6 +142,7 @@ crons = [
 | `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
 | `sync-fx-rates` | `syncFxRates()` | `worker/src/cron/sync-fx-rates.ts` | `docs/data-pipeline.md`, `docs/classification.md` |
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
+| `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/index.ts` | This doc (below) |
 
 **Dependencies:** Stability index waits for `syncStablecoins()` to complete (`stablecoinsSync.then(...)`).
@@ -415,6 +416,7 @@ Returns recent `cron_runs` rows for operational monitoring. Tracks 14 cron jobs 
 | `sync-stablecoin-charts` | 900s (15min) | `*/15 * * * *` |
 | `sync-fx-rates` | 900s (15min) | `*/15 * * * *` |
 | `stability-index` | 900s (15min) | `*/15 * * * *` |
+| `compute-dews` | 900s (15min) | `*/15 * * * *` |
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
