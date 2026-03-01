@@ -3536,6 +3536,22 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "institutional",
     governanceQuality: "single-entity",
   }),
+  usd("354", "apxUSD", "apxUSD", "rwa-backed", "centralized", {
+    rwa: true,
+    collateral: "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
+    pegMechanism: "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
+    links: [
+      { label: "Website", url: "https://apyx.fi" },
+      { label: "Twitter", url: "https://x.com/apyx_fi" },
+      { label: "Docs", url: "https://docs.apyx.fi" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x98a878b1cd98131b271883b390f68d2c90674665", decimals: 18 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "single-entity",
+  }),
 ];
 
 // --- Pre-computed lookups (static data, computed once at module level) ---
