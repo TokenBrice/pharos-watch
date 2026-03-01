@@ -190,3 +190,30 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
       "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000",
   },
 ];
+
+/**
+ * Curated protocol allowlist for automatic lending pool discovery (Wave 2).
+ * Only pools from these protocols are considered for non-yield-bearing coins.
+ *
+ * Tier 1 (battle-tested, $1B+ historical TVL):
+ *   aave-v3, compound-v3, sparklend, spark-savings, maple, yearn-finance
+ *
+ * Tier 2 (established, well-audited):
+ *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle
+ */
+export const LENDING_PROTOCOL_ALLOWLIST = new Set([
+  // Tier 1
+  "aave-v3",
+  "compound-v3",
+  "sparklend",
+  "spark-savings",
+  "maple",
+  "yearn-finance",
+  // Tier 2
+  "fluid-lending",
+  "euler-v2",
+  "venus-core-pool",
+  "kamino-lend",
+  "morpho-v1",
+  "pendle",
+]);
