@@ -86,10 +86,6 @@ export function HomepageClient() {
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary name="dews">
-        <DEWSSummary />
-      </SectionErrorBoundary>
-
       <SectionErrorBoundary name="charts">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TotalMcapChart />
@@ -121,6 +117,10 @@ export function HomepageClient() {
             />
           </div>
         </section>
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="dews">
+        <DEWSSummary logos={logos} />
       </SectionErrorBoundary>
 
       <FeatureHighlights />
