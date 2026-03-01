@@ -3,7 +3,6 @@ import {
   computeFlowIntensity,
   computeGaugeScore,
   detectFlightToQuality,
-  GAUGE_BANDS,
   getGaugeBand,
 } from "../mint-burn-scoring";
 
