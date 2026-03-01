@@ -23,6 +23,8 @@ import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { handleReportCards } from "./api/report-cards";
 import { handleYieldRankings } from "./api/yield-rankings";
 import { handleYieldHistory } from "./api/yield-history";
+import { handleMintBurnFlows } from "./api/mint-burn-flows";
+import { handleMintBurnEvents } from "./api/mint-burn-events";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -129,6 +131,14 @@ export function route(
 
   if (path === "/api/yield-history") {
     return handleYieldHistory(db, url);
+  }
+
+  if (path === "/api/mint-burn-flows") {
+    return handleMintBurnFlows(db, url);
+  }
+
+  if (path === "/api/mint-burn-events") {
+    return handleMintBurnEvents(db, url);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution

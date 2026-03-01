@@ -3,6 +3,8 @@ import { logCronRun, getCache } from "./lib/db";
 import { syncStablecoins } from "./cron/sync-stablecoins";
 import { syncStablecoinCharts } from "./cron/sync-stablecoin-charts";
 import { syncBlacklist } from "./cron/sync-blacklist";
+import { syncMintBurn } from "./cron/sync-mint-burn";
+import { createRateLimiter } from "./lib/evm-logs";
 import { syncUsdsStatus } from "./cron/sync-usds-status";
 import { syncBluechip } from "./cron/sync-bluechip";
 import { syncFxRates } from "./cron/sync-fx-rates";
@@ -215,11 +217,19 @@ const worker = {
         })());
         break;
       }
-      // Blacklist on a 20-min cycle (offset at :03/:23/:43 to avoid colliding with the 15-min trigger)
+      // Blacklist + mint/burn on a 20-min cycle (offset at :03/:23/:43 to avoid colliding with the 15-min trigger)
+      // Both jobs share one Etherscan rate limiter to stay within the free-tier 5 req/sec cap.
       case "3,23,43 * * * *": {
+        const etherscanRL = createRateLimiter(4);
+        const etherscanKey = env.ETHERSCAN_API_KEY ?? null;
         ctx.waitUntil(
           logCronRun(db, "sync-blacklist", () =>
-            syncBlacklist(db, env.ETHERSCAN_API_KEY ?? null, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null)
+            syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL)
+          )
+        );
+        ctx.waitUntil(
+          logCronRun(db, "sync-mint-burn", () =>
+            syncMintBurn(db, etherscanKey, etherscanRL)
           )
         );
         break;

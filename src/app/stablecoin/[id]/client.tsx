@@ -32,6 +32,8 @@ import { useReportCards } from "@/hooks/use-report-cards";
 import type { StablecoinData, StablecoinMeta } from "@/lib/types";
 import { pegScoreColor, getScoreColor, getScoreTier, TIER_BORDER, deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { FlowSummaryCard } from "@/components/flow-summary-card";
+import { FlowEventFeed } from "@/components/flow-event-feed";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 
@@ -41,6 +43,7 @@ const DETAIL_SECTIONS = [
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
   { id: "liquidity", label: "Liquidity" },
+  { id: "flows", label: "Flows" },
   { id: "history", label: "Depeg History" },
 ];
 
@@ -416,6 +419,11 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <section id="liquidity">
         <DexLiquidityCard stablecoinId={id} />
+      </section>
+
+      <section id="flows">
+        <FlowSummaryCard stablecoinId={id} />
+        <FlowEventFeed stablecoinId={id} limit={10} />
       </section>
 
       <ContractAddresses meta={coin} />

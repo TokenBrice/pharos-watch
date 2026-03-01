@@ -674,3 +674,66 @@ export interface YieldHistoryPoint {
   exchangeRate: number | null;
   sourceTvlUsd: number | null;
 }
+
+// --- Mint/Burn Flow types ---
+
+export interface MintBurnGauge {
+  score: number | null;
+  band: string | null;
+  flightToQuality: boolean;
+  flightIntensity: number;
+  trackedCoins: number;
+  trackedMcapUsd: number;
+}
+
+export interface MintBurnCoinFlow {
+  stablecoinId: string;
+  symbol: string;
+  flowIntensity: number | null;
+  netFlow24hUsd: number;
+  mintVolume24hUsd: number;
+  burnVolume24hUsd: number;
+  mintCount24h: number;
+  burnCount24h: number;
+  netFlow7dUsd: number;
+  largestEvent24h: {
+    direction: "mint" | "burn";
+    amountUsd: number;
+    txHash: string;
+    timestamp: number;
+  } | null;
+}
+
+export interface MintBurnHourlyBucket {
+  hourTs: number;
+  netFlowUsd: number;
+  mintVolumeUsd: number;
+  burnVolumeUsd: number;
+}
+
+export interface MintBurnFlowsResponse {
+  gauge: MintBurnGauge;
+  coins: MintBurnCoinFlow[];
+  hourly: MintBurnHourlyBucket[];
+  updatedAt: number;
+}
+
+export interface MintBurnEvent {
+  id: string;
+  stablecoinId: string;
+  symbol: string;
+  chainId: string;
+  direction: "mint" | "burn";
+  amount: number;
+  amountUsd: number | null;
+  counterparty: string | null;
+  txHash: string;
+  blockNumber: number;
+  timestamp: number;
+  explorerTxUrl: string;
+}
+
+export interface MintBurnEventsResponse {
+  events: MintBurnEvent[];
+  total: number;
+}

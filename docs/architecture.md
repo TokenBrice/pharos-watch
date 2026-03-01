@@ -24,6 +24,8 @@
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
+| `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin FIS, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
+| `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=`, `?minAmount=`, `?limit=N&offset=M`) |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
 | `GET /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
@@ -56,6 +58,9 @@ src/                              # Next.js frontend (static export)
 │   ├── digest/                   # Daily digest archive
 │   │   ├── page.tsx
 │   │   └── [date]/page.tsx       # Historical digest by date
+│   ├── flows/                    # Mint/burn flow tracker
+│   │   ├── page.tsx
+│   │   └── layout.tsx
 │   ├── liquidity/                # DEX liquidity scores & leaderboard
 │   │   ├── page.tsx
 │   │   ├── client.tsx
@@ -111,6 +116,12 @@ src/                              # Next.js frontend (static export)
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
 │   ├── stablecoin-table.tsx      # Sortable table with filters
+│   ├── flow-gauge.tsx             # Bank Run Gauge visualization (full-size)
+│   ├── flow-gauge-mini.tsx       # Compact gauge for homepage/detail page
+│   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
+│   ├── flow-table.tsx            # Per-coin flow table with FIS, volumes, net flows
+│   ├── flow-event-feed.tsx       # Live mint/burn event feed with filtering
+│   ├── flow-summary-card.tsx     # Summary card for homepage/detail page
 │   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
 │   ├── kpi-bar.tsx               # Homepage KPI bar (total supply, dominance, etc.)
 │   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
@@ -194,6 +205,7 @@ src/                              # Next.js frontend (static export)
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (GET /api/supply-history with fallback)
+│   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json
 │   ├── use-stablecoin-charts.ts  # GET /api/stablecoin-charts
 │   ├── use-blacklist-events.ts   # GET /api/blacklist
@@ -276,7 +288,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # US Treasury T-bill rate fetcher (FRED API)
-    │   └── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
+    │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
+    │   └── sync-mint-burn.ts     # On-chain mint/burn Transfer event sync via Etherscan (every 20min)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
@@ -303,6 +316,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
     │   ├── yield-rankings.ts    # GET /api/yield-rankings
     │   ├── yield-history.ts     # GET /api/yield-history
+    │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
+    │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
     │   └── feedback.ts          # POST /api/feedback (public, handled in index.ts not router)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
@@ -322,6 +337,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── twitter.ts             # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
+        ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)
+        ├── mint-burn-scoring.ts  # Flow Intensity Score (FIS), Bank Run Gauge, flight-to-quality detection
         ├── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
         ├── dexscreener.ts        # DexScreener API client (token price + pool search)
         ├── resolve-market-cap.ts # Multi-source market cap resolution (DL → CG → CMC → DexScreener)

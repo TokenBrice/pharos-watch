@@ -8,6 +8,7 @@ import {
   BookOpen,
   FlaskConical,
   ArrowLeftRight,
+  ArrowUpDown,
   Newspaper,
   Wallet,
   Network,
@@ -53,6 +54,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/yield", label: "Yield", icon: TrendingUp, description: "Risk-adjusted yield rankings" },
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
+      { href: "/flows", label: "Flows", icon: ArrowUpDown, description: "Mint and burn flow tracker" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
     ],
