@@ -1,8 +1,8 @@
-import { getCache } from "../lib/db";
+import { getCache, getFirstSeenDates } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { computePegScore } from "../../../src/lib/peg-score";
+import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { sumPegBuckets } from "../../../src/lib/supply";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
@@ -109,12 +109,15 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     try { bluechipMap = JSON.parse(bluechipCached.value); } catch { /* fall back to empty */ }
   }
 
-  // 2. Load depeg events (4-year window)
+  // 2. Load depeg events (4-year window) and first-seen dates
   const fourYearsAgoSec = Math.floor(Date.now() / 1000) - Math.ceil(4 * 365.25 * 86400);
 
-  const eventsResult = await db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
-    .bind(fourYearsAgoSec)
-    .all<DepegRow>();
+  const [eventsResult, firstSeenMap] = await Promise.all([
+    db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
+      .bind(fourYearsAgoSec)
+      .all<DepegRow>(),
+    getFirstSeenDates(db),
+  ]);
 
   const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
 
@@ -154,9 +157,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     }
 
     // Peg score
-    const trackingStart = events.length > 0
-      ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgo)
-      : fourYearsAgo;
+    const trackingStart = coinTrackingStart(events, fourYearsAgo, firstSeenMap.get(meta.id));
     const scoreResult = computePegScore(events, trackingStart, now);
 
     pegDataById.set(meta.id, {

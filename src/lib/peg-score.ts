@@ -1,6 +1,33 @@
 import type { DepegEvent } from "./types";
 import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 
+export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * 86400);
+
+/**
+ * Compute the tracking window start for a coin, respecting both the 4-year
+ * lookback cap and the coin's actual first-seen date.
+ *
+ * Without `firstSeenSec`, young coins get their depeg time diluted across a
+ * full 4-year window they didn't exist for.
+ */
+export function coinTrackingStart(
+  events: DepegEvent[],
+  fourYearsAgoSec: number,
+  firstSeenSec?: number | null,
+): number {
+  // If we know when the coin first appeared, don't go further back than that
+  // (but also don't go further back than the 4-year lookback cap).
+  if (firstSeenSec != null) {
+    return Math.max(firstSeenSec, fourYearsAgoSec);
+  }
+  // Fallback: use earliest event if available, otherwise 4-year cap
+  if (events.length > 0) {
+    const earliest = events.reduce((m, e) => Math.min(m, e.startedAt), Infinity);
+    return Math.max(earliest, fourYearsAgoSec);
+  }
+  return fourYearsAgoSec;
+}
+
 /**
  * Wrapper around computePegScore that applies a 4-year lookback window.
  * Used by the detail page to score a single coin from its depeg events.
@@ -12,12 +39,9 @@ export function computePegScoreWithWindow(
 ): PegScoreResult | null {
   if (isNavToken || !events) return null;
   const nowSec = Math.floor(Date.now() / 1000);
-  const fourYearsAgo = nowSec - 4 * 365.25 * 86400;
-  const rawTrackingStart = earliestTrackingDate ? Math.floor(Number(earliestTrackingDate)) : null;
-  const trackingStartSec = rawTrackingStart != null
-    ? Math.max(rawTrackingStart, fourYearsAgo)
-    : fourYearsAgo;
-  return computePegScore(events, trackingStartSec, nowSec);
+  const fourYearsAgo = nowSec - PEG_SCORE_LOOKBACK_SEC;
+  const firstSeenSec = earliestTrackingDate ? Math.floor(Number(earliestTrackingDate)) : null;
+  return computePegScore(events, coinTrackingStart(events, fourYearsAgo, firstSeenSec), nowSec);
 }
 
 export interface PegScoreResult {
@@ -86,6 +110,11 @@ export function computePegScore(
   const pegPct = Math.max(0, (1 - totalDepegSec / spanSec) * 100);
 
   // --- Severity score ---
+  // Each event's penalty = max(durationPenalty, magnitudeFloor).
+  // durationPenalty scales with peak × duration × recency (original formula).
+  // magnitudeFloor ensures even very short events (minutes/hours) carry a
+  // minimum penalty proportional to their magnitude — a 2-hour 400 bps depeg
+  // is not negligible just because it was brief.
   let totalPenalty = 0;
   for (const e of events) {
     const peakBps = Math.abs(e.peakDeviationBps);
@@ -94,7 +123,9 @@ export function computePegScore(
     const yearsAgo = (now - e.startedAt) / (365.25 * 86400);
     const recencyWeight = 1 / (1 + yearsAgo);
 
-    totalPenalty += (peakBps / 100) * (durationDays / 30) * recencyWeight;
+    const durationPenalty = (peakBps / 100) * (durationDays / 30) * recencyWeight;
+    const magnitudeFloor = (peakBps / 2000) * recencyWeight;
+    totalPenalty += Math.max(durationPenalty, magnitudeFloor);
   }
   const severityScore = Math.max(0, 100 - totalPenalty);
 
@@ -116,9 +147,9 @@ export function computePegScore(
   let activeDepegPenalty = 0;
   for (const e of events) {
     if (e.endedAt === null) {
-      // Scale: 100 bps (threshold) = ~2 penalty (floor), 10000 bps = 50 penalty (hard cap)
+      // Scale: 100 bps (threshold) = 5 penalty (floor), 2500+ bps = 50 penalty (hard cap)
       const absBps = Math.abs(e.peakDeviationBps);
-      activeDepegPenalty = Math.min(50, Math.max(2, absBps / 200));
+      activeDepegPenalty = Math.min(50, Math.max(5, absBps / 50));
       break;
     }
   }

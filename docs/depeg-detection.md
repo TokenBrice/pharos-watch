@@ -291,12 +291,26 @@ Used in report cards. Formula:
 
 ```
 pegPct = (1 - totalDepegSec / spanSec) * 100
-severityScore = 100 - sum of per-event penalties (peak x duration x recency decay)
+severityScore = 100 - sum of per-event penalties
+  per-event penalty = max(durationPenalty, magnitudeFloor)
+    durationPenalty = (peakBps/100) * (durationDays/30) * recencyWeight
+    magnitudeFloor  = (peakBps/2000) * recencyWeight
 spreadPenalty = min(15, (stddev of peaks / 1000) * 15)
-activeDepegPenalty = if ongoing: min(50, max(2, |peakBps| / 200))
+activeDepegPenalty = if ongoing: min(50, max(5, |peakBps| / 50))
 
 pegScore = max(0, min(100, round(0.5*pegPct + 0.5*severityScore - activeDepegPenalty - spreadPenalty)))
 ```
+
+**Tracking window**: `coinTrackingStart()` uses the coin's earliest supply_history snapshot
+(queried via `getFirstSeenDates()`) so young coins aren't diluted across a phantom 4-year window.
+Falls back to earliest depeg event, then to the 4-year lookback cap.
+
+**Magnitude floor**: Every depeg event carries a minimum severity penalty proportional
+to its peak deviation, regardless of how brief. This prevents hundreds of short
+high-magnitude depegs from being scored as nearly free.
+
+**Active depeg penalty**: Floor of 5, scales at `|peakBps| / 50`, capped at 50.
+A 500 bps ongoing depeg costs 10 points; 2500+ bps hits the cap.
 
 Returns `null` if < 30 days tracking.
 

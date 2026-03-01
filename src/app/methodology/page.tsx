@@ -42,7 +42,7 @@ export default function MethodologyPage() {
                 name: "How is the Pharos peg score calculated?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It requires at least 30 days of tracking data over a 4-year window.",
+                  text: "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but is capped at the coin's actual age. It requires at least 30 days of tracking data.",
                 },
               },
               {
@@ -396,7 +396,9 @@ export default function MethodologyPage() {
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            Composite 0&ndash;100 score measuring how faithfully a stablecoin holds its peg, computed over a 4-year tracking window.
+            Composite 0&ndash;100 score measuring how faithfully a stablecoin holds its peg.
+            The tracking window spans up to 4 years but is capped at the coin&apos;s actual age (earliest supply snapshot),
+            so young coins are not diluted across history they didn&apos;t exist for.
             Requires at least 30 days of tracking data; returns null otherwise.
           </p>
 
@@ -482,15 +484,18 @@ export default function MethodologyPage() {
                     <td className="py-2 pr-4">0&ndash;100</td>
                     <td className="py-2">
                       Penalizes magnitude, duration, and recency of each depeg event.
-                      Per-event penalty: (peakBps&nbsp;/&nbsp;100) &times; (durationDays&nbsp;/&nbsp;30) &times; recencyWeight.
+                      Per-event penalty: max(durationPenalty, magnitudeFloor), where
+                      durationPenalty = (peakBps&nbsp;/&nbsp;100) &times; (durationDays&nbsp;/&nbsp;30) &times; recencyWeight,
+                      magnitudeFloor = (peakBps&nbsp;/&nbsp;2000) &times; recencyWeight.
+                      The floor ensures even brief depegs carry a minimum penalty proportional to their severity.
                       Recency weight = 1&nbsp;/&nbsp;(1&nbsp;+&nbsp;yearsAgo) so recent events count more. Duration capped at 90 days
                     </td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Active Depeg Penalty</td>
                     <td className="py-2 pr-4">subtracted</td>
-                    <td className="py-2 pr-4">2&ndash;50</td>
-                    <td className="py-2">Applied only if an ongoing depeg exists (no end date). Scales with severity: clamp(absBps&nbsp;/&nbsp;200, 2, 50)</td>
+                    <td className="py-2 pr-4">5&ndash;50</td>
+                    <td className="py-2">Applied only if an ongoing depeg exists (no end date). Scales with severity: clamp(absBps&nbsp;/&nbsp;50, 5, 50)</td>
                   </tr>
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Spread Penalty</td>

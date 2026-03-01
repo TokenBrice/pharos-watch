@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
-import { computePegScore } from "../peg-score";
+import { computePegScore, coinTrackingStart } from "../peg-score";
 import type { PegScoreResult } from "../peg-score";
 import { computePegStability } from "../peg-stability";
 import type { DepegEvent } from "../types";
@@ -496,6 +496,195 @@ describe("computePegScore", () => {
     const result = computePegScore(events, trackingStart, NOW);
     expect(result.pegScore).not.toBeNull();
     expect(result.pegScore!).toBeLessThan(80);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// coinTrackingStart
+// ---------------------------------------------------------------------------
+describe("coinTrackingStart", () => {
+  const NOW = 1_700_000_000;
+  const FOUR_YEARS_AGO = NOW - 4 * 365.25 * DAY;
+
+  it("returns fourYearsAgo when no events and no firstSeen", () => {
+    expect(coinTrackingStart([], FOUR_YEARS_AGO)).toBe(FOUR_YEARS_AGO);
+  });
+
+  it("returns firstSeen when coin is younger than 4 years", () => {
+    const firstSeen = NOW - 200 * DAY;
+    expect(coinTrackingStart([], FOUR_YEARS_AGO, firstSeen)).toBe(firstSeen);
+  });
+
+  it("returns fourYearsAgo when firstSeen is older than 4 years", () => {
+    const firstSeen = NOW - 10 * YEAR;
+    expect(coinTrackingStart([], FOUR_YEARS_AGO, firstSeen)).toBe(FOUR_YEARS_AGO);
+  });
+
+  it("uses earliest event when no firstSeen provided", () => {
+    const events = [
+      makeEvent({ startedAt: NOW - 100 * DAY, endedAt: NOW - 99 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 50 * DAY, endedAt: NOW - 49 * DAY, peakDeviationBps: -200 }),
+    ];
+    expect(coinTrackingStart(events, FOUR_YEARS_AGO)).toBe(NOW - 100 * DAY);
+  });
+
+  it("prefers firstSeen over earliest event when firstSeen is older", () => {
+    const firstSeen = NOW - 300 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - 100 * DAY, endedAt: NOW - 99 * DAY, peakDeviationBps: -200 }),
+    ];
+    // firstSeen (300d) > fourYearsAgo → use firstSeen
+    expect(coinTrackingStart(events, FOUR_YEARS_AGO, firstSeen)).toBe(firstSeen);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Severity magnitude floor
+// ---------------------------------------------------------------------------
+describe("severity magnitude floor", () => {
+  const NOW = 1_700_000_000;
+
+  it("short high-magnitude events carry meaningful penalty via floor", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // A single 2-hour 400bps event — without floor this is nearly invisible
+    const events = [
+      makeEvent({
+        startedAt: NOW - 10 * DAY,
+        endedAt: NOW - 10 * DAY + 2 * 3600,
+        peakDeviationBps: -400,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // magnitudeFloor = (400/2000) * recency ≈ 0.2 * ~0.97 ≈ 0.19
+    // durationPenalty = (4) * (0.083/30) * 0.97 ≈ 0.011
+    // Floor should dominate: severityScore ≈ 99.8 not 99.99
+    expect(result.severityScore).toBeLessThan(99.9);
+  });
+
+  it("many short micro-depegs accumulate a significant penalty", () => {
+    const trackingStart = NOW - 30 * DAY;
+    // 50 events, each 1 hour, 300bps, spread over 30 days
+    const events = Array.from({ length: 50 }, (_, i) =>
+      makeEvent({
+        id: i,
+        startedAt: NOW - 30 * DAY + i * 12 * 3600,
+        endedAt: NOW - 30 * DAY + i * 12 * 3600 + 3600,
+        peakDeviationBps: -300,
+      }),
+    );
+    const result = computePegScore(events, trackingStart, NOW);
+    // Each event: magnitudeFloor = 300/2000 * ~1 = 0.15
+    // 50 * 0.15 = 7.5 total penalty → severityScore ≈ 92.5
+    expect(result.severityScore).toBeLessThan(95);
+    expect(result.severityScore).toBeGreaterThan(85);
+  });
+
+  it("floor does not affect long events where duration penalty already dominates", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({
+        startedAt: NOW - 60 * DAY,
+        endedAt: NOW - 30 * DAY,
+        peakDeviationBps: -500,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // durationPenalty = (5) * (30/30) * recency ≈ 5 * 0.86 = 4.3
+    // magnitudeFloor = 500/2000 * 0.86 = 0.22
+    // Duration penalty dominates
+    expect(result.severityScore).toBeGreaterThan(90);
+    expect(result.severityScore).toBeLessThan(100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Active depeg penalty scaling
+// ---------------------------------------------------------------------------
+describe("active depeg penalty scaling", () => {
+  const NOW = 1_700_000_000;
+
+  it("floor is 5 for threshold-level depegs (100 bps)", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: -100 }),
+    ];
+    const noDepegResult = computePegScore([], trackingStart, NOW);
+    const result = computePegScore(events, trackingStart, NOW);
+    // Active penalty = max(5, 100/50) = max(5, 2) = 5
+    // Score difference should be ≈5 points (plus some pegPct/severity effect)
+    expect(noDepegResult.pegScore! - result.pegScore!).toBeGreaterThanOrEqual(5);
+  });
+
+  it("moderate depeg (500 bps) gets penalty of 10", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: -500 }),
+    ];
+    const noDepegResult = computePegScore([], trackingStart, NOW);
+    const result = computePegScore(events, trackingStart, NOW);
+    // Active penalty = max(5, 500/50) = 10
+    expect(noDepegResult.pegScore! - result.pegScore!).toBeGreaterThanOrEqual(10);
+  });
+
+  it("severe depeg (2500+ bps) hits the 50-point cap", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: -5000 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // Active penalty capped at 50
+    expect(result.pegScore!).toBeLessThanOrEqual(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Young coin with chronic depegs (cUSD-like scenario)
+// ---------------------------------------------------------------------------
+describe("young coin with chronic depegs", () => {
+  const NOW = 1_700_000_000;
+
+  it("scores much lower when tracking window matches actual coin age", () => {
+    // Simulate a 30-day-old coin that depegs for 2 hours every 6 hours
+    const coinAge = 30 * DAY;
+    const trackingStart = NOW - coinAge;
+    const events: DepegEvent[] = [];
+    for (let i = 0; i < 120; i++) {
+      events.push(makeEvent({
+        id: i,
+        startedAt: trackingStart + i * 6 * 3600,
+        endedAt: trackingStart + i * 6 * 3600 + 2 * 3600,
+        peakDeviationBps: -350,
+      }));
+    }
+    const result = computePegScore(events, trackingStart, NOW);
+
+    // With proper 30-day window:
+    // pegPct ≈ 67% (depegged ~1/3 of the time)
+    // severityScore is reduced by 120 events × floor penalty
+    // Should score well below 80
+    expect(result.pegScore).not.toBeNull();
+    expect(result.pegScore!).toBeLessThan(80);
+  });
+
+  it("same events diluted over 4-year window would score much higher", () => {
+    // Same events but with a 4-year tracking start (the old bug)
+    const coinAge = 30 * DAY;
+    const fourYearStart = NOW - 4 * YEAR;
+    const events: DepegEvent[] = [];
+    for (let i = 0; i < 120; i++) {
+      events.push(makeEvent({
+        id: i,
+        startedAt: NOW - coinAge + i * 6 * 3600,
+        endedAt: NOW - coinAge + i * 6 * 3600 + 2 * 3600,
+        peakDeviationBps: -350,
+      }));
+    }
+
+    const correctResult = computePegScore(events, NOW - coinAge, NOW);
+    const dilutedResult = computePegScore(events, fourYearStart, NOW);
+
+    // The diluted (4-year window) version should score significantly higher
+    expect(dilutedResult.pegScore!).toBeGreaterThan(correctResult.pegScore! + 15);
   });
 });
 

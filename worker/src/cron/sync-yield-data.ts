@@ -1,7 +1,7 @@
 // worker/src/cron/sync-yield-data.ts
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, setCache, batchExecute } from "../lib/db";
+import { getCache, setCache, batchExecute, getFirstSeenDates } from "../lib/db";
 import {
   USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
   PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE, MIN_SAFETY_SCORE_FOR_YIELD,
@@ -21,7 +21,7 @@ import {
   computeOverallGrade, scoreDecentralization, scoreDependencyRisk,
   scoreLiquidity, scorePegStability, scoreResilience,
 } from "../../../src/lib/report-cards";
-import { computePegScore } from "../../../src/lib/peg-score";
+import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import type { StablecoinData, PegSummaryCoin, DexLiquidityData } from "../../../src/lib/types";
 import type { CronResult } from "../lib/db";
@@ -472,15 +472,16 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
     }
     const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
 
-    // Load depeg events (4-year window) + dex liquidity
+    // Load depeg events (4-year window) + dex liquidity + first-seen dates
     const nowSec = Math.floor(Date.now() / 1000);
     const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
-    const [eventsResult, dexLiqResult] = await Promise.all([
+    const [eventsResult, dexLiqResult, firstSeenMap] = await Promise.all([
       db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
         .bind(fourYearsAgoSec)
         .all<DepegRow>(),
       db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
         .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; pool_count: number; chain_count: number }>(),
+      getFirstSeenDates(db),
     ]);
 
     // Build depeg event lookup using rowToDepegEvent for proper typing
@@ -511,9 +512,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
 
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = events.length > 0
-        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
-        : fourYearsAgoSec;
+      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 
       const pegData: PegSummaryCoin = {
@@ -549,9 +548,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
 
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = events.length > 0
-        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
-        : fourYearsAgoSec;
+      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 
       const pegData: PegSummaryCoin = {

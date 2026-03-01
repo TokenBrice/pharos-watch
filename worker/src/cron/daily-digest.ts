@@ -2,7 +2,7 @@ import type { StablecoinData, DexLiquidityData, PegSummaryCoin } from "../../../
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { TRACKED_IDS, TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { formatCurrency } from "../../../src/lib/format";
-import { computePegScore } from "../../../src/lib/peg-score";
+import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import {
   scorePegStability,
   scoreLiquidity,
@@ -12,7 +12,7 @@ import {
   computeOverallGrade,
   scoreToGrade,
 } from "../../../src/lib/report-cards";
-import { getCache } from "../lib/db";
+import { getCache, getFirstSeenDates } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
@@ -441,14 +441,15 @@ export async function generateDailyDigest(
     }
     const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
 
-    // Load depeg events (4-year window) + dex liquidity
+    // Load depeg events (4-year window) + dex liquidity + first-seen dates
     const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
-    const [eventsResult, dexLiqResult] = await Promise.all([
+    const [eventsResult, dexLiqResult, firstSeenMap] = await Promise.all([
       db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
         .bind(fourYearsAgoSec)
         .all<DepegRow>(),
       db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
         .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; pool_count: number; chain_count: number }>(),
+      getFirstSeenDates(db),
     ]);
 
     const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
@@ -481,9 +482,7 @@ export async function generateDailyDigest(
 
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = events.length > 0
-        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
-        : fourYearsAgoSec;
+      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 
       const pegData: PegSummaryCoin = {
@@ -523,9 +522,7 @@ export async function generateDailyDigest(
 
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = events.length > 0
-        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
-        : fourYearsAgoSec;
+      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 
       const pegData: PegSummaryCoin = {

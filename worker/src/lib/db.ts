@@ -123,6 +123,20 @@ export async function upsertOnchainSupply(
   await batchExecute(db, stmts);
 }
 
+// --- Coin first-seen dates (for peg score tracking window) ---
+
+/** Earliest supply_history snapshot per coin — used so young coins aren't scored over a phantom 4-year window. */
+export async function getFirstSeenDates(db: D1Database): Promise<Map<string, number>> {
+  const result = await db
+    .prepare("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history GROUP BY stablecoin_id")
+    .all<{ stablecoin_id: string; first_seen: number }>();
+  const map = new Map<string, number>();
+  for (const row of result.results ?? []) {
+    map.set(row.stablecoin_id, row.first_seen);
+  }
+  return map;
+}
+
 // --- Cron run logging ---
 
 export interface CronResult {

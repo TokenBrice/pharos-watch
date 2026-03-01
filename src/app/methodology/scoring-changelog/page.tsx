@@ -11,12 +11,12 @@ import {
 export const metadata: Metadata = {
   title: "Safety Scores Changelog — Version History",
   description:
-    "Full version history of the Pharos safety scoring methodology, from v1.0 through v5.4. Every weight change, new dimension, and structural decision documented.",
+    "Full version history of the Pharos safety scoring methodology, from v1.0 through v5.5. Every weight change, new dimension, and structural decision documented.",
   alternates: { canonical: "/methodology/scoring-changelog/" },
   openGraph: {
     title: "Safety Scores Changelog — Version History",
     description:
-      "Full version history of the Pharos safety scoring methodology, from v1.0 through v5.4.",
+      "Full version history of the Pharos safety scoring methodology, from v1.0 through v5.5.",
     url: "/methodology/scoring-changelog/",
   },
 };
@@ -143,9 +143,41 @@ export default function ScoringChangelogPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Full version history of the grading methodology &mdash; every weight
-          change, new dimension, and structural decision from v1.0 to v5.4.
+          change, new dimension, and structural decision from v1.0 to v5.5.
         </p>
       </div>
+
+      {/* ──────────── v5.5 ──────────── */}
+      <VersionCard
+        version="v5.5"
+        title="Peg score fairness for young coins"
+        date="Mar 1"
+        accent="border-l-amber-500"
+      >
+        <p>
+          Three fixes to the peg score formula that prevent young coins with chronic
+          depegs from scoring artificially high:
+        </p>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            <span className="text-foreground font-medium">Tracking window capped at coin age</span>
+            {" "}&mdash; uses the coin&apos;s earliest supply snapshot instead of always
+            defaulting to a 4-year window. A 30-day-old coin is now scored over 30 days,
+            not 1,461.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Severity magnitude floor</span>
+            {" "}&mdash; every depeg event carries a minimum penalty of
+            (peakBps&nbsp;/&nbsp;2000)&nbsp;&times;&nbsp;recencyWeight, regardless of
+            duration. Hundreds of brief high-magnitude depegs now accumulate real cost.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Active depeg penalty steepened</span>
+            {" "}&mdash; floor raised from 2 to 5, divisor changed from 200 to 50.
+            A 500&nbsp;bps ongoing depeg now costs 10 points (was 2.5).
+          </li>
+        </ul>
+      </VersionCard>
 
       {/* ──────────── v5.4 ──────────── */}
       <VersionCard

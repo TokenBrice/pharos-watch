@@ -1,7 +1,7 @@
-import { getCache } from "../lib/db";
+import { getCache, getFirstSeenDates } from "../lib/db";
 import { DEX_FRESHNESS_SEC } from "../lib/constants";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { computePegScore } from "../../../src/lib/peg-score";
+import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { StablecoinData, DepegEvent } from "../../../src/lib/types";
@@ -20,9 +20,9 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   }
   const { peggedAssets, fxFallbackRates } = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
 
-  // 2. Load depeg events (4-year window matching peg score computation) and DEX prices from DB
+  // 2. Load depeg events (4-year window matching peg score computation), DEX prices, and first-seen dates from DB
   const fourYearsAgoSec = Math.floor(Date.now() / 1000) - Math.ceil(4 * 365.25 * 86400);
-  const [eventsResult, dexPriceResult] = await Promise.all([
+  const [eventsResult, dexPriceResult, firstSeenMap] = await Promise.all([
     db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC").bind(fourYearsAgoSec).all<DepegRow>(),
     db.prepare("SELECT * FROM dex_prices").all<{
       stablecoin_id: string;
@@ -32,6 +32,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       source_total_tvl: number;
       updated_at: number;
     }>().catch(() => ({ results: [] as never[] })),
+    getFirstSeenDates(db),
   ]);
   const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
 
@@ -110,9 +111,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     }
 
     // Peg score
-    const trackingStart = events.length > 0
-      ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgo)
-      : fourYearsAgo;
+    const trackingStart = coinTrackingStart(events, fourYearsAgo, firstSeenMap.get(meta.id));
     const scoreResult = computePegScore(events, trackingStart, now);
 
     // Build DEX price check if available (only for coins with meaningful supply)
