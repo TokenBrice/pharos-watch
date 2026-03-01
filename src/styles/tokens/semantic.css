@@ -54,6 +54,20 @@
   --psi-meltdown-hex: #991b1b;
   --psi-band-opacity: 0.10;
 
+  /* ── DEWS Threat Bands ────────────────────────────────────────── */
+  --dews-calm:        var(--p-green-500);
+  --dews-watch:       var(--p-teal-400);
+  --dews-alert:       var(--p-amber-300);
+  --dews-warning:     var(--p-orange-500);
+  --dews-danger:      var(--p-red-500);
+
+  /* ── DEWS hex values (for Recharts) ─────────────────────────── */
+  --dews-calm-hex:    #22c55e;
+  --dews-watch-hex:   #14b8a6;
+  --dews-alert-hex:   #eab308;
+  --dews-warning-hex: #f97316;
+  --dews-danger-hex:  #ef4444;
+
   /* ── Score Tiers ──────────────────────────────────────────────── */
   --score-green: var(--p-green-500);
   --score-blue:  var(--p-blue-500);
