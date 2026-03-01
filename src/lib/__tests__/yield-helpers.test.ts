@@ -6,8 +6,8 @@ import {
   computeYieldStability,
   computeApyVarianceScore,
   detectWarningSignals,
+  findBestLendingPool,
 } from "../../../worker/src/cron/yield-helpers";
-import { findBestLendingPool } from "../../../worker/src/cron/yield-helpers";
 
 describe("computeApyFromRate", () => {
   it("returns correct APY for 7-day rate change", () => {
