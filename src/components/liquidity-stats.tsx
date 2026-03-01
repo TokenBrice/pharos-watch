@@ -67,7 +67,7 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
             return (
               <div key={chain} className="flex items-center gap-2">
                 {meta?.logoPath ? (
-                  <Image src={meta.logoPath} alt="" width={16} height={16} className="rounded-full shrink-0" />
+                  <Image src={meta.logoPath} alt="" width={16} height={16} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
                 ) : (
                   <span className={`inline-block h-4 w-4 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
                 )}

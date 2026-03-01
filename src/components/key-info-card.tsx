@@ -174,7 +174,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                         alt={chain.name}
                         width={28}
                         height={28}
-                        className="rounded-full"
+                        className={`rounded-full${chain.darkInvert ? " dark:invert" : ""}`}
                       />
                     ) : (
                       <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">

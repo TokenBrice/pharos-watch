@@ -4,6 +4,7 @@ interface ChainMeta {
   evmChainId: number | null;
   type: "evm" | "tron" | "other";
   logoPath: string;
+  darkInvert?: boolean;
 }
 
 export const CHAIN_META: Record<string, ChainMeta> = {
@@ -74,7 +75,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   pulsechain:     { name: "PulseChain",      explorerUrl: "https://scan.pulsechain.com",                  evmChainId: 369,      type: "evm",   logoPath: "/chains/pulsechain.png"     },
   sophon:         { name: "Sophon",          explorerUrl: "https://explorer.sophon.xyz",                  evmChainId: 50104,    type: "evm",   logoPath: "/chains/sophon.png"         },
   tron:      { name: "Tron",      explorerUrl: "https://tronscan.org",              evmChainId: null,  type: "tron",  logoPath: "/chains/tron.png"      },
-  aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png"     },
+  aptos:     { name: "Aptos",     explorerUrl: "https://explorer.aptoslabs.com",   evmChainId: null,  type: "other", logoPath: "/chains/aptos.png",     darkInvert: true },
   sui:       { name: "Sui",       explorerUrl: "https://suiscan.xyz",              evmChainId: null,  type: "other", logoPath: "/chains/sui.png"       },
   solana:    { name: "Solana",   explorerUrl: "https://solscan.io",               evmChainId: null,  type: "other", logoPath: "/chains/solana.svg"    },
   ton:       { name: "TON",       explorerUrl: "https://tonviewer.com",            evmChainId: null,  type: "other", logoPath: "/chains/ton.png"       },

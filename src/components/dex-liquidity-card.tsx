@@ -115,7 +115,7 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
           return (
             <span key={chain} className="flex items-center gap-1.5">
               {meta?.logoPath ? (
-                <Image src={meta.logoPath} alt="" width={14} height={14} className="rounded-full shrink-0" />
+                <Image src={meta.logoPath} alt="" width={14} height={14} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
               ) : (
                 <span className={`inline-block h-2 w-2 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
               )}
