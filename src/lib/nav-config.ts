@@ -46,7 +46,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/stability-index", label: "Stability Index", icon: LighthouseIcon, description: "Pharos Stability Index" },
       { href: "/safety-scores", label: "Safety Scores", icon: FlaskConical, description: "Safety grades and contagion simulation" },
       { href: "/dependency-map", label: "Dependency Map", icon: Network, description: "Stablecoin collateral dependency graph" },
-      { href: "/portfolio", label: "Portfolio", icon: Wallet, description: "Personal stablecoin risk view" },
     ],
   },
   {
@@ -54,6 +53,12 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { href: "/portfolio", label: "Portfolio Audit", icon: Wallet, description: "Personal stablecoin risk view" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
     ],
   },
