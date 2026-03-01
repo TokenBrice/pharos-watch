@@ -5,10 +5,10 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
-  "dependencies": {},
   "devDependencies": {
-    "wrangler": "^4",
     "@cloudflare/workers-types": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4",
+    "zod": "^4.3.6"
   }
 }
