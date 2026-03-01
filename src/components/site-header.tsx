@@ -45,12 +45,11 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
       <Image src="/pharos-icon.png" alt="" width={32} height={32} className="rounded-lg" priority />
       <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
       <span className="text-xs text-muted-foreground/60 font-mono">
-        {total} stablecoins &middot; {pegCount} pegs &middot; {chainCount} chains
-        {totalPools != null && <> &middot; {formatCount(totalPools)} pools</>}
-        {blacklistEvents != null && <> &middot; {formatCount(blacklistEvents)} blacklist events</>}
-      </span>
-      <span className="text-xs text-muted-foreground/40 font-mono italic">
-        Pharos sees it all
+        {total} stablecoins tracking {pegCount} pegs on {chainCount} chains.
+        {totalPools != null && <> {formatCount(totalPools)} pools processed,</>}
+        {blacklistEvents != null && <> {formatCount(blacklistEvents)} blacklist events recorded</>}
+        {(totalPools != null || blacklistEvents != null) && <>: </>}
+        <span className="italic text-muted-foreground/40">Pharos sees it all</span>
       </span>
       {style && health && (
         <span className="ml-auto flex items-center gap-1.5 text-xs font-mono">
