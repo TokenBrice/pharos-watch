@@ -66,3 +66,41 @@ export function detectWarningSignals(input: WarningInput): string[] {
   }
   return signals;
 }
+
+/**
+ * Auto-discovery: find the best lending pool for a coin from allowlisted protocols.
+ * Used for non-yield-bearing stablecoins rated C+ or above (Wave 2).
+ *
+ * Filters: single exposure, stablecoin = true, project in allowlist, symbol match.
+ * Picks the highest-TVL pool.
+ */
+export function findBestLendingPool(
+  symbol: string,
+  dlPools: Array<{
+    pool: string; symbol: string; project: string; tvlUsd: number;
+    apy: number; apyBase: number | null; apyReward: number | null;
+    stablecoin: boolean; exposure: string;
+  }>,
+  allowlist: Set<string>,
+): { pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number; project: string } | null {
+  const symLower = symbol.toLowerCase();
+
+  const candidates = dlPools.filter((p) =>
+    p.exposure === "single" &&
+    p.stablecoin &&
+    allowlist.has(p.project) &&
+    p.symbol.toLowerCase() === symLower
+  );
+
+  if (candidates.length === 0) return null;
+
+  const best = candidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+  return {
+    pool: best.pool,
+    apy: best.apy,
+    apyBase: best.apyBase,
+    apyReward: best.apyReward,
+    tvlUsd: best.tvlUsd,
+    project: best.project,
+  };
+}
