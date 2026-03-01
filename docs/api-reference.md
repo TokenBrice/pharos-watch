@@ -1114,6 +1114,24 @@ Backfills CoinGecko historical prices into the price_cache table for more accura
 | `batchSize` | `integer` | `10` | Coins per batch |
 | `batch` | `integer` | `0` | Batch offset for chunked processing |
 
+### `POST /api/backfill-mint-burn-prices`
+
+Backfills `amount_usd` for all mint-burn events with NULL values using current prices from `price_cache`. Recalculates affected hourly aggregation buckets.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Response**
+
+```json
+{
+  "totalUpdated": 15000,
+  "coins": [
+    { "id": "1", "updated": 49 },
+    { "id": "2", "updated": 15119 }
+  ]
+}
+```
+
 ### `GET /api/audit-depeg-history`
 
 Audits existing depeg events against CoinGecko historical price data to detect false positives. Supports dry-run mode.

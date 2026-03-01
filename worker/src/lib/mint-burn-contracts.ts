@@ -142,3 +142,10 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     events: transferMintBurn(),
   },
 ];
+
+/** IDs classified as "safe havens" for flight-to-quality detection */
+export const SAFE_HAVEN_IDS = new Set(
+  MINT_BURN_CONFIGS.filter((c) =>
+    ["USDT", "USDC", "FDUSD", "PYUSD"].includes(c.symbol)
+  ).map((c) => c.stablecoinId)
+);
