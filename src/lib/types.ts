@@ -718,6 +718,28 @@ export interface MintBurnFlowsResponse {
   updatedAt: number;
 }
 
+export interface MintBurnPerCoinChain {
+  chainId: string;
+  mintVolumeUsd: number;
+  burnVolumeUsd: number;
+  mintCount: number;
+  burnCount: number;
+  netFlowUsd: number;
+}
+
+export interface MintBurnPerCoinResponse {
+  stablecoinId: string;
+  symbol: string;
+  mintVolumeUsd: number;
+  burnVolumeUsd: number;
+  netFlowUsd: number;
+  mintCount: number;
+  burnCount: number;
+  chains: MintBurnPerCoinChain[];
+  hourly: MintBurnHourlyBucket[];
+  updatedAt: number;
+}
+
 export interface MintBurnEvent {
   id: string;
   stablecoinId: string;
