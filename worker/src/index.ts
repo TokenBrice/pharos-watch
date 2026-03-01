@@ -73,6 +73,8 @@ function addCorsHeaders(response: Response, origin: string): Response {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     initCoinGecko(env.COINGECKO_API_KEY);
+    initAlerts(env.ALERT_WEBHOOK_URL);
+    initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
     const origin = env.CORS_ORIGIN;
 
     // Handle CORS preflight

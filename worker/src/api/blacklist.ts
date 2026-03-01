@@ -1,6 +1,10 @@
 import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
+import { CHAIN_META } from "../../../src/lib/chains";
+
+const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
+const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
@@ -24,10 +28,20 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     filterBindings.push(stablecoin);
   }
   if (chain) {
+    if (!VALID_CHAIN_NAMES.has(chain)) {
+      return new Response(JSON.stringify({ error: "Invalid chain parameter" }), {
+        status: 400, headers: { "Content-Type": "application/json" },
+      });
+    }
     conditions.push("chain_name = ?");
     filterBindings.push(chain);
   }
   if (eventType) {
+    if (!VALID_EVENT_TYPES.has(eventType)) {
+      return new Response(JSON.stringify({ error: "Invalid eventType parameter" }), {
+        status: 400, headers: { "Content-Type": "application/json" },
+      });
+    }
     conditions.push("event_type = ?");
     filterBindings.push(eventType);
   }

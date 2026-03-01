@@ -1,6 +1,10 @@
 import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
+import { CHAIN_META } from "../../../src/lib/chains";
+
+const VALID_CHAIN_IDS = new Set(Object.keys(CHAIN_META));
+const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 
 interface EventRow {
   id: string;
@@ -37,7 +41,19 @@ export const handleMintBurnEvents = withErrorHandler(
     }
 
     const direction = params.get("direction");
+    if (direction && !VALID_DIRECTIONS.has(direction)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid direction parameter" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
     const chain = params.get("chain");
+    if (chain && !VALID_CHAIN_IDS.has(chain)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid chain parameter" }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
     const minAmountRaw = params.get("minAmount");
     const minAmount = minAmountRaw !== null ? parseFloat(minAmountRaw) : null;
 
