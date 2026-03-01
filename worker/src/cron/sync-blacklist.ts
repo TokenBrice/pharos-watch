@@ -625,9 +625,10 @@ export async function syncBlacklist(
   db: D1Database,
   etherscanApiKey: string | null,
   trongridApiKey: string | null,
-  drpcApiKey: string | null
+  drpcApiKey: string | null,
+  externalEtherscanRL?: RateLimitedFetch,
 ): Promise<{ itemCount: number; metadata: string }> {
-  const etherscanLimiter = createRateLimiter(4);
+  const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
   const budget = createBudget(900);
   let totalNewEvents = 0;
