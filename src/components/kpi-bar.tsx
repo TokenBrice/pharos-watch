@@ -119,7 +119,7 @@ export function KpiBar() {
     const delta = psiDelta7d !== null
       ? <>{psiDelta7d >= 0 ? "+" : ""}{psiDelta7d.toFixed(1)} vs 7d · </>
       : null;
-    return <>{delta}<span className={psiColorClass}>{psiBand}</span> {psiDaysInBand}d</>;
+    return <>{delta}<span className={psiColorClass}>{psiBand}</span> <span className="text-muted-foreground">{psiDaysInBand}d</span></>;
   })();
 
   const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading;
@@ -168,17 +168,17 @@ export function KpiBar() {
           sublabelClassName={deltaColor(mcapChange24hPct)}
         />
         <KpiCell
-          label="Tracked 24H DEX Vol"
-          value={formatCurrency(totalVol24h, 1)}
-          sublabel={`${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}% vs 7d avg`}
-          sublabelClassName={deltaColor(volVs7dAvgPct)}
-        />
-        <KpiCell
           label="Net Supply Flow 24h"
           value={`${netFlow24h >= 0 ? "+" : "−"}${formatCurrency(Math.abs(netFlow24h), 1)}`}
           sublabel={`${netFlow7d >= 0 ? "+" : "−"}${formatCurrency(Math.abs(netFlow7d), 1)} over 7d`}
           valueClassName={deltaColor(netFlow24h)}
           sublabelClassName={deltaColor(netFlow7d)}
+        />
+        <KpiCell
+          label="Tracked 24H DEX Vol"
+          value={formatCurrency(totalVol24h, 1)}
+          sublabel={`${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}% vs 7d avg`}
+          sublabelClassName={deltaColor(volVs7dAvgPct)}
         />
         <KpiCell
           label="Peg Status"
