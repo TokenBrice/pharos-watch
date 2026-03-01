@@ -1,10 +1,12 @@
 "use client";
 
 import { useApiQuery, CRON_20MIN } from "./use-api-query";
-import type {
-  MintBurnFlowsResponse,
-  MintBurnPerCoinResponse,
-  MintBurnEventsResponse,
+import {
+  MintBurnFlowsResponseSchema,
+  MintBurnPerCoinResponseSchema,
+  type MintBurnFlowsResponse,
+  type MintBurnPerCoinResponse,
+  type MintBurnEventsResponse,
 } from "@/lib/types";
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
@@ -14,6 +16,7 @@ export function useMintBurnFlows(hours = 24) {
     ["mint-burn-flows", "all", hours],
     `/api/mint-burn-flows${qs}`,
     CRON_20MIN,
+    { schema: MintBurnFlowsResponseSchema },
   );
 }
 
@@ -25,7 +28,7 @@ export function useMintBurnFlowsCoin(stablecoinId: string, hours = 24) {
     ["mint-burn-flows", stablecoinId, hours],
     `/api/mint-burn-flows?${params}`,
     CRON_20MIN,
-    { enabled: !!stablecoinId },
+    { enabled: !!stablecoinId, schema: MintBurnPerCoinResponseSchema },
   );
 }
 
