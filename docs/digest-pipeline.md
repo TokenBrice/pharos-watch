@@ -38,10 +38,10 @@ The cron assembles a `DigestInputData` object from 8 sources before calling the 
 |----------|--------|-------------|
 | Market metrics | stablecoins cache | Total mcap, 7d delta, biggest supply mover (>$1M) |
 | Depeg events | `depeg_events` table | Active count, top 3 by impact (bps × mcap) |
-| Stability Index | `stability_index` table | Today's PSI score + band, yesterday's for comparison |
+| Stability Index | `stability_index_samples` + `stability_index` | Current PSI from latest 15-min sample, yesterday's from daily table |
 | Blacklist activity | `blacklist_events` (last 24h) | Event count, total USD affected; threshold: ≥2 events OR ≥$10M single |
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" (threshold: 2.5× weekly avg OR direction reversal) |
-| Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg risk, low grade) |
+| Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
 | Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
 
@@ -55,7 +55,7 @@ The cron assembles a `DigestInputData` object from 8 sources before calling the 
 
 ### Failure handling
 
-If JSON parsing fails, `title` and `extended` fall back to empty strings and `text` falls back to a short error message. The digest is still stored and distribution is still attempted.
+If JSON parsing fails, `title` and `extended` fall back to empty strings and `text` falls back to the raw LLM response (`rawText.trim()`). The digest is still stored and distribution is still attempted.
 
 ---
 

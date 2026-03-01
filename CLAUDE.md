@@ -20,12 +20,12 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, blacklist, cemetery, liquidity, compare, digest, stability-index, stability-index-alt, safety-scores, dependency-map, portfolio, methodology, privacy, status, about, stablecoin/[id], stablecoins/[peg])
+src/app/         — Pages (homepage, blacklist, cemetery, compare, dependency-map, digest, flows, liquidity, methodology, mint, portfolio, privacy, safety-scores, stability-index, stability-index-alt, status, about, yield, stablecoin/[id], stablecoins/[peg])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
 worker/src/cron/ — Data sync crons
-worker/src/api/  — REST API handlers (24 endpoints + 3 inline admin + POST feedback)
+worker/src/api/  — REST API handlers (30 router endpoints + 3 inline admin + POST feedback)
 worker/src/lib/  — DB helpers, constants, shared utilities
 ```
 
@@ -64,7 +64,7 @@ All the codebase is documented. While working, make sure to update the correspon
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all endpoints (26 router handlers + 3 inline admin + POST feedback), query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: all endpoints (30 router handlers + 3 inline admin + POST feedback), query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
@@ -81,5 +81,6 @@ Read these when working on related code:
 - **`docs/mint-burn-flows.md`** — Mint/burn flow tracker: on-chain event sync, Flow Intensity Score, Bank Run Gauge, flight-to-quality detection, contract configs, scoring, API endpoints, frontend
 - **`docs/yield-intelligence.md`** — Yield pipeline: three-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
 - **`docs/dews.md`** — DEWS formula, 7 sub-signals, threat bands, normalization, API endpoint
+- **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 15 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
-- **`docs/worker-and-api-limits.md`** — Hard limits for all 16 external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
+- **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**

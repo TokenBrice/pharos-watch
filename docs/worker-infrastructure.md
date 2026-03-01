@@ -68,7 +68,7 @@ Applied to every response via `addCorsHeaders()`:
 
 | Header | Value |
 |--------|-------|
-| `Access-Control-Allow-Origin` | Request origin (dynamic) |
+| `Access-Control-Allow-Origin` | `CORS_ORIGIN` env var (static: `https://pharos.watch`) |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
 | `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key` |
 | `Access-Control-Max-Age` | `86400` |
@@ -85,6 +85,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
    - `/api/health`, `/api/status`
    - `/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`
    - `/api/audit-depeg-history`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`
+   - `/api/backfill-dews`
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -112,7 +113,7 @@ Three admin endpoints are handled directly in `index.ts` (not via the router):
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `GET /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `skipDedup=true`, posts to Twitter + Telegram |
+| `GET /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
 | `GET /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
 | `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
 
@@ -163,7 +164,9 @@ crons = [
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/sync-dex-liquidity.ts` | `docs/dex-liquidity.md` |
-| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/plans/yield-intelligence-design.md` |
+| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/yield-intelligence.md` |
+
+**Dependency:** `sync-yield-data` is chained after `sync-dex-liquidity` via `dexSync.then(...)` — yield scoring depends on fresh DEX liquidity data for safety scores.
 
 ### Trigger 4: `0 8 * * *` (daily at 08:00 UTC)
 
@@ -174,7 +177,7 @@ crons = [
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
-| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/plans/yield-intelligence-design.md` |
+| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
 **Dependencies:** Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
 
@@ -408,7 +411,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 
 ### GET /api/status
 
-Returns recent `cron_runs` rows for operational monitoring. Tracks 14 cron jobs via the `CRON_INTERVALS` map:
+Returns recent `cron_runs` rows for operational monitoring. Tracks 15 cron jobs via the `CRON_INTERVALS` map:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|

@@ -14,7 +14,7 @@ The entire backend runs on a single Cloudflare Worker script.
 | **Included CPU time/month** | 30 M CPU-ms | $0.02/M over |
 | **CPU time per HTTP request** | 30 s default (up to 5 min configurable) | |
 | **CPU time per Cron Trigger** | Up to **15 min** | Our crons run up to 30 min wall-clock, but only ~15 min CPU |
-| **Cron Triggers per Worker** | **5 max** | ⚠️ We use all 5 slots: `*/15`, `3,23,43`, `10,40`, `0 8 * * *`, and the 5th piggybacked via minute-check. New cron jobs must piggyback on existing slots |
+| **Cron Triggers per Worker** | **5 max** | ⚠️ We use 4 of 5 slots: `*/15`, `3,23,43`, `10,40`, `0 8 * * *`. 1 free slot remaining. For a 5th, piggyback on an existing slot with a minute check |
 | **Concurrent outbound fetch() per invocation** | **6** | ⚠️ Hard platform limit. DEX liquidity already batches (2 DL fetches, then 4 Curve) to stay within budget |
 | **Subrequests per invocation (default)** | 1,000 | Configurable up to 10,000 via `limits.subrequests` in wrangler.toml |
 | **D1 connections per invocation** | 6 simultaneous | |
@@ -106,7 +106,7 @@ Primary source for TVL, supply data, and protocol metadata. No documented hard r
 
 **Endpoints used**: `stablecoins.llama.fi/stablecoins`, `coins.llama.fi`, `api.llama.fi/protocols`, `yields.llama.fi/pools`
 
-> **Key constraint**: No hard limit, but circuit breakers (`defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`) are in place. Three consecutive failures open the circuit; 30-min probe interval before half-open retry.
+> **Key constraint**: No hard limit, but circuit breakers (`defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`) are in place. Three consecutive failures open the circuit; 30-min probe interval before half-open retry.
 
 ---
 
@@ -116,7 +116,7 @@ Used for blacklist event fetching and on-chain balance lookups.
 
 | Resource | Limit |
 |---|---|
-| **Requests/second** | 3 req/s |
+| **Requests/second** | 5 req/s |
 | **Requests/day** | 100,000 |
 | **Chains available on free tier** | Ethereum mainnet + select others |
 | **Chains now requiring paid plan ($49/mo)** | ⚠️ Base, BNB, Avalanche, Optimism |
@@ -307,7 +307,7 @@ Fallback for FX rates when Frankfurter is unavailable.
 
 | Constraint | Current headroom | Risk |
 |---|---|---|
-| Cloudflare cron trigger slots (5 max) | 0 free — all 5 used | 🔴 Any new scheduled job must piggyback |
+| Cloudflare cron trigger slots (5 max) | 1 free — 4 of 5 used | 🟡 One slot available; additional jobs can piggyback on existing slots |
 | Cloudflare concurrent fetch() (6/invocation) | Already batching to avoid | 🔴 Cannot add more parallel fetches without refactoring |
 | CoinGecko monthly quota (500K calls) | Medium — pool crawl can spike | 🟡 Monitor `/key` endpoint for usage |
 | D1 storage (10 GB hard cap) | Plenty now, but supply history + liquidity history grows | 🟡 Add periodic pruning if tables grow fast |

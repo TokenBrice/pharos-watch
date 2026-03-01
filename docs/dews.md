@@ -1,18 +1,22 @@
 # Depeg Early Warning Score (DEWS)
 
-Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 15 minutes from 7 sub-signals.
+Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 15 minutes from 8 sub-signals.
 
 ---
 
 ## Score Formula
 
 ```
-DEWS = round(clamp(0, 100, sum(W_i * S_i) / sum(W_i)))
+base  = sum(W_i * S_i) / sum(W_i)          # available signals only
+amp   = PSI < 75 ? 1 + ((75 - PSI) / 75) * 0.3 : 1.0
+DEWS  = round(clamp(0, 100, base * amp))
 ```
 
 Only signals where `available = true` participate. Weights are redistributed proportionally across available signals.
 
 **Minimum signal requirement:** At least 2 available signal sources (total weight >= 0.30) to produce a non-zero score. Otherwise returns 0.
+
+**Systemic backdrop amplifier:** When PSI drops below 75 (STEADY band), individual DEWS scores are amplified by up to 30%. At PSI=40, amplification is ~14%. At PSI=0, amplification is 30%. This reflects that individual coin stress is more dangerous during systemic instability.
 
 ---
 
@@ -27,8 +31,9 @@ Only signals where `available = true` participate. Weights are redistributed pro
 | Cross-Source Divergence | `diverg` | 0.15 | `dex_prices` + cache | Fragmented pricing, trust breakdown |
 | Blacklist Activity | `black` | 0.10 | `blacklist_events` | Issuer emergency freeze surge |
 | Mint/Burn Flow | `flow` | 0.10 | `mint_burn_hourly` | Redemption surge vs minting |
+| Yield Anomaly | `yield` | 0.05 | `yield_data` | Yield warning signals (spike, divergence, TVL outflow, negative trend, reward-heavy) |
 
-Weights sum to 1.10 but only available signals participate, so redistribution normalizes by actual available weight. When `S_flow` is unavailable (most coins), effective weight is 1.00 across the 6 original signals.
+Weights sum to 1.15 but only available signals participate, so redistribution normalizes by actual available weight. When `S_flow` and `S_yield` are both unavailable (most coins), effective weight is 1.00 across the 6 original signals.
 
 ---
 
@@ -93,6 +98,20 @@ Available only when `mint_burn_hourly` data exists and is >= 7 days old. Measure
 - **Burn surge:** 24h burn volume / 30d daily average
 - **Burn-to-mint ratio:** 24h burns / 24h mints
 - 60/40 blend of surge and ratio scores
+
+### S_yield — Yield Anomaly
+
+Available only for yield-bearing coins with warning signals in `yield_data`. Maps active warning signals to stress points:
+
+| Warning Signal | Points |
+|----------------|--------|
+| `yield-spike` | 30 |
+| `yield-divergence` | 25 |
+| `tvl-outflow` | 35 |
+| `negative-trend` | 15 |
+| `reward-heavy` | 20 |
+
+Score = `min(100, sum of active signal points)`.
 
 ---
 

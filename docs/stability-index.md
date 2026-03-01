@@ -5,7 +5,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 ## Formula
 
 ```
-Score = 100 − severity − breadth + trend
+Score = 100 − severity − breadth − stressBreadth + trend
 ```
 
 Clamped to [0, 100], rounded to 1 decimal place.
@@ -16,6 +16,7 @@ Clamped to [0, 100], rounded to 1 decimal place.
 |-----------|-------|---------|---------|
 | **Severity** | 0–68 | `min(68, Σ (abs(bps) / 100 × mcap_share × log₂(1 + mcap / $1B) × 60 × factor))` | Depeg impact weighted by market cap significance |
 | **Breadth** | 0–17 | `min(17, Σ sqrt(mcap / $1B) × 3 × factor)` per unique depegged coin | Number of depegging coins, weighted so micro-caps barely register |
+| **Stress Breadth** | 0–5 | `min(5, dewsStressBreadth)` | DEWS-derived count of coins under elevated stress (non-depeg early warnings) |
 | **Trend** | −5 to +5 | `clamp(-5, 5, mcap_7d_change_pct)` | 7-day total market cap momentum |
 
 Severity and breadth iterate over **active depegs only** (unique coins currently outside their peg threshold), with depreciation applied to chronic depegs.

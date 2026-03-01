@@ -71,6 +71,13 @@ Matches each coin to a DeFiLlama pool via two layers:
 | Base Coin | Wrapper | Purpose |
 |-----------|---------|---------|
 | USDe (146) | sUSDe | Ethena staking wrapper |
+| USDS (209) | sUSDS | Sky savings wrapper |
+| GHO (118) | sGHO | Aave staked GHO |
+| DAI (5) | sDAI | Spark savings DAI |
+| crvUSD (110) | scrvUSD | Curve staked crvUSD |
+| FRXUSD (235) | sfrxUSD | Frax staked frxUSD |
+| DOLA (15) | sDOLA | Inverse Finance staked DOLA |
+| BOLD (269) | yBOLD | Liquity yield BOLD |
 | reUSD (339) | stUSR | Resolv staking wrapper |
 | AZND (327) | loAZND | Mu Digital locked wrapper |
 
@@ -168,7 +175,7 @@ https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od
 
 ## Warning Signals (Phase 2)
 
-`yield-helpers.ts::detectWarningSignals()` is implemented and tested but not yet wired into the sync cron. It detects:
+`yield-helpers.ts::detectWarningSignals()` runs in the sync cron and stores results in the `warning_signals` column of `yield_data`. It detects:
 
 | Signal | Condition | Meaning |
 |--------|-----------|---------|
@@ -211,6 +218,7 @@ CREATE TABLE yield_data (
   apy_max_30d         REAL,
   exchange_rate       REAL,           -- current vault rate (Tier 1 only)
   exchange_rate_prev  REAL,           -- 7d-ago vault rate
+  warning_signals     TEXT,           -- JSON array of active signal keys (migration 0033)
   updated_at          INTEGER NOT NULL
 );
 ```
