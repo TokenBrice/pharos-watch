@@ -151,12 +151,20 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
     for (let i = 0; i < 300; i++) sim.tick();
 
-    // Post-simulation overlap resolution — two-phase per pass to handle
-    // boundary re-collisions: separate pairs → clamp → separate again.
+    // Post-simulation overlap resolution.
+    // Boundaries are treated like immovable walls inside the same loop as
+    // pairwise separation, so displacement propagates inward through the
+    // graph instead of ping-ponging between clamp and separate.
     const MAX_PASSES = 100;
+    const xMin = PAD;
+    const xMax = WIDTH - PAD;
+    const yMin = PAD;
+    const yMax = HEIGHT - PAD;
 
-    function separatePairs(): number {
-      let overlaps = 0;
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      let violations = 0;
+
+      // Pairwise separation
       for (let i = 0; i < simNodes.length; i++) {
         for (let j = i + 1; j < simNodes.length; j++) {
           const a = simNodes[i];
@@ -167,7 +175,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           const minDist = a.r + b.r + MIN_GAP;
 
           if (dist < minDist) {
-            overlaps++;
+            violations++;
             if (dist > 0.1) {
               const push = (minDist - dist) / 2 + 0.5;
               const nx = dx / dist;
@@ -187,24 +195,18 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           }
         }
       }
-      return overlaps;
-    }
 
-    function clampToBounds() {
+      // Boundary enforcement — push out-of-bounds nodes inward
       for (const n of simNodes) {
-        n.x = Math.max(PAD + n.r, Math.min(WIDTH - PAD - n.r, n.x ?? WIDTH / 2));
-        n.y = Math.max(PAD + n.r, Math.min(HEIGHT - PAD - n.r, n.y ?? HEIGHT / 2));
+        const x = n.x ?? WIDTH / 2;
+        const y = n.y ?? HEIGHT / 2;
+        if (x - n.r < xMin) { violations++; n.x = xMin + n.r + 0.5; }
+        else if (x + n.r > xMax) { violations++; n.x = xMax - n.r - 0.5; }
+        if (y - n.r < yMin) { violations++; n.y = yMin + n.r + 0.5; }
+        else if (y + n.r > yMax) { violations++; n.y = yMax - n.r - 0.5; }
       }
-    }
 
-    for (let pass = 0; pass < MAX_PASSES; pass++) {
-      // Phase 1: push overlapping pairs apart
-      const overlaps = separatePairs();
-      if (overlaps === 0) break;
-      // Phase 2: clamp to bounds, then fix any overlaps the clamp re-introduced
-      clampToBounds();
-      separatePairs();
-      clampToBounds();
+      if (violations === 0) break;
     }
 
     const posMap = new Map<string, { x: number; y: number }>();
