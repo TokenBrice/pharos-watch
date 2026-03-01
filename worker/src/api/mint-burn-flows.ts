@@ -1,7 +1,7 @@
 import { getCache } from "../lib/db";
 import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 import {
   computeFlowIntensity,
   computeGaugeScore,
@@ -14,9 +14,6 @@ import { sumPegBuckets } from "../../../src/lib/supply";
 // ---------------------------------------------------------------------------
 // Safe-haven classification (flight-to-quality)
 // ---------------------------------------------------------------------------
-
-/** IDs classified as "safe havens" for flight-to-quality detection */
-const SAFE_HAVEN_IDS = new Set(["1", "2", "119", "120"]); // USDT, USDC, FDUSD, PYUSD
 
 /** All tracked stablecoin IDs from config */
 const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));

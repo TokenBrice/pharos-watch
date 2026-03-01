@@ -98,7 +98,8 @@ export interface GaugeCoinInput {
 
 /**
  * Compute the market-cap-weighted average Flow Intensity Score across coins.
- * Returns `null` if any coin has a null intensity (insufficient data).
+ * Skips coins with null intensity (insufficient data) and computes from available data.
+ * Returns `null` only when no coin has valid intensity data.
  */
 export function computeGaugeScore(
   coins: GaugeCoinInput[]
@@ -107,7 +108,7 @@ export function computeGaugeScore(
   let weightedSum = 0;
 
   for (const coin of coins) {
-    if (coin.intensity === null) return null;
+    if (coin.intensity === null) continue;
     totalMcap += coin.mcap;
     weightedSum += coin.intensity * coin.mcap;
   }

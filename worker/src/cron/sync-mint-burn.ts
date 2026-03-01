@@ -44,7 +44,9 @@ export async function syncMintBurn(
   const lastBlocks = new Map<string, number>();
   configKeys.forEach((key, i) => {
     const row = syncStates[i].results[0] as { last_block: number } | undefined;
-    lastBlocks.set(key, row?.last_block ?? 0);
+    // Fall back to config's startBlock (not 0) to avoid scanning pre-deployment history
+    const config = MINT_BURN_CONFIGS[i];
+    lastBlocks.set(key, row?.last_block ?? (config.startBlock - 1));
   });
 
   // 2. Get current Ethereum block number (single call, shared across all configs)

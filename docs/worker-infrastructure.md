@@ -84,7 +84,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 1. **Skip list** — these endpoints bypass cache entirely:
    - `/api/health`, `/api/status`
    - `/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`
-   - `/api/audit-depeg-history`, `/api/backfill-stability-index`
+   - `/api/audit-depeg-history`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -460,7 +460,7 @@ A job is marked "unhealthy" if its last run had `status='error'` or if the last 
 | `worker/src/lib/chain-rpcs.ts` | Chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
 | `worker/src/lib/coingecko.ts` | CoinGecko init: free/pro URL switching, auth headers |
 | `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → DefiLlama ID mapping (17 coins) |
-| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn contract configs: stablecoin/chain mappings, mint addresses, decimals |
+| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn contract configs: stablecoin/chain mappings, mint addresses, decimals, `startBlock` (earliest block to scan), `SAFE_HAVEN_IDS` |
 | `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
 | `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Etherscan Transfer event scanning, hourly aggregation |
