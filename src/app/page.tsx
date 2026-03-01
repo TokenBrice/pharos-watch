@@ -32,7 +32,7 @@ export default function HomePage() {
           }),
         }}
       />
-      <div className="flex items-center gap-3">
+      <div className="hidden lg:flex items-center gap-3">
         <Image src="/pharos-icon.png" alt="" width={32} height={32} className="rounded-lg" priority />
         <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
         <span className="text-xs text-muted-foreground/60">
