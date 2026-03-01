@@ -11,6 +11,7 @@ import {
   Newspaper,
   Wallet,
   Network,
+  TrendingUp,
   createLucideIcon,
 } from "lucide-react";
 
@@ -50,6 +51,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Data",
     items: [
+      { href: "/yield", label: "Yield", icon: TrendingUp, description: "Risk-adjusted yield rankings" },
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
