@@ -22,7 +22,7 @@ Defined in `.github/workflows/deploy-cloudflare.yml`. The `deploy-pages` job run
 3. `npm run build` — Next.js static export (also runs TypeScript type-checking)
 4. Deploy to Cloudflare Pages
 
-The `deploy-worker` job runs in parallel and type-checks the worker separately (`npx tsc --noEmit`).
+The `deploy-worker` job runs first (deploy-pages has `needs: deploy-worker`). It installs root deps (`npm ci`) for shared `src/lib/` type resolution, then installs worker deps and type-checks (`npx tsc --noEmit`).
 
 ## Test Setup
 
@@ -33,7 +33,10 @@ test: { globals: true }           // describe/it/expect available without import
 resolve: { alias: { "@": "src" }} // Same path alias as Next.js
 ```
 
-**Location:** `src/lib/__tests__/` — colocated with the library code they test.
+**Locations:**
+- `src/lib/__tests__/` — frontend library tests (pure functions)
+- `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
+- `worker/src/api/__tests__/` — API handler contract tests
 
 **Pattern:** `*.test.ts` — Vitest discovers files matching `**/*.{test,spec}.?(c|m)[jt]s?(x)`.
 
@@ -48,8 +51,19 @@ resolve: { alias: { "@": "src" }} // Same path alias as Next.js
 | `reserve-templates.test.ts` | `src/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
 | `reserve-coinid-validation.test.ts` | `src/lib/reserve-templates.ts` | Validates reserve slice `coinId` references match tracked stablecoin IDs |
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | Validates DEX pool configs cover all stablecoins with DEX presence |
+| `yield-helpers.test.ts` | `worker/src/cron/yield-helpers.ts` | `computePYS`, `computeApyFromRate`, `computeApyFromPrice`, `computeYieldStability`, `detectWarningSignals` |
 
-All seven suites test pure functions from `src/lib/` — no DOM, no React, no network.
+All eight suites test pure functions — no DOM, no React, no network.
+
+### Worker Library Tests
+
+Located in `worker/src/lib/__tests__/`. These test worker-side pure functions.
+
+| File | Module Under Test | What It Covers |
+|------|-------------------|----------------|
+| `mint-burn-scoring.test.ts` | `worker/src/lib/mint-burn-scoring.ts` | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand` |
+| `evm-logs.test.ts` | `worker/src/lib/evm-logs.ts` | `buildTopicParams` — topic filter construction for EVM log queries |
+| `resolve-market-cap.test.ts` | `worker/src/lib/resolve-market-cap.ts` | `resolveMarketCap` — CG vs computed mcap agreement, frozen data detection |
 
 ### API Contract Tests
 
@@ -71,7 +85,7 @@ Five high-priority API response types have Zod schemas in `src/lib/types.ts`:
 - `MintBurnFlowsResponseSchema`
 - `MintBurnPerCoinResponseSchema`
 
-These are wired into their respective hooks via `useApiQuery`'s `schema` option. On validation failure: `console.warn` with details, return data as-is (graceful degradation). Schemas are the single source of truth — types are derived via `z.infer<>`.
+Four of these are wired into their hooks via `useApiQuery`'s `schema` option: `StablecoinListResponse`, `PegSummaryResponse`, `MintBurnFlowsResponse`, and `MintBurnPerCoinResponse`. On validation failure: `console.warn` with details, return data as-is (graceful degradation). `ReportCardsResponse` keeps a hand-written interface (narrow `ReportCardGrade`/`DimensionKey` types needed by downstream components) — its schema is exported for contract tests but not wired into the hook. Most types are derived via `z.infer<>`.
 
 When adding a new API endpoint:
 1. Define the response schema in `src/lib/types.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
@@ -102,10 +116,15 @@ When adding a new API endpoint:
 
 ## Adding a New Test
 
+**Frontend library test:**
 1. Create `src/lib/__tests__/<module>.test.ts`.
 2. Import from the module under test (use `@/lib/...` alias).
 3. Write `describe`/`it` blocks following the conventions above.
 4. Run `npm test` to verify, then `npm run lint` to check for issues.
+
+**Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
+
+**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `helpers/mock-d1.ts`. Validate response shape against Zod schemas from `src/lib/types.ts`.
 
 Example skeleton:
 
