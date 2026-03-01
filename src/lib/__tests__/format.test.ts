@@ -8,7 +8,6 @@ import {
   formatAddress,
   formatDuration,
   formatNativePrice,
-  formatPegStability,
   formatDeathDate,
   formatDeathDateShort,
 } from "../format";
@@ -259,17 +258,6 @@ describe("formatNativePrice", () => {
     expect(formatNativePrice(25, "SILVER", 25)).toBe("$25.0000");
     expect(formatNativePrice(1.0, "VAR", 1)).toBe("$1.0000");
     expect(formatNativePrice(1.0, "OTHER", 1)).toBe("$1.0000");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// formatPegStability
-// ---------------------------------------------------------------------------
-describe("formatPegStability", () => {
-  it("formats percentage to 2 decimal places", () => {
-    expect(formatPegStability(99.5)).toBe("99.50%");
-    expect(formatPegStability(100)).toBe("100.00%");
-    expect(formatPegStability(0)).toBe("0.00%");
   });
 });
 

@@ -62,7 +62,7 @@ export function formatPegDeviation(price: number | null | undefined, pegValue = 
 }
 
 export function formatPercentChange(current: number, previous: number): string {
-  if (previous === 0) return "N/A";
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return "N/A";
   const change = ((current - previous) / previous) * 100;
   const sign = change >= 0 ? "+" : "";
   return `${sign}${change.toFixed(2)}%`;
@@ -85,10 +85,6 @@ export function formatEventDate(timestamp: number): string {
     day: "numeric",
     year: "numeric",
   });
-}
-
-export function formatPegStability(pct: number): string {
-  return `${pct.toFixed(2)}%`;
 }
 
 /**
@@ -125,6 +121,7 @@ export function formatDeathDate(d: string): string {
 
 /** Format an epoch-seconds timestamp as a relative time string ("just now", "5m ago", "2h ago"). */
 export function timeAgo(epochSec: number): string {
+  if (!Number.isFinite(epochSec)) return "N/A";
   const diffMin = Math.floor((Date.now() / 1000 - epochSec) / 60);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;

@@ -228,7 +228,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     const pt = svg.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const svgP = pt.matrixTransform(ctm.inverse());
     const pos = positions.get(nodeId);
     if (!pos) return;
     setDragId(nodeId);
@@ -242,7 +244,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     const pt = svg.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const svgP = pt.matrixTransform(ctm.inverse());
     const dx = svgP.x - dragStart.current.mx;
     const dy = svgP.y - dragStart.current.my;
     setPositions((prev) => {

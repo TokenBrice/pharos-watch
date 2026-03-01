@@ -15,12 +15,12 @@ export function useSort<K extends string>(defaultKey: K, defaultDir: "asc" | "de
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">(defaultDir);
 
   const toggleSort = useCallback((key: K) => {
-    setSortKey((prevKey) => {
-      if (prevKey === key) {
-        setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-        return prevKey;
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+      } else {
+        setSortDirection("desc");
       }
-      setSortDirection("desc");
       return key;
     });
   }, []);
