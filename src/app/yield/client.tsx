@@ -75,6 +75,12 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
+      {/* New feature notice */}
+      <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-4 text-sm text-amber-200">
+        This is a new feature, data collection and further adjustment work is in
+        progress: please be patient.
+      </div>
+
       {isError && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load yield data. {error instanceof Error ? error.message : "Please check your connection."}
