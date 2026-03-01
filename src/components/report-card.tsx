@@ -120,6 +120,11 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                       </span>
                     </div>
                   </div>
+                  {key === "pegStability" && dim.detail.includes("capped at C") && (
+                    <p className="ml-4 mt-1 text-xs text-amber-500">
+                      Capped — active depeg in progress
+                    </p>
+                  )}
                   {(key === "resilience" || key === "decentralization" || key === "dependencyRisk") && dim.score !== null && (
                     <div className="ml-4 mt-1 space-y-0.5">
                       {dim.detail.split(". ").map((part) => {
