@@ -125,13 +125,14 @@ describe("getGaugeBand", () => {
 });
 
 describe("computeGaugeScore", () => {
-  it("returns null when any coin has null intensity", () => {
+  it("ignores coins with null intensity in weighted average", () => {
+    // Only the coin with intensity=40 is included; the null coin is skipped
     expect(
       computeGaugeScore([
         { intensity: 40, mcap: 1e11 },
         { intensity: null, mcap: 5e10 },
       ])
-    ).toBeNull();
+    ).toBe(40);
   });
 
   it("computes mcap-weighted average", () => {
@@ -141,6 +142,29 @@ describe("computeGaugeScore", () => {
       { intensity: 40, mcap: 5e10 },
     ]);
     expect(result).toBeCloseTo(53.33, 1);
+  });
+
+  it("skips coins with null intensity and computes from available data", () => {
+    const result = computeGaugeScore([
+      { intensity: 60, mcap: 1e11 },
+      { intensity: null, mcap: 5e10 },
+      { intensity: 40, mcap: 5e10 },
+    ]);
+    // 60 * (100B/150B) + 40 * (50B/150B) = 40 + 13.33 = 53.33
+    expect(result).toBeCloseTo(53.33, 1);
+  });
+
+  it("returns null when ALL coins have null intensity", () => {
+    expect(
+      computeGaugeScore([
+        { intensity: null, mcap: 1e11 },
+        { intensity: null, mcap: 5e10 },
+      ])
+    ).toBeNull();
+  });
+
+  it("returns null for empty array", () => {
+    expect(computeGaugeScore([])).toBeNull();
   });
 });
 
