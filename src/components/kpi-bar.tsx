@@ -99,18 +99,36 @@ export function KpiBar() {
     : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand] ?? "";
 
-  const psiDaysInBand = useMemo(() => {
-    if (!psiBand || !psiData?.history) return 0;
+  const { psiDaysInBand, psiDelta1d, psiDelta7d } = useMemo(() => {
+    if (!psiBand || !psiData?.history) return { psiDaysInBand: 0, psiDelta1d: null, psiDelta7d: null };
     let days = 1; // today counts
     for (const point of psiData.history) {
       if (point.band === psiBand) days++;
       else break;
     }
-    return days;
-  }, [psiData, psiBand]);
-  const psiSublabel = psiBand
-    ? `${psiBand} · ${psiDaysInBand}d in band`
-    : "";
+    const currentScore = psiCurrent!.avg24h ?? psiCurrent!.score;
+    const d1 = psiData.history.length >= 1 ? currentScore - psiData.history[0].score : null;
+    const last7 = psiData.history.slice(0, 7);
+    const d7 = last7.length >= 7
+      ? currentScore - last7.reduce((s, p) => s + p.score, 0) / last7.length
+      : null;
+    return { psiDaysInBand: days, psiDelta1d: d1, psiDelta7d: d7 };
+  }, [psiData, psiBand, psiCurrent]);
+
+  const psiSublabel = (() => {
+    if (!psiBand) return "";
+    const parts: string[] = [];
+    if (psiDelta1d !== null) {
+      const sign = psiDelta1d >= 0 ? "+" : "";
+      parts.push(`${sign}${psiDelta1d.toFixed(1)} vs 1d`);
+    }
+    if (psiDelta7d !== null) {
+      const sign = psiDelta7d >= 0 ? "+" : "";
+      parts.push(`${sign}${psiDelta7d.toFixed(1)} vs 7d`);
+    }
+    parts.push(`${psiBand} ${psiDaysInBand}d`);
+    return parts.join(" · ");
+  })();
 
   const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading;
 
@@ -149,6 +167,7 @@ export function KpiBar() {
           value={psiScore}
           sublabel={psiSublabel}
           valueClassName={psiColorClass}
+          sublabelClassName={psiDelta1d !== null ? deltaColor(psiDelta1d) : undefined}
         />
         <KpiCell
           label="Total Stablecoin Mcap"
