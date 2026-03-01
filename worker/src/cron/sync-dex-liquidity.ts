@@ -2095,6 +2095,7 @@ async function computeStablecoinScores(
   const globalSeenPools = new Set<string>();
   const globalProtocolTvl: Record<string, number> = {};
   const globalChainTvl: Record<string, number> = {};
+  const globalProtoChainTvl: Record<string, number> = {}; // "proto:chain" → TVL
   let globalTotalTvl = 0;
   let globalTotalVol24h = 0;
   let globalTotalVol7d = 0;
@@ -2184,6 +2185,9 @@ async function computeStablecoinScores(
       const proto = normalizeProtocol(p.project);
       globalProtocolTvl[proto] = (globalProtocolTvl[proto] ?? 0) + p.tvlUsd;
       globalChainTvl[chainKey] = (globalChainTvl[chainKey] ?? 0) + p.tvlUsd;
+      // Track protocol→chain TVL for proportional chain cap reduction
+      const pcKey = `${proto}:${chainKey}`;
+      globalProtoChainTvl[pcKey] = (globalProtoChainTvl[pcKey] ?? 0) + p.tvlUsd;
     }
     globalTotalVol7d += m.totalVolume7dUsd;
 
@@ -2241,12 +2245,21 @@ async function computeStablecoinScores(
   // After cross-stablecoin dedup, a protocol can still exceed its real TVL when
   // CG/GT virtual reserves are inflated across many pools. The per-coin cap allows
   // up to protocolTvl PER stablecoin, but globally the protocol total must not
-  // exceed DL's reported TVL.
+  // exceed DL's reported TVL. Chain TVLs are reduced proportionally.
   let globalCapReduction = 0;
   for (const proto of Object.keys(globalProtocolTvl)) {
     const cap = protocolTvlCaps.get(proto);
     if (cap != null && cap > 0 && globalProtocolTvl[proto] > cap) {
-      globalCapReduction += globalProtocolTvl[proto] - cap;
+      const excess = globalProtocolTvl[proto] - cap;
+      globalCapReduction += excess;
+      // Distribute reduction to chain TVLs proportionally
+      const protoTotal = globalProtocolTvl[proto];
+      for (const [pcKey, pcTvl] of Object.entries(globalProtoChainTvl)) {
+        if (!pcKey.startsWith(`${proto}:`)) continue;
+        const chain = pcKey.slice(proto.length + 1);
+        const chainReduction = (pcTvl / protoTotal) * excess;
+        globalChainTvl[chain] = Math.max(0, (globalChainTvl[chain] ?? 0) - chainReduction);
+      }
       globalProtocolTvl[proto] = cap;
     }
   }
