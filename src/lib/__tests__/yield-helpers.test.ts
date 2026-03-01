@@ -7,6 +7,7 @@ import {
   computeApyVarianceScore,
   detectWarningSignals,
 } from "../../../worker/src/cron/yield-helpers";
+import { findBestLendingPool } from "../../../worker/src/cron/yield-helpers";
 
 describe("computeApyFromRate", () => {
   it("returns correct APY for 7-day rate change", () => {
@@ -99,5 +100,79 @@ describe("detectWarningSignals", () => {
   it("returns empty for healthy yield", () => {
     const signals = detectWarningSignals({ currentApy: 5, apy30d: 5, apyReward: null, apy: 5, medianApy: 6, sourceTvlUsd: 1e9, prevTvlUsd: 1e9 });
     expect(signals).toHaveLength(0);
+  });
+});
+
+describe("findBestLendingPool", () => {
+  const allowlist = new Set(["aave-v3", "compound-v3", "maple"]);
+
+  const makeDlPool = (overrides: Partial<{
+    pool: string; symbol: string; project: string; tvlUsd: number;
+    apy: number; apyBase: number | null; apyReward: number | null;
+    stablecoin: boolean; exposure: string; chain: string;
+  }>) => ({
+    pool: "pool-1",
+    symbol: "USDC",
+    project: "aave-v3",
+    tvlUsd: 1_000_000,
+    apy: 3.5,
+    apyBase: 3.5,
+    apyReward: null,
+    stablecoin: true,
+    exposure: "single",
+    chain: "Ethereum",
+    apyMean30d: 3.5,
+    underlyingTokens: null,
+    ...overrides,
+  });
+
+  it("returns the highest-TVL pool from an allowlisted protocol", () => {
+    const pools = [
+      makeDlPool({ pool: "a", project: "aave-v3", tvlUsd: 500_000 }),
+      makeDlPool({ pool: "b", project: "aave-v3", tvlUsd: 2_000_000 }),
+      makeDlPool({ pool: "c", project: "compound-v3", tvlUsd: 1_000_000 }),
+    ];
+    const result = findBestLendingPool("USDC", pools, allowlist);
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("b"); // highest TVL
+  });
+
+  it("excludes pools from non-allowlisted protocols", () => {
+    const pools = [
+      makeDlPool({ pool: "a", project: "sketchy-dex", tvlUsd: 10_000_000 }),
+      makeDlPool({ pool: "b", project: "aave-v3", tvlUsd: 500_000 }),
+    ];
+    const result = findBestLendingPool("USDC", pools, allowlist);
+    expect(result!.pool).toBe("b");
+  });
+
+  it("excludes multi-exposure pools", () => {
+    const pools = [
+      makeDlPool({ pool: "a", project: "aave-v3", exposure: "multi", tvlUsd: 5_000_000 }),
+      makeDlPool({ pool: "b", project: "aave-v3", exposure: "single", tvlUsd: 100_000 }),
+    ];
+    const result = findBestLendingPool("USDC", pools, allowlist);
+    expect(result!.pool).toBe("b");
+  });
+
+  it("excludes non-stablecoin pools", () => {
+    const pools = [
+      makeDlPool({ pool: "a", project: "aave-v3", stablecoin: false, tvlUsd: 5_000_000 }),
+    ];
+    const result = findBestLendingPool("USDC", pools, allowlist);
+    expect(result).toBeNull();
+  });
+
+  it("matches symbol case-insensitively", () => {
+    const pools = [
+      makeDlPool({ pool: "a", project: "aave-v3", symbol: "usdc" }),
+    ];
+    const result = findBestLendingPool("USDC", pools, allowlist);
+    expect(result).not.toBeNull();
+  });
+
+  it("returns null when no pools match", () => {
+    const result = findBestLendingPool("XSGD", [], allowlist);
+    expect(result).toBeNull();
   });
 });
