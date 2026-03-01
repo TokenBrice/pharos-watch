@@ -566,12 +566,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
   const PRICE_CACHE_TTL = 24 * 60 * 60; // 24 hours
   const now = Math.floor(Date.now() / 1000);
 
-  // Save: coins that were missing but enrichment resolved (and passed validation)
-  const enriched = llamaData.peggedAssets.filter(
-    (a) => missingBefore.has(a.id) && !hasMissingPrice(a)
+  // Save ALL assets with valid prices so other crons (mint-burn sync) can look them up.
+  // Previously only enriched assets were cached, starving mint-burn of price data.
+  const withValidPrices = llamaData.peggedAssets.filter(
+    (a) => a.price != null && typeof a.price === "number" && a.price > 0
   );
-  if (enriched.length > 0) {
-    await savePriceCache(db, enriched.map((a) => ({ id: a.id, price: a.price! as number })));
+  if (withValidPrices.length > 0) {
+    await savePriceCache(db, withValidPrices.map((a) => ({ id: a.id, price: a.price! as number })));
   }
 
   // Fallback: coins still missing — apply cached price if within TTL
