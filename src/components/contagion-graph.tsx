@@ -124,6 +124,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     const simNodes = nodes.map((n) => ({ ...n }));
     const simLinks = links.map((l) => ({ ...l }));
 
+    const MIN_GAP = 8;
+
     // Stronger repulsion scaled by node size — big nodes claim more space
     const sim = forceSimulation(simNodes)
       .force(
@@ -142,21 +144,20 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       .force(
         "collide",
         forceCollide<GraphNode>()
-          .radius((d) => d.r + 14)
-          .iterations(3),
+          .radius((d) => d.r + MIN_GAP)
+          .iterations(4),
       )
       .stop();
 
     for (let i = 0; i < 300; i++) sim.tick();
 
     // Post-simulation overlap resolution — guarantees no overlapping nodes
-    const MIN_GAP = 6;
-    const MAX_PASSES = 60;
+    const MAX_PASSES = 120;
 
     for (let pass = 0; pass < MAX_PASSES; pass++) {
       let overlaps = 0;
 
-      // Push overlapping node pairs apart
+      // Push overlapping node pairs apart (overshoot by 1px to avoid re-collapse after clamping)
       for (let i = 0; i < simNodes.length; i++) {
         for (let j = i + 1; j < simNodes.length; j++) {
           const a = simNodes[i];
@@ -169,7 +170,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           if (dist < minDist) {
             overlaps++;
             if (dist > 0.1) {
-              const push = (minDist - dist) / 2;
+              const push = (minDist - dist) / 2 + 1;
               const nx = dx / dist;
               const ny = dy / dist;
               a.x = (a.x ?? 0) - nx * push;
@@ -179,7 +180,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
             } else {
               // Coincident nodes — nudge in a deterministic direction
               const angle = ((i * 7 + j * 13) % 100) / 100 * Math.PI * 2;
-              const push = minDist / 2;
+              const push = minDist / 2 + 1;
               a.x = (a.x ?? 0) - Math.cos(angle) * push;
               a.y = (a.y ?? 0) - Math.sin(angle) * push;
               b.x = (b.x ?? 0) + Math.cos(angle) * push;
