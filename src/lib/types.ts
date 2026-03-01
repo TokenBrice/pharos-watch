@@ -129,6 +129,7 @@ export interface StablecoinMeta {
   reserves?: ReserveSlice[];  // Structured reserve composition (manually curated)
   notices?: CoinNotice[];     // Important alerts (winding down, depegged, etc.)
   tags?: string[];            // Protocol lineage / fork tags (e.g. "Liquity v1 fork")
+  yieldConfig?: YieldConfig;  // Yield intelligence config (only for yieldBearing coins)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
@@ -620,4 +621,56 @@ export interface BlacklistEvent {
   timestamp: number;               // Unix seconds
   explorerTxUrl: string;
   explorerAddressUrl: string;
+}
+
+// ── Yield Intelligence ──────────────────────────────────────────────
+export type YieldType = "lending-vault" | "rebase" | "fee-sharing" | "lp-receipt" | "nav-appreciation" | "governance-set";
+
+export interface YieldConfig {
+  /** DeFiLlama pool UUID for deterministic matching */
+  defiLlamaPoolId?: string;
+  /** Human-readable yield source description */
+  yieldSource: string;
+  /** Yield mechanism type */
+  yieldType: YieldType;
+}
+
+export interface YieldRanking {
+  id: string;
+  symbol: string;
+  name: string;
+  currentApy: number;
+  apy7d: number;
+  apy30d: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  yieldSource: string;
+  yieldType: string;
+  dataSource: string;
+  sourceTvlUsd: number | null;
+  pharosYieldScore: number | null;
+  safetyScore: number | null;
+  safetyGrade: string | null;
+  yieldToRisk: number | null;
+  excessYield: number | null;
+  yieldStability: number | null;
+  apyVariance30d: number | null;
+  apyMin30d: number | null;
+  apyMax30d: number | null;
+}
+
+export interface YieldRankingsResponse {
+  rankings: YieldRanking[];
+  riskFreeRate: number;
+  scalingFactor: number;
+  updatedAt: number;
+}
+
+export interface YieldHistoryPoint {
+  date: number;
+  apy: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  exchangeRate: number | null;
+  sourceTvlUsd: number | null;
 }
