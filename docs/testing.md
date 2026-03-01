@@ -92,6 +92,10 @@ When adding a new API endpoint:
 2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
+**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), Zod schemas infer `string` instead. In that case, keep the hand-written `interface` for TypeScript and export the Zod schema separately for contract tests only — don't wire it into the hook via `useApiQuery`. See `ReportCardsResponse` / `ReportCardsResponseSchema` for the pattern.
+
+**Worker CI note:** `src/lib/types.ts` imports `zod`, and the worker type-checks that file via its `@/*` path alias. The deploy-worker CI job installs root deps (`npm ci`) specifically for this. If you add new npm packages imported at the top level of shared `src/lib/` files, they'll be resolved from root `node_modules/` — no need to add them to `worker/package.json` unless the worker uses them at runtime.
+
 ## Conventions
 
 ### What to test
