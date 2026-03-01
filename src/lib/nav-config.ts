@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   LayoutDashboard,
   Droplets,
   ShieldBan,
@@ -52,6 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Data",
     items: [
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
+      { href: "/depeg", label: "Depeg Tracker", icon: Activity, description: "Live peg monitoring & early warnings" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
     ],
   },
