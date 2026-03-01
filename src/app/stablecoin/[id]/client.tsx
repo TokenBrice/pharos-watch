@@ -38,8 +38,8 @@ import { DEWSDetail } from "@/components/dews-detail";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 
 const DETAIL_SECTIONS = [
-  { id: "overview", label: "Overview" },
   { id: "report-card", label: "Safety Score" },
+  { id: "overview", label: "Overview" },
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
   { id: "liquidity", label: "Liquidity" },
@@ -383,6 +383,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       </Card>
 
       {/* Sections outside the card */}
+      <section id="report-card">
+        {reportCard && <ReportCardDetail card={reportCard} />}
+      </section>
+
       <section id="overview">
         {summary ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -397,10 +401,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {coin.notices && coin.notices.length > 0 && (
         <CoinNotices notices={coin.notices} />
       )}
-
-      <section id="report-card">
-        {reportCard && <ReportCardDetail card={reportCard} />}
-      </section>
 
       <section id="chart">
         <McapChart data={supplyHistory} />
