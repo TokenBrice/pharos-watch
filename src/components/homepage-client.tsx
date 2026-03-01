@@ -21,6 +21,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { DEWSSummary } from "@/components/dews-summary";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
@@ -83,6 +84,10 @@ export function HomepageClient() {
 
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="dews">
+        <DEWSSummary />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="charts">

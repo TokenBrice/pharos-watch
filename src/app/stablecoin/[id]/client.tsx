@@ -35,6 +35,7 @@ import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { FlowSummaryCard } from "@/components/flow-summary-card";
 import { FlowEventFeed } from "@/components/flow-event-feed";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { DEWSDetail } from "@/components/dews-detail";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 
 const DETAIL_SECTIONS = [
@@ -44,6 +45,7 @@ const DETAIL_SECTIONS = [
   { id: "info", label: "Info" },
   { id: "liquidity", label: "Liquidity" },
   { id: "flows", label: "Flows" },
+  { id: "dews", label: "DEWS" },
   { id: "history", label: "Depeg History" },
 ];
 
@@ -425,6 +427,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         <FlowSummaryCard stablecoinId={id} />
         <FlowEventFeed stablecoinId={id} limit={10} />
       </section>
+
+      {!isNavToken && (
+        <section id="dews">
+          <DEWSDetail stablecoinId={id} />
+        </section>
+      )}
 
       <ContractAddresses meta={coin} />
 
