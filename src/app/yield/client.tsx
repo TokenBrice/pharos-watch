@@ -140,7 +140,7 @@ export function YieldClient() {
         <div className="space-y-2">
           <h2 className="text-xl font-semibold">Yield vs Safety</h2>
           <p className="text-sm text-muted-foreground">
-            Each dot is a yield-bearing stablecoin. Click to view details.
+            Each dot is a stablecoin. Click to view details.
           </p>
           <YieldScatterPlot
             rankings={data.rankings}
@@ -167,7 +167,7 @@ export function YieldClient() {
         The Pharos Yield Score (PYS) is for informational purposes only and does not constitute
         financial advice. APY figures are sourced from DeFiLlama and may fluctuate. Past yields
         do not guarantee future returns. Always do your own research before allocating capital
-        to any yield-bearing stablecoin.
+        to any stablecoin.
       </p>
     </div>
   );

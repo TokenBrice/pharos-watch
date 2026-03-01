@@ -150,10 +150,12 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
               dataKey="y"
               domain={[0, maxApy]}
               name="APY (%)"
-              label={{ value: "APY (%)", angle: -90, position: "insideLeft", offset: 5, fill: "var(--color-muted-foreground)", fontSize: 12 }}
+              label={{ value: "APY %", angle: -90, position: "insideLeft", offset: -5, fill: "var(--color-muted-foreground)", fontSize: 12 }}
               tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+              tickFormatter={(v: number) => v.toFixed(0)}
               tickLine={false}
               axisLine={{ stroke: "var(--color-border)" }}
+              width={40}
             />
 
             <Tooltip content={<CustomTooltip />} cursor={false} />
