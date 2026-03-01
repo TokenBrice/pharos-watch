@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 23 coins. Each must also have a `yieldConfig` specifying:
+Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 24 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C+ or above. Each must also have a `yieldConfig` specifying:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -63,7 +63,7 @@ Falls through to Tier 2 if no previous exchange rate exists yet (first sync).
 
 Matches each coin to a DeFiLlama pool via two layers:
 
-1. **Static map** — `YIELD_POOL_MAP` maps Pharos ID to DL pool UUID. 20 of 23 coins mapped.
+1. **Static map** — `YIELD_POOL_MAP` maps Pharos ID to DL pool UUID. 21 of 24 coins mapped.
 2. **Fallback matching** — searches DL pools by symbol (including `YIELD_VARIANT_MAP` variant symbols). Filters for `exposure === "single"` and `stablecoin === true`, picks highest TVL.
 
 **Variant mapping:** Some tracked coins earn yield through a separate wrapper token. `YIELD_VARIANT_MAP` maps the base coin to its wrapper for pool matching:
@@ -85,6 +85,25 @@ apy = ((price_now / price_30d_ago) ^ (365.25 / 30) - 1) * 100
 ```
 
 Zero new API calls — reuses cached price data. Falls through if no price history exists.
+
+### Automatic Lending Pool Discovery (Wave 2)
+
+For stablecoins **not** flagged `yieldBearing` but rated C+ or above (safety score >= 60), the sync cron automatically discovers the best lending pool from a curated protocol allowlist.
+
+**Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/cron/yield-config.ts`):
+
+| Tier | Protocols |
+|------|-----------|
+| Tier 1 | aave-v3, compound-v3, sparklend, spark-savings, maple, yearn-finance |
+| Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle |
+
+**Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL.
+
+**Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend.
+
+**Data source:** `defillama-auto` — distinguishes from static-mapped `defillama` pools.
+
+**Eligibility evaluated dynamically:** If a coin's safety score drops below 60, it stops receiving yield data. If it rises above 60, it starts automatically.
 
 ---
 
@@ -218,7 +237,7 @@ CREATE TABLE yield_history (
 
 **Retention:** 365 days. Older rows are pruned at the end of each sync run.
 
-**Estimated volume:** ~23 coins × 48 points/day × 365 days ≈ 403K rows/year.
+**Estimated volume:** ~39 coins × 48 points/day × 365 days ≈ 684K rows/year.
 
 ---
 
