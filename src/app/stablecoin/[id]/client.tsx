@@ -18,7 +18,6 @@ import { McapChart } from "@/components/mcap-chart";
 import { DepegHistory } from "@/components/depeg-history";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { KeyInfoCard } from "@/components/key-info-card";
-import { ContractAddresses } from "@/components/contract-addresses";
 import { AiSummary } from "@/components/ai-summary";
 import { ReportCardDetail } from "@/components/report-card";
 import { CoinNotices } from "@/components/coin-notice";
@@ -433,8 +432,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
           <DEWSDetail stablecoinId={id} />
         </section>
       )}
-
-      <ContractAddresses meta={coin} />
 
       {!isNavToken && (
         <section id="history">
