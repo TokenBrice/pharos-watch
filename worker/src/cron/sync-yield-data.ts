@@ -4,17 +4,18 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache, batchExecute } from "../lib/db";
 import {
   USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
-  PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE,
+  PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE, MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getChainRpc } from "../lib/chain-rpcs";
 import {
   computeApyFromRate, computeApyFromPrice, computePYS,
   computeYieldStability, computeApyVarianceScore,
-  detectWarningSignals,
+  detectWarningSignals, findBestLendingPool,
 } from "./yield-helpers";
 import {
   YIELD_VARIANT_MAP, YIELD_POOL_MAP, ON_CHAIN_RATE_CONFIGS,
+  LENDING_PROTOCOL_ALLOWLIST,
 } from "./yield-config";
 import {
   computeOverallGrade, scoreDecentralization, scoreDependencyRisk,
@@ -266,6 +267,34 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     resolved.push({ id, symbol, yield: null });
   }
 
+  // 5b. Auto-discovery: find lending pools for non-yield-bearing C+ coins
+  if (dlPools.length > 0) {
+    const yieldBearingIds = new Set(yieldCoins.map((m) => m.id));
+    const lendingCandidates = TRACKED_STABLECOINS.filter((m) =>
+      !yieldBearingIds.has(m.id) &&
+      (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
+    );
+
+    for (const meta of lendingCandidates) {
+      const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST);
+      if (pool && pool.apy != null && pool.apy >= 0) {
+        resolved.push({
+          id: meta.id,
+          symbol: meta.symbol,
+          yield: {
+            currentApy: pool.apy,
+            apyBase: pool.apyBase,
+            apyReward: pool.apyReward,
+            sourcePool: pool.pool,
+            sourceTvlUsd: pool.tvlUsd,
+            dataSource: "defillama-auto",
+            exchangeRate: null,
+          },
+        });
+      }
+    }
+  }
+
   // 6. Compute trailing averages, PYS, and store
   const yieldDataStmts: D1PreparedStatement[] = [];
   const historyStmts: D1PreparedStatement[] = [];
@@ -295,8 +324,11 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
   for (const { id, symbol, yield: y } of resolved) {
     if (!y) continue;
 
-    const meta = yieldCoins.find((m) => m.id === id)!;
+    const meta = TRACKED_STABLECOINS.find((m) => m.id === id)!;
     const yieldConfig = meta.yieldConfig;
+    // Auto-discovered coins: synthesize yieldSource/yieldType from pool data
+    const yieldSource = yieldConfig?.yieldSource ?? `${y.dataSource === "defillama-auto" ? "Best lending rate" : "Unknown"}`;
+    const yieldType = yieldConfig?.yieldType ?? (y.dataSource === "defillama-auto" ? "lending-opportunity" : "nav-appreciation");
 
     // Load historical APY samples for trailing averages
     const histRows = await db.prepare(
@@ -364,7 +396,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         id, symbol, y.currentApy, y.apyBase, y.apyReward, apy7d, apy30d,
-        yieldConfig?.yieldSource ?? "Unknown", yieldConfig?.yieldType ?? "nav-appreciation",
+        yieldSource, yieldType,
         y.sourcePool, y.sourceTvlUsd, y.dataSource,
         safetyScore, safetyGrade, safePys, yieldToRisk, excessYield, safeStability,
         variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, warningSignalsJson, startSec,
@@ -399,7 +431,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     updatedAt: startSec,
   }));
 
-  console.log(`[sync-yield-data] Updated ${updatedCount}/${yieldCoins.length} coins`);
+  console.log(`[sync-yield-data] Updated ${updatedCount} coins (${yieldCoins.length} yield-bearing + auto-discovered)`);
   return { itemCount: updatedCount, metadata: `${updatedCount} coins, rf=${riskFreeRate}%` };
 }
 
