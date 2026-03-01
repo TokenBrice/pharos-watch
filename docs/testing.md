@@ -51,6 +51,33 @@ resolve: { alias: { "@": "src" }} // Same path alias as Next.js
 
 All seven suites test pure functions from `src/lib/` — no DOM, no React, no network.
 
+### API Contract Tests
+
+Located in `worker/src/api/__tests__/`. These test that worker handlers return the correct response shape for each endpoint mode. They use a lightweight D1 mock (`helpers/mock-d1.ts`) that returns canned row data.
+
+| File | Handler | Modes Tested |
+|------|---------|--------------|
+| `mint-burn-flows.test.ts` | `handleMintBurnFlows` | Aggregate (gauge + coins[]), Per-coin (flat + chains[]), 404 |
+| `stability-index.test.ts` | `handleStabilityIndex` | Summary, Detail (with components in history) |
+
+Contract tests validate responses against the same Zod schemas the frontend uses, creating a direct link between what the worker produces and what the frontend expects.
+
+### Zod Runtime Validation
+
+Five high-priority API response types have Zod schemas in `src/lib/types.ts`:
+- `StablecoinListResponseSchema`
+- `PegSummaryResponseSchema`
+- `ReportCardsResponseSchema`
+- `MintBurnFlowsResponseSchema`
+- `MintBurnPerCoinResponseSchema`
+
+These are wired into their respective hooks via `useApiQuery`'s `schema` option. On validation failure: `console.warn` with details, return data as-is (graceful degradation). Schemas are the single source of truth — types are derived via `z.infer<>`.
+
+When adding a new API endpoint:
+1. Define the response schema in `src/lib/types.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
+2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
+3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
+
 ## Conventions
 
 ### What to test
@@ -58,11 +85,12 @@ All seven suites test pure functions from `src/lib/` — no DOM, no React, no ne
 - **Pure `src/lib/` functions** — formatters, supply helpers, classification maps, peg-rate derivation. These are the highest-value tests: deterministic, fast, and catch regressions in shared logic.
 - **Edge cases** — `NaN`, `Infinity`, `null`, `undefined`, zero, negative values, empty inputs. The existing tests set this standard.
 - **Boundary values** — tier boundaries in formatters (e.g., 999 vs 1000 for K suffix).
+- **API contract tests** — when a worker handler has multiple response modes (different JSON shapes based on query params), add a contract test for each mode in `worker/src/api/__tests__/`. Use the D1 mock from `helpers/mock-d1.ts`.
 
 ### What NOT to test (for now)
 
 - **React components** — no jsdom/happy-dom environment configured. Component tests would need that added to `vitest.config.ts`.
-- **API/worker handlers** — the worker has its own TypeScript config and no test runner. Worker logic is validated via type-checking and integration tests in production (health endpoint, circuit breakers).
+- **API/worker handlers (full integration)** — the D1 mock tests response shape, not SQL correctness. Full end-to-end worker testing would need a real D1 instance.
 - **TanStack Query hooks** — these are thin wrappers around fetch calls; testing them requires mocking the API layer.
 
 ### Test style
