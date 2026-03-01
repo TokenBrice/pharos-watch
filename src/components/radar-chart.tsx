@@ -48,7 +48,7 @@ export function ReportCardRadar({
   return (
     <div
       className={`w-full ${className ?? ""}`}
-      style={size !== undefined ? { height: size } : undefined}
+      style={size !== undefined ? { height: size } : { height: "100%" }}
       role="figure"
       aria-label={`Safety score radar chart for ${card.symbol}`}
     >

@@ -67,11 +67,11 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Two-column layout: grade + radar | dimension breakdown */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Left column: Overall grade (left strip on desktop) + radar chart */}
-          <div className="flex flex-col items-center gap-4 md:flex-row md:items-stretch">
-            {/* Grade strip */}
-            <div className="flex flex-row items-center gap-3 md:flex-col md:justify-center md:gap-1 shrink-0">
+        <div className="grid gap-6 md:grid-cols-2 md:items-stretch">
+          {/* Left column: grade top-left strip + radar filling full height */}
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-stretch md:h-full">
+            {/* Grade strip — top-aligned on desktop, centred inline on mobile */}
+            <div className="flex flex-row items-center gap-3 md:flex-col md:justify-start md:items-center md:gap-1 md:pt-1 shrink-0">
               <Badge
                 variant="outline"
                 className={`text-3xl px-5 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
@@ -86,7 +86,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
               )}
             </div>
             {/* Radar chart — fills remaining width and full column height on desktop */}
-            <ReportCardRadar card={card} labels="full" className="w-full flex-1 min-h-[260px]" />
+            <ReportCardRadar card={card} labels="full" className="w-full flex-1 min-h-[260px] md:h-full" />
           </div>
 
           {/* Right column: Dimension breakdown */}
