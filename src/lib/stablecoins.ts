@@ -234,6 +234,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     geckoId: "usds",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Sky Savings Rate (sUSDS)", yieldType: "governance-set" },
     governanceQuality: "dao-governance",
     canBeBlacklisted: "possible",
     deploymentModel: "third-party-bridge",
@@ -293,6 +295,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     geckoId: "dai",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Dai Savings Rate (sDAI)", yieldType: "governance-set" },
     governanceQuality: "dao-governance",
     deploymentModel: "canonical-bridge",
     collateralQuality: "rwa",
@@ -673,6 +677,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     geckoId: "gho",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Aave Safety Module (sGHO)", yieldType: "governance-set" },
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -885,6 +891,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
     geckoId: "crvusd",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "nav-appreciation" },
     dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
     deploymentModel: "third-party-bridge",
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
@@ -1007,6 +1015,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
     geckoId: "dola-usd",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Inverse Finance Savings (sDOLA)", yieldType: "nav-appreciation" },
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
     collateral: "Over-collateralized crypto assets (wstETH, WETH, INV, WBTC, LP tokens, and others) deposited in Inverse Finance's FiRM fixed-rate lending markets; USDS in the PSM as a peg backstop",
@@ -1214,6 +1224,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
     geckoId: "frax-usd",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Frax Staking (sfrxUSD)", yieldType: "nav-appreciation" },
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
     collateral: "Tokenized cash-equivalent reserves held by governance-approved enshrined custodians: BlackRock BUIDL (U.S. Treasuries/repos via Securitize), Superstate USTB (T-bills) and USCC (U.S. government securities), Centrifuge JTRSY (T-bills), WisdomTree WTGXX (U.S. government money market), Agora AUSD, and Circle USDC; each custodian mints and redeems frxUSD 1:1 against reserves they hold on-chain",
@@ -1862,6 +1874,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     governanceQuality: "immutable-code",
     deploymentModel: "third-party-bridge",
     geckoId: "liquity-bold-2",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Stability Pool (via Yearn yBOLD)", yieldType: "lending-vault" },
     collateral: "WETH, wstETH, and rETH only; immutable contracts with no governance over collateral selection",
     pegMechanism: "Overcollateralized CDPs with direct on-chain redemption for $1 of collateral; user-set interest rates adapt to peg conditions, with 75% of interest revenue flowing to Stability Pools",
     links: [
@@ -2040,6 +2054,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   other("226", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
     geckoId: "frankencoin",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Frankencoin Savings", yieldType: "governance-set" },
     collateral: "ETH, BTC derivatives (WBTC, cbBTC), ETH LSTs (wstETH, LsETH), gold tokens (PAXG, XAUt), tokenized RWAs (SPYon, LENDS, REALU), and governance tokens (CRV, GNO) in oracle-free overcollateralized positions; any collateral can be whitelisted by governance",
     pegMechanism: "Auction-based collateral valuation with veto governance; no price oracle dependency",
     collateralQuality: "alt-lst-bridged-or-mixed",
