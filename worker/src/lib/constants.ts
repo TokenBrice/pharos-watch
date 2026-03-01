@@ -53,6 +53,7 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "usds-status": 86400,
   "fx-rates": 1800,
   "bluechip-ratings": 86400,
+  "yield-data": 3600,
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---
@@ -69,6 +70,13 @@ export const DEPEG_PENDING_EXPIRY_SEC = 2700; // 45 min (3 sync cycles)
 /** Secondary source agreement threshold as fraction of primary threshold */
 export const DEPEG_SECONDARY_THRESHOLD_RATIO = 0.5;
 
+// --- Yield Intelligence ---
+
+export const RISK_FREE_RATE_FALLBACK = 4.25;
+export const TREASURY_FISCAL_DATA_URL =
+  "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates?filter=security_desc:eq:Treasury Bills&sort=-record_date&page[size]=1&fields=record_date,avg_interest_rate_amt";
+export const PYS_SCALING_FACTOR = 5;
+
 // --- Circuit breaker source names ---
 
 export const CIRCUIT_SOURCE = {
@@ -78,4 +86,5 @@ export const CIRCUIT_SOURCE = {
   DL_PROTOCOLS: "defillama-protocols",
   CG_PRICES: "coingecko-prices",
   CG_MCAP: "coingecko-mcap",
+  TREASURY_RATES: "treasury-rates",
 } as const;
