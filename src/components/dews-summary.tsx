@@ -60,7 +60,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5">
-            {elevated.map((entry) => {
+            {elevated.slice(0, 12).map((entry) => {
               const meta = PSI_ELIGIBLE_META_BY_ID.get(entry.id);
               const symbol = meta?.symbol ?? entry.id;
               const name = meta?.name ?? symbol;
@@ -84,6 +84,11 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
                 </Link>
               );
             })}
+            {elevated.length > 12 && (
+              <p className="text-xs text-muted-foreground px-2 py-1.5">
+                +{elevated.length - 12} more elevated
+              </p>
+            )}
           </div>
         )}
       </CardContent>
