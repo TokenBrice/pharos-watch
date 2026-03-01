@@ -381,7 +381,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
 
     // Belt-and-suspenders: guard against NaN/Infinity reaching D1
     const safePys = Number.isFinite(pys) ? pys : 0;
-    const safeVariance = Number.isFinite(apyVarianceScore) ? apyVarianceScore : 0;
+    const safeVariance30d = variance30d != null && Number.isFinite(variance30d) ? variance30d : null;
     const safeStability = yieldStability != null && Number.isFinite(yieldStability) ? yieldStability : null;
 
     // Previous exchange rate (for Tier 1 coins — cached from resolution phase)
@@ -414,7 +414,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
         yieldSource, yieldType,
         y.sourcePool, y.sourceTvlUsd, y.dataSource,
         safetyScore, safetyGrade, safePys, yieldToRisk, excessYield, safeStability,
-        variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, warningSignalsJson, startSec,
+        safeVariance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, warningSignalsJson, startSec,
       )
     );
 
