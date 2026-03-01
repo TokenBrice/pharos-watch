@@ -19,7 +19,7 @@ const TIME_RANGES = [
 function FlowsPageInner() {
   const [hours, setHours] = useState(24);
   const { data, isLoading, isError, error, dataUpdatedAt } =
-    useMintBurnFlows(undefined, hours);
+    useMintBurnFlows(hours);
 
   const gauge = data?.gauge;
   const coins = data?.coins ?? [];

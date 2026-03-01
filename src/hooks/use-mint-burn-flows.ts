@@ -3,19 +3,29 @@
 import { useApiQuery, CRON_20MIN } from "./use-api-query";
 import type {
   MintBurnFlowsResponse,
+  MintBurnPerCoinResponse,
   MintBurnEventsResponse,
 } from "@/lib/types";
 
-export function useMintBurnFlows(stablecoinId?: string, hours = 24) {
-  const params = new URLSearchParams();
-  if (stablecoinId) params.set("stablecoin", stablecoinId);
-  if (hours !== 24) params.set("hours", hours.toString());
-  const qs = params.toString();
-
+/** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
+export function useMintBurnFlows(hours = 24) {
+  const qs = hours !== 24 ? `?hours=${hours}` : "";
   return useApiQuery<MintBurnFlowsResponse>(
-    ["mint-burn-flows", stablecoinId ?? "all", hours],
-    `/api/mint-burn-flows${qs ? `?${qs}` : ""}`,
-    CRON_20MIN
+    ["mint-burn-flows", "all", hours],
+    `/api/mint-burn-flows${qs}`,
+    CRON_20MIN,
+  );
+}
+
+/** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */
+export function useMintBurnFlowsCoin(stablecoinId: string, hours = 24) {
+  const params = new URLSearchParams({ stablecoin: stablecoinId });
+  if (hours !== 24) params.set("hours", hours.toString());
+  return useApiQuery<MintBurnPerCoinResponse>(
+    ["mint-burn-flows", stablecoinId, hours],
+    `/api/mint-burn-flows?${params}`,
+    CRON_20MIN,
+    { enabled: !!stablecoinId },
   );
 }
 
@@ -31,6 +41,6 @@ export function useMintBurnEvents(
   return useApiQuery<MintBurnEventsResponse>(
     ["mint-burn-events", stablecoinId, opts?.direction ?? "all", opts?.offset ?? 0],
     `/api/mint-burn-events?${params}`,
-    CRON_20MIN
+    CRON_20MIN,
   );
 }
