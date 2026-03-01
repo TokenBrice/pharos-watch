@@ -1,9 +1,10 @@
 import { Suspense } from "react";
-import Image from "next/image";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
+import { CHAIN_META } from "@/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
+import { SiteHeader } from "@/components/site-header";
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
@@ -32,13 +33,7 @@ export default function HomePage() {
           }),
         }}
       />
-      <div className="hidden lg:flex items-center gap-3">
-        <Image src="/pharos-icon.png" alt="" width={32} height={32} className="rounded-lg" priority />
-        <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
-        <span className="text-xs text-muted-foreground/60">
-          {total} stablecoins &middot; {PEG_CURRENCY_COUNT} pegs
-        </span>
-      </div>
+      <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
       <KpiBar />
       <Suspense fallback={
         <div className="flex min-h-[40vh] items-center justify-center">
