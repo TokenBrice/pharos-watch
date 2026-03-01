@@ -658,7 +658,7 @@ export async function generateDailyDigest(
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPromptContent }],
     }),
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(60_000),
   });
 
   if (!response.ok) {
