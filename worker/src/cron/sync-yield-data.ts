@@ -368,8 +368,8 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     const stdDev30d = samples.length >= 2
       ? Math.sqrt(samples.reduce((s, v) => s + (v - apy30d) ** 2, 0) / samples.length)
       : null;
-    const apyMin30d = samples.length > 0 ? Math.min(...samples) : null;
-    const apyMax30d = samples.length > 0 ? Math.max(...samples) : null;
+    const apyMin30d = samples.length > 0 ? samples.reduce((m, v) => Math.min(m, v), Infinity) : null;
+    const apyMax30d = samples.length > 0 ? samples.reduce((m, v) => Math.max(m, v), -Infinity) : null;
 
     // Safety score
     const safety = safetyScores.get(id);
@@ -512,7 +512,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
       const trackingStart = events.length > 0
-        ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgoSec)
+        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
         : fourYearsAgoSec;
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 
@@ -550,7 +550,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
       const trackingStart = events.length > 0
-        ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgoSec)
+        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
         : fourYearsAgoSec;
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 

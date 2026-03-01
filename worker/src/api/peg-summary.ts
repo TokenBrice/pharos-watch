@@ -111,7 +111,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
 
     // Peg score
     const trackingStart = events.length > 0
-      ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgo)
+      ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgo)
       : fourYearsAgo;
     const scoreResult = computePegScore(events, trackingStart, now);
 

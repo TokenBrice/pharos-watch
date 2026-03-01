@@ -113,7 +113,7 @@ export const handleMintBurnEvents = withErrorHandler(
 
     const latestTs =
       events.length > 0
-        ? Math.max(...events.map((e) => e.timestamp))
+        ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
         : Math.floor(Date.now() / 1000);
 
     return new Response(JSON.stringify({ events, total }), {

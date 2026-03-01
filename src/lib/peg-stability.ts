@@ -37,7 +37,7 @@ export function computePegStability(
   const earliestSec = earliestDate
     ? Math.floor(Number(earliestDate))
     : events.length > 0
-      ? Math.min(...events.map((e) => e.startedAt))
+      ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity)
       : null;
 
   if (earliestSec === null) return null;
@@ -58,7 +58,7 @@ export function computePegStability(
   const depeggedNow = events.some((e) => e.endedAt === null);
   let currentStreakDays: number | null = null;
   if (!depeggedNow && events.length > 0) {
-    const lastEnded = Math.max(...events.filter((e) => e.endedAt !== null).map((e) => e.endedAt!));
+    const lastEnded = events.filter((e) => e.endedAt !== null).reduce((m, e) => Math.max(m, e.endedAt!), -Infinity);
     if (lastEnded > 0) {
       currentStreakDays = Math.floor((nowSec - lastEnded) / 86400);
     }

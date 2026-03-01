@@ -482,7 +482,7 @@ export async function generateDailyDigest(
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
       const trackingStart = events.length > 0
-        ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgoSec)
+        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
         : fourYearsAgoSec;
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 
@@ -524,7 +524,7 @@ export async function generateDailyDigest(
       const asset = priceById.get(meta.id);
       const events = eventsByCoin.get(meta.id) ?? [];
       const trackingStart = events.length > 0
-        ? Math.min(Math.min(...events.map((e) => e.startedAt)), fourYearsAgoSec)
+        ? Math.min(events.reduce((m, e) => Math.min(m, e.startedAt), Infinity), fourYearsAgoSec)
         : fourYearsAgoSec;
       const scoreResult = computePegScore(events, trackingStart, nowSec);
 

@@ -80,7 +80,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     explorerAddressUrl: row.explorer_address_url,
   }));
 
-  const latestTs = events.length > 0 ? Math.max(...events.map((e) => e.timestamp)) : Math.floor(Date.now() / 1000);
+  const latestTs = events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
 
   return new Response(JSON.stringify({ events, total }), {
     headers: addFreshnessHeaders({

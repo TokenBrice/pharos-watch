@@ -299,7 +299,7 @@ export function renderCompareShareImage(
   radarData?: ShareRadarData,
 ): HTMLCanvasElement {
   // Compute card and canvas height from content
-  const maxRows = Math.max(...coins.map(statRowCount));
+  const maxRows = coins.reduce((m, c) => Math.max(m, statRowCount(c)), -Infinity);
   const cardH = CARD_HEADER_H + maxRows * ROW_H + CARD_BOTTOM_PAD;
   const H = CARDS_Y + cardH + (radarData ? RADAR_SECTION_H : 0) + FOOTER_H;
 

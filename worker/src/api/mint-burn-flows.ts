@@ -370,7 +370,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     }));
 
   const updatedAt = hourlyRows.length > 0
-    ? Math.max(...hourlyRows.map((r) => r.hour_ts))
+    ? hourlyRows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
     : nowSec;
 
   const body = {
@@ -491,7 +491,7 @@ async function handlePerCoin(
   }
 
   const updatedAt = rows.length > 0
-    ? Math.max(...rows.map((r) => r.hour_ts))
+    ? rows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
     : nowSec;
 
   const body = {

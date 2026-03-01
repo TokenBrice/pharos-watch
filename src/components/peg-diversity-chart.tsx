@@ -138,8 +138,8 @@ export function PegDiversityChart() {
     const totals = filteredData.map((d) =>
       pegKeys.reduce((sum, key) => sum + ((d[key] as number) ?? 0), 0)
     );
-    const min = Math.min(...totals);
-    const max = Math.max(...totals);
+    const min = totals.reduce((m, v) => Math.min(m, v), Infinity);
+    const max = totals.reduce((m, v) => Math.max(m, v), -Infinity);
     const padding = (max - min) * 0.15 || max * 0.05;
     return [Math.max(0, min - padding), max + padding];
   }, [range, filteredData, pegKeys]);

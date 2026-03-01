@@ -154,8 +154,8 @@ export function StabilityIndex() {
 
 function Sparkline({ data, color }: { data: { score: number; band: string }[]; color: string }) {
   const scores = data.map((d) => d.score);
-  const min = Math.min(...scores);
-  const max = Math.max(...scores);
+  const min = scores.reduce((m, s) => Math.min(m, s), Infinity);
+  const max = scores.reduce((m, s) => Math.max(m, s), -Infinity);
   const range = max - min || 1;
   const w = 120;
   const h = 28;

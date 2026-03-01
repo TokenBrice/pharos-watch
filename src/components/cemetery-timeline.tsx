@@ -36,8 +36,8 @@ export function CemeteryTimeline({ coins }: CemeteryTimelineProps) {
   if (coins.length === 0) return null;
 
   const timestamps = coins.map((c) => deathTs(c.deathDate));
-  const minTs = Math.min(...timestamps);
-  const maxTs = Math.max(...timestamps);
+  const minTs = timestamps.reduce((m, t) => Math.min(m, t), Infinity);
+  const maxTs = timestamps.reduce((m, t) => Math.max(m, t), -Infinity);
   const range = maxTs - minTs || 1;
 
   // Generate year tick marks

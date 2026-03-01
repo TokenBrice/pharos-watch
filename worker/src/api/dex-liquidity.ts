@@ -138,7 +138,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
 
   const rows = result.results ?? [];
   const oldestUpdate = rows.length > 0
-    ? Math.min(...rows.map((r) => r.updated_at))
+    ? rows.reduce((m, r) => Math.min(m, r.updated_at), Infinity)
     : Math.floor(Date.now() / 1000);
 
   return new Response(JSON.stringify(map), {

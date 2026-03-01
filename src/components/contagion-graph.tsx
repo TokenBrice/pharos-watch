@@ -89,7 +89,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     const idSet = new Set(sortedIds);
 
     const mcaps = sortedIds.map((id) => mcapMap.get(id) ?? 0);
-    const maxMcap = Math.max(...mcaps, 1);
+    const maxMcap = mcaps.reduce((m, v) => Math.max(m, v), 1);
 
     const graphNodes: GraphNode[] = sortedIds.map((id) => {
       const card = cardMap.get(id)!;

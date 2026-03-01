@@ -240,8 +240,8 @@ function useHistoryStats(history: HistoryPoint[]) {
     if (!history.length) return null;
     const last30 = history.slice(0, 30);
     const scores = last30.map((p) => p.score);
-    const high30 = Math.max(...scores);
-    const low30 = Math.min(...scores);
+    const high30 = scores.reduce((m, s) => Math.max(m, s), -Infinity);
+    const low30 = scores.reduce((m, s) => Math.min(m, s), Infinity);
     const avg30 = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
     const avg30Band = BAND_ZONES.find((z) => avg30 >= z.y1)?.label ?? "";
     const high30Band = last30.find((p) => p.score === high30)?.band ?? "";

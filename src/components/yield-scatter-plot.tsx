@@ -75,7 +75,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
 
   const maxApy = useMemo(() => {
     if (data.length === 0) return 20;
-    return Math.max(20, Math.ceil(Math.max(...data.map((d) => d.y)) * 1.1));
+    return Math.max(20, Math.ceil(data.reduce((m, d) => Math.max(m, d.y), -Infinity) * 1.1));
   }, [data]);
 
   const handleClick = useCallback(

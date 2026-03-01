@@ -25,7 +25,7 @@ export function StaleDataBanner({ queries }: { queries: StaleQuery[] }) {
   return (
     <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">
       Data may be stale ({labels}). Last update was over{" "}
-      {formatAge(Math.max(...staleQueries.map((q) => now - q.dataUpdatedAt)))} ago.
+      {formatAge(staleQueries.reduce((m, q) => Math.max(m, now - q.dataUpdatedAt), -Infinity))} ago.
     </div>
   );
 }

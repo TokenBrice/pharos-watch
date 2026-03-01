@@ -58,7 +58,7 @@ export function computePegScore(
 
   // Determine tracking window start
   const earliestEvent = events.length > 0
-    ? Math.min(...events.map((e) => e.startedAt))
+    ? events.reduce((m, e) => Math.min(m, e.startedAt), Infinity)
     : null;
   const startSec = trackingStartSec ?? earliestEvent;
 
@@ -139,7 +139,7 @@ export function computePegScore(
     worstDeviationBps,
     activeDepeg: events.some((e) => e.endedAt === null),
     lastEventAt: events.length > 0
-      ? Math.max(...events.map((e) => e.startedAt))
+      ? events.reduce((m, e) => Math.max(m, e.startedAt), -Infinity)
       : null,
     trackingSpanDays: Math.floor(spanDays),
   };

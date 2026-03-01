@@ -748,8 +748,8 @@ async function buildCurveLookups(
 
         let balanceRatio = 1;
         if (balances.length >= 2) {
-          const minBal = Math.min(...balances);
-          const maxBal = Math.max(...balances);
+          const minBal = balances.reduce((m, b) => Math.min(m, b), Infinity);
+          const maxBal = balances.reduce((m, b) => Math.max(m, b), -Infinity);
           balanceRatio = maxBal > 0 ? minBal / maxBal : 0;
         }
 

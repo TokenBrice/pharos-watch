@@ -66,8 +66,8 @@ interface StablecoinTableProps {
 
 function MiniSparkline({ values }: { values: number[] }) {
   if (values.length < 2 || values.every(v => v === 0)) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const min = values.reduce((m, v) => Math.min(m, v), Infinity);
+  const max = values.reduce((m, v) => Math.max(m, v), -Infinity);
   const range = max - min || 1;
   const h = 16;
   const w = 40;
