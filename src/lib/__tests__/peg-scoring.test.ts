@@ -1,0 +1,689 @@
+import { describe, it, expect } from "vitest";
+import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
+import { computePegScore } from "../peg-score";
+import type { PegScoreResult } from "../peg-score";
+import { computePegStability } from "../peg-stability";
+import type { DepegEvent } from "../types";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Create a minimal DepegEvent with sensible defaults. */
+function makeEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">): DepegEvent {
+  return {
+    id: 1,
+    stablecoinId: "test-coin",
+    symbol: "TST",
+    pegType: "USD",
+    direction: overrides.peakDeviationBps < 0 ? "below" : "above",
+    startPrice: 1.0,
+    peakPrice: null,
+    recoveryPrice: null,
+    pegReference: 1.0,
+    source: "live",
+    endedAt: null,
+    ...overrides,
+  };
+}
+
+const DAY = 86400;
+const YEAR = 365.25 * DAY;
+
+// ---------------------------------------------------------------------------
+// mergeDepegSeconds
+// ---------------------------------------------------------------------------
+describe("mergeDepegSeconds", () => {
+  it("returns 0 for an empty events array", () => {
+    expect(mergeDepegSeconds([], 0, 1000)).toBe(0);
+  });
+
+  it("returns duration of a single closed interval", () => {
+    const events = [makeEvent({ startedAt: 100, endedAt: 500, peakDeviationBps: -200 })];
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(400);
+  });
+
+  it("clamps an open-ended event to the 'now' boundary", () => {
+    const events = [makeEvent({ startedAt: 100, endedAt: null, peakDeviationBps: -200 })];
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(900); // 100..1000
+  });
+
+  it("clamps event start to windowStart", () => {
+    const events = [makeEvent({ startedAt: 50, endedAt: 300, peakDeviationBps: -200 })];
+    // windowStart=100, so effective interval is 100..300
+    expect(mergeDepegSeconds(events, 100, 1000)).toBe(200);
+  });
+
+  it("filters out intervals that end before windowStart", () => {
+    const events = [makeEvent({ startedAt: 10, endedAt: 50, peakDeviationBps: -200 })];
+    // windowStart=100 means clamped start=100, end=50 => filtered (end <= start)
+    expect(mergeDepegSeconds(events, 100, 1000)).toBe(0);
+  });
+
+  it("sums non-overlapping intervals", () => {
+    const events = [
+      makeEvent({ startedAt: 100, endedAt: 200, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: 400, endedAt: 500, peakDeviationBps: -300 }),
+    ];
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(200); // 100 + 100
+  });
+
+  it("merges overlapping intervals", () => {
+    const events = [
+      makeEvent({ startedAt: 100, endedAt: 400, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: 300, endedAt: 600, peakDeviationBps: -300 }),
+    ];
+    // Merged: 100..600 = 500
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(500);
+  });
+
+  it("merges adjacent intervals (touching boundaries)", () => {
+    const events = [
+      makeEvent({ startedAt: 100, endedAt: 300, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: 300, endedAt: 500, peakDeviationBps: -300 }),
+    ];
+    // 300 <= 300 so they merge: 100..500 = 400
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(400);
+  });
+
+  it("handles fully nested intervals", () => {
+    const events = [
+      makeEvent({ startedAt: 100, endedAt: 600, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: 200, endedAt: 400, peakDeviationBps: -300 }),
+    ];
+    // Inner is fully inside outer: merged = 100..600 = 500
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(500);
+  });
+
+  it("merges multiple overlapping intervals out of order", () => {
+    const events = [
+      makeEvent({ startedAt: 500, endedAt: 700, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: 100, endedAt: 300, peakDeviationBps: -300 }),
+      makeEvent({ startedAt: 250, endedAt: 550, peakDeviationBps: -250 }),
+    ];
+    // Sorted: [100,300], [250,550], [500,700]
+    // Merge: 100..300 overlaps with 250..550 => 100..550, overlaps with 500..700 => 100..700 = 600
+    expect(mergeDepegSeconds(events, 0, 1000)).toBe(600);
+  });
+
+  it("clamps both start and end to window boundaries", () => {
+    const events = [makeEvent({ startedAt: 50, endedAt: null, peakDeviationBps: -200 })];
+    // windowStart=200, now=800 => clamped to 200..800 = 600
+    expect(mergeDepegSeconds(events, 200, 800)).toBe(600);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// worstDeviation
+// ---------------------------------------------------------------------------
+describe("worstDeviation", () => {
+  it("returns null for empty events array", () => {
+    expect(worstDeviation([])).toBeNull();
+  });
+
+  it("returns the peakDeviationBps of a single event", () => {
+    const events = [makeEvent({ startedAt: 100, peakDeviationBps: -350 })];
+    expect(worstDeviation(events)).toBe(-350);
+  });
+
+  it("returns the event with the largest absolute deviation (negative)", () => {
+    const events = [
+      makeEvent({ startedAt: 100, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: 200, peakDeviationBps: -500 }),
+      makeEvent({ startedAt: 300, peakDeviationBps: -100 }),
+    ];
+    expect(worstDeviation(events)).toBe(-500);
+  });
+
+  it("returns the event with the largest absolute deviation (positive)", () => {
+    const events = [
+      makeEvent({ startedAt: 100, peakDeviationBps: 200 }),
+      makeEvent({ startedAt: 200, peakDeviationBps: 600 }),
+      makeEvent({ startedAt: 300, peakDeviationBps: -100 }),
+    ];
+    expect(worstDeviation(events)).toBe(600);
+  });
+
+  it("compares absolute values across positive and negative deviations", () => {
+    const events = [
+      makeEvent({ startedAt: 100, peakDeviationBps: 300 }),
+      makeEvent({ startedAt: 200, peakDeviationBps: -400 }),
+    ];
+    // |-400| > |300|, so returns -400
+    expect(worstDeviation(events)).toBe(-400);
+  });
+
+  it("keeps the signed value even when comparing absolutes", () => {
+    const events = [
+      makeEvent({ startedAt: 100, peakDeviationBps: -100 }),
+      makeEvent({ startedAt: 200, peakDeviationBps: 100 }),
+    ];
+    // Same absolute value, first one wins (no override when equal)
+    expect(worstDeviation(events)).toBe(-100);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePegScore
+// ---------------------------------------------------------------------------
+describe("computePegScore", () => {
+  const NOW = 1_700_000_000; // fixed "now" for deterministic tests
+
+  it("returns null pegScore and defaults when no events and no tracking start", () => {
+    const result = computePegScore([], null, NOW);
+    expect(result.pegScore).toBeNull();
+    expect(result.pegPct).toBe(100);
+    expect(result.severityScore).toBe(100);
+    expect(result.spreadPenalty).toBe(0);
+    expect(result.eventCount).toBe(0);
+    expect(result.worstDeviationBps).toBeNull();
+    expect(result.activeDepeg).toBe(false);
+    expect(result.lastEventAt).toBeNull();
+    expect(result.trackingSpanDays).toBe(0);
+  });
+
+  it("returns 100 for no events with sufficient tracking history", () => {
+    const trackingStart = NOW - 365 * DAY; // 1 year ago
+    const result = computePegScore([], trackingStart, NOW);
+    expect(result.pegScore).toBe(100);
+    expect(result.pegPct).toBe(100);
+    expect(result.severityScore).toBe(100);
+    expect(result.spreadPenalty).toBe(0);
+    expect(result.eventCount).toBe(0);
+    expect(result.activeDepeg).toBe(false);
+  });
+
+  it("returns null pegScore when tracking span is < 30 days", () => {
+    const trackingStart = NOW - 20 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - 10 * DAY, endedAt: NOW - 9 * DAY, peakDeviationBps: -200 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // Score is null due to insufficient data, but other metrics are populated
+    expect(result.pegScore).toBeNull();
+    expect(result.pegPct).toBeGreaterThan(0);
+    expect(result.eventCount).toBe(1);
+  });
+
+  it("calculates pegPct correctly for a single closed depeg", () => {
+    const trackingStart = NOW - 100 * DAY;
+    // 10-day depeg in a 100-day window => 90% peg time
+    const events = [
+      makeEvent({ startedAt: NOW - 50 * DAY, endedAt: NOW - 40 * DAY, peakDeviationBps: -200 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.pegPct).toBeCloseTo(90, 0);
+  });
+
+  it("applies severity penalty based on peak deviation, duration, and recency", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // A recent 30-day event at 500 bps
+    const events = [
+      makeEvent({
+        startedAt: NOW - 35 * DAY,
+        endedAt: NOW - 5 * DAY,
+        peakDeviationBps: -500,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // Severity penalty: (500/100) * (30/30) * recency where recency = 1/(1 + ~0.096) ~ 0.91
+    // totalPenalty ~ 5 * 1 * 0.91 = 4.56, severityScore ~ 95.4
+    expect(result.severityScore).toBeGreaterThan(90);
+    expect(result.severityScore).toBeLessThan(100);
+    // pegScore should be well above 0 but below 100
+    expect(result.pegScore).toBeGreaterThan(0);
+    expect(result.pegScore).toBeLessThan(100);
+  });
+
+  it("caps event duration at 90 days for severity calculation", () => {
+    const trackingStart = NOW - 2 * 365 * DAY;
+    // A 180-day depeg (capped to 90 days for severity)
+    const events = [
+      makeEvent({
+        startedAt: NOW - 200 * DAY,
+        endedAt: NOW - 20 * DAY,
+        peakDeviationBps: -300,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    // Duration capped at 90, not 180
+    // penalty = (300/100) * (90/30) * recency
+    // yearsAgo ~ 200/365.25 ~ 0.547, recency ~ 1/(1+0.547) ~ 0.646
+    // penalty ~ 3 * 3 * 0.646 ~ 5.8
+    expect(result.severityScore).toBeCloseTo(100 - 5.8, 0);
+  });
+
+  it("applies recency weighting: recent events penalize more than old ones", () => {
+    const trackingStart = NOW - 4 * 365 * DAY;
+    // Same event parameters, one recent and one old
+    const recentEvent = makeEvent({
+      startedAt: NOW - 30 * DAY,
+      endedAt: NOW - 20 * DAY,
+      peakDeviationBps: -500,
+    });
+    const oldEvent = makeEvent({
+      startedAt: NOW - 3 * 365 * DAY,
+      endedAt: NOW - 3 * 365 * DAY + 10 * DAY,
+      peakDeviationBps: -500,
+    });
+
+    const recentResult = computePegScore([recentEvent], trackingStart, NOW);
+    const oldResult = computePegScore([oldEvent], trackingStart, NOW);
+
+    // The recent event should produce a lower severity score (more penalty)
+    expect(recentResult.severityScore).toBeLessThan(oldResult.severityScore);
+  });
+
+  it("calculates spread penalty for erratic depeg magnitudes", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // Two events with very different magnitudes => high stddev => spread penalty
+    const events = [
+      makeEvent({
+        startedAt: NOW - 200 * DAY,
+        endedAt: NOW - 195 * DAY,
+        peakDeviationBps: -100,
+      }),
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: NOW - 95 * DAY,
+        peakDeviationBps: -2000,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.spreadPenalty).toBeGreaterThan(0);
+    // spreadPenalty = min(15, (stddev/1000)*15)
+    // mean = (100+2000)/2 = 1050, variance = ((100-1050)^2 + (2000-1050)^2)/2 = 902500
+    // stddev = 950, penalty = min(15, (950/1000)*15) = min(15, 14.25) = 14.25
+    expect(result.spreadPenalty).toBeCloseTo(14.25, 1);
+  });
+
+  it("spread penalty is 0 for a single event", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: NOW - 95 * DAY,
+        peakDeviationBps: -500,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.spreadPenalty).toBe(0);
+  });
+
+  it("spread penalty is 0 when all events have the same magnitude", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({
+        startedAt: NOW - 200 * DAY,
+        endedAt: NOW - 195 * DAY,
+        peakDeviationBps: -300,
+      }),
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: NOW - 95 * DAY,
+        peakDeviationBps: -300,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.spreadPenalty).toBe(0);
+  });
+
+  it("spread penalty is capped at 15", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // Extremely different magnitudes => stddev >> 1000
+    const events = [
+      makeEvent({
+        startedAt: NOW - 200 * DAY,
+        endedAt: NOW - 195 * DAY,
+        peakDeviationBps: -50,
+      }),
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: NOW - 95 * DAY,
+        peakDeviationBps: -10000,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.spreadPenalty).toBe(15);
+  });
+
+  it("applies active depeg penalty for ongoing events", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({
+        startedAt: NOW - 5 * DAY,
+        endedAt: null, // ongoing
+        peakDeviationBps: -2000,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.activeDepeg).toBe(true);
+    // Active penalty = min(50, max(2, 2000/200)) = min(50, 10) = 10
+    // The score should be lower due to the penalty
+    expect(result.pegScore).not.toBeNull();
+  });
+
+  it("active depeg penalty has a floor of 2 and cap of 50", () => {
+    const trackingStart = NOW - 365 * DAY;
+
+    // Small depeg: penalty = max(2, 100/200) = max(2, 0.5) = 2
+    const smallEvent = makeEvent({
+      startedAt: NOW - 1 * DAY,
+      endedAt: null,
+      peakDeviationBps: -100,
+    });
+    const smallResult = computePegScore([smallEvent], trackingStart, NOW);
+
+    // Huge depeg: penalty = min(50, max(2, 15000/200)) = min(50, 75) = 50
+    const hugeEvent = makeEvent({
+      startedAt: NOW - 1 * DAY,
+      endedAt: null,
+      peakDeviationBps: -15000,
+    });
+    const hugeResult = computePegScore([hugeEvent], trackingStart, NOW);
+
+    // Compute expected scores manually
+    // Both have same pegPct and similar severity, so difference comes from active penalty
+    // Small should score higher than huge due to smaller active penalty
+    expect(smallResult.pegScore!).toBeGreaterThan(hugeResult.pegScore!);
+  });
+
+  it("composite score is clamped to [0, 100]", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // No events => raw = 0.5*100 + 0.5*100 - 0 - 0 = 100
+    const perfectResult = computePegScore([], trackingStart, NOW);
+    expect(perfectResult.pegScore).toBe(100);
+
+    // Catastrophic depeg to force score below 0
+    const events = [
+      makeEvent({
+        startedAt: trackingStart,
+        endedAt: null,
+        peakDeviationBps: -10000,
+      }),
+    ];
+    const badResult = computePegScore(events, trackingStart, NOW);
+    expect(badResult.pegScore).toBeGreaterThanOrEqual(0);
+  });
+
+  it("pegScore is rounded to the nearest integer", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({
+        startedAt: NOW - 50 * DAY,
+        endedAt: NOW - 48 * DAY,
+        peakDeviationBps: -200,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.pegScore).not.toBeNull();
+    expect(Number.isInteger(result.pegScore!)).toBe(true);
+  });
+
+  it("reports correct eventCount", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - 300 * DAY, endedAt: NOW - 295 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -300 }),
+      makeEvent({ startedAt: NOW - 100 * DAY, endedAt: NOW - 95 * DAY, peakDeviationBps: -150 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.eventCount).toBe(3);
+  });
+
+  it("reports worstDeviationBps from events", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 100 * DAY, endedAt: NOW - 95 * DAY, peakDeviationBps: -800 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.worstDeviationBps).toBe(-800);
+  });
+
+  it("reports lastEventAt as the most recent startedAt", () => {
+    const trackingStart = NOW - 365 * DAY;
+    const events = [
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 50 * DAY, endedAt: NOW - 45 * DAY, peakDeviationBps: -300 }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.lastEventAt).toBe(NOW - 50 * DAY);
+  });
+
+  it("reports trackingSpanDays as floored days", () => {
+    const trackingStart = NOW - 100 * DAY - 43200; // 100.5 days
+    const result = computePegScore([], trackingStart, NOW);
+    expect(result.trackingSpanDays).toBe(100);
+  });
+
+  it("uses earliest event as tracking start when trackingStartSec is null", () => {
+    const events = [
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 100 * DAY, endedAt: NOW - 95 * DAY, peakDeviationBps: -300 }),
+    ];
+    const result = computePegScore(events, null, NOW);
+    // Tracking starts from earliest event: NOW - 200*DAY
+    expect(result.trackingSpanDays).toBe(200);
+  });
+
+  it("scores a mild depeg in the 80-99 range", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // 15-day mild depeg (400 bps) in 1 year of history — noticeable but not catastrophic
+    const events = [
+      makeEvent({
+        startedAt: NOW - 60 * DAY,
+        endedAt: NOW - 45 * DAY,
+        peakDeviationBps: -400,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.pegScore).not.toBeNull();
+    expect(result.pegScore!).toBeGreaterThanOrEqual(80);
+    expect(result.pegScore!).toBeLessThanOrEqual(99);
+  });
+
+  it("scores a severe/long depeg much lower", () => {
+    const trackingStart = NOW - 365 * DAY;
+    // 30-day severe depeg (5000 bps) fairly recent
+    const events = [
+      makeEvent({
+        startedAt: NOW - 60 * DAY,
+        endedAt: NOW - 30 * DAY,
+        peakDeviationBps: -5000,
+      }),
+    ];
+    const result = computePegScore(events, trackingStart, NOW);
+    expect(result.pegScore).not.toBeNull();
+    expect(result.pegScore!).toBeLessThan(80);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePegStability
+// ---------------------------------------------------------------------------
+describe("computePegStability", () => {
+  const NOW = 1_700_000_000;
+
+  it("returns null when no earliestDate and no events", () => {
+    const result = computePegStability([], null, NOW);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when historySpanSec <= 0", () => {
+    // earliestDate is in the future
+    const futureDate = String(NOW + 1000);
+    const result = computePegStability([], futureDate, NOW);
+    expect(result).toBeNull();
+  });
+
+  it("returns 100% pegPct when no depeg events", () => {
+    const earliestDate = String(NOW - 365 * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.pegPct).toBe(100);
+    expect(result!.eventCount).toBe(0);
+    expect(result!.depeggedNow).toBe(false);
+    expect(result!.worstDeviationBps).toBeNull();
+  });
+
+  it("calculates pegPct correctly with one closed depeg event", () => {
+    const earliestDate = String(NOW - 100 * DAY);
+    // 10-day depeg in 100-day window => 90% at peg
+    const events = [
+      makeEvent({
+        startedAt: NOW - 50 * DAY,
+        endedAt: NOW - 40 * DAY,
+        peakDeviationBps: -300,
+      }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.pegPct).toBeCloseTo(90, 0);
+  });
+
+  it("marks limited=true when tracking span is under 30 days", () => {
+    const earliestDate = String(NOW - 15 * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.limited).toBe(true);
+  });
+
+  it("marks limited=false when tracking span is 30+ days", () => {
+    const earliestDate = String(NOW - 60 * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.limited).toBe(false);
+  });
+
+  it("detects depeggedNow when there is an ongoing event", () => {
+    const earliestDate = String(NOW - 365 * DAY);
+    const events = [
+      makeEvent({
+        startedAt: NOW - 5 * DAY,
+        endedAt: null,
+        peakDeviationBps: -500,
+      }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.depeggedNow).toBe(true);
+    expect(result!.currentStreakDays).toBeNull();
+  });
+
+  it("calculates currentStreakDays since last closed event", () => {
+    const earliestDate = String(NOW - 365 * DAY);
+    const events = [
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: NOW - 90 * DAY,
+        peakDeviationBps: -300,
+      }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.depeggedNow).toBe(false);
+    expect(result!.currentStreakDays).toBe(90); // 90 days since endedAt
+  });
+
+  it("returns the most recent endedAt for currentStreakDays with multiple events", () => {
+    const earliestDate = String(NOW - 365 * DAY);
+    const events = [
+      makeEvent({
+        startedAt: NOW - 200 * DAY,
+        endedAt: NOW - 190 * DAY,
+        peakDeviationBps: -300,
+      }),
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: NOW - 50 * DAY,
+        peakDeviationBps: -200,
+      }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.currentStreakDays).toBe(50); // 50 days since most recent endedAt
+  });
+
+  it("reports worstDeviationBps from events", () => {
+    const earliestDate = String(NOW - 365 * DAY);
+    const events = [
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 100 * DAY, endedAt: NOW - 95 * DAY, peakDeviationBps: -700 }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.worstDeviationBps).toBe(-700);
+  });
+
+  it("reports correct eventCount", () => {
+    const earliestDate = String(NOW - 365 * DAY);
+    const events = [
+      makeEvent({ startedAt: NOW - 300 * DAY, endedAt: NOW - 295 * DAY, peakDeviationBps: -200 }),
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -300 }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.eventCount).toBe(2);
+  });
+
+  it("falls back to earliest event when earliestDate is null", () => {
+    const events = [
+      makeEvent({ startedAt: NOW - 200 * DAY, endedAt: NOW - 195 * DAY, peakDeviationBps: -200 }),
+    ];
+    const result = computePegStability(events, null, NOW);
+    expect(result).not.toBeNull();
+    // Tracking starts from the event's startedAt
+    expect(result!.pegPct).toBeGreaterThan(0);
+  });
+
+  it("handles fully depegged scenario (depeg spans entire window)", () => {
+    const earliestDate = String(NOW - 100 * DAY);
+    const events = [
+      makeEvent({
+        startedAt: NOW - 100 * DAY,
+        endedAt: null, // ongoing, covers entire window
+        peakDeviationBps: -5000,
+      }),
+    ];
+    const result = computePegStability(events, earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.pegPct).toBeCloseTo(0, 0);
+    expect(result!.depeggedNow).toBe(true);
+  });
+
+  // --- formatTrackingSpan (tested indirectly through computePegStability) ---
+
+  it("formats tracking span as days when < 30 days", () => {
+    const earliestDate = String(NOW - 15 * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.trackingSpan).toBe("15d");
+  });
+
+  it("formats tracking span as months when < 12 months", () => {
+    const earliestDate = String(NOW - 90 * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    // 90 days / 30.44 ~ 2.95 months, floored to 2
+    expect(result!.trackingSpan).toBe("2mo");
+  });
+
+  it("formats tracking span as years and months", () => {
+    // 2 years and 3 months
+    const earliestDate = String(NOW - (2 * 365 + 90) * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    // (2*365+90) = 820 days, 820/30.44 ~ 26.9 months, 26/12 = 2 years, 26%12 = 2 remaining
+    expect(result!.trackingSpan).toMatch(/^2y/);
+  });
+
+  it("formats tracking span as years only when no remaining months", () => {
+    // Use enough days that floor(days/30.44) gives exactly 24 months (2 years, 0 remaining)
+    // 24 * 30.44 = 730.56, so 731 days => floor(731/30.44) = 24 months => 2y 0mo => "2y"
+    const earliestDate = String(NOW - 731 * DAY);
+    const result = computePegStability([], earliestDate, NOW);
+    expect(result).not.toBeNull();
+    expect(result!.trackingSpan).toBe("2y");
+  });
+});
