@@ -490,7 +490,6 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
 
     // Phase 1: non-dependent coins
     for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.navToken) continue;
       if (meta.flags.governance === "centralized-dependent") continue;
 
       const asset = priceById.get(meta.id);
@@ -529,7 +528,6 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
 
     // Phase 2: dependent coins (need parent scores computed first)
     for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.navToken) continue;
       if (meta.flags.governance !== "centralized-dependent") continue;
 
       const asset = priceById.get(meta.id);
@@ -559,7 +557,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
         decentralization: scoreDecentralization(meta.flags.governance, meta),
         dependencyRisk: scoreDependencyRisk(meta, overallScores),
       };
-      const overall = computeOverallGrade(dims, { navToken: false });
+      const overall = computeOverallGrade(dims, { navToken: !!meta.flags.navToken });
       if (overall.score !== null) {
         overallScores.set(meta.id, overall.score);
         scores.set(meta.id, { score: overall.score, grade: overall.grade });
