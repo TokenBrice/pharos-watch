@@ -12,7 +12,7 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { deriveDependencies } from "@/lib/reserve-templates";
 import { GRADE_RADAR_COLORS, gradeRange } from "@/lib/report-cards";
@@ -149,14 +149,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
     for (let i = 0; i < 300; i++) sim.tick();
 
-    // Legend box (top-right corner) — nodes must avoid this
-    const legendBox = {
-      left: WIDTH - PAD - 88,
-      top: PAD - 10,
-      right: WIDTH - PAD + 6,
-      bottom: PAD + 5 * 18 + 3 * 16 + 26,
-    };
-
     // Post-simulation overlap resolution — guarantees no overlapping nodes
     const MIN_GAP = 6;
     const MAX_PASSES = 60;
@@ -194,20 +186,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               b.y = (b.y ?? 0) + Math.sin(angle) * push;
             }
           }
-        }
-      }
-
-      // Push nodes out of legend box
-      for (const n of simNodes) {
-        const x = n.x ?? WIDTH / 2;
-        const y = n.y ?? HEIGHT / 2;
-        if (
-          x + n.r > legendBox.left &&
-          x - n.r < legendBox.right &&
-          y + n.r > legendBox.top &&
-          y - n.r < legendBox.bottom
-        ) {
-          n.x = legendBox.left - n.r - 2;
         }
       }
 
@@ -298,12 +276,33 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Dependency Map
-        </CardTitle>
         <p className="text-xs text-muted-foreground">
           Top {nodes.length} stablecoins by market cap. Edge thickness shows dependency weight; color and dash encode type. Hover edges for details.
         </p>
+        {/* Horizontal legend */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+          {[
+            { label: "Grade A", color: GRADE_RADAR_COLORS.A },
+            { label: "Grade B", color: GRADE_RADAR_COLORS.B },
+            { label: "Grade C", color: GRADE_RADAR_COLORS.C },
+            { label: "Grade D", color: GRADE_RADAR_COLORS.D },
+            { label: "Grade F", color: GRADE_RADAR_COLORS.F },
+          ].map(({ label, color }) => (
+            <span key={label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <span className="inline-block h-3 w-3 rounded-full border-2" style={{ borderColor: color, backgroundColor: "var(--color-card, #1a1a2e)" }} />
+              {label}
+            </span>
+          ))}
+          <span className="mx-1 text-border">|</span>
+          {(["collateral", "mechanism", "wrapper"] as const).map((type) => (
+            <span key={type} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+              <svg width="16" height="6" className="shrink-0">
+                <line x1="0" y1="3" x2="16" y2="3" stroke={TYPE_COLORS[type]} strokeWidth={2} strokeDasharray={TYPE_DASH[type]} />
+              </svg>
+              {type[0].toUpperCase() + type.slice(1)}
+            </span>
+          ))}
+        </div>
       </CardHeader>
       <CardContent>
         <div
@@ -525,43 +524,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 </g>
               );
             })()}
-
-            {/* Legend background */}
-            <rect
-              x={WIDTH - PAD - 88}
-              y={PAD - 10}
-              width={94}
-              height={5 * 18 + 3 * 16 + 26}
-              rx={6}
-              fill="var(--color-card, #1a1a2e)"
-              fillOpacity={0.85}
-              stroke="var(--color-border, #333)"
-              strokeWidth={1}
-            />
-
-            {/* Grade legend */}
-            {[
-              { label: "A", color: GRADE_RADAR_COLORS.A },
-              { label: "B", color: GRADE_RADAR_COLORS.B },
-              { label: "C", color: GRADE_RADAR_COLORS.C },
-              { label: "D", color: GRADE_RADAR_COLORS.D },
-              { label: "F", color: GRADE_RADAR_COLORS.F },
-            ].map(({ label, color }, i) => (
-              <g key={label} transform={`translate(${WIDTH - PAD - 80}, ${PAD + i * 18})`}>
-                <circle cx={6} cy={6} r={6} fill="var(--color-card, #1a1a2e)" stroke={color} strokeWidth={2.5} />
-                <text x={18} y={10} fill="currentColor" fontSize={10} opacity={0.6}>
-                  Grade {label}
-                </text>
-              </g>
-            ))}
-
-            {/* Edge type legend entries */}
-            {(["collateral", "mechanism", "wrapper"] as const).map((type, i) => (
-              <g key={type} transform={`translate(${WIDTH - PAD - 80}, ${PAD + 5 * 18 + 8 + i * 16})`}>
-                <line x1={0} y1={5} x2={16} y2={5} stroke={TYPE_COLORS[type]} strokeWidth={2} strokeDasharray={TYPE_DASH[type]} />
-                <text x={22} y={9} fill="currentColor" fontSize={9} opacity={0.6}>{type[0].toUpperCase() + type.slice(1)}</text>
-              </g>
-            ))}
 
           </svg>
         </div>
