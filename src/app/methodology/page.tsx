@@ -791,6 +791,66 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
+      {/* Depeg Early Warning Score (DEWS) */}
+      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+        <CardHeader>
+          <CardTitle as="h2">Depeg Early Warning Score (DEWS)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability.
+            It is computed every 15 minutes from 7 sub-signals. Only signals with available data
+            participate; weights are redistributed proportionally across available signals.
+          </p>
+
+          {/* Formula */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Score Formula</h3>
+            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              DEWS = round(clamp(0, 100, sum(W_i &times; S_i) / sum(W_i)))
+            </p>
+            <p>At least 2 available signal sources (total weight &ge; 0.30) are required to produce a non-zero score.</p>
+          </div>
+
+          {/* Sub-signals */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Sub-Signals &amp; Weights</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground">Supply Velocity (0.25)</span> &mdash; rapid redemptions (bank run), measured from 1-day and 7-day supply contraction rates</li>
+              <li><span className="text-foreground">Pool Balance Drift (0.20)</span> &mdash; one-sided selling pressure in DEX pools, blending balance stress, pool stress, and worst-pool imbalance</li>
+              <li><span className="text-foreground">Liquidity Erosion (0.15)</span> &mdash; LPs fleeing, measured from 7-day changes in liquidity score and TVL</li>
+              <li><span className="text-foreground">Price Confidence (0.15)</span> &mdash; oracle/data source failures, mapping confidence levels to stress values</li>
+              <li><span className="text-foreground">Cross-Source Divergence (0.15)</span> &mdash; fragmented pricing between primary price, DEX price, and peg reference</li>
+              <li><span className="text-foreground">Blacklist Activity (0.10)</span> &mdash; issuer emergency freeze surges for USDC, USDT, PAXG, XAUT</li>
+              <li><span className="text-foreground">Mint/Burn Flow (0.10)</span> &mdash; redemption surge vs minting from on-chain Transfer event data</li>
+            </ul>
+          </div>
+
+          {/* Threat bands */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Threat Bands</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-green-500 font-medium">CALM (0&ndash;15)</span> &mdash; no stress signals detected</li>
+              <li><span className="text-teal-500 font-medium">WATCH (16&ndash;35)</span> &mdash; mild stress on 1&ndash;2 indicators</li>
+              <li><span className="text-yellow-500 font-medium">ALERT (36&ndash;55)</span> &mdash; multiple indicators elevated</li>
+              <li><span className="text-orange-500 font-medium">WARNING (56&ndash;75)</span> &mdash; strong stress signals, depeg plausible</li>
+              <li><span className="text-red-500 font-medium">DANGER (76&ndash;100)</span> &mdash; all precursors firing</li>
+            </ul>
+          </div>
+
+          {/* Edge cases */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Edge Cases</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>NAV tokens are excluded entirely (price appreciates, not pegged)</li>
+              <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
+              <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
+              <li>Missing DEX data: pool and liquidity signals marked unavailable, weight redistributed</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Contagion Stress Test */}
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>

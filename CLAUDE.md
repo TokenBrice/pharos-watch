@@ -64,7 +64,7 @@ All the codebase is documented. While working, make sure to update the correspon
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all endpoints (24 router handlers + 3 inline admin + POST feedback), query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: all endpoints (26 router handlers + 3 inline admin + POST feedback), query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
@@ -78,5 +78,6 @@ Read these when working on related code:
 - **`docs/depeg-detection.md`** — Two-stage depeg detection, thresholds, confirmation flow, event lifecycle, peg score formula
 - **`docs/supply-snapshot.md`** — Daily supply snapshot cron, supply_history schema, supply helpers, backfill endpoint
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
-- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 11 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/dews.md`** — DEWS formula, 7 sub-signals, threat bands, normalization, API endpoint
+- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 15 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
 - **`docs/worker-and-api-limits.md`** — Hard limits for all 16 external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**

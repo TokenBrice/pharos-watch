@@ -1,0 +1,188 @@
+# Depeg Early Warning Score (DEWS)
+
+Per-coin, forward-looking stress score (0-100) estimating depeg probability. Computed every 15 minutes from 7 sub-signals.
+
+---
+
+## Score Formula
+
+```
+DEWS = round(clamp(0, 100, sum(W_i * S_i) / sum(W_i)))
+```
+
+Only signals where `available = true` participate. Weights are redistributed proportionally across available signals.
+
+**Minimum signal requirement:** At least 2 available signal sources (total weight >= 0.30) to produce a non-zero score. Otherwise returns 0.
+
+---
+
+## Sub-Signals & Weights
+
+| Signal | Key | Weight | Data Source | What It Detects |
+|--------|-----|--------|-------------|-----------------|
+| Supply Velocity | `supply` | 0.25 | stablecoins cache | Rapid redemptions (bank run) |
+| Pool Balance Drift | `pool` | 0.20 | `dex_liquidity` | One-sided selling pressure in DEX pools |
+| Liquidity Erosion | `liq` | 0.15 | `dex_liquidity_history` | LPs fleeing |
+| Price Confidence | `price` | 0.15 | stablecoins cache | Oracle/data source failures |
+| Cross-Source Divergence | `diverg` | 0.15 | `dex_prices` + cache | Fragmented pricing, trust breakdown |
+| Blacklist Activity | `black` | 0.10 | `blacklist_events` | Issuer emergency freeze surge |
+| Mint/Burn Flow | `flow` | 0.10 | `mint_burn_hourly` | Redemption surge vs minting |
+
+Weights sum to 1.10 but only available signals participate, so redistribution normalizes by actual available weight. When `S_flow` is unavailable (most coins), effective weight is 1.00 across the 6 original signals.
+
+---
+
+## Threat Bands
+
+| Range | Band | Hex | Description |
+|-------|------|-----|-------------|
+| 0-15 | **CALM** | `#22c55e` | No stress signals detected |
+| 16-35 | **WATCH** | `#14b8a6` | Mild stress on 1-2 indicators |
+| 36-55 | **ALERT** | `#eab308` | Multiple indicators elevated |
+| 56-75 | **WARNING** | `#f97316` | Strong stress signals, depeg plausible |
+| 76-100 | **DANGER** | `#ef4444` | All precursors firing |
+
+---
+
+## Sub-Signal Details
+
+### S_supply — Supply Velocity
+
+Measures supply contraction rate. Only negative changes contribute stress.
+
+- **1d normalization:** `[0%, 0] → [1%, 15] → [3%, 40] → [5%, 65] → [10%, 85] → [20%, 100]`
+- **7d normalization:** `[0%, 0] → [3%, 15] → [7%, 40] → [15%, 70] → [30%, 100]`
+- **Blend:** `0.6 * norm1d + 0.4 * norm7d`
+- **Size dampening:** `sizeFactor = min(1, log10(max(mcap, $1M) / $1M) / 3)` — small coins (<$50M) get reduced signal
+
+### S_pool — Pool Balance Drift
+
+DEX pool imbalances from `dex_liquidity`. Blends:
+- 40% balance stress (1 - weighted_balance_ratio)
+- 35% pool stress score (avg_pool_stress)
+- 25% worst single pool imbalance (from top_pools_json)
+
+Smoothed with previous reading when available.
+
+### S_liq — Liquidity Erosion
+
+7-day change in liquidity score and TVL from `dex_liquidity_history`.
+- **Score erosion anchors:** `[0%, 0] → [5%, 15] → [15%, 40] → [30%, 70] → [50%, 100]`
+- **TVL erosion anchors:** `[0%, 0] → [10%, 15] → [25%, 40] → [50%, 70] → [75%, 100]`
+- 50/50 blend
+
+### S_price — Price Confidence Degradation
+
+Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100.
++15 transition bonus when confidence degrades from previous reading.
+
+### S_diverg — Cross-Source Price Divergence
+
+Max of: primary deviation from peg, DEX deviation from peg, cross-source spread (all in bps).
+- **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
+- **Non-USD peg dampening:** `value *= 0.7`
+- Smoothed with previous reading.
+
+### S_black — Blacklist Activity
+
+Only for tracked coins (USDC, USDT, PAXG, XAUT). Uses 24h event count with spike detection relative to 7d daily average.
+
+### S_flow — Mint/Burn Flow
+
+Available only when `mint_burn_hourly` data exists and is >= 7 days old. Measures:
+- **Burn surge:** 24h burn volume / 30d daily average
+- **Burn-to-mint ratio:** 24h burns / 24h mints
+- 60/40 blend of surge and ratio scores
+
+---
+
+## Edge Cases
+
+- **NAV tokens** (`flags.navToken`): Excluded entirely (price appreciates, not pegged)
+- **Non-USD pegs:** S_diverg dampened by 0.7 factor (noisier FX pricing)
+- **Small coins (<$50M):** S_supply dampened via size factor
+- **No DEX data:** S_pool and S_liq marked unavailable, weight redistributed
+- **No blacklist tracking:** S_black unavailable for most coins
+- **New coins / no history:** Signals gracefully degrade to unavailable
+
+---
+
+## Data Pipeline
+
+### Tables
+
+| Table | Pruning | Purpose |
+|-------|---------|---------|
+| `stress_signals` | 7 days | 15-minute rolling samples |
+| `stress_signal_history` | 365 days | Daily snapshots (first run of UTC day) |
+
+### Cron Schedule
+
+**Trigger:** `*/15 * * * *` — chained after `sync-stablecoins` (same pattern as `stability-index`)
+
+**Cron name:** `compute-dews`
+
+**Data flow:**
+1. Read stablecoins cache, derive peg rates
+2. Read `dex_liquidity`, `dex_prices`, `dex_liquidity_history`
+3. Read `blacklist_events` counts (24h + 7d)
+4. Read previous `stress_signals` for smoothing
+5. Read `mint_burn_hourly` aggregates
+6. Compute DEWS per PSI-eligible coin
+7. Batch write to `stress_signals`
+8. Daily snapshot to `stress_signal_history` (first run of UTC day)
+9. Prune old data
+
+---
+
+## API Endpoint
+
+### `GET /api/stress-signals`
+
+**All coins (no params):** Returns latest DEWS for all coins.
+
+```json
+{
+  "signals": {
+    "1": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+    ...
+  },
+  "updatedAt": 1740000000
+}
+```
+
+**Single coin:** `?stablecoin=1&days=30` — Returns latest + daily history.
+
+```json
+{
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+  "history": [
+    { "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... } },
+    ...
+  ]
+}
+```
+
+**Cache:** standard (s-maxage=300, max-age=60)
+
+### `GET /api/backfill-dews` (admin)
+
+Validates DEWS against historical depeg events. Reports TP rate and lead time.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+---
+
+## Frontend Integration
+
+| Component | File | Location |
+|-----------|------|----------|
+| `DEWSBadge` | `src/components/dews-badge.tsx` | Table rows (hidden when CALM) |
+| `DEWSDetail` | `src/components/dews-detail.tsx` | Stablecoin detail page |
+| `DEWSSummary` | `src/components/dews-summary.tsx` | Homepage widget |
+
+**Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/use-stress-signals.ts`
+
+**Classification constants:** `ThreatBand`, `THREAT_BAND_COLORS`, `THREAT_BAND_HEX`, `THREAT_BAND_LABELS` in `src/lib/classification.ts`
+
+**Design tokens:** `--dews-calm` through `--dews-danger` in `src/styles/tokens/semantic.css`

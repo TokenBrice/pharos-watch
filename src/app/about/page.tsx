@@ -330,6 +330,18 @@ export default function AboutPage() {
               </p>
             </CardContent>
           </Card>
+
+          <Card className="rounded-xl">
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-5 w-5 text-amber-500" />
+                <span className="font-bold">Depeg Early Warning (DEWS)</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Per-coin forward-looking stress score (0&ndash;100) computed every 15 minutes from 7 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, and mint/burn flow
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
