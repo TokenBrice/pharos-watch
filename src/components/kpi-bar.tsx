@@ -7,9 +7,11 @@ import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { formatCurrency } from "@/lib/format";
 import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
+import { FlowGaugeMini } from "@/components/flow-gauge-mini";
 
 /** Green for positive, red for negative, muted for zero. */
 function deltaColor(value: number): string {
@@ -26,7 +28,7 @@ function KpiCell({
   sublabelClassName,
 }: {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   sublabel?: React.ReactNode;
   valueClassName?: string;
   sublabelClassName?: string;
@@ -60,6 +62,7 @@ export function KpiBar() {
   const { data: stablecoinsData, isLoading: stablecoinsLoading } = useStablecoins();
   const { data: pegData, isLoading: pegLoading } = usePegSummary();
   const { data: dexData, isLoading: dexLoading } = useDexLiquidity();
+  const { data: flowsData } = useMintBurnFlows();
 
   const { totalMcap, mcapChange24hPct, mcapChange7dPct, netFlow24h, netFlow7d } = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) return { totalMcap: 0, mcapChange24hPct: 0, mcapChange7dPct: 0, netFlow24h: 0, netFlow7d: 0 };
@@ -88,6 +91,13 @@ export function KpiBar() {
     const pct = avg7d > 0 ? ((vol24h - avg7d) / avg7d) * 100 : 0;
     return { totalVol24h: vol24h, volVs7dAvgPct: pct };
   }, [dexData]);
+
+  // Mint/burn flow gauge
+  const flowGauge = flowsData?.gauge ?? null;
+  const flowNetUsd = useMemo(() => {
+    if (!flowsData?.coins) return 0;
+    return flowsData.coins.reduce((sum, c) => sum + c.netFlow24hUsd, 0);
+  }, [flowsData]);
 
   // PSI derived values (must be before early return to satisfy hook rules)
   const psiCurrent = psiData?.current;
@@ -151,9 +161,15 @@ export function KpiBar() {
   const sign7d = mcapChange7dPct >= 0 ? "+" : "";
   const changeSublabel = `${sign24h}${mcapChange24hPct.toFixed(2)}% 24h · ${sign7d}${mcapChange7dPct.toFixed(2)}% 7d`;
 
+  const hasFlows = flowGauge !== null && flowGauge.score !== null;
+  // Both class strings are static so Tailwind purge can find them
+  const gridCols = hasFlows
+    ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-border/50"
+    : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border/50";
+
   return (
     <Card className="p-0 overflow-hidden">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-border/50">
+      <div className={gridCols}>
         <KpiCell
           label="Pharos Stability Index"
           value={psiScore}
@@ -186,6 +202,22 @@ export function KpiBar() {
           sublabel={`${depegToday} events today · ${depegDelta >= 0 ? "+" : ""}${depegDelta} vs yesterday`}
           sublabelClassName={deltaColor(-depegDelta)}
         />
+        {flowGauge && flowGauge.score !== null && (
+          <KpiCell
+            label="On-Chain Flow"
+            value={<FlowGaugeMini score={flowGauge.score} band={flowGauge.band} />}
+            sublabel={
+              <>
+                Net 24h:{" "}
+                <span className={deltaColor(flowNetUsd)}>
+                  {flowNetUsd >= 0 ? "+" : "\u2212"}
+                  {formatCurrency(Math.abs(flowNetUsd), 1)}
+                </span>{" "}
+                {flowNetUsd >= 0 ? "minted" : "redeemed"}
+              </>
+            }
+          />
+        )}
       </div>
     </Card>
   );
