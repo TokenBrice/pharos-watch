@@ -238,7 +238,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               <div className="flex items-center gap-4 mt-auto border-t border-border/30 pt-3">
                 {coinData.price != null && pegRef > 0 && (
                   <PegGauge
-                    deviationBps={deviationBps}
+                    deviationBps={isNavToken ? 0 : deviationBps}
                     className="w-full max-w-[110px]"
                   />
                 )}
@@ -246,9 +246,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                   <div className="text-2xl font-bold font-mono tracking-tight">
                     {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
                   </div>
-                  <p className={`text-sm font-mono ${deviationColorClass(Math.abs(deviationBps))}`}>
+                  <p className={`text-sm font-mono ${isNavToken ? "text-green-500" : deviationColorClass(Math.abs(deviationBps))}`}>
                     {formatPegDeviation(coinData.price, pegRef)}
-                    {pegRateSources[coinData.pegType ?? ""] === "fallback" && (
+                    {isNavToken && (
+                      <span className="text-xs text-muted-foreground ml-1" title="Price reflects NAV appreciation — not a peg deviation">
+                        (NAV token)
+                      </span>
+                    )}
+                    {!isNavToken && pegRateSources[coinData.pegType ?? ""] === "fallback" && (
                       <span className="text-xs text-muted-foreground ml-1" title="Peg reference: ECB FX rate (not market-derived)">
                         (ECB rate)
                       </span>
