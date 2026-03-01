@@ -635,7 +635,7 @@ export function StabilityIndexClient() {
               <div key={c.label} className="flex flex-col items-center gap-0.5">
                 <span className="text-xs text-muted-foreground">{c.label}</span>
                 <span className="text-lg font-extrabold tabular-nums" style={{ color: c.color }}>
-                  {c.sign}{components[c.label.toLowerCase() as keyof typeof components].toFixed(1)}
+                  {c.sign}{(components[c.label.toLowerCase() as keyof typeof components] ?? 0).toFixed(1)}
                 </span>
               </div>
             ))}

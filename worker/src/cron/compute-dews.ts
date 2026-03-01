@@ -196,6 +196,29 @@ export async function computeAndStoreDEWS(db: D1Database): Promise<CronResult> {
     /* mint_burn_hourly may not exist */
   }
 
+  // 7b. Read yield warnings
+  const yieldWarnings = new Map<string, string[]>();
+  try {
+    const yieldRows = await db
+      .prepare("SELECT stablecoin_id, warning_signals FROM yield_data WHERE warning_signals IS NOT NULL")
+      .all<{ stablecoin_id: string; warning_signals: string }>();
+    for (const row of yieldRows.results) {
+      try {
+        const parsed = JSON.parse(row.warning_signals);
+        if (Array.isArray(parsed)) yieldWarnings.set(row.stablecoin_id, parsed);
+      } catch { /* ignore */ }
+    }
+  } catch { /* yield_data may not have column yet */ }
+
+  // 7c. Read latest PSI score (from previous cycle)
+  let latestPsiScore: number | null = null;
+  try {
+    const psiRow = await db
+      .prepare("SELECT score FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+      .first<{ score: number }>();
+    if (psiRow) latestPsiScore = psiRow.score;
+  } catch { /* table may not exist */ }
+
   // 8. Compute DEWS for each eligible coin
   const results: {
     stablecoinId: string;
@@ -274,6 +297,8 @@ export async function computeAndStoreDEWS(db: D1Database): Promise<CronResult> {
       burnBaseline30dUsd: mb?.burnBaseline ?? null,
       mintBaseline30dUsd: mb?.mintBaseline ?? null,
       flowDataAgeDays: mb?.dataAgeDays ?? 0,
+      yieldWarnings: yieldWarnings.get(meta.id) ?? [],
+      psiScore: latestPsiScore,
       prevPoolValue: (prev?.pool as { value?: number })?.value,
       prevDivergValue: (prev?.diverg as { value?: number })?.value,
     };

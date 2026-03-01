@@ -92,6 +92,10 @@ function baseInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
     burnBaseline30dUsd: null,
     mintBaseline30dUsd: null,
     flowDataAgeDays: 0,
+    // Yield anomaly
+    yieldWarnings: [],
+    // Systemic backdrop
+    psiScore: null,
     ...overrides,
   };
 }

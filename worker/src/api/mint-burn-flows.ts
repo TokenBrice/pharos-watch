@@ -18,6 +18,55 @@ import { sumPegBuckets } from "../../../src/lib/supply";
 /** All tracked stablecoin IDs from config */
 const TRACKED_IDS = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
 
+/** Max age for report card cache before falling back to hardcoded set (2 hours) */
+const REPORT_CARD_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+/** Score thresholds for grade-based FTQ classification */
+const SAFE_SCORE_THRESHOLD = 65; // B+ or better → "safe"
+const RISKY_SCORE_THRESHOLD = 50; // Below C → "risky"
+
+interface ReportCardCache {
+  scores: Record<string, { score: number; grade: string }>;
+  updatedAt: number;
+}
+
+/**
+ * Build safe/risky ID sets from report card cache.
+ * Returns null if cache is missing, unparseable, or stale (>2h).
+ */
+async function getGradeBasedClassification(
+  db: D1Database,
+): Promise<{ safeIds: Set<string>; riskyIds: Set<string> } | null> {
+  const cached = await getCache(db, "report_card_cache");
+  if (!cached) return null;
+
+  try {
+    const data = JSON.parse(cached.value) as ReportCardCache;
+    if (!data.scores || !data.updatedAt) return null;
+
+    // Stale check: updatedAt is epoch seconds in cache, compare with current time
+    const ageMs = Date.now() - data.updatedAt * 1000;
+    if (ageMs > REPORT_CARD_MAX_AGE_MS) return null;
+
+    const safeIds = new Set<string>();
+    const riskyIds = new Set<string>();
+
+    for (const [id, entry] of Object.entries(data.scores)) {
+      if (!TRACKED_IDS.has(id)) continue;
+      if (entry.score >= SAFE_SCORE_THRESHOLD) {
+        safeIds.add(id);
+      } else if (entry.score < RISKY_SCORE_THRESHOLD) {
+        riskyIds.add(id);
+      }
+      // Scores between 50-64 are "neutral" — don't contribute to FTQ
+    }
+
+    return { safeIds, riskyIds };
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // DB row types
 // ---------------------------------------------------------------------------
@@ -76,6 +125,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   const windowStart = nowSec - hours * 3600;
   const window7d = nowSec - 7 * 24 * 3600;
   const baselineStart = nowSec - 30 * 24 * 3600;
+
+  // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
+  const gradeClassification = await getGradeBasedClassification(db);
 
   // Load stablecoins cache for mcap lookup
   const stablecoinsCached = await getCache(db, "stablecoins");
@@ -243,10 +295,21 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
 
     gaugeInputs.push({ intensity, mcap });
 
-    if (SAFE_HAVEN_IDS.has(id)) {
-      safeNet24h += netFlow24h;
+    if (gradeClassification) {
+      // Grade-based: safe (>=65), risky (<50), neutral (50-64) ignored
+      if (gradeClassification.safeIds.has(id)) {
+        safeNet24h += netFlow24h;
+      } else if (gradeClassification.riskyIds.has(id)) {
+        riskyNet24h += netFlow24h;
+      }
+      // Neutral coins don't contribute to FTQ signal
     } else {
-      riskyNet24h += netFlow24h;
+      // Fallback: hardcoded safe-haven set, everything else is risky
+      if (SAFE_HAVEN_IDS.has(id)) {
+        safeNet24h += netFlow24h;
+      } else {
+        riskyNet24h += netFlow24h;
+      }
     }
 
     const largest = largestEventMap.get(id);

@@ -11,6 +11,7 @@ import { getChainRpc } from "../lib/chain-rpcs";
 import {
   computeApyFromRate, computeApyFromPrice, computePYS,
   computeYieldStability, computeApyVarianceScore,
+  detectWarningSignals,
 } from "./yield-helpers";
 import {
   YIELD_VARIANT_MAP, YIELD_POOL_MAP, ON_CHAIN_RATE_CONFIGS,
@@ -184,6 +185,16 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
   //    Follows the same two-phase approach as daily-digest.ts
   const safetyScores = await computeSafetyScores(db);
 
+  // Cache safety scores for other consumers (flow API, digest, etc.)
+  const scoresObj: Record<string, { score: number; grade: string }> = {};
+  for (const [id, val] of safetyScores) {
+    scoresObj[id] = val;
+  }
+  await setCache(db, "report_card_cache", JSON.stringify({
+    scores: scoresObj,
+    updatedAt: startSec,
+  }));
+
   // 5. Resolve yield for each coin
   const resolved: { id: string; symbol: string; yield: ResolvedYield | null }[] = [];
   const tier1PrevRates = new Map<string, number | null>();
@@ -260,7 +271,26 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
   const historyStmts: D1PreparedStatement[] = [];
   let updatedCount = 0;
 
-  // Phase 2: compute warning signals here (see yield-helpers.ts::detectWarningSignals)
+  // Compute median APY across all resolved yield-bearing coins (for warning signals)
+  const resolvedApys = resolved
+    .filter((r) => r.yield != null)
+    .map((r) => r.yield!.currentApy)
+    .sort((a, b) => a - b);
+  const medianApy = resolvedApys.length > 0
+    ? resolvedApys.length % 2 === 1
+      ? resolvedApys[Math.floor(resolvedApys.length / 2)]
+      : (resolvedApys[resolvedApys.length / 2 - 1] + resolvedApys[resolvedApys.length / 2]) / 2
+    : 0;
+
+  // Pre-fetch previous TVLs (at least 7 days ago) for warning signal detection
+  const prevTvlMap = new Map<string, number | null>();
+  for (const { id, yield: y } of resolved) {
+    if (!y) continue;
+    const prevTvlRow = await db.prepare(
+      "SELECT source_tvl_usd FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? AND source_tvl_usd IS NOT NULL ORDER BY recorded_at DESC LIMIT 1"
+    ).bind(id, startSec - 7 * 86400).first<{ source_tvl_usd: number | null }>();
+    prevTvlMap.set(id, prevTvlRow?.source_tvl_usd ?? null);
+  }
 
   for (const { id, symbol, yield: y } of resolved) {
     if (!y) continue;
@@ -310,6 +340,19 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     // Previous exchange rate (for Tier 1 coins — cached from resolution phase)
     const prevExchangeRate = tier1PrevRates.get(id) ?? null;
 
+    // Warning signals
+    const prevTvlUsd = prevTvlMap.get(id) ?? null;
+    const warnings = detectWarningSignals({
+      currentApy: y.currentApy,
+      apy30d,
+      apyReward: y.apyReward,
+      apy: y.currentApy,
+      medianApy,
+      sourceTvlUsd: y.sourceTvlUsd,
+      prevTvlUsd,
+    });
+    const warningSignalsJson = warnings.length > 0 ? JSON.stringify(warnings) : null;
+
     // Upsert yield_data
     yieldDataStmts.push(
       db.prepare(
@@ -317,14 +360,14 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
           stablecoin_id, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
           yield_source, yield_type, source_pool, source_tvl_usd, data_source,
           safety_score, safety_grade, pharos_yield_score, yield_to_risk, excess_yield, yield_stability,
-          apy_variance_30d, apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          apy_variance_30d, apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         id, symbol, y.currentApy, y.apyBase, y.apyReward, apy7d, apy30d,
         yieldConfig?.yieldSource ?? "Unknown", yieldConfig?.yieldType ?? "nav-appreciation",
         y.sourcePool, y.sourceTvlUsd, y.dataSource,
         safetyScore, safetyGrade, safePys, yieldToRisk, excessYield, safeStability,
-        variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, startSec,
+        variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, warningSignalsJson, startSec,
       )
     );
 
@@ -520,5 +563,6 @@ function rowToRanking(row: Record<string, unknown>) {
     apyVariance30d: row.apy_variance_30d,
     apyMin30d: row.apy_min_30d,
     apyMax30d: row.apy_max_30d,
+    warningSignals: row.warning_signals ? JSON.parse(row.warning_signals as string) : [],
   };
 }

@@ -143,7 +143,11 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
   },
 ];
 
-/** IDs classified as "safe havens" for flight-to-quality detection */
+/**
+ * Hardcoded safe-haven IDs — used as fallback for flight-to-quality detection
+ * when the report_card_cache is unavailable or stale (>2h).
+ * Prefer grade-based classification from report card scores when available.
+ */
 export const SAFE_HAVEN_IDS = new Set(
   MINT_BURN_CONFIGS.filter((c) =>
     ["USDT", "USDC", "FDUSD", "PYUSD"].includes(c.symbol)

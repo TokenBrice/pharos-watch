@@ -18,7 +18,7 @@ interface DigestInputData {
   stabilityIndex: {
     score: number;
     band: string;
-    components: { severity: number; breadth: number; trend: number };
+    components: { severity: number; breadth: number; stressBreadth?: number; trend: number };
   } | null;
   yesterdayIndex: { score: number; band: string } | null;
 

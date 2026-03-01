@@ -58,6 +58,10 @@ export interface DEWSInput {
   burnBaseline30dUsd: number | null;
   mintBaseline30dUsd: number | null;
   flowDataAgeDays: number;
+  // Yield anomaly (optional — from yield_data.warning_signals)
+  yieldWarnings: string[];
+  // Systemic backdrop (optional — latest PSI score from previous cycle)
+  psiScore: number | null;
   // Smoothing (optional — previous reading for averaging)
   prevPoolValue?: number;
   prevDivergValue?: number;
@@ -81,6 +85,7 @@ const WEIGHTS: Record<string, number> = {
   diverg: 0.15,
   black: 0.1,
   flow: 0.1,
+  yield: 0.05,
 };
 
 const CONFIDENCE_SCORES: Record<string, number> = {
@@ -475,6 +480,28 @@ function computeFlowSignal(input: DEWSInput): SignalResult {
   };
 }
 
+const YIELD_WARNING_SCORES: Record<string, number> = {
+  "yield-spike": 30,
+  "yield-divergence": 25,
+  "tvl-outflow": 35,
+  "negative-trend": 15,
+  "reward-heavy": 20,
+};
+
+function computeYieldSignal(input: DEWSInput): SignalResult {
+  if (input.yieldWarnings.length === 0) {
+    return { value: 0, available: false };
+  }
+
+  const sum = input.yieldWarnings.reduce(
+    (acc, w) => acc + (YIELD_WARNING_SCORES[w] ?? 0),
+    0,
+  );
+  const value = clamp(0, 100, sum);
+
+  return { value, available: true, warnings: input.yieldWarnings };
+}
+
 // ---------------------------------------------------------------------------
 // Main compute
 // ---------------------------------------------------------------------------
@@ -488,6 +515,7 @@ export function computeDEWS(input: DEWSInput): DEWSResult {
     diverg: computeDivergSignal(input),
     black: computeBlacklistSignal(input),
     flow: computeFlowSignal(input),
+    yield: computeYieldSignal(input),
   };
 
   // Weighted average with redistribution for missing signals
@@ -506,7 +534,15 @@ export function computeDEWS(input: DEWSInput): DEWSResult {
     return { score: 0, band: "CALM", signals };
   }
 
-  const score = Math.round(clamp(0, 100, weightedSum / totalWeight));
+  // Systemic backdrop: amplify individual stress when market is under pressure
+  let amplifiedScore = weightedSum / totalWeight;
+  if (input.psiScore !== null && input.psiScore < 75) {
+    // PSI < 75 (below STEADY) = market stress
+    // At PSI 75: no amplification. At PSI 40: 15% amplification. At PSI 0: 30% amplification.
+    const amplifier = 1 + Math.max(0, (75 - input.psiScore) / 75) * 0.3;
+    amplifiedScore *= amplifier;
+  }
+  const score = Math.round(clamp(0, 100, amplifiedScore));
   const band = getThreatBand(score);
 
   return { score, band, signals };

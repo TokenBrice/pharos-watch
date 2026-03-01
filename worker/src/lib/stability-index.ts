@@ -10,6 +10,7 @@ export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
   totalMcapUsd: number;
   mcap7dChangePct: number;
+  dewsStressBreadth?: number;
 }
 
 export interface StabilityResult {
@@ -18,6 +19,7 @@ export interface StabilityResult {
   components: {
     severity: number;
     breadth: number;
+    stressBreadth: number;
     trend: number;
   };
 }
@@ -53,7 +55,11 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult {
   const safePct = Number.isFinite(mcap7dChangePct) ? mcap7dChangePct : 0;
   const trend = Math.max(-5, Math.min(5, safePct));
 
-  const raw = 100 - severity - breadth + trend;
+  // Add stress breadth from DEWS (coins under stress but not yet depegged)
+  const stressBreadthRaw = input.dewsStressBreadth ?? 0;
+  const stressBreadth = Math.min(5, stressBreadthRaw); // Cap at 5 additional points
+
+  const raw = 100 - severity - breadth - stressBreadth + trend;
   const score = Math.round(Math.max(0, Math.min(100, raw)) * 10) / 10;
 
   return {
@@ -62,6 +68,7 @@ export function computeStabilityIndex(input: StabilityInput): StabilityResult {
     components: {
       severity: Math.round(severity * 100) / 100,
       breadth: Math.round(breadth * 100) / 100,
+      stressBreadth: Math.round(stressBreadth * 100) / 100,
       trend: Math.round(trend * 100) / 100,
     },
   };

@@ -240,9 +240,13 @@ const worker = {
         break;
       }
       // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
+      // Yield depends on dex_liquidity for safety scores — chain after DEX sync
       case "10,40 * * * *": {
-        ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null)));
-        ctx.waitUntil(logCronRun(db, "sync-yield-data", () => syncYieldData(db)));
+        const dexSync = logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null));
+        ctx.waitUntil(dexSync);
+        ctx.waitUntil(dexSync.then(() =>
+          logCronRun(db, "sync-yield-data", () => syncYieldData(db))
+        ));
         break;
       }
       case "0 8 * * *": {

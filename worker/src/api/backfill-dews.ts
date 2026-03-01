@@ -120,6 +120,8 @@ export const handleBackfillDEWS = withErrorHandler(
           burnBaseline30dUsd: null,
           mintBaseline30dUsd: null,
           flowDataAgeDays: 0,
+          yieldWarnings: [],
+          psiScore: null,
         };
 
         const result = computeDEWS(input);

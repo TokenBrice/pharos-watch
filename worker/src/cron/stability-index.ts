@@ -44,6 +44,28 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
     }
   }
 
+  // Read DEWS stress signals (from previous 15-min cycle) for stress breadth
+  let dewsStressBreadth = 0;
+  try {
+    const dewsRows = await db
+      .prepare(
+        `SELECT s.stablecoin_id, s.score, s.band
+         FROM stress_signals s
+         INNER JOIN (
+           SELECT stablecoin_id, MAX(computed_at) as max_at
+           FROM stress_signals GROUP BY stablecoin_id
+         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at
+         WHERE s.band IN ('ALERT', 'WARNING', 'DANGER')`,
+      )
+      .all<{ stablecoin_id: string; score: number; band: string }>();
+
+    // Count stressed coins weighted by mcap
+    for (const row of dewsRows.results ?? []) {
+      const coinMcap = mcapById.get(row.stablecoin_id) ?? 0;
+      dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * 1.5;
+    }
+  } catch { /* stress_signals may not exist */ }
+
   // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start
   type DepegRow = { stablecoin_id: string; peg_reference: number; started_at: number };
   const grouped = new Map<string, DepegRow[]>();
@@ -89,7 +111,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database): Promise<Cro
     });
   }
 
-  const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct });
+  const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
 
   await db
     .prepare(
