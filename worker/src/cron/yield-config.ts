@@ -4,7 +4,9 @@
 /** Yield variant: maps a tracked Pharos coin to its untracked yield wrapper. */
 export interface YieldVariant {
   variantSymbol: string;
+  /** Phase 2: used for on-chain rate queries when expanding Tier 1 coverage. */
   variantAddress?: string;
+  /** Phase 2: chain for on-chain rate queries. */
   variantChain?: string;
 }
 
@@ -31,11 +33,46 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     variantSymbol: "loAZND",
     variantChain: "monad",
   },
+  // USDS -> sUSDS (Sky Savings Rate wrapper)
+  "209": {
+    variantSymbol: "sUSDS",
+    variantChain: "ethereum",
+  },
+  // GHO -> sGHO (Aave Safety Module staking wrapper)
+  "118": {
+    variantSymbol: "sGHO",
+    variantChain: "ethereum",
+  },
+  // DAI -> sDAI (Dai Savings Rate wrapper)
+  "5": {
+    variantSymbol: "sDAI",
+    variantChain: "ethereum",
+  },
+  // crvUSD -> scrvUSD (Curve Savings vault)
+  "110": {
+    variantSymbol: "scrvUSD",
+    variantChain: "ethereum",
+  },
+  // FRXUSD -> sfrxUSD (Frax Staking wrapper)
+  "235": {
+    variantSymbol: "sfrxUSD",
+    variantChain: "ethereum",
+  },
+  // DOLA -> sDOLA (Inverse Finance Savings)
+  "15": {
+    variantSymbol: "sDOLA",
+    variantChain: "ethereum",
+  },
+  // BOLD -> yBOLD (Yearn vault over Liquity Stability Pool)
+  "269": {
+    variantSymbol: "yBOLD",
+    variantChain: "ethereum",
+  },
 };
 
 /**
  * Maps Pharos stablecoin ID -> DeFiLlama pool UUID for deterministic yield matching.
- * GATE: 12/15 coins matched (threshold: >=10/15).
+ * GATE: 20/23 coins matched (threshold: >=15/23).
  * Empty string = no DL pool found (comment explains why).
  *
  * Selection criteria for each coin:
@@ -92,6 +129,32 @@ export const YIELD_POOL_MAP: Record<string, string> = {
 
   // yoUSD - pendle SY yield token, Base, $1.3M TVL, ~8.0% APY
   "cg-yousd": "c7c9e2c5-a3ea-4e6e-80d7-090fd2d604c5",
+
+  // ── Wave 1: Native yield coins (C+ or above) ─────────────────────
+
+  // USDS -> sUSDS - sky-lending, Ethereum, $5.3B TVL, ~4.0% APY
+  "209": "d8c4eff5-c8a9-46fc-a888-057c4c668e72",
+
+  // GHO -> sGHO - aave-v3 staking, Ethereum, $266M TVL, ~5.3% APY
+  "118": "ff2a68af-030c-4697-b0a1-b62a738eaef0",
+
+  // DAI -> sDAI - sdai native, Gnosis, $86M TVL, ~5.5% APY
+  "5": "13392973-be6e-4b2f-bce9-4f7dd53d1c3a",
+
+  // crvUSD -> scrvUSD - crvusd native savings, Ethereum, $40M TVL, ~6.7% APY
+  "110": "5fd328af-4203-471b-bd16-1705c726d926",
+
+  // FRXUSD -> sfrxUSD - frax native staking, Ethereum, $26M TVL, ~4.3% APY
+  "235": "42523cca-14b0-44f6-95fb-4781069520a5",
+
+  // DOLA -> sDOLA - inverse-finance-firm, Ethereum, $14M TVL, ~4.3% APY
+  "15": "bf0f95c9-bc46-467d-9762-1d80ff50cd74",
+
+  // BOLD -> yBOLD - yearn-finance vault, Ethereum, $4.5M TVL, ~9.8% APY
+  "269": "4c29f645-12db-461f-a1d7-16900d624271",
+
+  // ZCHF - frankencoin native savings (no wrapper), Ethereum, $7.1M TVL, ~3.8% APY
+  "226": "8b427366-7bfb-4c61-88be-8dc004fdc3da",
 };
 
 /** On-chain exchange rate config for Tier 1 vault tokens. */
