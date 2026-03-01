@@ -608,9 +608,19 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
         dlYieldsAvailable = true;
         console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
 
-        // Cache stablecoin pools for yield sync (avoids redundant 13MB re-fetch)
-        const stablecoinPools = pools.filter((p) => p.stablecoin);
-        await setCache(db, "dl-stablecoin-pools", JSON.stringify(stablecoinPools));
+        // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
+        try {
+          const minimalPools = pools
+            .filter((p) => p.stablecoin && p.exposure === "single")
+            .map((p) => ({
+              pool: p.pool, project: p.project, symbol: p.symbol,
+              tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
+              apyReward: p.apyReward, stablecoin: true, exposure: "single",
+            }));
+          await setCache(db, "dl-stablecoin-pools", JSON.stringify(minimalPools));
+        } catch (e) {
+          console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
+        }
       } else {
         console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
       }
