@@ -5,12 +5,15 @@ import Link from "next/link";
 import {
   Activity,
   ArrowLeftRight,
+  ArrowUpDown,
   Droplets,
   FlaskConical,
   Network,
   ScrollText,
   ShieldBan,
+  ShieldAlert,
   Skull,
+  TrendingUp,
   Wallet,
 } from "lucide-react";
 
@@ -86,6 +89,30 @@ const FEATURES = [
     icon: ArrowLeftRight,
     borderClass: "border-l-sky-500",
     linkLabel: "Compare coins",
+  },
+  {
+    title: "Depeg Tracker",
+    description: "Live peg deviations, early warning scores, and depeg event history.",
+    href: "/depeg",
+    icon: ShieldAlert,
+    borderClass: "border-l-rose-500",
+    linkLabel: "View tracker",
+  },
+  {
+    title: "Mint & Burn Flows",
+    description: "On-chain mint/burn activity with flow intensity and bank run gauge.",
+    href: "/flows",
+    icon: ArrowUpDown,
+    borderClass: "border-l-blue-500",
+    linkLabel: "View flows",
+  },
+  {
+    title: "Yield Intelligence",
+    description: "APY rankings with safety-adjusted scores and warning signals.",
+    href: "/yield",
+    icon: TrendingUp,
+    borderClass: "border-l-green-500",
+    linkLabel: "View yields",
   },
 ];
 

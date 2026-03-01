@@ -144,6 +144,7 @@ export function DepegClient() {
                 value={pegFilter}
                 onValueChange={(v) => v && setPegFilter(v as PegCurrency | "all")}
                 className="flex gap-1"
+                aria-label="Filter by peg currency"
               >
                 {PEG_FILTERS.map((f) => (
                   <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
@@ -156,6 +157,7 @@ export function DepegClient() {
                 value={typeFilter}
                 onValueChange={(v) => v && setTypeFilter(v as GovernanceType | "all")}
                 className="flex gap-1"
+                aria-label="Filter by governance type"
               >
                 {TYPE_FILTERS.map((f) => (
                   <ToggleGroupItem key={f.value} value={f.value} variant="outline" size="sm" className="text-xs">
@@ -196,6 +198,7 @@ export function DepegClient() {
           onTypeFilterChange={setTypeFilter}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          hideFilters
         />
       </SectionErrorBoundary>
 

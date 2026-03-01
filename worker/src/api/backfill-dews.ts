@@ -118,7 +118,6 @@ export const handleBackfillDEWS = withErrorHandler(
           burnVolume24hUsd: null,
           mintVolume24hUsd: null,
           burnBaseline30dUsd: null,
-          mintBaseline30dUsd: null,
           flowDataAgeDays: 0,
           yieldWarnings: [],
           psiScore: null,

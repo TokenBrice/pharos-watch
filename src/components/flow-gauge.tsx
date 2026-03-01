@@ -290,7 +290,7 @@ function GaugeActive({
           variant="outline"
           className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-xs"
         >
-          Flight to Quality &middot; {Math.round(flightIntensity * 100)}% intensity
+          Flight to Quality &middot; {Math.round(flightIntensity)}% intensity
         </Badge>
       )}
 

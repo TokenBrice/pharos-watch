@@ -141,3 +141,15 @@ export function formatDeathDateShort(d: string): string {
   return dt.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
 }
 
+/** Tailwind color class for net flow values (positive = green, negative = red) */
+export function getNetColor(value: number): string {
+  if (value > 0) return "text-emerald-500";
+  if (value < 0) return "text-red-500";
+  return "text-muted-foreground";
+}
+
+/** Sign prefix for positive net flow values */
+export function getNetPrefix(value: number): string {
+  return value > 0 ? "+" : "";
+}
+

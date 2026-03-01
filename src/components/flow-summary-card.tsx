@@ -10,22 +10,8 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
 import { GAUGE_BANDS } from "@/components/flow-gauge";
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getNetColor(value: number): string {
-  if (value > 0) return "text-emerald-500";
-  if (value < 0) return "text-red-500";
-  return "text-muted-foreground";
-}
-
-function getNetPrefix(value: number): string {
-  return value > 0 ? "+" : "";
-}
 
 function getBandForScore(score: number): string {
   if (score < 15) return "CRISIS";

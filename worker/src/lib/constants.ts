@@ -55,6 +55,7 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "bluechip-ratings": 86400,
   "dex-liquidity": 43200,
   "yield-data": 3600,
+  dews: 1800,
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---

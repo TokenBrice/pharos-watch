@@ -1,5 +1,5 @@
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 
@@ -14,6 +14,11 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   const filterBindings: (string | number)[] = [];
 
   if (stablecoin) {
+    if (!isValidStablecoinId(stablecoin)) {
+      return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
+        status: 400, headers: { "Content-Type": "application/json" },
+      });
+    }
     conditions.push("stablecoin_id = ?");
     filterBindings.push(stablecoin);
   }

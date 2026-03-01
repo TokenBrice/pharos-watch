@@ -221,12 +221,13 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
       const { rate } = onChainRates.get(id)!;
       // Need previous rate from yield_history
       const prevRow = await db.prepare(
-        "SELECT exchange_rate FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? ORDER BY recorded_at DESC LIMIT 1"
-      ).bind(id, startSec - 7 * 86400).first<{ exchange_rate: number | null }>();
+        "SELECT exchange_rate, recorded_at FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? ORDER BY recorded_at DESC LIMIT 1"
+      ).bind(id, startSec - 7 * 86400).first<{ exchange_rate: number | null; recorded_at: number }>();
       tier1PrevRates.set(id, prevRow?.exchange_rate ?? null);
 
       if (prevRow?.exchange_rate && prevRow.exchange_rate > 0) {
-        const apy = computeApyFromRate(rate, prevRow.exchange_rate, 7);
+        const actualDays = (startSec - prevRow.recorded_at) / 86400;
+        const apy = computeApyFromRate(rate, prevRow.exchange_rate, actualDays);
         resolved.push({
           id, symbol,
           yield: { currentApy: apy, apyBase: apy, apyReward: null, sourcePool: null, sourceTvlUsd: null, dataSource: "onchain", exchangeRate: rate },
@@ -363,7 +364,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
 
     const apyVarianceScore = computeApyVarianceScore(samples);
     const yieldStability = computeYieldStability(samples);
-    const variance30d = samples.length >= 2
+    const stdDev30d = samples.length >= 2
       ? Math.sqrt(samples.reduce((s, v) => s + (v - apy30d) ** 2, 0) / samples.length)
       : null;
     const apyMin30d = samples.length > 0 ? Math.min(...samples) : null;
@@ -381,7 +382,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
 
     // Belt-and-suspenders: guard against NaN/Infinity reaching D1
     const safePys = Number.isFinite(pys) ? pys : 0;
-    const safeVariance30d = variance30d != null && Number.isFinite(variance30d) ? variance30d : null;
+    const safeVariance30d = stdDev30d != null && Number.isFinite(stdDev30d) ? stdDev30d : null;
     const safeStability = yieldStability != null && Number.isFinite(yieldStability) ? yieldStability : null;
 
     // Previous exchange rate (for Tier 1 coins — cached from resolution phase)
@@ -393,7 +394,6 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
       currentApy: y.currentApy,
       apy30d,
       apyReward: y.apyReward,
-      apy: y.currentApy,
       medianApy,
       sourceTvlUsd: y.sourceTvlUsd,
       prevTvlUsd,
@@ -407,7 +407,8 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
           stablecoin_id, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
           yield_source, yield_type, source_pool, source_tvl_usd, data_source,
           safety_score, safety_grade, pharos_yield_score, yield_to_risk, excess_yield, yield_stability,
-          apy_variance_30d, apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, updated_at
+          apy_variance_30d, /* note: column stores standard deviation, not variance */
+          apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         id, symbol, y.currentApy, y.apyBase, y.apyReward, apy7d, apy30d,

@@ -72,6 +72,7 @@ export async function syncMintBurn(
   }> = [];
 
   for (const config of MINT_BURN_CONFIGS) {
+    if (config.chain.evmChainId === null) { contractsSkipped++; continue; }
     const configKey = `${config.chain.chainId}-${config.contractAddress}`;
     const fromBlock = (lastBlocks.get(configKey) ?? 0) + 1;
 
@@ -98,7 +99,7 @@ export async function syncMintBurn(
       }
 
       const logs = await fetchEvmLogsForTopics(
-        config.chain.evmChainId!, config.contractAddress, topics,
+        config.chain.evmChainId, config.contractAddress, topics,
         etherscanApiKey, fromBlock, chainHead, 0, etherscanRL, budget
       );
 

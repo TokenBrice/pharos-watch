@@ -91,11 +91,8 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // USDY - ondo-yield-assets native, Ethereum, $149M TVL, ~3.6% APY
   "129": "ac61ee82-2fe4-4f9b-a9cd-7fb33f598859",
 
-  // BUIDL - no DL pool; Blackrock/Securitize fund not tracked by DL Yields
-  "173": "",
-
-  // YLDS - no DL pool; Figure Markets not tracked by DL Yields
-  "272": "",
+  // BUIDL (173) - no DL pool; Blackrock/Securitize fund not tracked by DL Yields
+  // YLDS (272) - no DL pool; Figure Markets not tracked by DL Yields
 
   // reUSD -> stUSR - resolv native staking, Ethereum, $109M TVL, ~0.6% APY
   "339": "0aedb3f6-9298-49de-8bb0-2f611a4df784",
@@ -106,9 +103,7 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // YUSD - aegis native, Ethereum, $36M TVL, ~5.7% APY
   "255": "f91b2168-c279-475c-a98a-673220f4fee7",
 
-  // USDB - no native DL pool; Blast native yield is not tracked by DL Yields
-  //        (only lending pools like wasabi/orbit-protocol exist with tiny TVL)
-  "172": "",
+  // USDB (172) - no native DL pool; Blast native yield is not tracked by DL Yields
 
   // AZND -> loAZND - mu-digital native, Monad, $7.4M TVL, ~6.7% APY
   "327": "0a05f2ee-e182-476a-9cdc-2fed86fcd765",

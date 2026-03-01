@@ -524,6 +524,7 @@ export interface CronRun {
   status: string;
   error?: string;
   itemCount?: number;
+  metadata?: Record<string, unknown>;
 }
 
 export interface CronStatus {
@@ -696,6 +697,7 @@ export interface YieldRanking {
   apyVariance30d: number | null;
   apyMin30d: number | null;
   apyMax30d: number | null;
+  warningSignals: string[];
 }
 
 export interface YieldRankingsResponse {
@@ -803,4 +805,52 @@ export interface MintBurnEvent {
 export interface MintBurnEventsResponse {
   events: MintBurnEvent[];
   total: number;
+}
+
+// --- Stress signals (DEWS) types ---
+
+export const SignalDetailSchema = z.object({
+  value: z.number(),
+  available: z.boolean(),
+}).passthrough();
+
+export const StressSignalEntrySchema = z.object({
+  score: z.number(),
+  band: z.string(),
+  signals: z.record(z.string(), SignalDetailSchema),
+  computedAt: z.number(),
+});
+
+export interface StressSignalEntry {
+  score: number;
+  band: string;
+  signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
+  computedAt: number;
+}
+
+export const StressSignalsAllResponseSchema = z.object({
+  signals: z.record(z.string(), StressSignalEntrySchema),
+  updatedAt: z.number(),
+});
+
+export interface StressSignalsAllResponse {
+  signals: Record<string, StressSignalEntry>;
+  updatedAt: number;
+}
+
+export const StressSignalHistoryEntrySchema = z.object({
+  date: z.number(),
+  score: z.number(),
+  band: z.string(),
+  signals: z.record(z.string(), SignalDetailSchema),
+});
+
+export const StressSignalDetailResponseSchema = z.object({
+  current: StressSignalEntrySchema.nullable(),
+  history: z.array(StressSignalHistoryEntrySchema),
+});
+
+export interface StressSignalDetailResponse {
+  current: StressSignalEntry | null;
+  history: { date: number; score: number; band: string; signals: Record<string, { value: number; available: boolean; [key: string]: unknown }> }[];
 }

@@ -1,4 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, isValidStablecoinId, addFreshnessHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleStressSignals = withErrorHandler(
@@ -11,6 +11,11 @@ export const handleStressSignals = withErrorHandler(
     );
 
     if (stablecoinId) {
+      if (!isValidStablecoinId(stablecoinId)) {
+        return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
+          status: 400, headers: { "Content-Type": "application/json" },
+        });
+      }
       // Single coin: latest + daily history
       const latest = await db
         .prepare(
@@ -43,6 +48,7 @@ export const handleStressSignals = withErrorHandler(
           signals_json: string;
         }>();
 
+      const computedAt = latest?.computed_at ?? Math.floor(Date.now() / 1000);
       return new Response(
         JSON.stringify({
           current: latest
@@ -61,10 +67,10 @@ export const handleStressSignals = withErrorHandler(
           })),
         }),
         {
-          headers: {
+          headers: addFreshnessHeaders({
             "Content-Type": "application/json",
             "Cache-Control": CACHE_PROFILES.standard,
-          },
+          }, computedAt, 900),
         },
       );
     }
@@ -100,10 +106,10 @@ export const handleStressSignals = withErrorHandler(
     }
 
     return new Response(JSON.stringify({ signals, updatedAt }), {
-      headers: {
+      headers: addFreshnessHeaders({
         "Content-Type": "application/json",
         "Cache-Control": CACHE_PROFILES.standard,
-      },
+      }, updatedAt, 900),
     });
   },
 );

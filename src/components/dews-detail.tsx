@@ -31,6 +31,7 @@ const SIGNAL_META: Record<
   diverg: { name: "Price Divergence", metricKey: "spreadBps", metricLabel: "spread (bps)" },
   black: { name: "Blacklist Activity", metricKey: "events24h", metricLabel: "24h events" },
   flow: { name: "Mint/Burn Flow", metricKey: "burnSurge", metricLabel: "burn surge" },
+  yield: { name: "Yield Anomaly", metricKey: "warnings", metricLabel: "warnings" },
 };
 
 function ProgressBar({ value, band }: { value: number; band: ThreatBand }) {
@@ -47,6 +48,7 @@ function ProgressBar({ value, band }: { value: number; band: ThreatBand }) {
 
 function formatMetric(key: string, val: unknown): string {
   if (val === null || val === undefined) return "n/a";
+  if (Array.isArray(val)) return `${val.length} active`;
   if (typeof val === "number") {
     if (key === "delta1d" || key === "delta7d" || key === "scoreDelta7d" || key === "tvlDelta7d") {
       return `${val >= 0 ? "+" : ""}${val.toFixed(1)}%`;
@@ -126,7 +128,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
       <CardContent className="space-y-4">
         {availableCount < 4 && (
           <p className="text-xs text-muted-foreground">
-            Limited data: only {availableCount} of 7 signals available. Score may be less reliable.
+            Limited data: only {availableCount} of 8 signals available. Score may be less reliable.
           </p>
         )}
 

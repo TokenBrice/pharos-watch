@@ -1,17 +1,19 @@
 /**
  * Depeg Early Warning Score (DEWS) — pure, stateless compute function.
  *
- * Estimates per-coin depeg probability using 7 sub-signals (0-100 each),
+ * Estimates per-coin depeg probability using 8 sub-signals (0-100 each),
  * combined via weighted average with redistribution for missing signals.
  *
  * Pattern: same as stability-index.ts — no DB access, no side effects.
  */
 
+import type { ThreatBand } from "../../../src/lib/classification";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type ThreatBand = "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
+export type { ThreatBand };
 
 export interface PoolEntry {
   tvlUsd: number;
@@ -56,7 +58,6 @@ export interface DEWSInput {
   burnVolume24hUsd: number | null;
   mintVolume24hUsd: number | null;
   burnBaseline30dUsd: number | null;
-  mintBaseline30dUsd: number | null;
   flowDataAgeDays: number;
   // Yield anomaly (optional — from yield_data.warning_signals)
   yieldWarnings: string[];
@@ -77,6 +78,9 @@ export interface DEWSResult {
 // Constants
 // ---------------------------------------------------------------------------
 
+// Weights intentionally sum to >1.0. Flow and yield signals are "bonus" weight
+// because they are not available for all coins. The weighted average divides by
+// the sum of available weights, so this normalizes correctly at runtime.
 const WEIGHTS: Record<string, number> = {
   supply: 0.25,
   pool: 0.2,

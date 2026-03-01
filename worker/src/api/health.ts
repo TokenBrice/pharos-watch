@@ -62,6 +62,21 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     // yield_data table may not exist yet
   }
 
+  // Check stress_signals (DEWS) freshness (runs every 15min)
+  try {
+    const dewsAge = await db
+      .prepare("SELECT MIN(? - computed_at) as age FROM stress_signals")
+      .bind(now)
+      .first<{ age: number | null }>();
+    const dewsMaxAge = CACHE_FRESHNESS_THRESHOLDS["dews"] ?? 1800;
+    const dewsAgeSeconds = dewsAge?.age ?? null;
+    const dewsRatio = dewsAgeSeconds != null ? dewsAgeSeconds / dewsMaxAge : Infinity;
+    if (dewsRatio > worstRatioMut) worstRatioMut = dewsRatio;
+    caches["dews"] = { ageSeconds: dewsAgeSeconds, maxAge: dewsMaxAge, healthy: dewsRatio <= 1.5 };
+  } catch {
+    // stress_signals table may not exist yet
+  }
+
   // Check circuit breaker states
   let circuits: Record<string, CircuitRecord> = {};
   try {

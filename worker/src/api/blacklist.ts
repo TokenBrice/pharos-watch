@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 
@@ -15,6 +15,11 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   const filterBindings: (string | number)[] = [];
 
   if (stablecoin) {
+    if (!isValidStablecoinId(stablecoin)) {
+      return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
+        status: 400, headers: { "Content-Type": "application/json" },
+      });
+    }
     conditions.push("stablecoin = ?");
     filterBindings.push(stablecoin);
   }

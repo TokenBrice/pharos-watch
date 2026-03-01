@@ -955,7 +955,7 @@ export default function MethodologyPage() {
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
             DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability.
-            It is computed every 15 minutes from 7 sub-signals. Only signals with available data
+            It is computed every 15 minutes from 8 sub-signals. Only signals with available data
             participate; weights are redistributed proportionally across available signals.
           </p>
 

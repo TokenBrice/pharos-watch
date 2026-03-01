@@ -26,6 +26,7 @@ interface PegHeatmapProps {
   searchQuery?: string;
   onSearchChange?: (v: string) => void;
   pegRateSources?: Record<string, PegRateSource>;
+  hideFilters?: boolean;
 }
 
 const PEG_OPTIONS: { value: PegCurrency | "all"; label: string }[] = [
@@ -90,6 +91,7 @@ export function PegHeatmap({
   searchQuery,
   onSearchChange,
   pegRateSources,
+  hideFilters,
 }: PegHeatmapProps) {
   const prefetch = usePrefetchStablecoin();
   const fallbackPegs = useMemo(() => {
@@ -121,31 +123,33 @@ export function PegHeatmap({
               <div className="flex items-center gap-1"><span className={`h-2.5 w-2.5 rounded-sm ${deviationBgClass(500)}`} /> &gt;500bps</div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <FilterChips options={PEG_OPTIONS} value={pegFilter} onChange={onPegFilterChange} />
-            <FilterChips options={TYPE_OPTIONS} value={typeFilter} onChange={onTypeFilterChange} />
-            {onSearchChange && (
-              <div className="relative w-full sm:w-44">
-                <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery ?? ""}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="pl-8 pr-7 h-9 sm:h-8 text-xs"
-                  aria-label="Search stablecoins by name or symbol"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => onSearchChange("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Clear search"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {!hideFilters && (
+            <div className="flex flex-wrap items-center gap-3">
+              <FilterChips options={PEG_OPTIONS} value={pegFilter} onChange={onPegFilterChange} />
+              <FilterChips options={TYPE_OPTIONS} value={typeFilter} onChange={onTypeFilterChange} />
+              {onSearchChange && (
+                <div className="relative w-full sm:w-44">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search..."
+                    value={searchQuery ?? ""}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="pl-8 pr-7 h-9 sm:h-8 text-xs"
+                    aria-label="Search stablecoins by name or symbol"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => onSearchChange("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {fallbackPegs.size > 0 && (
           <p className="text-xs text-muted-foreground mt-1">

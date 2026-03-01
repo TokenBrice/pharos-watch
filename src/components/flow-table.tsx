@@ -14,7 +14,7 @@ import { SortableTableHead } from "@/components/sortable-table-head";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSort } from "@/hooks/use-sort";
 import { useLogos } from "@/hooks/use-logos";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { MintBurnCoinFlow } from "@/lib/types";
 
@@ -24,16 +24,6 @@ interface FlowTableProps {
 }
 
 type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "largest" | "fis";
-
-function getNetColor(value: number): string {
-  if (value > 0) return "text-emerald-500";
-  if (value < 0) return "text-red-500";
-  return "text-muted-foreground";
-}
-
-function getNetPrefix(value: number): string {
-  return value > 0 ? "+" : "";
-}
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
@@ -200,7 +190,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                           style={{ width: `${Math.min(100, coin.flowIntensity)}%` }}
                         />
                       </div>
-                      <span className="font-mono tabular-nums text-sm">{coin.flowIntensity}</span>
+                      <span className="font-mono tabular-nums text-sm">{Math.round(coin.flowIntensity)}</span>
                     </div>
                   ) : (
                     <span className="text-muted-foreground">&mdash;</span>

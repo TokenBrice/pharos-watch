@@ -1,5 +1,5 @@
 import { getCache } from "../lib/db";
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 import {
@@ -110,6 +110,11 @@ export const handleMintBurnFlows = withErrorHandler(
     const hours = Math.max(1, Math.min(720, isNaN(hoursRaw) ? 24 : hoursRaw));
 
     if (stablecoinParam) {
+      if (!isValidStablecoinId(stablecoinParam)) {
+        return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
+          status: 400, headers: { "Content-Type": "application/json" },
+        });
+      }
       return handlePerCoin(db, stablecoinParam, hours);
     }
     return handleAggregate(db, hours);
@@ -205,9 +210,10 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
          ) m ON e.stablecoin_id = m.stablecoin_id
             AND COALESCE(e.amount_usd, e.amount) = m.max_val
             AND e.timestamp >= ?
-         GROUP BY e.stablecoin_id`,
+         GROUP BY e.stablecoin_id
+         HAVING e.timestamp = MAX(e.timestamp)`,
       )
-      .bind(nowSec - 24 * 3600, nowSec - 24 * 3600)
+      .bind(windowStart, windowStart)
       .all<EventRow>(),
   ]);
 

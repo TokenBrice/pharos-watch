@@ -338,7 +338,7 @@ export default function AboutPage() {
                 <span className="font-bold">Depeg Early Warning (DEWS)</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Per-coin forward-looking stress score (0&ndash;100) computed every 15 minutes from 7 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, and mint/burn flow
+                Per-coin forward-looking stress score (0&ndash;100) computed every 15 minutes from 8 sub-signals: supply velocity, pool balance drift, liquidity erosion, price confidence, cross-source divergence, blacklist activity, mint/burn flow, and yield anomaly
               </p>
             </CardContent>
           </Card>

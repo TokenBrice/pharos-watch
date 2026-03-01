@@ -32,6 +32,7 @@ const BAND_ORDER: Record<string, number> = {
 };
 
 type SortKey =
+  | "__attention"
   | "pegScore"
   | "dewsScore"
   | "currentDeviationBps"
@@ -75,7 +76,7 @@ function rowAccentClass(row: DepegTrackerRow): string {
 
 export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTableProps) {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
-    useSort<SortKey | "__attention">("__attention" as SortKey, "desc");
+    useSort<SortKey>("__attention", "desc");
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const [page, setPage] = useState(0);
   const prefetch = usePrefetchStablecoin();
@@ -83,7 +84,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
   const sorted = useMemo(() => {
     return [...rows].sort((a, b) => {
       // Default "attention" sort
-      if (sort.key === ("__attention" as SortKey)) {
+      if (sort.key === "__attention") {
         return attentionScore(b) - attentionScore(a);
       }
 
@@ -342,6 +343,13 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
               </TableRow>
             );
           })}
+          {paginated.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                No stablecoins match your filters
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
       <TablePagination
@@ -352,7 +360,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
         total={sorted.length}
         onPrevious={() => setPage((p) => Math.max(0, p - 1))}
         onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-        noun="stablecoin"
+        noun="stablecoins"
       />
     </div>
   );

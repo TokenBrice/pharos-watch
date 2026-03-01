@@ -26,11 +26,13 @@ export async function fetchWithRetry(
         const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
         const waitMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
         console.warn(`[fetch-retry] ${url} rate-limited (429), waiting ${waitMs}ms`);
+        await res.body?.cancel();
         await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
 
       console.warn(`[fetch-retry] ${url} returned ${res.status} (attempt ${i + 1}/${maxRetries + 1})`);
+      await res.body?.cancel();
     } catch (err) {
       console.warn(`[fetch-retry] ${url} failed (attempt ${i + 1}/${maxRetries + 1}):`, err);
     }

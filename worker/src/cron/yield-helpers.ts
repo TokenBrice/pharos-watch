@@ -2,7 +2,7 @@
 // Pure computation functions for yield intelligence. No I/O.
 
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
-  if (ratePrev <= 0 || days <= 0) return 0;
+  if (ratePrev <= 0 || rateNow <= 0 || days <= 0) return 0;
   const ratio = rateNow / ratePrev;
   if (ratio === 1) return 0;
   return (Math.pow(ratio, 365.25 / days) - 1) * 100;
@@ -48,7 +48,6 @@ interface WarningInput {
   currentApy: number;
   apy30d: number;
   apyReward: number | null;
-  apy: number;
   medianApy: number;
   sourceTvlUsd: number | null;
   prevTvlUsd: number | null;
@@ -59,7 +58,7 @@ export function detectWarningSignals(input: WarningInput): string[] {
   if (input.apy30d > 0 && input.currentApy / input.apy30d > 2.0) signals.push("yield-spike");
   if (input.medianApy > 0 && input.currentApy > input.medianApy * 3) signals.push("yield-divergence");
   if (input.apy30d > 0 && input.currentApy < input.apy30d * 0.7) signals.push("negative-trend");
-  if (input.apyReward != null && input.apy > 0 && input.apyReward / input.apy > 0.8) signals.push("reward-heavy");
+  if (input.apyReward != null && input.currentApy > 0 && input.apyReward / input.currentApy > 0.8) signals.push("reward-heavy");
   if (input.sourceTvlUsd != null && input.prevTvlUsd != null && input.prevTvlUsd > 0) {
     const change = (input.sourceTvlUsd - input.prevTvlUsd) / input.prevTvlUsd;
     if (change < -0.2) signals.push("tvl-outflow");

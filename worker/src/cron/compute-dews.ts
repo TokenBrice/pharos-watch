@@ -295,7 +295,6 @@ export async function computeAndStoreDEWS(db: D1Database): Promise<CronResult> {
       burnVolume24hUsd: mb?.burn24h ?? null,
       mintVolume24hUsd: mb?.mint24h ?? null,
       burnBaseline30dUsd: mb?.burnBaseline ?? null,
-      mintBaseline30dUsd: mb?.mintBaseline ?? null,
       flowDataAgeDays: mb?.dataAgeDays ?? 0,
       yieldWarnings: yieldWarnings.get(meta.id) ?? [],
       psiScore: latestPsiScore,
