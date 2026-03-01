@@ -52,9 +52,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Data",
     items: [
-      { href: "/yield", label: "Yield", icon: TrendingUp, description: "Risk-adjusted yield rankings" },
       { href: "/liquidity", label: "Liquidity", icon: Droplets, description: "DEX liquidity analysis" },
-      { href: "/flows", label: "Flows", icon: ArrowUpDown, description: "Mint and burn flow tracker" },
       { href: "/blacklist", label: "Blacklist Tracker", icon: ShieldBan, description: "Frozen address events" },
       { href: "/compare", label: "Compare", icon: ArrowLeftRight, description: "Side-by-side comparison" },
     ],
@@ -66,6 +64,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "/digest", label: "Digest", icon: Newspaper, description: "Daily market digest" },
       { href: "/methodology", label: "Methodology", icon: BookOpen, description: "How Pharos grades stablecoins" },
       { href: "/about", label: "About", icon: Info, description: "About Pharos" },
+    ],
+  },
+  {
+    label: "Experimental",
+    items: [
+      { href: "/yield", label: "Yield", icon: TrendingUp, description: "Risk-adjusted yield rankings" },
+      { href: "/flows", label: "Flows", icon: ArrowUpDown, description: "Mint and burn flow tracker" },
     ],
   },
 ];
