@@ -27,7 +27,7 @@ function KpiCell({
 }: {
   label: string;
   value: string | number;
-  sublabel?: string;
+  sublabel?: React.ReactNode;
   valueClassName?: string;
   sublabelClassName?: string;
 }) {
@@ -61,8 +61,8 @@ export function KpiBar() {
   const { data: pegData, isLoading: pegLoading } = usePegSummary();
   const { data: dexData, isLoading: dexLoading } = useDexLiquidity();
 
-  const { totalMcap, mcapChange24hPct, mcapChange7dPct } = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets) return { totalMcap: 0, mcapChange24hPct: 0, mcapChange7dPct: 0 };
+  const { totalMcap, mcapChange24hPct, mcapChange7dPct, netFlow24h, netFlow7d } = useMemo(() => {
+    if (!stablecoinsData?.peggedAssets) return { totalMcap: 0, mcapChange24hPct: 0, mcapChange7dPct: 0, netFlow24h: 0, netFlow7d: 0 };
     let total = 0;
     let totalPrev = 0;
     let totalPrevWeek = 0;
@@ -73,7 +73,7 @@ export function KpiBar() {
     }
     const pct24h = totalPrev > 0 ? ((total - totalPrev) / totalPrev) * 100 : 0;
     const pct7d = totalPrevWeek > 0 ? ((total - totalPrevWeek) / totalPrevWeek) * 100 : 0;
-    return { totalMcap: total, mcapChange24hPct: pct24h, mcapChange7dPct: pct7d };
+    return { totalMcap: total, mcapChange24hPct: pct24h, mcapChange7dPct: pct7d, netFlow24h: total - totalPrev, netFlow7d: total - totalPrevWeek };
   }, [stablecoinsData]);
 
   const { totalVol24h, volVs7dAvgPct } = useMemo(() => {
@@ -99,35 +99,27 @@ export function KpiBar() {
     : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand] ?? "";
 
-  const { psiDaysInBand, psiDelta1d, psiDelta7d } = useMemo(() => {
-    if (!psiBand || !psiData?.history) return { psiDaysInBand: 0, psiDelta1d: null, psiDelta7d: null };
+  const { psiDaysInBand, psiDelta7d } = useMemo(() => {
+    if (!psiBand || !psiData?.history) return { psiDaysInBand: 0, psiDelta7d: null };
     let days = 1; // today counts
     for (const point of psiData.history) {
       if (point.band === psiBand) days++;
       else break;
     }
     const currentScore = psiCurrent!.avg24h ?? psiCurrent!.score;
-    const d1 = psiData.history.length >= 1 ? currentScore - psiData.history[0].score : null;
     const last7 = psiData.history.slice(0, 7);
     const d7 = last7.length >= 7
       ? currentScore - last7.reduce((s, p) => s + p.score, 0) / last7.length
       : null;
-    return { psiDaysInBand: days, psiDelta1d: d1, psiDelta7d: d7 };
+    return { psiDaysInBand: days, psiDelta7d: d7 };
   }, [psiData, psiBand, psiCurrent]);
 
   const psiSublabel = (() => {
-    if (!psiBand) return "";
-    const parts: string[] = [];
-    if (psiDelta1d !== null) {
-      const sign = psiDelta1d >= 0 ? "+" : "";
-      parts.push(`${sign}${psiDelta1d.toFixed(1)} vs 1d`);
-    }
-    if (psiDelta7d !== null) {
-      const sign = psiDelta7d >= 0 ? "+" : "";
-      parts.push(`${sign}${psiDelta7d.toFixed(1)} vs 7d`);
-    }
-    parts.push(`${psiBand} ${psiDaysInBand}d`);
-    return parts.join(" · ");
+    if (!psiBand) return null;
+    const delta = psiDelta7d !== null
+      ? <>{psiDelta7d >= 0 ? "+" : ""}{psiDelta7d.toFixed(1)} vs 7d · </>
+      : null;
+    return <>{delta}<span className={psiColorClass}>{psiBand}</span> {psiDaysInBand}d</>;
   })();
 
   const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading;
@@ -167,7 +159,7 @@ export function KpiBar() {
           value={psiScore}
           sublabel={psiSublabel}
           valueClassName={psiColorClass}
-          sublabelClassName={psiDelta1d !== null ? deltaColor(psiDelta1d) : undefined}
+          sublabelClassName={psiDelta7d !== null ? deltaColor(psiDelta7d) : undefined}
         />
         <KpiCell
           label="Total Stablecoin Mcap"
@@ -182,13 +174,16 @@ export function KpiBar() {
           sublabelClassName={deltaColor(volVs7dAvgPct)}
         />
         <KpiCell
-          label="Stablecoins at Peg"
-          value={`${coinsAtPeg} / ${totalTracked}`}
+          label="Net Supply Flow 24h"
+          value={`${netFlow24h >= 0 ? "+" : "−"}${formatCurrency(Math.abs(netFlow24h), 1)}`}
+          sublabel={`${netFlow7d >= 0 ? "+" : "−"}${formatCurrency(Math.abs(netFlow7d), 1)} over 7d`}
+          valueClassName={deltaColor(netFlow24h)}
+          sublabelClassName={deltaColor(netFlow7d)}
         />
         <KpiCell
-          label="Depeg Events Today"
-          value={depegToday}
-          sublabel={`${depegDelta >= 0 ? "+" : ""}${depegDelta} vs yesterday`}
+          label="Peg Status"
+          value={`${coinsAtPeg} / ${totalTracked}`}
+          sublabel={`${depegToday} events today · ${depegDelta >= 0 ? "+" : ""}${depegDelta} vs yesterday`}
           sublabelClassName={deltaColor(-depegDelta)}
         />
       </div>
