@@ -68,9 +68,10 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
       <CardContent className="space-y-6">
         {/* Two-column layout: grade + radar | dimension breakdown */}
         <div className="grid gap-6 md:grid-cols-2">
-          {/* Left column: Overall grade + radar chart */}
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex items-center gap-3">
+          {/* Left column: Overall grade (left strip on desktop) + radar chart */}
+          <div className="flex flex-col items-center gap-4 md:flex-row md:items-stretch">
+            {/* Grade strip */}
+            <div className="flex flex-row items-center gap-3 md:flex-col md:justify-center md:gap-1 shrink-0">
               <Badge
                 variant="outline"
                 className={`text-3xl px-5 py-2 font-bold ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
@@ -78,13 +79,14 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                 {card.overallGrade}
               </Badge>
               {card.overallScore !== null && (
-                <span className="text-lg text-muted-foreground">
+                <span className="text-lg text-muted-foreground md:text-base">
                   {card.overallScore}
                   <span className="text-sm">/100</span>
                 </span>
               )}
             </div>
-            <ReportCardRadar card={card} labels="full" className="flex-1 min-h-[260px]" />
+            {/* Radar chart — fills remaining width and full column height on desktop */}
+            <ReportCardRadar card={card} labels="full" className="w-full flex-1 min-h-[260px]" />
           </div>
 
           {/* Right column: Dimension breakdown */}
