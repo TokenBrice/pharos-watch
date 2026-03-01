@@ -1941,6 +1941,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("168", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
     geckoId: "f-x-protocol-fxusd",
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "f(x) Protocol Stability Pool", yieldType: "governance-set" },
     collateral: "wstETH and WBTC deposited as collateral into f(x) Protocol CDP vaults; xPOSITIONs represent looped leveraged positions as NFTs; fully overcollateralized",
     pegMechanism: "CDP-style with overcollateralization and liquidations; USDC/fxUSD Stability Pool Gauge on Curve acts as peg keeper (buys fxUSD below peg); fxUSD redeemable at oracle price for underlying collateral when below peg; automatic rebalancing and liquidation of under-collateralized positions",
     proofOfReserves: { type: "independent-audit", url: "https://www.openzeppelin.com/news/fx-v2-audit", provider: "OpenZeppelin" },

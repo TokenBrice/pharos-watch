@@ -72,7 +72,7 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
 
 /**
  * Maps Pharos stablecoin ID -> DeFiLlama pool UUID for deterministic yield matching.
- * GATE: 20/23 coins matched (threshold: >=15/23).
+ * GATE: 21/24 coins matched (threshold: >=15/24).
  * Empty string = no DL pool found (comment explains why).
  *
  * Selection criteria for each coin:
@@ -155,6 +155,10 @@ export const YIELD_POOL_MAP: Record<string, string> = {
 
   // ZCHF - frankencoin native savings (no wrapper), Ethereum, $7.1M TVL, ~3.8% APY
   "226": "8b427366-7bfb-4c61-88be-8dc004fdc3da",
+
+  // fxUSD - fx-protocol Stability Pool, Ethereum, $33.9M TVL, ~4.0% APY
+  //         (DL symbol is FXUSDSTABILITYPOOLV2.0, not fxUSD — must use static map)
+  "168": "abd6c9e1-3b52-459a-a31b-9022a4dcf7e2",
 };
 
 /** On-chain exchange rate config for Tier 1 vault tokens. */
