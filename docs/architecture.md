@@ -22,6 +22,8 @@
 | `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
+| `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
+| `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
 | `GET /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
@@ -77,6 +79,9 @@ src/                              # Next.js frontend (static export)
 │   │   ├── client.tsx
 │   │   └── error.tsx
 │   ├── stablecoins/[peg]/        # Stablecoins filtered by peg currency
+│   │   ├── page.tsx
+│   │   └── client.tsx
+│   ├── yield/                    # Yield intelligence leaderboard
 │   │   ├── page.tsx
 │   │   └── client.tsx
 │   ├── about/                    # About & methodology
@@ -183,6 +188,8 @@ src/                              # Next.js frontend (static export)
 │   ├── balance-bar.tsx           # Balance ratio visualization bar
 │   ├── sort-icon.tsx             # Shared sort direction arrow icon
 │   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons
+│   ├── yield-leaderboard.tsx     # Yield rankings sortable table with score breakdown
+│   ├── yield-scatter-plot.tsx    # Yield vs risk scatter chart with quadrant labels
 │   ├── theme-toggle.tsx          # Dark/light mode toggle
 │   └── pharos-loader.tsx         # Loading spinner
 ├── hooks/
@@ -210,7 +217,9 @@ src/                              # Next.js frontend (static export)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
 │   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
 │   ├── use-preferences.ts        # User preference state (persistent settings)
-│   └── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
+│   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
+│   ├── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
+│   └── use-yield-history.ts      # GET /api/yield-history (per-coin yield history)
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
     ├── analytics.ts              # Analytics tracking (page views, events)
@@ -245,7 +254,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (30 total)
+├── migrations/                   # D1 SQL migrations (31 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -263,7 +272,11 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── stability-index.ts    # Composite ecosystem health score → D1 (every 15 min, after sync-stablecoins)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
-    │   └── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
+    │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
+    │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
+    │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
+    │   ├── fetch-tbill-rate.ts   # US Treasury T-bill rate fetcher (FRED API)
+    │   └── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
@@ -288,6 +301,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-stability-index.ts # GET /api/backfill-stability-index (admin)
     │   ├── backfill-cg-prices.ts # GET /api/backfill-cg-prices (admin)
     │   ├── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
+    │   ├── yield-rankings.ts    # GET /api/yield-rankings
+    │   ├── yield-history.ts     # GET /api/yield-history
     │   └── feedback.ts          # POST /api/feedback (public, handled in index.ts not router)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)

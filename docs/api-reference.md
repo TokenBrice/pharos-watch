@@ -36,9 +36,9 @@ Endpoints backed by the cron cache include these additional headers:
 | Profile | `Cache-Control` | Used by |
 |---------|----------------|---------|
 | realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary |
-| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index |
+| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings |
 | per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
-| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings |
+| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history |
 | no-store | `no-store` | health |
 
 ---
@@ -792,6 +792,102 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
 | `navToken` | `boolean` |
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
+
+---
+
+### `GET /api/yield-rankings`
+
+Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. Includes Pharos Yield Score, risk-adjusted metrics, and the current risk-free rate.
+
+**Cache:** standard — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour).
+
+**Response**
+
+```json
+{
+  "rankings": [YieldRanking, ...],
+  "riskFreeRate": 3.76,
+  "scalingFactor": 5,
+  "updatedAt": 1772000000
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `rankings` | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending |
+| `riskFreeRate` | `number` | Current US Treasury T-bill rate (%) used as the risk-free benchmark |
+| `scalingFactor` | `number` | Scaling factor applied in yield score computation |
+| `updatedAt` | `number` | Unix seconds when the rankings were last computed |
+
+**`YieldRanking`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Pharos stablecoin ID |
+| `symbol` | `string` | Token symbol |
+| `name` | `string` | Full name |
+| `currentApy` | `number` | Current APY (%) |
+| `apy7d` | `number` | 7-day average APY (%) |
+| `apy30d` | `number` | 30-day average APY (%) |
+| `apyBase` | `number` | Base APY component (%) |
+| `apyReward` | `number \| null` | Reward APY component (%), `null` if none |
+| `yieldSource` | `string` | Human-readable yield source description |
+| `yieldType` | `string` | Yield type classification (e.g. `"lending-vault"`, `"staking"`) |
+| `dataSource` | `string` | Data source identifier (e.g. `"defillama"`) |
+| `sourceTvlUsd` | `number` | TVL of the yield source pool (USD) |
+| `pharosYieldScore` | `number` | Composite Pharos Yield Score (0–100) |
+| `safetyScore` | `number` | Safety score from report cards (0–100) |
+| `safetyGrade` | `string` | Letter grade (`"A+"` through `"F"`, or `"NR"`) |
+| `yieldToRisk` | `number` | Yield-to-risk ratio (excess yield / safety penalty) |
+| `excessYield` | `number` | APY above risk-free rate (percentage points) |
+| `yieldStability` | `number` | Yield stability metric (0–1; higher = more stable) |
+| `apyVariance30d` | `number` | 30-day APY variance |
+| `apyMin30d` | `number` | Minimum APY in last 30 days (%) |
+| `apyMax30d` | `number` | Maximum APY in last 30 days (%) |
+
+---
+
+### `GET /api/yield-history`
+
+Historical yield data for a single stablecoin.
+
+**Cache:** slow
+
+**Required query parameter**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `stablecoin` | `string` | Pharos stablecoin ID (required) |
+
+**Optional query parameters**
+
+| Param | Type | Default | Bounds | Description |
+|-------|------|---------|--------|-------------|
+| `days` | `integer` | `90` | 1–365 | Lookback window in days |
+
+**Response:** Array sorted by `date` ascending.
+
+```json
+[
+  {
+    "date": 1771500000,
+    "apy": 12.4,
+    "apyBase": 10.2,
+    "apyReward": 2.2,
+    "exchangeRate": 1.052,
+    "sourceTvlUsd": 5200000000
+  }
+]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | `number` | Unix seconds |
+| `apy` | `number` | Total APY at snapshot time (%) |
+| `apyBase` | `number` | Base APY component (%) |
+| `apyReward` | `number \| null` | Reward APY component (%); `null` if none |
+| `exchangeRate` | `number \| null` | Exchange rate at snapshot time (e.g. sUSDe/USDe); `null` if not applicable |
+| `sourceTvlUsd` | `number` | TVL of the yield source pool at snapshot time (USD) |
 
 ---
 
