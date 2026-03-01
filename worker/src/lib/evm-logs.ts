@@ -96,10 +96,34 @@ export interface EtherscanLogEntry {
   logIndex: string;
 }
 
+/** Topic filter entry for compound topic queries */
+export interface TopicFilter {
+  index: number; // 0–3
+  value: string; // hex hash
+}
+
+/**
+ * Build Etherscan topic filter URL params from an array of topic filters.
+ * Sets `topic{N}` for each entry and `topic0_{N}_opr = "and"` for N > 0
+ * (Etherscan requires explicit operator params between topic positions).
+ */
+export function buildTopicParams(topics: TopicFilter[]): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const { index, value } of topics) {
+    params.set(`topic${index}`, value);
+    if (index > 0) {
+      params.set(`topic0_${index}_opr`, "and");
+    }
+  }
+  return params;
+}
+
 /**
  * Fetch EVM logs for a specific topic from Etherscan v2.
  * Returns `null` on API failure (rate limit, network error, invalid key)
  * vs `[]` for a genuine "no records found" response.
+ *
+ * Delegates to `fetchEvmLogsForTopics` with a single topic0 filter.
  */
 export async function fetchEvmLogsForTopic(
   evmChainId: number,
@@ -112,18 +136,56 @@ export async function fetchEvmLogsForTopic(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget
 ): Promise<EtherscanLogEntry[] | null> {
+  return fetchEvmLogsForTopics(
+    evmChainId,
+    contractAddress,
+    [{ index: 0, value: topicHash }],
+    apiKey,
+    fromBlock,
+    toBlock,
+    depth,
+    rateLimit,
+    budget
+  );
+}
+
+/**
+ * Fetch EVM logs matching compound topic filters from Etherscan v2.
+ * Supports filtering by topic0 alone, or topic0 + topic1/topic2 for
+ * mint/burn detection (e.g. Transfer where from=zero or to=zero).
+ *
+ * Returns `null` on API failure (rate limit, network error, invalid key)
+ * vs `[]` for a genuine "no records found" response.
+ *
+ * Recursively splits block ranges when result count hits Etherscan's 1000-row cap.
+ */
+export async function fetchEvmLogsForTopics(
+  evmChainId: number,
+  contractAddress: string,
+  topics: TopicFilter[],
+  apiKey: string | null,
+  fromBlock: number,
+  toBlock: number,
+  depth: number,
+  rateLimit: RateLimitedFetch,
+  budget: SubrequestBudget
+): Promise<EtherscanLogEntry[] | null> {
   if (budgetExhausted(budget)) return null;
   if (depth > MAX_RECURSION_DEPTH) return null;
 
+  const topicParams = buildTopicParams(topics);
   const params = new URLSearchParams({
     chainid: evmChainId.toString(),
     module: "logs",
     action: "getLogs",
     address: contractAddress,
-    topic0: topicHash,
     fromBlock: fromBlock.toString(),
     toBlock: toBlock.toString(),
   });
+  // Merge topic params into the main params
+  for (const [key, value] of topicParams) {
+    params.set(key, value);
+  }
   if (apiKey) params.set("apikey", apiKey);
 
   budget.count++;
@@ -153,8 +215,8 @@ export async function fetchEvmLogsForTopic(
     if (mid === fromBlock) return logs;
 
     const [first, second] = await Promise.all([
-      fetchEvmLogsForTopic(evmChainId, contractAddress, topicHash, apiKey, fromBlock, mid, depth + 1, rateLimit, budget),
-      fetchEvmLogsForTopic(evmChainId, contractAddress, topicHash, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget),
+      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget),
+      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget),
     ]);
     // Combine partial results; propagate null only if both halves failed
     if (first === null && second === null) return null;
