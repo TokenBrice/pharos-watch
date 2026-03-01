@@ -658,6 +658,80 @@ export default function MethodologyPage() {
             patterns that may signal market stress or capital rotation.
           </p>
 
+          {/* Flow pipeline diagram — desktop: horizontal */}
+          <div className="hidden md:flex items-stretch gap-4">
+            {/* Inputs */}
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Mints</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Transfer from 0x0</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Burns</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Transfer to 0x0</p>
+              </div>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* Aggregation */}
+            <div className="rounded-lg border p-3 text-center flex-1 flex flex-col justify-center">
+              <p className="text-foreground font-medium">Hourly Buckets</p>
+              <p className="text-xs text-muted-foreground mt-0.5">30-day rolling baseline</p>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* FIS */}
+            <div className="rounded-lg border p-3 text-center flex-1 flex flex-col justify-center">
+              <p className="text-foreground font-medium">Flow Intensity Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0 (max burn) · 50 (neutral) · 100 (max mint)</p>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* Outputs */}
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Bank Run Gauge</p>
+                <p className="text-xs text-muted-foreground mt-0.5">market-cap weighted</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Flight-to-Quality</p>
+                <p className="text-xs text-muted-foreground mt-0.5">dual threshold detection</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Flow pipeline diagram — mobile: vertical */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Mints</p>
+                <p className="text-xs text-muted-foreground">Transfer from 0x0</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Burns</p>
+                <p className="text-xs text-muted-foreground">Transfer to 0x0</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Hourly Buckets</p>
+              <p className="text-xs text-muted-foreground mt-0.5">30-day rolling baseline</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Flow Intensity Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0 (max burn) · 50 (neutral) · 100 (max mint)</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Bank Run Gauge</p>
+                <p className="text-xs text-muted-foreground">market-cap weighted</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Flight-to-Quality</p>
+                <p className="text-xs text-muted-foreground">dual threshold</p>
+              </div>
+            </div>
+          </div>
+
           {/* Flow Intensity Score */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Flow Intensity Score (FIS)</h3>
@@ -740,6 +814,88 @@ export default function MethodologyPage() {
             resolution strategy.
           </p>
 
+          {/* Yield pipeline diagram — desktop: horizontal */}
+          <div className="hidden md:flex items-stretch gap-4">
+            {/* Three tiers */}
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Tier 1</p>
+                <p className="text-xs text-muted-foreground mt-0.5">On-chain exchange rate</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Tier 2</p>
+                <p className="text-xs text-muted-foreground mt-0.5">DeFiLlama pools</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Tier 3</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Price-derived (NAV)</p>
+              </div>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* APY */}
+            <div className="rounded-lg border p-3 text-center w-32 flex flex-col justify-center flex-shrink-0">
+              <p className="text-foreground font-medium">APY</p>
+              <p className="text-xs text-muted-foreground mt-0.5">first successful tier</p>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* Formula components */}
+            <div className="flex flex-col gap-2 flex-1">
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Yield Efficiency</p>
+                <p className="text-xs text-muted-foreground mt-0.5">APY ÷ risk penalty</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center flex-1">
+                <p className="text-foreground font-medium">Sustainability</p>
+                <p className="text-xs text-muted-foreground mt-0.5">penalises high variance</p>
+              </div>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* PYS */}
+            <div className="rounded-lg border p-3 text-center w-32 flex flex-col justify-center flex-shrink-0">
+              <p className="text-foreground font-medium">PYS Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0–100</p>
+            </div>
+          </div>
+
+          {/* Yield pipeline diagram — mobile: vertical */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-3 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Tier 1</p>
+                <p className="text-xs text-muted-foreground">On-chain rate</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Tier 2</p>
+                <p className="text-xs text-muted-foreground">DeFiLlama</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Tier 3</p>
+                <p className="text-xs text-muted-foreground">Price-derived</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">APY</p>
+              <p className="text-xs text-muted-foreground mt-0.5">first successful tier</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Yield Efficiency</p>
+                <p className="text-xs text-muted-foreground">APY ÷ risk penalty</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Sustainability</p>
+                <p className="text-xs text-muted-foreground">penalises variance</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">PYS Score</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0–100</p>
+            </div>
+          </div>
+
           {/* APY Resolution tiers */}
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">APY Resolution (three-tier)</h3>
@@ -802,6 +958,134 @@ export default function MethodologyPage() {
             It is computed every 15 minutes from 7 sub-signals. Only signals with available data
             participate; weights are redistributed proportionally across available signals.
           </p>
+
+          {/* DEWS pipeline diagram — desktop: horizontal */}
+          <div className="hidden md:flex items-stretch gap-4">
+            {/* 7 signals */}
+            <div className="grid grid-cols-2 gap-2 flex-1">
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Supply Velocity</p>
+                <p className="text-xs text-muted-foreground">0.25</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Pool Balance Drift</p>
+                <p className="text-xs text-muted-foreground">0.20</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Liquidity Erosion</p>
+                <p className="text-xs text-muted-foreground">0.15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Price Confidence</p>
+                <p className="text-xs text-muted-foreground">0.15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Cross-Source Divergence</p>
+                <p className="text-xs text-muted-foreground">0.15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Blacklist Activity</p>
+                <p className="text-xs text-muted-foreground">0.10</p>
+              </div>
+              <div className="col-span-2 rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Mint/Burn Flow</p>
+                <p className="text-xs text-muted-foreground">0.10</p>
+              </div>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* DEWS */}
+            <div className="rounded-lg border p-3 text-center w-36 flex flex-col justify-center flex-shrink-0">
+              <p className="text-foreground font-medium">DEWS</p>
+              <p className="text-xs text-muted-foreground mt-0.5">&Sigma;(W&sdot;S) / &Sigma;(W)</p>
+              <p className="text-xs text-muted-foreground">0–100</p>
+            </div>
+            <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
+            {/* Threat bands */}
+            <div className="flex flex-col gap-1.5 w-36 justify-center flex-shrink-0">
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-green-500 font-medium text-xs">CALM</p>
+                <p className="text-xs text-muted-foreground">0–15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-teal-500 font-medium text-xs">WATCH</p>
+                <p className="text-xs text-muted-foreground">16–35</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-yellow-500 font-medium text-xs">ALERT</p>
+                <p className="text-xs text-muted-foreground">36–55</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-orange-500 font-medium text-xs">WARNING</p>
+                <p className="text-xs text-muted-foreground">56–75</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-red-500 font-medium text-xs">DANGER</p>
+                <p className="text-xs text-muted-foreground">76–100</p>
+              </div>
+            </div>
+          </div>
+
+          {/* DEWS pipeline diagram — mobile: vertical */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Supply Velocity</p>
+                <p className="text-xs text-muted-foreground">0.25</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Pool Balance Drift</p>
+                <p className="text-xs text-muted-foreground">0.20</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Liquidity Erosion</p>
+                <p className="text-xs text-muted-foreground">0.15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Price Confidence</p>
+                <p className="text-xs text-muted-foreground">0.15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Cross-Source Div.</p>
+                <p className="text-xs text-muted-foreground">0.15</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Blacklist Activity</p>
+                <p className="text-xs text-muted-foreground">0.10</p>
+              </div>
+              <div className="col-span-2 rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Mint/Burn Flow</p>
+                <p className="text-xs text-muted-foreground">0.10</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">DEWS</p>
+              <p className="text-xs text-muted-foreground mt-0.5">&Sigma;(W&sdot;S) / &Sigma;(W) &mdash; 0–100</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="grid grid-cols-5 gap-1 w-full">
+              <div className="rounded-lg border p-1.5 text-center">
+                <p className="text-green-500 font-medium text-xs">CALM</p>
+                <p className="text-xs text-muted-foreground">0–15</p>
+              </div>
+              <div className="rounded-lg border p-1.5 text-center">
+                <p className="text-teal-500 font-medium text-xs">WATCH</p>
+                <p className="text-xs text-muted-foreground">16–35</p>
+              </div>
+              <div className="rounded-lg border p-1.5 text-center">
+                <p className="text-yellow-500 font-medium text-xs">ALERT</p>
+                <p className="text-xs text-muted-foreground">36–55</p>
+              </div>
+              <div className="rounded-lg border p-1.5 text-center">
+                <p className="text-orange-500 font-medium text-xs">WARN</p>
+                <p className="text-xs text-muted-foreground">56–75</p>
+              </div>
+              <div className="rounded-lg border p-1.5 text-center">
+                <p className="text-red-500 font-medium text-xs">DANGER</p>
+                <p className="text-xs text-muted-foreground">76–100</p>
+              </div>
+            </div>
+          </div>
 
           {/* Formula */}
           <div className="space-y-2">
