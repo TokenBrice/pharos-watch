@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { StablecoinListResponse } from "@/lib/types";
+import { StablecoinListResponseSchema, type StablecoinListResponse } from "@/lib/types";
 import { useApiQuery, CRON_15MIN, CRON_1H } from "./use-api-query";
 
 export interface SupplyHistoryPoint {
@@ -11,7 +11,10 @@ export interface SupplyHistoryPoint {
 }
 
 export function useStablecoins() {
-  return useApiQuery<StablecoinListResponse>(["stablecoins"], "/api/stablecoins", CRON_15MIN);
+  return useApiQuery<StablecoinListResponse>(
+    ["stablecoins"], "/api/stablecoins", CRON_15MIN,
+    { schema: StablecoinListResponseSchema },
+  );
 }
 
 /** Stablecoin detail shape (tokens array from DL, CG, or commodity paths) */
