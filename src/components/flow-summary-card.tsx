@@ -76,12 +76,14 @@ function SummarySkeleton() {
 // ---------------------------------------------------------------------------
 
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
-  const { data, isLoading } = useMintBurnFlows(stablecoinId);
+  // Use aggregate endpoint (no stablecoin param) — per-coin endpoint returns a
+  // different response shape without the `coins` array.
+  const { data, isLoading } = useMintBurnFlows();
 
   if (isLoading) return <SummarySkeleton />;
 
   // Return nothing if there's no data for this coin
-  if (!data) return null;
+  if (!data?.coins) return null;
 
   const coin = data.coins.find((c) => c.stablecoinId === stablecoinId);
   if (!coin) return null;
