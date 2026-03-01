@@ -1,6 +1,6 @@
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, batchExecute } from "../lib/db";
+import { getCache, setCache, batchExecute } from "../lib/db";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import {
@@ -607,6 +607,10 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
         pools = llamaData.data;
         dlYieldsAvailable = true;
         console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
+
+        // Cache stablecoin pools for yield sync (avoids redundant 13MB re-fetch)
+        const stablecoinPools = pools.filter((p) => p.stablecoin);
+        await setCache(db, "dl-stablecoin-pools", JSON.stringify(stablecoinPools));
       } else {
         console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
       }

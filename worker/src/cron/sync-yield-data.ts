@@ -156,16 +156,27 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
   }
 
-  // 1. Fetch DL pools (Tier 2 source)
+  // 1. Load DL pools — prefer cached data from DEX sync (avoids redundant 13MB fetch)
   let dlPools: DlPool[] = [];
-  if (await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS)) {
+  const cachedPools = await getCache(db, "dl-stablecoin-pools");
+  if (cachedPools) {
+    try {
+      dlPools = JSON.parse(cachedPools.value) as DlPool[];
+      console.log(`[sync-yield-data] Using ${dlPools.length} cached stablecoin pools from DEX sync`);
+    } catch {
+      console.warn("[sync-yield-data] Failed to parse cached DL pools, falling back to direct fetch");
+    }
+  }
+
+  // Fall back to direct fetch if no cache available
+  if (dlPools.length === 0 && await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS)) {
     try {
       const res = await fetchWithRetry(DL_YIELDS_URL, {
         headers: { "User-Agent": USER_AGENT },
       });
       if (res?.ok) {
         const body = await res.json() as { data: DlPool[] };
-        dlPools = body.data ?? [];
+        dlPools = (body.data ?? []).filter((p) => p.stablecoin);
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
       } else {
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
@@ -274,7 +285,9 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
       !yieldBearingIds.has(m.id) &&
       (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
     );
+    console.log(`[sync-yield-data] Auto-discovery: ${lendingCandidates.length} candidates from ${TRACKED_STABLECOINS.length} tracked, ${yieldBearingIds.size} yield-bearing excluded`);
 
+    let autoCount = 0;
     for (const meta of lendingCandidates) {
       const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST);
       if (pool && pool.apy != null && pool.apy >= 0) {
@@ -291,8 +304,10 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
             exchangeRate: null,
           },
         });
+        autoCount++;
       }
     }
+    console.log(`[sync-yield-data] Auto-discovery: found ${autoCount} lending pools`);
   }
 
   // 6. Compute trailing averages, PYS, and store
