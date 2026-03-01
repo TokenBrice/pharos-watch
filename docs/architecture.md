@@ -59,6 +59,9 @@ src/                              # Next.js frontend (static export)
 │   ├── dependency-map/           # Collateral dependency graph visualization
 │   │   ├── page.tsx
 │   │   └── client.tsx
+│   ├── depeg/                    # Depeg Tracker: live peg monitoring, DEWS, heatmap, event feed
+│   │   ├── page.tsx
+│   │   └── client.tsx
 │   ├── digest/                   # Daily digest archive
 │   │   ├── page.tsx
 │   │   └── [date]/page.tsx       # Historical digest by date

@@ -20,7 +20,7 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, blacklist, cemetery, compare, dependency-map, digest, flows, liquidity, methodology, mint, portfolio, privacy, safety-scores, stability-index, stability-index-alt, status, about, yield, stablecoin/[id], stablecoins/[peg])
+src/app/         — Pages (homepage, blacklist, cemetery, compare, dependency-map, depeg, digest, flows, liquidity, methodology, mint, portfolio, privacy, safety-scores, stability-index, stability-index-alt, status, about, yield, stablecoin/[id], stablecoins/[peg])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
