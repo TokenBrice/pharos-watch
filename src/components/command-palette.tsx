@@ -115,7 +115,7 @@ export function CommandPalette() {
         fuzzyMatch(q, coin.symbol) ||
         fuzzyMatch(q, coin.id)
       ) {
-        const logoUrl = coin.geckoId ? logos[coin.geckoId] : undefined;
+        const logoUrl = logos[coin.id];
         items.push({
           id: `coin-${coin.id}`,
           label: coin.name,
