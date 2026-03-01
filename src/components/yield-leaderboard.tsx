@@ -17,30 +17,12 @@ import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
 import type { YieldRanking, ReportCardGrade } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
 type SortKey = "pys" | "apy30d" | "safetyScore" | "tvl" | "yieldStability" | "yieldType";
-
-/** Static color classes for yield type badges (Tailwind purge-safe). */
-const YIELD_TYPE_COLORS: Record<string, string> = {
-  "lending-vault": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "rebase": "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  "fee-sharing": "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
-  "lp-receipt": "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  "nav-appreciation": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "governance-set": "bg-orange-500/10 text-orange-500 border-orange-500/20",
-};
-
-const YIELD_TYPE_LABELS: Record<string, string> = {
-  "lending-vault": "Lending",
-  "rebase": "Rebase",
-  "fee-sharing": "Fee Share",
-  "lp-receipt": "LP Receipt",
-  "nav-appreciation": "NAV",
-  "governance-set": "Gov. Set",
-};
 
 /** Static PYS color classes (Tailwind purge-safe). */
 function getPysColor(pys: number | null): string {
@@ -223,7 +205,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 <TableCell className="hidden sm:table-cell text-center">
                   <Badge
                     variant="outline"
-                    className={`text-xs ${YIELD_TYPE_COLORS[row.yieldType] ?? ""}`}
+                    className={`text-xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}
                   >
                     {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
                   </Badge>
@@ -237,11 +219,11 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                       <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                         <div
                           className="h-full rounded-full bg-emerald-500"
-                          style={{ width: `${Math.min(100, Math.max(0, row.yieldStability))}%` }}
+                          style={{ width: `${Math.min(100, Math.max(0, row.yieldStability * 100))}%` }}
                         />
                       </div>
                       <span className="text-xs font-mono tabular-nums text-muted-foreground">
-                        {Math.round(row.yieldStability)}%
+                        {Math.round(row.yieldStability * 100)}%
                       </span>
                     </div>
                   ) : (

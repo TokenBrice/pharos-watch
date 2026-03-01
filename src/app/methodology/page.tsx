@@ -728,6 +728,69 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
+      {/* Yield Intelligence */}
+      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+        <CardHeader>
+          <CardTitle as="h2">Yield Intelligence</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the
+            Pharos Yield Score (PYS). Data is refreshed every 30 minutes using a three-tier APY
+            resolution strategy.
+          </p>
+
+          {/* APY Resolution tiers */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">APY Resolution (three-tier)</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground">Tier 1 &mdash; On-chain exchange rate</span>: reads the token contract directly (e.g.&nbsp;sDAI, sUSDe) and computes APY from the 7-day rate delta</li>
+              <li><span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a DeFiLlama yield pool via static mapping or symbol-based fallback</li>
+              <li><span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives APY from the 30-day price appreciation in supply_history</li>
+            </ul>
+            <p>Each tier is tried in order; the first successful resolution is used.</p>
+          </div>
+
+          {/* PYS formula */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Pharos Yield Score (PYS)</h3>
+            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              riskPenalty = max(0.5, (101 &minus; safetyScore) / 20)<br />
+              yieldEfficiency = apy30d / riskPenalty<br />
+              sustainability = max(0.3, 1.0 &minus; apyVarianceScore)<br />
+              PYS = min(100, yieldEfficiency &times; sustainability &times; scalingFactor)
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground">Yield efficiency</span> rewards higher APY relative to the coin&apos;s risk profile &mdash; safer coins get a lower penalty divisor</li>
+              <li><span className="text-foreground">Sustainability multiplier</span> penalizes volatile yields (high variance over 30 days), favouring consistent returns</li>
+              <li><span className="text-foreground">Scaling factor</span> is a global constant that normalises scores into the 0&ndash;100 range</li>
+            </ul>
+          </div>
+
+          {/* NAV token note */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">NAV Token Handling</h3>
+            <p>
+              NAV-appreciating tokens (e.g.&nbsp;sDAI, wUSDM, BUIDL) are not covered by the report card
+              framework&apos;s safety grading &mdash; they receive a default safety baseline of 40 (NR).
+              Their PYS is therefore derived primarily from APY magnitude and variance rather than a
+              full safety assessment. As the grading framework expands to cover NAV tokens, their PYS
+              will become more nuanced.
+            </p>
+          </div>
+
+          {/* Limitations */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Limitations</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Trailing averages require sufficient history &mdash; newly tracked coins may show unstable scores until 30 days of data accumulate</li>
+              <li>DeFiLlama pool matching uses heuristics; pool mismatches are corrected via the static override map</li>
+              <li>Price-derived APY (Tier 3) can be noisy for low-liquidity NAV tokens</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Contagion Stress Test */}
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>

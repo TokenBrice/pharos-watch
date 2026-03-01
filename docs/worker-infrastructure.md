@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 12 cron jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 14 cron jobs across 4 trigger slots.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -162,6 +162,7 @@ crons = [
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/sync-dex-liquidity.ts` | `docs/dex-liquidity.md` |
+| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/plans/yield-intelligence-design.md` |
 
 ### Trigger 4: `0 8 * * *` (daily at 08:00 UTC)
 
@@ -172,6 +173,7 @@ crons = [
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
+| `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/plans/yield-intelligence-design.md` |
 
 **Dependencies:** Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
 
@@ -255,6 +257,8 @@ CREATE TABLE IF NOT EXISTS cache (
 | `fx-rates` | `syncFxRates` | FX rates (EUR, GBP, etc.) |
 | `usds-status` | `syncUsdsStatus` | Freeze capability + implementation address |
 | `bluechip-ratings` | `syncBluechip` | Ratings map keyed by DefiLlama ID |
+| `yield-rankings` | `syncYieldData` | Pre-computed yield rankings + PYS scores |
+| `risk_free_rate` | `fetchTbillRate` | Current T-bill rate for PYS computation |
 
 **Cache access helpers:**
 
@@ -399,10 +403,11 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 | `fx-rates` | 1,800s (30 min) |
 | `bluechip-ratings` | 86,400s (24h) |
 | `dex-liquidity` | 43,200s (12h) |
+| `yield-data` | 3,600s (1h) |
 
 ### GET /api/status
 
-Returns recent `cron_runs` rows for operational monitoring. Tracks 12 cron jobs via the `CRON_INTERVALS` map:
+Returns recent `cron_runs` rows for operational monitoring. Tracks 14 cron jobs via the `CRON_INTERVALS` map:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -413,11 +418,13 @@ Returns recent `cron_runs` rows for operational monitoring. Tracks 12 cron jobs 
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
+| `sync-yield-data` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
 | `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
+| `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago.
 

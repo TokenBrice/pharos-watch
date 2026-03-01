@@ -254,6 +254,28 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
   OTHER: { label: "Other", textColor: "text-slate-500 dark:text-slate-400", bgColor: "bg-slate-500", hex: "#64748b" },
 };
 
+// ---------------------------------------------------------------------------
+// Yield type labels & styles
+// ---------------------------------------------------------------------------
+
+export const YIELD_TYPE_LABELS: Record<string, string> = {
+  "lending-vault": "Lending",
+  "rebase": "Rebase",
+  "fee-sharing": "Fee Share",
+  "lp-receipt": "LP Receipt",
+  "nav-appreciation": "NAV",
+  "governance-set": "Gov. Set",
+};
+
+export const YIELD_TYPE_STYLES: Record<string, { badge: string; hex: string }> = {
+  "lending-vault":    { badge: "bg-blue-500/10 text-blue-500 border-blue-500/20",         hex: "#3b82f6" },
+  "rebase":           { badge: "bg-purple-500/10 text-purple-500 border-purple-500/20",    hex: "#8b5cf6" },
+  "fee-sharing":      { badge: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",          hex: "#06b6d4" },
+  "lp-receipt":       { badge: "bg-amber-500/10 text-amber-500 border-amber-500/20",       hex: "#f59e0b" },
+  "nav-appreciation": { badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", hex: "#10b981" },
+  "governance-set":   { badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",    hex: "#f97316" },
+};
+
 /** Chart hex colors for blacklist stablecoin breakdown */
 export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDT: "#06b6d4",

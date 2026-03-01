@@ -186,6 +186,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
 
   // 5. Resolve yield for each coin
   const resolved: { id: string; symbol: string; yield: ResolvedYield | null }[] = [];
+  const tier1PrevRates = new Map<string, number | null>();
 
   for (const meta of yieldCoins) {
     const id = meta.id;
@@ -199,6 +200,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
       const prevRow = await db.prepare(
         "SELECT exchange_rate FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? ORDER BY recorded_at DESC LIMIT 1"
       ).bind(id, startSec - 7 * 86400).first<{ exchange_rate: number | null }>();
+      tier1PrevRates.set(id, prevRow?.exchange_rate ?? null);
 
       if (prevRow?.exchange_rate && prevRow.exchange_rate > 0) {
         const apy = computeApyFromRate(rate, prevRow.exchange_rate, 7);
@@ -258,10 +260,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
   const historyStmts: D1PreparedStatement[] = [];
   let updatedCount = 0;
 
-  // Compute median APY for warning signal detection
-  const allApys = resolved.filter((r) => r.yield).map((r) => r.yield!.currentApy);
-  const _medianApy = allApys.length > 0 ? sortedMedian(allApys) : 0;
-  void _medianApy; // reserved for future warning signal caching
+  // Phase 2: compute warning signals here (see yield-helpers.ts::detectWarningSignals)
 
   for (const { id, symbol, yield: y } of resolved) {
     if (!y) continue;
@@ -277,8 +276,12 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     const samples = (histRows.results ?? []).map((r) => r.apy);
     samples.push(y.currentApy);
 
-    const apy7dSamples = samples.slice(-Math.ceil(samples.length * 7 / 30));
-    const apy7d = apy7dSamples.length > 0 ? apy7dSamples.reduce((s, v) => s + v, 0) / apy7dSamples.length : y.currentApy;
+    const sevenDaysAgo = startSec - 7 * 86400;
+    const apy7dSamples = (histRows.results ?? [])
+      .filter((r) => r.recorded_at >= sevenDaysAgo)
+      .map((r) => r.apy);
+    apy7dSamples.push(y.currentApy);
+    const apy7d = apy7dSamples.reduce((s, v) => s + v, 0) / apy7dSamples.length;
     const apy30d = samples.reduce((s, v) => s + v, 0) / samples.length;
 
     const apyVarianceScore = computeApyVarianceScore(samples);
@@ -298,10 +301,8 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     const yieldToRisk = (101 - (safetyScore as number)) > 0 ? apy30d / (101 - (safetyScore as number)) : null;
     const excessYield = apy30d - riskFreeRate;
 
-    // Previous exchange rate (for Tier 1 coins)
-    const prevRateRow = await db.prepare(
-      "SELECT exchange_rate FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? AND exchange_rate IS NOT NULL ORDER BY recorded_at DESC LIMIT 1"
-    ).bind(id, startSec - 7 * 86400).first<{ exchange_rate: number | null }>();
+    // Previous exchange rate (for Tier 1 coins — cached from resolution phase)
+    const prevExchangeRate = tier1PrevRates.get(id) ?? null;
 
     // Upsert yield_data
     yieldDataStmts.push(
@@ -317,7 +318,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
         yieldConfig?.yieldSource ?? "Unknown", yieldConfig?.yieldType ?? "nav-appreciation",
         y.sourcePool, y.sourceTvlUsd, y.dataSource,
         safetyScore as number, safetyGrade as string, pys, yieldToRisk, excessYield, yieldStability,
-        variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevRateRow?.exchange_rate ?? null, startSec,
+        variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, startSec,
       )
     );
 
@@ -354,12 +355,6 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
 }
 
 // -- Helpers -----------------------------------------------------------------
-
-function sortedMedian(arr: number[]): number {
-  const sorted = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-}
 
 /**
  * Compute safety scores inline -- report-cards API handler does NOT cache results,

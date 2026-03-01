@@ -2831,7 +2831,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
     yieldBearing: true, navToken: true,
-    yieldConfig: { yieldSource: "PikuDAO lending vault", yieldType: "nav-appreciation" },
+    yieldConfig: { yieldSource: "PikuDAO lending vault", yieldType: "lending-vault" },
     geckoId: "usp-yield-optimized-stablecoin",
     collateral: "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",
     pegMechanism: "NAV-appreciating: starts at $1.00 backing; 90% of strategy yield flows back into backing pool, increasing token value over time; redemptions processed via FIFO smart-contract queue (0.2% fee, settled within 24 hours) with KYC/KYB required for minting and redeeming",

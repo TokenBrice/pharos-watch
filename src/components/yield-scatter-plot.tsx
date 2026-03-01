@@ -13,26 +13,8 @@ import {
   Cell,
 } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES, CHART_HEIGHT } from "@/lib/chart-colors";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
 import type { YieldRanking } from "@/lib/types";
-
-/** Static color map for yield types (Tailwind-independent hex values for SVG). */
-const YIELD_TYPE_DOT_COLORS: Record<string, string> = {
-  "lending-vault": "#3b82f6",     // blue
-  "rebase": "#8b5cf6",            // purple
-  "fee-sharing": "#06b6d4",       // cyan
-  "lp-receipt": "#f59e0b",        // amber
-  "nav-appreciation": "#10b981",  // emerald
-  "governance-set": "#f97316",    // orange
-};
-
-const YIELD_TYPE_LABELS: Record<string, string> = {
-  "lending-vault": "Lending",
-  "rebase": "Rebase",
-  "fee-sharing": "Fee Share",
-  "lp-receipt": "LP Receipt",
-  "nav-appreciation": "NAV",
-  "governance-set": "Gov. Set",
-};
 
 interface ScatterDataPoint {
   x: number;          // safety score
@@ -184,7 +166,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
               {data.map((entry) => (
                 <Cell
                   key={entry.id}
-                  fill={YIELD_TYPE_DOT_COLORS[entry.yieldType] ?? "#94a3b8"}
+                  fill={YIELD_TYPE_STYLES[entry.yieldType]?.hex ?? "#94a3b8"}
                   fillOpacity={0.8}
                   r={6}
                 />
@@ -200,7 +182,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
           <div key={type} className="flex items-center gap-1.5">
             <span
               className="inline-block w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: YIELD_TYPE_DOT_COLORS[type] ?? "#94a3b8" }}
+              style={{ backgroundColor: YIELD_TYPE_STYLES[type]?.hex ?? "#94a3b8" }}
             />
             <span>{YIELD_TYPE_LABELS[type] ?? type}</span>
           </div>

@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankings } from "@/hooks/use-yield-rankings";
 import { useLogos } from "@/hooks/use-logos";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { CRON_20MIN } from "@/hooks/use-api-query";
+import { CRON_30MIN } from "@/hooks/use-api-query";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 
@@ -88,7 +88,7 @@ export function YieldClient() {
       )}
       {!isError && (
         <StaleDataBanner
-          queries={[{ label: "Yield Rankings", dataUpdatedAt, staleTime: CRON_20MIN }]}
+          queries={[{ label: "Yield Rankings", dataUpdatedAt, staleTime: CRON_30MIN }]}
         />
       )}
 
