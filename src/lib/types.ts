@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 // --- Flag-based classification ---
 
 /** Backing mechanism */
@@ -251,33 +253,39 @@ export interface PegAssetBase {
   circulating?: Record<string, number>;
 }
 
-export interface StablecoinData {
-  id: string;
-  name: string;
-  symbol: string;
-  geckoId: string | null;
-  pegType: string;
-  pegMechanism: string;
-  price: number | null;
-  priceSource: string;
-  priceConfidence: PriceConfidence | null;
-  supplySource?: string;
-  circulating: Record<string, number>;
-  circulatingPrevDay: Record<string, number>;
-  circulatingPrevWeek: Record<string, number>;
-  circulatingPrevMonth: Record<string, number>;
-  chainCirculating: Record<
-    string,
-    { current: number; circulatingPrevDay: number; circulatingPrevWeek: number; circulatingPrevMonth: number }
-  >;
-  chains: string[];
-}
+const PegBucketsSchema = z.record(z.string(), z.number());
+const ChainCirculatingSchema = z.record(z.string(), z.object({
+  current: z.number(),
+  circulatingPrevDay: z.number(),
+  circulatingPrevWeek: z.number(),
+  circulatingPrevMonth: z.number(),
+}));
 
-export interface StablecoinListResponse {
-  peggedAssets: StablecoinData[];
-  /** Live FX fallback rates from ECB, keyed by pegType (e.g. peggedEUR: 1.08) */
-  fxFallbackRates?: Record<string, number>;
-}
+export const StablecoinDataSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  symbol: z.string(),
+  geckoId: z.string().nullable(),
+  pegType: z.string(),
+  pegMechanism: z.string(),
+  price: z.number().nullable(),
+  priceSource: z.string(),
+  priceConfidence: z.string().nullable(),
+  supplySource: z.string().optional(),
+  circulating: PegBucketsSchema,
+  circulatingPrevDay: PegBucketsSchema,
+  circulatingPrevWeek: PegBucketsSchema,
+  circulatingPrevMonth: PegBucketsSchema,
+  chainCirculating: ChainCirculatingSchema,
+  chains: z.array(z.string()),
+});
+export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
+
+export const StablecoinListResponseSchema = z.object({
+  peggedAssets: z.array(StablecoinDataSchema),
+  fxFallbackRates: z.record(z.string(), z.number()).optional(),
+});
+export type StablecoinListResponse = z.infer<typeof StablecoinListResponseSchema>;
 
 // --- Stablecoin Cemetery types ---
 
@@ -456,6 +464,36 @@ export interface ReportCard {
   isDefunct: boolean;
 }
 
+export const ReportCardsResponseSchema = z.object({
+  cards: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    symbol: z.string(),
+    overallGrade: z.string(),
+    overallScore: z.number().nullable(),
+    dimensions: z.record(z.string(), z.object({
+      grade: z.string(),
+      score: z.number().nullable(),
+      detail: z.string(),
+    })),
+    ratedDimensions: z.number(),
+    rawInputs: z.object({}).passthrough(),
+    dependencies: z.array(z.any()).optional(),
+    isDefunct: z.boolean(),
+  })),
+  methodology: z.object({
+    version: z.string(),
+    weights: z.record(z.string(), z.number()),
+    pegMultiplierExponent: z.number(),
+    thresholds: z.array(z.object({ grade: z.string(), min: z.number() })),
+  }),
+  dependencyGraph: z.object({
+    edges: z.array(z.object({ from: z.string(), to: z.string() })),
+  }),
+  updatedAt: z.number(),
+});
+// Keep hand-written interface — the Zod schema uses z.string() for grades/dimensions
+// but downstream code needs the narrow ReportCardGrade / DimensionKey types.
 export interface ReportCardsResponse {
   cards: ReportCard[];
   methodology: {
@@ -560,48 +598,49 @@ export interface DepegEvent {
 
 // --- Peg Summary types (from /api/peg-summary) ---
 
-export interface DexPriceCheck {
-  dexPrice: number;
-  dexDeviationBps: number;
-  agrees: boolean;
-  sourcePools: number;
-  sourceTvl: number;
-}
+export const PegSummaryCoinSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  name: z.string(),
+  pegType: z.string(),
+  pegCurrency: z.string(),
+  governance: z.string(),
+  currentDeviationBps: z.number().nullable(),
+  pegScore: z.number().nullable(),
+  pegPct: z.number(),
+  severityScore: z.number(),
+  spreadPenalty: z.number(),
+  eventCount: z.number(),
+  worstDeviationBps: z.number().nullable(),
+  activeDepeg: z.boolean(),
+  lastEventAt: z.number().nullable(),
+  trackingSpanDays: z.number(),
+  dexPriceCheck: z.object({
+    dexPrice: z.number(),
+    dexDeviationBps: z.number(),
+    agrees: z.boolean(),
+    sourcePools: z.number(),
+    sourceTvl: z.number(),
+  }).nullable().optional(),
+});
+export type PegSummaryCoin = z.infer<typeof PegSummaryCoinSchema>;
 
-export interface PegSummaryCoin {
-  id: string;
-  symbol: string;
-  name: string;
-  pegType: string;
-  pegCurrency: string;
-  governance: string;
-  currentDeviationBps: number | null;
-  pegScore: number | null;
-  pegPct: number;
-  severityScore: number;
-  spreadPenalty: number;
-  eventCount: number;
-  worstDeviationBps: number | null;
-  activeDepeg: boolean;
-  lastEventAt: number | null;
-  trackingSpanDays: number;
-  dexPriceCheck?: DexPriceCheck | null;
-}
+export const PegSummaryStatsSchema = z.object({
+  activeDepegCount: z.number(),
+  medianDeviationBps: z.number(),
+  worstCurrent: z.object({ id: z.string(), symbol: z.string(), bps: z.number() }).nullable(),
+  coinsAtPeg: z.number(),
+  totalTracked: z.number(),
+  depegEventsToday: z.number(),
+  depegEventsYesterday: z.number(),
+});
+export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
 
-export interface PegSummaryStats {
-  activeDepegCount: number;
-  medianDeviationBps: number;
-  worstCurrent: { id: string; symbol: string; bps: number } | null;
-  coinsAtPeg: number;
-  totalTracked: number;
-  depegEventsToday: number;
-  depegEventsYesterday: number;
-}
-
-export interface PegSummaryResponse {
-  coins: PegSummaryCoin[];
-  summary: PegSummaryStats | null;
-}
+export const PegSummaryResponseSchema = z.object({
+  coins: z.array(PegSummaryCoinSchema),
+  summary: PegSummaryStatsSchema.nullable(),
+});
+export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 
 // --- Blacklist/Freeze tracker types ---
 
@@ -677,68 +716,74 @@ export interface YieldHistoryPoint {
 
 // --- Mint/Burn Flow types ---
 
-export interface MintBurnGauge {
-  score: number | null;
-  band: string | null;
-  flightToQuality: boolean;
-  flightIntensity: number;
-  trackedCoins: number;
-  trackedMcapUsd: number;
-}
+export const MintBurnGaugeSchema = z.object({
+  score: z.number().nullable(),
+  band: z.string().nullable(),
+  flightToQuality: z.boolean(),
+  flightIntensity: z.number(),
+  trackedCoins: z.number(),
+  trackedMcapUsd: z.number(),
+});
+export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 
-export interface MintBurnCoinFlow {
-  stablecoinId: string;
-  symbol: string;
-  flowIntensity: number | null;
-  netFlow24hUsd: number;
-  mintVolume24hUsd: number;
-  burnVolume24hUsd: number;
-  mintCount24h: number;
-  burnCount24h: number;
-  netFlow7dUsd: number;
-  largestEvent24h: {
-    direction: "mint" | "burn";
-    amountUsd: number;
-    txHash: string;
-    timestamp: number;
-  } | null;
-}
+export const MintBurnCoinFlowSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  flowIntensity: z.number().nullable(),
+  netFlow24hUsd: z.number(),
+  mintVolume24hUsd: z.number(),
+  burnVolume24hUsd: z.number(),
+  mintCount24h: z.number(),
+  burnCount24h: z.number(),
+  netFlow7dUsd: z.number(),
+  largestEvent24h: z.object({
+    direction: z.enum(["mint", "burn"]),
+    amountUsd: z.number(),
+    txHash: z.string(),
+    timestamp: z.number(),
+  }).nullable(),
+});
+export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
-export interface MintBurnHourlyBucket {
-  hourTs: number;
-  netFlowUsd: number;
-  mintVolumeUsd: number;
-  burnVolumeUsd: number;
-}
+export const MintBurnHourlyBucketSchema = z.object({
+  hourTs: z.number(),
+  netFlowUsd: z.number(),
+  mintVolumeUsd: z.number(),
+  burnVolumeUsd: z.number(),
+});
+export type MintBurnHourlyBucket = z.infer<typeof MintBurnHourlyBucketSchema>;
 
-export interface MintBurnFlowsResponse {
-  gauge: MintBurnGauge;
-  coins: MintBurnCoinFlow[];
-  hourly: MintBurnHourlyBucket[];
-  updatedAt: number;
-}
+export const MintBurnFlowsResponseSchema = z.object({
+  gauge: MintBurnGaugeSchema,
+  coins: z.array(MintBurnCoinFlowSchema),
+  hourly: z.array(MintBurnHourlyBucketSchema),
+  updatedAt: z.number(),
+});
+export type MintBurnFlowsResponse = z.infer<typeof MintBurnFlowsResponseSchema>;
 
-export interface MintBurnPerCoinChain {
-  chainId: string;
-  mintVolumeUsd: number;
-  burnVolumeUsd: number;
-  mintCount: number;
-  burnCount: number;
-  netFlowUsd: number;
-}
+export const MintBurnPerCoinChainSchema = z.object({
+  chainId: z.string(),
+  mintVolumeUsd: z.number(),
+  burnVolumeUsd: z.number(),
+  mintCount: z.number(),
+  burnCount: z.number(),
+  netFlowUsd: z.number(),
+});
+export type MintBurnPerCoinChain = z.infer<typeof MintBurnPerCoinChainSchema>;
 
-export interface MintBurnPerCoinResponse {
-  stablecoinId: string;
-  symbol: string;
-  mintVolumeUsd: number;
-  burnVolumeUsd: number;
-  netFlowUsd: number;
-  mintCount: number;
-  burnCount: number;
-  chains: MintBurnPerCoinChain[];
-  hourly: MintBurnHourlyBucket[];
-  updatedAt: number;
-}
+export const MintBurnPerCoinResponseSchema = z.object({
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  mintVolumeUsd: z.number(),
+  burnVolumeUsd: z.number(),
+  netFlowUsd: z.number(),
+  mintCount: z.number(),
+  burnCount: z.number(),
+  chains: z.array(MintBurnPerCoinChainSchema),
+  hourly: z.array(MintBurnHourlyBucketSchema),
+  updatedAt: z.number(),
+});
+export type MintBurnPerCoinResponse = z.infer<typeof MintBurnPerCoinResponseSchema>;
 
 export interface MintBurnEvent {
   id: string;
