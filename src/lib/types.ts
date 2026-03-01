@@ -663,7 +663,7 @@ export interface BlacklistEvent {
 }
 
 // ── Yield Intelligence ──────────────────────────────────────────────
-export type YieldType = "lending-vault" | "rebase" | "fee-sharing" | "lp-receipt" | "nav-appreciation" | "governance-set";
+export type YieldType = "lending-vault" | "rebase" | "fee-sharing" | "lp-receipt" | "nav-appreciation" | "governance-set" | "lending-opportunity";
 
 export interface YieldConfig {
   /** DeFiLlama pool UUID for deterministic matching */

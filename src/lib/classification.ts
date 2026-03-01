@@ -265,6 +265,7 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "lp-receipt": "LP Receipt",
   "nav-appreciation": "NAV",
   "governance-set": "Gov. Set",
+  "lending-opportunity": "Lending Opp.",
 };
 
 export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }> = {
@@ -274,6 +275,7 @@ export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }
   "lp-receipt":       { badge: "bg-amber-500/10 text-amber-500 border-amber-500/20",       hex: "#f59e0b" },
   "nav-appreciation": { badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20", hex: "#10b981" },
   "governance-set":   { badge: "bg-orange-500/10 text-orange-500 border-orange-500/20",    hex: "#f97316" },
+  "lending-opportunity": { badge: "bg-sky-500/10 text-sky-500 border-sky-500/20",           hex: "#0ea5e9" },
 };
 
 /** Chart hex colors for blacklist stablecoin breakdown */
