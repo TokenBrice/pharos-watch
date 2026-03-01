@@ -9,11 +9,10 @@ const HEALTH_STYLES = {
   stale:    { dot: "bg-red-500",   text: "text-red-500",   label: "STALE" },
 } as const;
 
-function formatRelativeTime(ts: number): string {
-  const diff = Math.max(0, Math.floor((Date.now() - ts * 1000) / 1000));
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
+function formatAge(seconds: number): string {
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  return `${Math.floor(seconds / 3600)}h ago`;
 }
 
 interface SiteHeaderProps {
@@ -26,6 +25,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();
 
   const style = health ? HEALTH_STYLES[health.status] : null;
+  const syncAge = health?.caches.stablecoins?.ageSeconds;
 
   return (
     <div className="hidden lg:flex items-center gap-3">
@@ -38,9 +38,11 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
         <span className="ml-auto flex items-center gap-1.5 text-xs font-mono">
           <span className={`inline-block h-1.5 w-1.5 rounded-full animate-pulse ${style.dot}`} />
           <span className={`uppercase ${style.text}`}>{style.label}</span>
-          <span className="text-muted-foreground/60">
-            &middot; {formatRelativeTime(health.timestamp)}
-          </span>
+          {syncAge != null && (
+            <span className="text-muted-foreground/60">
+              &middot; synced {formatAge(syncAge)}
+            </span>
+          )}
         </span>
       )}
     </div>
