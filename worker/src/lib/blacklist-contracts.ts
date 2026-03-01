@@ -24,7 +24,7 @@ export interface ContractEventConfig {
 
 // --- Chain configurations (derived from shared CHAIN_META) ---
 
-function chainConfig(chainId: string): ChainConfig {
+export function chainConfig(chainId: string): ChainConfig {
   const meta = CHAIN_META[chainId];
   if (!meta) throw new Error(`Unknown chain: ${chainId}`);
   return {
