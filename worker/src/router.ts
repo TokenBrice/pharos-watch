@@ -21,6 +21,8 @@ import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
 import { handleAuditDepegHistory } from "./api/audit-depeg-history";
 import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { handleReportCards } from "./api/report-cards";
+import { handleMintBurnFlows } from "./api/mint-burn-flows";
+import { handleMintBurnEvents } from "./api/mint-burn-events";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -119,6 +121,14 @@ export function route(
 
   if (path === "/api/report-cards") {
     return handleReportCards(db);
+  }
+
+  if (path === "/api/mint-burn-flows") {
+    return handleMintBurnFlows(db, url);
+  }
+
+  if (path === "/api/mint-burn-events") {
+    return handleMintBurnEvents(db, url);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution
