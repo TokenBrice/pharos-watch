@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 15 coins. Each must also have a `yieldConfig` specifying:
+Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 23 coins. Each must also have a `yieldConfig` specifying:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -63,7 +63,7 @@ Falls through to Tier 2 if no previous exchange rate exists yet (first sync).
 
 Matches each coin to a DeFiLlama pool via two layers:
 
-1. **Static map** — `YIELD_POOL_MAP` maps Pharos ID to DL pool UUID. 12 of 15 coins mapped.
+1. **Static map** — `YIELD_POOL_MAP` maps Pharos ID to DL pool UUID. 20 of 23 coins mapped.
 2. **Fallback matching** — searches DL pools by symbol (including `YIELD_VARIANT_MAP` variant symbols). Filters for `exposure === "single"` and `stablecoin === true`, picks highest TVL.
 
 **Variant mapping:** Some tracked coins earn yield through a separate wrapper token. `YIELD_VARIANT_MAP` maps the base coin to its wrapper for pool matching:
@@ -218,7 +218,7 @@ CREATE TABLE yield_history (
 
 **Retention:** 365 days. Older rows are pruned at the end of each sync run.
 
-**Estimated volume:** ~15 coins × 48 points/day × 365 days ≈ 263K rows/year.
+**Estimated volume:** ~23 coins × 48 points/day × 365 days ≈ 403K rows/year.
 
 ---
 
