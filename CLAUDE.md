@@ -79,3 +79,4 @@ Read these when working on related code:
 - **`docs/supply-snapshot.md`** — Daily supply snapshot cron, supply_history schema, supply helpers, backfill endpoint
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 11 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/worker-and-api-limits.md`** — Hard limits for all 16 external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
