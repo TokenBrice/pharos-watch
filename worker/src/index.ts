@@ -11,6 +11,8 @@ import { snapshotSupply } from "./cron/snapshot-supply";
 import { generateDailyDigest } from "./cron/daily-digest";
 import { computeAndStoreStabilityIndex } from "./cron/stability-index";
 import { snapshotPsiDaily } from "./cron/snapshot-psi";
+import { syncYieldData } from "./cron/sync-yield-data";
+import { fetchTbillRate } from "./cron/fetch-tbill-rate";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 import { initCoinGecko } from "./lib/coingecko";
@@ -222,13 +224,15 @@ const worker = {
         );
         break;
       }
-      // DEX liquidity on its own 30-min cycle (offset at :10/:40)
+      // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
       case "10,40 * * * *": {
         ctx.waitUntil(logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null)));
+        ctx.waitUntil(logCronRun(db, "sync-yield-data", () => syncYieldData(db)));
         break;
       }
       case "0 8 * * *": {
         ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
+        ctx.waitUntil(logCronRun(db, "fetch-tbill-rate", () => fetchTbillRate(db)));
         const psiPromise = logCronRun(db, "snapshot-psi", () => snapshotPsiDaily(db));
         ctx.waitUntil(psiPromise);
         ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
