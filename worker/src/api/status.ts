@@ -44,6 +44,7 @@ const CRON_INTERVALS: Record<string, number> = {
   "sync-stablecoins": 900,
   "sync-stablecoin-charts": 900,
   "sync-blacklist": 1200,
+  "sync-mint-burn": 1200,
   "sync-dex-liquidity": 1800,
   "sync-usds-status": 86400,
   "sync-bluechip": 86400,
