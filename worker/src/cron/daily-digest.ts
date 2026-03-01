@@ -678,7 +678,21 @@ export async function generateDailyDigest(
   }
 
   // Strip markdown code block wrapper if Claude added one (```json ... ```)
-  const jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  let jsonText = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+
+  // Extract the first JSON object if the model appended trailing text
+  const braceStart = jsonText.indexOf("{");
+  if (braceStart !== -1) {
+    let depth = 0;
+    let braceEnd = -1;
+    for (let i = braceStart; i < jsonText.length; i++) {
+      if (jsonText[i] === "{") depth++;
+      else if (jsonText[i] === "}") { depth--; if (depth === 0) { braceEnd = i; break; } }
+    }
+    if (braceEnd !== -1) {
+      jsonText = jsonText.slice(braceStart, braceEnd + 1);
+    }
+  }
 
   // Parse JSON response for title + text + extended
   let digestTitle: string;

@@ -13,7 +13,7 @@ function escapeHtml(text: string): string {
 
 /** Build the full Telegram message for a digest. */
 export function buildTelegramMessage(title: string, extended: string, date: string): string {
-  return `<b>${escapeHtml(title)}</b>\n\n${extended}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
+  return `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(extended)}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
 }
 
 /** Post a raw text message to a Telegram channel. Throws on API error. */
