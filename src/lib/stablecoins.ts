@@ -688,7 +688,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { label: "Website", url: "https://aave.com/gho" },
       { label: "Twitter", url: "https://x.com/GHOAave" },
       { label: "Docs", url: "https://aave.com/docs/ecosystem/gho" },
-      { label: "GitHub", url: "https://github.com/aave/gho-core" },
+      { label: "GitHub", url: "https://github.com/aave-dao/gho-origin" },
     ],
     contracts: [
       { chain: "ethereum", address: "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f", decimals: 18 },
@@ -698,7 +698,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ink", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
       { chain: "avalanche", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
     ],
-    proofOfReserves: { type: "independent-audit", url: "https://github.com/aave/gho-core/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
+    proofOfReserves: { type: "independent-audit", url: "https://github.com/aave-dao/gho-origin/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
     reserves: [
       // Source: Aave V3 Ethereum market data, Eco.com GHO guide, Chaos Labs risk dashboard
       { name: "wstETH", pct: 34, risk: "low" },
