@@ -16,20 +16,12 @@ import { DEWSBadge } from "@/components/dews-badge";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
-import type { PegSummaryCoin } from "@/lib/types";
+import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@/lib/classification";
-import type { StressSignalEntry } from "@/hooks/use-stress-signals";
+
+export type { DepegTrackerRow } from "@/lib/depeg-sort";
 
 const PAGE_SIZE = 25;
-
-/** DEWS threat bands ordered by severity for sorting */
-const BAND_ORDER: Record<string, number> = {
-  CALM: 0,
-  WATCH: 1,
-  ALERT: 2,
-  WARNING: 3,
-  DANGER: 4,
-};
 
 type SortKey =
   | "__attention"
@@ -43,27 +35,10 @@ type SortKey =
   | "dexAgrees"
   | "trackingSpanDays";
 
-export interface DepegTrackerRow {
-  coin: PegSummaryCoin;
-  dews: StressSignalEntry | null;
-}
-
 interface DepegTrackerTableProps {
   rows: DepegTrackerRow[];
   logos: Record<string, string> | undefined;
   onRowClick: (id: string) => void;
-}
-
-/** Composite sort for default "needs attention" ordering */
-function attentionScore(row: DepegTrackerRow): number {
-  // Active depeg = huge boost (1_000_000)
-  let score = row.coin.activeDepeg ? 1_000_000 : 0;
-  // DEWS band: DANGER=40000, WARNING=30000, ALERT=20000, WATCH=10000, CALM=0
-  const band = row.dews?.band ?? "CALM";
-  score += (BAND_ORDER[band] ?? 0) * 10_000;
-  // Absolute deviation for fine-grained ordering
-  score += Math.abs(row.coin.currentDeviationBps ?? 0);
-  return score;
 }
 
 /** Row left-border class based on severity */

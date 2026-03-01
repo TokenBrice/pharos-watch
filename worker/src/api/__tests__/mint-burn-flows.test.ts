@@ -81,7 +81,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const res = await handleMintBurnFlows(db, url);
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as Record<string, unknown>;
 
     // Cross-validate against the same Zod schema the frontend uses
     const parsed = MintBurnFlowsResponseSchema.safeParse(body);

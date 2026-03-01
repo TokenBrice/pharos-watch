@@ -38,10 +38,10 @@ describe("handleStabilityIndex contract tests", () => {
 
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
-    expect(body.current).toHaveProperty("score");
-    expect(body.current).toHaveProperty("band");
-    expect(body.current).toHaveProperty("components");
-    expect(Array.isArray(body.history)).toBe(true);
+    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("score");
+    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("band");
+    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("components");
+    expect(Array.isArray((body as { history: unknown[] }).history)).toBe(true);
   });
 
   it("detail mode includes components in history items", async () => {
@@ -53,10 +53,11 @@ describe("handleStabilityIndex contract tests", () => {
 
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
-    expect(Array.isArray(body.history)).toBe(true);
+    const typedBody = body as { history: Record<string, unknown>[] };
+    expect(Array.isArray(typedBody.history)).toBe(true);
     // Detail mode adds components to history items
-    if (body.history.length > 0) {
-      expect(body.history[0]).toHaveProperty("components");
+    if (typedBody.history.length > 0) {
+      expect(typedBody.history[0]).toHaveProperty("components");
     }
   });
 });
