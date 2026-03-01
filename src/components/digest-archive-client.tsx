@@ -117,10 +117,10 @@ export function DigestArchiveClient() {
           <select
             value={activeMonth ?? ""}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-sm bg-transparent border border-border rounded px-2 py-1 text-foreground"
+            className="text-sm bg-background border border-border rounded px-2 py-1 text-foreground"
           >
             {monthOptions.map((m) => (
-              <option key={m.key} value={m.key}>
+              <option key={m.key} value={m.key} className="bg-background text-foreground">
                 {m.label}
               </option>
             ))}
