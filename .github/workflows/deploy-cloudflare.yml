@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - run: npm ci
       - run: cd worker && npm ci
       - run: cd worker && npx tsc --noEmit
       - uses: cloudflare/wrangler-action@v3
