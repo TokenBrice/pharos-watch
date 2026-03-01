@@ -1,5 +1,5 @@
 -- Individual mint/burn events
-CREATE TABLE mint_burn_events (
+CREATE TABLE IF NOT EXISTS mint_burn_events (
   id TEXT PRIMARY KEY,                 -- "{chainId}-{txHash}-{logIndex}"
   stablecoin_id TEXT NOT NULL,         -- Pharos stablecoin ID ("1", "2", "5", "118", etc.)
   symbol TEXT NOT NULL,                -- "USDT", "USDC", "DAI", "GHO", etc.
@@ -14,12 +14,12 @@ CREATE TABLE mint_burn_events (
   explorer_tx_url TEXT NOT NULL
 );
 
-CREATE INDEX idx_mbe2_ts ON mint_burn_events(timestamp DESC);
-CREATE INDEX idx_mbe2_coin ON mint_burn_events(stablecoin_id, timestamp DESC);
-CREATE INDEX idx_mbe2_chain ON mint_burn_events(chain_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_mbe2_ts ON mint_burn_events(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_mbe2_coin ON mint_burn_events(stablecoin_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_mbe2_chain ON mint_burn_events(chain_id, timestamp DESC);
 
 -- Pre-aggregated hourly flow buckets (written by cron after each scan)
-CREATE TABLE mint_burn_hourly (
+CREATE TABLE IF NOT EXISTS mint_burn_hourly (
   stablecoin_id TEXT NOT NULL,
   chain_id TEXT NOT NULL,
   hour_ts INTEGER NOT NULL,            -- Unix seconds, truncated to hour boundary
@@ -31,11 +31,11 @@ CREATE TABLE mint_burn_hourly (
   PRIMARY KEY (stablecoin_id, chain_id, hour_ts)
 );
 
-CREATE INDEX idx_mbh_ts ON mint_burn_hourly(hour_ts DESC);
-CREATE INDEX idx_mbh_coin ON mint_burn_hourly(stablecoin_id, hour_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mbh_ts ON mint_burn_hourly(hour_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mbh_coin ON mint_burn_hourly(stablecoin_id, hour_ts DESC);
 
 -- Incremental block tracking (same pattern as blacklist_sync_state)
-CREATE TABLE mint_burn_sync_state (
+CREATE TABLE IF NOT EXISTS mint_burn_sync_state (
   config_key TEXT PRIMARY KEY,         -- "{chainId}-{contractAddress}"
   last_block INTEGER NOT NULL DEFAULT 0
 );
