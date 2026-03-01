@@ -48,7 +48,7 @@ interface ResolvedYield {
   apyReward: number | null;
   sourcePool: string | null;
   sourceTvlUsd: number | null;
-  dataSource: "onchain" | "defillama" | "price-derived";
+  dataSource: "onchain" | "defillama" | "defillama-auto" | "price-derived";
   exchangeRate: number | null;
 }
 
