@@ -1,5 +1,6 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
+import { CACHE_FRESHNESS_THRESHOLDS } from "../lib/constants";
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
@@ -37,7 +38,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
       .prepare("SELECT MIN(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0")
       .bind(now)
       .first<{ age: number | null }>();
-    const dexMaxAge = 43200; // 12 hours
+    const dexMaxAge = CACHE_FRESHNESS_THRESHOLDS["dex-liquidity"] ?? 43200;
     const dexAgeSeconds = dexAge?.age ?? null;
     const dexRatio = dexAgeSeconds != null ? dexAgeSeconds / dexMaxAge : Infinity;
     if (dexRatio > worstRatioMut) worstRatioMut = dexRatio;
@@ -52,7 +53,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
       .prepare("SELECT MIN(? - updated_at) as age FROM yield_data")
       .bind(now)
       .first<{ age: number | null }>();
-    const yieldMaxAge = 7200; // 2 hours
+    const yieldMaxAge = CACHE_FRESHNESS_THRESHOLDS["yield-data"] ?? 3600;
     const yieldAgeSeconds = yieldAge?.age ?? null;
     const yieldRatio = yieldAgeSeconds != null ? yieldAgeSeconds / yieldMaxAge : Infinity;
     if (yieldRatio > worstRatioMut) worstRatioMut = yieldRatio;

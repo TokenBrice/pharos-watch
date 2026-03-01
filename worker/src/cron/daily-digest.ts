@@ -296,26 +296,25 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to query active depegs:", e);
   }
 
-  // 3. Stability index — date-keyed lookup for today + yesterday
+  // 3. Stability index — real-time sample (matches homepage) + yesterday's daily snapshot
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86400);
   const yesterdayTs = todayTs - 86400;
-  const indexRows = await db
-    .prepare(
-      "SELECT computed_at, score, band, components FROM stability_index " +
-      "WHERE computed_at IN (?, ?) ORDER BY computed_at DESC"
-    )
-    .bind(todayTs, yesterdayTs)
-    .all<{ computed_at: number; score: number; band: string; components: string }>();
-  const indexResults = indexRows.results ?? [];
-  const todayRow = indexResults.find(r => r.computed_at === todayTs);
-  const yesterdayRow = indexResults.find(r => r.computed_at === yesterdayTs);
-  // If today's PSI hasn't computed yet, use yesterday as "current"
-  const currentRow = todayRow ?? yesterdayRow;
-  const stabilityIndex = currentRow
-    ? { score: currentRow.score, band: currentRow.band, components: JSON.parse(currentRow.components) }
+
+  // Current: latest 15-min real-time sample (same source as homepage)
+  const latestSample = await db
+    .prepare("SELECT score, band, components FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+    .first<{ score: number; band: string; components: string }>();
+  const stabilityIndex = latestSample
+    ? { score: latestSample.score, band: latestSample.band, components: JSON.parse(latestSample.components) }
     : null;
-  const yesterdayIndex = todayRow && yesterdayRow
+
+  // Yesterday: daily snapshot for comparison
+  const yesterdayRow = await db
+    .prepare("SELECT score, band FROM stability_index WHERE computed_at = ?")
+    .bind(yesterdayTs)
+    .first<{ score: number; band: string }>();
+  const yesterdayIndex = yesterdayRow
     ? { score: yesterdayRow.score, band: yesterdayRow.band }
     : null;
 

@@ -4,6 +4,7 @@ import {
   computeApyFromRate,
   computeApyFromPrice,
   computeYieldStability,
+  computeApyVarianceScore,
   detectWarningSignals,
 } from "../../../worker/src/cron/yield-helpers";
 
@@ -74,6 +75,15 @@ describe("computeYieldStability", () => {
   });
   it("returns null for single value", () => {
     expect(computeYieldStability([5])).toBeNull();
+  });
+  it("returns 1 for near-zero values (no Infinity from floating-point)", () => {
+    expect(computeYieldStability([1e-15, 2e-15])).toBe(1);
+  });
+});
+
+describe("computeApyVarianceScore", () => {
+  it("returns 0 for near-zero values (no Infinity from floating-point)", () => {
+    expect(computeApyVarianceScore([1e-15, 2e-15])).toBe(0);
   });
 });
 

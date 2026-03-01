@@ -53,6 +53,7 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   "usds-status": 86400,
   "fx-rates": 1800,
   "bluechip-ratings": 86400,
+  "dex-liquidity": 43200,
   "yield-data": 3600,
 };
 
@@ -76,6 +77,8 @@ export const RISK_FREE_RATE_FALLBACK = 4.25;
 export const TREASURY_FISCAL_DATA_URL =
   "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates?filter=security_desc:eq:Treasury Bills&sort=-record_date&page[size]=1&fields=record_date,avg_interest_rate_amt";
 export const PYS_SCALING_FACTOR = 5;
+/** Default safety score for unrated coins (navTokens, coins with insufficient data). */
+export const DEFAULT_SAFETY_SCORE = 40;
 
 // --- Circuit breaker source names ---
 

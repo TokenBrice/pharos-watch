@@ -30,7 +30,7 @@ export function computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFacto
 export function computeYieldStability(apySamples: number[]): number | null {
   if (apySamples.length < 2) return null;
   const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
-  if (mean === 0) return 1;
+  if (Math.abs(mean) < 1e-10) return 1;
   const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
   const cv = Math.sqrt(variance) / Math.abs(mean);
   return Math.max(0, Math.min(1, Math.round((1 - cv) * 100) / 100));
@@ -39,7 +39,7 @@ export function computeYieldStability(apySamples: number[]): number | null {
 export function computeApyVarianceScore(apySamples: number[]): number {
   if (apySamples.length < 2) return 0;
   const mean = apySamples.reduce((s, v) => s + v, 0) / apySamples.length;
-  if (mean === 0) return 0;
+  if (Math.abs(mean) < 1e-10) return 0;
   const variance = apySamples.reduce((s, v) => s + (v - mean) ** 2, 0) / apySamples.length;
   return Math.min(1, Math.sqrt(variance) / Math.abs(mean));
 }

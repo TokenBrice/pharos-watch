@@ -18,7 +18,7 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
-import type { YieldRanking, ReportCardGrade } from "@/lib/types";
+import type { YieldRanking } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
@@ -159,7 +159,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
         </TableHeader>
         <TableBody>
           {paginated.map((row, index) => {
-            const grade = row.safetyGrade as ReportCardGrade | null;
+            const grade = row.safetyGrade;
             return (
               <TableRow
                 key={row.id}
@@ -216,7 +216,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 <TableCell className="hidden lg:table-cell text-right">
                   {row.yieldStability !== null ? (
                     <div className="flex items-center justify-end gap-2">
-                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden" role="progressbar" aria-label={`Yield stability: ${Math.round(row.yieldStability * 100)}%`} aria-valuenow={Math.round(row.yieldStability * 100)} aria-valuemin={0} aria-valuemax={100}>
                         <div
                           className="h-full rounded-full bg-emerald-500"
                           style={{ width: `${Math.min(100, Math.max(0, row.yieldStability * 100))}%` }}

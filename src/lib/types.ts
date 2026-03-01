@@ -684,12 +684,12 @@ export interface YieldRanking {
   apyBase: number | null;
   apyReward: number | null;
   yieldSource: string;
-  yieldType: string;
+  yieldType: YieldType;
   dataSource: string;
   sourceTvlUsd: number | null;
   pharosYieldScore: number | null;
   safetyScore: number | null;
-  safetyGrade: string | null;
+  safetyGrade: ReportCardGrade | null;
   yieldToRisk: number | null;
   excessYield: number | null;
   yieldStability: number | null;

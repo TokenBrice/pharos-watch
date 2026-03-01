@@ -4,7 +4,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache, batchExecute } from "../lib/db";
 import {
   USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
-  PYS_SCALING_FACTOR,
+  PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE,
 } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getChainRpc } from "../lib/chain-rpcs";
@@ -293,13 +293,19 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     const apyMax30d = samples.length > 0 ? Math.max(...samples) : null;
 
     // Safety score
-    const safetyScore = safetyScores.get(id) ?? 40; // default 40 for unrated
-    const safetyGrade = safetyScores.has(id) ? (safetyScores.get(id + "_grade") ?? "NR") : "NR";
+    const safety = safetyScores.get(id);
+    const safetyScore = safety?.score ?? DEFAULT_SAFETY_SCORE;
+    const safetyGrade = safety?.grade ?? "NR";
 
     // PYS
-    const pys = computePYS({ apy30d, safetyScore: safetyScore as number, apyVarianceScore, scalingFactor: PYS_SCALING_FACTOR });
-    const yieldToRisk = (101 - (safetyScore as number)) > 0 ? apy30d / (101 - (safetyScore as number)) : null;
+    const pys = computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor: PYS_SCALING_FACTOR });
+    const yieldToRisk = (101 - safetyScore) > 0 ? apy30d / (101 - safetyScore) : null;
     const excessYield = apy30d - riskFreeRate;
+
+    // Belt-and-suspenders: guard against NaN/Infinity reaching D1
+    const safePys = Number.isFinite(pys) ? pys : 0;
+    const safeVariance = Number.isFinite(apyVarianceScore) ? apyVarianceScore : 0;
+    const safeStability = yieldStability != null && Number.isFinite(yieldStability) ? yieldStability : null;
 
     // Previous exchange rate (for Tier 1 coins — cached from resolution phase)
     const prevExchangeRate = tier1PrevRates.get(id) ?? null;
@@ -317,7 +323,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
         id, symbol, y.currentApy, y.apyBase, y.apyReward, apy7d, apy30d,
         yieldConfig?.yieldSource ?? "Unknown", yieldConfig?.yieldType ?? "nav-appreciation",
         y.sourcePool, y.sourceTvlUsd, y.dataSource,
-        safetyScore as number, safetyGrade as string, pys, yieldToRisk, excessYield, yieldStability,
+        safetyScore, safetyGrade, safePys, yieldToRisk, excessYield, safeStability,
         variance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, startSec,
       )
     );
@@ -360,8 +366,9 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
  * Compute safety scores inline -- report-cards API handler does NOT cache results,
  * so we must compute them ourselves (same approach as daily-digest.ts lines 426-558).
  */
-async function computeSafetyScores(db: D1Database): Promise<Map<string, number | string>> {
-  const scores = new Map<string, number | string>();
+interface SafetyResult { score: number; grade: string }
+async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyResult>> {
+  const scores = new Map<string, SafetyResult>();
 
   try {
     // Load stablecoins cache (for price data / peg types)
@@ -441,8 +448,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, number |
       const overall = computeOverallGrade(dims, { navToken: !!meta.flags.navToken });
       if (overall.score !== null) {
         overallScores.set(meta.id, overall.score);
-        scores.set(meta.id, overall.score);
-        scores.set(meta.id + "_grade", overall.grade);
+        scores.set(meta.id, { score: overall.score, grade: overall.grade });
       }
     }
 
@@ -481,8 +487,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, number |
       const overall = computeOverallGrade(dims, { navToken: false });
       if (overall.score !== null) {
         overallScores.set(meta.id, overall.score);
-        scores.set(meta.id, overall.score);
-        scores.set(meta.id + "_grade", overall.grade);
+        scores.set(meta.id, { score: overall.score, grade: overall.grade });
       }
     }
   } catch (err) {

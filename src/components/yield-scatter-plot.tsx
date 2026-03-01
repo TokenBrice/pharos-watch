@@ -14,7 +14,7 @@ import {
 } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES, CHART_HEIGHT } from "@/lib/chart-colors";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
-import type { YieldRanking } from "@/lib/types";
+import type { YieldRanking, YieldType } from "@/lib/types";
 
 interface ScatterDataPoint {
   x: number;          // safety score
@@ -22,7 +22,7 @@ interface ScatterDataPoint {
   id: string;
   name: string;
   symbol: string;
-  yieldType: string;
+  yieldType: YieldType;
   safetyGrade: string | null;
   pharosYieldScore: number | null;
   yieldSource: string;

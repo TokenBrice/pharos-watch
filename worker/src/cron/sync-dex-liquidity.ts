@@ -583,8 +583,9 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
   const dlYieldsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS);
   const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
-  // Fetch in two batches to stay under the Workers 6-connection limit
-  // (leaves headroom for retries within fetchWithRetry)
+  // Fetch DL first, consume bodies immediately to release connections before Curve batch.
+  // sync-yield-data runs concurrently on the same cron slot (10,40), sharing the
+  // Workers 6-connection limit — consuming early leaves headroom.
   const [llamaRes, protocolsRes] = await Promise.all([
     dlYieldsAllowed
       ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT } })
@@ -594,13 +595,7 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
       : Promise.resolve(null),
   ]);
 
-  const curveResponses = await Promise.all(
-    CURVE_CHAINS.map((chain) =>
-      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT } }),
-    ),
-  );
-
-  // --- DL Yields ---
+  // --- DL Yields (consume body to release connection) ---
   let pools: LlamaPool[] = [];
   let dlYieldsAvailable = false;
 
@@ -623,7 +618,7 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
     console.warn("[dex-liquidity] DL yields circuit open — CG/GT will be primary pool source");
   }
 
-  // --- DL Protocols ---
+  // --- DL Protocols (consume body to release connection) ---
   const dexProjects = new Set<string>();
   const protocolTvlCaps = new Map<string, number>();
   let dlProtocolsAvailable = false;
@@ -658,6 +653,13 @@ async function fetchDataSources(graphApiKey: string | null, db: D1Database): Pro
   } else {
     console.warn("[dex-liquidity] DL protocols circuit open — dead-protocol filtering degraded");
   }
+
+  // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
+  const curveResponses = await Promise.all(
+    CURVE_CHAINS.map((chain) =>
+      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT } }),
+    ),
+  );
 
   // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
   if (!dlYieldsAvailable && curveResponses.every((r) => !r?.ok)) {

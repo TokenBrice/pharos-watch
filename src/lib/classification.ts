@@ -5,7 +5,7 @@
  * Tailwind class strings are always complete static literals (never constructed dynamically).
  */
 
-import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin } from "./types";
+import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin, YieldType } from "./types";
 import { TRACKED_STABLECOINS } from "./stablecoins";
 
 // ---------------------------------------------------------------------------
@@ -258,7 +258,7 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
 // Yield type labels & styles
 // ---------------------------------------------------------------------------
 
-export const YIELD_TYPE_LABELS: Record<string, string> = {
+export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "lending-vault": "Lending",
   "rebase": "Rebase",
   "fee-sharing": "Fee Share",
@@ -267,7 +267,7 @@ export const YIELD_TYPE_LABELS: Record<string, string> = {
   "governance-set": "Gov. Set",
 };
 
-export const YIELD_TYPE_STYLES: Record<string, { badge: string; hex: string }> = {
+export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }> = {
   "lending-vault":    { badge: "bg-blue-500/10 text-blue-500 border-blue-500/20",         hex: "#3b82f6" },
   "rebase":           { badge: "bg-purple-500/10 text-purple-500 border-purple-500/20",    hex: "#8b5cf6" },
   "fee-sharing":      { badge: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",          hex: "#06b6d4" },
