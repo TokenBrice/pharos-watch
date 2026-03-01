@@ -15,6 +15,7 @@ import { computeAndStoreStabilityIndex } from "./cron/stability-index";
 import { snapshotPsiDaily } from "./cron/snapshot-psi";
 import { syncYieldData } from "./cron/sync-yield-data";
 import { fetchTbillRate } from "./cron/fetch-tbill-rate";
+import { computeAndStoreDEWS } from "./cron/compute-dews";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 import { initCoinGecko } from "./lib/coingecko";
@@ -154,7 +155,7 @@ const worker = {
       return addCorsHeaders(new Response(JSON.stringify(rows.results), { headers: { "Content-Type": "application/json" } }), origin);
     }
 
-    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history" || url.pathname === "/api/backfill-cg-prices" || url.pathname === "/api/audit-depeg-history" || url.pathname === "/api/backfill-stability-index" || url.pathname === "/api/backfill-mint-burn-prices";
+    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history" || url.pathname === "/api/backfill-cg-prices" || url.pathname === "/api/audit-depeg-history" || url.pathname === "/api/backfill-stability-index" || url.pathname === "/api/backfill-mint-burn-prices" || url.pathname === "/api/backfill-dews";
 
     // Check edge cache first
     const cache = caches.default;
@@ -202,6 +203,10 @@ const worker = {
         // PSI depends on stablecoins cache + depeg_events — run after sync completes
         ctx.waitUntil(stablecoinsSync.then(() =>
           logCronRun(db, "stability-index", () => computeAndStoreStabilityIndex(db))
+        ));
+        // DEWS depends on stablecoins cache + dex data — run after sync
+        ctx.waitUntil(stablecoinsSync.then(() =>
+          logCronRun(db, "compute-dews", () => computeAndStoreDEWS(db))
         ));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {

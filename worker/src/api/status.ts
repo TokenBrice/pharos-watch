@@ -55,6 +55,7 @@ const CRON_INTERVALS: Record<string, number> = {
   "snapshot-psi": 86400,
   "sync-yield-data": 1800,
   "fetch-tbill-rate": 86400,
+  "compute-dews": 900,
 };
 
 // --- Handler ---
