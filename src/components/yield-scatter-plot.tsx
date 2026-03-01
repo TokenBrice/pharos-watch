@@ -79,8 +79,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
   }, [data]);
 
   const handleClick = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (entry: any) => {
+    (entry: ScatterDataPoint) => {
       if (entry?.id) onDotClick(entry.id);
     },
     [onDotClick],

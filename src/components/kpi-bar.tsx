@@ -10,7 +10,7 @@ import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
 import { formatCurrency } from "@/lib/format";
-import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@/lib/psi-colors";
 import { FlowGaugeMini } from "@/components/flow-gauge-mini";
 
 /** Green for positive, red for negative, muted for zero. */
@@ -107,7 +107,7 @@ export function KpiBar() {
   const psiBand = psiCurrent
     ? psiCurrent.avg24hBand ?? psiCurrent.band
     : "";
-  const psiColorClass = PSI_BAND_CLASSES[psiBand] ?? "";
+  const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
 
   const { psiDaysInBand, psiDelta7d } = useMemo(() => {
     if (!psiBand || !psiData?.history) return { psiDaysInBand: 0, psiDelta7d: null };

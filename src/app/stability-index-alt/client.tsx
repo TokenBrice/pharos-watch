@@ -80,7 +80,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
             : null;
           const psi = worst ? worst.score : null;
           const psiBand = psi !== null ? BAND_ZONES.find((z) => psi >= z.y1)?.label ?? "" : "";
-          const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand] ?? "text-muted-foreground" : "text-muted-foreground";
+          const psiColor = psiBand ? PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "text-muted-foreground" : "text-muted-foreground";
           return (
             <div key={evt.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 min-w-0">
               <span className="text-sm tabular-nums text-muted-foreground shrink-0">{dateStr}</span>
@@ -269,7 +269,7 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
     <>
       <div className="h-10 w-px bg-border" />
       {items.map((item) => {
-        const color = PSI_BAND_CLASSES[item.band] ?? "text-foreground";
+        const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
           <div key={item.label} className="flex flex-col items-center gap-0.5">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
@@ -289,7 +289,7 @@ function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
   return (
     <div className="lg:hidden grid grid-cols-4 gap-3 w-full border-t pt-4">
       {items.map((item) => {
-        const color = PSI_BAND_CLASSES[item.band] ?? "text-foreground";
+        const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
           <div key={item.label} className="flex flex-col items-center gap-0.5">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
@@ -599,8 +599,8 @@ export function StabilityIndexClient() {
   const displayBand = avg24hBand ?? band;
   const yesterday = data.history.length > 0 ? data.history[0] : null;
   const delta = yesterday ? Math.round((displayScore - yesterday.score) * 10) / 10 : null;
-  const colorClass = PSI_BAND_CLASSES[displayBand] ?? "text-foreground";
-  const hexColor = PSI_HEX_COLORS[displayBand] ?? "#888";
+  const colorClass = PSI_BAND_CLASSES[displayBand as ConditionBand] ?? "text-foreground";
+  const hexColor = PSI_HEX_COLORS[displayBand as ConditionBand] ?? "#888";
 
   return (
     <div className="relative">

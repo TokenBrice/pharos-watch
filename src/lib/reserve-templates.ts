@@ -109,7 +109,7 @@ export function getReserves(coin: StablecoinMeta): ReserveResult | null {
  * Reserve slices with `coinId` are converted to DependencyWeight entries.
  * Falls back to manual `meta.dependencies` when no reserves have coinId links.
  */
-export function deriveDependencies(meta: StablecoinMeta): DependencyWeight[] {
+export function deriveDependencies(meta: Pick<StablecoinMeta, 'reserves' | 'dependencies'>): DependencyWeight[] {
   const reserves = meta.reserves;
   if (!reserves?.length) return meta.dependencies ?? [];
 

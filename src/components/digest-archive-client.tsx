@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestArchive } from "@/hooks/use-digest-archive";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
-import { PSI_BAND_CLASSES } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@/lib/psi-colors";
 import { formatCurrency } from "@/lib/format";
 import { CRON_24H } from "@/hooks/use-api-query";
 
@@ -151,7 +151,7 @@ export function DigestArchiveClient() {
               {(d.psiBand || d.totalMcapUsd != null) && (
                 <div className="flex items-center gap-2 mt-0.5 sm:hidden">
                   {d.psiBand && d.psiScore != null && (
-                    <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand] ?? ""}`}>
+                    <span className={`text-xs font-mono font-medium ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}>
                       {d.psiBand} {d.psiScore.toFixed(1)}
                     </span>
                   )}
@@ -165,7 +165,7 @@ export function DigestArchiveClient() {
             </div>
             {d.psiBand && d.psiScore != null && (
               <span
-                className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand] ?? ""}`}
+                className={`text-xs font-mono font-medium px-1.5 py-0.5 rounded bg-muted/50 shrink-0 hidden sm:inline ${PSI_BAND_CLASSES[d.psiBand as ConditionBand] ?? ""}`}
               >
                 {d.psiBand} {d.psiScore.toFixed(1)}
               </span>

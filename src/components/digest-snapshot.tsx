@@ -3,7 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestSnapshot } from "@/hooks/use-digest-snapshot";
 import { formatCurrency, formatAddress, formatPercentChange } from "@/lib/format";
-import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@/lib/psi-colors";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
 /* ---------- sub-section wrapper ---------- */
@@ -113,7 +113,7 @@ export function DigestSnapshot({ date }: { date: string }) {
           <SnapshotCard
             title="Stability Index"
             icon={<Activity className="h-4 w-4" aria-hidden="true" />}
-            borderClass={PSI_BORDER_CLASSES[inputData.stabilityIndex.band] ?? "border-l-muted-foreground"}
+            borderClass={PSI_BORDER_CLASSES[inputData.stabilityIndex.band as ConditionBand] ?? "border-l-muted-foreground"}
           >
             <p className="text-sm text-foreground/90">
               Score:{" "}
@@ -130,7 +130,7 @@ export function DigestSnapshot({ date }: { date: string }) {
               Band:{" "}
               <span
                 className={
-                  PSI_BAND_CLASSES[inputData.stabilityIndex.band] ??
+                  PSI_BAND_CLASSES[inputData.stabilityIndex.band as ConditionBand] ??
                   "text-muted-foreground"
                 }
               >

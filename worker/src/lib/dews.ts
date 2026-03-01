@@ -23,7 +23,26 @@ export interface PoolEntry {
 export interface SignalResult {
   value: number; // 0-100
   available: boolean;
-  [key: string]: unknown; // Extra debug fields per signal
+  // Debug fields per signal (optional, set by individual compute functions)
+  delta1d?: number;
+  delta7d?: number;
+  sizeFactor?: number;
+  balanceRatio?: number;
+  avgPoolStress?: number;
+  worstPool?: number;
+  scoreDelta7d?: number | null;
+  tvlDelta7d?: number | null;
+  confidence?: string | null;
+  spreadBps?: number;
+  primaryDevBps?: number;
+  dexDevBps?: number;
+  events24h?: number;
+  events7d?: number;
+  spikeRatio?: number;
+  burnSurge?: number;
+  burnToMintRatio?: number;
+  net24hUsd?: number;
+  warnings?: string[];
 }
 
 export interface DEWSInput {

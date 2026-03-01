@@ -545,7 +545,7 @@ const SELF_BACKED_SCORE_BY_GOVERNANCE: Record<GovernanceType, number> = {
 };
 
 export function scoreDependencyRisk(
-  meta: StablecoinMeta,
+  meta: Pick<StablecoinMeta, 'dependencies' | 'reserves'> & { flags: Pick<StablecoinMeta['flags'], 'governance'> },
   overallScores: Map<string, number>,
 ): ReportCardDimension {
   const deps = deriveDependencies(meta);
@@ -735,7 +735,7 @@ export function computeStressedGrades(
       const meta = {
         flags: { governance: card.rawInputs.governanceTier },
         dependencies: card.rawInputs.dependencies,
-      } as StablecoinMeta;
+      };
       const newDepRisk = scoreDependencyRisk(meta, overallScores);
       const newDimensions = { ...card.dimensions, dependencyRisk: newDepRisk };
       const overall = computeOverallGrade(newDimensions, { navToken: card.rawInputs.navToken });

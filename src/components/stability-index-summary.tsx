@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
-import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_BORDER_CLASSES } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_BORDER_CLASSES, type ConditionBand } from "@/lib/psi-colors";
 
 export function StabilityIndexSummary() {
   const { data, isLoading } = useStabilityIndex();
@@ -24,9 +24,9 @@ export function StabilityIndexSummary() {
     return { score, band, daysInBand };
   }, [data]);
 
-  const borderClass = stats ? (PSI_BORDER_CLASSES[stats.band] ?? "border-l-zinc-500") : "border-l-zinc-500";
-  const textClass = stats ? (PSI_BAND_CLASSES[stats.band] ?? "text-foreground") : "text-foreground";
-  const hexColor = stats ? (PSI_HEX_COLORS[stats.band] ?? "#888") : "#888";
+  const borderClass = stats ? (PSI_BORDER_CLASSES[stats.band as ConditionBand] ?? "border-l-zinc-500") : "border-l-zinc-500";
+  const textClass = stats ? (PSI_BAND_CLASSES[stats.band as ConditionBand] ?? "text-foreground") : "text-foreground";
+  const hexColor = stats ? (PSI_HEX_COLORS[stats.band as ConditionBand] ?? "#888") : "#888";
 
   if (isLoading) {
     return (

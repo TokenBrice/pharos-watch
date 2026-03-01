@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { PSI_HEX_COLORS } from "@/lib/psi-colors";
+import { PSI_HEX_COLORS, type ConditionBand } from "@/lib/psi-colors";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -66,7 +66,7 @@ export function PsiSeismograph({ score, band }: PsiSeismographProps) {
     if (reducedMotion) {
       // Static render: grid + flat line
       drawGrid(ctx);
-      const color = PSI_HEX_COLORS[propsRef.current.band] ?? "#888";
+      const color = PSI_HEX_COLORS[propsRef.current.band as ConditionBand] ?? "#888";
       const midY = CANVAS_H / 2;
       ctx.beginPath();
       ctx.moveTo(0, midY);
@@ -82,7 +82,7 @@ export function PsiSeismograph({ score, band }: PsiSeismographProps) {
       const { score: s, band: b } = propsRef.current;
       const amp = amplitudeFromScore(s);
       const midY = CANVAS_H / 2;
-      const color = PSI_HEX_COLORS[b] ?? "#888";
+      const color = PSI_HEX_COLORS[b as ConditionBand] ?? "#888";
 
       // Advance phase
       anim.phase += PHASE_SPEED;

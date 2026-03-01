@@ -2,8 +2,15 @@
 
 export type ConditionBand = "BEDROCK" | "STEADY" | "TREMOR" | "FRACTURE" | "CRISIS" | "MELTDOWN";
 
+const CONDITION_BANDS = new Set<string>(["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"]);
+
+/** Type guard for ConditionBand — returns true when the string is a valid band. */
+export function isConditionBand(s: string): s is ConditionBand {
+  return CONDITION_BANDS.has(s);
+}
+
 /** Hex colors for each PSI condition band. */
-export const PSI_HEX_COLORS: Record<string, string> = {
+export const PSI_HEX_COLORS: Record<ConditionBand, string> = {
   BEDROCK: "#22c55e",
   STEADY: "#14b8a6",
   TREMOR: "#eab308",
@@ -13,7 +20,7 @@ export const PSI_HEX_COLORS: Record<string, string> = {
 };
 
 /** Static Tailwind text-color classes for each PSI condition band. */
-export const PSI_BAND_CLASSES: Record<string, string> = {
+export const PSI_BAND_CLASSES: Record<ConditionBand, string> = {
   BEDROCK: "text-green-500",
   STEADY: "text-teal-500",
   TREMOR: "text-yellow-500",
@@ -23,7 +30,7 @@ export const PSI_BAND_CLASSES: Record<string, string> = {
 };
 
 /** Static Tailwind border-l color classes for each PSI condition band. */
-export const PSI_BORDER_CLASSES: Record<string, string> = {
+export const PSI_BORDER_CLASSES: Record<ConditionBand, string> = {
   BEDROCK: "border-l-green-500",
   STEADY: "border-l-teal-500",
   TREMOR: "border-l-yellow-500",
@@ -33,7 +40,7 @@ export const PSI_BORDER_CLASSES: Record<string, string> = {
 };
 
 /** Pulse animation duration (seconds) per band — faster = more urgent. */
-export const PSI_PULSE_DURATION: Record<string, number> = {
+export const PSI_PULSE_DURATION: Record<ConditionBand, number> = {
   BEDROCK: 3,
   STEADY: 3,
   TREMOR: 2,

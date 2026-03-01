@@ -270,7 +270,7 @@ export const StablecoinDataSchema = z.object({
   pegMechanism: z.string(),
   price: z.number().nullable(),
   priceSource: z.string(),
-  priceConfidence: z.string().nullable(),
+  priceConfidence: z.enum(["high", "single-source", "low", "fallback"]).nullable(),
   supplySource: z.string().optional(),
   circulating: PegBucketsSchema,
   circulatingPrevDay: PegBucketsSchema,
@@ -477,8 +477,12 @@ export const ReportCardsResponseSchema = z.object({
       detail: z.string(),
     })),
     ratedDimensions: z.number(),
-    rawInputs: z.object({}).passthrough(),
-    dependencies: z.array(z.any()).optional(),
+    rawInputs: z.object({
+      dependencies: z.array(z.object({ id: z.string() }).passthrough()),
+      navToken: z.boolean(),
+      governanceTier: z.string(),
+    }).passthrough(),
+    dependencies: z.array(z.object({ id: z.string() }).passthrough()).optional(),
     isDefunct: z.boolean(),
   })),
   methodology: z.object({
