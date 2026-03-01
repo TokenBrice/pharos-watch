@@ -102,7 +102,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
   return (
     <div className="space-y-3">
       <div className={CHART_HEIGHT}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
             {/* Quadrant shading */}
             <ReferenceArea

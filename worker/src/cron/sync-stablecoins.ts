@@ -462,6 +462,26 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
     llamaData.peggedAssets = validAssets;
   }
 
+  // Normalize chainCirculating: DL returns peg-bucket objects ({peggedUSD: N})
+  // for current/prev values — flatten to plain numbers so the frontend schema
+  // and components can consume them directly.
+  const CC_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
+  for (const asset of llamaData.peggedAssets) {
+    const cc = asset.chainCirculating as Record<string, Record<string, unknown>> | undefined;
+    if (!cc || typeof cc !== "object") continue;
+    for (const chain of Object.keys(cc)) {
+      const entry = cc[chain];
+      if (!entry || typeof entry !== "object") continue;
+      for (const key of CC_KEYS) {
+        const val = entry[key];
+        if (val && typeof val === "object") {
+          entry[key] = Object.values(val as Record<string, number>)
+            .reduce((s: number, v: number) => s + (Number.isFinite(v) ? v : 0), 0);
+        }
+      }
+    }
+  }
+
   if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...silverTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
   }
