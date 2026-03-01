@@ -21,6 +21,8 @@ import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
 import { handleAuditDepegHistory } from "./api/audit-depeg-history";
 import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { handleReportCards } from "./api/report-cards";
+import { handleYieldRankings } from "./api/yield-rankings";
+import { handleYieldHistory } from "./api/yield-history";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -119,6 +121,14 @@ export function route(
 
   if (path === "/api/report-cards") {
     return handleReportCards(db);
+  }
+
+  if (path === "/api/yield-rankings") {
+    return handleYieldRankings(db);
+  }
+
+  if (path === "/api/yield-history") {
+    return handleYieldHistory(db, url);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution

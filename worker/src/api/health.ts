@@ -46,6 +46,21 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     // dex_liquidity table may not exist yet
   }
 
+  // Check yield_data table freshness
+  try {
+    const yieldAge = await db
+      .prepare("SELECT MIN(? - updated_at) as age FROM yield_data")
+      .bind(now)
+      .first<{ age: number | null }>();
+    const yieldMaxAge = 7200; // 2 hours
+    const yieldAgeSeconds = yieldAge?.age ?? null;
+    const yieldRatio = yieldAgeSeconds != null ? yieldAgeSeconds / yieldMaxAge : Infinity;
+    if (yieldRatio > worstRatioMut) worstRatioMut = yieldRatio;
+    caches["yield-data"] = { ageSeconds: yieldAgeSeconds, maxAge: yieldMaxAge, healthy: yieldRatio <= 1.5 };
+  } catch {
+    // yield_data table may not exist yet
+  }
+
   // Check circuit breaker states
   let circuits: Record<string, CircuitRecord> = {};
   try {
