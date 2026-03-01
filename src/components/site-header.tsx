@@ -5,18 +5,6 @@ import Image from "next/image";
 import { useHealth } from "@/hooks/use-health";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 
-const HEALTH_STYLES = {
-  healthy:  { dot: "bg-green-500", text: "text-green-500", label: "HEALTHY" },
-  degraded: { dot: "bg-amber-500", text: "text-amber-500", label: "DEGRADED" },
-  stale:    { dot: "bg-red-500",   text: "text-red-500",   label: "STALE" },
-} as const;
-
-function formatAge(seconds: number): string {
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  return `${Math.floor(seconds / 3600)}h ago`;
-}
-
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
   return String(n);
@@ -32,8 +20,6 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();
   const { data: dexMap } = useDexLiquidity();
 
-  const style = health ? HEALTH_STYLES[health.status] : null;
-  const syncAge = health?.caches.stablecoins?.ageSeconds;
   const blacklistEvents = health?.blacklist.totalEvents;
   const totalPools = useMemo(
     () => dexMap ? Object.values(dexMap).reduce((sum, d) => sum + d.poolCount, 0) : undefined,
@@ -51,17 +37,6 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
         {(totalPools != null || blacklistEvents != null) && <>: </>}
         <span className="italic text-muted-foreground/40">Pharos sees it all</span>
       </span>
-      {style && health && (
-        <span className="ml-auto flex items-center gap-1.5 text-xs font-mono">
-          <span className={`inline-block h-1.5 w-1.5 rounded-full animate-pulse ${style.dot}`} />
-          <span className={`uppercase ${style.text}`}>{style.label}</span>
-          {syncAge != null && (
-            <span className="text-muted-foreground/60">
-              &middot; synced {formatAge(syncAge)}
-            </span>
-          )}
-        </span>
-      )}
     </div>
   );
 }
