@@ -44,7 +44,6 @@ const DETAIL_SECTIONS = [
   { id: "info", label: "Info" },
   { id: "liquidity", label: "Liquidity" },
   { id: "flows", label: "Flows" },
-  { id: "dews", label: "DEWS" },
   { id: "history", label: "Depeg History" },
 ];
 
@@ -385,7 +384,14 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       {/* Sections outside the card */}
       <section id="overview">
-        {summary && <AiSummary {...summary} />}
+        {summary ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AiSummary {...summary} />
+            {!isNavToken && <DEWSDetail stablecoinId={id} />}
+          </div>
+        ) : (
+          !isNavToken && <DEWSDetail stablecoinId={id} />
+        )}
       </section>
 
       {coin.notices && coin.notices.length > 0 && (
@@ -426,12 +432,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         <FlowSummaryCard stablecoinId={id} />
         <FlowEventFeed stablecoinId={id} limit={10} />
       </section>
-
-      {!isNavToken && (
-        <section id="dews">
-          <DEWSDetail stablecoinId={id} />
-        </section>
-      )}
 
       {!isNavToken && (
         <section id="history">

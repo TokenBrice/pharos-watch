@@ -1,3 +1,5 @@
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
 interface AiSummaryProps {
   title: string;
   text: string;
@@ -11,17 +13,23 @@ export function AiSummary({ title, text, updatedAt }: AiSummaryProps) {
   });
 
   return (
-    <div className="border-t border-b border-border/50 py-5">
-      <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-        {title}
-        <span className="font-normal tracking-wide"> · Last updated {dateline}</span>
-      </p>
-      <p
-        className="text-[1.1rem] leading-relaxed text-foreground/90 italic"
-        style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-      >
-        {text}
-      </p>
-    </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle as="h2">{title}</CardTitle>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            Updated {dateline}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p
+          className="text-[1.05rem] leading-relaxed text-foreground/90 italic"
+          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+        >
+          {text}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
