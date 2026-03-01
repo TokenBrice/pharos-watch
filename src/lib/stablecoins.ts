@@ -26,10 +26,11 @@ interface StablecoinOpts {
   reserves?: import("./types").ReserveSlice[];
   notices?: import("./types").CoinNotice[];
   tags?: string[];
+  yieldConfig?: import("./types").YieldConfig;
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -181,6 +182,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
+    yieldConfig: { yieldSource: "Ethena staking (sUSDe)", yieldType: "lending-vault" },
     geckoId: "ethena-usde",
     collateral: "ETH (including stETH), BTC, and SOL in delta-neutral positions (spot long + short perpetual futures), plus liquid stablecoins (USDC, USDT, USDtb) as non-hedged backing",
     pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
@@ -381,6 +383,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("237", "Hashnote USYC", "USYC", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Hashnote T-bill fund", yieldType: "nav-appreciation" },
     geckoId: "hashnote-usyc",
     deploymentModel: "third-party-bridge",
     collateral: "Short-term U.S. Treasury bills and reverse repo agreements held in segregated prime brokerage accounts",
@@ -452,6 +455,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "ondo-us-dollar-yield",
     deploymentModel: "third-party-bridge",
     yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Ondo T-bill fund", yieldType: "nav-appreciation" },
     collateral: "Short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and bank demand deposits",
     pegMechanism: "Bank wire redemption at NAV-based price with independent verification and collateral agent oversight",
     proofOfReserves: { type: "real-time", url: "https://ondo.finance/usdy", provider: "Ankura Trust" },
@@ -484,6 +488,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("173", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true,
+    yieldConfig: { yieldSource: "BlackRock T-bill fund", yieldType: "nav-appreciation" },
     geckoId: "blackrock-usd-institutional-digital-liquidity-fund",
     deploymentModel: "third-party-bridge",
     collateral: "Cash, U.S. Treasury bills, and repurchase agreements held by Bank of New York Mellon as custodian; tokenized and administered by Securitize",
@@ -856,6 +861,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Figure yield fund", yieldType: "nav-appreciation" },
     geckoId: "ylds",
     collateral: "Short-dated U.S. Treasury securities and overnight Treasury repo agreements held by Figure Certificate Company (FCC), an SEC-registered face-amount certificate company; custodian UMB Bank NA, audited by KPMG LLP; reserves maintained at 100% with 0.5% excess buffer",
     pegMechanism: "Fixed $1.00 face-amount certificate; daily interest accrual at SOFR minus 50bps (minimum 0%), paid monthly in USD or YLDS; 1:1 mint and redemption through Figure Certificate Company with mandatory KYC; registered under the Securities Act of 1933 and Investment Company Act of 1940",
@@ -1319,6 +1325,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
     yieldBearing: true, navToken: true,
+    yieldConfig: { yieldSource: "Re Protocol vault", yieldType: "nav-appreciation" },
     geckoId: "re-protocol-reusd",
     deploymentModel: "native-multichain",
     collateral: "USDC, USDe, and sUSDe deployed into delta-neutral ETH basis trades or short-duration U.S. Treasury bills via the Re Protocol Insurance Capital Layer",
@@ -1429,6 +1436,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("257", "OpenEden TBILL", "TBILL", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "OpenEden T-bill vault", yieldType: "nav-appreciation" },
     geckoId: "openeden-tbill",
     deploymentModel: "native-multichain",
     collateral: "Short-term U.S. Treasury bills (weighted-average maturity <3 months) managed by BNY Investment Management, custodied by BNY; small USD cash buffer",
@@ -1800,6 +1808,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "aegis-yusd",
     deploymentModel: "third-party-bridge",
     yieldBearing: true,
+    yieldConfig: { yieldSource: "Aegis delta-neutral strategy", yieldType: "lending-vault" },
     collateral: "Bitcoin held in institutional custody (Fireblocks, Copper, CEFFU); delta-neutral hedge via COIN-M perpetual futures; funded by user deposits of USDT, USDC, or DAI converted to BTC",
     pegMechanism: "Delta-neutral hedging: BTC spot long + COIN-M perpetual short; 1:1 redemption via Aegis Mint contract; funding rate yield distributed to registered YUSD holders; insurance fund backstop for extreme events",
     proofOfReserves: { type: "real-time", url: "https://aegis.accountable.capital/", provider: "Accountable" },
@@ -2055,6 +2064,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("172", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
+    yieldConfig: { yieldSource: "Blast native yield", yieldType: "governance-set" },
     geckoId: "usdb",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "USDC and USDT bridged to Blast L2; yield from Maker DSR and T-bills",
@@ -2665,6 +2675,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("327", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
     yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Mu Digital AUD yield fund", yieldType: "nav-appreciation" },
     geckoId: "mu-digital-aznd",
     collateral: "USD-denominated Asia Pacific RWAs managed by Golden Hill Asset Management (Singapore-regulated): sovereign debt (BBB+ min), investment-grade Asian corporate and bank bonds (BBB- min), speculative-grade industrial bonds (BB min), and direct lending/private credit; muBOND junior tranche overcollateralizes AZND at ~118%",
     pegMechanism: "KYC-gated 1:1 mint using USDC, USDT, or AUSD; redemptions processed weekly (~7 calendar days) per Singapore fund liquidity calendar; muBOND junior tranche absorbs NAV losses first; insurance fund provides additional backstop; permissionless secondary swaps via DEX partners on Monad",
@@ -2757,6 +2768,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
     yieldBearing: true,
+    yieldConfig: { yieldSource: "Origin lending + DeFi strategies", yieldType: "rebase" },
     geckoId: "origin-dollar",
     governanceQuality: "wrapper",
     collateral: "USDC deployed into DeFi strategies (Morpho, Curve)",
@@ -2819,6 +2831,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
     yieldBearing: true, navToken: true,
+    yieldConfig: { yieldSource: "PikuDAO lending vault", yieldType: "nav-appreciation" },
     geckoId: "usp-yield-optimized-stablecoin",
     collateral: "Diversified basket of off-chain and on-chain yield strategies: BMMF Turkey FX arbitrage (delta-neutral), DeFi protocol allocations (Ethena, Aave, Cap, Giza, Almanak, USD.AI), and cash stablecoins (USDC/USDT) as a buffer; allocation governed by PikuDAO",
     pegMechanism: "NAV-appreciating: starts at $1.00 backing; 90% of strategy yield flows back into backing pool, increasing token value over time; redemptions processed via FIFO smart-contract queue (0.2% fee, settled within 24 hours) with KYC/KYB required for minting and redeeming",
@@ -3415,6 +3428,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     deploymentModel: "third-party-bridge",
     governanceQuality: "wrapper",
     yieldBearing: true, navToken: true,
+    yieldConfig: { yieldSource: "Maple Finance lending", yieldType: "nav-appreciation" },
     collateral: "USDC deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     pegMechanism: "ERC-4626 vault; USDC deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
     links: [
@@ -3438,6 +3452,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     geckoId: "syrupusdt",
     governanceQuality: "wrapper",
     yieldBearing: true, navToken: true,
+    yieldConfig: { yieldSource: "Maple Finance lending", yieldType: "nav-appreciation" },
     collateral: "USDT deposits lent to institutional borrowers via overcollateralized, fixed-rate loans on Maple Finance",
     pegMechanism: "ERC-4626 vault; USDT deposited into Maple lending pools, NAV appreciates with accrued interest; near-instant redemptions via dynamic liquidity buffer",
     links: [
@@ -3458,6 +3473,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("cg-yousd", "Yield Optimizer USD", "yoUSD", "crypto-backed", "centralized-dependent", {
     geckoId: "yield-optimizer-usd",
     yieldBearing: true, navToken: true,
+    yieldConfig: { yieldSource: "Yield Optimizer strategies", yieldType: "nav-appreciation" },
     collateral: "USDC deposits continuously rebalanced across 50+ whitelisted DeFi yield sources on Ethereum, Base, Arbitrum, and Unichain; allocations ranked by Exponential.fi risk-adjusted ratings with per-pool caps (max 50%) and per-protocol caps (max 70%); 5 smart contract audits by Offbeat Security, Hunter Security, Spearbit/Cantina, Aether Labs, and Paladin with no critical or high findings; admin multisig with <4 signers controls protocol whitelisting; backed by Paradigm, Haun Ventures, and Coinbase Ventures",
     pegMechanism: "ERC-4626 vault on Base; USDC deposited via yoGateway, rebalanced cross-chain to whitelisted DeFi pools; NAV appreciates with accrued yield (e.g. ~$1.069 at launch anniversary); instant redemptions up to liquidity buffer, larger withdrawals up to 24h as cross-chain positions unwind",
     links: [
