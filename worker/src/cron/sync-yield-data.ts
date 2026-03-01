@@ -181,7 +181,8 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
       } else {
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
       }
-    } catch {
+    } catch (e) {
+      console.warn("[sync-yield-data] DL yields direct fetch failed:", e);
       await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
     }
   }

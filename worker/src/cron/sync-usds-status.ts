@@ -40,7 +40,8 @@ async function readImplementationSlot(apiKey: string | null): Promise<string | n
     if (!json.result || json.result === "0x") return null;
     // Result is a 32-byte hex — extract the address from the last 20 bytes
     return "0x" + json.result.slice(-40).toLowerCase();
-  } catch {
+  } catch (e) {
+    console.warn("[sync-usds] getImplementationAddress failed:", e);
     return null;
   }
 }
@@ -65,7 +66,8 @@ async function probeFreeze(implAddress: string, apiKey: string | null): Promise<
     const json = (await res.json()) as { result?: string };
     // A successful call returns at least 66 chars (0x + 32 bytes)
     return !!json.result && json.result.length >= 66;
-  } catch {
+  } catch (e) {
+    console.warn("[sync-usds] probeFreeze failed:", e);
     return null;
   }
 }

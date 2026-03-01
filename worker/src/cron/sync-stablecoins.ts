@@ -144,8 +144,8 @@ async function fetchGoldTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
           const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
           if (data.mcap) mcapMap[t.id] = data.mcap;
           if (data.tvl) tvlHistoryMap[t.id] = data.tvl;
-        } catch {
-          // Skip this token
+        } catch (e) {
+          console.warn(`[sync-stablecoins] Protocol fetch failed for ${t.protocolSlug}:`, e);
         }
       });
     await Promise.all(protocolFetches);
@@ -374,8 +374,8 @@ async function fallbackToCgSupply(
         }
       }
     }
-  } catch {
-    // Non-blocking
+  } catch (e) {
+    console.warn("[sync-stablecoins] Failed to restore stale cache data:", e);
   }
 
   // Enrich missing prices
@@ -692,8 +692,8 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
         }
       }
     }
-  } catch {
-    // Non-blocking — never prevent cache write
+  } catch (e) {
+    console.warn("[sync-stablecoins] Staleness check failed:", e);
   }
 
   // Embed live FX fallback rates if available (reuse earlier fetch)

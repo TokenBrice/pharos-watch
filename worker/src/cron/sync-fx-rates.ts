@@ -153,7 +153,8 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
           }
         }
       }
-    } catch {
+    } catch (e) {
+      console.warn("[sync-fx-rates] Secondary FX API (RUB/UAH/ARS) failed:", e);
       // Fall through to hardcoded fallback for RUB
     }
 
@@ -208,7 +209,8 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
       } else if (prevRates["peggedSILVER"]) {
         rates["peggedSILVER"] = prevRates["peggedSILVER"];
       }
-    } catch {
+    } catch (e) {
+      console.warn("[sync-fx-rates] Gold/silver API failed, using cached values:", e);
       // fetch failed — fall back to previously cached values
       if (prevRates["peggedGOLD"]) rates["peggedGOLD"] = prevRates["peggedGOLD"];
       if (prevRates["peggedSILVER"]) rates["peggedSILVER"] = prevRates["peggedSILVER"];

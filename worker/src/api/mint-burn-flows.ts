@@ -282,6 +282,10 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   let riskyNet24h = 0;
   let trackedMcapUsd = 0;
 
+  if (!gradeClassification) {
+    console.warn("Report card cache stale/missing, falling back to hardcoded SAFE_HAVEN_IDS");
+  }
+
   for (const config of MINT_BURN_CONFIGS) {
     const id = config.stablecoinId;
     const agg = coinAgg.get(id);

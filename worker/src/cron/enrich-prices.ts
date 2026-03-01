@@ -296,7 +296,9 @@ export async function enrichMissingPrices(
     try {
       const fxCache = await db.prepare("SELECT value FROM cache WHERE key = 'fx-rates'").first<{ value: string }>();
       if (fxCache) fxRates = JSON.parse(fxCache.value);
-    } catch { /* non-blocking */ }
+    } catch (e) {
+      console.warn("[enrich-prices] Failed to load FX rates for price bounds:", e);
+    }
   }
 
   let pass1Count = 0;
@@ -470,8 +472,8 @@ export async function enrichMissingPrices(
             if (row && (Math.floor(Date.now() / 1000) - row.updated_at) < 3600) {
               shouldCall = false;
             }
-          } catch {
-            // Rate-limit check failed — proceed with call (safe fallback)
+          } catch (e) {
+            console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", e);
           }
         }
 
@@ -523,8 +525,8 @@ export async function enrichMissingPrices(
                     .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('cmc_last_fetch', '1', ?)")
                     .bind(Math.floor(Date.now() / 1000))
                     .run();
-                } catch {
-                  // Non-blocking
+                } catch (e) {
+                  console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
                 }
               }
             } else {

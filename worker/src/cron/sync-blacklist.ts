@@ -104,7 +104,8 @@ async function fetchEvmBalanceAtTag(
     }
 
     return bigIntToDecimal(BigInt(json.result), decimals);
-  } catch {
+  } catch (e) {
+    console.warn("[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
     return null;
   }
 }
@@ -162,7 +163,8 @@ async function fetchBalanceViaDrpc(
     }
 
     return bigIntToDecimal(BigInt(json.result), decimals);
-  } catch {
+  } catch (e) {
+    console.warn("[sync-blacklist] fetchBalanceViaDrpc failed:", e);
     return null;
   }
 }
@@ -227,7 +229,8 @@ async function fetchTronTokenBalance(
     }
 
     return 0; // Account exists but has no balance of this token
-  } catch {
+  } catch (e) {
+    console.warn("[sync-blacklist] fetchTronTokenBalance failed:", e);
     return null;
   }
 }
@@ -519,7 +522,8 @@ async function fetchDestroyAmountFromLog(
       }
     }
     return null;
-  } catch {
+  } catch (e) {
+    console.warn("[sync-blacklist] fetchDestroyAmountFromLog failed:", e);
     return null;
   }
 }

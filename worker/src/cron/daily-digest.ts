@@ -17,6 +17,7 @@ import type { CronResult } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
+import { fetchWithRetry } from "../lib/fetch-retry";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -644,26 +645,31 @@ export async function generateDailyDigest(
   console.log("[daily-digest] Calling Claude API with data:\n" + userPromptContent);
 
   // --- Call Claude API ---
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": anthropicApiKey,
-      "anthropic-version": "2023-06-01",
+  const response = await fetchWithRetry(
+    "https://api.anthropic.com/v1/messages",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": anthropicApiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 800,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: userPromptContent }],
+      }),
+      signal: AbortSignal.timeout(60_000),
     },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 800,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPromptContent }],
-    }),
-    signal: AbortSignal.timeout(60_000),
-  });
+    2,
+    { timeoutMs: 60_000 },
+  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
+  if (!response || !response.ok) {
+    const errorText = response ? await response.text() : "no response after retries";
     throw new Error(
-      `Claude API error ${response.status}: ${errorText.slice(0, 500)}`,
+      `Claude API error ${response?.status ?? "null"}: ${typeof errorText === "string" ? errorText.slice(0, 500) : errorText}`,
     );
   }
 
