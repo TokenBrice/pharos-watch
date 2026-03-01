@@ -46,7 +46,7 @@ interface ContagionGraphProps {
 // ---------------------------------------------------------------------------
 
 const WIDTH = 800;
-const HEIGHT = 520;
+const HEIGHT = 600;
 const PAD = 44; // inner padding so nothing touches the border
 const MAX_NODES = 50;
 const MIN_RADIUS = 10;
@@ -151,13 +151,12 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
     for (let i = 0; i < 300; i++) sim.tick();
 
-    // Post-simulation overlap resolution — guarantees no overlapping nodes
-    const MAX_PASSES = 120;
+    // Post-simulation overlap resolution — two-phase per pass to handle
+    // boundary re-collisions: separate pairs → clamp → separate again.
+    const MAX_PASSES = 100;
 
-    for (let pass = 0; pass < MAX_PASSES; pass++) {
+    function separatePairs(): number {
       let overlaps = 0;
-
-      // Push overlapping node pairs apart (overshoot by 1px to avoid re-collapse after clamping)
       for (let i = 0; i < simNodes.length; i++) {
         for (let j = i + 1; j < simNodes.length; j++) {
           const a = simNodes[i];
@@ -170,7 +169,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           if (dist < minDist) {
             overlaps++;
             if (dist > 0.1) {
-              const push = (minDist - dist) / 2 + 1;
+              const push = (minDist - dist) / 2 + 0.5;
               const nx = dx / dist;
               const ny = dy / dist;
               a.x = (a.x ?? 0) - nx * push;
@@ -178,9 +177,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               b.x = (b.x ?? 0) + nx * push;
               b.y = (b.y ?? 0) + ny * push;
             } else {
-              // Coincident nodes — nudge in a deterministic direction
               const angle = ((i * 7 + j * 13) % 100) / 100 * Math.PI * 2;
-              const push = minDist / 2 + 1;
+              const push = minDist / 2;
               a.x = (a.x ?? 0) - Math.cos(angle) * push;
               a.y = (a.y ?? 0) - Math.sin(angle) * push;
               b.x = (b.x ?? 0) + Math.cos(angle) * push;
@@ -189,14 +187,24 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           }
         }
       }
+      return overlaps;
+    }
 
-      // Clamp to padded bounds
+    function clampToBounds() {
       for (const n of simNodes) {
         n.x = Math.max(PAD + n.r, Math.min(WIDTH - PAD - n.r, n.x ?? WIDTH / 2));
         n.y = Math.max(PAD + n.r, Math.min(HEIGHT - PAD - n.r, n.y ?? HEIGHT / 2));
       }
+    }
 
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      // Phase 1: push overlapping pairs apart
+      const overlaps = separatePairs();
       if (overlaps === 0) break;
+      // Phase 2: clamp to bounds, then fix any overlaps the clamp re-introduced
+      clampToBounds();
+      separatePairs();
+      clampToBounds();
     }
 
     const posMap = new Map<string, { x: number; y: number }>();

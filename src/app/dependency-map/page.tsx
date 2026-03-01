@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const DependencyMapClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
-  { loading: () => <Skeleton className="h-[520px] w-full rounded-lg" /> },
+  { loading: () => <Skeleton className="h-[600px] w-full rounded-lg" /> },
 );
 
 const description =
