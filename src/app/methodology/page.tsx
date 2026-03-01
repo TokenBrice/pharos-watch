@@ -646,6 +646,88 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
+      {/* Mint/Burn Flow Scoring */}
+      <Card className="rounded-xl border-l-[3px] border-l-orange-500">
+        <CardHeader>
+          <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            Pharos tracks on-chain Transfer events (mints from address(0) and burns to address(0)) for major stablecoins
+            via Etherscan. These raw events are aggregated into hourly buckets and scored to detect abnormal flow
+            patterns that may signal market stress or capital rotation.
+          </p>
+
+          {/* Flow Intensity Score */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Flow Intensity Score (FIS)</h3>
+            <p>
+              Per-coin score measuring how far current mint/burn activity deviates from its historical baseline.
+              Ranges from 0 (extreme net burning) to 100 (extreme net minting), with 50 representing normal activity.
+            </p>
+            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              denominator = max(baselineDailyAbs &times; 0.3, $1M)<br />
+              z = (currentDailyNet &minus; baselineDailyNet) / denominator<br />
+              FIS = clamp(0, 100, 50 + z &times; 25)
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground">Baseline period</span> &mdash; 30-day rolling average of daily net flows and absolute volumes</li>
+              <li><span className="text-foreground">Minimum data</span> &mdash; requires 7 days of history; returns null otherwise</li>
+              <li><span className="text-foreground">Floor</span> &mdash; denominator is floored at $1M to prevent noise in low-volume coins</li>
+              <li><span className="text-foreground">Interpretation</span> &mdash; FIS &lt; 30 = significant net burning, FIS &gt; 70 = significant net minting</li>
+            </ul>
+          </div>
+
+          {/* Bank Run Gauge */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
+            <p>
+              Market-cap-weighted composite of all tracked coins&apos; FIS values, producing a single ecosystem-wide
+              reading. The gauge score maps to one of seven condition bands:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4 font-medium text-foreground">Band</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Score Range</th>
+                    <th className="py-2 font-medium text-foreground">Meaning</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr><td className="py-1.5 pr-4 text-foreground">CRISIS</td><td className="py-1.5 pr-4">0&ndash;15</td><td className="py-1.5">Severe coordinated burning across major coins</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">STRESS</td><td className="py-1.5 pr-4">15&ndash;30</td><td className="py-1.5">Significant net outflows from the ecosystem</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">CAUTIOUS</td><td className="py-1.5 pr-4">30&ndash;45</td><td className="py-1.5">Mild net burning, elevated caution</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">NEUTRAL</td><td className="py-1.5 pr-4">45&ndash;55</td><td className="py-1.5">Normal activity, balanced mints and burns</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">HEALTHY</td><td className="py-1.5 pr-4">55&ndash;70</td><td className="py-1.5">Moderate net inflows</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">CONFIDENT</td><td className="py-1.5 pr-4">70&ndash;85</td><td className="py-1.5">Strong net minting, capital entering the ecosystem</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">SURGE</td><td className="py-1.5 pr-4">85&ndash;100</td><td className="py-1.5">Exceptional minting activity across the market</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Returns null when any tracked coin lacks sufficient data (fewer than 7 days of history),
+              since a partial composite would be misleading.
+            </p>
+          </div>
+
+          {/* Flight-to-quality */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Flight-to-Quality Detection</h3>
+            <p>
+              Detects capital rotation from risky to safe-haven stablecoins &mdash; a pattern typically seen during
+              market stress when holders move funds from algorithmic or less-established coins into fully-backed
+              centralized stablecoins.
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li><span className="text-foreground">Safe classification</span> &mdash; centralized governance with real-world-asset backing (USDT, USDC, FDUSD, PYUSD)</li>
+              <li><span className="text-foreground">Dual threshold</span> &mdash; active when risky coins have &gt;$100M net outflows AND safe coins have &gt;$100M net inflows simultaneously over 24h</li>
+              <li><span className="text-foreground">Intensity scaling</span> &mdash; min(100, |riskyOutflows| / $1B &times; 100), reflecting the magnitude of the rotation</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Contagion Stress Test */}
       <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>

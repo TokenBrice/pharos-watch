@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, Droplets, ExternalLink, FlaskConical, Gauge, Github, Layers, Network, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import { Activity, BarChart3, Droplets, ExternalLink, Flame, FlaskConical, Gauge, Github, Layers, Network, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
@@ -9,7 +9,7 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 
 const DATA_SOURCE_GROUPS = [
   { label: "Supply & Price", sources: "DefiLlama, CoinGecko, CoinMarketCap, DexScreener" },
-  { label: "On-chain Events", sources: "Etherscan v2, TronGrid" },
+  { label: "On-chain Events", sources: "Etherscan v2 (freeze events, mint/burn flows), TronGrid" },
   { label: "Ratings & Reference", sources: "Bluechip, ECB, fawazahmed0/exchange-api, gold-api.com" },
   { label: "DEX Data", sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, GeckoTerminal, DexScreener" },
 ] as const;
@@ -82,7 +82,7 @@ export default function AboutPage() {
                 name: "Where does Pharos get its data?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2 and TronGrid for on-chain freeze events; Bluechip for safety ratings; ECB and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; and DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data.",
+                  text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2 and TronGrid for on-chain freeze events and mint/burn flow tracking; Bluechip for safety ratings; ECB and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; and DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data.",
                 },
               },
             ],
@@ -238,6 +238,20 @@ export default function AboutPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 Pool depth, volume, quality-adjusted TVL, durability, and cross-chain presence scored 0&ndash;100
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-xl">
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Flame className="h-5 w-5 text-orange-500" />
+                <Link href="/flows" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
+                  Mint/Burn Flows
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                On-chain Transfer event monitoring via Etherscan for real-time mint and burn flow tracking, with a Bank Run Gauge and flight-to-quality detection
               </p>
             </CardContent>
           </Card>

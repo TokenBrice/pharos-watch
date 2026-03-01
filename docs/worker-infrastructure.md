@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 11 cron jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 12 cron jobs across 4 trigger slots.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -153,6 +153,9 @@ crons = [
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
+| `sync-mint-burn` | `syncMintBurn()` | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
+
+**Shared Etherscan rate limiter:** Both `sync-blacklist` and `sync-mint-burn` use the Etherscan V2 API. To stay within the free-tier 5 req/sec cap, a single `createRateLimiter(4)` instance is created at the trigger level and passed into both jobs. This ensures combined Etherscan requests from both crons never exceed 4 req/sec, leaving headroom for retries.
 
 ### Trigger 3: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
@@ -399,7 +402,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 
 ### GET /api/status
 
-Returns recent `cron_runs` rows for operational monitoring. Tracks 11 cron jobs via the `CRON_INTERVALS` map:
+Returns recent `cron_runs` rows for operational monitoring. Tracks 12 cron jobs via the `CRON_INTERVALS` map:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -408,6 +411,7 @@ Returns recent `cron_runs` rows for operational monitoring. Tracks 11 cron jobs 
 | `sync-fx-rates` | 900s (15min) | `*/15 * * * *` |
 | `stability-index` | 900s (15min) | `*/15 * * * *` |
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
+| `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
 | `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
@@ -449,7 +453,10 @@ A job is marked "unhealthy" if its last run had `status='error'` or if the last 
 | `worker/src/lib/chain-rpcs.ts` | Chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
 | `worker/src/lib/coingecko.ts` | CoinGecko init: free/pro URL switching, auth headers |
 | `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → DefiLlama ID mapping (17 coins) |
+| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn contract configs: stablecoin/chain mappings, mint addresses, decimals |
+| `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
+| `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Etherscan Transfer event scanning, hourly aggregation |
 | `worker/src/cron/sync-usds-status.ts` | USDS freeze monitor: ERC-1967 proxy inspection |
 | `worker/src/cron/sync-bluechip.ts` | Bluechip ratings: batch fetch from bluechip.org |
 | `worker/migrations/0001_initial.sql` | `cache`, `blacklist_events`, `blacklist_sync_state` tables |

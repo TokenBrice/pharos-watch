@@ -795,6 +795,145 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
 
 ---
 
+### `GET /api/mint-burn-flows`
+
+Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin Flow Intensity Scores, and hourly timeseries. Updated every 20 minutes by the sync cron.
+
+**Cache:** standard
+
+**Optional query parameters**
+
+| Param | Type | Default | Bounds | Description |
+|-------|------|---------|--------|-------------|
+| `stablecoin` | `string` | — | — | Filter to a single stablecoin ID. Changes response shape to per-coin mode |
+| `hours` | `integer` | `24` | 1–720 | Lookback window in hours |
+
+**Response (aggregate mode — no `stablecoin` param)**
+
+```json
+{
+  "gauge": {
+    "score": 52.3,
+    "band": "NEUTRAL",
+    "flightToQuality": false,
+    "flightIntensity": 0,
+    "trackedCoins": 8,
+    "trackedMcapUsd": 215000000000
+  },
+  "coins": [CoinFlow, ...],
+  "hourly": [HourlyFlow, ...],
+  "updatedAt": 1772000000
+}
+```
+
+**`gauge`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | `number \| null` | Market-cap-weighted composite FIS (0–100). `null` when insufficient data |
+| `band` | `string \| null` | Gauge band: `"CRISIS"`, `"STRESS"`, `"CAUTIOUS"`, `"NEUTRAL"`, `"HEALTHY"`, `"CONFIDENT"`, `"SURGE"` |
+| `flightToQuality` | `boolean` | Whether flight-to-quality conditions are active |
+| `flightIntensity` | `number` | Flight-to-quality intensity (0–100). 0 when not active |
+| `trackedCoins` | `number` | Number of stablecoins tracked for mint/burn flows |
+| `trackedMcapUsd` | `number` | Combined market cap of tracked coins (USD) |
+
+**`CoinFlow`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `stablecoinId` | `string` | Pharos stablecoin ID |
+| `symbol` | `string` | Token symbol |
+| `flowIntensity` | `number \| null` | Flow Intensity Score (0–100). `null` if < 7 days of data |
+| `netFlow24hUsd` | `number` | Net flow over the requested window (USD, positive = net minting) |
+| `mintVolume24hUsd` | `number` | Total mint volume (USD) |
+| `burnVolume24hUsd` | `number` | Total burn volume (USD) |
+| `mintCount24h` | `number` | Number of mint events |
+| `burnCount24h` | `number` | Number of burn events |
+| `netFlow7dUsd` | `number` | 7-day net flow (USD) |
+| `largestEvent24h` | `object \| null` | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }` |
+
+**`HourlyFlow`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `hourTs` | `number` | Unix seconds (start of hour) |
+| `netFlowUsd` | `number` | Net flow for this hour (USD) |
+| `mintVolumeUsd` | `number` | Mint volume for this hour (USD) |
+| `burnVolumeUsd` | `number` | Burn volume for this hour (USD) |
+
+**Response (per-coin mode — with `stablecoin` param)**
+
+Returns per-chain breakdown and hourly timeseries for a single coin. Returns `404` if the stablecoin is not tracked for mint/burn flows.
+
+```json
+{
+  "stablecoinId": "1",
+  "symbol": "USDT",
+  "mintVolumeUsd": 50000000,
+  "burnVolumeUsd": 30000000,
+  "netFlowUsd": 20000000,
+  "mintCount": 12,
+  "burnCount": 8,
+  "chains": [{ "chainId": "ethereum", "mintVolumeUsd": 40000000, ... }],
+  "hourly": [HourlyFlow, ...],
+  "updatedAt": 1772000000
+}
+```
+
+---
+
+### `GET /api/mint-burn-events`
+
+Paginated list of individual mint/burn Transfer events for a specific stablecoin. Events are sourced from on-chain logs via Etherscan.
+
+**Cache:** realtime
+
+**Required query parameter**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `stablecoin` | `string` | Pharos stablecoin ID (required) |
+
+**Optional query parameters**
+
+| Param | Type | Default | Bounds | Description |
+|-------|------|---------|--------|-------------|
+| `direction` | `string` | — | `"mint"` or `"burn"` | Filter by direction |
+| `chain` | `string` | — | — | Filter by chain ID (e.g. `"ethereum"`) |
+| `minAmount` | `number` | — | — | Minimum USD amount |
+| `limit` | `integer` | `50` | 1–500 | Max results |
+| `offset` | `integer` | `0` | — | Pagination offset |
+
+**Response**
+
+```json
+{
+  "events": [MintBurnEvent, ...],
+  "total": 1234
+}
+```
+
+Results are ordered by `timestamp` descending (most recent first).
+
+**`MintBurnEvent`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Composite ID: `{chainId}-{txHash}-{logIndex}` |
+| `stablecoinId` | `string` | Pharos stablecoin ID |
+| `symbol` | `string` | Token symbol |
+| `chainId` | `string` | Chain identifier (e.g. `"ethereum"`) |
+| `direction` | `"mint" \| "burn"` | Whether tokens were minted or burned |
+| `amount` | `number` | Amount in native token units |
+| `amountUsd` | `number \| null` | USD value at time of event |
+| `counterparty` | `string \| null` | Non-zero address (recipient for mint, sender for burn) |
+| `txHash` | `string` | Transaction hash |
+| `blockNumber` | `number` | Block number |
+| `timestamp` | `number` | Unix seconds |
+| `explorerTxUrl` | `string` | Block explorer URL for the transaction |
+
+---
+
 ## Admin Endpoints
 
 These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker secret. Unauthorized requests receive a `401` response. They are not intended for public consumption.
