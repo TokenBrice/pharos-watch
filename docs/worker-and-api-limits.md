@@ -20,7 +20,7 @@ The entire backend runs on a single Cloudflare Worker script.
 | **D1 connections per invocation** | 6 simultaneous | |
 | **Environment variables** | Unlimited | |
 
-> **Key constraint**: The 6-concurrent-fetch limit is the most commonly hit platform wall. Any new feature that fans out to multiple external APIs in parallel must count fetches carefully.
+> **Key constraint**: The 6-concurrent-fetch limit is the most commonly hit platform wall. Any new feature that fans out to multiple external APIs in parallel must count fetches carefully. **This limit is shared across all `ctx.waitUntil()` jobs on the same cron slot** — e.g. `sync-dex-liquidity` and `sync-yield-data` both run on `10,40` and must budget their combined connections to stay under 6. Consume response bodies promptly to release connections for sibling jobs.
 
 ---
 

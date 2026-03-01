@@ -36,15 +36,23 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 ### Additional Metadata
 
+Key fields on `StablecoinMeta` (see `src/lib/types.ts` for the full 22-field interface):
+
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
 - `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)
 - `geckoId?: string` — CoinGecko coin ID for price/mcap lookups (commodity and non-DefiLlama tokens)
+- `cmcSlug?: string` — CoinMarketCap slug for fallback price lookups
 - `protocolSlug?: string` — DefiLlama protocol slug for TVL/mcap data (commodity tokens)
 - `proofOfReserves?: ProofOfReserves` — proof of reserves configuration
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
-- `contracts?: ContractDeployment[]` — on-chain contract addresses per chain (used for supply verification and displayed on detail page)
+- `contracts?: ContractDeployment[]` — on-chain contract addresses per chain
+- `dependencies?: Dependency[]` — upstream stablecoin dependencies (for report cards)
+- `canBeBlacklisted?: boolean | "possible"` — blacklist capability (for resilience scoring)
+- `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
+- `reserves?: ReserveComposition` — reserve composition data
+- `yieldConfig?: YieldConfig` — yield intelligence configuration
 
 ### Bluechip Grade
 

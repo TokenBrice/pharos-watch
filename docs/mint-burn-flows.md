@@ -54,7 +54,7 @@ On-chain mint and burn event tracker for stablecoins. Detects Transfer events (a
 | FRXUSD | 235 | 18 | Risky | Transfer |
 | BOLD | 269 | 18 | Risky | Transfer |
 
-Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — used for flight-to-quality detection.
+Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
 
 ### Event Detection
 
@@ -265,7 +265,7 @@ Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
 
 **Cache:** `CACHE_PROFILES.realtime` (~900s freshness with 15-min staleness window)
 
-### POST /api/backfill-mint-burn-prices (admin)
+### GET /api/backfill-mint-burn-prices (admin)
 
 Backfills `amount_usd` for events that were synced without price data. Requires `X-Admin-Key` header.
 

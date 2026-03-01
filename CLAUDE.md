@@ -53,6 +53,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 - **Classification labels/colors**: all in `src/lib/classification.ts` — never define locally
 - **Supply helpers**: use `getCirculatingRaw()` from `src/lib/supply.ts`; all values are already in USD (DL converts)
 - **Hook timing**: `staleTime = cron interval`, `refetchInterval = 2× cron interval`
+- **Workers 6-connection limit is per-cron-trigger, not per-job** — all `ctx.waitUntil()` jobs on the same cron slot share one 6-connection pool. Consume response bodies before starting new fetch batches to release connections for sibling jobs.
 - **Worker imports `src/lib/`** — root tsconfig excludes `worker/` to avoid D1 type conflicts
 - **DL list vs detail API**: The list endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values already in USD for all peg types. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs. Do NOT multiply list endpoint values by price — that double-converts.
 - **No supply overrides**: Supply data comes from DefiLlama only. No on-chain, CMC, or DEX overrides. Prices fall back to CG → CMC → DexScreener when DL has no price.
@@ -80,7 +81,7 @@ Read these when working on related code:
 - **`docs/blacklist-tracker.md`** — Multi-chain blacklist/freeze tracking, contract configs, balance enrichment, sync flow
 - **`docs/mint-burn-flows.md`** — Mint/burn flow tracker: on-chain event sync, Flow Intensity Score, Bank Run Gauge, flight-to-quality detection, contract configs, scoring, API endpoints, frontend
 - **`docs/yield-intelligence.md`** — Yield pipeline: three-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
-- **`docs/dews.md`** — DEWS formula, 7 sub-signals, threat bands, normalization, API endpoint
+- **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 15 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**

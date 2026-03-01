@@ -95,9 +95,9 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 | Profile | `Cache-Control` header | Used by |
 |---------|----------------------|---------|
-| Realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary |
-| Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status |
-| Slow | `public, s-maxage=3600, max-age=300` | supply-history, daily-digest, bluechip-ratings, dex-liquidity-history |
+| Realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary, mint-burn-events |
+| Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
+| Slow | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, digest-snapshot |
 
 ### Admin Auth
 
@@ -121,7 +121,7 @@ Three admin endpoints are handled directly in `index.ts` (not via the router):
 
 ## Cron Scheduling
 
-Cloudflare Workers supports a maximum of **4 cron triggers**. All 4 slots are used. Adding a new job requires piggybacking on an existing trigger with a minute check.
+Cloudflare Workers supports a maximum of **5 cron triggers**. 4 of 5 slots are used. Adding a new job can use the remaining slot, or piggyback on an existing trigger with a minute check.
 
 ### wrangler.toml Triggers
 
@@ -166,7 +166,7 @@ crons = [
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/sync-dex-liquidity.ts` | `docs/dex-liquidity.md` |
 | `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/yield-intelligence.md` |
 
-**Dependency:** `sync-yield-data` is chained after `sync-dex-liquidity` via `dexSync.then(...)` — yield scoring depends on fresh DEX liquidity data for safety scores.
+**Connection budget:** Both jobs run concurrently via separate `ctx.waitUntil()` calls and share the Workers 6-connection limit. `sync-dex-liquidity` consumes its DeFiLlama response bodies before starting the Curve batch (releasing 2 connections) so the Curve batch uses only 4, leaving 2 connections for `sync-yield-data`'s concurrent fetches. When adding fetch-heavy work to this slot, audit the combined connection count across all jobs.
 
 ### Trigger 4: `0 8 * * *` (daily at 08:00 UTC)
 

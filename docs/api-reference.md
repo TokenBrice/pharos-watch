@@ -1114,7 +1114,7 @@ Backfills CoinGecko historical prices into the price_cache table for more accura
 | `batchSize` | `integer` | `10` | Coins per batch |
 | `batch` | `integer` | `0` | Batch offset for chunked processing |
 
-### `POST /api/backfill-mint-burn-prices`
+### `GET /api/backfill-mint-burn-prices`
 
 Backfills `amount_usd` for all mint-burn events with NULL values using current prices from `price_cache`. Recalculates affected hourly aggregation buckets.
 

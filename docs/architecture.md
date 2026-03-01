@@ -26,6 +26,7 @@
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin FIS, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
 | `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=`, `?minAmount=`, `?limit=N&offset=M`) |
+| `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
 | `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
 | `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
 | `GET /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
@@ -33,7 +34,10 @@
 | `GET /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (requires `X-Admin-Key`) |
 | `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `GET /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `GET /api/backfill-dews` | Admin: backfill DEWS scores (requires `X-Admin-Key`) |
+| `GET /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
 | `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
 
 ## Full File Tree
 
@@ -145,6 +149,9 @@ src/                              # Next.js frontend (static export)
 │   ├── peg-heatmap.tsx           # Real-time peg deviation heatmap
 │   ├── depeg-feed.tsx            # Depeg event list
 │   ├── depeg-history.tsx         # Per-coin depeg history (detail page)
+│   ├── dews-badge.tsx            # DEWS threat level badge
+│   ├── dews-detail.tsx           # DEWS detail breakdown (detail page)
+│   ├── dews-summary.tsx          # DEWS summary card (homepage)
 │   ├── blacklist-table.tsx       # Blacklist event table
 │   ├── blacklist-chart.tsx       # Blacklist event chart
 │   ├── blacklist-stats.tsx       # Blacklist summary stats
@@ -161,6 +168,7 @@ src/                              # Next.js frontend (static export)
 │   ├── coin-notice.tsx           # Coin-specific warning/info notices (detail page)
 │   ├── feature-highlights.tsx    # Homepage feature highlight cards
 │   ├── section-error-boundary.tsx # Section-level error boundary wrapper
+│   ├── site-header.tsx           # Site header with nav and search
 │   ├── bluechip-rating-card.tsx  # Bluechip safety rating card (detail page)
 │   ├── bluechip-box.tsx          # Bluechip rating box (homepage)
 │   ├── bluechip-header-badge.tsx # Bluechip grade badge in header
@@ -218,6 +226,8 @@ src/                              # Next.js frontend (static export)
 │   ├── use-daily-digest.ts       # GET /api/daily-digest
 │   ├── use-digest-archive.ts    # GET /api/digest-archive
 │   ├── use-digest-snapshot.ts    # GET /api/digest-snapshot (per-date context)
+│   ├── use-endpoint-probes.ts    # Parallel endpoint health probes (status page)
+│   ├── use-health.ts             # GET /api/health (auto-refresh 60s)
 │   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
@@ -229,6 +239,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
 │   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
 │   ├── use-preferences.ts        # User preference state (persistent settings)
+│   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
 │   ├── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
 │   └── use-yield-history.ts      # GET /api/yield-history (per-coin yield history)
@@ -240,7 +251,7 @@ src/                              # Next.js frontend (static export)
     ├── reserve-templates.ts      # Reserve composition templates, getReserves(), deriveDependencies() (reserve slices → DependencyWeight[])
     ├── stablecoins.ts            # Master list of ~145 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
-    ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
+    ├── dead-stablecoins.ts       # 79 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
     ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
@@ -266,7 +277,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (31 total)
+├── migrations/                   # D1 SQL migrations (34 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -285,9 +296,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
+    │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
-    │   ├── fetch-tbill-rate.ts   # US Treasury T-bill rate fetcher (FRED API)
+    │   ├── fetch-tbill-rate.ts   # US Treasury T-bill rate fetcher (Fiscal Data API)
     │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
     │   └── sync-mint-burn.ts     # On-chain mint/burn Transfer event sync via Etherscan (every 20min)
     ├── api/
@@ -314,6 +326,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-stability-index.ts # GET /api/backfill-stability-index (admin)
     │   ├── backfill-cg-prices.ts # GET /api/backfill-cg-prices (admin)
     │   ├── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
+    │   ├── backfill-dews.ts     # GET /api/backfill-dews (admin)
+    │   ├── backfill-mint-burn-prices.ts # GET /api/backfill-mint-burn-prices (admin)
+    │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
     │   ├── yield-rankings.ts    # GET /api/yield-rankings
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
@@ -331,6 +346,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
+        ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── coingecko.ts            # CoinGecko API key initialization (shared across crons)
         ├── coingecko-onchain.ts   # CoinGecko Onchain API client (12 chains, pool discovery, locked liquidity)

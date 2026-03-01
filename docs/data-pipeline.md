@@ -18,7 +18,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`.
+Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`.
 
 ### DefiLlama list vs detail API
 
@@ -50,7 +50,7 @@ Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) 
 3. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
 4. **Pass 3:** CoinGecko ID -> CoinGecko direct API
 5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
-6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price cap: $1K for fiat stables, $100K for gold, capped at 10 searches per run)
+6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price bounds via `isReasonablePrice()`: e.g. $0.01–$1.19 for USD pegs, $100–$100K for gold, per-currency thresholds for other fiat pegs; capped at 10 searches per run)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 

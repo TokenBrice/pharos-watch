@@ -240,7 +240,7 @@ Clickable rows use:
 
 ### Number Formatting
 
-Use the shared formatters from `src/lib/formatters.ts`:
+Use the shared formatters from `src/lib/format.ts`:
 
 - `formatCurrency(value)` → `$1.2M`, `$45.6B`
 - `formatPercentChange(current, previous)` → `↑ +2.5%` or `↓ -1.2%`

@@ -19,8 +19,9 @@ Defined in `.github/workflows/deploy-cloudflare.yml`. The `deploy-pages` job run
 
 1. `npm run lint` — ESLint must pass (warnings OK, errors block)
 2. `npm test` — Vitest must pass (exit code 0)
-3. `npm run build` — Next.js static export (also runs TypeScript type-checking)
-4. Deploy to Cloudflare Pages
+3. `npx tsx scripts/sync-digests.ts` — Fetch latest digests for SSG
+4. `npm run build` — Next.js static export (also runs TypeScript type-checking)
+5. Deploy to Cloudflare Pages
 
 The `deploy-worker` job runs first (deploy-pages has `needs: deploy-worker`). It installs root deps (`npm ci`) for shared `src/lib/` type resolution, then installs worker deps and type-checks (`npx tsc --noEmit`).
 
@@ -64,6 +65,7 @@ Located in `worker/src/lib/__tests__/`. These test worker-side pure functions.
 | `mint-burn-scoring.test.ts` | `worker/src/lib/mint-burn-scoring.ts` | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand` |
 | `evm-logs.test.ts` | `worker/src/lib/evm-logs.ts` | `buildTopicParams` — topic filter construction for EVM log queries |
 | `resolve-market-cap.test.ts` | `worker/src/lib/resolve-market-cap.ts` | `resolveMarketCap` — CG vs computed mcap agreement, frozen data detection |
+| `dews.test.ts` | `worker/src/lib/dews.ts` | `computeDEWS` — DEWS scoring, sub-signal computation, threat band assignment |
 
 ### API Contract Tests
 
