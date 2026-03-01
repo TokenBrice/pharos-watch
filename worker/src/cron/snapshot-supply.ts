@@ -51,7 +51,7 @@ export async function snapshotSupply(db: D1Database): Promise<CronResult> {
     stmts.push(
       db
         .prepare(
-          "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)"
+          "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)"
         )
         .bind(asset.id, snapshotDate, circulatingUsd, price)
     );
