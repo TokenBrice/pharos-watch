@@ -27,6 +27,7 @@ import { handleMintBurnFlows } from "./api/mint-burn-flows";
 import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleStressSignals } from "./api/stress-signals";
+import { handleBackfillDEWS } from "./api/backfill-dews";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -149,6 +150,10 @@ export function route(
 
   if (path === "/api/stress-signals") {
     return handleStressSignals(db, url);
+  }
+
+  if (path === "/api/backfill-dews") {
+    return handleBackfillDEWS(db, url, adminKey, request);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution
