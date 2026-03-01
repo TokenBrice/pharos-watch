@@ -101,7 +101,7 @@ describe("computeDEWS", () => {
     const result = computeDEWS(
       baseInput({
         weightedBalanceRatio: 0.97,
-        avgPoolStress: 0.02,
+        avgPoolStress: 2,
         topPools: [],
         liquidityScore: 80,
         liquidityScore7dAgo: 78,
@@ -157,7 +157,7 @@ describe("computeDEWS", () => {
     const result = computeDEWS(
       baseInput({
         weightedBalanceRatio: 0.45,
-        avgPoolStress: 0.7,
+        avgPoolStress: 70,
         topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
       }),
     );

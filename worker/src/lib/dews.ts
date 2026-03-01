@@ -205,7 +205,8 @@ function computePoolSignal(input: DEWSInput): SignalResult {
 
   // Invert balance ratio so higher = more stress
   const balanceStress = (1 - input.weightedBalanceRatio) * 100;
-  const poolStressScore = input.avgPoolStress * 100;
+  // avg_pool_stress is already 0-100 in the DB
+  const poolStressScore = input.avgPoolStress;
 
   // Worst single pool imbalance
   let worstPoolSignal = 0;
