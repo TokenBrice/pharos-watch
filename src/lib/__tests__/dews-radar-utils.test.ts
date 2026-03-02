@@ -12,32 +12,32 @@ import {
 
 describe("scoreToRadius", () => {
   it("returns innerR when score is at band minimum", () => {
-    expect(scoreToRadius(16, "WATCH")).toBeCloseTo(75);
+    expect(scoreToRadius(16, "WATCH")).toBeCloseTo(178);
   });
   it("returns outerR when score is at band maximum", () => {
-    expect(scoreToRadius(35, "WATCH")).toBeCloseTo(108);
+    expect(scoreToRadius(35, "WATCH")).toBeCloseTo(208);
   });
   it("returns midpoint for mid-band score", () => {
-    expect(scoreToRadius(25, "WATCH")).toBeGreaterThan(75);
-    expect(scoreToRadius(25, "WATCH")).toBeLessThan(108);
+    expect(scoreToRadius(25, "WATCH")).toBeGreaterThan(178);
+    expect(scoreToRadius(25, "WATCH")).toBeLessThan(208);
   });
   it("returns innerR for ALERT minimum", () => {
-    expect(scoreToRadius(36, "ALERT")).toBeCloseTo(118);
+    expect(scoreToRadius(36, "ALERT")).toBeCloseTo(143);
   });
   it("returns outerR for ALERT maximum", () => {
-    expect(scoreToRadius(55, "ALERT")).toBeCloseTo(151);
+    expect(scoreToRadius(55, "ALERT")).toBeCloseTo(175);
   });
   it("returns innerR for WARNING minimum", () => {
-    expect(scoreToRadius(56, "WARNING")).toBeCloseTo(161);
+    expect(scoreToRadius(56, "WARNING")).toBeCloseTo(95);
   });
   it("returns outerR for WARNING maximum", () => {
-    expect(scoreToRadius(75, "WARNING")).toBeCloseTo(194);
+    expect(scoreToRadius(75, "WARNING")).toBeCloseTo(140);
   });
   it("returns innerR for DANGER minimum", () => {
-    expect(scoreToRadius(76, "DANGER")).toBeCloseTo(204);
+    expect(scoreToRadius(76, "DANGER")).toBeCloseTo(45);
   });
   it("returns outerR for DANGER maximum", () => {
-    expect(scoreToRadius(100, "DANGER")).toBeCloseTo(240);
+    expect(scoreToRadius(100, "DANGER")).toBeCloseTo(90);
   });
 });
 
@@ -58,6 +58,28 @@ describe("deterministicOffset", () => {
   it("handles empty string without throwing", () => {
     expect(() => deterministicOffset("")).not.toThrow();
     expect(deterministicOffset("")).toBe(0);
+  });
+});
+
+describe("deterministicRadiusOffset", () => {
+  it("returns the same value for the same id and zoneWidth", () => {
+    expect(deterministicRadiusOffset("42", 26)).toBe(deterministicRadiusOffset("42", 26));
+  });
+  it("returns a value in [0, zoneWidth)", () => {
+    const result = deterministicRadiusOffset("123", 26);
+    expect(result).toBeGreaterThanOrEqual(0);
+    expect(result).toBeLessThan(26);
+  });
+  it("returns 0 for empty string", () => {
+    expect(deterministicRadiusOffset("", 26)).toBe(0);
+  });
+  it("uses the same charCode sum as deterministicOffset", () => {
+    // "1" has charSum=49; 49 % 26 = 23
+    expect(deterministicRadiusOffset("1", 26)).toBe(23);
+  });
+  it("respects the zoneWidth parameter", () => {
+    // "1" charSum=49; 49 % 10 = 9
+    expect(deterministicRadiusOffset("1", 10)).toBe(9);
   });
 });
 
