@@ -47,10 +47,18 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
 
-/** Lookup from lowercased symbol to coin for URL parsing. */
+/** Lookup from lowercased symbol to coin — used for preset cards and legacy URL fallback. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
   TRACKED_STABLECOINS.map((c) => [
     c.symbol.toLowerCase(),
+    { id: c.id, name: c.name, symbol: c.symbol },
+  ]),
+);
+
+/** Lookup from numeric ID string to coin — primary URL identifier (avoids duplicate-symbol collisions). */
+const ID_TO_COIN = new Map<string, CoinOption>(
+  TRACKED_STABLECOINS.map((c) => [
+    c.id,
     { id: c.id, name: c.name, symbol: c.symbol },
   ]),
 );
@@ -108,13 +116,17 @@ export function CompareClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Derive selected IDs from URL (single source of truth)
+  // Derive selected IDs from URL (single source of truth).
+  // Accepts both numeric IDs (new format) and lowercase symbols (legacy/presets).
   const selectedIds = useMemo(() => {
     const param = searchParams.get("coins");
     if (!param) return [];
     return param
       .split(",")
-      .map((s) => SYMBOL_TO_COIN.get(s.trim().toLowerCase()))
+      .map((s) => {
+        const trimmed = s.trim();
+        return ID_TO_COIN.get(trimmed) ?? SYMBOL_TO_COIN.get(trimmed.toLowerCase());
+      })
       .filter((c): c is CoinOption => !!c)
       .slice(0, MAX_COINS)
       .map((c) => c.id);
@@ -137,16 +149,12 @@ export function CompareClient() {
     [searchParams, router],
   );
 
-  // Write selected IDs to URL
+  // Write selected IDs to URL (using numeric IDs to avoid duplicate-symbol collisions)
   const setSelectedIds = useCallback(
     (updater: (prev: string[]) => string[]) => {
       const next = updater(selectedIds);
-      const symbols = next
-        .map((id) => TRACKED_STABLECOINS.find((c) => c.id === id))
-        .filter((c): c is (typeof TRACKED_STABLECOINS)[number] => !!c)
-        .map((c) => c.symbol.toLowerCase());
       const params = new URLSearchParams();
-      if (symbols.length > 0) params.set("coins", symbols.join(","));
+      if (next.length > 0) params.set("coins", next.join(","));
       const currentRange = searchParams.get("range");
       if (currentRange) params.set("range", currentRange);
       const qs = params.toString();
