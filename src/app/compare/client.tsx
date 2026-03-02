@@ -94,7 +94,7 @@ const COMPARISON_PRESETS = [
   {
     title: "Emerging Currency Pegs",
     description: "Stablecoins pegged to emerging market fiat currencies",
-    coins: ["brz", "tryb", "zarp"],
+    coins: ["brz", "zarp"],
   },
   {
     title: "Non-USD Majors",

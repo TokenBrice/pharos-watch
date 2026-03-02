@@ -199,8 +199,7 @@
 | 114 | 304 | USDU | USDU Finance | crypto-backed | USD | Pending |
 | 115 | 289 | XSGD | StraitsX XSGD | rwa-backed | SGD | N/A |
 | 116 | 122 | GYEN | GYEN | rwa-backed | JPY | N/A |
-| 117 | 300 | TRYB | BiLira | rwa-backed | TRY | N/A |
-| 118 | 165 | AUDD | AUDD | rwa-backed | AUD | N/A |
+| 117 | 165 | AUDD | AUDD | rwa-backed | AUD | N/A |
 | 119 | cg-jpyc | JPYC | JPY Coin | rwa-backed | JPY | N/A |
 | 120 | gold-xaut | XAUT | Tether Gold | rwa-backed | GOLD | Pending |
 
@@ -243,7 +242,7 @@
 
 These 15 coins are excluded because their reserve composition is trivially "100% local currency deposits" with no meaningful breakdown for a treemap:
 
-- **Non-USD/EUR fiat pegs** (10): BRZ (BRL), XSGD (SGD), GYEN (JPY), TRYB (TRY), AUDD (AUD), JPYC (JPY), VCHF (CHF), VGBP (GBP), tGBP (GBP), ZARP (ZAR), CADC (CAD)
+- **Non-USD/EUR fiat pegs** (9): BRZ (BRL), XSGD (SGD), GYEN (JPY), AUDD (AUD), JPYC (JPY), VCHF (CHF), VGBP (GBP), tGBP (GBP), ZARP (ZAR), CADC (CAD)
 - **Inflation-indexed**: ISC (VAR/CPI) — hybrid reserve, not enough public data
 - **Pure algorithmic**: FPI (Frax Price Index) — no external reserves
 - **Fiat-only EUR**: EURS (Stasis Euro) — 100% euro bank deposits

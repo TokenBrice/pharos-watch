@@ -2943,27 +2943,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7", decimals: 6 },
     ],
   }),
-  other("300", "BiLira", "TRYB", "rwa-backed", "centralized", "TRY", {
-    geckoId: "bilira",
-    collateral: "Turkish lira cash reserves held in Turkish bank accounts; independently audited with reports published regularly",
-    pegMechanism: "Direct 1:1 redemption for TRY through BiLira",
-    proofOfReserves: { type: "independent-audit", url: "https://www.bilira.co/en/audit-reports" },
-    links: [
-      { label: "Website", url: "https://www.bilira.co/en/product/tryb-stablecoin" },
-      { label: "Twitter", url: "https://x.com/BiLira_Official" },
-      { label: "Audit Reports", url: "https://www.bilira.co/en/audit-reports" },
-      { label: "Proof of Reserve", url: "https://dune.com/biliraofficial/bilira-official" },
-    ],
-    jurisdiction: { country: "Turkey", regulator: "SPK/CMB" },
-    contracts: [
-      { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
-      { chain: "bsc",      address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
-      { chain: "avalanche", address: "0x564a341df6c126f90cf3ecb92120fd7190acb401", decimals: 6 },
-      { chain: "polygon",  address: "0x4fb71290ac171e1d144f7221d882becac7196eb5", decimals: 6 },
-      { chain: "base",     address: "0xfb8718a69aed7726afb3f04d2bd4bfde1bdcb294", decimals: 6 },
-      { chain: "plasma", address: "0x90729a45948c3078890bc80f2a4e7870a2ea4c5e", decimals: 6 },
-    ],
-  }),
   other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
     geckoId: "novatti-australian-digital-dollar",
     collateral: "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",

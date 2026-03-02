@@ -240,14 +240,6 @@
 |--------|----------|---------------|--------|-------|
 | done | Flow | flow | $10.0M | |
 
-### TRYB — BiLira (id: 300, geckoId: bilira)
-
-**Gaps: 1 | Added: 1 | Skipped: 0**
-
-| Status | DL Chain | Internal Chain | Supply | Notes |
-|--------|----------|---------------|--------|-------|
-| done | Plasma | plasma | $6.3M | |
-
 ### USBD — Bima USBD (id: 253, geckoId: usbd)
 
 **Gaps: 1 | Added: 1 | Skipped: 0**

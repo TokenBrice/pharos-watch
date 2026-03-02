@@ -484,11 +484,6 @@
     "text": "PHT is a Philippine peso-pegged stablecoin built on a MakerDAO MCD fork, overcollateralized by USDC and USDT vaults. It's targeting the $38 billion Filipino remittance corridor where traditional fees eat 6%+ of every transfer. The technical architecture is sound -- MCD is battle-tested -- but adoption for local-currency stablecoins requires merchant integration and fiat off-ramps that raw DeFi infrastructure doesn't provide. A worthy experiment in local-currency stablecoins for a market that desperately needs cheaper money movement.",
     "updatedAt": "2026-02-22"
   },
-  "300": {
-    "title": "Lira's Digital Mirror",
-    "text": "BiLira's TRYB has the distinction of being one of the largest non-USD-pegged stablecoins, pegged to a currency that has lost roughly 80% of its value against the dollar since 2021. Fully backed by Turkish lira reserves in Turkish bank accounts, TRYB faithfully tracks the lira -- including its depreciation. Whether holding a depreciating currency in tokenized form constitutes a compelling product is a question the Turkish crypto community has apparently answered in the affirmative.",
-    "updatedAt": "2026-02-22"
-  },
   "302": {
     "title": "Solana's Native Stable",
     "text": "Hylo's hyUSD is backed entirely by yield-bearing Solana liquid staking tokens -- mSOL, jitoSOL, and bSOL -- with no fiat reserves, no RWAs, and no centralized dependencies. The dual-token design uses xSOL to absorb volatility, maintaining 160%+ overcollateralization while offering leveraged SOL exposure without liquidation risk. The oracle-free design is elegant in theory, but the entire system inherits validator slashing risk and LST depeg risk from its collateral basket.",

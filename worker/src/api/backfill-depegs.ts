@@ -42,7 +42,6 @@ const PEG_TO_FX: Record<string, string> = {
 const OTHER_COIN_FX: Record<string, string> = {
   "289": "SGD",  // XSGD
   "122": "JPY",  // GYEN
-  "300": "TRY",  // TRYB
   "165": "AUD",  // AUDD
 };
 
