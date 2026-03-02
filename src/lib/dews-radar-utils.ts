@@ -11,10 +11,10 @@ const BAND_SCORE: Record<ElevatedBand, [number, number]> = {
 };
 
 const BAND_RADIUS: Record<ElevatedBand, [number, number]> = {
-  WATCH:   [75,  108],
-  ALERT:   [118, 151],
-  WARNING: [161, 194],
-  DANGER:  [204, 240],
+  WATCH:   [178, 208],
+  ALERT:   [143, 175],
+  WARNING: [95,  140],
+  DANGER:  [45,  90],
 };
 
 const SWEEP_DURATION: Record<ThreatBand, number> = {
@@ -53,6 +53,18 @@ export function deterministicOffset(id: string): number {
   if (id.length === 0) return 0;
   const sum = id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return ((sum % 30) * Math.PI) / 180;
+}
+
+/**
+ * Deterministic radius offset within a zone, derived from a coin ID string.
+ * Same id + zoneWidth always returns the same value. Range: [0, zoneWidth).
+ * Uses same charCode sum as deterministicOffset for consistency.
+ */
+export function deterministicRadiusOffset(id: string, zoneWidth: number): number {
+  if (id.length === 0) return 0;
+  if (zoneWidth === 0) return 0;
+  const sum = id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return sum % zoneWidth;
 }
 
 /**
