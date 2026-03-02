@@ -384,13 +384,13 @@ export default function ScoringChangelogPage() {
           applied as a post-hoc power-curve multiplier:
         </p>
         <div className="rounded-lg border p-3 font-mono text-xs bg-muted">
-          final = base &times; (PSI / 100) ^ 0.20
+          final = base &times; (pegScore / 100) ^ 0.20
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left">
-                <th className="py-2 pr-4 font-medium text-foreground">PSI</th>
+                <th className="py-2 pr-4 font-medium text-foreground">pegScore</th>
                 <th className="py-2 pr-4 font-medium text-foreground">
                   Multiplier
                 </th>
@@ -590,7 +590,7 @@ export default function ScoringChangelogPage() {
               coupling risk)
             </li>
             <li>
-              Active-depeg cap and +3 bonus removed from peg stability (PSI
+              Active-depeg cap and +3 bonus removed from peg stability (pegScore
               already encodes severity)
             </li>
             <li>HHI concentration penalty removed from liquidity</li>

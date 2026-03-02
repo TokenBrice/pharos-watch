@@ -45,7 +45,7 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   dependencyRisk: 0.25,
 };
 
-/** Peg stability multiplier: final = base × (PSI/100)^exponent */
+/** Peg stability multiplier: final = base × (pegScore/100)^exponent */
 export const PEG_MULTIPLIER_EXPONENT = 0.20;
 
 /**
@@ -621,11 +621,11 @@ export function scoreDependencyRisk(
  * with peg stability applied as a post-hoc power-curve multiplier.
  *
  * Base = weighted average of rated non-peg dimensions (NR dimensions redistribute).
- * Final = base × (PSI / 100) ^ PEG_MULTIPLIER_EXPONENT
+ * Final = base × (pegScore / 100) ^ PEG_MULTIPLIER_EXPONENT
  *
- * PSI = null + navToken → multiplier 1.0 (NAV token, peg tracking not applicable).
- * PSI = null + non-NAV → overall NR (no price/peg data available).
- * PSI = 0 (dead coin) → multiplier = 0.
+ * pegScore = null + navToken → multiplier 1.0 (NAV token, peg tracking not applicable).
+ * pegScore = null + non-NAV → overall NR (no price/peg data available).
+ * pegScore = 0 (dead coin) → multiplier = 0.
  *
  * Requires at least 2 rated base dimensions for an overall grade, else NR.
  */

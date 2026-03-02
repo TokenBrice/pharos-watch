@@ -113,7 +113,7 @@ export default function MethodologyPage() {
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="rounded-lg border p-3 text-center w-64">
               <p className="text-foreground font-medium">&times; Peg Multiplier</p>
-              <p className="text-xs text-muted-foreground mt-0.5">(PSI / 100)<sup>0.20</sup></p>
+              <p className="text-xs text-muted-foreground mt-0.5">(pegScore / 100)<sup>0.20</sup></p>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="rounded-lg border border-amber-500/40 p-3 text-center w-64">
@@ -155,7 +155,7 @@ export default function MethodologyPage() {
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="w-full rounded-lg border p-3 text-center">
               <p className="text-foreground font-medium">&times; Peg Multiplier</p>
-              <p className="text-xs text-muted-foreground mt-0.5">(PSI / 100)<sup>0.20</sup></p>
+              <p className="text-xs text-muted-foreground mt-0.5">(pegScore / 100)<sup>0.20</sup></p>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="w-full rounded-lg border border-amber-500/40 p-3 text-center">
@@ -217,9 +217,9 @@ export default function MethodologyPage() {
             <h3 className="text-foreground font-medium">Peg Stability Multiplier</h3>
             <p>
               After computing the base score, peg stability is applied as a power-curve multiplier:
-              final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(PSI&nbsp;/&nbsp;100)<sup>0.20</sup>.
+              final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(pegScore&nbsp;/&nbsp;100)<sup>0.20</sup>.
               Coins with strong pegs (90+) are barely affected (~2% penalty), while coins with broken pegs
-              are properly penalized (e.g. PSI&nbsp;10 &rarr; 37% penalty). NAV tokens (PSI&nbsp;=&nbsp;NR) receive
+              are properly penalized (e.g. pegScore&nbsp;10 &rarr; 37% penalty). NAV tokens (pegScore&nbsp;=&nbsp;NR) receive
               multiplier&nbsp;1.0 since peg tracking does not apply to them.
             </p>
           </div>
