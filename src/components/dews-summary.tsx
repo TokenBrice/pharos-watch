@@ -179,6 +179,51 @@ function DEWSDot({
   );
 }
 
+function DEWSCenter({
+  highest,
+  elevatedCount,
+  totalCount,
+  sweepDur,
+}: {
+  highest: ThreatBand;
+  elevatedCount: number;
+  totalCount: number;
+  sweepDur: number;
+}) {
+  const hex = THREAT_BAND_HEX[highest];
+  const label = highest === "CALM" ? "ALL CALM" : highest;
+  const sublabel =
+    highest === "CALM" ? `${totalCount} monitored` : `${elevatedCount} elevated`;
+
+  return (
+    <g>
+      <circle
+        cx={CX} cy={CY} r={38}
+        fill={hex} fillOpacity={0.13}
+        stroke={hex} strokeOpacity={0.38} strokeWidth={1.5}
+        className="dews-center-r"
+        style={{ animation: `dews-center-pulse ${sweepDur}s ease-in-out infinite` }}
+      />
+      <text
+        x={CX} y={CY - 5}
+        textAnchor="middle" dominantBaseline="middle"
+        fill={hex} fontSize={11} fontWeight={700}
+        fontFamily="var(--font-mono)" letterSpacing={1}
+      >
+        {label}
+      </text>
+      <text
+        x={CX} y={CY + 11}
+        textAnchor="middle" dominantBaseline="middle"
+        fill="var(--color-muted-foreground)" fontSize={9}
+        fontFamily="var(--font-mono)"
+      >
+        {sublabel}
+      </text>
+    </g>
+  );
+}
+
 function DEWSRadar({
   elevated,
   highest,
@@ -248,7 +293,12 @@ function DEWSRadar({
           onClick={onCoinClick}
         />
       ))}
-      {/* Center readout — Task 6 */}
+      <DEWSCenter
+        highest={highest}
+        elevatedCount={elevated.length}
+        totalCount={totalCount}
+        sweepDur={dur}
+      />
       {/* Tooltip — Task 7 */}
     </svg>
   );
