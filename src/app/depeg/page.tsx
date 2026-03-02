@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     url: "/depeg/",
     images: [{ url: "https://pharos.watch/og-depeg.png", width: 1200, height: 630 }],
   },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-depeg.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function DepegPage() {

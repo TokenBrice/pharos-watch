@@ -15,6 +15,10 @@ export const metadata: Metadata = {
     description:
       "Browse the full archive of Pharos daily stablecoin market recaps. Sardonic commentary backed by hard data.",
     url: "/digest/",
+    images: [{ url: "https://pharos.watch/og-digest.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-digest.png", width: 1200, height: 630 }],
   },
 };
 

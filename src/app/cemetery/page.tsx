@@ -19,6 +19,9 @@ export const metadata: Metadata = {
     url: "/cemetery/",
     images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 630 }],
   },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function CemeteryPage() {

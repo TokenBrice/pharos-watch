@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     url: "/liquidity/",
     images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 630 }],
   },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function LiquidityPage() {

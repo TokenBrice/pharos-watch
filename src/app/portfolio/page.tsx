@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     title: "Portfolio: Personal Stablecoin Risk View",
     description,
     url: "/portfolio/",
+    images: [{ url: "https://pharos.watch/og-portfolio.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-portfolio.png", width: 1200, height: 630 }],
   },
 };
 

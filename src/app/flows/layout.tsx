@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     url: "/flows/",
     images: [{ url: "https://pharos.watch/og-flows.png", width: 1200, height: 630 }],
   },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-flows.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function FlowsLayout({

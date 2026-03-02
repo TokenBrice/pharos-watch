@@ -15,6 +15,10 @@ export const metadata: Metadata = {
     description:
       "Full methodology behind Pharos safety grades, peg scores, liquidity scores, and contagion stress tests. Transparent scoring for every stablecoin.",
     url: "/methodology/",
+    images: [{ url: "https://pharos.watch/og-methodology.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    images: [{ url: "https://pharos.watch/og-methodology.png", width: 1200, height: 630 }],
   },
 };
 
