@@ -16,7 +16,7 @@ interface DepegFeedProps {
   className?: string;
 }
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 3;
 
 export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
