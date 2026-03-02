@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { buildTopicParams } from "../evm-logs";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  buildTopicParams,
+  decodeAddress,
+  decodeUint256,
+  createBudget,
+  budgetExhausted,
+  createRateLimiter,
+  fetchEvmLogsForTopics,
+} from "../evm-logs";
 
 describe("buildTopicParams", () => {
   it("builds params for single topic (topic0 only)", () => {
@@ -50,5 +58,239 @@ describe("buildTopicParams", () => {
     expect(params.get("topic2")).toBe("0xccc");
     expect(params.get("topic0_1_opr")).toBe("and");
     expect(params.get("topic0_2_opr")).toBe("and");
+  });
+});
+
+// --- decodeAddress ---
+
+describe("decodeAddress", () => {
+  it("extracts 20-byte address from standard 32-byte topic", () => {
+    const topic = "0x000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7";
+    expect(decodeAddress(topic)).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
+  });
+
+  it("handles topic without 0x prefix", () => {
+    const topic = "000000000000000000000000dac17f958d2ee523a2206206994597c13d831ec7";
+    expect(decodeAddress(topic)).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
+  });
+
+  it("returns lowercase address", () => {
+    const topic = "0x000000000000000000000000DAC17F958D2EE523A2206206994597C13D831EC7";
+    expect(decodeAddress(topic)).toBe("0xdac17f958d2ee523a2206206994597c13d831ec7");
+  });
+
+  it("handles zero address (mint from)", () => {
+    const topic = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    expect(decodeAddress(topic)).toBe("0x0000000000000000000000000000000000000000");
+  });
+});
+
+// --- decodeUint256 ---
+
+describe("decodeUint256", () => {
+  it("decodes standard uint256 with 18 decimals", () => {
+    // 1e18 in hex = 0xDE0B6B3A7640000
+    const hex = "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000";
+    expect(decodeUint256(hex, 18)).toBeCloseTo(1.0, 10);
+  });
+
+  it("decodes uint256 with 6 decimals (USDC)", () => {
+    // 1,000,000 in hex = 0xF4240
+    const hex = "0x00000000000000000000000000000000000000000000000000000000000f4240";
+    expect(decodeUint256(hex, 6)).toBeCloseTo(1.0, 10);
+  });
+
+  it("decodes zero value", () => {
+    const hex = "0x0000000000000000000000000000000000000000000000000000000000000000";
+    expect(decodeUint256(hex, 18)).toBe(0);
+  });
+
+  it("handles hex without 0x prefix", () => {
+    const hex = "00000000000000000000000000000000000000000000000000000000000f4240";
+    expect(decodeUint256(hex, 6)).toBeCloseTo(1.0, 10);
+  });
+
+  it("decodes large values (1 billion USDC)", () => {
+    // 1e9 * 1e6 = 1e15 = 0x38D7EA4C68000
+    const hex = "0x00000000000000000000000000000000000000000000000000038d7ea4c68000";
+    expect(decodeUint256(hex, 6)).toBeCloseTo(1_000_000_000, 0);
+  });
+});
+
+// --- createBudget & budgetExhausted ---
+
+describe("createBudget", () => {
+  it("creates budget with default limit of 900", () => {
+    const budget = createBudget();
+    expect(budget.limit).toBe(900);
+    expect(budget.count).toBe(0);
+  });
+
+  it("creates budget with custom limit", () => {
+    const budget = createBudget(50);
+    expect(budget.limit).toBe(50);
+    expect(budget.count).toBe(0);
+  });
+});
+
+describe("budgetExhausted", () => {
+  it("returns false when under limit", () => {
+    expect(budgetExhausted({ count: 5, limit: 10 })).toBe(false);
+  });
+
+  it("returns true when at limit", () => {
+    expect(budgetExhausted({ count: 10, limit: 10 })).toBe(true);
+  });
+
+  it("returns true when over limit", () => {
+    expect(budgetExhausted({ count: 15, limit: 10 })).toBe(true);
+  });
+});
+
+// --- createRateLimiter ---
+
+describe("createRateLimiter", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("executes function and returns result", async () => {
+    const limiter = createRateLimiter(10); // 10 req/s = 100ms interval
+    const promise = limiter(() => Promise.resolve(42));
+    await vi.advanceTimersByTimeAsync(200);
+    const result = await promise;
+    expect(result).toBe(42);
+  });
+
+  it("enforces timing between sequential calls", async () => {
+    const limiter = createRateLimiter(5); // 5 req/s = 200ms interval
+    const callTimes: number[] = [];
+
+    const p1 = limiter(async () => {
+      callTimes.push(Date.now());
+      return 1;
+    });
+
+    const p2 = limiter(async () => {
+      callTimes.push(Date.now());
+      return 2;
+    });
+
+    // Advance time to let both complete
+    await vi.advanceTimersByTimeAsync(500);
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toBe(1);
+    expect(r2).toBe(2);
+    expect(callTimes).toHaveLength(2);
+    // Second call should be at least 200ms after first
+    expect(callTimes[1] - callTimes[0]).toBeGreaterThanOrEqual(200);
+  });
+});
+
+// --- fetchEvmLogsForTopics ---
+
+describe("fetchEvmLogsForTopics", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const noopLimiter = <T>(fn: () => Promise<T>) => fn();
+
+  it("returns logs on success", async () => {
+    const mockLogs = [
+      { address: "0x123", topics: ["0xabc"], data: "0x", blockNumber: "0x1", timeStamp: "1000", transactionHash: "0xhash", logIndex: "0x0" },
+    ];
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: "1", message: "OK", result: mockLogs }), { status: 200 })
+    );
+
+    const budget = createBudget(10);
+    const topics = [{ index: 0, value: "0xabc" }];
+    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+
+    expect(result).toHaveLength(1);
+    expect(budget.count).toBe(1);
+  });
+
+  it("returns null on HTTP error", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response("Server Error", { status: 500 })
+    );
+
+    const budget = createBudget(10);
+    const topics = [{ index: 0, value: "0xabc" }];
+    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+
+    expect(result).toBeNull();
+  });
+
+  it("returns empty array on 'No records found'", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ status: "0", message: "No records found", result: [] }), { status: 200 })
+    );
+
+    const budget = createBudget(10);
+    const topics = [{ index: 0, value: "0xabc" }];
+    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+
+    expect(result).toEqual([]);
+  });
+
+  it("returns null when budget exhausted", async () => {
+    const budget = { count: 10, limit: 10 }; // Already exhausted
+    const topics = [{ index: 0, value: "0xabc" }];
+    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+
+    expect(result).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns null at max recursion depth", async () => {
+    const budget = createBudget(10);
+    const topics = [{ index: 0, value: "0xabc" }];
+    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 9, noopLimiter, budget);
+
+    expect(result).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("recursively splits when result count >= 1000", async () => {
+    // First call returns 1000 results (triggers split)
+    const lotsOfLogs = Array.from({ length: 1000 }, (_, i) => ({
+      address: "0x123", topics: ["0xabc"], data: "0x",
+      blockNumber: `0x${i.toString(16)}`, timeStamp: "1000",
+      transactionHash: `0xhash${i}`, logIndex: `0x${i.toString(16)}`,
+    }));
+
+    // First half returns 5 logs, second half returns 3 logs
+    const firstHalf = lotsOfLogs.slice(0, 5);
+    const secondHalf = lotsOfLogs.slice(0, 3);
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "1", message: "OK", result: lotsOfLogs }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "1", message: "OK", result: firstHalf }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ status: "1", message: "OK", result: secondHalf }), { status: 200 })
+      );
+
+    const budget = createBudget(10);
+    const topics = [{ index: 0, value: "0xabc" }];
+    const result = await fetchEvmLogsForTopics(1, "0x123", topics, null, 0, 100, 0, noopLimiter, budget);
+
+    expect(result).toHaveLength(8); // 5 + 3
+    expect(budget.count).toBe(3); // 3 API calls
   });
 });
