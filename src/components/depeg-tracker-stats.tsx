@@ -15,7 +15,7 @@ export function DepegTrackerStats({ stats }: DepegTrackerStatsProps) {
     "same as yesterday";
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <Card className="rounded-xl border-l-[3px] border-l-red-500">
         <CardHeader className="pb-1">
           <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

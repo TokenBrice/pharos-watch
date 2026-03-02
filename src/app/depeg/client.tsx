@@ -95,15 +95,17 @@ export function DepegClient() {
   if (isPegLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="rounded-xl">
-              <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
-              <CardContent><Skeleton className="h-8 w-32" /></CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+          <Skeleton className="h-[500px] rounded-xl" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="rounded-xl">
+                <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
+                <CardContent><Skeleton className="h-8 w-32" /></CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-        <Skeleton className="h-[400px]" />
       </div>
     );
   }
@@ -125,17 +127,17 @@ export function DepegClient() {
         />
       )}
 
-      {/* Summary Stats */}
-      {pegData?.summary && (
-        <SectionErrorBoundary name="depeg-stats">
-          <DepegTrackerStats stats={pegData.summary} />
+      {/* DEWS radar + stat boxes — 2-column on desktop */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <SectionErrorBoundary name="dews">
+          <DEWSSummary logos={logos} />
         </SectionErrorBoundary>
-      )}
-
-      {/* DEWS Summary (moved from homepage) */}
-      <SectionErrorBoundary name="dews">
-        <DEWSSummary logos={logos} />
-      </SectionErrorBoundary>
+        {pegData?.summary && (
+          <SectionErrorBoundary name="depeg-stats">
+            <DepegTrackerStats stats={pegData.summary} />
+          </SectionErrorBoundary>
+        )}
+      </div>
 
       {/* Filters + Table */}
       <SectionErrorBoundary name="depeg-table">
