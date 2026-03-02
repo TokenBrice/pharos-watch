@@ -84,7 +84,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <CardTitle as="h2">Depeg Early Warning</CardTitle>
+          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-32 bg-muted rounded" />
@@ -97,7 +97,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle as="h2">Depeg Early Warning</CardTitle>
+          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">

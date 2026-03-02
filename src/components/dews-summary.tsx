@@ -19,7 +19,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <CardTitle as="h2">Depeg Early Warning</CardTitle>
+          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-24 bg-muted rounded" />
@@ -45,7 +45,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle as="h2">Depeg Early Warning</CardTitle>
+          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
           <span className="text-xs text-muted-foreground">
             {elevated.length > 0
               ? `${elevated.length} elevated · ${calmCount} calm`
