@@ -121,6 +121,35 @@ export function isValidStablecoinId(id: string): boolean {
   return /^\d+$/.test(id) || /^(?:gold|silver|cg)-/.test(id);
 }
 
+// --- Shared response builders ---
+
+/** Build a JSON error response. Replaces inline `new Response(JSON.stringify({ error }), ...)` calls. */
+export function errorResponse(status: number, message: string): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/** Parse an integer query parameter with default, min, and max bounds. */
+export function parseIntParam(
+  value: string | null | undefined,
+  defaultVal: number,
+  min: number,
+  max: number,
+): number {
+  if (value == null) return defaultVal;
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? defaultVal : Math.min(max, Math.max(min, parsed));
+}
+
+/** Build a JSON success response with optional extra headers. */
+export function jsonResponse(body: unknown, headers?: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json", ...headers },
+  });
+}
+
 /**
  * Creates a cache-passthrough API handler that reads from the cache table
  * and returns the cached JSON with freshness headers.
