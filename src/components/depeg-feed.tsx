@@ -13,11 +13,12 @@ import type { DepegEvent } from "@/lib/types";
 interface DepegFeedProps {
   events: DepegEvent[];
   logos?: Record<string, string>;
+  className?: string;
 }
 
 const PAGE_SIZE = 20;
 
-export function DepegFeed({ events, logos }: DepegFeedProps) {
+export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -32,13 +33,13 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
   if (events.length === 0) return null;
 
   return (
-    <Card className="rounded-xl">
+    <Card className={["rounded-xl flex flex-col", className].filter(Boolean).join(" ")}>
       <CardHeader className="pb-3">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Recent Depeg Events
         </CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1.5" aria-live="polite">
+      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5" aria-live="polite">
         {visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
           return (
@@ -92,7 +93,7 @@ export function DepegFeed({ events, logos }: DepegFeedProps) {
         })}
 
         {hasMore && (
-          <div className="pt-2 text-center lg:col-span-2">
+          <div className="pt-2 text-center">
             <Button
               variant="ghost"
               size="sm"

@@ -95,15 +95,18 @@ export function DepegClient() {
   if (isPegLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
           <Skeleton className="h-[500px] rounded-xl" />
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="rounded-xl">
-                <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
-                <CardContent><Skeleton className="h-8 w-32" /></CardContent>
-              </Card>
-            ))}
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="rounded-xl">
+                  <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
+                  <CardContent><Skeleton className="h-8 w-32" /></CardContent>
+                </Card>
+              ))}
+            </div>
+            <Skeleton className="flex-1 min-h-[200px] rounded-xl" />
           </div>
         </div>
       </div>
@@ -127,16 +130,25 @@ export function DepegClient() {
         />
       )}
 
-      {/* DEWS radar + stat boxes — 2-column on desktop */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
+      {/* DEWS radar + stat boxes + depeg feed — 2-column on desktop */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
         <SectionErrorBoundary name="dews">
           <DEWSSummary logos={logos} />
         </SectionErrorBoundary>
-        {pegData?.summary && (
-          <SectionErrorBoundary name="depeg-stats">
-            <DepegTrackerStats stats={pegData.summary} />
+        <div className="flex flex-col gap-6">
+          {pegData?.summary && (
+            <SectionErrorBoundary name="depeg-stats">
+              <DepegTrackerStats stats={pegData.summary} />
+            </SectionErrorBoundary>
+          )}
+          <SectionErrorBoundary name="depeg-feed">
+            <DepegFeed
+              events={eventsData?.events ?? []}
+              logos={logos}
+              className="flex-1 min-h-0"
+            />
           </SectionErrorBoundary>
-        )}
+        </div>
       </div>
 
       {/* Filters + Table */}
@@ -208,13 +220,6 @@ export function DepegClient() {
         />
       </SectionErrorBoundary>
 
-      {/* Recent Depeg Events (moved from homepage) */}
-      <SectionErrorBoundary name="depeg-feed">
-        <DepegFeed
-          events={eventsData?.events ?? []}
-          logos={logos}
-        />
-      </SectionErrorBoundary>
     </div>
   );
 }
