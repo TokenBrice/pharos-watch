@@ -23,7 +23,7 @@ interface FlowTableProps {
   isLoading: boolean;
 }
 
-type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "largest" | "fis";
+type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "net30d" | "net90d" | "largest" | "fis";
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
@@ -50,6 +50,14 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
         case "net7d":
           aVal = Math.abs(a.netFlow7dUsd);
           bVal = Math.abs(b.netFlow7dUsd);
+          break;
+        case "net30d":
+          aVal = Math.abs(a.netFlow30dUsd);
+          bVal = Math.abs(b.netFlow30dUsd);
+          break;
+        case "net90d":
+          aVal = Math.abs(a.netFlow90dUsd);
+          bVal = Math.abs(b.netFlow90dUsd);
           break;
         case "largest":
           aVal = a.largestEvent24h?.amountUsd ?? 0;
@@ -79,7 +87,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               <TableHead className="hidden sm:table-cell text-right">Minted 24h</TableHead>
               <TableHead className="hidden sm:table-cell text-right">Burned 24h</TableHead>
               <TableHead className="hidden md:table-cell text-right">Net 7d</TableHead>
-              <TableHead className="hidden lg:table-cell text-right">Largest Event</TableHead>
+              <TableHead className="hidden lg:table-cell text-right">Net 30d</TableHead>
+              <TableHead className="hidden xl:table-cell text-right">Net 90d</TableHead>
+              <TableHead className="hidden xl:table-cell text-right">Largest Event</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -91,7 +101,9 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="hidden sm:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
                 <TableCell className="hidden sm:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
                 <TableCell className="hidden md:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden lg:table-cell text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+                <TableCell className="hidden lg:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                <TableCell className="hidden xl:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                <TableCell className="hidden xl:table-cell text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -157,6 +169,26 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               className="hidden md:table-cell text-right"
             />
             <SortableTableHead
+              sortKey="net30d"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Net 30d"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden lg:table-cell text-right"
+            />
+            <SortableTableHead
+              sortKey="net90d"
+              currentSortKey={sortKey}
+              sortDirection={sortDirection}
+              label="Net 90d"
+              toggleSort={toggleSort}
+              getAriaSortValue={getAriaSortValue}
+              handleSortKeyDown={handleSortKeyDown}
+              className="hidden xl:table-cell text-right"
+            />
+            <SortableTableHead
               sortKey="largest"
               currentSortKey={sortKey}
               sortDirection={sortDirection}
@@ -164,7 +196,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden lg:table-cell text-right"
+              className="hidden xl:table-cell text-right"
             />
           </TableRow>
         </TableHeader>
@@ -213,6 +245,16 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                   </span>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
+                  <span className={getNetColor(coin.netFlow30dUsd)}>
+                    {getNetPrefix(coin.netFlow30dUsd)}{formatCurrency(coin.netFlow30dUsd)}
+                  </span>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
+                  <span className={getNetColor(coin.netFlow90dUsd)}>
+                    {getNetPrefix(coin.netFlow90dUsd)}{formatCurrency(coin.netFlow90dUsd)}
+                  </span>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
                   {coin.largestEvent24h ? (
                     <span className={coin.largestEvent24h.direction === "mint" ? "text-emerald-500" : "text-red-500"}>
                       {coin.largestEvent24h.direction === "mint" ? "+" : "-"}{formatCurrency(coin.largestEvent24h.amountUsd)}
@@ -226,7 +268,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           })}
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+              <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                 No flow data available
               </TableCell>
             </TableRow>

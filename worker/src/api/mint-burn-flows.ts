@@ -125,8 +125,10 @@ export const handleMintBurnFlows = withErrorHandler(
 async function handleAggregate(db: D1Database, hours: number): Promise<Response> {
   const nowSec = Math.floor(Date.now() / 1000);
   const windowStart = nowSec - hours * 3600;
-  const window7d = nowSec - 7 * 24 * 3600;
-  const baselineStart = nowSec - 30 * 24 * 3600;
+  const window7d  = nowSec - 7  * 24 * 3600;
+  const window30d = nowSec - 30 * 24 * 3600;
+  const window90d = nowSec - 90 * 24 * 3600;
+  const baselineStart = window30d;
 
   // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
   const gradeClassification = await getGradeBasedClassification(db);
@@ -149,8 +151,8 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     }
   }
 
-  // Parallel queries: hourly data for window, 7d window, 30d baseline, largest events
-  const [hourlyResult, hourly7dResult, baselineResult, largestEventsResult] = await Promise.all([
+  // Parallel queries: hourly data for window, 7d/30d/90d net sums, 30d baseline, largest events
+  const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineResult, largestEventsResult] = await Promise.all([
     db
       .prepare(
         `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
@@ -170,6 +172,26 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
          GROUP BY stablecoin_id`,
       )
       .bind(window7d)
+      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) as net_flow_usd
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(window30d)
+      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) as net_flow_usd
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(window90d)
       .all<{ stablecoin_id: string; net_flow_usd: number }>(),
     db
       .prepare(
@@ -215,9 +237,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   ]);
 
   const hourlyRows = hourlyResult.results ?? [];
-  const net7dMap = new Map(
-    (hourly7dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]),
-  );
+  const net7dMap  = new Map((hourly7dResult.results  ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
+  const net30dMap = new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
+  const net90dMap = new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
   const baselineMap = new Map(
     (baselineResult.results ?? []).map((r) => [
       r.stablecoin_id,
@@ -266,6 +288,8 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     mintCount24h: number;
     burnCount24h: number;
     netFlow7dUsd: number;
+    netFlow30dUsd: number;
+    netFlow90dUsd: number;
     largestEvent24h: {
       direction: string;
       amountUsd: number;
@@ -329,7 +353,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       burnVolume24hUsd: agg?.burnVolume ?? 0,
       mintCount24h: agg?.mintCount ?? 0,
       burnCount24h: agg?.burnCount ?? 0,
-      netFlow7dUsd: net7dMap.get(id) ?? 0,
+      netFlow7dUsd:  net7dMap.get(id)  ?? 0,
+      netFlow30dUsd: net30dMap.get(id) ?? 0,
+      netFlow90dUsd: net90dMap.get(id) ?? 0,
       largestEvent24h: largest
         ? {
             direction: largest.direction,

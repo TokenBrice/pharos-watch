@@ -742,6 +742,8 @@ export const MintBurnCoinFlowSchema = z.object({
   mintCount24h: z.number(),
   burnCount24h: z.number(),
   netFlow7dUsd: z.number(),
+  netFlow30dUsd: z.number(),
+  netFlow90dUsd: z.number(),
   largestEvent24h: z.object({
     direction: z.enum(["mint", "burn"]),
     amountUsd: z.number(),
