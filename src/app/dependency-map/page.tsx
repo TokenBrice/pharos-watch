@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FeatureStatusBadge } from "@/components/feature-status-badge";
 
 const DependencyMapClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
@@ -37,7 +38,7 @@ export default function DependencyMapPage() {
           <span>/</span>
           <span className="text-foreground">Dependency Map</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Dependency Map</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Dependency Map <FeatureStatusBadge status="experimental" /></h1>
         <p className="text-sm text-muted-foreground">
           Collateral dependencies between the top 50 stablecoins by market cap. Node size reflects market cap;
           lines show how one stablecoin relies on another as collateral. Drag nodes to explore. Click to view details.

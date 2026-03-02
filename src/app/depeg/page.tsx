@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FeatureStatusBadge } from "@/components/feature-status-badge";
 
 const DepegClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DepegClient })),
@@ -74,7 +75,7 @@ export default function DepegPage() {
           <span>/</span>
           <span className="text-foreground">Depeg Tracker</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Depeg Tracker</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Depeg Tracker <FeatureStatusBadge status="mature" /></h1>
         <p className="text-sm text-muted-foreground">
           Real-time peg monitoring across {TRACKED_STABLECOINS.length} stablecoins.
           Peg scores, DEWS early warning signals, live deviation heatmaps, and a
