@@ -21,6 +21,7 @@ import {
   computeOverallGrade,
   resolveResilienceFactors,
   resolveGovernanceQuality,
+  isBlacklistable,
 } from "../../../src/lib/report-cards";
 import type {
   StablecoinData,
@@ -40,15 +41,6 @@ import type {
   CollateralQuality,
   CustodyModel,
 } from "../../../src/lib/types";
-
-// ---------------------------------------------------------------------------
-// Blacklistability helper
-// ---------------------------------------------------------------------------
-
-function isBlacklistable(meta: StablecoinMeta): boolean | "possible" {
-  if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
-  return meta.flags.governance === "centralized";
-}
 
 // ---------------------------------------------------------------------------
 // Handler
@@ -174,13 +166,21 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     });
   }
 
+  // Build first-order blacklistable index once. Uses isBlacklistable without
+  // the index arg → only explicit overrides + centralized governance, no recursion.
+  const blacklistableIds: ReadonlySet<string> = new Set(
+    TRACKED_STABLECOINS
+      .filter(m => isBlacklistable(m) === true)
+      .map(m => m.id)
+  );
+
   // 5. Score all coins in dependency order (upstream first)
   const sortedMetas = topologicalOrder([...TRACKED_STABLECOINS]);
   const overallScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
 
   for (const meta of sortedMetas) {
-    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores);
+    const card = computeCard(meta, pegDataById, dexLiqMap, bluechipMap, overallScores, blacklistableIds);
     liveCards.push(card);
     if (card.overallScore !== null) {
       overallScores.set(card.id, card.overallScore);
@@ -268,12 +268,13 @@ function computeCard(
   dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">>,
   bluechipMap: Record<string, BluechipRating>,
   overallScores: Map<string, number>,
+  blacklistableIds: ReadonlySet<string>,
 ): ReportCard {
   const peg = pegDataById.get(meta.id);
   const liq = dexLiqMap[meta.id];
   const rating = bluechipMap[meta.id];
 
-  const canBeBlacklisted = isBlacklistable(meta);
+  const canBeBlacklisted = isBlacklistable(meta, blacklistableIds);
   const resilienceFactors = resolveResilienceFactors(meta);
 
   // Score each dimension
