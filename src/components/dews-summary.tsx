@@ -10,6 +10,7 @@ import type { ThreatBand } from "@/lib/classification";
 import {
   scoreToRadius,
   deterministicOffset,
+  deterministicRadiusOffset,
   distributeAngles,
   highestBand,
   sweepDuration,
@@ -30,8 +31,16 @@ type ElevatedBand = Exclude<ThreatBand, "CALM">;
 
 const RING_BANDS: ElevatedBand[] = ["WATCH", "ALERT", "WARNING", "DANGER"];
 const RING_RADII: Record<ElevatedBand, number> = {
-  WATCH: 75, ALERT: 118, WARNING: 161, DANGER: 204,
+  DANGER: 45, WARNING: 95, ALERT: 143, WATCH: 178,
 };
+
+const CALM_INNER_R = 212;
+const CALM_ZONE_WIDTH = 26; // outer edge 238 − inner edge 212
+
+interface CalmDot {
+  x: number;
+  y: number;
+}
 
 // 8 spokes at 45° intervals, from r=10 to OUTER_R
 const SPOKES = Array.from({ length: 8 }, (_, i) => {
@@ -124,9 +133,36 @@ function computePositions(
   return result;
 }
 
+function computeCalmDots(
+  signals: Record<string, { score: number; band: string }>,
+): CalmDot[] {
+  const calmIds = Object.keys(signals).filter((id) => signals[id].band === "CALM");
+  const angles = distributeAngles(calmIds.length);
+  return calmIds.map((id, i) => {
+    const r = CALM_INNER_R + deterministicRadiusOffset(id, CALM_ZONE_WIDTH);
+    const angle = angles[i] + deterministicOffset(id);
+    return {
+      x: CX + r * Math.cos(angle),
+      y: CY + r * Math.sin(angle),
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components (unexported)
 // ---------------------------------------------------------------------------
+
+function DEWSCalmDot({ x, y }: CalmDot) {
+  return (
+    <circle
+      cx={x.toFixed(1)}
+      cy={y.toFixed(1)}
+      r={2}
+      fill="var(--color-muted-foreground)"
+      fillOpacity={0.12}
+    />
+  );
+}
 
 function DEWSDot({
   coin,
@@ -262,11 +298,13 @@ function DEWSCenter({
 
 function DEWSRadar({
   elevated,
+  calmDots,
   highest,
   totalCount,
   onCoinClick,
 }: {
   elevated: ElevatedCoin[];
+  calmDots: CalmDot[];
   highest: ThreatBand;
   totalCount: number;
   onCoinClick: (id: string) => void;
@@ -302,6 +340,9 @@ function DEWSRadar({
           fill="none" stroke={THREAT_BAND_HEX[band]}
           strokeOpacity={0.25} strokeWidth={1} strokeDasharray="4 6" />
       ))}
+      {/* Calm zone inner boundary — faint gray, not a threat color */}
+      <circle cx={CX} cy={CY} r={CALM_INNER_R}
+        fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={1} strokeDasharray="4 6" />
       <circle cx={CX} cy={CY} r={OUTER_R}
         fill="none" stroke={hex} strokeOpacity={0.35} strokeWidth={1} strokeDasharray="4 6" />
 
@@ -319,6 +360,11 @@ function DEWSRadar({
           stroke={hex} strokeOpacity={0.65} strokeWidth={1.5} strokeLinecap="round"
         />
       </g>
+
+      {/* Calm ambient starfield — non-interactive, beneath elevated coins */}
+      {calmDots.map((dot, i) => (
+        <DEWSCalmDot key={i} x={dot.x} y={dot.y} />
+      ))}
 
       {/* Coin dots */}
       {elevated.map((coin) => (
@@ -353,7 +399,7 @@ function DEWSLegend({ updatedAt }: { updatedAt: number }) {
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 border-t">
-      {RING_BANDS.map((band) => (
+      {[...RING_BANDS].reverse().map((band) => (
         <div key={band} className="flex items-center gap-1.5">
           <svg width={20} height={4} aria-hidden="true">
             <line x1={0} y1={2} x2={20} y2={2}
@@ -400,6 +446,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
 
   const totalCount = Object.keys(data.signals).length;
   const elevated = computePositions(data.signals, logos);
+  const calmDots = computeCalmDots(data.signals);
   const highest = highestBand(elevated.map((c) => c.band));
 
   return (
@@ -417,6 +464,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
       <CardContent className="space-y-0 pb-4">
         <DEWSRadar
           elevated={elevated}
+          calmDots={calmDots}
           highest={highest}
           totalCount={totalCount}
           onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
