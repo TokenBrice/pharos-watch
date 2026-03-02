@@ -1,12 +1,146 @@
 "use client";
 
-import Link from "next/link";
+import { useId, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
-import { DEWSBadge } from "@/components/dews-badge";
-import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { PSI_ELIGIBLE_META_BY_ID } from "@/lib/psi-eligible";
+import { THREAT_BAND_HEX } from "@/lib/classification";
 import type { ThreatBand } from "@/lib/classification";
+import {
+  scoreToRadius,
+  deterministicOffset,
+  distributeAngles,
+  highestBand,
+  sweepDuration,
+  pulseDuration,
+} from "@/lib/dews-radar-utils";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const CX = 280;
+const CY = 240;
+const OUTER_R = 240;
+
+type ElevatedBand = Exclude<ThreatBand, "CALM">;
+
+const RING_BANDS: ElevatedBand[] = ["WATCH", "ALERT", "WARNING", "DANGER"];
+const RING_RADII: Record<ElevatedBand, number> = {
+  WATCH: 75, ALERT: 118, WARNING: 161, DANGER: 204,
+};
+
+// 8 spokes at 45° intervals, from r=10 to OUTER_R
+const SPOKES = Array.from({ length: 8 }, (_, i) => {
+  const a = (i * Math.PI) / 4;
+  return {
+    x1: CX + 10 * Math.cos(a), y1: CY + 10 * Math.sin(a),
+    x2: CX + OUTER_R * Math.cos(a), y2: CY + OUTER_R * Math.sin(a),
+  };
+});
+
+// Wake arc: 90° sector from 12 o'clock to 3 o'clock in the sweep group's local frame.
+// The sweep line points right (0°). The wake is the quadrant behind it (-90° to 0°).
+const WAKE_PATH = `M ${CX} ${CY} L ${CX} ${CY - OUTER_R} A ${OUTER_R} ${OUTER_R} 0 0 1 ${CX + OUTER_R} ${CY} Z`;
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface ElevatedCoin {
+  id: string;
+  score: number;
+  band: ElevatedBand;
+  symbol: string;
+  name: string;
+  logoUrl?: string;
+  x: number;
+  y: number;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function computePositions(
+  signals: Record<string, { score: number; band: string }>,
+  logos: Record<string, string> | undefined,
+): ElevatedCoin[] {
+  const byBand: Record<ElevatedBand, Array<{ id: string; score: number }>> = {
+    WATCH: [], ALERT: [], WARNING: [], DANGER: [],
+  };
+
+  for (const [id, entry] of Object.entries(signals)) {
+    if (entry.band === "CALM") continue;
+    const b = entry.band as ElevatedBand;
+    if (byBand[b]) byBand[b].push({ id, score: entry.score });
+  }
+
+  const result: ElevatedCoin[] = [];
+
+  for (const band of RING_BANDS) {
+    const coins = byBand[band];
+    const angles = distributeAngles(coins.length);
+    coins.forEach((coin, i) => {
+      const r = scoreToRadius(coin.score, band);
+      const angle = angles[i] + deterministicOffset(coin.id);
+      const meta = PSI_ELIGIBLE_META_BY_ID.get(coin.id);
+      result.push({
+        id: coin.id,
+        score: coin.score,
+        band,
+        symbol: meta?.symbol ?? coin.id,
+        name: meta?.name ?? coin.id,
+        logoUrl: logos?.[coin.id],
+        x: CX + r * Math.cos(angle),
+        y: CY + r * Math.sin(angle),
+      });
+    });
+  }
+
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components (unexported)
+// ---------------------------------------------------------------------------
+
+// Placeholder — will be replaced in Task 4
+function DEWSRadarSkeleton({ hex }: { hex: string }) {
+  return (
+    <svg viewBox="0 0 560 480" width="100%" style={{ maxHeight: 440 }}
+      aria-label="DEWS radar" role="img">
+      {/* Spokes */}
+      {SPOKES.map((s, i) => (
+        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+          stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+      ))}
+      {/* Band ring boundaries */}
+      {RING_BANDS.map((band) => (
+        <circle key={band} cx={CX} cy={CY} r={RING_RADII[band]}
+          fill="none" stroke={THREAT_BAND_HEX[band]}
+          strokeOpacity={0.25} strokeWidth={1} strokeDasharray="4 6" />
+      ))}
+      {/* Outer boundary */}
+      <circle cx={CX} cy={CY} r={OUTER_R}
+        fill="none" stroke={hex}
+        strokeOpacity={0.35} strokeWidth={1} strokeDasharray="4 6" />
+      {/* Center placeholder */}
+      <circle cx={CX} cy={CY} r={38}
+        fill={hex} fillOpacity={0.12}
+        stroke={hex} strokeOpacity={0.35} strokeWidth={1.5} />
+      <text x={CX} y={CY - 4} textAnchor="middle" dominantBaseline="middle"
+        fill={hex} fontSize={11} fontWeight={700} fontFamily="var(--font-mono)" letterSpacing={1}>
+        DEWS
+      </text>
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public component
+// ---------------------------------------------------------------------------
 
 interface DEWSSummaryProps {
   logos?: Record<string, string>;
@@ -17,80 +151,30 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
 
   if (isLoading) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader>
           <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-24 bg-muted rounded" />
+          <div className="h-[440px] rounded-lg bg-muted animate-pulse" />
         </CardContent>
       </Card>
     );
   }
 
-  if (!data?.signals || Object.keys(data.signals).length === 0) {
-    return null;
-  }
+  if (!data?.signals || Object.keys(data.signals).length === 0) return null;
 
-  // Sort by score descending, filter to non-CALM
-  const elevated = Object.entries(data.signals)
-    .map(([id, entry]) => ({ id, ...entry }))
-    .filter((e) => e.band !== "CALM")
-    .sort((a, b) => b.score - a.score);
-
-  const totalCoins = Object.keys(data.signals).length;
-  const calmCount = totalCoins - elevated.length;
+  const elevated = computePositions(data.signals, logos);
+  const highest = highestBand(elevated.map((c) => c.band));
+  const hex = THREAT_BAND_HEX[highest];
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
-          <span className="text-xs text-muted-foreground">
-            {elevated.length > 0
-              ? `${elevated.length} elevated · ${calmCount} calm`
-              : `All ${totalCoins} coins calm`}
-          </span>
-        </div>
+        <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
       </CardHeader>
       <CardContent>
-        {elevated.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            All {totalCoins} tracked coins at Calm. No stress signals detected.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1.5">
-            {elevated.slice(0, 12).map((entry) => {
-              const meta = PSI_ELIGIBLE_META_BY_ID.get(entry.id);
-              const symbol = meta?.symbol ?? entry.id;
-              const name = meta?.name ?? symbol;
-              const logoUrl = logos?.[entry.id];
-              return (
-                <Link
-                  key={entry.id}
-                  href={`/stablecoin/${entry.id}`}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
-                >
-                  <StablecoinLogo src={logoUrl} name={name} size={20} />
-                  <span className="text-sm font-medium truncate flex-1">{symbol}</span>
-                  <DEWSBadge
-                    score={entry.score}
-                    band={entry.band as ThreatBand}
-                    signals={entry.signals}
-                  />
-                  <span className="text-xs font-mono tabular-nums text-muted-foreground w-6 text-right">
-                    {entry.score}
-                  </span>
-                </Link>
-              );
-            })}
-            {elevated.length > 12 && (
-              <p className="text-xs text-muted-foreground px-2 py-1.5">
-                +{elevated.length - 12} more elevated
-              </p>
-            )}
-          </div>
-        )}
+        <DEWSRadarSkeleton hex={hex} />
       </CardContent>
     </Card>
   );
