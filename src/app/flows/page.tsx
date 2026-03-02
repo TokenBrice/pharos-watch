@@ -54,12 +54,6 @@ function FlowsPageInner() {
         </p>
       </div>
 
-      {/* New feature notice */}
-      <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-4 text-sm text-amber-200">
-        This is a new feature, data collection work is in progress: please be
-        patient.
-      </div>
-
       {/* Error / stale banner */}
       {isError && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
@@ -137,7 +131,11 @@ function FlowsPageInner() {
 
 export default function FlowsPage() {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
+      </div>
+    }>
       <FlowsPageInner />
     </Suspense>
   );

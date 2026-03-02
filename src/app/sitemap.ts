@@ -13,6 +13,9 @@ const LAST_EDITED: Record<string, string> = {
   "/compare/": "2026-02-26",
   "/methodology/": "2026-02-28",
   "/methodology/scoring-changelog/": "2026-02-28",
+  "/depeg/": "2026-03-02",
+  "/yield/": "2026-03-02",
+  "/flows/": "2026-03-02",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -27,6 +30,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: "https://pharos.watch/blacklist/",
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.8,
+    },
+    {
+      url: "https://pharos.watch/depeg/",
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.8,
@@ -69,6 +78,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: "https://pharos.watch/dependency-map/",
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
+      url: "https://pharos.watch/yield/",
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
+    {
+      url: "https://pharos.watch/flows/",
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,

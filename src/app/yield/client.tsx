@@ -75,12 +75,6 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
-      {/* New feature notice */}
-      <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-4 text-sm text-amber-200">
-        This is a new feature, data collection and further adjustment work is in
-        progress: please be patient.
-      </div>
-
       {isError && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
           Failed to load yield data. {error instanceof Error ? error.message : "Please check your connection."}
@@ -137,29 +131,33 @@ export function YieldClient() {
 
       {/* Scatter plot */}
       {data && data.rankings.length > 0 && (
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">Yield vs Safety</h2>
-          <p className="text-sm text-muted-foreground">
-            Each dot is a stablecoin. Click to view details.
-          </p>
-          <YieldScatterPlot
-            rankings={data.rankings}
-            riskFreeRate={data.riskFreeRate}
-            onDotClick={handleNavigate}
-          />
-        </div>
+        <section aria-labelledby="scatter-heading">
+          <div className="space-y-2">
+            <h2 id="scatter-heading" className="text-xl font-semibold">Yield vs Safety</h2>
+            <p className="text-sm text-muted-foreground">
+              Each dot is a stablecoin. Click to view details.
+            </p>
+            <YieldScatterPlot
+              rankings={data.rankings}
+              riskFreeRate={data.riskFreeRate}
+              onDotClick={handleNavigate}
+            />
+          </div>
+        </section>
       )}
 
       {/* Leaderboard table */}
       {data && (
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold">Yield Leaderboard</h2>
-          <YieldLeaderboard
-            rankings={data.rankings}
-            logos={logos}
-            onRowClick={handleNavigate}
-          />
-        </div>
+        <section aria-labelledby="leaderboard-heading">
+          <div className="space-y-3">
+            <h2 id="leaderboard-heading" className="text-xl font-semibold">Yield Leaderboard</h2>
+            <YieldLeaderboard
+              rankings={data.rankings}
+              logos={logos}
+              onRowClick={handleNavigate}
+            />
+          </div>
+        </section>
       )}
 
       {/* Disclaimer */}
