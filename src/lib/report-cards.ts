@@ -396,6 +396,41 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Blacklist capability helpers
+// ---------------------------------------------------------------------------
+
+/** Minimum % of reserves backed by blacklistable coinIds to trigger inherited risk. */
+export const INHERITED_BLACKLIST_THRESHOLD_PCT = 25;
+
+/**
+ * Resolves the blacklist risk tier for a coin.
+ *
+ * Resolution order:
+ *   1. Explicit meta.canBeBlacklisted override
+ *   2. Centralized governance → true
+ *   3. Inherited: ≥ INHERITED_BLACKLIST_THRESHOLD_PCT of reserves are backed
+ *      by first-order blacklistable coins (matched by coinId)
+ *   4. false
+ *
+ * Pass `blacklistableIds` built from first-order coins only (explicit + centralized,
+ * no index arg) to avoid recursive/circular inheritance.
+ */
+export function isBlacklistable(
+  meta: StablecoinMeta,
+  blacklistableIds?: ReadonlySet<string>,
+): boolean | "possible" | "possible-inherited" {
+  if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
+  if (meta.flags.governance === "centralized") return true;
+  if (blacklistableIds && meta.reserves) {
+    const inheritedPct = meta.reserves
+      .filter(r => r.coinId !== undefined && blacklistableIds.has(r.coinId))
+      .reduce((sum, r) => sum + r.pct, 0);
+    if (inheritedPct >= INHERITED_BLACKLIST_THRESHOLD_PCT) return "possible-inherited";
+  }
+  return false;
+}
+
 /**
  * Resilience: 3-factor weighted average.
  *
@@ -409,11 +444,16 @@ export function resolveResilienceFactors(meta: StablecoinMeta): {
  */
 export function scoreResilience(
   meta: StablecoinMeta,
-  canBeBlacklisted: boolean | "possible",
+  canBeBlacklisted: boolean | "possible" | "possible-inherited",
 ): ReportCardDimension {
   const factors = resolveResilienceFactors(meta);
-  const blacklistScore = canBeBlacklisted === true ? 33 : canBeBlacklisted === "possible" ? 66 : 100;
-  const blacklistLabel = canBeBlacklisted === true ? "Yes" : canBeBlacklisted === "possible" ? "Possible (mutable contract)" : "No";
+  const blacklistScore = canBeBlacklisted === true ? 33
+    : (canBeBlacklisted === "possible" || canBeBlacklisted === "possible-inherited") ? 66
+    : 100;
+  const blacklistLabel = canBeBlacklisted === true ? "Yes"
+    : canBeBlacklisted === "possible" ? "Possible (mutable contract)"
+    : canBeBlacklisted === "possible-inherited" ? "Possible (inherited)"
+    : "No";
 
   const custodyScore = CUSTODY_MODEL_SCORE[factors.custodyModel];
 

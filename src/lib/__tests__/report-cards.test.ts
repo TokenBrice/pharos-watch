@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   scoreResilience,
+  isBlacklistable,
+  INHERITED_BLACKLIST_THRESHOLD_PCT,
   resolveGovernanceQuality,
   GOVERNANCE_QUALITY_SCORE,
   scoreDependencyRisk,
@@ -199,5 +201,88 @@ describe("computeOverallGrade — no-liquidity penalty", () => {
     // Score should NOT be further penalised beyond normal weighting
     expect(result.score).not.toBeNull();
     expect(result.grade).not.toBe("NR");
+  });
+});
+
+describe("scoreResilience — possible-inherited blacklist label", () => {
+  it("scores 66 and labels Possible (inherited) for possible-inherited", () => {
+    const result = scoreResilience(makeMeta(), "possible-inherited");
+    expect(result.detail).toContain("Blacklist: Possible (inherited) (66)");
+  });
+});
+
+describe("isBlacklistable — inherited risk from reserves", () => {
+  it("exports INHERITED_BLACKLIST_THRESHOLD_PCT as 25", () => {
+    expect(INHERITED_BLACKLIST_THRESHOLD_PCT).toBe(25);
+  });
+
+  it("returns true for centralized governance (no index needed)", () => {
+    const meta = makeMeta({ flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: false } });
+    expect(isBlacklistable(meta)).toBe(true);
+  });
+
+  it("returns false for decentralized governance with no reserves", () => {
+    const meta = makeMeta({ flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false } });
+    expect(isBlacklistable(meta)).toBe(false);
+  });
+
+  it("returns possible-inherited when ≥25% of reserves link to blacklistable coinIds", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "USDC via PSM", pct: 33, risk: "low", coinId: "2" },
+        { name: "ETH", pct: 67, risk: "medium" },
+      ],
+    });
+    const blacklistableIds = new Set(["2"]);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe("possible-inherited");
+  });
+
+  it("returns false when blacklistable reserve share is below threshold (24%)", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "USDC buffer", pct: 24, risk: "low", coinId: "2" },
+        { name: "ETH", pct: 76, risk: "medium" },
+      ],
+    });
+    const blacklistableIds = new Set(["2"]);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+  });
+
+  it("explicit canBeBlacklisted: false override wins even with heavy blacklistable reserves", () => {
+    const meta = makeMeta({
+      canBeBlacklisted: false,
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "USDC", pct: 100, risk: "low", coinId: "2" },
+      ],
+    });
+    const blacklistableIds = new Set(["2"]);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+  });
+
+  it("returns false when reserves have coinIds but none are in the blacklistable index", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "sDAI", pct: 50, risk: "low", coinId: "5" },
+        { name: "ETH", pct: 50, risk: "medium" },
+      ],
+    });
+    const blacklistableIds = new Set(["2", "1"]);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+  });
+
+  it("ignores reserve slices without coinId when computing inherited share", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      reserves: [
+        { name: "USDC (unlabelled)", pct: 30, risk: "low" },
+        { name: "ETH", pct: 70, risk: "medium" },
+      ],
+    });
+    const blacklistableIds = new Set(["2"]);
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 });
