@@ -184,7 +184,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Ethena staking (sUSDe)", yieldType: "lending-vault" },
     geckoId: "ethena-usde",
-    collateral: "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC/USDT) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
+    collateral: "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC, USDT, pyUSD, and yield-bearing variants deposited in Aave/Morpho) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
     pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
     links: [
@@ -626,7 +626,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
     geckoId: "usdai",
     deploymentModel: "third-party-bridge",
-    collateral: "GPU-backed infrastructure loans (NVIDIA hardware tokenized as on-chain warehouse receipts under UCC law via the CALIBER framework); base USDai is backed 1:1 by wM (M0 Protocol T-bills) while sUSDai earns yield from hardware-collateralized credit to AI compute operators",
+    collateral: "GPU-backed infrastructure loans (NVIDIA hardware tokenized as on-chain warehouse receipts under UCC law via the CALIBER framework); base USDai is backed 1:1 by wM (M0 Protocol T-bills) and PYUSD (PayPal USD, added as a reserve and settlement asset via a PayPal partnership in December 2025) while sUSDai earns yield from hardware-collateralized credit to AI compute operators",
     pegMechanism: "Minted 1:1 by depositing USDC/USDT converted to wM (M0 T-bill tokens); redeemable 1:1 in fixed 30-day processing windows; sUSDai is an ERC-4626 vault accruing yield from GPU-backed loans; QEV auction mechanism manages redemptions against illiquid collateral",
     jurisdiction: { country: "United States" },
     links: [
@@ -641,8 +641,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "plasma",   address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
     ],
     reserves: [
-      // Source: USD.AI blog Feb 2026, Stablewatch, CoinDesk Oct 2025. Confidence: Medium
-      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 99, risk: "low", coinId: "213" },
+      // Source: The Defiant Feb 19 2026 (DefiLlama breakdown), USD.AI Dec 18 2025 PYUSD integration. Confidence: Medium
+      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 56, risk: "low", coinId: "213" },
+      { name: "PYUSD (PayPal USD)", pct: 43, risk: "medium" },
       { name: "GPU-collateralized loans (NVIDIA hardware)", pct: 1, risk: "high" },
     ],
   }),
