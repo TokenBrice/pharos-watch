@@ -33,6 +33,7 @@ import { pegScoreColor, getScoreColor, getScoreTier, TIER_BORDER, deviationColor
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { FlowSummaryCard } from "@/components/flow-summary-card";
 import { FlowEventFeed } from "@/components/flow-event-feed";
+import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { DEWSDetail } from "@/components/dews-detail";
 import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
@@ -68,6 +69,8 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const { data: liquidityMap, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
   const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
   const reportCard = reportCardsData?.cards.find((c) => c.id === id);
+  const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
+  const hasFlows = isFlowsLoading || !!flowsData?.coins.find((c) => c.stablecoinId === id);
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
   );
@@ -388,7 +391,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
         {/* Section nav as card bottom bar */}
         <div className="border-t border-border/30">
-          <DetailSectionNav sections={DETAIL_SECTIONS} />
+          <DetailSectionNav sections={hasFlows ? DETAIL_SECTIONS : DETAIL_SECTIONS.filter((s) => s.id !== "flows")} />
         </div>
       </Card>
 
@@ -441,10 +444,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         <DexLiquidityCard stablecoinId={id} />
       </section>
 
-      <section id="flows">
-        <FlowSummaryCard stablecoinId={id} />
-        <FlowEventFeed stablecoinId={id} limit={10} />
-      </section>
+      {hasFlows && (
+        <section id="flows">
+          <FlowSummaryCard stablecoinId={id} />
+          <FlowEventFeed stablecoinId={id} limit={10} />
+        </section>
+      )}
 
       {!isNavToken && (
         <section id="history">
