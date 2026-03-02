@@ -13,7 +13,7 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
-import { CRON_1H, CRON_15MIN } from "@/hooks/use-api-query";
+import { CRON_1H, CRON_15MIN, CRON_30MIN, CRON_24H } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
 import { ComparisonTable } from "@/components/comparison-table";
@@ -178,10 +178,10 @@ export function CompareClient() {
 
   // Global data hooks
   const { data: listData, dataUpdatedAt } = useStablecoins();
-  const { data: pegSummary } = usePegSummary();
-  const { data: bluechipData } = useBluechipRatings();
-  const { data: dexData } = useDexLiquidity();
-  const { data: reportCardsData } = useReportCards();
+  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
+  const { data: bluechipData, dataUpdatedAt: bcUpdatedAt } = useBluechipRatings();
+  const { data: dexData, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
+  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, ReportCard>();
@@ -471,7 +471,13 @@ export function CompareClient() {
   return (
     <div className="space-y-6">
       <StaleDataBanner
-        queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]}
+        queries={[
+          { label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN },
+          { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
+          { label: "Liquidity", dataUpdatedAt: liqUpdatedAt, staleTime: CRON_30MIN },
+          { label: "Report Cards", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
+          { label: "Bluechip", dataUpdatedAt: bcUpdatedAt, staleTime: CRON_24H },
+        ]}
       />
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">

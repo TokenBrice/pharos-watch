@@ -35,7 +35,7 @@ import { FlowSummaryCard } from "@/components/flow-summary-card";
 import { FlowEventFeed } from "@/components/flow-event-feed";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { DEWSDetail } from "@/components/dews-detail";
-import { CRON_15MIN } from "@/hooks/use-api-query";
+import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
 
 const DETAIL_SECTIONS = [
   { id: "report-card", label: "Safety Score" },
@@ -64,9 +64,9 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
   const { data: listData, isLoading: listLoading, isError: listError, dataUpdatedAt: listUpdatedAt } = useStablecoins();
-  const { data: pegSummaryData } = usePegSummary();
-  const { data: liquidityMap } = useDexLiquidity();
-  const { data: reportCardsData } = useReportCards();
+  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
+  const { data: liquidityMap, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
+  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
   const reportCard = reportCardsData?.cards.find((c) => c.id === id);
   const coinData: StablecoinData | undefined = listData?.peggedAssets?.find(
     (c: StablecoinData) => c.id === id
@@ -162,7 +162,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       )}
 
       <StaleDataBanner
-        queries={[{ label: "Prices", dataUpdatedAt: listUpdatedAt, staleTime: CRON_15MIN }]}
+        queries={[
+          { label: "Prices", dataUpdatedAt: listUpdatedAt, staleTime: CRON_15MIN },
+          { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
+          { label: "Liquidity", dataUpdatedAt: liqUpdatedAt, staleTime: CRON_30MIN },
+          { label: "Report Cards", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
+        ]}
       />
 
       {/* HERO CARD */}

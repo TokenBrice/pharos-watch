@@ -97,7 +97,7 @@ function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, numbe
 
 export function ReportCardsClient() {
   const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt } = useReportCards();
-  const { data: stablecoinsData } = useStablecoins();
+  const { data: stablecoinsData, dataUpdatedAt: pricesUpdatedAt } = useStablecoins();
   const { data: logos } = useLogos();
 
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
@@ -221,7 +221,10 @@ export function ReportCardsClient() {
   return (
     <div className="space-y-6">
       <StaleDataBanner
-        queries={[{ label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN }]}
+        queries={[
+          { label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
+          { label: "Prices", dataUpdatedAt: pricesUpdatedAt, staleTime: CRON_15MIN },
+        ]}
       />
       {/* Grade distribution bar */}
       <Card>

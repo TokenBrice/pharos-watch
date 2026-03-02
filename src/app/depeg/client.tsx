@@ -40,8 +40,8 @@ const TYPE_FILTERS: { value: GovernanceType | "all"; label: string }[] = [
 
 export function DepegClient() {
   const { data: pegData, isLoading: isPegLoading, isError: isPegError, error: pegError, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
-  const { data: dewsData } = useStressSignals();
-  const { data: eventsData } = useDepegEvents();
+  const { data: dewsData, dataUpdatedAt: dewsUpdatedAt } = useStressSignals();
+  const { data: eventsData, dataUpdatedAt: eventsUpdatedAt } = useDepegEvents();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -117,7 +117,11 @@ export function DepegClient() {
       )}
       {!isPegError && (
         <StaleDataBanner
-          queries={[{ label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN }]}
+          queries={[
+            { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
+            { label: "DEWS", dataUpdatedAt: dewsUpdatedAt, staleTime: CRON_15MIN },
+            { label: "Depeg Events", dataUpdatedAt: eventsUpdatedAt, staleTime: CRON_15MIN },
+          ]}
         />
       )}
 

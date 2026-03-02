@@ -18,7 +18,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { CRON_15MIN } from "@/hooks/use-api-query";
+import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { derivePegRates } from "@/lib/peg-rates";
@@ -27,9 +27,9 @@ import type { PegSummaryCoin } from "@/lib/types";
 export function HomepageClient() {
   const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
   const { data: logos } = useLogos();
-  const { data: pegSummaryData } = usePegSummary();
-  const { data: dexLiquidity } = useDexLiquidity();
-  const { data: reportCardsData } = useReportCards();
+  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
+  const { data: dexLiquidity, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
+  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
   const metaById = TRACKED_META_BY_ID;
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
@@ -61,7 +61,12 @@ export function HomepageClient() {
       )}
       {!error && (
         <StaleDataBanner
-          queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]}
+          queries={[
+            { label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN },
+            { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
+            { label: "Liquidity", dataUpdatedAt: liqUpdatedAt, staleTime: CRON_30MIN },
+            { label: "Report Cards", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
+          ]}
         />
       )}
 
