@@ -54,17 +54,22 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Protocol Breakdown</p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        {entries.map(([protocol, tvl]) => {
+      <div className="flex h-7 w-full overflow-hidden rounded-full bg-muted">
+        {entries.map(([protocol, tvl], idx) => {
           const pct = (tvl / total) * 100;
           if (pct < 1) return null;
+          const logo = PROTOCOL_LOGOS[protocol];
           return (
             <div
               key={protocol}
-              className={`${colorFor[protocol] ?? "bg-muted-foreground"}`}
+              className={`relative flex items-center justify-center overflow-hidden ${colorFor[protocol] ?? "bg-muted-foreground"}`}
               style={{ width: `${pct}%` }}
               title={`${prettifyProtocol(protocol)}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
-            />
+            >
+              {idx < 5 && pct >= 8 && logo && (
+                <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />
+              )}
+            </div>
           );
         })}
       </div>
@@ -73,10 +78,9 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
           const logo = PROTOCOL_LOGOS[protocol];
           return (
             <span key={protocol} className="flex items-center gap-1.5">
-              {logo ? (
+              <span className={`inline-block h-2.5 w-2.5 rounded-sm shrink-0 ${colorFor[protocol] ?? "bg-muted-foreground"}`} />
+              {logo && (
                 <Image src={logo} alt="" width={14} height={14} className="rounded-full shrink-0" />
-              ) : (
-                <span className={`inline-block h-2 w-2 rounded-full ${colorFor[protocol] ?? "bg-muted-foreground"}`} />
               )}
               {prettifyProtocol(protocol)} {((tvl / total) * 100).toFixed(0)}%
             </span>
@@ -95,18 +99,23 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chain Breakdown</p>
-      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        {entries.map(([chain, tvl]) => {
+      <div className="flex h-7 w-full overflow-hidden rounded-full bg-muted">
+        {entries.map(([chain, tvl], idx) => {
           const pct = (tvl / total) * 100;
           if (pct < 1) return null;
           const displayName = normalizeChain(chain);
+          const meta = CHAIN_META[chain.toLowerCase()];
           return (
             <div
               key={chain}
-              className={CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}
+              className={`relative flex items-center justify-center overflow-hidden ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`}
               style={{ width: `${pct}%` }}
               title={`${displayName}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
-            />
+            >
+              {idx < 5 && pct >= 8 && meta?.logoPath && (
+                <Image src={meta.logoPath} alt="" width={16} height={16} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
+              )}
+            </div>
           );
         })}
       </div>
@@ -115,10 +124,9 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
           const meta = CHAIN_META[chain.toLowerCase()];
           return (
             <span key={chain} className="flex items-center gap-1.5">
-              {meta?.logoPath ? (
+              <span className={`inline-block h-2.5 w-2.5 rounded-sm shrink-0 ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
+              {meta?.logoPath && (
                 <Image src={meta.logoPath} alt="" width={14} height={14} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
-              ) : (
-                <span className={`inline-block h-2 w-2 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
               )}
               {normalizeChain(chain)} {formatCurrency(tvl)}
             </span>
