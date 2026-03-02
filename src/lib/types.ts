@@ -440,7 +440,7 @@ export interface RawDimensionInputs {
   liquidityScore: number | null;
   concentrationHhi: number | null;
   bluechipGrade: BluechipGrade | null;
-  canBeBlacklisted: boolean | "possible";
+  canBeBlacklisted: boolean | "possible" | "possible-inherited";
   chainTier: ChainTier;
   deploymentModel: DeploymentModel;
   collateralQuality: CollateralQuality;
