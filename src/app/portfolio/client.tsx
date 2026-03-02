@@ -431,14 +431,22 @@ export function PortfolioClient() {
                     <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                       Upstream Exposure
                     </h3>
-                    <button
-                      type="button"
-                      aria-pressed={showUpstreamDetail}
-                      onClick={() => setShowUpstreamDetail((v) => !v)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showUpstreamDetail ? "Show summary" : "Show detail"}
-                    </button>
+                    <div className="inline-flex items-center rounded-md border bg-muted/30 p-0.5 gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowUpstreamDetail(false)}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${!showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        Summary
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowUpstreamDetail(true)}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-sm transition-colors ${showUpstreamDetail ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        Detail
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-3">
                     {exposureToShow.map((exp) => (
