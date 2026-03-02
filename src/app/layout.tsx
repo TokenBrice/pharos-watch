@@ -63,6 +63,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     site: "@PharosWatch",
     creator: "@TokenBrice",
+    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 630 }],
   },
   alternates: {
     canonical: "https://pharos.watch/",
