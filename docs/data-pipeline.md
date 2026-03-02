@@ -18,7 +18,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`.
+Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`, `etherscan`.
 
 ### DefiLlama list vs detail API
 
@@ -123,6 +123,27 @@ For stablecoins with >$1B circulating supply, depeg detection uses a two-phase c
 2. **Phase 2** (`confirm-pending-depegs.ts`): On the next cron cycle, pending records are re-checked. If the depeg persists, a real depeg event is opened. If the price recovered, the pending record is deleted
 
 This prevents false positive depeg events for systemically important stablecoins during brief price feed glitches.
+
+## Stale Data Monitoring (Frontend)
+
+The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from any critical query exceeds 2x its `staleTime`. Each page monitors all TanStack Query hooks that feed its content:
+
+| Page | Queries monitored | staleTime constants |
+|------|------------------|---------------------|
+| **Homepage** | Prices, Peg Data, Liquidity, Report Cards | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN` |
+| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN` |
+| **Depeg** | Peg Data, DEWS, Depeg Events | `CRON_15MIN`, `CRON_15MIN`, `CRON_15MIN` |
+| **Compare** | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
+| **Safety scores** | Grades, Prices | `CRON_15MIN`, `CRON_15MIN` |
+| **Liquidity** | Liquidity | `CRON_30MIN` |
+| **Yield** | Yield Rankings | `CRON_30MIN` |
+| **Flows** | Mint/Burn Flows | `CRON_20MIN` |
+| **Blacklist** | Blacklist | `CRON_20MIN` |
+| **Portfolio** | Grades | `CRON_15MIN` |
+
+Constants defined in `src/hooks/use-api-query.ts`: `CRON_15MIN` (15 min), `CRON_20MIN` (20 min), `CRON_30MIN` (30 min), `CRON_1H` (1 hour), `CRON_24H` (24 hours).
+
+The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. The banner triggers at 2x `staleTime` (i.e., 4x the cron interval), so it only appears when data is genuinely stale, not during normal cron gaps.
 
 ## Blacklist Sync State Semantics
 

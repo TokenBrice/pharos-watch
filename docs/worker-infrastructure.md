@@ -216,6 +216,42 @@ async function logCronRun(
 
 **Schema:** `cron_runs(job, started_at, duration_ms, status, item_count, metadata, error)`
 
+### Per-Job Cron Timeouts
+
+Each cron job receives an `AbortSignal` from `logCronRun()` that fires after a configurable timeout. Jobs that exceed their timeout are aborted and logged with `status='error'`. The signal is threaded through to `fetchWithRetry()` so that in-flight HTTP requests are also cancelled.
+
+| Job | Timeout | Reason |
+|-----|---------|--------|
+| Default | 5 min | Standard jobs complete in <60s |
+| `sync-dex-liquidity` | 10 min | 150+ pool crawl |
+| `sync-blacklist` | 8 min | Multi-chain scan + balance enrichment |
+| `sync-mint-burn` | 8 min | Multi-contract EVM log scan |
+| `daily-digest` | 8 min | LLM generation + distribution |
+
+Configuration: `CRON_TIMEOUT_MS` record in `worker/src/lib/db.ts`.
+
+### Circuit Breakers
+
+All external data sources are protected by per-source circuit breakers (`worker/src/lib/circuit-breaker.ts`). State is persisted in the D1 `cache` table under keys like `circuit:defillama-stablecoins`.
+
+- **Open threshold**: 3 consecutive failures
+- **Probe interval**: 30 minutes (one request allowed to test recovery)
+- **Alerts**: Webhook alert fires on open and close transitions
+- **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
+
+Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
+
+| Source key | Cache key | Used by |
+|-----------|-----------|---------|
+| `DL_STABLECOINS` | `defillama-stablecoins` | `sync-stablecoins` |
+| `DL_COINS` | `defillama-coins` | `enrich-prices` |
+| `DL_YIELDS` | `defillama-yields` | `sync-yield-data`, `sync-dex-liquidity` |
+| `DL_PROTOCOLS` | `defillama-protocols` | `sync-dex-liquidity` |
+| `CG_PRICES` | `coingecko-prices` | `enrich-prices` |
+| `CG_MCAP` | `coingecko-mcap` | `sync-stablecoins` (CG supply fallback) |
+| `TREASURY_RATES` | `treasury-rates` | `fetch-tbill-rate` |
+| `ETHERSCAN` | `etherscan` | `sync-blacklist`, `sync-mint-burn` |
+
 ---
 
 ## Alert System
