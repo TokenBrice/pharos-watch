@@ -18,7 +18,7 @@ import {
   LENDING_PROTOCOL_ALLOWLIST,
 } from "./yield-config";
 import {
-  computeOverallGrade, scoreDecentralization, scoreDependencyRisk,
+  computeOverallGrade, isBlacklistable, scoreDecentralization, scoreDependencyRisk,
   scoreLiquidity, scorePegStability, scoreResilience,
 } from "../../../src/lib/report-cards";
 import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
@@ -508,6 +508,12 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
 
     const overallScores = new Map<string, number>();
 
+    const blacklistableIds: ReadonlySet<string> = new Set(
+      TRACKED_STABLECOINS
+        .filter(m => isBlacklistable(m) === true)
+        .map(m => m.id)
+    );
+
     // Phase 1: non-dependent coins
     for (const meta of TRACKED_STABLECOINS) {
       if (meta.flags.governance === "centralized-dependent") continue;
@@ -529,7 +535,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
         trackingSpanDays: scoreResult.trackingSpanDays,
       };
 
-      const canBl = meta.canBeBlacklisted !== undefined ? meta.canBeBlacklisted : (meta.flags.governance as string) === "centralized";
+      const canBl = isBlacklistable(meta, blacklistableIds);
       const dims = {
         pegStability: scorePegStability(pegData, meta),
         liquidity: scoreLiquidity(dexLiqMap[meta.id]),
@@ -565,7 +571,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
         trackingSpanDays: scoreResult.trackingSpanDays,
       };
 
-      const canBl = meta.canBeBlacklisted !== undefined ? meta.canBeBlacklisted : (meta.flags.governance as string) === "centralized";
+      const canBl = isBlacklistable(meta, blacklistableIds);
       const dims = {
         pegStability: scorePegStability(pegData, meta),
         liquidity: scoreLiquidity(dexLiqMap[meta.id]),
