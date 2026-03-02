@@ -162,24 +162,24 @@ function backingFallback(backing: string): { name: string; symbol: string } {
 const COLLATERAL_CATEGORIES: Array<{ pattern: RegExp; label: string }> = [
   // Most specific first
   {
-    pattern: /treasury|t-bill|tbill|buidl|usyc|ustb|openeden|repo|money.market|wm.*m0|m0.*wm|ishares.*treasury|government.money.market/i,
+    pattern: /treasury|treasuries|t-bill|tbill|buidl|usyc|ustb|openeden|repo|money.market|wm.*m0|m0.*wm|ishares.*treasury|government.money.market|government.securities/i,
     label: "U.S. Treasury Bills",
   },
   {
-    pattern: /\beur\b|euro.*deposit|euro.*bond|eu.*gov|european.*asset|societe.generale|arion.bank|lhv.bank|swissquote|flowbank/i,
+    pattern: /\beur\b|euro.*deposit|euro.*cash|euro.*bond|eu.*gov|european.*asset|european.*bank|societe.generale|arion.bank|lhv.bank|swissquote|flowbank/i,
     label: "EUR / European Assets",
   },
   {
-    pattern: /cash.deposit|bank.deposit|cash.equivalent|fiat.usd|bny.mellon|usd.*bank|segregated.*cash|cash.*custody|cash.in.bankrupt/i,
+    pattern: /\bcash\b|cash.deposit|bank.deposit|bank.*deposit|cash.equivalent|fiat.usd|bny.mellon|usd.*bank|segregated.*cash|cash.*custody|cash.in.bankrupt/i,
     label: "USD Cash Deposits",
+  },
+  {
+    pattern: /delta.hedged|spot.crypto|perpetual|\bperp\b|basis.trad|short.futures|short.perp|funding.trad/i,
+    label: "Delta-Neutral Positions",
   },
   {
     pattern: /\bbtc(?!-margined)\b|bitcoin|wbtc|cbbtc|tbtc|fbtc|solvbtc|kbtc|ubtc/i,
     label: "Bitcoin (BTC)",
-  },
-  {
-    pattern: /delta.neutral|perpetual|\bperp\b|basis.trad|short.futures|short.perp|funding.trad/i,
-    label: "Delta-Neutral Positions",
   },
   {
     pattern: /\bweth\b|wsteth|steth|lseth|\breth\b|liquid.*stak.*eth|eth.*liquid|\beth\b/i,

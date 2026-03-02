@@ -11,12 +11,16 @@ describe("categorizeCollateral", () => {
     expect(categorizeCollateral("Overnight reverse repos (secured by Treasuries)")).toBe("U.S. Treasury Bills");
     expect(categorizeCollateral("OpenEden TBILL tokens (tokenized U.S. T-bills)")).toBe("U.S. Treasury Bills");
     expect(categorizeCollateral("Money market funds (Fidelity / Amundi)")).toBe("U.S. Treasury Bills");
+    expect(categorizeCollateral("U.S. Treasuries")).toBe("U.S. Treasury Bills");
+    expect(categorizeCollateral("Short-Term U.S. Treasuries")).toBe("U.S. Treasury Bills");
+    expect(categorizeCollateral("U.S. Government Securities")).toBe("U.S. Treasury Bills");
   });
 
   it("maps cash deposit variants to USD Cash Deposits", () => {
     expect(categorizeCollateral("Cash deposits (JP Morgan, Lead Bank)")).toBe("USD Cash Deposits");
     expect(categorizeCollateral("USD cash deposits at BNY Mellon (segregated)")).toBe("USD Cash Deposits");
     expect(categorizeCollateral("Cash and cash equivalents")).toBe("USD Cash Deposits");
+    expect(categorizeCollateral("Cash")).toBe("USD Cash Deposits");
   });
 
   it("maps ETH variants to ETH / Liquid Staking", () => {
@@ -37,6 +41,7 @@ describe("categorizeCollateral", () => {
     expect(categorizeCollateral("Perpetual short futures positions (CEX via Ceffu custody)")).toBe("Delta-Neutral Positions");
     expect(categorizeCollateral("Short perp margin (Copper/Ceffu off-exchange)")).toBe("Delta-Neutral Positions");
     expect(categorizeCollateral("BTC-margined perpetual futures (short positions)")).toBe("Delta-Neutral Positions");
+    expect(categorizeCollateral("Spot crypto (BTC/ETH, delta-hedged via perp shorts)")).toBe("Delta-Neutral Positions");
   });
 
   it("maps gold variants to Physical Gold", () => {
@@ -51,6 +56,8 @@ describe("categorizeCollateral", () => {
   it("maps EUR/European assets correctly", () => {
     expect(categorizeCollateral("Euro bank deposits (CRR credit institutions, EU)")).toBe("EUR / European Assets");
     expect(categorizeCollateral("EUR bank deposits (Arion Bank, LHV Bank)")).toBe("EUR / European Assets");
+    expect(categorizeCollateral("Euro cash and cash equivalents (bank/custody accounts)")).toBe("EUR / European Assets");
+    expect(categorizeCollateral("Cash deposits at Tier 1 European banks")).toBe("EUR / European Assets");
   });
 
   it("maps DeFi positions to DeFi Collateral", () => {
