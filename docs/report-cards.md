@@ -49,7 +49,18 @@ Cemetery coins get a permanent F.
 |---|---|---|
 | **Collateral Quality** | Reserve-derived weighted score (see below) | 0–100 from curated reserve compositions, or enum fallback |
 | **Custody Model** | Who holds collateral? | On-chain (100), Institutional custodian (50), CEX/off-exchange (0) |
-| **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Possible (66), Blacklistable (33) |
+| **Blacklist Capability** | Can issuer freeze funds? | Not blacklistable (100), Possible — mutable contract (66), Possible — inherited (66), Blacklistable (33) |
+
+#### Blacklist Capability Tiers
+
+| Value | Score | Condition |
+|---|---|---|
+| Yes | 33 | `canBeBlacklisted: true` (explicit) or `governance === "centralized"` |
+| Possible (mutable contract) | 66 | `canBeBlacklisted: "possible"` (explicit override) |
+| Possible (inherited) | 66 | ≥25% of reserves backed by blacklistable coins (via `coinId` lookup) |
+| No | 100 | None of the above |
+
+`"possible-inherited"` is a **computed** value only — it never appears as a manual override in `stablecoins.ts`. The `canBeBlacklisted` field in `StablecoinMeta` only accepts `boolean | "possible"`. The inherited tier is derived at scoring time when reserve compositions show that at least 25% of a coin's reserves are backed by stablecoins that are themselves blacklistable.
 
 #### Collateral Quality: Reserve-Derived Scoring (v3.3)
 
