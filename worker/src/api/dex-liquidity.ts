@@ -80,6 +80,15 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
   const oneDayAgo = nowSec - 86_400;
   const sevenDaysAgo = nowSec - 7 * 86_400;
 
+  // CoinGecko onchain integration (2026-02-25) + pool dedup + TVL caps (2026-02-28) changed the
+  // pool-source methodology significantly. The first daily snapshot that captured the full new
+  // methodology (CG + GT + DL with dedup + TVL cap) was written at 2026-03-01 00:00 UTC.
+  // Comparing post-methodology current TVL against pre-methodology historical snapshots produces
+  // artificially inflated 7-day trends (e.g. DAI +210%, USDT +63%). Suppress tvlChange7d until
+  // both the reference snapshot and current data share the same methodology.
+  // This epoch can be removed once all 7d windows are post-methodology (i.e. after 2026-03-08).
+  const METHODOLOGY_EPOCH = 1_772_323_200; // 2026-03-01 00:00:00 UTC
+
   const map: Record<string, unknown> = {};
   for (const row of result.results ?? []) {
     const id = row.stablecoin_id;
@@ -90,12 +99,14 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
     let tvlChange24h: number | null = null;
     let tvlChange7d: number | null = null;
 
-    // Find closest snapshot to 1 day ago and 7 days ago
+    // Find closest snapshot to 1 day ago and 7 days ago.
+    // For 7d, only use snapshots from after the pool-source methodology change (METHODOLOGY_EPOCH)
+    // to avoid comparing against pre-CG snapshots that reflect narrower pool coverage.
     for (const snap of history) {
       if (tvlChange24h == null && snap.date <= oneDayAgo && snap.tvl > 0) {
         tvlChange24h = ((currentTvl - snap.tvl) / snap.tvl) * 100;
       }
-      if (tvlChange7d == null && snap.date <= sevenDaysAgo && snap.tvl > 0) {
+      if (tvlChange7d == null && snap.date <= sevenDaysAgo && snap.date >= METHODOLOGY_EPOCH && snap.tvl > 0) {
         tvlChange7d = ((currentTvl - snap.tvl) / snap.tvl) * 100;
       }
       if (tvlChange24h != null && tvlChange7d != null) break;
