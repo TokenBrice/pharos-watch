@@ -156,6 +156,61 @@ function backingFallback(backing: string): { name: string; symbol: string } {
 }
 
 // ---------------------------------------------------------------------------
+// Collateral category lookup
+// ---------------------------------------------------------------------------
+
+const COLLATERAL_CATEGORIES: Array<{ pattern: RegExp; label: string }> = [
+  // Most specific first
+  {
+    pattern: /treasury|t-bill|tbill|buidl|usyc|ustb|openeden|repo|money.market|wm.*m0|m0.*wm|ishares.*treasury|government.money.market/i,
+    label: "U.S. Treasury Bills",
+  },
+  {
+    pattern: /\beur\b|euro.*deposit|euro.*bond|eu.*gov|european.*asset|societe.generale|arion.bank|lhv.bank|swissquote|flowbank/i,
+    label: "EUR / European Assets",
+  },
+  {
+    pattern: /cash.deposit|bank.deposit|cash.equivalent|fiat.usd|bny.mellon|usd.*bank|segregated.*cash|cash.*custody|cash.in.bankrupt/i,
+    label: "USD Cash Deposits",
+  },
+  {
+    pattern: /\bbtc(?!-margined)\b|bitcoin|wbtc|cbbtc|tbtc|fbtc|solvbtc|kbtc|ubtc/i,
+    label: "Bitcoin (BTC)",
+  },
+  {
+    pattern: /delta.neutral|perpetual|\bperp\b|basis.trad|short.futures|short.perp|funding.trad/i,
+    label: "Delta-Neutral Positions",
+  },
+  {
+    pattern: /\bweth\b|wsteth|steth|lseth|\breth\b|liquid.*stak.*eth|eth.*liquid|\beth\b/i,
+    label: "ETH / Liquid Staking",
+  },
+  {
+    pattern: /silver/i,
+    label: "Physical Silver",
+  },
+  {
+    pattern: /\bgold\b|lbma|gold.bullion|pamp.*gold|tokenized.*gold/i,
+    label: "Physical Gold",
+  },
+  {
+    pattern: /morpho|aave|euler|pendle|curve.*lp|yearn|lp.token|lending.position|vault.share|fraxlend|compound/i,
+    label: "DeFi Collateral",
+  },
+  {
+    pattern: /\bsol\b|\bbnb\b|\bavax\b|\bdot\b|\bsui\b|\bxtz\b|\bhype\b|\bsnx\b/i,
+    label: "Other Crypto",
+  },
+];
+
+export function categorizeCollateral(name: string): string {
+  for (const { pattern, label } of COLLATERAL_CATEGORIES) {
+    if (pattern.test(name)) return label;
+  }
+  return "Other RWA";
+}
+
+// ---------------------------------------------------------------------------
 // Upstream exposure walker
 // ---------------------------------------------------------------------------
 
