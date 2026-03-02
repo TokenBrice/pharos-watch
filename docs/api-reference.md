@@ -43,16 +43,21 @@ Endpoints backed by the cron cache include these additional headers:
 
 ---
 
-## Error Responses
+## Error Response Conventions
 
-| Status | Body | When |
-|--------|------|------|
-| 400 | `{ "error": "Missing ?stablecoin= parameter" }` | Required query param absent |
-| 400 | `{ "error": "Invalid stablecoin ID" }` | ID fails format validation |
-| 401 | `{ "error": "Unauthorized" }` | Admin endpoint called without valid `X-Admin-Key` |
-| 500 | `{ "error": "Internal Server Error" }` | Unhandled exception |
-| 502 | `{ "error": "..." }` | Upstream (DefiLlama / CoinGecko) fetch failed |
-| 503 | `{ "error": "Data not yet available" }` | Cron has not yet populated the cache |
+All error responses use `{ "error": "message" }` JSON format.
+
+| Status | Meaning | When |
+|--------|---------|------|
+| 400 | Bad Request | Invalid query parameter (unknown stablecoin ID, invalid enum value) |
+| 401 | Unauthorized | Admin endpoint called without valid `X-Admin-Key` header |
+| 404 | Not Found | Valid ID format but resource doesn't exist (e.g., unknown stablecoin in detail endpoint) |
+| 429 | Too Many Requests | Rate limit exceeded (feedback endpoint) |
+| 500 | Internal Server Error | Unhandled exception (caught by `withErrorHandler`) |
+| 502 | Bad Gateway | Upstream (DefiLlama / CoinGecko) fetch failed |
+| 503 | Service Unavailable | Cache-passthrough endpoint where cache has never been populated |
+
+**Rule:** Cache-passthrough handlers return **503** when data hasn't been populated yet. Query handlers that find no matching rows return **200** with empty results (e.g., `{ events: [], total: 0 }`).
 
 ---
 
