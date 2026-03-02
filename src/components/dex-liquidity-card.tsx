@@ -69,7 +69,7 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
         })}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entries.slice(0, 5).map(([protocol, tvl]) => {
+        {entries.filter(([, tvl]) => (tvl / total) * 100 >= 1).map(([protocol, tvl]) => {
           const logo = PROTOCOL_LOGOS[protocol];
           return (
             <span key={protocol} className="flex items-center gap-1.5">
@@ -110,7 +110,7 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
         })}
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entries.slice(0, 4).map(([chain, tvl]) => {
+        {entries.filter(([, tvl]) => (tvl / total) * 100 >= 1).map(([chain, tvl]) => {
           const meta = CHAIN_META[chain.toLowerCase()];
           return (
             <span key={chain} className="flex items-center gap-1.5">
