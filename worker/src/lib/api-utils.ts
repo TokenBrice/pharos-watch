@@ -7,26 +7,57 @@ export type { CacheStatus };
 // --- Shared cache freshness logic ---
 
 /**
+ * Keys in CACHE_FRESHNESS_THRESHOLDS that live in dedicated tables rather than
+ * the `cache` key/value table, and need table-specific freshness queries.
+ */
+const TABLE_FRESHNESS_QUERIES: Record<string, string> = {
+  "dex-liquidity": "SELECT MIN(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0",
+  "yield-data":    "SELECT MIN(? - updated_at) as age FROM yield_data",
+  "dews":          "SELECT MIN(? - computed_at) as age FROM stress_signals",
+};
+
+/**
  * Queries the cache table and evaluates freshness for every key in
  * CACHE_FRESHNESS_THRESHOLDS. Used by both /health and /status endpoints.
+ *
+ * For keys stored in dedicated tables (dex-liquidity, yield-data, dews), the
+ * table is queried directly instead of the cache key/value store.
  */
 export async function buildCacheStatuses(
   db: D1Database,
   now: number,
 ): Promise<{ caches: Record<string, CacheStatus>; worstRatio: number }> {
-  const cacheKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS);
+  // Fetch rows from the generic cache table (excludes table-backed keys)
+  const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
+    (k) => !(k in TABLE_FRESHNESS_QUERIES),
+  );
   const cacheRows = await db
-    .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${cacheKeys.map(() => '?').join(',')})`)
-    .bind(...cacheKeys)
-    .all<{ key: string; value: string; updated_at: number }>();
-  const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, { value: r.value, updatedAt: r.updated_at }]));
+    .prepare(`SELECT key, updated_at FROM cache WHERE key IN (${cacheOnlyKeys.map(() => '?').join(',')})`)
+    .bind(...cacheOnlyKeys)
+    .all<{ key: string; updated_at: number }>();
+  const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, r.updated_at]));
 
   const caches: Record<string, CacheStatus> = {};
   let worstRatio = 0;
 
   for (const [key, maxAge] of Object.entries(CACHE_FRESHNESS_THRESHOLDS)) {
-    const cached = cacheMap.get(key);
-    const ageSeconds = cached ? now - cached.updatedAt : null;
+    let ageSeconds: number | null;
+
+    if (key in TABLE_FRESHNESS_QUERIES) {
+      try {
+        const row = await db
+          .prepare(TABLE_FRESHNESS_QUERIES[key])
+          .bind(now)
+          .first<{ age: number | null }>();
+        ageSeconds = row?.age ?? null;
+      } catch {
+        ageSeconds = null;
+      }
+    } else {
+      const updatedAt = cacheMap.get(key);
+      ageSeconds = updatedAt != null ? now - updatedAt : null;
+    }
+
     const ratio = ageSeconds != null ? ageSeconds / maxAge : Infinity;
     if (ratio > worstRatio) worstRatio = ratio;
     caches[key] = { ageSeconds, maxAge, healthy: ratio <= 1.5 };

@@ -1,6 +1,5 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
-import { CACHE_FRESHNESS_THRESHOLDS } from "../lib/constants";
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
@@ -30,51 +29,6 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     }
   } catch (err) {
     console.error("[health] Failed to query blacklist counts:", err);
-  }
-
-  // Check dex_liquidity table freshness (runs every 6h)
-  try {
-    const dexAge = await db
-      .prepare("SELECT MIN(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0")
-      .bind(now)
-      .first<{ age: number | null }>();
-    const dexMaxAge = CACHE_FRESHNESS_THRESHOLDS["dex-liquidity"] ?? 43200;
-    const dexAgeSeconds = dexAge?.age ?? null;
-    const dexRatio = dexAgeSeconds != null ? dexAgeSeconds / dexMaxAge : Infinity;
-    if (dexRatio > worstRatioMut) worstRatioMut = dexRatio;
-    caches["dex-liquidity"] = { ageSeconds: dexAgeSeconds, maxAge: dexMaxAge, healthy: dexRatio <= 1.5 };
-  } catch {
-    // dex_liquidity table may not exist yet
-  }
-
-  // Check yield_data table freshness
-  try {
-    const yieldAge = await db
-      .prepare("SELECT MIN(? - updated_at) as age FROM yield_data")
-      .bind(now)
-      .first<{ age: number | null }>();
-    const yieldMaxAge = CACHE_FRESHNESS_THRESHOLDS["yield-data"] ?? 3600;
-    const yieldAgeSeconds = yieldAge?.age ?? null;
-    const yieldRatio = yieldAgeSeconds != null ? yieldAgeSeconds / yieldMaxAge : Infinity;
-    if (yieldRatio > worstRatioMut) worstRatioMut = yieldRatio;
-    caches["yield-data"] = { ageSeconds: yieldAgeSeconds, maxAge: yieldMaxAge, healthy: yieldRatio <= 1.5 };
-  } catch {
-    // yield_data table may not exist yet
-  }
-
-  // Check stress_signals (DEWS) freshness (runs every 15min)
-  try {
-    const dewsAge = await db
-      .prepare("SELECT MIN(? - computed_at) as age FROM stress_signals")
-      .bind(now)
-      .first<{ age: number | null }>();
-    const dewsMaxAge = CACHE_FRESHNESS_THRESHOLDS["dews"] ?? 1800;
-    const dewsAgeSeconds = dewsAge?.age ?? null;
-    const dewsRatio = dewsAgeSeconds != null ? dewsAgeSeconds / dewsMaxAge : Infinity;
-    if (dewsRatio > worstRatioMut) worstRatioMut = dewsRatio;
-    caches["dews"] = { ageSeconds: dewsAgeSeconds, maxAge: dewsMaxAge, healthy: dewsRatio <= 1.5 };
-  } catch {
-    // stress_signals table may not exist yet
   }
 
   // Check circuit breaker states
