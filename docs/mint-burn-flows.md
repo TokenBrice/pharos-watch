@@ -30,6 +30,7 @@ On-chain mint and burn event tracker for stablecoins. Detects Transfer events (a
 | `NEUTRAL` | 50 | Neutral Flow Intensity Score |
 | `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
+| `MAX_SCAN_RANGE` | 50,000 | Max block range per contract per cycle (~7 days of ETH blocks) |
 | `startBlock` | 21,900,000 | All 10 contracts start scanning from this Ethereum block |
 | Subrequest budget | 200 per cron run | Etherscan API call budget |
 

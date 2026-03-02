@@ -17,6 +17,12 @@ const INDEXING_SAFETY_SEC = 900;
 // Approximate block time (seconds) for Ethereum — only chain in Phase 1.
 const ETH_BLOCK_TIME = 12;
 
+// Maximum block range to scan per contract per cron cycle.
+// Prevents exponential recursion in fetchEvmLogsForTopics from exhausting the
+// shared subrequest budget when scanning dense contracts (e.g. USDC) over large ranges.
+// 50K blocks ≈ 7 days of Ethereum blocks. Full backfill of 2.6M blocks takes ~17 hours.
+const MAX_SCAN_RANGE = 50_000;
+
 function evmSafetyMarginBlocks(): number {
   return Math.ceil(INDEXING_SAFETY_SEC / ETH_BLOCK_TIME);
 }
@@ -85,6 +91,11 @@ export async function syncMintBurn(
       continue;
     }
 
+    // Cap scan range to prevent exponential recursion exhausting the budget.
+    // Historical ranges (scanTo < chainHead) are safe to advance to fully;
+    // near chain head the safety margin protects against indexing lag.
+    const scanTo = Math.min(fromBlock + MAX_SCAN_RANGE, chainHead);
+
     let maxBlockSeen = 0;
     let configEvents = 0;
     let configError = false;
@@ -100,7 +111,7 @@ export async function syncMintBurn(
 
       const logs = await fetchEvmLogsForTopics(
         config.chain.evmChainId, config.contractAddress, topics,
-        etherscanApiKey, fromBlock, chainHead, 0, etherscanRL, budget
+        etherscanApiKey, fromBlock, scanTo, 0, etherscanRL, budget
       );
 
       if (logs === null) {
@@ -144,10 +155,10 @@ export async function syncMintBurn(
       if (maxBlockSeen > 0) {
         newLastBlock = maxBlockSeen;
       } else {
-        // No events found — advance toward chain head, but leave a safety margin
-        // to avoid permanently skipping events the explorer hasn't indexed yet.
+        // No events found — advance to end of scanned range.
+        // Apply safety margin only near chain head to protect against indexing lag.
         const safetyBlocks = evmSafetyMarginBlocks();
-        newLastBlock = Math.max(fromBlock - 1, chainHead - safetyBlocks);
+        newLastBlock = Math.max(fromBlock - 1, Math.min(scanTo, chainHead - safetyBlocks));
       }
       await db.prepare(
         `INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)
