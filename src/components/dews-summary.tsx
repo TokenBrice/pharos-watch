@@ -179,6 +179,37 @@ function DEWSDot({
   );
 }
 
+function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
+  const hex = THREAT_BAND_HEX[coin.band];
+  const W = 124;
+  const H = 46;
+  // Clamp so tooltip stays within viewBox (560 wide, 480 tall)
+  const tx = Math.min(Math.max(coin.x + 14, 4), 560 - W - 4);
+  const ty = Math.min(Math.max(coin.y - H - 10, 4), 480 - H - 4);
+
+  return (
+    <g pointerEvents="none">
+      <rect x={tx} y={ty} width={W} height={H} rx={6}
+        fill="var(--color-popover)" stroke="var(--color-border)" strokeWidth={1} />
+      <text x={tx + 10} y={ty + 16}
+        fill="var(--color-foreground)" fontSize={11} fontWeight={600}
+        fontFamily="var(--font-sans)">
+        {coin.symbol}
+      </text>
+      <text x={tx + 10} y={ty + 32}
+        fill={hex} fontSize={10} fontWeight={600}
+        fontFamily="var(--font-mono)">
+        {coin.band}
+      </text>
+      <text x={tx + W - 10} y={ty + 32}
+        fill="var(--color-muted-foreground)" fontSize={10}
+        fontFamily="var(--font-mono)" textAnchor="end">
+        {coin.score}/100
+      </text>
+    </g>
+  );
+}
+
 function DEWSCenter({
   highest,
   elevatedCount,
@@ -293,13 +324,16 @@ function DEWSRadar({
           onClick={onCoinClick}
         />
       ))}
+      {hoveredId && (() => {
+        const hovered = elevated.find((c) => c.id === hoveredId);
+        return hovered ? <DEWSTooltip coin={hovered} /> : null;
+      })()}
       <DEWSCenter
         highest={highest}
         elevatedCount={elevated.length}
         totalCount={totalCount}
         sweepDur={dur}
       />
-      {/* Tooltip — Task 7 */}
     </svg>
   );
 }
@@ -313,6 +347,7 @@ interface DEWSSummaryProps {
 }
 
 export function DEWSSummary({ logos }: DEWSSummaryProps) {
+  const router = useRouter();
   const { data, isLoading } = useStressSignals();
 
   if (isLoading) {
@@ -344,7 +379,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
           elevated={elevated}
           highest={highest}
           totalCount={totalCount}
-          onCoinClick={(_id) => { /* navigation wired in Task 7 */ }}
+          onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
         />
       </CardContent>
     </Card>
