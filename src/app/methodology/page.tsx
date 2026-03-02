@@ -267,7 +267,7 @@ export default function MethodologyPage() {
                   <tr>
                     <td className="py-2 pr-4 text-foreground">Blacklist Capability</td>
                     <td className="py-2 pr-4">Can the issuer freeze holder funds?</td>
-                    <td className="py-2">No&nbsp;(100), Possible&nbsp;(mutable&nbsp;contract)&nbsp;(66), Yes&nbsp;(33)</td>
+                    <td className="py-2">No&nbsp;(100), Possible&nbsp;(mutable&nbsp;contract)&nbsp;(66), Possible&nbsp;(inherited&nbsp;&mdash;&nbsp;&ge;25%&nbsp;of&nbsp;reserves&nbsp;backed&nbsp;by&nbsp;blacklistable&nbsp;coins&nbsp;such&nbsp;as&nbsp;USDC/USDT)&nbsp;(66), Yes&nbsp;(33)</td>
                   </tr>
                 </tbody>
               </table>

@@ -94,6 +94,7 @@ vi.mock("../../../../src/lib/report-cards", () => ({
   scoreLiquidity: vi.fn(() => ({ score: 70, grade: "B" })),
   scorePegStability: vi.fn(() => ({ score: 85, grade: "A-" })),
   scoreResilience: vi.fn(() => ({ score: 75, grade: "B" })),
+  isBlacklistable: vi.fn(() => false),
 }));
 
 // Stub peg-score
