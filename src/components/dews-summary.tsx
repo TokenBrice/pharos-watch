@@ -279,7 +279,7 @@ function DEWSRadar({
   const dur = sweepDuration(highest);
 
   return (
-    <svg viewBox="0 0 560 480" width="100%" style={{ maxHeight: 440 }}
+    <svg viewBox="0 0 560 500" width="100%" style={{ maxHeight: 440 }}
       aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}`}`}
       role="img">
       <defs>
