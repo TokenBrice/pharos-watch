@@ -3440,9 +3440,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "rwa",
     custodyModel: "onchain",
     reserves: [
-      { name: "Overcollateralized institutional loans (BTC/ETH collateral, Blue Chip pool)", pct: 55, risk: "medium", coinId: "2", depType: "wrapper" },
-      { name: "Overcollateralized institutional loans (SOL/XRP/altcoin collateral, High Yield pool)", pct: 35, risk: "high", coinId: "2", depType: "wrapper" },
-      { name: "Liquidity buffer (USDC idle)", pct: 10, risk: "low", coinId: "2", depType: "wrapper" },
+      // syrupUSDC holds USDC-denominated loan receivables; BTC/ETH/crypto is collateral securing those loans, not the underlying asset
+      { name: "USDC (deployed as overcollateralized institutional loans)", pct: 100, risk: "medium", coinId: "2", depType: "wrapper" },
     ],
   }),
   usd("cg-syrupusdt", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
@@ -3462,9 +3461,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "rwa",
     custodyModel: "onchain",
     reserves: [
-      { name: "Overcollateralized institutional loans (BTC/ETH collateral, Blue Chip pool)", pct: 55, risk: "medium", coinId: "1", depType: "wrapper" },
-      { name: "Overcollateralized institutional loans (SOL/XRP/altcoin collateral, High Yield pool)", pct: 35, risk: "high", coinId: "1", depType: "wrapper" },
-      { name: "Liquidity buffer (USDT idle)", pct: 10, risk: "low", coinId: "1", depType: "wrapper" },
+      // syrupUSDT holds USDT-denominated loan receivables; BTC/ETH/crypto is collateral securing those loans, not the underlying asset
+      { name: "USDT (deployed as overcollateralized institutional loans)", pct: 100, risk: "medium", coinId: "1", depType: "wrapper" },
     ],
   }),
   usd("cg-yousd", "Yield Optimizer USD", "yoUSD", "crypto-backed", "centralized-dependent", {
