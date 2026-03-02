@@ -25,7 +25,7 @@ const CX = 280;
 const CY = 240;
 const OUTER_R = 240;
 const VB_W = 560;
-const VB_H = 480;
+const VB_H = 500;
 
 type ElevatedBand = Exclude<ThreatBand, "CALM">;
 
