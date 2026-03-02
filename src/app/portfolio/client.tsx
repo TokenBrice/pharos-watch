@@ -206,6 +206,7 @@ export function PortfolioClient() {
   const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt } = useReportCards();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
+  const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
 
   const portfolio = usePortfolio(reportData?.cards);
 
@@ -420,33 +421,50 @@ export function PortfolioClient() {
                 </div>
               )}
 
-              {portfolio.upstreamExposure.length > 0 && (
+              {(portfolio.upstreamExposureGrouped.length > 0 || portfolio.upstreamExposure.length > 0) && (
                 <div>
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                    Upstream Exposure
-                  </h3>
-                  <div className="space-y-3">
-                    {portfolio.upstreamExposure.map((exp) => (
-                      <ExposureBar
-                        key={exp.coinId}
-                        name={exp.name}
-                        symbol={exp.symbol}
-                        usd={exp.usd}
-                        pct={exp.pct}
-                        isWarning={!exp.isCollateral && exp.pct > 80}
-                        isCollateral={exp.isCollateral}
-                      />
-                    ))}
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Upstream Exposure
+                    </h3>
+                    <button
+                      onClick={() => setShowUpstreamDetail((v) => !v)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showUpstreamDetail ? "Show summary" : "Show detail"}
+                    </button>
                   </div>
-                  {portfolio.upstreamExposure.some((e) => !e.isCollateral && e.pct > 80) && (
-                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-600 dark:text-amber-400">
-                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                      <span>
-                        High concentration: a single upstream stablecoin accounts for over 80% of
-                        your portfolio exposure.
-                      </span>
-                    </div>
-                  )}
+                  {(() => {
+                    const exposureToShow = showUpstreamDetail
+                      ? portfolio.upstreamExposure
+                      : portfolio.upstreamExposureGrouped;
+                    return (
+                      <>
+                        <div className="space-y-3">
+                          {exposureToShow.map((exp) => (
+                            <ExposureBar
+                              key={exp.coinId}
+                              name={exp.name}
+                              symbol={exp.symbol}
+                              usd={exp.usd}
+                              pct={exp.pct}
+                              isWarning={!exp.isCollateral && exp.pct > 80}
+                              isCollateral={exp.isCollateral}
+                            />
+                          ))}
+                        </div>
+                        {exposureToShow.some((e) => !e.isCollateral && e.pct > 80) && (
+                          <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-600 dark:text-amber-400">
+                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                            <span>
+                              High concentration: a single upstream stablecoin accounts for over 80% of
+                              your portfolio exposure.
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
