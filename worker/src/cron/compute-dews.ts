@@ -341,6 +341,7 @@ export async function computeAndStoreDEWS(
       if (!prevBand) continue; // no previous reading — skip first run
       const prevIdx = BAND_ORDER.indexOf(prevBand as typeof BAND_ORDER[number]);
       const newIdx = BAND_ORDER.indexOf(r.band as typeof BAND_ORDER[number]);
+      if (prevIdx === -1 || newIdx === -1) continue; // unrecognised band — treat as no reading
       if (newIdx <= prevIdx) continue; // not an upward transition
 
       const meta = PSI_ELIGIBLE_META_BY_ID.get(r.stablecoinId);

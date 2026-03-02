@@ -150,7 +150,7 @@ If either is absent, Telegram posting is skipped silently.
 3. Add the bot as Admin with "Post Messages" permission only
 4. Add secrets: `cd worker && npx wrangler secret put TELEGRAM_BOT_TOKEN` / `npx wrangler secret put TELEGRAM_CHAT_ID`
 
-**Adding future post types:** any cron can import `postDigestToTelegram` (or call the lower-level `buildTelegramMessage` + a custom fetch) from `telegram.ts` — no changes to the module needed.
+**Other post types:** the DEWS cron posts real-time band-entry alerts via `postDewsAlert` from `telegram.ts`. Any cron can import from `telegram.ts` — see `postDigestToTelegram` and `postDewsAlert` as examples of the pattern.
 
 ### Distribution status logging
 
