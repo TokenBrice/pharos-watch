@@ -75,7 +75,7 @@ async function probeFreeze(implAddress: string, apiKey: string | null): Promise<
 export async function syncUsdsStatus(
   db: D1Database,
   etherscanApiKey: string | null,
-  signal?: AbortSignal,
+  _signal?: AbortSignal,
 ): Promise<{ itemCount: number } | void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
