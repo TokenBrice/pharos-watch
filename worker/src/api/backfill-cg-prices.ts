@@ -5,9 +5,9 @@ import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { withErrorHandler } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
+import { RATE_LIMITS } from "../lib/rate-limits";
 
 const DEFAULT_BATCH_SIZE = 10;
-const CG_DELAY_MS = 200; // 500 req/min budget → 200ms between calls
 
 interface CoinResult {
   id: string;
@@ -70,7 +70,7 @@ export const handleBackfillCgPrices = withErrorHandler(
 
       // Rate-limit CoinGecko calls
       if (coinDetails.length > 0 || skipped.length > 0 || errors.length > 0) {
-        await new Promise((r) => setTimeout(r, CG_DELAY_MS));
+        await new Promise((r) => setTimeout(r, RATE_LIMITS.COINGECKO_BACKFILL_MS));
       }
 
       // Fetch historical prices + market caps from CoinGecko

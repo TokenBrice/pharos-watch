@@ -10,6 +10,12 @@ import {
   onchainRateLimit, parseCgPoolVolume,
 } from "../lib/coingecko-onchain";
 import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP } from "../lib/dexscreener";
+import { GT_CHAIN_MAP, GT_CHAIN_REVERSE } from "../lib/chain-registry";
+import { RATE_LIMITS, CRAWL_BUDGETS } from "../lib/rate-limits";
+import {
+  GT_API_BASE, QUALITY_MULTIPLIERS, GT_DEX_QUALITY,
+  USD_REFERENCE_SYMBOLS, COMPOSITE_POOL_NAMES, BLOCKED_DEX_IDS,
+} from "../lib/dex-constants";
 
 const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
@@ -44,78 +50,6 @@ const UNIV3_POOL_QUERY = `{
   }
 }`;
 
-/** Well-known USD-pegged tokens used as reference prices in Uni V3 pool observations */
-const USD_REFERENCE_SYMBOLS = new Set(["USDC", "USDT", "DAI", "BUSD", "TUSD", "USDP", "GUSD", "LUSD", "FRAX"]);
-
-// Well-known composite pool names → constituent symbols
-const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
-  "3pool": ["DAI", "USDC", "USDT"],
-  "3crv": ["DAI", "USDC", "USDT"],
-  "3CRV": ["DAI", "USDC", "USDT"],
-  "fraxbp": ["FRAX", "USDC"],
-  "FRAXBP": ["FRAX", "USDC"],
-};
-
-// Explicitly blocked DEX slugs (dead/deprecated protocols not yet flagged by DeFiLlama)
-const BLOCKED_DEX_IDS = new Set(["retro", "retro-finance", "retro-finance-v3"]);
-
-// Quality multipliers for pool-type-adjusted TVL
-const QUALITY_MULTIPLIERS: Record<string, number> = {
-  "curve-stableswap-high-a": 1.0,
-  "curve-stableswap": 0.85,
-  "curve-cryptoswap": 0.5,
-  "uniswap-v3-1bp": 1.1,
-  "uniswap-v3-5bp": 0.85,
-  "uniswap-v3-30bp": 0.4,
-  "fluid-dex": 0.85,
-  "aerodrome-stable": 0.85,
-  "aerodrome-volatile": 0.4,
-  "balancer-stable": 0.85,
-  "balancer-weighted": 0.4,
-  "generic": 0.3,
-  "orderbook": 0.6,
-};
-
-// GeckoTerminal API
-const GT_API_BASE = "https://api.geckoterminal.com/api/v2";
-const GT_RATE_LIMIT_MS = 2000; // 30 req/min = 1 every 2s
-const GT_CRAWL_BUDGET_MS = 15 * 60 * 1000; // Max wall time for pool crawl (15 min of 30 min cron)
-
-/** Map our chain names (from stablecoins.ts contracts) to GT network IDs */
-const GT_CHAIN_MAP: Record<string, string> = {
-  ethereum: "eth",
-  base: "base",
-  arbitrum: "arbitrum",
-  polygon: "polygon_pos",
-  bsc: "bsc",
-  avalanche: "avax",
-  optimism: "optimism",
-  celo: "celo",
-  gnosis: "xdai",
-  fantom: "ftm",
-  solana: "solana",
-  berachain: "berachain",
-  sui: "sui-network",
-};
-
-/** Reverse map: GT network ID → our chain name */
-const GT_CHAIN_REVERSE: Record<string, string> = Object.fromEntries(
-  Object.entries(GT_CHAIN_MAP).map(([k, v]) => [v, k])
-);
-
-/** Quality multipliers for GT-only pools, keyed by DEX ID prefix */
-const GT_DEX_QUALITY: [string, number][] = [
-  ["balancer", 0.7],
-  ["velodrome", 0.7],
-  ["pancakeswap-v3", 0.5],
-  ["trader-joe", 0.5],
-  ["sushiswap-v3", 0.5],
-  ["camelot-v3", 0.5],
-  ["maverick", 0.5],
-  ["ambient", 0.5],
-  ["pancakeswap-v2", 0.3],
-  ["sushiswap", 0.3],
-];
 
 interface LlamaPool {
   pool: string;
@@ -1206,7 +1140,7 @@ async function fetchGtTokenBatch(
       const addresses = batch.map((t) => t.address).join(",");
 
       if (requestCount > 0) {
-        await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
+        await new Promise((r) => setTimeout(r, RATE_LIMITS.GECKO_TERMINAL_MS));
       }
       requestCount++;
 
@@ -1613,7 +1547,7 @@ async function fetchGtPools(
 
   for (const { gtChain, ourChain, address, stablecoinId } of allTokens) {
     // Time budget check — stop crawling to leave time for scoring + DB writes
-    if (Date.now() - startMs > GT_CRAWL_BUDGET_MS) {
+    if (Date.now() - startMs > CRAWL_BUDGETS.GECKO_TERMINAL_MS) {
       console.log(
         `[dex-liquidity] GT pool crawl time budget exhausted after ${stats.requests}/${allTokens.length} requests ` +
         `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`
@@ -1622,7 +1556,7 @@ async function fetchGtPools(
     }
 
     if (stats.requests > 0) {
-      await new Promise((r) => setTimeout(r, GT_RATE_LIMIT_MS));
+      await new Promise((r) => setTimeout(r, RATE_LIMITS.GECKO_TERMINAL_MS));
     }
     stats.requests++;
 

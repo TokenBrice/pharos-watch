@@ -1,3 +1,5 @@
+import { SECONDS } from "./time-constants";
+
 /** Minimum peg deviation (in basis points) to trigger a depeg event */
 const DEPEG_THRESHOLD_BPS = 100;
 
@@ -50,12 +52,12 @@ export const CACHE_PROFILES = {
 export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
   stablecoins: 600,
   "stablecoin-charts": 600,
-  "usds-status": 86400,
-  "fx-rates": 1800,
-  "bluechip-ratings": 86400,
-  "dex-liquidity": 43200,
-  "yield-data": 3600,
-  dews: 1800,
+  "usds-status": SECONDS.ONE_DAY,
+  "fx-rates": SECONDS.THIRTY_MINUTES,
+  "bluechip-ratings": SECONDS.ONE_DAY,
+  "dex-liquidity": SECONDS.TWELVE_HOURS,
+  "yield-data": SECONDS.ONE_HOUR,
+  dews: SECONDS.THIRTY_MINUTES,
 };
 
 // --- Depeg multi-source confirmation (>$1B coins) ---

@@ -5,46 +5,13 @@
  */
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
+import { DS_CHAIN_MAP } from "./chain-registry";
+import { RATE_LIMITS } from "./rate-limits";
+
+// Re-export for downstream consumers
+export { DS_CHAIN_MAP };
 
 const DS_TOKEN_API = "https://api.dexscreener.com/tokens/v1";
-const DS_RATE_LIMIT_MS = 1100; // ~60 req/min free tier
-
-/** Map our chain names → DexScreener chain IDs */
-export const DS_CHAIN_MAP: Record<string, string> = {
-  ethereum: "ethereum",
-  base: "base",
-  arbitrum: "arbitrum",
-  polygon: "polygon",
-  bsc: "bsc",
-  avalanche: "avalanche",
-  optimism: "optimism",
-  solana: "solana",
-  berachain: "berachain",
-  sui: "sui",
-  fantom: "fantom",
-  celo: "celo",
-  gnosis: "gnosis",
-  tron: "tron",
-  ink: "ink",
-  sonic: "sonic",
-  mantle: "mantle",
-  linea: "linea",
-  scroll: "scroll",
-  blast: "blast",
-  zksync: "zksync",
-  mode: "mode",
-  sei: "sei",
-  manta: "manta",
-  monad: "monad",
-  plume: "plume",
-  hyperevm: "hyperevm",
-  bob: "bob",
-  unichain: "unichain",
-  soneium: "soneium",
-  worldchain: "worldchain",
-  taiko: "taiko",
-  megaeth: "megaeth",
-};
 
 /** Response shape from GET /tokens/v1/{chainId}/{address} */
 export interface DsPair {
@@ -88,5 +55,5 @@ export async function fetchDsTokenPools(
 
 /** Rate-limit sleep between DexScreener calls */
 export function dsRateLimit(): Promise<void> {
-  return new Promise((r) => setTimeout(r, DS_RATE_LIMIT_MS));
+  return new Promise((r) => setTimeout(r, RATE_LIMITS.DEXSCREENER_MS));
 }

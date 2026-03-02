@@ -18,6 +18,7 @@ import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { SECONDS } from "../lib/time-constants";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -210,7 +211,7 @@ export async function generateDailyDigest(
   if (latest) {
     const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
     const isBroken = latest.digest_text.trimStart().startsWith("```");
-    if (ageSec < 3600 && !isBroken && !force) {
+    if (ageSec < SECONDS.ONE_HOUR && !isBroken && !force) {
       console.log(
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );
@@ -299,8 +300,8 @@ export async function generateDailyDigest(
 
   // 3. Stability index — real-time sample (matches homepage) + yesterday's daily snapshot
   const nowSec = Math.floor(Date.now() / 1000);
-  const todayTs = nowSec - (nowSec % 86400);
-  const yesterdayTs = todayTs - 86400;
+  const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
+  const yesterdayTs = todayTs - SECONDS.ONE_DAY;
 
   // Current: latest 15-min real-time sample (same source as homepage)
   const latestSample = await db
@@ -328,7 +329,7 @@ export async function generateDailyDigest(
       .prepare(
         "SELECT stablecoin AS symbol, chain_name, event_type, amount FROM blacklist_events WHERE timestamp >= ? AND timestamp < ? ORDER BY amount DESC",
       )
-      .bind(todayTs - 86400, todayTs)
+      .bind(todayTs - SECONDS.ONE_DAY, todayTs)
       .all<{ symbol: string; chain_name: string; event_type: string; amount: number | null }>();
     const blEvents = blRows.results ?? [];
     if (blEvents.length > 0) {
@@ -371,8 +372,8 @@ export async function generateDailyDigest(
     }
 
     if (top10.length > 0) {
-      const yesterday = todayTs - 86400;
-      const weekAgo = todayTs - 7 * 86400;
+      const yesterday = todayTs - SECONDS.ONE_DAY;
+      const weekAgo = todayTs - 7 * SECONDS.ONE_DAY;
       // Query supply snapshots for today, yesterday, and 7 days ago
       const placeholders = top10.map(() => "?").join(",");
       const supplyRows = await db
@@ -442,7 +443,7 @@ export async function generateDailyDigest(
     const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
 
     // Load depeg events (4-year window) + dex liquidity + first-seen dates
-    const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
+    const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * SECONDS.ONE_DAY);
     const [eventsResult, dexLiqResult, firstSeenMap] = await Promise.all([
       db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
         .bind(fourYearsAgoSec)
@@ -586,7 +587,7 @@ export async function generateDailyDigest(
   // 4d. Recently resolved depegs (last 48h)
   let resolvedDepegs: DigestInputData["resolvedDepegs"];
   try {
-    const cutoff48h = nowSec - 48 * 3600;
+    const cutoff48h = nowSec - SECONDS.TWO_DAYS;
     const resolvedRows = await db
       .prepare(
         `SELECT symbol, peak_deviation_bps, started_at, ended_at, stablecoin_id
@@ -610,7 +611,7 @@ export async function generateDailyDigest(
       .map((r) => ({
         symbol: r.symbol,
         peakBps: Math.abs(r.peak_deviation_bps),
-        durationHours: Math.round((r.ended_at - r.started_at) / 3600),
+        durationHours: Math.round((r.ended_at - r.started_at) / SECONDS.ONE_HOUR),
         mcapUsd: mcapById.get(r.stablecoin_id) ?? 0,
       }))
       .filter((r) => r.peakBps > 200 && r.mcapUsd > 50_000_000)
