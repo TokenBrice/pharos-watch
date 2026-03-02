@@ -37,6 +37,7 @@ export interface PortfolioState {
   portfolioScore: number | null;
   dimensionScores: Record<DimensionKey, number | null>;
   upstreamExposure: UpstreamExposure[];
+  upstreamExposureGrouped: UpstreamExposure[];
   isFromUrl: boolean;
   addCoin: (coinId: string, amount: number) => void;
   removeCoin: (coinId: string) => void;
@@ -502,6 +503,11 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     [holdings, cards],
   );
 
+  const upstreamExposureGrouped = useMemo(
+    () => computeGroupedExposure(upstreamExposure, totalUsd),
+    [upstreamExposure, totalUsd],
+  );
+
   return {
     holdings,
     totalUsd,
@@ -509,6 +515,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
     portfolioScore,
     dimensionScores,
     upstreamExposure,
+    upstreamExposureGrouped,
     isFromUrl,
     addCoin,
     removeCoin,
