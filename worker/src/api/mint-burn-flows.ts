@@ -307,8 +307,11 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     console.warn("Report card cache stale/missing, falling back to hardcoded SAFE_HAVEN_IDS");
   }
 
+  const seenCoinIds = new Set<string>();
   for (const config of MINT_BURN_CONFIGS) {
     const id = config.stablecoinId;
+    if (seenCoinIds.has(id)) continue;
+    seenCoinIds.add(id);
     const agg = coinAgg.get(id);
     const baseline = baselineMap.get(id);
     const mcap = mcapById.get(id) ?? 0;
