@@ -38,7 +38,7 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
   return smidge;
 }
 
-export async function syncBluechip(db: D1Database): Promise<void> {
+export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promise<void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   // Check cache freshness

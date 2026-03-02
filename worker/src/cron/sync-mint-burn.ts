@@ -31,6 +31,7 @@ export async function syncMintBurn(
   db: D1Database,
   etherscanApiKey: string | null,
   etherscanRL: RateLimitedFetch,
+  signal?: AbortSignal,
 ): Promise<{ itemCount: number; metadata: string }> {
   const budget = createBudget(200);
   let totalNewEvents = 0;

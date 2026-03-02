@@ -131,10 +131,6 @@ describe("syncBlacklist", () => {
         timeStamp: "0x6670a780", // 1718650752
         transactionHash: "0xabc123",
         logIndex: "0x0",
-        transactionIndex: "0x0",
-        blockHash: "0x0",
-        gasPrice: "0x0",
-        gasUsed: "0x0",
       },
     ]);
 

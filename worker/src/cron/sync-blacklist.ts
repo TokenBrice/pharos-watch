@@ -631,6 +631,7 @@ export async function syncBlacklist(
   trongridApiKey: string | null,
   drpcApiKey: string | null,
   externalEtherscanRL?: RateLimitedFetch,
+  signal?: AbortSignal,
 ): Promise<{ itemCount: number; metadata: string }> {
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);

@@ -90,15 +90,15 @@ describe("computeApyVarianceScore", () => {
 
 describe("detectWarningSignals", () => {
   it("detects yield spike", () => {
-    const signals = detectWarningSignals({ currentApy: 25, apy30d: 10, apyReward: null, apy: 25, medianApy: 8, sourceTvlUsd: null, prevTvlUsd: null });
+    const signals = detectWarningSignals({ currentApy: 25, apy30d: 10, apyReward: null, medianApy: 8, sourceTvlUsd: null, prevTvlUsd: null });
     expect(signals).toContain("yield-spike");
   });
   it("detects reward-heavy yield", () => {
-    const signals = detectWarningSignals({ currentApy: 20, apy30d: 18, apyReward: 17, apy: 20, medianApy: 8, sourceTvlUsd: null, prevTvlUsd: null });
+    const signals = detectWarningSignals({ currentApy: 20, apy30d: 18, apyReward: 17, medianApy: 8, sourceTvlUsd: null, prevTvlUsd: null });
     expect(signals).toContain("reward-heavy");
   });
   it("returns empty for healthy yield", () => {
-    const signals = detectWarningSignals({ currentApy: 5, apy30d: 5, apyReward: null, apy: 5, medianApy: 6, sourceTvlUsd: 1e9, prevTvlUsd: 1e9 });
+    const signals = detectWarningSignals({ currentApy: 5, apy30d: 5, apyReward: null, medianApy: 6, sourceTvlUsd: 1e9, prevTvlUsd: 1e9 });
     expect(signals).toHaveLength(0);
   });
 });

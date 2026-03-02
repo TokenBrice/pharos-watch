@@ -55,7 +55,7 @@ interface ResolvedYield {
 
 // -- Tier 1: On-chain exchange rates -----------------------------------------
 
-async function fetchOnChainRates(): Promise<Map<string, { rate: number }>> {
+async function fetchOnChainRates(signal?: AbortSignal): Promise<Map<string, { rate: number }>> {
   const results = new Map<string, { rate: number }>();
 
   for (const config of ON_CHAIN_RATE_CONFIGS) {
@@ -70,6 +70,7 @@ async function fetchOnChainRates(): Promise<Map<string, { rate: number }>> {
       const res = await fetchWithRetry(rpc.rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal,
         body: JSON.stringify({
           jsonrpc: "2.0",
           method: "eth_call",
@@ -148,7 +149,7 @@ async function getPriceDerivedApy(
 
 // -- Main sync function ------------------------------------------------------
 
-export async function syncYieldData(db: D1Database): Promise<CronResult> {
+export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
   const yieldCoins = TRACKED_STABLECOINS.filter((m) => m.flags.yieldBearing);
 
@@ -173,6 +174,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
     try {
       const res = await fetchWithRetry(DL_YIELDS_URL, {
         headers: { "User-Agent": USER_AGENT },
+        signal,
       });
       if (res?.ok) {
         const body = await res.json() as { data: DlPool[] };
@@ -188,7 +190,7 @@ export async function syncYieldData(db: D1Database): Promise<CronResult> {
   }
 
   // 2. Fetch on-chain rates (Tier 1 source)
-  const onChainRates = await fetchOnChainRates();
+  const onChainRates = await fetchOnChainRates(signal);
 
   // 3. Read cached risk-free rate
   const rfCache = await getCache(db, "risk_free_rate");

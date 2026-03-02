@@ -201,17 +201,17 @@ const worker = {
 
     switch (cron) {
       case "*/15 * * * *": {
-        const stablecoinsSync = logCronRun(db, "sync-stablecoins", () => syncStablecoins(db, env.CMC_API_KEY));
+        const stablecoinsSync = logCronRun(db, "sync-stablecoins", (signal) => syncStablecoins(db, env.CMC_API_KEY, signal));
         ctx.waitUntil(stablecoinsSync);
-        ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", () => syncStablecoinCharts(db)));
-        ctx.waitUntil(logCronRun(db, "sync-fx-rates", () => syncFxRates(db)));
+        ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
+        ctx.waitUntil(logCronRun(db, "sync-fx-rates", (signal) => syncFxRates(db, signal)));
         // PSI depends on stablecoins cache + depeg_events — run after sync completes
         ctx.waitUntil(stablecoinsSync.then(() =>
-          logCronRun(db, "stability-index", () => computeAndStoreStabilityIndex(db))
+          logCronRun(db, "stability-index", (signal) => computeAndStoreStabilityIndex(db, signal))
         ));
         // DEWS depends on stablecoins cache + dex data — run after sync
         ctx.waitUntil(stablecoinsSync.then(() =>
-          logCronRun(db, "compute-dews", () => computeAndStoreDEWS(db))
+          logCronRun(db, "compute-dews", (signal) => computeAndStoreDEWS(db, signal))
         ));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {
@@ -237,11 +237,11 @@ const worker = {
         }
         const etherscanRL = createRateLimiter(4);
         const etherscanKey = env.ETHERSCAN_API_KEY ?? null;
-        const blacklistJob = logCronRun(db, "sync-blacklist", () =>
-          syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL)
+        const blacklistJob = logCronRun(db, "sync-blacklist", (signal) =>
+          syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL, signal)
         );
-        const mintBurnJob = logCronRun(db, "sync-mint-burn", () =>
-          syncMintBurn(db, etherscanKey, etherscanRL)
+        const mintBurnJob = logCronRun(db, "sync-mint-burn", (signal) =>
+          syncMintBurn(db, etherscanKey, etherscanRL, signal)
         );
         ctx.waitUntil(blacklistJob);
         ctx.waitUntil(mintBurnJob);
@@ -256,21 +256,21 @@ const worker = {
       // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
       // Yield depends on dex_liquidity for safety scores — chain after DEX sync
       case "10,40 * * * *": {
-        const dexSync = logCronRun(db, "sync-dex-liquidity", () => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null));
+        const dexSync = logCronRun(db, "sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null, signal));
         ctx.waitUntil(dexSync);
         ctx.waitUntil(dexSync.then(() =>
-          logCronRun(db, "sync-yield-data", () => syncYieldData(db))
+          logCronRun(db, "sync-yield-data", (signal) => syncYieldData(db, signal))
         ));
         break;
       }
       case "0 8 * * *": {
-        ctx.waitUntil(logCronRun(db, "snapshot-supply", () => snapshotSupply(db)));
-        ctx.waitUntil(logCronRun(db, "fetch-tbill-rate", () => fetchTbillRate(db)));
-        const psiPromise = logCronRun(db, "snapshot-psi", () => snapshotPsiDaily(db));
+        ctx.waitUntil(logCronRun(db, "snapshot-supply", (signal) => snapshotSupply(db, signal)));
+        ctx.waitUntil(logCronRun(db, "fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
+        const psiPromise = logCronRun(db, "snapshot-psi", (signal) => snapshotPsiDaily(db, signal));
         ctx.waitUntil(psiPromise);
-        ctx.waitUntil(logCronRun(db, "sync-usds-status", () => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null)));
-        ctx.waitUntil(logCronRun(db, "sync-bluechip", () => syncBluechip(db)));
-        ctx.waitUntil(psiPromise.then(() => logCronRun(db, "daily-digest", () => {
+        ctx.waitUntil(logCronRun(db, "sync-usds-status", (signal) => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null, signal)));
+        ctx.waitUntil(logCronRun(db, "sync-bluechip", (signal) => syncBluechip(db, signal)));
+        ctx.waitUntil(psiPromise.then(() => logCronRun(db, "daily-digest", (signal) => {
           const twitterCreds =
             env.TWITTER_API_KEY &&
             env.TWITTER_API_SECRET &&
@@ -287,7 +287,7 @@ const worker = {
             env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
               ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
               : null;
-          return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds, false, telegramCreds);
+          return generateDailyDigest(db, env.ANTHROPIC_API_KEY ?? null, twitterCreds, false, telegramCreds, signal);
         })));
         break;
       }

@@ -56,9 +56,9 @@ function downsample(data: RawChartPoint[]): DownsampledPoint[] {
   return result;
 }
 
-export async function syncStablecoinCharts(db: D1Database): Promise<void> {
+export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal): Promise<void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
-  const res = await fetchWithRetry(`${DEFILLAMA_BASE}/stablecoincharts/all`);
+  const res = await fetchWithRetry(`${DEFILLAMA_BASE}/stablecoincharts/all`, signal ? { signal } : undefined);
 
   if (!res || !res.ok) {
     console.error(`[sync-charts] DefiLlama API error: ${res?.status ?? "no response"}`);

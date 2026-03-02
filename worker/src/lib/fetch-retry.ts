@@ -2,6 +2,9 @@
  * Fetch with retry and exponential backoff.
  * Respects Retry-After header on 429 responses.
  * Returns null if all attempts fail.
+ *
+ * If opts.signal is provided (e.g. from a cron AbortController), it is composed
+ * with the per-request timeout via AbortSignal.any() so both fire correctly.
  */
 export async function fetchWithRetry(
   url: string,
@@ -14,9 +17,13 @@ export async function fetchWithRetry(
 
   for (let i = 0; i <= maxRetries; i++) {
     try {
+      const perRequestTimeout = AbortSignal.timeout(timeoutMs);
+      const combinedSignal = opts?.signal
+        ? AbortSignal.any([opts.signal, perRequestTimeout])
+        : perRequestTimeout;
       const res = await fetch(url, {
         ...opts,
-        signal: opts?.signal ?? AbortSignal.timeout(timeoutMs),
+        signal: combinedSignal,
       });
       if (res.ok) return res;
       if (res.status === 404 && passthrough404) return res;

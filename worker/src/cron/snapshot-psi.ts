@@ -1,7 +1,7 @@
 import type { CronResult } from "../lib/db";
 import { getConditionBand } from "../lib/stability-index";
 
-export async function snapshotPsiDaily(db: D1Database): Promise<CronResult> {
+export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = now - (now % 86400);
   const yesterdayMidnight = todayMidnight - 86400;

@@ -84,7 +84,7 @@ interface FrankfurterResponse {
   rates: Record<string, number>;
 }
 
-export async function syncFxRates(db: D1Database): Promise<CronResult> {
+export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   try {
     // Load previous rates for delta validation
@@ -97,6 +97,7 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
     const url = `https://api.frankfurter.app/latest?from=USD&to=${CURRENCIES.join(",")}`;
     const res = await fetchWithRetry(url, {
       headers: { "User-Agent": USER_AGENT },
+      signal,
     });
 
     if (!res || !res.ok) {
@@ -128,10 +129,12 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
       const FALLBACK_URL = "https://latest.currency-api.pages.dev/v1/currencies/usd.min.json";
       let erRes = await fetchWithRetry(PRIMARY_URL, {
         headers: { "User-Agent": USER_AGENT },
+        signal,
       });
       if (!erRes || !erRes.ok) {
         erRes = await fetchWithRetry(FALLBACK_URL, {
           headers: { "User-Agent": USER_AGENT },
+          signal,
         });
       }
       if (erRes && erRes.ok) {
@@ -181,8 +184,8 @@ export async function syncFxRates(db: D1Database): Promise<CronResult> {
     let metalsSource: "gold-api.com" | "cached" = "cached";
     try {
       const [goldRes, silverRes] = await Promise.all([
-        fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT } }),
-        fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT } }),
+        fetchWithRetry("https://api.gold-api.com/price/XAU", { headers: { "User-Agent": USER_AGENT }, signal }),
+        fetchWithRetry("https://api.gold-api.com/price/XAG", { headers: { "User-Agent": USER_AGENT }, signal }),
       ]);
       const goldData = goldRes?.ok ? (await goldRes.json()) as { price?: number } : null;
       const silverData = silverRes?.ok ? (await silverRes.json()) as { price?: number } : null;

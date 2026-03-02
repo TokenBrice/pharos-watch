@@ -12,7 +12,7 @@ import { processPoolMetrics } from "./process-pools";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 
-export async function syncDexLiquidity(db: D1Database, graphApiKey: string | null, cgApiKey: string | null = null): Promise<void> {
+export async function syncDexLiquidity(db: D1Database, graphApiKey: string | null, cgApiKey: string | null = null, signal?: AbortSignal): Promise<void> {
   initOnchainAvailability(cgApiKey ?? undefined);
   const useCg = isOnchainAvailable();
   console.log(`[dex-liquidity] Starting sync`);

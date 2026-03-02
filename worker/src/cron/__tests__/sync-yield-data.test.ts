@@ -227,8 +227,8 @@ describe("syncYieldData", () => {
               underlyingTokens: null,
             },
           ]),
-          updated_at: Math.floor(Date.now() / 1000),
-        } as { value: string; updated_at: number };
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
       }
       return null;
     });
@@ -241,7 +241,7 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(1);
     // Should NOT have fetched from yields.llama.fi since cached pools were available
     const yieldCalls = fetchSpy.mock.calls.filter(
-      ([url]: [string]) => typeof url === "string" && url.includes("yields.llama.fi")
+      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi")
     );
     expect(yieldCalls.length).toBe(0);
   });
@@ -283,7 +283,7 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBeDefined();
     // No DL yields fetch should have been attempted
     const yieldCalls = fetchSpy.mock.calls.filter(
-      ([url]: [string]) => typeof url === "string" && url.includes("yields.llama.fi")
+      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi")
     );
     expect(yieldCalls.length).toBe(0);
   });

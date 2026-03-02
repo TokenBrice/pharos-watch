@@ -3,7 +3,7 @@ import { PSI_ELIGIBLE_STABLECOINS } from "../../../src/lib/psi-eligible";
 import { sumPegBuckets } from "../../../src/lib/supply";
 import type { CronResult } from "../lib/db";
 
-export async function snapshotSupply(db: D1Database): Promise<CronResult> {
+export async function snapshotSupply(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const cached = await getCache(db, "stablecoins");
   if (!cached) {
     console.error("[snapshot-supply] No stablecoins cache found");

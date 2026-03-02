@@ -13,7 +13,7 @@ interface TreasuryResponse {
   data: { record_date: string; avg_interest_rate_amt: string }[];
 }
 
-export async function fetchTbillRate(db: D1Database): Promise<CronResult> {
+export async function fetchTbillRate(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   if (!await shouldAttemptFetch(db, CIRCUIT_SOURCE.TREASURY_RATES)) {
     console.log("[fetch-tbill-rate] Circuit open, using fallback");
     await setCache(db, "risk_free_rate", String(RISK_FREE_RATE_FALLBACK));
@@ -23,6 +23,7 @@ export async function fetchTbillRate(db: D1Database): Promise<CronResult> {
   try {
     const res = await fetchWithRetry(TREASURY_FISCAL_DATA_URL, {
       headers: { "User-Agent": USER_AGENT },
+      signal,
     });
 
     if (!res?.ok) {

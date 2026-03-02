@@ -411,7 +411,7 @@ async function fallbackToCgSupply(
   };
 }
 
-export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promise<CronResult> {
+export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   const cgData = await fetchCoinGeckoMarketData();
@@ -421,7 +421,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string): Promi
 
   const [llamaRes, goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
     dlAllowed
-      ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`)
+      ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`, signal ? { signal } : undefined)
       : Promise.resolve(null),
     fetchGoldTokens(cgData),
     fetchSilverTokens(cgData),

@@ -195,6 +195,7 @@ export async function generateDailyDigest(
   twitterCreds: TwitterCreds | null = null,
   force = false,
   telegramCreds: TelegramCreds | null = null,
+  signal?: AbortSignal,
 ): Promise<CronResult> {
   if (!anthropicApiKey) {
     console.log("[daily-digest] No API key configured, skipping");
