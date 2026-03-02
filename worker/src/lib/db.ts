@@ -1,4 +1,5 @@
 import { D1_BATCH_SIZE } from "./constants";
+import { SECONDS } from "./time-constants";
 import { sendAlert } from "./alerts";
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
@@ -190,7 +191,7 @@ export async function logCronRun(
   try {
     await db
       .prepare("DELETE FROM cron_runs WHERE started_at < ?")
-      .bind(Math.floor(Date.now() / 1000) - 604800)
+      .bind(Math.floor(Date.now() / 1000) - SECONDS.ONE_WEEK)
       .run();
   } catch (e) {
     console.error("[db] Failed to prune old cron runs:", e);

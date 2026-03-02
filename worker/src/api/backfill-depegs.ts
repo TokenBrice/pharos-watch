@@ -9,10 +9,10 @@ import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { RATE_LIMITS } from "../lib/rate-limits";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
 const BATCH_SIZE = 3;
-const CG_DELAY_MS = 200; // 500 req/min budget → 200ms between calls
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
  *  Mirrors the live system's pending → re-check → promote flow. */
@@ -516,7 +516,7 @@ async function fetchCgPriceHistoryHourly(geckoId: string): Promise<PricePoint[]>
   // Phase 1: pre-hourly epoch — single request returns daily data
   try {
     const from = Math.floor(new Date("2014-01-01T00:00:00Z").getTime() / 1000);
-    await new Promise(r => setTimeout(r, CG_DELAY_MS));
+    await new Promise(r => setTimeout(r, RATE_LIMITS.COINGECKO_BACKFILL_MS));
     const res = await fetchWithRetry(
       cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${HOURLY_EPOCH}&precision=full`),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
@@ -539,7 +539,7 @@ async function fetchCgPriceHistoryHourly(geckoId: string): Promise<PricePoint[]>
   for (let chunkFrom = HOURLY_EPOCH; chunkFrom < nowSec; chunkFrom += CHUNK_SEC) {
     const chunkTo = Math.min(chunkFrom + CHUNK_SEC, nowSec);
     try {
-      await new Promise(r => setTimeout(r, CG_DELAY_MS));
+      await new Promise(r => setTimeout(r, RATE_LIMITS.COINGECKO_BACKFILL_MS));
       const res = await fetchWithRetry(
         cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${chunkFrom}&to=${chunkTo}&precision=full`),
         { headers: cgHeaders({ "User-Agent": USER_AGENT }) },

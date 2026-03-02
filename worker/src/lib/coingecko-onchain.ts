@@ -6,33 +6,11 @@
 import { cgUrl, cgHeaders } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
+import { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "./chain-registry";
+import { RATE_LIMITS } from "./rate-limits";
 
-// Rate limit: ~240 req/min on paid plans (conservative, leaving headroom)
-const CG_ONCHAIN_RATE_MS = 250;
-
-/** Chain name (our convention) → CoinGecko onchain network ID */
-export const CG_CHAIN_MAP: Record<string, string> = {
-  ethereum: "eth",
-  base: "base",
-  arbitrum: "arbitrum",
-  polygon: "polygon_pos",
-  bsc: "bsc",
-  avalanche: "avax",
-  optimism: "optimism",
-  celo: "celo",
-  gnosis: "xdai",
-  fantom: "ftm",
-  tron: "tron",
-  ink: "ink",
-  solana: "solana",
-  berachain: "berachain",
-  sui: "sui-network",
-};
-
-/** Reverse map: CG network ID → our chain name */
-export const CG_CHAIN_REVERSE: Record<string, string> = Object.fromEntries(
-  Object.entries(CG_CHAIN_MAP).map(([k, v]) => [v, k])
-);
+// Re-export for downstream consumers
+export { CG_CHAIN_MAP, CG_CHAIN_REVERSE };
 
 /** Check if CoinGecko onchain API is available (API key configured) */
 let onchainAvailable = false;
@@ -97,7 +75,7 @@ export interface CgToken {
 /** Rate-limit helper: wait between requests */
 export async function onchainRateLimit(requestCount: number): Promise<void> {
   if (requestCount > 0) {
-    await new Promise((r) => setTimeout(r, CG_ONCHAIN_RATE_MS));
+    await new Promise((r) => setTimeout(r, RATE_LIMITS.COINGECKO_ONCHAIN_MS));
   }
 }
 

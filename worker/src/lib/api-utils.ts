@@ -4,6 +4,24 @@ import type { CacheStatus } from "../../../src/lib/types";
 
 export type { CacheStatus };
 
+// --- Data freshness metadata ---
+
+export interface FreshnessMeta {
+  updatedAt: number;
+  ageSeconds: number;
+  status: "fresh" | "degraded" | "stale";
+}
+
+export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
+  const age = Math.floor(Date.now() / 1000) - updatedAt;
+  const ratio = age / maxAgeSec;
+  return {
+    updatedAt,
+    ageSeconds: age,
+    status: ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale",
+  };
+}
+
 // --- Shared cache freshness logic ---
 
 /**
@@ -122,12 +140,23 @@ export function createCacheHandler(
       });
     }
 
-    return new Response(cached.value, {
-      headers: addFreshnessHeaders({
-        "Content-Type": "application/json",
-        "Cache-Control": cacheControl,
-      }, cached.updatedAt, maxAgeSec),
-    });
+    const headers = addFreshnessHeaders({
+      "Content-Type": "application/json",
+      "Cache-Control": cacheControl,
+    }, cached.updatedAt, maxAgeSec);
+
+    // Inject _meta into plain-object responses (not arrays)
+    try {
+      const parsed: unknown = JSON.parse(cached.value);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        (parsed as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
+        return new Response(JSON.stringify(parsed), { headers });
+      }
+    } catch {
+      // If JSON parse fails, fall through to raw response
+    }
+
+    return new Response(cached.value, { headers });
   });
 }
 

@@ -31,13 +31,39 @@ export function hasMissingPrice(a: PeggedAsset): boolean {
   return a.price == null || typeof a.price !== "number" || a.price === 0;
 }
 
+/** Hardcoded price bounds per peg type — used as fallback when FX rates are unavailable */
+export const PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
+  USD: [0.01, 1.19],   // USD stablecoins never legitimately trade above $1.19
+  EUR: [0.01, 2],
+  GBP: [0.01, 2],
+  CHF: [0.01, 2],
+  BRL: [0.01, 2],
+  REAL: [0.01, 2],
+  JPY: [0.001, 0.05],
+  IDR: [0.00001, 0.001],
+  SGD: [0.2, 5],
+  TRY: [0.005, 0.5],
+  AUD: [0.2, 5],
+  RUB: [0.005, 50],
+  ZAR: [0.01, 0.5],
+  CAD: [0.30, 2],
+  CNY: [0.01, 0.50],
+  PHP: [0.002, 0.10],
+  MXN: [0.005, 0.20],
+  UAH: [0.002, 0.15],
+  ARS: [0.000001, 0.05],
+  GOLD: [100, 100_000],
+  SILVER: [5, 500],
+};
+
 /** Guard against corrupted API prices that would break peg deviation calculations */
 export function isReasonablePrice(price: number, pegType: string | undefined, fxRates?: Record<string, number>): boolean {
   if (!pegType) return price > 0 && price < 100_000;
 
   // USD is the base currency — no FX rate, keep tight hardcoded bounds
   if (pegType.includes("USD")) {
-    return price > 0.01 && price < 1.19; // USD stablecoins never legitimately trade above $1.19 — higher values are CG data artifacts
+    const [min, max] = PRICE_BOUNDS.USD;
+    return price > min && price < max;
   }
 
   // Dynamic bounds from live FX rates: 0.01x to 2x
@@ -49,26 +75,10 @@ export function isReasonablePrice(price: number, pegType: string | undefined, fx
   }
 
   // Hardcoded fallback when FX rates unavailable (first boot, cache miss)
-  if (pegType.includes("EUR") || pegType.includes("GBP") || pegType.includes("CHF") || pegType.includes("BRL") || pegType.includes("REAL")) {
-    return price > 0.01 && price < 2;
+  for (const [key, [min, max]] of Object.entries(PRICE_BOUNDS)) {
+    if (key === "USD") continue; // Already handled above
+    if (pegType.includes(key)) return price > min && price < max;
   }
-  if (pegType.includes("JPY")) return price > 0.001 && price < 0.05;
-  if (pegType.includes("IDR")) return price > 0.00001 && price < 0.001;
-  if (pegType.includes("SGD")) return price > 0.2 && price < 5;
-  if (pegType.includes("TRY")) return price > 0.005 && price < 0.5;
-  if (pegType.includes("AUD")) return price > 0.2 && price < 5;
-  if (pegType.includes("RUB")) {
-    return price > 0.005 && price < 50; // RUB ~$0.0127, lower bound allows for further weakening
-  }
-  if (pegType.includes("ZAR")) return price > 0.01 && price < 0.5;
-  if (pegType.includes("CAD")) return price > 0.30 && price < 2;
-  if (pegType.includes("CNY")) return price > 0.01 && price < 0.50;
-  if (pegType.includes("PHP")) return price > 0.002 && price < 0.10;
-  if (pegType.includes("MXN")) return price > 0.005 && price < 0.20;
-  if (pegType.includes("UAH")) return price > 0.002 && price < 0.15;
-  if (pegType.includes("ARS")) return price > 0.000001 && price < 0.05;
-  if (pegType.includes("GOLD")) return price > 100 && price < 100_000;
-  if (pegType.includes("SILVER")) return price > 5 && price < 500;
   return price > 0 && price < 100_000;
 }
 

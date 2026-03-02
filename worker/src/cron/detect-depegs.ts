@@ -1,4 +1,5 @@
 import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
+import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
@@ -154,7 +155,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
             if (dexAbsBps < threshold) {
               // DEX disagrees with ongoing depeg
               const eventAge = now - existing.started_at;
-              if (eventAge >= 1800 && dexRow.source_total_tvl >= 1_000_000) {
+              if (eventAge >= SECONDS.THIRTY_MINUTES && dexRow.source_total_tvl >= 1_000_000) {
                 // Event open 30+ min AND DEX has >=$1M TVL — auto-close
                 console.warn(
                   `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
