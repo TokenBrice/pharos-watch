@@ -126,6 +126,59 @@ function computePositions(
 // Sub-components (unexported)
 // ---------------------------------------------------------------------------
 
+function DEWSDot({
+  coin,
+  onHover,
+  onClick,
+}: {
+  coin: ElevatedCoin;
+  onHover: (id: string | null) => void;
+  onClick: (id: string) => void;
+}) {
+  const hex = THREAT_BAND_HEX[coin.band];
+  const isHighTier = coin.band === "WARNING" || coin.band === "DANGER";
+  const dotR = isHighTier ? 9 : 6;
+  const glowR = dotR + 7;
+  const dur = pulseDuration(coin.band);
+
+  return (
+    <g
+      transform={`translate(${coin.x.toFixed(1)}, ${coin.y.toFixed(1)})`}
+      role="button"
+      tabIndex={0}
+      aria-label={`${coin.symbol}: DEWS score ${coin.score}, band ${coin.band}`}
+      style={{ cursor: "pointer" }}
+      onMouseEnter={() => onHover(coin.id)}
+      onMouseLeave={() => onHover(null)}
+      onFocus={() => onHover(coin.id)}
+      onBlur={() => onHover(null)}
+      onClick={() => onClick(coin.id)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(coin.id); }}
+    >
+      {/* Animated glow ring */}
+      <circle r={glowR} fill={hex}
+        className="dews-glow-r"
+        style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }} />
+      {/* Main dot */}
+      <circle r={dotR} fill={hex} fillOpacity={0.92} />
+      {/* Always-visible label: WARNING and DANGER only */}
+      {isHighTier && (
+        <text
+          y={-(dotR + 7)}
+          textAnchor="middle"
+          dominantBaseline="auto"
+          fill={hex}
+          fontSize={10}
+          fontWeight={700}
+          fontFamily="var(--font-mono)"
+        >
+          {coin.symbol}
+        </text>
+      )}
+    </g>
+  );
+}
+
 function DEWSRadar({
   elevated,
   highest,
@@ -186,7 +239,15 @@ function DEWSRadar({
         />
       </g>
 
-      {/* Coin dots — Task 5 */}
+      {/* Coin dots */}
+      {elevated.map((coin) => (
+        <DEWSDot
+          key={coin.id}
+          coin={coin}
+          onHover={setHoveredId}
+          onClick={onCoinClick}
+        />
+      ))}
       {/* Center readout — Task 6 */}
       {/* Tooltip — Task 7 */}
     </svg>
