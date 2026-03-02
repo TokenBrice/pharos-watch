@@ -73,8 +73,13 @@ export function processPoolMetrics(
 
     // Try to find Curve enrichment data (address-based first, symbol-combo fallback)
     const chainNorm = pool.chain.toLowerCase();
-    const curveData = curvePoolMap.get(`${chainNorm}:${pool.pool.toLowerCase()}`)
-      ?? curvePoolMap.get(`${chainNorm}:${poolSymbols.map((s) => s.toUpperCase()).sort().join("-")}`);
+    const addrCurveKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+    const symCurveKey = `${chainNorm}:${poolSymbols.map((s) => s.toUpperCase()).sort().join("-")}`;
+    const curveData = curvePoolMap.get(addrCurveKey) ?? curvePoolMap.get(symCurveKey);
+    // Track whether the match was address-based: metapoolAdjustedTvl is only valid for
+    // the specific Curve pool whose address matched. Symbol fallbacks may hit a different
+    // physical pool sharing the same token pair, so we preserve their own TVL.
+    const curveAddressMatch = curvePoolMap.has(addrCurveKey);
 
     // --- v2: Enhanced quality resolution ---
     let qualMult: number;
@@ -99,8 +104,10 @@ export function processPoolMetrics(
         resolvedPoolType = curveData.A >= 500 ? "curve-stableswap-high-a" : "curve-stableswap";
         qualMult = getQualityMultiplier(resolvedPoolType, curveData.A);
       }
-      // Use metapool-adjusted TVL for effective calculation
-      effectivePoolTvl = curveData.metapoolAdjustedTvl;
+      // Use metapool-adjusted TVL only for address-based matches (the actual Curve pool).
+      // Symbol fallbacks may match a different physical pool sharing the same token pair —
+      // those pools must use their own TVL, not the Curve pool's.
+      effectivePoolTvl = curveAddressMatch ? curveData.metapoolAdjustedTvl : pool.tvlUsd;
       // Pool maturity from Curve creation timestamp
       if (curveData.creationTs > 0) {
         poolMaturityDays = Math.floor((Date.now() / 1000 - curveData.creationTs) / 86400);

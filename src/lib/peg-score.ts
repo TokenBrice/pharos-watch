@@ -9,23 +9,27 @@ export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * 86400);
  *
  * Without `firstSeenSec`, young coins get their depeg time diluted across a
  * full 4-year window they didn't exist for.
+ *
+ * Returns null when neither supply history nor events are available — the
+ * caller should treat this as "insufficient data" (no peg score).
  */
 export function coinTrackingStart(
   events: DepegEvent[],
   fourYearsAgoSec: number,
   firstSeenSec?: number | null,
-): number {
+): number | null {
   // If we know when the coin first appeared, don't go further back than that
   // (but also don't go further back than the 4-year lookback cap).
   if (firstSeenSec != null) {
     return Math.max(firstSeenSec, fourYearsAgoSec);
   }
-  // Fallback: use earliest event if available, otherwise 4-year cap
+  // Fallback: use earliest event if available
   if (events.length > 0) {
     const earliest = events.reduce((m, e) => Math.min(m, e.startedAt), Infinity);
     return Math.max(earliest, fourYearsAgoSec);
   }
-  return fourYearsAgoSec;
+  // No supply history and no events → insufficient data, not a perfect score
+  return null;
 }
 
 /**

@@ -505,8 +505,8 @@ describe("coinTrackingStart", () => {
   const NOW = 1_700_000_000;
   const FOUR_YEARS_AGO = NOW - 4 * 365.25 * DAY;
 
-  it("returns fourYearsAgo when no events and no firstSeen", () => {
-    expect(coinTrackingStart([], FOUR_YEARS_AGO)).toBe(FOUR_YEARS_AGO);
+  it("returns null when no events and no firstSeen (insufficient data)", () => {
+    expect(coinTrackingStart([], FOUR_YEARS_AGO)).toBeNull();
   });
 
   it("returns firstSeen when coin is younger than 4 years", () => {
