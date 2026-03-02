@@ -1,12 +1,13 @@
 import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
+import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP } from "../../lib/dexscreener";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
 import { normalizeProtocol } from "./pool-helpers";
 import {
-  CG_TICKERS_BASE, CG_TICKERS_RATE_MS,
+  CG_TICKERS_RATE_MS,
   ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS,
 } from "./constants";
 
@@ -158,10 +159,10 @@ export async function fetchCgTickersFallback(
 
   for (const meta of targetCoins) {
     try {
-      const url = `${CG_TICKERS_BASE}/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`;
+      const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`);
       const timeout = AbortSignal.timeout(10_000);
       const res = await fetchWithRetry(url, {
-        headers: { "User-Agent": USER_AGENT },
+        headers: cgHeaders({ "User-Agent": USER_AGENT }),
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       if (!res?.ok) {

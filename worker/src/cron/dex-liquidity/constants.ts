@@ -68,7 +68,6 @@ for (const meta of TRACKED_STABLECOINS) {
   SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.flags.governance);
 }
 
-export const CG_TICKERS_BASE = "https://api.coingecko.com/api/v3/coins";
 export const CG_TICKERS_RATE_MS = 2500; // conservative: ~24 req/min well under free-tier limit
 
 /**
