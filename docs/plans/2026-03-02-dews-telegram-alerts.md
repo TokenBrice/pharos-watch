@@ -119,6 +119,22 @@ describe("buildDewsAlertMessage", () => {
     expect(msg).toContain("Coin &lt;Test&gt; &amp; More");
     expect(msg).not.toContain("<Test>");
   });
+
+  it("formats backing as display label", () => {
+    const msg = buildDewsAlertMessage(BASE_PARAMS); // backing: "rwa-backed"
+    expect(msg).toContain("RWA-backed");
+    expect(msg).not.toContain("rwa-backed");
+  });
+
+  it("formats governance as display label", () => {
+    const msg = buildDewsAlertMessage(BASE_PARAMS); // governance: "centralized"
+    expect(msg).toContain("Centralized");
+  });
+
+  it("formats centralized-dependent governance", () => {
+    const msg = buildDewsAlertMessage({ ...BASE_PARAMS, governance: "centralized-dependent" });
+    expect(msg).toContain("Centralized-dep.");
+  });
 });
 
 describe("extractTopSignals", () => {
@@ -200,6 +216,18 @@ const SIGNAL_LABELS: Record<string, string> = {
   yield: "Yield Anomaly",
 };
 
+const BACKING_LABELS: Record<string, string> = {
+  "rwa-backed": "RWA-backed",
+  "crypto-backed": "Crypto-backed",
+  "algorithmic": "Algorithmic",
+};
+
+const GOVERNANCE_LABELS: Record<string, string> = {
+  "centralized": "Centralized",
+  "decentralized": "Decentralized",
+  "centralized-dependent": "Centralized-dep.",
+};
+
 export interface DewsAlertParams {
   stablecoinId: string;
   name: string;
@@ -231,6 +259,8 @@ export function extractTopSignals(
 export function buildDewsAlertMessage(params: DewsAlertParams): string {
   const { stablecoinId, name, symbol, backing, governance, mcapUsd, price, score, band, prevBand, topSignals } = params;
   const emoji = band === "DANGER" ? "🚨" : "⚠️";
+  const backingLabel = BACKING_LABELS[backing] ?? backing;
+  const governanceLabel = GOVERNANCE_LABELS[governance] ?? governance;
   const mcapStr = mcapUsd >= 1e9
     ? `$${(mcapUsd / 1e9).toFixed(1)}B`
     : `$${Math.round(mcapUsd / 1e6)}M`;
@@ -241,7 +271,7 @@ export function buildDewsAlertMessage(params: DewsAlertParams): string {
 
   return (
     `${emoji} <b>${band}: ${escapeHtml(symbol)}</b>\n\n` +
-    `<b>${escapeHtml(name)}</b> (${escapeHtml(backing)}, ${escapeHtml(governance)}) has entered the DEWS <b>${band}</b> band.\n` +
+    `<b>${escapeHtml(name)}</b> (${escapeHtml(backingLabel)}, ${escapeHtml(governanceLabel)}) has entered the DEWS <b>${band}</b> band.\n` +
     `Score: <b>${score}</b>/100 — up from ${escapeHtml(prevBand)}\n` +
     `Market cap: ${mcapStr}${priceStr}` +
     signalLines +
@@ -320,19 +350,19 @@ export async function computeAndStoreDEWS(
 
 ### Step 2: Extend the prev-signals query to include `band`
 
-Find the existing query (around line 121-140) that reads `stress_signals` for smoothing. It currently SELECTs only `stablecoin_id, signals_json`. Change it to also fetch `band`:
+**Declare `prevBandMap` at the same scope as `prevSignals`** (line 121 in the current file). Find:
 
-Old query result type:
 ```typescript
-.all<{ stablecoin_id: string; signals_json: string }>();
+const prevSignals = new Map<string, Record<string, { value: number }>>();
 ```
 
-New query and type:
+Add immediately after it (outside the try-catch, same scope):
+
 ```typescript
-.all<{ stablecoin_id: string; signals_json: string; band: string }>();
+const prevBandMap = new Map<string, string>();
 ```
 
-Also update the SQL string from:
+Update the SQL string from:
 ```sql
 SELECT s.stablecoin_id, s.signals_json
 ```
@@ -341,23 +371,31 @@ to:
 SELECT s.stablecoin_id, s.signals_json, s.band
 ```
 
-Then, right after the loop that populates `prevSignals`, add a new Map to store previous bands:
+Update the query result type from:
+```typescript
+.all<{ stablecoin_id: string; signals_json: string }>();
+```
+to:
+```typescript
+.all<{ stablecoin_id: string; signals_json: string; band: string }>();
+```
+
+Inside the existing loop that populates `prevSignals`, add one line after the inner try/catch:
 
 ```typescript
-const prevBandMap = new Map<string, string>();
 for (const row of prevRows.results) {
   try {
     prevSignals.set(row.stablecoin_id, JSON.parse(row.signals_json));
   } catch {
     /* ignore malformed JSON */
   }
-  if (row.band) prevBandMap.set(row.stablecoin_id, row.band);
+  if (row.band) prevBandMap.set(row.stablecoin_id, row.band); // add this line
 }
 ```
 
 ### Step 3: Add transition detection and alert dispatch after the batch INSERT
 
-Add the band ordering constant near the top of the function (after `nowSec`):
+Add the band ordering constants at **module scope** in `compute-dews.ts`, after the import block and before the `BLACKLIST_SYMBOL_TO_IDS` declaration (around line 15). These are pure immutable values with no dependency on function arguments — module scope avoids re-creating them on every 15-min cron run:
 
 ```typescript
 const BAND_ORDER = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"] as const;
@@ -520,7 +558,7 @@ A coin that drops below the threshold and re-enters will fire again on re-entry.
 ```
 ⚠️ <b>WARNING: USDC</b>
 
-<b>USD Coin</b> (rwa-backed, centralized) has entered the DEWS WARNING band.
+<b>USD Coin</b> (RWA-backed, Centralized) has entered the DEWS WARNING band.
 Score: <b>62</b>/100 — up from ALERT
 Market cap: $43.2B | Price: $0.9987
 
