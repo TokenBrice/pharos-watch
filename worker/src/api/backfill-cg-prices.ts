@@ -3,7 +3,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { RATE_LIMITS } from "../lib/rate-limits";
 
@@ -33,27 +33,18 @@ export const handleBackfillCgPrices = withErrorHandler(
     if (singleId) {
       const match = TRACKED_STABLECOINS.filter((c) => c.id === singleId);
       if (match.length === 0) {
-        return new Response(
-          JSON.stringify({ error: "Stablecoin not found" }),
-          { status: 404, headers: { "Content-Type": "application/json" } },
-        );
+        return errorResponse(404, "Stablecoin not found");
       }
       coins = match;
     } else {
-      const batchSize = parseInt(
-        url.searchParams.get("batchSize") ?? String(DEFAULT_BATCH_SIZE),
-        10,
-      );
-      const batch = parseInt(url.searchParams.get("batch") ?? "0", 10);
+      const batchSize = parseIntParam(url.searchParams.get("batchSize"), DEFAULT_BATCH_SIZE, 1, 1000);
+      const batch = parseIntParam(url.searchParams.get("batch"), 0, 0, 100_000);
       const start = batch * batchSize;
       coins = TRACKED_STABLECOINS.slice(start, start + batchSize);
     }
 
     if (coins.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No coins in this batch" }),
-        { headers: { "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ message: "No coins in this batch" });
     }
 
     let totalPricesFilled = 0;
@@ -181,16 +172,13 @@ export const handleBackfillCgPrices = withErrorHandler(
       });
     }
 
-    return new Response(
-      JSON.stringify({
-        coinsProcessed: coinDetails.length,
-        totalPricesFilled,
-        totalRowsInserted,
-        coinDetails: coinDetails.length > 0 ? coinDetails : undefined,
-        skipped: skipped.length > 0 ? skipped : undefined,
-        errors: errors.length > 0 ? errors : undefined,
-      }),
-      { headers: { "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      coinsProcessed: coinDetails.length,
+      totalPricesFilled,
+      totalRowsInserted,
+      coinDetails: coinDetails.length > 0 ? coinDetails : undefined,
+      skipped: skipped.length > 0 ? skipped : undefined,
+      errors: errors.length > 0 ? errors : undefined,
+    });
   },
 );

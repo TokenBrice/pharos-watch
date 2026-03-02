@@ -1,5 +1,5 @@
 import { requireAdmin } from "../lib/auth";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { getPriceCache, batchExecute } from "../lib/db";
 
 export const handleBackfillMintBurnPrices = withErrorHandler(
@@ -70,9 +70,6 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
       await batchExecute(db, insertStmts);
     }
 
-    return new Response(
-      JSON.stringify({ totalUpdated, coins: coinResults }),
-      { headers: { "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ totalUpdated, coins: coinResults });
   }
 );

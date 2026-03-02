@@ -4,7 +4,7 @@ import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../.
 import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
-import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -239,7 +239,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     }
     coins = match;
   } else {
-    const batch = parseInt(url.searchParams.get("batch") ?? "0", 10);
+    const batch = parseIntParam(url.searchParams.get("batch"), 0, 0, 100_000);
     const start = batch * BATCH_SIZE;
     coins = PSI_ELIGIBLE_STABLECOINS.slice(start, start + BATCH_SIZE);
   }

@@ -1,4 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, parseIntParam } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
@@ -38,17 +38,14 @@ export const handleAuditDepegHistory = withErrorHandler(
     if (authError) return authError;
 
     // Pagination: ?limit=N&offset=M — Analyst plan (500 req/min) supports large batches
-    const parsedLimit = parseInt(url.searchParams.get("limit") ?? "200", 10);
-    const limit = Number.isNaN(parsedLimit) ? 200 : Math.max(1, parsedLimit);
-    const parsedOffset = parseInt(url.searchParams.get("offset") ?? "0", 10);
-    const offset = Number.isNaN(parsedOffset) ? 0 : Math.max(0, parsedOffset);
+    const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000);
+    const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, 100_000);
     // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
     const deleteIds = url.searchParams.get("delete");
     // Dry run: preview deletions without touching the DB
     const dryRun = url.searchParams.get("dry-run") === "true";
     // Optional supply filter: ?min-supply=N (default 0 = audit everything with a geckoId)
-    const parsedMinSupply = parseInt(url.searchParams.get("min-supply") ?? "0", 10);
-    const minSupply = Number.isNaN(parsedMinSupply) ? 0 : Math.max(0, parsedMinSupply);
+    const minSupply = parseIntParam(url.searchParams.get("min-supply"), 0, 0, Number.MAX_SAFE_INTEGER);
     // Optional symbol filter: ?symbol=USDC (case-insensitive)
     const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
 

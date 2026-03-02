@@ -1,4 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
@@ -33,10 +33,7 @@ export const handleBackfillDEWS = withErrorHandler(
       .all<DepegEvent>();
 
     if (!events.results.length) {
-      return new Response(
-        JSON.stringify({ error: "No completed depeg events found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } },
-      );
+      return errorResponse(404, "No completed depeg events found");
     }
 
     // Load supply_history for reconstructing historical inputs
@@ -163,18 +160,15 @@ export const handleBackfillDEWS = withErrorHandler(
     const tpRate = totalEvents > 0 ? Math.round((tpCount / totalEvents) * 100) : 0;
     const avgLeadTime = leadTimeCount > 0 ? Math.round((totalLeadTimeDays / leadTimeCount) * 10) / 10 : null;
 
-    return new Response(
-      JSON.stringify({
-        summary: {
-          totalEvents,
-          truePositives: tpCount,
-          tpRate: `${tpRate}%`,
-          avgLeadTimeDays: avgLeadTime,
-          note: "Backtest uses supply_history + dex_liquidity_history only. Pool balance, price confidence, blacklist, and flow signals are unavailable for historical data.",
-        },
-        events: results,
-      }),
-      { headers: { "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      summary: {
+        totalEvents,
+        truePositives: tpCount,
+        tpRate: `${tpRate}%`,
+        avgLeadTimeDays: avgLeadTime,
+        note: "Backtest uses supply_history + dex_liquidity_history only. Pool balance, price confidence, blacklist, and flow signals are unavailable for historical data.",
+      },
+      events: results,
+    });
   },
 );
