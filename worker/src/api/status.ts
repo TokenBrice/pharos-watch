@@ -1,5 +1,5 @@
 import { getCache } from "../lib/db";
-import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
+import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 
 // --- Types ---
@@ -151,12 +151,7 @@ export const handleStatus = withErrorHandler(
       dataQuality,
     };
 
-    return new Response(JSON.stringify(body), {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-    });
+    return jsonResponse(body, { "Cache-Control": "no-store" });
   }
 );
 

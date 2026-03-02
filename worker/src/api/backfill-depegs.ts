@@ -4,7 +4,7 @@ import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../.
 import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -235,10 +235,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   if (singleId) {
     const match = PSI_ELIGIBLE_STABLECOINS.filter((c) => c.id === singleId);
     if (match.length === 0) {
-      return new Response(JSON.stringify({ error: "Stablecoin not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(404, "Stablecoin not found");
     }
     coins = match;
   } else {
@@ -248,9 +245,7 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   }
 
   if (coins.length === 0) {
-    return new Response(JSON.stringify({ message: "No coins in this batch" }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ message: "No coins in this batch" });
   }
 
   // Get peg rates from cached stablecoin data
@@ -400,19 +395,16 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     }
   }
 
-  return new Response(
-    JSON.stringify({
-      coinsProcessed: coins.length,
-      eventsCreated: totalEvents,
-      skipped: skipped.length > 0 ? skipped : undefined,
-      errors: errors.length > 0 ? errors : undefined,
-      commodities: needsCommodities ? {
-        goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
-        silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
-      } : undefined,
-    }),
-    { headers: { "Content-Type": "application/json" } }
-  );
+  return jsonResponse({
+    coinsProcessed: coins.length,
+    eventsCreated: totalEvents,
+    skipped: skipped.length > 0 ? skipped : undefined,
+    errors: errors.length > 0 ? errors : undefined,
+    commodities: needsCommodities ? {
+      goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
+      silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
+    } : undefined,
+  });
 });
 
 interface BackfillEvent {

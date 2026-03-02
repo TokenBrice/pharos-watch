@@ -1,4 +1,4 @@
-import { withErrorHandler, safeParse } from "../lib/api-utils";
+import { withErrorHandler, safeParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 interface DigestInputData {
@@ -73,10 +73,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
 ): Promise<Response> => {
   const date = url.searchParams.get("date");
   if (!date || !DATE_RE.test(date)) {
-    return new Response(
-      JSON.stringify({ error: "Missing or invalid ?date=YYYY-MM-DD parameter" }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return errorResponse(400, "Missing or invalid ?date=YYYY-MM-DD parameter");
   }
 
   // Compute UTC day boundaries (epoch seconds)
@@ -106,10 +103,7 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   }
 
   if (!targetRow) {
-    return new Response(
-      JSON.stringify({ error: "No digest found for this date" }),
-      { status: 404, headers: { "Content-Type": "application/json" } },
-    );
+    return errorResponse(404, "No digest found for this date");
   }
 
   const inputData = safeParse<DigestInputData | null>(targetRow.input_data, null);
@@ -159,16 +153,11 @@ export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
     timestamp: r.timestamp,
   }));
 
-  return new Response(JSON.stringify({
+  return jsonResponse({
     date,
     inputData,
     prevInputData,
     depegEvents,
     blacklistEvents,
-  }), {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.slow,
-    },
-  });
+  }, { "Cache-Control": CACHE_PROFILES.slow });
 });

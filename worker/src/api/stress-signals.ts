@@ -1,20 +1,15 @@
-import { withErrorHandler, isValidStablecoinId, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, isValidStablecoinId, addFreshnessHeaders, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
   async (db: D1Database, url: URL): Promise<Response> => {
     const stablecoinId = url.searchParams.get("stablecoin");
-    const days = Math.min(
-      365,
-      Math.max(1, Number(url.searchParams.get("days")) || 30),
-    );
+    const days = parseIntParam(url.searchParams.get("days"), 30, 1, 365);
 
     if (stablecoinId) {
       if (!isValidStablecoinId(stablecoinId)) {
-        return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
-          status: 400, headers: { "Content-Type": "application/json" },
-        });
+        return errorResponse(400, "Invalid stablecoin ID");
       }
       // Single coin: latest + daily history
       const latest = await db
@@ -49,30 +44,24 @@ export const handleStressSignals = withErrorHandler(
         }>();
 
       const computedAt = latest?.computed_at ?? Math.floor(Date.now() / 1000);
-      return new Response(
-        JSON.stringify({
-          current: latest
-            ? {
-                score: latest.score,
-                band: latest.band,
-                signals: JSON.parse(latest.signals_json),
-                computedAt: latest.computed_at,
-              }
-            : null,
-          history: history.results.map((r) => ({
-            date: r.snapshot_date,
-            score: r.score,
-            band: r.band,
-            signals: JSON.parse(r.signals_json),
-          })),
-        }),
-        {
-          headers: addFreshnessHeaders({
-            "Content-Type": "application/json",
-            "Cache-Control": CACHE_PROFILES.standard,
-          }, computedAt, 900),
-        },
-      );
+      return jsonResponse({
+        current: latest
+          ? {
+              score: latest.score,
+              band: latest.band,
+              signals: JSON.parse(latest.signals_json),
+              computedAt: latest.computed_at,
+            }
+          : null,
+        history: history.results.map((r) => ({
+          date: r.snapshot_date,
+          score: r.score,
+          band: r.band,
+          signals: JSON.parse(r.signals_json),
+        })),
+      }, addFreshnessHeaders({
+        "Cache-Control": CACHE_PROFILES.standard,
+      }, computedAt, 900));
     }
 
     // All coins: latest only (subquery for most recent per coin)
@@ -105,11 +94,8 @@ export const handleStressSignals = withErrorHandler(
       updatedAt = Math.max(updatedAt, row.computed_at);
     }
 
-    return new Response(JSON.stringify({ signals, updatedAt }), {
-      headers: addFreshnessHeaders({
-        "Content-Type": "application/json",
-        "Cache-Control": CACHE_PROFILES.standard,
-      }, updatedAt, 900),
-    });
+    return jsonResponse({ signals, updatedAt }, addFreshnessHeaders({
+      "Cache-Control": CACHE_PROFILES.standard,
+    }, updatedAt, 900));
   },
 );

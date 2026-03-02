@@ -1,4 +1,4 @@
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
@@ -18,10 +18,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       .first<{ earliest: number | null }>();
 
     if (!earliest?.earliest) {
-      return new Response(JSON.stringify({ error: "No depeg events found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(404, "No depeg events found");
     }
 
     // Start from earliest depeg event, iterate day by day
@@ -146,8 +143,6 @@ export const handleBackfillStabilityIndex = withErrorHandler(
     const deleteStmt = db.prepare("DELETE FROM stability_index");
     await batchExecute(db, [deleteStmt, ...stmts]);
 
-    return new Response(JSON.stringify({ ok: true, daysBackfilled: count }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ ok: true, daysBackfilled: count });
   }
 );

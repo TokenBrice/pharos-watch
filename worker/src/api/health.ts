@@ -1,4 +1,4 @@
-import { withErrorHandler, buildCacheStatuses, type CacheStatus } from "../lib/api-utils";
+import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 
 interface HealthResponse {
@@ -48,10 +48,5 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
 
   const body: HealthResponse = { status, timestamp: now, caches, blacklist, circuits };
 
-  return new Response(JSON.stringify(body), {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
+  return jsonResponse(body, { "Cache-Control": "no-store" });
 });

@@ -1,4 +1,4 @@
-import { withErrorHandler, safeParse, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, safeParse, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 interface DexLiquidityRow {
@@ -141,10 +141,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
     ? rows.reduce((m, r) => Math.min(m, r.updated_at), Infinity)
     : Math.floor(Date.now() / 1000);
 
-  return new Response(JSON.stringify(map), {
-    headers: addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, oldestUpdate, 3600),
-  });
+  return jsonResponse(map, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, oldestUpdate, 3600));
 });

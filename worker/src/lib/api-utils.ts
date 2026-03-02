@@ -102,10 +102,7 @@ export function withErrorHandler<T extends unknown[]>(
       return await handler(...args);
     } catch (err) {
       console.error(`[api] Error in ${endpoint}:`, err);
-      return new Response(
-        JSON.stringify({ error: "Internal Server Error" }),
-        { status: 500, headers: { "Content-Type": "application/json" } },
-      );
+      return errorResponse(500, "Internal Server Error");
     }
   };
 }
@@ -163,10 +160,7 @@ export function createCacheHandler(
   return withErrorHandler(endpoint, async (db: D1Database): Promise<Response> => {
     const cached = await getCache(db, cacheKey);
     if (!cached) {
-      return new Response(JSON.stringify({ error: "Data not yet available" }), {
-        status: 503,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(503, "Data not yet available");
     }
 
     const headers = addFreshnessHeaders({

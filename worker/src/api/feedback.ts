@@ -1,7 +1,7 @@
 // worker/src/api/feedback.ts
 
 import { getCache } from "../lib/db";
-import { isValidStablecoinId } from "../lib/api-utils";
+import { isValidStablecoinId, errorResponse, jsonResponse } from "../lib/api-utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -253,49 +253,43 @@ export async function handleFeedback(
   request: Request,
   env: FeedbackEnv
 ): Promise<Response> {
-  const json = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { "Content-Type": "application/json" },
-    });
-
   // Parse JSON body
   let fb: FeedbackBody;
   try {
     fb = (await request.json()) as FeedbackBody;
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return errorResponse(400, "Invalid JSON body");
   }
 
   if (typeof fb !== "object" || fb === null) {
-    return json({ error: "Invalid JSON body" }, 400);
+    return errorResponse(400, "Invalid JSON body");
   }
 
   // Honeypot: silently accept but do nothing
-  if (fb.website) return json({ ok: true });
+  if (fb.website) return jsonResponse({ ok: true });
 
   // Validate type
   if (!["bug", "data-correction", "feature-request"].includes(fb.type)) {
-    return json({ error: "Invalid feedback type" }, 400);
+    return errorResponse(400, "Invalid feedback type");
   }
 
   // Validate description
   const desc = fb.description?.trim() ?? "";
   if (desc.length < 10 || desc.length > 2000) {
-    return json({ error: "Description must be 10–2000 characters" }, 400);
+    return errorResponse(400, "Description must be 10–2000 characters");
   }
 
   // Validate title (required for bug + feature-request)
   if (fb.type === "bug" || fb.type === "feature-request") {
     const title = fb.title?.trim() ?? "";
     if (title.length < 3 || title.length > 100) {
-      return json({ error: "Title must be 3–100 characters" }, 400);
+      return errorResponse(400, "Title must be 3–100 characters");
     }
   }
 
   // Validate pageUrl
   if (!fb.pageUrl?.startsWith("/")) {
-    return json({ error: "Invalid pageUrl" }, 400);
+    return errorResponse(400, "Invalid pageUrl");
   }
 
   // Validate stablecoinId if provided
@@ -311,14 +305,14 @@ export async function handleFeedback(
   const salt = env.FEEDBACK_IP_SALT ?? "pharos-default-salt";
   const allowed = await checkRateLimit(db, ip, salt);
   if (!allowed) {
-    return json({ error: "Too many submissions. Please wait a few minutes." }, 429);
+    return errorResponse(429, "Too many submissions. Please wait a few minutes.");
   }
 
   // Require PAT
   const pat = env.GITHUB_PAT;
   if (!pat) {
     console.error("[feedback] GITHUB_PAT secret not configured");
-    return json({ error: "Feedback service temporarily unavailable" }, 503);
+    return errorResponse(503, "Feedback service temporarily unavailable");
   }
 
   try {
@@ -362,9 +356,9 @@ export async function handleFeedback(
       await createGitHubIssue(pat, title, body, labels);
     }
 
-    return json({ ok: true });
+    return jsonResponse({ ok: true });
   } catch (err) {
     console.error("[feedback] GitHub API error:", err);
-    return json({ error: "Failed to submit feedback. Please try again." }, 500);
+    return errorResponse(500, "Failed to submit feedback. Please try again.");
   }
 }

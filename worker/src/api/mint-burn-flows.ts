@@ -1,5 +1,5 @@
 import { getCache } from "../lib/db";
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 import {
@@ -106,14 +106,11 @@ export const handleMintBurnFlows = withErrorHandler(
   async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
-    const hoursRaw = parseInt(params.get("hours") ?? "24", 10);
-    const hours = Math.max(1, Math.min(720, isNaN(hoursRaw) ? 24 : hoursRaw));
+    const hours = parseIntParam(params.get("hours"), 24, 1, 720);
 
     if (stablecoinParam) {
       if (!isValidStablecoinId(stablecoinParam)) {
-        return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
-          status: 400, headers: { "Content-Type": "application/json" },
-        });
+        return errorResponse(400, "Invalid stablecoin ID");
       }
       return handlePerCoin(db, stablecoinParam, hours);
     }
@@ -387,16 +384,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     updatedAt,
   };
 
-  return new Response(JSON.stringify(body), {
-    headers: addFreshnessHeaders(
-      {
-        "Content-Type": "application/json",
-        "Cache-Control": CACHE_PROFILES.standard,
-      },
-      updatedAt,
-      300,
-    ),
-  });
+  return jsonResponse(body, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, updatedAt, 300));
 }
 
 // ---------------------------------------------------------------------------
@@ -410,10 +400,7 @@ async function handlePerCoin(
 ): Promise<Response> {
   const config = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === stablecoinId);
   if (!config) {
-    return new Response(
-      JSON.stringify({ error: `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows` }),
-      { status: 404, headers: { "Content-Type": "application/json" } },
-    );
+    return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -507,14 +494,7 @@ async function handlePerCoin(
     updatedAt,
   };
 
-  return new Response(JSON.stringify(body), {
-    headers: addFreshnessHeaders(
-      {
-        "Content-Type": "application/json",
-        "Cache-Control": CACHE_PROFILES.standard,
-      },
-      updatedAt,
-      300,
-    ),
-  });
+  return jsonResponse(body, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, updatedAt, 300));
 }

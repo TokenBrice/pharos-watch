@@ -6,17 +6,14 @@ import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import type { StablecoinData, DepegEvent } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const cached = await getCache(db, "stablecoins");
   if (!cached) {
-    return new Response(JSON.stringify({ error: "Data not yet available" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse(503, "Data not yet available");
   }
   const { peggedAssets, fxFallbackRates } = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
 
@@ -196,25 +193,19 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     .filter(([, src]) => src === "fallback")
     .map(([peg]) => peg);
 
-  return new Response(
-    JSON.stringify({
-      coins,
-      summary: {
-        activeDepegCount,
-        medianDeviationBps: medianBps,
-        worstCurrent,
-        coinsAtPeg,
-        totalTracked: coins.length,
-        depegEventsToday,
-        depegEventsYesterday,
-        ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
-      },
-    }),
-    {
-      headers: addFreshnessHeaders({
-        "Content-Type": "application/json",
-        "Cache-Control": CACHE_PROFILES.realtime,
-      }, cached.updatedAt, 900),
+  return jsonResponse({
+    coins,
+    summary: {
+      activeDepegCount,
+      medianDeviationBps: medianBps,
+      worstCurrent,
+      coinsAtPeg,
+      totalTracked: coins.length,
+      depegEventsToday,
+      depegEventsYesterday,
+      ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
     },
-  );
+  }, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.realtime,
+  }, cached.updatedAt, 900));
 });

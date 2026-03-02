@@ -1,4 +1,4 @@
-import { withErrorHandler, isValidStablecoinId } from "../lib/api-utils";
+import { withErrorHandler, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 
 interface SupplyHistoryRow {
@@ -13,21 +13,14 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
 ): Promise<Response> => {
   const stablecoinId = url.searchParams.get("stablecoin");
   if (!stablecoinId) {
-    return new Response(
-      JSON.stringify({ error: "Missing ?stablecoin= parameter" }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+    return errorResponse(400, "Missing ?stablecoin= parameter");
   }
   // Validate ID format to prevent edge cache pollution
   if (!isValidStablecoinId(stablecoinId)) {
-    return new Response(
-      JSON.stringify({ error: "Invalid stablecoin ID" }),
-      { status: 400, headers: { "Content-Type": "application/json" } }
-    );
+    return errorResponse(400, "Invalid stablecoin ID");
   }
 
-  const parsedDays = parseInt(url.searchParams.get("days") ?? "365", 10);
-  const days = Number.isNaN(parsedDays) ? 365 : Math.min(1825, Math.max(1, parsedDays));
+  const days = parseIntParam(url.searchParams.get("days"), 365, 1, 1825);
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
 
   const result = await db
@@ -46,10 +39,5 @@ export const handleSupplyHistory = withErrorHandler("supply-history", async (
     price: row.price,
   }));
 
-  return new Response(JSON.stringify(history), {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.slow,
-    },
-  });
+  return jsonResponse(history, { "Cache-Control": CACHE_PROFILES.slow });
 });

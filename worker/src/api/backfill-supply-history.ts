@@ -2,7 +2,7 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
@@ -186,10 +186,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     if (singleId) {
       const match = PSI_ELIGIBLE_STABLECOINS.filter((c) => c.id === singleId);
       if (match.length === 0) {
-        return new Response(
-          JSON.stringify({ error: "Stablecoin not found" }),
-          { status: 404, headers: { "Content-Type": "application/json" } },
-        );
+        return errorResponse(404, "Stablecoin not found");
       }
       coins = match;
     } else {
@@ -203,10 +200,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     }
 
     if (coins.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No coins in this batch" }),
-        { headers: { "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ message: "No coins in this batch" });
     }
 
     let totalRows = 0;
@@ -347,14 +341,11 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        coinsProcessed: coins.length,
-        rowsInserted: totalRows,
-        skipped: skipped.length > 0 ? skipped : undefined,
-        errors: errors.length > 0 ? errors : undefined,
-      }),
-      { headers: { "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      coinsProcessed: coins.length,
+      rowsInserted: totalRows,
+      skipped: skipped.length > 0 ? skipped : undefined,
+      errors: errors.length > 0 ? errors : undefined,
+    });
   },
 );

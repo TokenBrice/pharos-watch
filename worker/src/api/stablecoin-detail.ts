@@ -1,5 +1,5 @@
 import { getCache, setCache } from "../lib/db";
-import { withErrorHandler } from "../lib/api-utils";
+import { withErrorHandler, errorResponse } from "../lib/api-utils";
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, CACHE_PROFILES, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { binarySearchNearest } from "../lib/binary-search";
@@ -215,10 +215,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
           },
         });
       }
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch commodity token data" }),
-        { status: 502, headers: { "Content-Type": "application/json" } }
-      );
+      return errorResponse(502, "Failed to fetch commodity token data");
     }
   }
 
@@ -284,10 +281,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
           },
         });
       }
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch CoinGecko data" }),
-        { status: 502, headers: { "Content-Type": "application/json" } }
-      );
+      return errorResponse(502, "Failed to fetch CoinGecko data");
     }
   }
 
@@ -303,10 +297,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
         },
       });
     }
-    return new Response(JSON.stringify({ error: `Failed to fetch stablecoin ${id}` }), {
-      status: 502,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse(502, `Failed to fetch stablecoin ${id}`);
   }
 
   let body = await res.text();
@@ -354,10 +345,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
         },
       });
     }
-    return new Response(
-      JSON.stringify({ error: `Invalid upstream data for stablecoin ${id}` }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
+    return errorResponse(502, `Invalid upstream data for stablecoin ${id}`);
   }
 
   return new Response(body, {

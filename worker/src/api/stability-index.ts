@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders, safeParse } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, safeParse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getConditionBand } from "../lib/stability-index";
 
@@ -36,12 +36,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // If no sample and no history, return empty
   if (!latestSample && results.length === 0) {
-    return new Response(JSON.stringify({ current: null, history: [] }), {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": CACHE_PROFILES.standard,
-      },
-    });
+    return jsonResponse({ current: null, history: [] }, { "Cache-Control": CACHE_PROFILES.standard });
   }
 
   // Build current from latest sample, falling back to latest history row
@@ -68,7 +63,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
 
-  return new Response(JSON.stringify({
+  return jsonResponse({
     current: {
       score: currentSource.score,
       band: currentSource.band,
@@ -80,10 +75,7 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       computedAt,
     },
     history,
-  }), {
-    headers: addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, computedAt, 86400),
-  });
+  }, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, computedAt, 86400));
 });

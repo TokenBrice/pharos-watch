@@ -1,6 +1,6 @@
 import { getCache, getFirstSeenDates } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { withErrorHandler, addFreshnessHeaders } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
@@ -71,10 +71,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   ]);
 
   if (!stablecoinsCached) {
-    return new Response(JSON.stringify({ error: "Data not yet available" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse(503, "Data not yet available");
   }
 
   let peggedAssets: StablecoinData[];
@@ -87,10 +84,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     peggedAssets = parsed.peggedAssets;
     fxFallbackRates = parsed.fxFallbackRates;
   } catch {
-    return new Response(JSON.stringify({ error: "Cached stablecoins data is corrupt" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse(503, "Cached stablecoins data is corrupt");
   }
 
   // Build dex liquidity map from table rows (only fields scoreLiquidity needs)
@@ -259,12 +253,9 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     updatedAt: stablecoinsCached.updatedAt,
   };
 
-  return new Response(JSON.stringify(response), {
-    headers: addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.standard,
-    }, stablecoinsCached.updatedAt, 900),
-  });
+  return jsonResponse(response, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, stablecoinsCached.updatedAt, 900));
 });
 
 // ---------------------------------------------------------------------------

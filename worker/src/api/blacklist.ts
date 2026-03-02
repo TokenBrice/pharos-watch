@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "../../../src/lib/chains";
@@ -8,9 +8,8 @@ const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const rawLimit = params.get("limit");
-  const limit = rawLimit !== null ? Math.min(Math.max(parseInt(rawLimit, 10) || 0, 0), 5000) : 0;
-  const offset = Math.max(parseInt(params.get("offset") ?? "0", 10) || 0, 0);
+  const limit = parseIntParam(params.get("limit"), 0, 0, 5000);
+  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
   const eventType = params.get("eventType");
@@ -20,27 +19,21 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
 
   if (stablecoin) {
     if (!isValidStablecoinId(stablecoin)) {
-      return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
-        status: 400, headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(400, "Invalid stablecoin ID");
     }
     conditions.push("stablecoin = ?");
     filterBindings.push(stablecoin);
   }
   if (chain) {
     if (!VALID_CHAIN_NAMES.has(chain)) {
-      return new Response(JSON.stringify({ error: "Invalid chain parameter" }), {
-        status: 400, headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(400, "Invalid chain parameter");
     }
     conditions.push("chain_name = ?");
     filterBindings.push(chain);
   }
   if (eventType) {
     if (!VALID_EVENT_TYPES.has(eventType)) {
-      return new Response(JSON.stringify({ error: "Invalid eventType parameter" }), {
-        status: 400, headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(400, "Invalid eventType parameter");
     }
     conditions.push("event_type = ?");
     filterBindings.push(eventType);
@@ -82,10 +75,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
 
   const latestTs = events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
 
-  return new Response(JSON.stringify({ events, total }), {
-    headers: addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.realtime,
-    }, latestTs, 900),
-  });
+  return jsonResponse({ events, total }, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.realtime,
+  }, latestTs, 900));
 });

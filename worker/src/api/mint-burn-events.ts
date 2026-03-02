@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "../../../src/lib/chains";
@@ -28,40 +28,25 @@ export const handleMintBurnEvents = withErrorHandler(
 
     const stablecoin = params.get("stablecoin");
     if (!stablecoin) {
-      return new Response(
-        JSON.stringify({ error: "Missing required parameter: stablecoin" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      return errorResponse(400, "Missing required parameter: stablecoin");
     }
     if (!isValidStablecoinId(stablecoin)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid stablecoin ID" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      return errorResponse(400, "Invalid stablecoin ID");
     }
 
     const direction = params.get("direction");
     if (direction && !VALID_DIRECTIONS.has(direction)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid direction parameter" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      return errorResponse(400, "Invalid direction parameter");
     }
     const chain = params.get("chain");
     if (chain && !VALID_CHAIN_IDS.has(chain)) {
-      return new Response(
-        JSON.stringify({ error: "Invalid chain parameter" }),
-        { status: 400, headers: { "Content-Type": "application/json" } },
-      );
+      return errorResponse(400, "Invalid chain parameter");
     }
     const minAmountRaw = params.get("minAmount");
     const minAmount = minAmountRaw !== null ? parseFloat(minAmountRaw) : null;
 
-    const rawLimit = params.get("limit");
-    const limit = rawLimit !== null
-      ? Math.min(Math.max(parseInt(rawLimit, 10) || 50, 1), 500)
-      : 50;
-    const offset = Math.max(parseInt(params.get("offset") ?? "0", 10) || 0, 0);
+    const limit = parseIntParam(params.get("limit"), 50, 1, 500);
+    const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
 
     // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?"];
@@ -116,15 +101,8 @@ export const handleMintBurnEvents = withErrorHandler(
         ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
         : Math.floor(Date.now() / 1000);
 
-    return new Response(JSON.stringify({ events, total }), {
-      headers: addFreshnessHeaders(
-        {
-          "Content-Type": "application/json",
-          "Cache-Control": CACHE_PROFILES.realtime,
-        },
-        latestTs,
-        900,
-      ),
-    });
+    return jsonResponse({ events, total }, addFreshnessHeaders({
+      "Cache-Control": CACHE_PROFILES.realtime,
+    }, latestTs, 900));
   },
 );

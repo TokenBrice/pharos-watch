@@ -1,12 +1,12 @@
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = Math.min(Math.max(parseInt(params.get("limit") ?? "") || 100, 1), 1000);
-  const offset = Math.max(parseInt(params.get("offset") ?? "0", 10) || 0, 0);
+  const limit = parseIntParam(params.get("limit"), 100, 1, 1000);
+  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
   const stablecoin = params.get("stablecoin");
   const active = params.get("active");
 
@@ -15,9 +15,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
 
   if (stablecoin) {
     if (!isValidStablecoinId(stablecoin)) {
-      return new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
-        status: 400, headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(400, "Invalid stablecoin ID");
     }
     conditions.push("stablecoin_id = ?");
     filterBindings.push(stablecoin);
@@ -42,10 +40,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
 
   const latestTs = events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000);
 
-  return new Response(JSON.stringify({ events, total }), {
-    headers: addFreshnessHeaders({
-      "Content-Type": "application/json",
-      "Cache-Control": CACHE_PROFILES.realtime,
-    }, latestTs, 900),
-  });
+  return jsonResponse({ events, total }, addFreshnessHeaders({
+    "Cache-Control": CACHE_PROFILES.realtime,
+  }, latestTs, 900));
 });

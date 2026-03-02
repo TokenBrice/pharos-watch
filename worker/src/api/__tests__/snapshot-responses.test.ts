@@ -71,7 +71,7 @@ describe("Regression: handler status codes with empty DB", () => {
   it("handleDigestArchive → 200", async () => {
     const res = await handleDigestArchive(emptyDb);
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = await res.json() as { digests: unknown[] };
     expect(body).toHaveProperty("digests");
     expect(body.digests).toEqual([]);
   });
