@@ -145,20 +145,34 @@ export interface CronResult {
   metadata?: string;
 }
 
+// --- Per-job cron timeout configuration ---
+
+const CRON_TIMEOUT_MS: Record<string, number> = {
+  "sync-dex-liquidity": 10 * 60_000,
+  "sync-blacklist":      8 * 60_000,
+  "sync-mint-burn":      8 * 60_000,
+  "daily-digest":        8 * 60_000,
+};
+const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
+
 /**
- * Wraps a cron job function with execution logging.
+ * Wraps a cron job function with execution logging and an AbortController timeout.
  * Logs start time, duration, status, and optional item count to cron_runs table.
  * Prunes rows older than 7 days after each insert.
  */
 export async function logCronRun(
   db: D1Database,
   job: string,
-  fn: () => Promise<CronResult | void>
+  fn: (signal: AbortSignal) => Promise<CronResult | void>
 ): Promise<void> {
   const startMs = Date.now();
   const startSec = Math.floor(startMs / 1000);
+  const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(new Error(`Cron job "${job}" timed out after ${timeoutMs / 1000}s`)), timeoutMs);
   try {
-    const result = await fn();
+    const result = await fn(ac.signal);
+    clearTimeout(timer);
     await db
       .prepare(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, ?, ?, ?, ?)"
@@ -173,6 +187,7 @@ export async function logCronRun(
       )
       .run();
   } catch (e) {
+    clearTimeout(timer);
     try {
       await db
         .prepare(
