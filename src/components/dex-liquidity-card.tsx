@@ -54,22 +54,17 @@ function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Protocol Breakdown</p>
-      <div className="flex h-7 w-full overflow-hidden rounded-full bg-muted">
-        {entries.map(([protocol, tvl], idx) => {
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+        {entries.map(([protocol, tvl]) => {
           const pct = (tvl / total) * 100;
           if (pct < 1) return null;
-          const logo = PROTOCOL_LOGOS[protocol];
           return (
             <div
               key={protocol}
-              className={`relative flex items-center justify-center overflow-hidden ${colorFor[protocol] ?? "bg-muted-foreground"}`}
+              className={colorFor[protocol] ?? "bg-muted-foreground"}
               style={{ width: `${pct}%` }}
               title={`${prettifyProtocol(protocol)}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
-            >
-              {idx < 5 && pct >= 8 && logo && (
-                <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />
-              )}
-            </div>
+            />
           );
         })}
       </div>
@@ -99,23 +94,18 @@ function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chain Breakdown</p>
-      <div className="flex h-7 w-full overflow-hidden rounded-full bg-muted">
-        {entries.map(([chain, tvl], idx) => {
+      <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+        {entries.map(([chain, tvl]) => {
           const pct = (tvl / total) * 100;
           if (pct < 1) return null;
           const displayName = normalizeChain(chain);
-          const meta = CHAIN_META[chain.toLowerCase()];
           return (
             <div
               key={chain}
-              className={`relative flex items-center justify-center overflow-hidden ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`}
+              className={CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}
               style={{ width: `${pct}%` }}
               title={`${displayName}: ${formatCurrency(tvl)} (${pct.toFixed(0)}%)`}
-            >
-              {idx < 5 && pct >= 8 && meta?.logoPath && (
-                <Image src={meta.logoPath} alt="" width={16} height={16} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
-              )}
-            </div>
+            />
           );
         })}
       </div>
