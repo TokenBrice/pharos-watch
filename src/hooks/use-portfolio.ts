@@ -248,7 +248,7 @@ export function computeGroupedExposure(
     stablecoinEntries.unshift({
       coinId: "__group_major_centralized__",
       name: "Major Centralized Stablecoins",
-      symbol: "STABLES",
+      symbol: "",
       usd: majorUsd,
       pct: totalUsd > 0 ? (majorUsd / totalUsd) * 100 : 0,
       isCollateral: false,
