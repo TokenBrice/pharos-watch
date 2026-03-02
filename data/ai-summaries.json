@@ -643,5 +643,90 @@
     "title": "Fidelity's Trillion-Dollar Entrance",
     "text": "When the third-largest asset manager on earth launches a stablecoin, the signal matters more than the product. FIDD is textbook institutional: reserves at BNY Mellon, PwC attestations, OCC national trust charter, daily NAV disclosure that exceeds Circle's monthly cadence. Fidelity's distribution moat -- retail through Fidelity Crypto, institutional through Fidelity Digital Assets, and advisors through its wealth platform -- gives FIDD access to channels that crypto-native issuers can only dream about. Underestimating Fidelity's distribution muscle would be unwise.",
     "updatedAt": "2026-02-22"
+  },
+  "cg-jpyc": {
+    "title": "The Yen's Licensed Pioneer",
+    "text": "Japan's first FSA-approved yen stablecoin occupies an enviable regulatory position — Type II Funds Transfer license, 100% JGB-backed reserves, zero transaction fees — and a laughable market cap of $17 million. JPYC Inc. has set a 10-trillion-yen target that would require 3,400x growth, which is either visionary ambition or Japanese corporate optimism at its finest. The real threat isn't GYEN (regulated in New York but locked out of Japan's domestic market) but Progmat Coin, a joint venture from Mitsubishi UFJ, Sumitomo Mitsui, and Mizuho — three megabanks whose combined balance sheet makes JPYC look like a rounding error. Being first to market matters less when the second movers have trillion-dollar balance sheets.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-xaut": {
+    "title": "Tether Mints Bullion",
+    "text": "Tether's gold token commands half the $6 billion tokenized gold market, which sounds impressive until you notice that share was 60% six months ago. XAUT works exactly like you'd expect from Tether: BDO Italia attestations, undisclosed Swiss custodian, El Salvador jurisdiction, and a market that trades on brand recognition over transparency. The real story is that Tether bought 27 tons of physical gold in 2025, making it one of the larger non-sovereign gold accumulators — the tokenized wrapper is almost an afterthought. With gold's 65% rally inflating all boats, the question is whether XAUT's eroding market share matters when the pie keeps growing.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-paxg": {
+    "title": "Fort Knox With a Charter",
+    "text": "The only federally regulated gold token in existence, PAXG operates under Paxos's OCC national trust charter with KPMG monthly attestations and allocated bars at Brink's London. At $2.5 billion it holds roughly 40% of the tokenized gold market — the permanent second to Tether Gold, but the first choice for anyone whose compliance department has veto power. While XAUT trades on Tether's distribution, PAXG trades on verifiable custody: allocated bars with serial numbers, bankruptcy-remote trust structure, and the kind of regulatory paper trail that makes institutional allocators comfortable. In a market where gold itself is the product, trust infrastructure is the only real differentiator.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-kau": {
+    "title": "Gold That Pays Rent",
+    "text": "Kinesis cracked the code that other gold tokens missed: people want yield. KAU holders earn a share of 15% of all platform transaction fees, paid monthly in additional gold — a model that propelled it from negligible to 8% market share in just twelve weeks. At $388 million it's still dwarfed by the XAUT-PAXG duopoly, but the trajectory is the story. Add a virtual Mastercard for point-of-sale gold spending and you get something genuinely different: gold that functions as money, not just an asset. The catch is that yield depends entirely on Kinesis's transaction volume — if trading dries up, so does the rent check.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-xaum": {
+    "title": "Asia's Institutional Bullion",
+    "text": "Matrixdock's gold token sits at $70 million — a rounding error next to XAUT and PAXG — but its strategy is infrastructure, not retail. Bureau Veritas-audited bars in Singapore and Hong Kong vaults, a February 2026 expansion to Solana, and a partnership with Bhutan's Gelephu Mindfulness City for sovereign gold tokenization all point to the same thesis: institutional RWA rails for Asia-Pacific. Whether XAUm becomes the region's gold standard or remains a well-audited footnote depends on whether institutions actually prefer Asia-domiciled custody over London and Swiss vaults.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-vro": {
+    "title": "Gold in the Free Ports",
+    "text": "VeraOne stores its gold in the Geneva Free Ports — the same duty-free Swiss storage complex favored by art collectors and sovereign wealth funds — which gives VRO perhaps the most interesting custody story in tokenized gold and absolutely none of the liquidity to match. At $48 million market cap with minimal trading volume, it's a micro-cap gold gram token that proves having premium vault infrastructure doesn't automatically attract premium capital. The 1 VRO = 1 gram denomination makes it accessible on paper, but without meaningful exchange listings or DeFi integrations, accessibility remains theoretical.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-cgo": {
+    "title": "DMCC-Stamped Bullion",
+    "text": "Dubai's contribution to tokenized gold arrives with serious pedigree: DMCC endorsement, Transguard vault custody under the Emirates Group umbrella, individually serialized 24-karat bars registered on DMCC Tradeflow, and a sleek redemption-via-app workflow. At $18 million market cap, none of that pedigree has translated into meaningful adoption. CGO occupies the same awkward position as several regional gold tokens — impeccable local credentials, negligible global presence. The UAE's regulatory clarity on tokenized commodities is genuinely ahead of most jurisdictions, but clarity alone doesn't create liquidity.",
+    "updatedAt": "2026-03-02"
+  },
+  "gold-dgld": {
+    "title": "Heritage Gold, Rebooted",
+    "text": "DGLD is backed by PAMP gold bars — the Swiss refiner whose name is synonymous with premium bullion — which makes its six-year disappearance and recent revival all the more puzzling. MKS PAMP relaunched DGLD in late 2025 with a Base deployment via Aerodrome, real-time reserve verification through on-chain bar serial numbers, and VQF/FINMA regulatory oversight. At somewhere between $3 million and $17 million (the data can't even agree), DGLD has the most prestigious gold backing in crypto and the least market traction. A 60-year refining heritage turns out to be necessary but wildly insufficient for winning the tokenized gold race.",
+    "updatedAt": "2026-03-02"
+  },
+  "silver-kag": {
+    "title": "The Lonely Ounce",
+    "text": "In a world where tokenized gold has surged past $6 billion, tokenized silver remains a ghost town — and KAG is effectively its only resident. At $16 million market cap, Kinesis Silver offers the same yield-sharing model as its gold sibling KAU, but without the macro tailwind: silver was flat while gold rallied 65% in 2025. The thesis is straightforward — if precious metals tokenization is real, silver must eventually follow gold — but \"eventually\" is doing a lot of heavy lifting. For now, KAG is less a product and more a bet on silver's relevance in an increasingly gold-obsessed market.",
+    "updatedAt": "2026-03-02"
+  },
+  "cg-eurq": {
+    "title": "The Enterprise Euro",
+    "text": "Quantoz built EURQ for corporate treasurers, not DeFi degens — MiCA-compliant, DNB-regulated, 102% reserved in government bonds and Tier 1 bank deposits, with direct SEPA integration and a minimum transaction size that explicitly filters out retail. At 89 million euros in circulation it's the second-largest regulated euro stablecoin behind Circle's EURC, carving a niche in programmable corporate payments where compliance is a feature, not a tax. The 2% over-collateralization buffer is a quiet flex: enough to signal conservatism without dragging capital efficiency. Whether the enterprise market actually wants an on-chain euro or just talks about it at conferences remains the open question.",
+    "updatedAt": "2026-03-02"
+  },
+  "cg-deuro": {
+    "title": "The Oracle-Free Euro",
+    "text": "Born from the same codebase as Frankencoin (ZCHF), dEURO takes the contrarian position that price oracles are a point of failure, not a feature. Its CDP model uses internal auctions instead of external price feeds — a design that trades capital efficiency for resilience against oracle manipulation. Collateral ranges from BTC and ETH to XAUT and even USDC, making it less a purist crypto stablecoin and more an omnivorous CDP that happens to denominate in euros. With governance fully transferred to token holders and no founder control over contracts, dEURO is genuinely decentralized in a euro stablecoin market where that word usually means \"we have a multisig.\" MiCA's evolving stance on decentralized stablecoins could be either tailwind or existential threat.",
+    "updatedAt": "2026-03-02"
+  },
+  "cg-zarp": {
+    "title": "The Rand's Digital Outpost",
+    "text": "South Africa's lone stablecoin contender holds about $3.6 million in circulation — modest by any standard, but backed by Old Mutual Wealth, one of the continent's largest financial institutions. The reserves are independently audited by Kempen, held strictly for redemption purposes, and cover the full supply at 1:1. ZARP's problem isn't credibility; it's relevance. With an FSCA CASP license still pending and South African crypto regulation in perpetual draft mode, adoption has plateaued despite deployment across Ethereum, Base, Polygon, and Solana. For a country with genuine demand for stable local-currency rails, the market has responded with a collective shrug.",
+    "updatedAt": "2026-03-02"
+  },
+  "cg-syrupusdc": {
+    "title": "Institutional Lending, Vaulted",
+    "text": "Maple Finance's syrupUSDC has quietly become one of the largest yield-bearing stablecoins at $2.6 billion in deposits, all channeled into overcollateralized institutional loans returning 5-9% APY. The ERC-4626 vault design makes it composable enough that Aave V3, Morpho, and Pendle have all integrated it — meaning your lending yield can itself be lent, borrowed against, or split into principal and yield tranches. Base expansion in January 2026 saw a $50 million deposit cap fill immediately. The risk is the one that always haunts institutional credit: borrowers default, and \"overcollateralized\" is only as good as the collateral's liquidation value in a downturn.",
+    "updatedAt": "2026-03-02"
+  },
+  "cg-syrupusdt": {
+    "title": "The Mirror Vault",
+    "text": "Maple's USDT counterpart to syrupUSDC runs on identical mechanics — ERC-4626 vault, institutional borrower pool, overcollateralized credit lines — but with $1.1 billion in deposits, it's the smaller sibling. The distinction matters less than it appears: both feed from the same Maple lending infrastructure, and yield differentials between the two are negligible. Ethereum-only deployment (no Base or Arbitrum yet) limits its DeFi composability compared to syrupUSDC, which may explain the size gap. For yield-seekers who prefer their stablecoin exposure in Tether rather than Circle, syrupUSDT is the vault; the economics are otherwise indistinguishable.",
+    "updatedAt": "2026-03-02"
+  },
+  "cg-yousd": {
+    "title": "Fifty Strategies, One Token",
+    "text": "YO Protocol's yoUSD automates what DeFi power users do manually — rebalancing USDC across 50+ yield sources on Ethereum, Base, Arbitrum, and Unichain, ranked by risk scores with per-pool and per-protocol concentration caps. The result: 8.64% annualized returns since March 2025 with zero negative months, which is the kind of track record that looks miraculous until you remember it was built during a bull market. Backed by Paradigm, Haun Ventures, and Coinbase Ventures, the $28 million in deposits is modest but growing. The real tension is philosophical: yoUSD is a sophisticated yield aggregator wearing a stablecoin's clothing, and its NAV appreciation model means your \"dollar\" is worth $1.07 and climbing — stable in the sense that it never goes down, not that it stays at one.",
+    "updatedAt": "2026-03-02"
+  },
+  "353": {
+    "title": "GPU Yield, Dollarized",
+    "text": "GAIB's AID is a conventional dollar stablecoin — T-bills and stablecoin reserves, 1:1 mint and burn — whose entire reason for existing is its companion token sAID, which accrues yield from GPU and AI infrastructure financing deals. The structure neatly separates stable value (AID) from exotic yield (sAID), letting users choose their risk exposure. At $21 million market cap it's early-stage even by RWA standards, betting that AI compute demand will create a durable yield substrate. Whether GPU financing agreements produce reliable enough cash flows to back a yield product is genuinely untested — but in a market where every new stablecoin needs a narrative, \"AI infrastructure yield\" is at least more substantive than most.",
+    "updatedAt": "2026-03-02"
+  },
+  "354": {
+    "title": "Dividends as Collateral",
+    "text": "Apyx introduced what might be the most creative collateral backing in stablecoins: preferred shares from Digital Asset Treasury companies — publicly traded equity from firms like Strategy that hold large crypto positions. The theory is that variable-rate preferred shares trade near par regardless of crypto price volatility, providing stable collateral for a dollar token. Launched on Ethereum in February 2026 with DeFi Development Corp as an early investor, apxUSD is so new that market cap data barely exists. The Protocol-Owned Liquidity buffer is meant to absorb stress, but the underlying question is whether equity dividends from crypto-holding companies are truly uncorrelated with the crypto market they depend on.",
+    "updatedAt": "2026-03-02"
   }
 }
