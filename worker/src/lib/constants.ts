@@ -95,4 +95,5 @@ export const CIRCUIT_SOURCE = {
   CG_PRICES: "coingecko-prices",
   CG_MCAP: "coingecko-mcap",
   TREASURY_RATES: "treasury-rates",
+  ETHERSCAN: "etherscan",
 } as const;

@@ -19,6 +19,8 @@ import { computeAndStoreDEWS } from "./cron/compute-dews";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 import { initCoinGecko } from "./lib/coingecko";
+import { shouldAttemptFetch, recordOutcome } from "./lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "./lib/constants";
 
 interface Env {
   DB: D1Database;
@@ -228,17 +230,26 @@ const worker = {
       // Blacklist + mint/burn on a 20-min cycle (offset at :03/:23/:43 to avoid colliding with the 15-min trigger)
       // Both jobs share one Etherscan rate limiter to stay within the free-tier 5 req/sec cap.
       case "3,23,43 * * * *": {
+        const etherscanAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
+        if (!etherscanAllowed) {
+          console.warn("[cron] Etherscan circuit open — skipping blacklist + mint/burn sync");
+          break;
+        }
         const etherscanRL = createRateLimiter(4);
         const etherscanKey = env.ETHERSCAN_API_KEY ?? null;
-        ctx.waitUntil(
-          logCronRun(db, "sync-blacklist", () =>
-            syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL)
-          )
+        const blacklistJob = logCronRun(db, "sync-blacklist", () =>
+          syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL)
         );
+        const mintBurnJob = logCronRun(db, "sync-mint-burn", () =>
+          syncMintBurn(db, etherscanKey, etherscanRL)
+        );
+        ctx.waitUntil(blacklistJob);
+        ctx.waitUntil(mintBurnJob);
         ctx.waitUntil(
-          logCronRun(db, "sync-mint-burn", () =>
-            syncMintBurn(db, etherscanKey, etherscanRL)
-          )
+          Promise.allSettled([blacklistJob, mintBurnJob]).then((results) => {
+            const allOk = results.every((r) => r.status === "fulfilled");
+            return recordOutcome(db, CIRCUIT_SOURCE.ETHERSCAN, allOk);
+          })
         );
         break;
       }

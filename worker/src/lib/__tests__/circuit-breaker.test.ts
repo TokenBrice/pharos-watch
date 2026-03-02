@@ -10,6 +10,7 @@ vi.mock("../alerts", () => ({
 // Import after mocking
 import { getCircuitRecord, shouldAttemptFetch, recordOutcome, getCircuitStates } from "../circuit-breaker";
 import { sendAlert } from "../alerts";
+import { CIRCUIT_SOURCE } from "../constants";
 
 const mockedAlert = vi.mocked(sendAlert);
 
@@ -241,6 +242,14 @@ describe("circuit-breaker", () => {
       expect(Object.keys(states)).toHaveLength(1);
       expect(states["good"].state).toBe("closed");
       expect(states["bad"]).toBeUndefined();
+    });
+  });
+
+  // --- Etherscan circuit source ---
+
+  describe("Etherscan circuit source", () => {
+    it("ETHERSCAN source constant exists", () => {
+      expect(CIRCUIT_SOURCE.ETHERSCAN).toBe("etherscan");
     });
   });
 });
