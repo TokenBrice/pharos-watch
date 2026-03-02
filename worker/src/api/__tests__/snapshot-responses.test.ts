@@ -78,17 +78,14 @@ describe("Regression: handler status codes with empty DB", () => {
 
   // --- db + url handlers (no query params → expected behavior) ---
 
-  it("handleBlacklist → 500 (batch not supported by mock)", async () => {
-    // Blacklist uses db.batch() which the lightweight mock doesn't support,
-    // so withErrorHandler catches the error and returns 500.
+  it("handleBlacklist → 200 (empty results)", async () => {
     const res = await handleBlacklist(emptyDb, baseUrl);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
   });
 
-  it("handleDepegEvents → 500 (batch not supported by mock)", async () => {
-    // Depeg-events also uses db.batch(), same behavior as blacklist.
+  it("handleDepegEvents → 200 (empty results)", async () => {
     const res = await handleDepegEvents(emptyDb, baseUrl);
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
   });
 
   it("handleSupplyHistory → 400 (missing stablecoin param)", async () => {

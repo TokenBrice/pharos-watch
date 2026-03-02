@@ -41,7 +41,13 @@ export function mockD1(tables: MockTable[] = []): D1Database {
 
   return {
     prepare: (sql: string) => stmt(sql),
-    batch: async () => [],
+    batch: async (stmts: { all: () => Promise<unknown>; first: () => Promise<unknown> }[]) => {
+      const results = [];
+      for (const s of stmts) {
+        results.push(await s.all());
+      }
+      return results;
+    },
     exec: async () => ({ count: 0, duration: 0 }),
     dump: async () => new ArrayBuffer(0),
   } as unknown as D1Database;
