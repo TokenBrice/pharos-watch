@@ -93,7 +93,10 @@ function BiggestDepegs({
                 <span className="text-sm font-medium truncate group-hover:underline">
                   {d.symbol}
                 </span>
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-xs text-muted-foreground font-mono sm:hidden">
+                  {formatNativePrice(d.price, d.pegCurrency, d.pegRef, 2)}
+                </span>
+                <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                   {formatNativePrice(d.price, d.pegCurrency, d.pegRef)}
                 </span>
               </div>

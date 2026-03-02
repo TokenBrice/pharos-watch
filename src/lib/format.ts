@@ -21,23 +21,24 @@ const PEG_CURRENCY_SYMBOLS: Record<string, string> = {
   GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
 };
 
-function formatPrice(price: number | null | undefined, symbol = "$"): string {
+function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
   if (price == null || typeof price !== "number" || isNaN(price)) return "N/A";
-  return `${symbol}${price.toFixed(4)}`;
+  return `${symbol}${price.toFixed(decimals)}`;
 }
 
 export function formatNativePrice(
   usdPrice: number | null | undefined,
   pegCurrency: string,
   pegRef: number,
+  decimals = 4,
 ): string {
   if (usdPrice == null || typeof usdPrice !== "number" || isNaN(usdPrice)) return "N/A";
   const symbol = PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
   if (pegCurrency === "USD" || pegCurrency === "GOLD" || pegCurrency === "SILVER" || pegCurrency === "VAR" || pegCurrency === "OTHER") {
-    return formatPrice(usdPrice);
+    return formatPrice(usdPrice, "$", decimals);
   }
-  if (!pegRef || pegRef <= 0) return formatPrice(usdPrice);
-  return formatPrice(usdPrice / pegRef, symbol);
+  if (!pegRef || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
+  return formatPrice(usdPrice / pegRef, symbol, decimals);
 }
 
 /** Format a basis-point value with a sign prefix, e.g. "+12 bps" or "-5 bps". */
