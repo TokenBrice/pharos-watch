@@ -137,4 +137,24 @@ describe("computeGroupedExposure", () => {
     const grouped = computeGroupedExposure(raw, 100_000);
     expect(grouped[0].pct).toBeCloseTo(25);
   });
+
+  it("returns empty array for empty input", () => {
+    expect(computeGroupedExposure([], 100_000)).toEqual([]);
+  });
+
+  it("sets pct to 0 when totalUsd is 0", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "__c_t__", name: "Short-term U.S. Treasury bills", symbol: "T-Bills", usd: 0, pct: 0, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, 0);
+    expect(grouped[0].pct).toBe(0);
+  });
+
+  it("handles collateral-only input with no stablecoin entries", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "__c_t__", name: "Short-term U.S. Treasury bills", symbol: "T-Bills", usd: 100_000, pct: 100, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, 100_000);
+    expect(grouped.every((e) => e.isCollateral)).toBe(true);
+  });
 });
