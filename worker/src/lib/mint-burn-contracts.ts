@@ -9,7 +9,8 @@ export interface MintBurnEventDef {
   signature: string;
   topicHash: string;
   direction: MintBurnDirection;
-  amountEncoding: "transfer-value" | "first-data-uint256";
+  amountEncoding: "transfer-value" | "first-data-uint256" | "nth-data-uint256";
+  dataSlot?: number; // Required when amountEncoding = "nth-data-uint256"; 0-indexed slot in ABI-encoded data
   filterTopic?: {
     index: number;
     value: string;
@@ -58,9 +59,41 @@ function transferMintBurn(): MintBurnEventDef[] {
   ];
 }
 
+// --- reUSD (Re Protocol) event topic hashes ---
+// Deposited(address user, address token, uint256 amount) — all params unindexed
+// Confirmed from ETH tx 0xf58255931c37cbca0859946c45d9a19e48b1da5476d1aab76ec788100c8d7a59
+const REUSD_DEPOSITED_TOPIC     = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
+// InstantRedemptionProcessed(address indexed user, uint256 sharesBurned, uint256 netPayout) — user indexed
+// Confirmed from ETH tx 0x831367d37ebb2bd3bf41a1152124a493c309b1f092ce161da578d635b49d23e8
+const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc0af66837a83c3560ec6220";
+
 // --- Phase 1 configs (Ethereum only, 10 stablecoins) ---
 
-const ETHEREUM = chainConfig("ethereum");
+const ETHEREUM  = chainConfig("ethereum");
+const ARBITRUM  = chainConfig("arbitrum");
+const BASE      = chainConfig("base");
+const AVALANCHE = chainConfig("avalanche");
+
+// --- reUSD helper: deposit event reads collateral amount from data slot 2 ---
+
+function reUsdDepositEvent(): MintBurnEventDef[] {
+  return [{
+    signature: "Deposited(address,address,uint256)",
+    topicHash: REUSD_DEPOSITED_TOPIC,
+    direction: "mint",
+    amountEncoding: "nth-data-uint256",
+    dataSlot: 2, // data = [user(32B), token(32B), amount(32B)]
+  }];
+}
+
+function reUsdRedeemEvent(): MintBurnEventDef[] {
+  return [{
+    signature: "InstantRedemptionProcessed(address,uint256,uint256)",
+    topicHash: REUSD_INSTANT_REDEEM_TOPIC,
+    direction: "burn",
+    amountEncoding: "first-data-uint256", // data[0] = sharesBurned (reUSD amount)
+  }];
+}
 
 export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
   // --- Safe havens ---
@@ -140,6 +173,66 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     contractAddress: "0x6440f144b7e50d6a8439336510312d2f54beb01d",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
     events: transferMintBurn(),
+  },
+
+  // --- reUSD (Re Protocol, ID 339) — deposit + instant-redemption across 4 chains ---
+  // Deposit contracts: emit Deposited(user, token, amount) where amount = collateral (USDC/USDT, 6 dec)
+  // Redemption contracts: emit InstantRedemptionProcessed(indexed user, sharesBurned, netPayout) where sharesBurned = reUSD amount (18 dec)
+
+  // Ethereum
+  {
+    chain: ETHEREUM, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+    decimals: 6, dustThreshold: 10_000, startBlock: 21_675_000,
+    events: reUsdDepositEvent(),
+  },
+  {
+    chain: ETHEREUM, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x8aeb9453ef22cb38abc7a3af9c208f65c1bfe31e",
+    decimals: 18, dustThreshold: 10_000, startBlock: 23_479_000,
+    events: reUsdRedeemEvent(),
+  },
+
+  // Arbitrum
+  {
+    chain: ARBITRUM, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x802edbb1ec20548a4388abc337e4011718eb0291",
+    decimals: 6, dustThreshold: 10_000, startBlock: 305_400_000,
+    events: reUsdDepositEvent(),
+  },
+  {
+    chain: ARBITRUM, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0xfd4016ea13ca8acc04a11a99702df076a4d3b852",
+    decimals: 18, dustThreshold: 10_000, startBlock: 382_974_000,
+    events: reUsdRedeemEvent(),
+  },
+
+  // Base
+  {
+    chain: BASE, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+    decimals: 6, dustThreshold: 10_000, startBlock: 24_000_000,
+    events: reUsdDepositEvent(),
+  },
+  {
+    chain: BASE, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x9ab62aebabe738ab233c447eedce88d1d0a61fe3",
+    decimals: 18, dustThreshold: 10_000, startBlock: 24_000_000,
+    events: reUsdRedeemEvent(),
+  },
+
+  // Avalanche
+  {
+    chain: AVALANCHE, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0xb22a8533e6cd81598f82514a42f0b3161745fbe1",
+    decimals: 6, dustThreshold: 10_000, startBlock: 55_000_000,
+    events: reUsdDepositEvent(),
+  },
+  {
+    chain: AVALANCHE, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0xe13292f97e38da0c64398de5e0bfc95180de9d23",
+    decimals: 18, dustThreshold: 10_000, startBlock: 55_000_000,
+    events: reUsdRedeemEvent(),
   },
 ];
 

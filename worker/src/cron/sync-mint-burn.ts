@@ -4,27 +4,34 @@ import {
   budgetExhausted,
   getEvmBlockNumber,
   fetchEvmLogsForTopics,
-  decodeUint256,
+  decodeUint256AtSlot,
   decodeAddress,
 } from "../lib/evm-logs";
-import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import { batchExecute } from "../lib/db";
 
 // Safety margin when advancing sync state to chain head (prevents permanent event loss
 // if block explorer indexing lags behind chain tip). 15 minutes in seconds.
 const INDEXING_SAFETY_SEC = 900;
 
-// Approximate block time (seconds) for Ethereum — only chain in Phase 1.
-const ETH_BLOCK_TIME = 12;
+// Approximate block times (seconds) per EVM chain — used to compute safety margin in blocks.
+const EVM_BLOCK_TIME: Record<number, number> = {
+  1:     12,    // Ethereum
+  42161: 0.25,  // Arbitrum
+  8453:  2,     // Base
+  43114: 2,     // Avalanche
+};
 
 // Maximum block range to scan per contract per cron cycle.
 // Prevents exponential recursion in fetchEvmLogsForTopics from exhausting the
 // shared subrequest budget when scanning dense contracts (e.g. USDC) over large ranges.
 // 50K blocks ≈ 7 days of Ethereum blocks. Full backfill of 2.6M blocks takes ~17 hours.
+// Note: for fast chains like Arbitrum (0.25s blocks), 50K blocks ≈ 3.5 hours.
 const MAX_SCAN_RANGE = 50_000;
 
-function evmSafetyMarginBlocks(): number {
-  return Math.ceil(INDEXING_SAFETY_SEC / ETH_BLOCK_TIME);
+function evmSafetyMarginBlocks(evmChainId: number): number {
+  const blockTime = EVM_BLOCK_TIME[evmChainId] ?? 2;
+  return Math.ceil(INDEXING_SAFETY_SEC / blockTime);
 }
 
 export async function syncMintBurn(
@@ -56,10 +63,19 @@ export async function syncMintBurn(
     lastBlocks.set(key, row?.last_block ?? (config.startBlock - 1));
   });
 
-  // 2. Get current Ethereum block number (single call, shared across all configs)
-  const chainHead = await getEvmBlockNumber(1, etherscanApiKey, etherscanRL, budget);
-  if (chainHead === null) {
-    return { itemCount: 0, metadata: JSON.stringify({ error: "Failed to get chain head" }) };
+  // 2. Get current block number per chain (lazy cache — fetched on first use per chain ID)
+  const chainHeadCache = new Map<number, number>();
+  async function getChainHead(evmChainId: number): Promise<number | null> {
+    if (chainHeadCache.has(evmChainId)) return chainHeadCache.get(evmChainId)!;
+    const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanRL, budget);
+    if (head !== null) chainHeadCache.set(evmChainId, head);
+    return head;
+  }
+
+  // Pre-fetch Ethereum chain head so an early failure returns a clear error
+  const ethHead = await getChainHead(1);
+  if (ethHead === null) {
+    return { itemCount: 0, metadata: JSON.stringify({ error: "Failed to get Ethereum chain head" }) };
   }
 
   // 3. Load current prices for USD conversion (one query, cached in Map)
@@ -80,14 +96,16 @@ export async function syncMintBurn(
 
   for (const config of MINT_BURN_CONFIGS) {
     if (config.chain.evmChainId === null) { contractsSkipped++; continue; }
+    if (budgetExhausted(budget)) { contractsSkipped++; continue; }
+
+    const evmChainId = config.chain.evmChainId;
+    const chainHead = await getChainHead(evmChainId);
+    if (chainHead === null) { contractsSkipped++; continue; }
+
     const configKey = `${config.chain.chainId}-${config.contractAddress}`;
     const fromBlock = (lastBlocks.get(configKey) ?? 0) + 1;
 
     if (fromBlock > chainHead) {
-      contractsSkipped++;
-      continue;
-    }
-    if (budgetExhausted(budget)) {
       contractsSkipped++;
       continue;
     }
@@ -111,7 +129,7 @@ export async function syncMintBurn(
       }
 
       const logs = await fetchEvmLogsForTopics(
-        config.chain.evmChainId, config.contractAddress, topics,
+        evmChainId, config.contractAddress, topics,
         etherscanApiKey, fromBlock, scanTo, 0, etherscanRL, budget
       );
 
@@ -122,7 +140,7 @@ export async function syncMintBurn(
       }
 
       // Parse logs into DB rows
-      const rows = parseMintBurnLogs(config, eventDef.direction, logs, prices);
+      const rows = parseMintBurnLogs(config, eventDef, logs, prices);
       for (const row of rows) {
         maxBlockSeen = Math.max(maxBlockSeen, row.block_number);
 
@@ -158,7 +176,7 @@ export async function syncMintBurn(
       } else {
         // No events found — advance to end of scanned range.
         // Apply safety margin only near chain head to protect against indexing lag.
-        const safetyBlocks = evmSafetyMarginBlocks();
+        const safetyBlocks = evmSafetyMarginBlocks(evmChainId);
         newLastBlock = Math.max(fromBlock - 1, Math.min(scanTo, chainHead - safetyBlocks));
       }
       await db.prepare(
@@ -232,14 +250,16 @@ interface MintBurnRow {
 
 function parseMintBurnLogs(
   config: MintBurnContractConfig,
-  direction: "mint" | "burn",
+  eventDef: MintBurnEventDef,
   logs: EtherscanLogEntry[],
   prices: Map<string, number>,
 ): MintBurnRow[] {
   const rows: MintBurnRow[] = [];
+  const direction = eventDef.direction;
 
   for (const log of logs) {
-    const amount = decodeUint256(log.data, config.decimals);
+    const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
+    const amount = decodeUint256AtSlot(log.data, slot, config.decimals);
     if (amount <= 0 || amount < config.dustThreshold) continue;
 
     const blockNum = parseInt(log.blockNumber, 16);
