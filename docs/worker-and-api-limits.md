@@ -70,7 +70,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 | **Requests/minute (free)** | ~30 req/min (dynamic, load-dependent) |
 | **Requests/minute (with CG Analyst key)** | 250 req/min via CoinGecko `/onchain` endpoints |
 
-**Rate limit in code**: `GT_RATE_LIMIT_MS = 2000` ms (30 req/min) in `worker/src/cron/sync-dex-liquidity.ts`
+**Rate limit in code**: `GECKO_TERMINAL_MS = 2000` ms (30 req/min) in `worker/src/lib/rate-limits.ts`, used by `worker/src/cron/dex-liquidity/fetch-crawlers.ts`
 
 **Crawl budget**: 15 min max wall-time within the 30-min cron window (`GT_CRAWL_BUDGET_MS`). Not all 252+ token-chain combos can be crawled per run at 30 req/min.
 

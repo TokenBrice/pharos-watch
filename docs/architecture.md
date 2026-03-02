@@ -294,7 +294,18 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
     │   ├── sync-bluechip.ts      # Bluechip safety ratings → D1 (daily, 8AM UTC)
-    │   ├── sync-dex-liquidity.ts # DeFiLlama Yields + Curve API + CG Onchain → D1 (every ~20min)
+    │   ├── dex-liquidity/        # DeFiLlama Yields + Curve API + CG Onchain → D1 (every 30min)
+    │   │   ├── index.ts           # Barrel re-export
+    │   │   ├── types.ts           # All interfaces and type aliases
+    │   │   ├── constants.ts       # API URLs, subgraph IDs, GraphQL queries, quality maps
+    │   │   ├── pool-helpers.ts    # Pure functions: classification, scoring, normalization
+    │   │   ├── fetch-primary.ts   # DL Yields/Protocols, Curve, Uni V3, Aerodrome, token batches
+    │   │   ├── fetch-crawlers.ts  # CG/GT per-token pool crawl + merge
+    │   │   ├── fetch-fallbacks.ts # DexScreener + CG tickers fallbacks
+    │   │   ├── process-pools.ts   # Match DL pools to stablecoins with enrichment
+    │   │   ├── scoring.ts         # Composite scores, HHI, depth stability, DEX prices
+    │   │   ├── persistence.ts     # D1 writes (scores table, history snapshots)
+    │   │   └── orchestrator.ts    # 10-step syncDexLiquidity() main function
     │   ├── stability-index.ts    # Composite ecosystem health score → D1 (every 15 min, after sync-stablecoins)
     │   ├── snapshot-psi.ts       # Daily PSI snapshot → D1 (daily, 8AM UTC)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)

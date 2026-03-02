@@ -163,7 +163,7 @@ crons = [
 
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
-| `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/sync-dex-liquidity.ts` | `docs/dex-liquidity.md` |
+| `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | `docs/dex-liquidity.md` |
 | `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/yield-intelligence.md` |
 
 **Connection budget:** Both jobs run concurrently via separate `ctx.waitUntil()` calls and share the Workers 6-connection limit. `sync-dex-liquidity` consumes its DeFiLlama response bodies before starting the Curve batch (releasing 2 connections) so the Curve batch uses only 4, leaving 2 connections for `sync-yield-data`'s concurrent fetches. When adding fetch-heavy work to this slot, audit the combined connection count across all jobs.
