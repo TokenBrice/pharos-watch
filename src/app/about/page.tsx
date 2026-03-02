@@ -141,7 +141,7 @@ export default function AboutPage() {
                 href="https://www.anthropic.com/claude-code"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-foreground underline underline-offset-4 hover:text-violet-500 transition-colors"
+                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
               >
                 Claude
                 <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />

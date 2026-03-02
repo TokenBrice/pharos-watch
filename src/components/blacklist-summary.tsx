@@ -39,7 +39,7 @@ export function BlacklistSummary() {
   }
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-red-500">
+    <Card className="rounded-xl border-l-[3px] border-l-red-500 animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
           <span className="flex items-center gap-1.5"><ShieldBan className="h-4 w-4" />Blacklist Activity</span>
@@ -54,15 +54,15 @@ export function BlacklistSummary() {
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-live="polite">
           <div>
-            <p className="text-2xl font-bold font-mono">{stats?.frozenAddresses ?? 0}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.frozenAddresses ?? 0}</p>
             <p className="text-xs text-muted-foreground">frozen addresses</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{stats ? formatCurrency(stats.destroyedTotal) : "$0"}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats ? formatCurrency(stats.destroyedTotal) : "$0"}</p>
             <p className="text-xs text-muted-foreground">destroyed value</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{stats?.recentCount ?? 0}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.recentCount ?? 0}</p>
             <p className="text-xs text-muted-foreground">events (30d)</p>
           </div>
         </div>

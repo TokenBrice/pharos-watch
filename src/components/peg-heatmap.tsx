@@ -178,7 +178,7 @@ export function PegHeatmap({
                   <Link
                     key={coin.id}
                     href={`/stablecoin/${coin.id}`}
-                    className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-transform hover:scale-105 ${deviationTileClass(absBps)}`}
+                    className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border hover:bg-muted/40 transition-colors ${deviationTileClass(absBps)}`}
                     title={dexDisagrees
                       ? `DEX price disagrees: $${dex.dexPrice.toFixed(4)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
                       : undefined}

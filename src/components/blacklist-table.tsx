@@ -81,7 +81,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border overflow-hidden">
+      <div className="rounded-xl border overflow-x-auto">
         <div className="bg-muted/50 h-10" />
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
@@ -101,7 +101,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
   }
 
   return (
-    <div className="rounded-xl border overflow-hidden">
+    <div className="rounded-xl border overflow-x-auto">
       <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
         <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={sorted.length === 0}>
           <Download className="h-3.5 w-3.5" />

@@ -16,6 +16,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
 import { formatCurrency } from "@/lib/format";
+import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
 import { CHAIN_META } from "@/lib/chains";
 import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
@@ -222,33 +223,32 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
           <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
               <linearGradient id="tvlGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-blue-500, #3b82f6)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--color-blue-500, #3b82f6)" stopOpacity={0.05} />
+                <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
-              tick={{ fontSize: 10, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v)}
               width={60}
             />
             <Tooltip
-              contentStyle={{ fontSize: 12, backgroundColor: "var(--color-card)", border: "1px solid var(--color-border)", color: "var(--color-card-foreground)" }}
-              labelStyle={{ color: "var(--color-card-foreground)" }}
+              {...RECHARTS_TOOLTIP_STYLES}
               formatter={(value: number | undefined) => [formatCurrency(value ?? 0), "TVL"]}
             />
             <Area
               type="monotone"
               dataKey="tvl"
-              stroke="var(--color-blue-500, #3b82f6)"
+              stroke={CHART_BLUE}
               fill="url(#tvlGradient)"
               strokeWidth={1.5}
             />
@@ -353,13 +353,13 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
   const tier = getScoreTier(score);
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
+    <Card className="rounded-xl border-l-[3px] border-l-cyan-500 animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             DEX Liquidity
           </CardTitle>
-          <div className={`text-2xl font-bold font-mono ${TIER_TEXT[tier]}`}>
+          <div className={`text-2xl font-extrabold font-mono tabular-nums ${TIER_TEXT[tier]}`}>
             {score}<span className="text-sm text-muted-foreground">/100</span>
           </div>
         </div>

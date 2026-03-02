@@ -115,11 +115,11 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const availableCount = Object.values(signals).filter((s) => s.available).length;
 
   return (
-    <Card>
+    <Card className="animate-in fade-in duration-300">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle as="h2">Depeg Early Warning</CardTitle>
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold font-mono tabular-nums">{score}</span>
+          <span className="text-2xl font-extrabold font-mono tabular-nums">{score}</span>
           <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${bandColor}`}>
             {THREAT_BAND_LABELS[typedBand]}
           </span>
@@ -180,14 +180,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   type="number"
                   scale="time"
                   domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono)", fill: "var(--color-muted-foreground)" }}
                   tickFormatter={(ts: number) =>
                     new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                   }
                 />
                 <YAxis
                   domain={[0, 100]}
-                  tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+                  tick={{ fontSize: 12, fontFamily: "var(--font-mono)", fill: "var(--color-muted-foreground)" }}
                   width={30}
                 />
                 <Tooltip

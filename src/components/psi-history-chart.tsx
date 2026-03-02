@@ -16,7 +16,7 @@ import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { downloadChartPng } from "@/lib/chart-export";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
@@ -315,7 +315,7 @@ export function PsiHistoryChart({ excludeEvents }: { excludeEvents?: string[] } 
           <CardTitle as="h2">Pharos Stability Index History</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[250px] sm:h-[350px] w-full" />
+          <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
         </CardContent>
       </Card>
     );

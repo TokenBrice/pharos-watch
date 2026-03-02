@@ -17,7 +17,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@/lib/format";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
 import { PEG_CHART_COLORS } from "@/lib/classification";
-import { CHART_HEIGHT } from "@/lib/chart-colors";
+import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 
 function pegKeyToCode(key: string): string {
   return key.replace(/^pegged/, "");
@@ -57,8 +57,15 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
   const total = items.reduce((sum, i) => sum + i.value, 0);
 
   return (
-    <div className="rounded-lg border bg-card p-3 shadow-md text-sm">
-      <p className="font-bold text-card-foreground mb-1.5">
+    <div
+      className="rounded-lg border p-3 shadow-md text-sm"
+      style={{
+        backgroundColor: RECHARTS_TOOLTIP_STYLES.contentStyle.backgroundColor,
+        borderColor: "var(--color-border)",
+        fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
+      }}
+    >
+      <p className="font-bold text-card-foreground mb-1.5" style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}>
         {new Date(label).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
@@ -216,6 +223,7 @@ export function PegDiversityChart() {
                     tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                     tickLine={false}
                     axisLine={false}
+                    minTickGap={72}
                     tickFormatter={(ts: number) =>
                       new Date(ts).toLocaleDateString("en-US", {
                         month: "short",

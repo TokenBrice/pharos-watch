@@ -173,7 +173,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total DEX TVL</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(stats.totalTvl)}</div>
+            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{formatCurrency(stats.totalTvl)}</div>
             <p className="text-sm text-muted-foreground">
               Across all tracked stablecoins
               {stats.agg7dChange != null && (
@@ -190,7 +190,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">24h DEX Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{formatCurrency(stats.totalVol)}</div>
+            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{formatCurrency(stats.totalVol)}</div>
             <p className="text-sm text-muted-foreground">Trading volume today</p>
           </CardContent>
         </Card>
@@ -200,7 +200,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Liq Score</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold font-mono tracking-tight ${getScoreColor(stats.avgScore)}`}>
+            <div className={`text-2xl font-extrabold font-mono tabular-nums tracking-tight ${getScoreColor(stats.avgScore)}`}>
               {stats.avgScore}<span className="text-lg text-muted-foreground">/100</span>
             </div>
             <p className="text-sm text-muted-foreground">Mean score of active coins</p>
@@ -212,7 +212,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active on DEX</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono tracking-tight">{stats.withLiquidity}</div>
+            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.withLiquidity}</div>
             <p className="text-sm text-muted-foreground">of {stats.totalTracked} tracked stablecoins</p>
           </CardContent>
         </Card>
@@ -222,7 +222,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Pool Balance</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-mono tracking-tight">{stats.avgBalance}%</div>
+              <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.avgBalance}%</div>
               <p className="text-sm text-muted-foreground">TVL-weighted average</p>
             </CardContent>
           </Card>
@@ -233,7 +233,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Organic Liquidity</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold font-mono tracking-tight">{stats.avgOrganic}%</div>
+              <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.avgOrganic}%</div>
               <p className="text-sm text-muted-foreground">Fee-based vs incentivized</p>
             </CardContent>
           </Card>

@@ -34,7 +34,15 @@ export function DependencyMapClient() {
     );
   }
 
-  if (!reportData?.cards) return null;
+  if (!reportData?.cards || reportData.cards.length === 0) {
+    return (
+      <Card className="rounded-xl">
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+          No dependency data available yet.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <ContagionGraph

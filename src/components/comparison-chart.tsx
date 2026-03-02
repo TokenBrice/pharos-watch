@@ -195,6 +195,7 @@ export function ComparisonChart({
                   tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
+                  minTickGap={72}
                   tickFormatter={formatTimestamp}
                 />
                 <YAxis

@@ -36,11 +36,11 @@ export function CemeterySummary() {
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <p className="text-2xl font-bold font-mono">{DEAD_STABLECOINS.length}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{DEAD_STABLECOINS.length}</p>
             <p className="text-xs text-muted-foreground">dead stablecoins</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{formatCurrency(totalDestroyed, 1)}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{formatCurrency(totalDestroyed, 1)}</p>
             <p className="text-xs text-muted-foreground">peak value destroyed</p>
           </div>
           <div className="space-y-1">

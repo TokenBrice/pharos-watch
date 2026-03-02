@@ -75,9 +75,9 @@ function BiggestDepegs({
       </CardHeader>
       <CardContent>
         {depegs.length === 0 && (
-          <p className="text-xs text-muted-foreground">No data</p>
+          <p className="text-xs text-muted-foreground">All tracked stablecoins are on-peg</p>
         )}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        {depegs.length > 0 && <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
           {depegs.map((d) => (
             <Link
               key={d.id}
@@ -110,7 +110,7 @@ function BiggestDepegs({
               </span>
             </Link>
           ))}
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );
@@ -167,6 +167,7 @@ function FastestMovers({
           {/* Growing */}
           <div className="space-y-2.5">
             <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Growing</p>
+            {growers.length === 0 && <p className="text-xs text-muted-foreground">None</p>}
             {growers.map((g) => (
               <Link
                 key={g.id}

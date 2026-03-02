@@ -35,7 +35,7 @@ export function DigestArchiveSummary() {
     : "—";
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+    <Card className="rounded-xl border-l-[3px] border-l-violet-500 animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
           <span className="flex items-center gap-1.5"><ScrollText className="h-4 w-4" />Digest Archive</span>
@@ -50,15 +50,15 @@ export function DigestArchiveSummary() {
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-live="polite">
           <div>
-            <p className="text-2xl font-bold font-mono">{count > 0 ? count : "—"}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{count > 0 ? count : "—"}</p>
             <p className="text-xs text-muted-foreground">recaps published</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{latestFormatted}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{latestFormatted}</p>
             <p className="text-xs text-muted-foreground">latest entry</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{sinceYear}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{sinceYear}</p>
             <p className="text-xs text-muted-foreground">archive since</p>
           </div>
         </div>

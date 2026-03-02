@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
-import { CHART_RED, CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_RED, CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { formatCurrency } from "@/lib/format";
 import type { CauseOfDeath } from "@/lib/types";
 
@@ -26,7 +26,15 @@ import type { CauseOfDeath } from "@/lib/types";
 
 function ChartTooltip({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 shadow-md text-sm">
+    <div
+      className="rounded-lg border px-3 py-2 shadow-md text-sm"
+      style={{
+        backgroundColor: RECHARTS_TOOLTIP_STYLES.contentStyle.backgroundColor,
+        borderColor: "var(--color-border)",
+        borderRadius: RECHARTS_TOOLTIP_STYLES.contentStyle.borderRadius,
+        fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
+      }}
+    >
       {children}
     </div>
   );
@@ -388,7 +396,7 @@ function CumulativeDestroyedChart() {
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
               tickLine={false}
               axisLine={false}
               interval={Math.max(0, Math.floor(data.length / 8))}

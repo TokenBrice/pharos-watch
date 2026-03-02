@@ -30,7 +30,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
       return (
         <div className="rounded-lg border border-border/50 bg-muted/30 p-6 text-center">
           <p className="text-sm text-muted-foreground">
-            This section failed to load.
+            The {this.props.name} section failed to load.
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}

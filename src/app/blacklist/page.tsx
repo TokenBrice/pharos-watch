@@ -160,7 +160,7 @@ function BlacklistPageInner() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
         <UsdsStatusCard />
         <EurcBlacklistCard />
       </div>
@@ -170,7 +170,11 @@ function BlacklistPageInner() {
 
 export default function BlacklistPage() {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
+      </div>
+    }>
       <BlacklistPageInner />
     </Suspense>
   );

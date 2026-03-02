@@ -12,7 +12,7 @@ import {
   Cell,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { formatCurrency } from "@/lib/format";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { CHART_PALETTE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
@@ -59,14 +59,14 @@ export function ChainOverview({ data }: ChainOverviewProps) {
           <CardTitle as="h2">Chain Distribution</CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[250px] sm:h-[350px] w-full" />
+          <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" variant="bars" />
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="rounded-xl">
+    <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader>
         <CardTitle as="h2">Chain Distribution</CardTitle>
       </CardHeader>

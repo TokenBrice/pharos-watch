@@ -44,7 +44,7 @@ export function StabilityIndexSummary() {
   if (!stats) return null;
 
   return (
-    <Card className={`rounded-xl border-l-[3px] ${borderClass}`}>
+    <Card className={`rounded-xl border-l-[3px] animate-in fade-in duration-300 ${borderClass}`}>
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
           <span className="flex items-center gap-1.5">
@@ -62,15 +62,15 @@ export function StabilityIndexSummary() {
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <p className={`text-2xl font-bold font-mono ${textClass}`}>{stats.score.toFixed(1)}</p>
+            <p className={`text-2xl font-extrabold font-mono tabular-nums ${textClass}`}>{stats.score.toFixed(1)}</p>
             <p className="text-xs text-muted-foreground">current score</p>
           </div>
           <div>
-            <p className={`text-2xl font-bold font-mono uppercase ${textClass}`}>{stats.band}</p>
+            <p className={`text-2xl font-extrabold font-mono tabular-nums uppercase ${textClass}`}>{stats.band}</p>
             <p className="text-xs text-muted-foreground">condition band</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{stats.daysInBand}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats.daysInBand}</p>
             <p className="text-xs text-muted-foreground">{stats.daysInBand === 1 ? "day" : "days"} in band</p>
           </div>
         </div>

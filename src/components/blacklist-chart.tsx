@@ -17,7 +17,7 @@ import { formatCurrency } from "@/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
 import { BLACKLIST_CHART_COLORS } from "@/lib/classification";
-import { CHART_HEIGHT } from "@/lib/chart-colors";
+import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import type { BlacklistEvent } from "@/lib/types";
 
 const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"] as const;
@@ -184,8 +184,16 @@ function BlacklistTooltip({
   const total = nonZero.reduce((s, p) => s + p.value, 0);
 
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 shadow-md text-sm">
-      <p className="font-semibold mb-1">{label}</p>
+    <div
+      className="rounded-lg border px-3 py-2 shadow-md text-sm"
+      style={{
+        backgroundColor: RECHARTS_TOOLTIP_STYLES.contentStyle.backgroundColor,
+        borderColor: "var(--color-border)",
+        borderRadius: RECHARTS_TOOLTIP_STYLES.contentStyle.borderRadius,
+        fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
+      }}
+    >
+      <p className="font-semibold mb-1" style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}>{label}</p>
       {nonZero.map((p) => (
         <div key={p.dataKey} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">

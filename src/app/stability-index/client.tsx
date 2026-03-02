@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
@@ -165,6 +166,7 @@ function ComponentChart({
                   tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
                   tickLine={false}
                   axisLine={false}
+                  minTickGap={72}
                   tickFormatter={(ts: number) =>
                     new Date(ts).toLocaleDateString("en-US", {
                       month: "short",
@@ -560,7 +562,7 @@ export function StabilityIndexClient() {
             <Skeleton className="h-6 w-40" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-[250px] sm:h-[350px] w-full" />
+            <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
           </CardContent>
         </Card>
         <Card className="rounded-xl">
@@ -568,7 +570,7 @@ export function StabilityIndexClient() {
             <Skeleton className="h-6 w-48" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-[250px] sm:h-[350px] w-full" />
+            <ChartSkeleton className="h-[250px] sm:h-[350px] w-full" />
           </CardContent>
         </Card>
       </div>

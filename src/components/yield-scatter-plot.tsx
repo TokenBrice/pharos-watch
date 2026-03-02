@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { RECHARTS_TOOLTIP_STYLES, CHART_HEIGHT } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, CHART_HEIGHT, CHART_BLUE, CHART_GREEN, CHART_RED } from "@/lib/chart-colors";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
 import type { YieldRanking, YieldType } from "@/lib/types";
 
@@ -107,18 +107,18 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
             {/* Quadrant shading */}
             <ReferenceArea
               x1={60} x2={100} y1={riskFreeRate} y2={maxApy}
-              fill="#10b981" fillOpacity={0.05}
-              label={{ value: "Sweet Spot", position: "insideTopRight", fill: "#10b981", fontSize: 11, opacity: 0.7 }}
+              fill={CHART_GREEN} fillOpacity={0.05}
+              label={{ value: "Sweet Spot", position: "insideTopRight", fill: CHART_GREEN, fontSize: 11, opacity: 0.7 }}
             />
             <ReferenceArea
               x1={0} x2={60} y1={riskFreeRate} y2={maxApy}
-              fill="#ef4444" fillOpacity={0.05}
-              label={{ value: "Danger Zone", position: "insideTopLeft", fill: "#ef4444", fontSize: 11, opacity: 0.7 }}
+              fill={CHART_RED} fillOpacity={0.05}
+              label={{ value: "Danger Zone", position: "insideTopLeft", fill: CHART_RED, fontSize: 11, opacity: 0.7 }}
             />
             <ReferenceArea
               x1={60} x2={100} y1={0} y2={riskFreeRate}
-              fill="#3b82f6" fillOpacity={0.05}
-              label={{ value: "Play It Safe", position: "insideBottomRight", fill: "#3b82f6", fontSize: 11, opacity: 0.7 }}
+              fill={CHART_BLUE} fillOpacity={0.05}
+              label={{ value: "Play It Safe", position: "insideBottomRight", fill: CHART_BLUE, fontSize: 11, opacity: 0.7 }}
             />
             <ReferenceArea
               x1={0} x2={60} y1={0} y2={riskFreeRate}

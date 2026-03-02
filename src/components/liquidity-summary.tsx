@@ -40,7 +40,7 @@ export function LiquiditySummary() {
   }
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
+    <Card className="rounded-xl border-l-[3px] border-l-cyan-500 animate-in fade-in duration-300">
       <CardHeader className="pb-2">
         <CardTitle as="h2" className="flex items-center justify-between">
           <span className="flex items-center gap-1.5"><Droplets className="h-4 w-4" />DEX Liquidity</span>
@@ -55,15 +55,15 @@ export function LiquiditySummary() {
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <p className="text-2xl font-bold font-mono">{stats ? formatCurrency(stats.totalTvl, 1) : "$0"}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats ? formatCurrency(stats.totalTvl, 1) : "$0"}</p>
             <p className="text-xs text-muted-foreground">total DEX TVL</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{stats ? formatCurrency(stats.totalVol24h, 1) : "$0"}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats ? formatCurrency(stats.totalVol24h, 1) : "$0"}</p>
             <p className="text-xs text-muted-foreground">24h volume</p>
           </div>
           <div>
-            <p className="text-2xl font-bold font-mono">{stats?.activeCount ?? 0}</p>
+            <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.activeCount ?? 0}</p>
             <p className="text-xs text-muted-foreground">stablecoins on DEX</p>
           </div>
         </div>
