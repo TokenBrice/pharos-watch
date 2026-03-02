@@ -211,12 +211,49 @@ export function categorizeCollateral(name: string): string {
   return "Other RWA";
 }
 
+// Coin IDs that belong to the "Major Centralized Stablecoins" group:
+// fiat majors (USDT, USDC, USDS, PYUSD, FDUSD, USDP) +
+// institutional RWA products used as backing (BUIDL, M, USDtb, USDY, USYC, TBILL)
+const MAJOR_CENTRALIZED_IDS = new Set([
+  "1",   // USDT — Tether
+  "2",   // USDC — Circle
+  "11",  // USDP — Paxos
+  "119", // FDUSD — First Digital
+  "120", // PYUSD — PayPal
+  "129", // USDY — Ondo
+  "173", // BUIDL — BlackRock
+  "209", // USDS — Sky
+  "213", // M — M0 Protocol
+  "221", // USDtb — Ethena
+  "237", // USYC — Hashnote
+  "257", // TBILL — OpenEden
+]);
+
 export function computeGroupedExposure(
   raw: UpstreamExposure[],
   totalUsd: number,
 ): UpstreamExposure[] {
-  // Stablecoin entries pass through unchanged
-  const stablecoinEntries = raw.filter((e) => !e.isCollateral);
+  // Stablecoin deps: group majors together, pass the rest through individually
+  let majorUsd = 0;
+  const stablecoinEntries: UpstreamExposure[] = [];
+  for (const entry of raw) {
+    if (entry.isCollateral) continue;
+    if (MAJOR_CENTRALIZED_IDS.has(entry.coinId)) {
+      majorUsd += entry.usd;
+    } else {
+      stablecoinEntries.push(entry);
+    }
+  }
+  if (majorUsd > 0) {
+    stablecoinEntries.unshift({
+      coinId: "__group_major_centralized__",
+      name: "Major Centralized Stablecoins",
+      symbol: "STABLES",
+      usd: majorUsd,
+      pct: totalUsd > 0 ? (majorUsd / totalUsd) * 100 : 0,
+      isCollateral: false,
+    });
+  }
 
   // Collateral entries: collapse by category
   const categoryMap = new Map<string, { usd: number }>();

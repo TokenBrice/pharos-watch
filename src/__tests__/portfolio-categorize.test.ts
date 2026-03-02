@@ -97,15 +97,33 @@ describe("computeGroupedExposure", () => {
     expect(grouped[0].isCollateral).toBe(true);
   });
 
-  it("passes stablecoin entries (isCollateral: false) through unchanged", () => {
+  it("passes non-major stablecoin entries (isCollateral: false) through unchanged", () => {
     const raw: UpstreamExposure[] = [
-      { coinId: "2", name: "USD Coin", symbol: "USDC", usd: 50_000, pct: 50, isCollateral: false },
+      { coinId: "999", name: "Some Other Stable", symbol: "SOS", usd: 50_000, pct: 50, isCollateral: false },
       { coinId: "__collateral_buidl__", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", symbol: "BUIDL", usd: 50_000, pct: 50, isCollateral: true },
     ];
     const grouped = computeGroupedExposure(raw, totalUsd);
     const stableEntry = grouped.find((e) => !e.isCollateral);
-    expect(stableEntry?.symbol).toBe("USDC");
+    expect(stableEntry?.symbol).toBe("SOS");
     expect(stableEntry?.usd).toBe(50_000);
+  });
+
+  it("groups major centralized stablecoin deps into one entry", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "2",   name: "USD Coin", symbol: "USDC", usd: 40_000, pct: 40, isCollateral: false },
+      { coinId: "213", name: "M by M0",  symbol: "M",    usd: 20_000, pct: 20, isCollateral: false },
+      { coinId: "173", name: "BlackRock USD", symbol: "BUIDL", usd: 10_000, pct: 10, isCollateral: false },
+      { coinId: "999", name: "Other Dep", symbol: "OTH",  usd: 30_000, pct: 30, isCollateral: false },
+    ];
+    const grouped = computeGroupedExposure(raw, totalUsd);
+    const major = grouped.find((e) => e.coinId === "__group_major_centralized__");
+    expect(major?.name).toBe("Major Centralized Stablecoins");
+    expect(major?.usd).toBe(70_000);
+    expect(major?.pct).toBeCloseTo(70);
+    expect(major?.isCollateral).toBe(false);
+    // Non-major dep passes through individually
+    const other = grouped.find((e) => e.symbol === "OTH");
+    expect(other?.usd).toBe(30_000);
   });
 
   it("keeps collateral entries from different categories separate", () => {
