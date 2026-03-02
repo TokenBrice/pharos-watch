@@ -11,6 +11,7 @@ import {
   scoreDependencyRisk,
   computeOverallGrade,
   scoreToGrade,
+  isBlacklistable,
 } from "../../../src/lib/report-cards";
 import { getCache, getFirstSeenDates } from "../lib/db";
 import type { CronResult } from "../lib/db";
@@ -477,6 +478,12 @@ export async function generateDailyDigest(
     const allGrades: GradeInfo[] = [];
     const overallScores = new Map<string, number>();
 
+    const blacklistableIds: ReadonlySet<string> = new Set(
+      TRACKED_STABLECOINS
+        .filter(m => isBlacklistable(m) === true)
+        .map(m => m.id)
+    );
+
     // Phase 1: non-dependent coins
     for (const meta of TRACKED_STABLECOINS) {
       if (meta.flags.navToken) continue;
@@ -499,7 +506,7 @@ export async function generateDailyDigest(
         trackingSpanDays: scoreResult.trackingSpanDays,
       };
 
-      const canBl = meta.canBeBlacklisted !== undefined ? meta.canBeBlacklisted : (meta.flags.governance as string) === "centralized";
+      const canBl = isBlacklistable(meta, blacklistableIds);
       const dims = {
         pegStability: scorePegStability(pegData, meta),
         liquidity: scoreLiquidity(dexLiqMap[meta.id]),
@@ -539,7 +546,7 @@ export async function generateDailyDigest(
         trackingSpanDays: scoreResult.trackingSpanDays,
       };
 
-      const canBl = meta.canBeBlacklisted !== undefined ? meta.canBeBlacklisted : (meta.flags.governance as string) === "centralized";
+      const canBl = isBlacklistable(meta, blacklistableIds);
       const dims = {
         pegStability: scorePegStability(pegData, meta),
         liquidity: scoreLiquidity(dexLiqMap[meta.id]),
