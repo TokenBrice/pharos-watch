@@ -210,6 +210,10 @@ export function PortfolioClient() {
 
   const portfolio = usePortfolio(reportData?.cards);
 
+  const exposureToShow = showUpstreamDetail
+    ? portfolio.upstreamExposure
+    : portfolio.upstreamExposureGrouped;
+
   // URL sync: keep query string in sync with portfolio holdings
   const router = useRouter();
 
@@ -428,43 +432,36 @@ export function PortfolioClient() {
                       Upstream Exposure
                     </h3>
                     <button
+                      type="button"
+                      aria-pressed={showUpstreamDetail}
                       onClick={() => setShowUpstreamDetail((v) => !v)}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showUpstreamDetail ? "Show summary" : "Show detail"}
                     </button>
                   </div>
-                  {(() => {
-                    const exposureToShow = showUpstreamDetail
-                      ? portfolio.upstreamExposure
-                      : portfolio.upstreamExposureGrouped;
-                    return (
-                      <>
-                        <div className="space-y-3">
-                          {exposureToShow.map((exp) => (
-                            <ExposureBar
-                              key={exp.coinId}
-                              name={exp.name}
-                              symbol={exp.symbol}
-                              usd={exp.usd}
-                              pct={exp.pct}
-                              isWarning={!exp.isCollateral && exp.pct > 80}
-                              isCollateral={exp.isCollateral}
-                            />
-                          ))}
-                        </div>
-                        {exposureToShow.some((e) => !e.isCollateral && e.pct > 80) && (
-                          <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-600 dark:text-amber-400">
-                            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                            <span>
-                              High concentration: a single upstream stablecoin accounts for over 80% of
-                              your portfolio exposure.
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                  <div className="space-y-3">
+                    {exposureToShow.map((exp) => (
+                      <ExposureBar
+                        key={exp.coinId}
+                        name={exp.name}
+                        symbol={exp.symbol}
+                        usd={exp.usd}
+                        pct={exp.pct}
+                        isWarning={!exp.isCollateral && exp.pct > 80}
+                        isCollateral={exp.isCollateral}
+                      />
+                    ))}
+                  </div>
+                  {exposureToShow.some((e) => !e.isCollateral && e.pct > 80) && (
+                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                      <span>
+                        High concentration: a single upstream stablecoin accounts for over 80% of
+                        your portfolio exposure.
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
