@@ -398,14 +398,31 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       </section>
 
       <section id="overview">
-        {summary ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AiSummary {...summary} />
-            {!isNavToken && <DEWSDetail stablecoinId={id} />}
-          </div>
-        ) : (
-          !isNavToken && <DEWSDetail stablecoinId={id} />
-        )}
+        {(() => {
+          const reserves = getReserves(coin);
+          const hasLeft = !!(summary || reserves);
+          const hasDews = !isNavToken;
+          if (!hasLeft && !hasDews) return null;
+          if (!hasLeft) return <DEWSDetail stablecoinId={id} />;
+          return (
+            <div className={`grid grid-cols-1 gap-6 ${hasDews ? "lg:grid-cols-2" : ""}`}>
+              <div className="flex flex-col gap-6">
+                {summary && <AiSummary {...summary} />}
+                {reserves && (
+                  <div>
+                    <ReserveTreemap reserves={reserves.reserves} />
+                    {reserves.estimated && (
+                      <p className="mt-1 text-center text-xs text-muted-foreground">
+                        Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {hasDews && <DEWSDetail stablecoinId={id} />}
+            </div>
+          );
+        })()}
       </section>
 
       {coin.notices && coin.notices.length > 0 && (
@@ -418,20 +435,6 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <section id="info" className="space-y-6">
         <KeyInfoCard meta={coin} />
-        {(() => {
-          const result = getReserves(coin);
-          if (!result) return null;
-          return (
-            <div>
-              <ReserveTreemap reserves={result.reserves} />
-              {result.estimated && (
-                <p className="mt-1 text-center text-xs text-muted-foreground">
-                  Estimated composition based on {coin.flags.backing.replace("-", " ")} classification
-                </p>
-              )}
-            </div>
-          );
-        })()}
       </section>
 
       <section id="liquidity">
