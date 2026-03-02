@@ -66,10 +66,9 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
             const meta = CHAIN_META[chain.toLowerCase()];
             return (
               <div key={chain} className="flex items-center gap-2">
-                {meta?.logoPath ? (
+                <span className={`inline-block h-3 w-3 rounded-sm shrink-0 ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
+                {meta?.logoPath && (
                   <Image src={meta.logoPath} alt="" width={16} height={16} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
-                ) : (
-                  <span className={`inline-block h-4 w-4 rounded-full ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
                 )}
                 <div>
                   <p className="text-sm font-medium">{normalizeChain(chain)}</p>
@@ -145,10 +144,9 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
             const logo = PROTOCOL_LOGOS[protocol];
             return (
               <div key={protocol} className="flex items-center gap-2">
-                {logo ? (
+                <span className={`inline-block h-3 w-3 rounded-sm shrink-0 ${color}`} />
+                {logo && (
                   <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />
-                ) : (
-                  <span className={`inline-block h-4 w-4 rounded-full ${color}`} />
                 )}
                 <div>
                   <p className="text-sm font-medium">{name}</p>
