@@ -23,6 +23,8 @@ import {
 const CX = 280;
 const CY = 240;
 const OUTER_R = 240;
+const VB_W = 560;
+const VB_H = 480;
 
 type ElevatedBand = Exclude<ThreatBand, "CALM">;
 
@@ -183,9 +185,12 @@ function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
   const hex = THREAT_BAND_HEX[coin.band];
   const W = 124;
   const H = 46;
-  // Clamp so tooltip stays within viewBox (560 wide, 480 tall)
-  const tx = Math.min(Math.max(coin.x + 14, 4), 560 - W - 4);
-  const ty = Math.min(Math.max(coin.y - H - 10, 4), 480 - H - 4);
+  // Clamp so tooltip stays within viewBox; flip below the dot when near the top edge
+  const tx = Math.min(Math.max(coin.x + 14, 4), VB_W - W - 4);
+  const preferAbove = coin.y - H - 10 >= 4;
+  const ty = preferAbove
+    ? coin.y - H - 10
+    : Math.min(coin.y + 14, VB_H - H - 4);
 
   return (
     <g pointerEvents="none">

@@ -602,13 +602,13 @@ export function CompareClient() {
             detailErrors={detailErrors}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {detailLoading ? (
               <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" />
             ) : (
               supplySeries.length >= 2 && (
                 <ComparisonChart
-                  title="Market Cap History"
+                  title="Market Cap History Comparison"
                   series={supplySeries}
                   formatValue={formatCurrency}
                   range={range}
@@ -619,11 +619,11 @@ export function CompareClient() {
             )}
 
             {radarCards.length >= 2 && (
-              <Card>
+              <Card className="h-full flex flex-col">
                 <CardHeader>
                   <CardTitle className="text-lg">Safety Score Comparison</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col items-center justify-center">
                   <CompareRadar cards={radarCards} size={350} />
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
                     {radarCards.map(({ card, color }) => (
