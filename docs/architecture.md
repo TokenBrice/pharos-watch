@@ -132,7 +132,6 @@ src/                              # Next.js frontend (static export)
 │   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
 │   ├── kpi-bar.tsx               # Homepage KPI bar (total supply, dominance, etc.)
 │   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
-│   ├── governance-chart.tsx      # "Stablecoin by Type" breakdown card
 │   ├── peg-type-chart.tsx        # "Alternative Peg Dominance" card
 │   ├── peg-diversity-chart.tsx   # Non-USD peg supply stacked area chart
 │   ├── total-mcap-chart.tsx      # Full-width market cap area chart

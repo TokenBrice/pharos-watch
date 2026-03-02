@@ -23,7 +23,7 @@ import {
 import { normalizeProtocol, getActiveChainMap, getActiveChainReverse } from "./pool-helpers";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
-export async function fetchDataSources(graphApiKey: string | null, db: D1Database): Promise<DataSources | null> {
+export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
   const dlYieldsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS);
   const dlProtocolsAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_PROTOCOLS);
 
@@ -32,10 +32,10 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   // Workers 6-connection limit — consuming early leaves headroom.
   const [llamaRes, protocolsRes] = await Promise.all([
     dlYieldsAllowed
-      ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT } })
+      ? fetchWithRetry(DEFILLAMA_YIELDS_URL, { headers: { "User-Agent": USER_AGENT }, signal })
       : Promise.resolve(null),
     dlProtocolsAllowed
-      ? fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT } })
+      ? fetchWithRetry(DEFILLAMA_PROTOCOLS_URL, { headers: { "User-Agent": USER_AGENT }, signal })
       : Promise.resolve(null),
   ]);
 
@@ -115,7 +115,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
   // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
   const curveResponses = await Promise.all(
     CURVE_CHAINS.map((chain) =>
-      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT } }),
+      fetchWithRetry(`${CURVE_API_BASE}/${chain}`, { headers: { "User-Agent": USER_AGENT }, signal }),
     ),
   );
 
@@ -264,6 +264,7 @@ export async function fetchUniV3Data(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
   addressToId: Map<string, string>,
+  signal?: AbortSignal,
 ): Promise<UniV3Lookups> {
   const uniV3PoolFees = new Map<string, number>(); // "chain:address" → feeTier
   const uniV3SymbolFees = new Map<string, number>(); // "chain:SYM0:SYM1" → lowest feeTier
@@ -281,6 +282,7 @@ export async function fetchUniV3Data(
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
         body: JSON.stringify({ query: UNIV3_POOL_QUERY }),
+        signal,
       });
       if (!res?.ok) {
         console.warn(`[dex-liquidity] Uni V3 subgraph failed for ${chain}: ${res?.status}`);
@@ -396,6 +398,7 @@ export async function fetchAerodromeData(
   graphApiKey: string | null,
   symbolToIds: Map<string, string[]>,
   addressToId: Map<string, string>,
+  signal?: AbortSignal,
 ): Promise<AerodromeLookups> {
   const priceObs = new Map<string, DexPriceObs[]>();
   const isStableMap = new Map<string, boolean>();
@@ -409,6 +412,7 @@ export async function fetchAerodromeData(
         method: "POST",
         headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
         body: JSON.stringify({ query: AERODROME_PAIR_QUERY }),
+        signal,
       });
       if (!res?.ok) {
         console.warn(`[dex-liquidity] Aerodrome subgraph failed for ${chain}: ${res?.status}`);
@@ -577,6 +581,7 @@ export function buildChainAddresses(): Map<string, { address: string; stablecoin
  *  Returns price observations (one per token per chain). */
 export async function fetchGtTokenBatch(
   addressToId: Map<string, string>,
+  signal?: AbortSignal,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   const chainAddresses = buildChainAddresses();
@@ -599,6 +604,7 @@ export async function fetchGtTokenBatch(
         const url = `${GT_API_BASE}/networks/${gtChain}/tokens/multi/${addresses}`;
         const res = await fetchWithRetry(url, {
           headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+          signal,
         });
         if (!res?.ok) continue;
 
@@ -636,6 +642,7 @@ export async function fetchGtTokenBatch(
  *  Returns price observations (one per token per chain). */
 export async function fetchCgTokenBatchPrices(
   addressToId: Map<string, string>,
+  signal?: AbortSignal,
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
   const chainAddresses = buildChainAddresses();
@@ -653,7 +660,7 @@ export async function fetchCgTokenBatchPrices(
       requestCount++;
 
       try {
-        const cgTokens = await fetchCgTokensBatch(cgChain, addresses);
+        const cgTokens = await fetchCgTokensBatch(cgChain, addresses, signal);
         for (const token of cgTokens) {
           const a = token.attributes;
           const addr = a.address.toLowerCase();

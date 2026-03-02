@@ -24,6 +24,7 @@ export async function fetchCgPools(
   addressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
   protocolTvlCaps: Map<string, number>,
+  signal?: AbortSignal,
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -45,7 +46,7 @@ export async function fetchCgPools(
     stats.requests++;
 
     try {
-      const pools = await fetchCgTokenPools(cgChain, address);
+      const pools = await fetchCgTokenPools(cgChain, address, signal);
       for (const pool of pools) {
         stats.poolsSeen++;
         const a = pool.attributes;
@@ -275,6 +276,7 @@ export async function fetchGtPools(
   addressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
   protocolTvlCaps: Map<string, number>,
+  signal?: AbortSignal,
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -319,6 +321,7 @@ export async function fetchGtPools(
       const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${address}/pools?page=1`;
       const res = await fetchWithRetry(url, {
         headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
+        signal,
       }, 0);
       if (!res?.ok) continue;
 

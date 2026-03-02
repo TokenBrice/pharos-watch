@@ -22,7 +22,7 @@ interface UsdsStatus {
   lastChecked: number;
 }
 
-async function readImplementationSlot(apiKey: string | null): Promise<string | null> {
+async function readImplementationSlot(apiKey: string | null, signal?: AbortSignal): Promise<string | null> {
   const params = new URLSearchParams({
     chainid: ETH_CHAIN_ID.toString(),
     module: "proxy",
@@ -34,7 +34,7 @@ async function readImplementationSlot(apiKey: string | null): Promise<string | n
   if (apiKey) params.set("apikey", apiKey);
 
   try {
-    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`);
+    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
     if (!res || !res.ok) return null;
     const json = (await res.json()) as { result?: string };
     if (!json.result || json.result === "0x") return null;
@@ -46,7 +46,7 @@ async function readImplementationSlot(apiKey: string | null): Promise<string | n
   }
 }
 
-async function probeFreeze(implAddress: string, apiKey: string | null): Promise<boolean | null> {
+async function probeFreeze(implAddress: string, apiKey: string | null, signal?: AbortSignal): Promise<boolean | null> {
   // Call isBlocked(address(0)) on the proxy — if the implementation has the function
   // it will return data; otherwise it will revert (empty result or error)
   const data = IS_BLOCKED_SELECTOR + "0".repeat(64);
@@ -61,7 +61,7 @@ async function probeFreeze(implAddress: string, apiKey: string | null): Promise<
   if (apiKey) params.set("apikey", apiKey);
 
   try {
-    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`);
+    const res = await fetchWithRetry(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
     if (!res || !res.ok) return null;
     const json = (await res.json()) as { result?: string };
     // A successful call returns at least 66 chars (0x + 32 bytes)
@@ -75,7 +75,7 @@ async function probeFreeze(implAddress: string, apiKey: string | null): Promise<
 export async function syncUsdsStatus(
   db: D1Database,
   etherscanApiKey: string | null,
-  _signal?: AbortSignal,
+  signal?: AbortSignal,
 ): Promise<{ itemCount: number } | void> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
@@ -89,7 +89,7 @@ export async function syncUsdsStatus(
     }
   }
 
-  const implAddress = await readImplementationSlot(etherscanApiKey);
+  const implAddress = await readImplementationSlot(etherscanApiKey, signal);
   if (!implAddress) {
     console.warn("[usds-status] Failed to read implementation slot");
     return;
@@ -98,7 +98,7 @@ export async function syncUsdsStatus(
   let freezeActive = false;
   if (implAddress !== NO_FREEZE_IMPL) {
     // Implementation changed — probe for freeze function
-    const probeResult = await probeFreeze(implAddress, etherscanApiKey);
+    const probeResult = await probeFreeze(implAddress, etherscanApiKey, signal);
     if (probeResult === null) {
       console.warn("[usds-status] Probe failed, preserving cached status");
       return;

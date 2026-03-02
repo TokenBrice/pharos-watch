@@ -14,6 +14,7 @@ import {
 export async function fetchDsFallbackPools(
   metrics: Map<string, LiquidityMetrics>,
   knownPoolAddrs: Set<string>,
+  signal?: AbortSignal,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -47,7 +48,7 @@ export async function fetchDsFallbackPools(
       if (requests > 0) await dsRateLimit();
       requests++;
 
-      const pairs = await fetchDsTokenPools(contract.chain, contract.address);
+      const pairs = await fetchDsTokenPools(contract.chain, contract.address, signal);
       if (pairs.length === 0) continue;
 
       for (const pair of pairs) {
@@ -137,6 +138,7 @@ export async function fetchDsFallbackPools(
  */
 export async function fetchCgTickersFallback(
   metrics: Map<string, LiquidityMetrics>,
+  signal?: AbortSignal,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
@@ -157,9 +159,10 @@ export async function fetchCgTickersFallback(
   for (const meta of targetCoins) {
     try {
       const url = `${CG_TICKERS_BASE}/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`;
+      const timeout = AbortSignal.timeout(10_000);
       const res = await fetchWithRetry(url, {
         headers: { "User-Agent": USER_AGENT },
-        signal: AbortSignal.timeout(10_000),
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       if (!res?.ok) {
         await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));

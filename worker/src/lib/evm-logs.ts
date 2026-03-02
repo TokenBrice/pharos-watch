@@ -59,7 +59,8 @@ export async function getEvmBlockNumber(
   evmChainId: number,
   apiKey: string | null,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
 
@@ -73,7 +74,7 @@ export async function getEvmBlockNumber(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`);
+      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
       if (!res.ok) { await res.body?.cancel(); return null; }
       return res.json() as Promise<{ result?: string }>;
     });
@@ -134,7 +135,8 @@ export async function fetchEvmLogsForTopic(
   toBlock: number,
   depth: number,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<EtherscanLogEntry[] | null> {
   return fetchEvmLogsForTopics(
     evmChainId,
@@ -145,7 +147,8 @@ export async function fetchEvmLogsForTopic(
     toBlock,
     depth,
     rateLimit,
-    budget
+    budget,
+    signal,
   );
 }
 
@@ -168,7 +171,8 @@ export async function fetchEvmLogsForTopics(
   toBlock: number,
   depth: number,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<EtherscanLogEntry[] | null> {
   if (budgetExhausted(budget)) return null;
   if (depth > MAX_RECURSION_DEPTH) return null;
@@ -189,9 +193,10 @@ export async function fetchEvmLogsForTopics(
   if (apiKey) params.set("apikey", apiKey);
 
   budget.count++;
+  const timeout = AbortSignal.timeout(30_000);
   const json = await rateLimit(async () => {
     const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, {
-      signal: AbortSignal.timeout(30_000),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
     if (!res.ok) {
       console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${res.status}`);
@@ -215,8 +220,8 @@ export async function fetchEvmLogsForTopics(
     if (mid === fromBlock) return logs;
 
     const [first, second] = await Promise.all([
-      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget),
-      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget),
+      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, fromBlock, mid, depth + 1, rateLimit, budget, signal),
+      fetchEvmLogsForTopics(evmChainId, contractAddress, topics, apiKey, mid + 1, toBlock, depth + 1, rateLimit, budget, signal),
     ]);
     // Combine partial results; propagate null only if both halves failed
     if (first === null && second === null) return null;

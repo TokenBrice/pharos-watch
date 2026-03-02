@@ -72,7 +72,8 @@ async function fetchEvmBalanceAtTag(
   apiKey: string | null,
   rateLimit: RateLimitedFetch,
   decimals: number,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
 
@@ -93,7 +94,7 @@ async function fetchEvmBalanceAtTag(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`);
+      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
       if (!res.ok) { await res.body?.cancel(); return null; }
       return res.json() as Promise<{ result?: string; error?: unknown }>;
     });
@@ -129,7 +130,8 @@ async function fetchBalanceViaDrpc(
   blockNumber: number,
   drpcApiKey: string,
   decimals: number,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
 
@@ -153,6 +155,7 @@ async function fetchBalanceViaDrpc(
           method: "eth_call",
           params: [{ to: contractAddress, data }, blockTag],
         }),
+        signal,
       }
     );
     if (!res.ok) { await res.body?.cancel(); return null; }
@@ -176,19 +179,20 @@ async function fetchEvmTokenBalance(
   etherscanApiKey: string | null,
   drpcApiKey: string | null,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   // L2 chains: use dRPC archive for historical balanceOf.
   // Etherscan v2 free plan doesn't support eth_call on L2s.
   if (config.chain.evmChainId !== 1 && drpcApiKey) {
     return fetchBalanceViaDrpc(
-      config.chain.chainId, config.contractAddress, address, blockNumber, drpcApiKey, config.decimals, budget
+      config.chain.chainId, config.contractAddress, address, blockNumber, drpcApiKey, config.decimals, budget, signal
     );
   }
 
   // Ethereum mainnet: use Etherscan eth_call with historical block tag
   const blockTag = "0x" + blockNumber.toString(16);
-  return fetchEvmBalanceAtTag(config.chain.evmChainId!, config.contractAddress, address, blockTag, etherscanApiKey, rateLimit, config.decimals, budget);
+  return fetchEvmBalanceAtTag(config.chain.evmChainId!, config.contractAddress, address, blockTag, etherscanApiKey, rateLimit, config.decimals, budget, signal);
 }
 
 async function fetchTronTokenBalance(
@@ -197,7 +201,8 @@ async function fetchTronTokenBalance(
   apiKey: string | null,
   rateLimit: RateLimitedFetch,
   decimals: number,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
 
@@ -210,7 +215,7 @@ async function fetchTronTokenBalance(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`https://api.trongrid.io/v1/accounts/${tronAddress}`, { headers });
+      const res = await fetch(`https://api.trongrid.io/v1/accounts/${tronAddress}`, { headers, signal });
       if (!res.ok) { await res.body?.cancel(); return null; }
       return res.json() as Promise<{
         data: { trc20: Record<string, string>[] }[];
@@ -298,7 +303,8 @@ async function fetchEvmEventsIncremental(
   apiKey: string | null,
   fromBlock: number,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<{ rows: BlacklistRow[]; maxBlock: number; apiError: boolean }> {
   const evmChainId = config.chain.evmChainId;
   if (evmChainId == null) return { rows: [], maxBlock: fromBlock, apiError: false };
@@ -319,7 +325,8 @@ async function fetchEvmEventsIncremental(
       99999999,
       0,
       rateLimit,
-      budget
+      budget,
+      signal,
     );
 
     if (logs === null) {
@@ -374,7 +381,8 @@ async function fetchTronEventsIncremental(
   apiKey: string | null,
   lastTimestampMs: number,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<{ rows: BlacklistRow[]; maxBlock: number }> {
   const rows: BlacklistRow[] = [];
   let maxBlock = 0;
@@ -392,7 +400,7 @@ async function fetchTronEventsIncremental(
 
       budget.count++;
       const json: TronEventsResponse | null = await rateLimit(async () => {
-        const res = await fetch(url!, { headers });
+        const res = await fetch(url!, { headers, signal });
         if (!res.ok) {
           console.warn(`[blacklist] Tron API error: ${res.status}`);
           await res.body?.cancel();
@@ -448,7 +456,8 @@ async function enrichRowBalances(
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
   tronLimiter: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<void> {
   for (const row of rows) {
     if (budgetExhausted(budget)) break;
@@ -462,11 +471,11 @@ async function enrichRowBalances(
 
     if (config.chain.type === "tron") {
       row.amount = await fetchTronTokenBalance(
-        config.contractAddress, row.address, trongridApiKey, tronLimiter, config.decimals, budget
+        config.contractAddress, row.address, trongridApiKey, tronLimiter, config.decimals, budget, signal
       );
     } else if (config.chain.evmChainId != null) {
       row.amount = await fetchEvmTokenBalance(
-        config, row.address, blockForBalance, etherscanApiKey, drpcApiKey, etherscanLimiter, budget
+        config, row.address, blockForBalance, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
       );
     }
   }
@@ -483,7 +492,8 @@ async function fetchDestroyAmountFromLog(
   config: ContractEventConfig,
   apiKey: string | null,
   rateLimit: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
 
@@ -499,7 +509,7 @@ async function fetchDestroyAmountFromLog(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`);
+      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
       if (!res.ok) { await res.body?.cancel(); return null; }
       return res.json() as Promise<{ result?: { logs?: EtherscanLogEntry[] } }>;
     });
@@ -535,7 +545,8 @@ async function backfillAmounts(
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
   tronLimiter: RateLimitedFetch,
-  budget: SubrequestBudget
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
 ): Promise<void> {
   const result = await db
     .prepare(
@@ -564,21 +575,21 @@ async function backfillAmounts(
       // For destroy events, re-fetch the event log to get the amount from event data.
       // This is more reliable than balanceOf, especially on L2s without archive state.
       amount = await fetchDestroyAmountFromLog(
-        config.chain.evmChainId, config.contractAddress, row.tx_hash, config, etherscanApiKey, etherscanLimiter, budget
+        config.chain.evmChainId, config.contractAddress, row.tx_hash, config, etherscanApiKey, etherscanLimiter, budget, signal
       );
       // Fall back to balanceOf at block-1 only if log parsing failed
       if (amount == null) {
         amount = await fetchEvmTokenBalance(
-          config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget
+          config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
         );
       }
     } else if (config.chain.type === "tron") {
       amount = await fetchTronTokenBalance(
-        config.contractAddress, row.address, trongridApiKey, tronLimiter, config.decimals, budget
+        config.contractAddress, row.address, trongridApiKey, tronLimiter, config.decimals, budget, signal
       );
     } else if (config.chain.evmChainId != null) {
       amount = await fetchEvmTokenBalance(
-        config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget
+        config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
       );
     }
 
@@ -651,7 +662,7 @@ export async function syncBlacklist(
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
   try {
-    await backfillAmounts(db, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget);
+    await backfillAmounts(db, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget, signal);
   } catch (err) {
     console.warn("[sync-blacklist] Backfill failed:", err);
   }
@@ -675,10 +686,10 @@ export async function syncBlacklist(
       let result: { rows: BlacklistRow[]; maxBlock: number; apiError?: boolean };
 
       if (config.chain.type === "tron") {
-        result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget);
+        result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget, signal);
 
         await enrichRowBalances(
-          result.rows, config, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget
+          result.rows, config, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget, signal
         );
         await insertRows(db, result.rows);
 
@@ -693,10 +704,10 @@ export async function syncBlacklist(
         // If lastBlock hit the sentinel (99999999), reset to 0 to re-scan.
         const wasReset = lastBlock >= EVM_SCANNED_TO_LATEST;
         const fromBlock = wasReset ? 0 : lastBlock > 0 ? lastBlock + 1 : 0;
-        result = await fetchEvmEventsIncremental(config, etherscanApiKey, fromBlock, etherscanLimiter, budget);
+        result = await fetchEvmEventsIncremental(config, etherscanApiKey, fromBlock, etherscanLimiter, budget, signal);
 
         await enrichRowBalances(
-          result.rows, config, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget
+          result.rows, config, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget, signal
         );
         await insertRows(db, result.rows);
 
@@ -712,7 +723,7 @@ export async function syncBlacklist(
           // Genuine no events — advance sync state toward chain head, but leave a safety
           // margin to avoid permanently skipping events that the explorer hasn't indexed yet.
           if (!chainHeadCache.has(evmChainId)) {
-            const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget);
+            const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget, signal);
             if (head) chainHeadCache.set(evmChainId, head);
           }
           const head = chainHeadCache.get(evmChainId);

@@ -64,7 +64,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
       batch.map(async ([slug, pharosId]) => {
         const res = await fetchWithRetry(
           `${API_BASE}/${slug}`,
-          { headers: { "User-Agent": USER_AGENT } },
+          { headers: { "User-Agent": USER_AGENT }, signal },
           2,
           { passthrough404: true }
         );

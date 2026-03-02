@@ -87,10 +87,12 @@ export async function onchainRateLimit(requestCount: number): Promise<void> {
 export async function fetchCgTokenPools(
   network: string,
   address: string,
+  signal?: AbortSignal,
 ): Promise<CgPool[]> {
   const url = cgUrl(`/onchain/networks/${network}/tokens/${address}/pools?include=base_token,quote_token&page=1`);
   const res = await fetchWithRetry(url, {
     headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }),
+    signal,
   }, 1); // 1 retry max to keep wall time bounded
   if (!res?.ok) return [];
   const json = (await res.json()) as { data?: unknown };
@@ -105,12 +107,14 @@ export async function fetchCgTokenPools(
 export async function fetchCgTokensBatch(
   network: string,
   addresses: string[],
+  signal?: AbortSignal,
 ): Promise<CgToken[]> {
   if (addresses.length === 0) return [];
   const joined = addresses.join(",");
   const url = cgUrl(`/onchain/networks/${network}/tokens/multi/${joined}`);
   const res = await fetchWithRetry(url, {
     headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }),
+    signal,
   }, 1);
   if (!res?.ok) return [];
   const json = (await res.json()) as { data?: unknown };

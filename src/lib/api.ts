@@ -63,7 +63,11 @@ export async function apiFetchWithMeta<T>(
     if (ageHeader) {
       const age = parseInt(ageHeader, 10);
       if (!isNaN(age)) {
-        meta = { updatedAt: 0, ageSeconds: age, status: age > 900 ? "degraded" : "fresh" };
+        // Use 900s as default maxAge, compute ratio-based status like worker's buildFreshnessMeta
+        const maxAge = 900;
+        const ratio = age / maxAge;
+        const status = ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale";
+        meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status };
       }
     }
   }

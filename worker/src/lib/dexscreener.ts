@@ -34,14 +34,16 @@ export interface DsPair {
 export async function fetchDsTokenPools(
   chain: string,
   tokenAddress: string,
+  signal?: AbortSignal,
 ): Promise<DsPair[]> {
   const dsChain = DS_CHAIN_MAP[chain];
   if (!dsChain) return [];
 
   const url = `${DS_TOKEN_API}/${dsChain}/${tokenAddress}`;
+  const timeout = AbortSignal.timeout(10_000);
   const res = await fetchWithRetry(url, {
     headers: { "User-Agent": USER_AGENT },
-    signal: AbortSignal.timeout(10_000),
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
   });
   if (!res?.ok) return [];
 

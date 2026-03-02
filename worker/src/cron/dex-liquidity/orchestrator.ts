@@ -19,7 +19,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   console.log(`[dex-liquidity] Pool discovery source: ${useCg ? "CoinGecko onchain" : "GeckoTerminal fallback"}`);
 
   // 1. Fetch all external data sources
-  const dataSources = await fetchDataSources(graphApiKey, db);
+  const dataSources = await fetchDataSources(graphApiKey, db, signal);
   if (!dataSources) return;
   if (!dataSources.dlYieldsAvailable) {
     console.log("[dex-liquidity] DL yields unavailable — CG/GT pool crawl will be the only pool source");
@@ -35,7 +35,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
   // 4. Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations
   const { uniV3PoolFees, uniV3SymbolFees, uniV3PriceObs } = await fetchUniV3Data(
-    graphApiKey, symbolToIds, addressToId,
+    graphApiKey, symbolToIds, addressToId, signal,
   );
   if (addressToId.size > 0) {
     console.log(`[dex-liquidity] Learned ${addressToId.size} token addresses for disambiguation`);
@@ -45,7 +45,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   let aerodromePriceObs = new Map<string, DexPriceObs[]>();
   let aerodromeIsStable = new Map<string, boolean>();
   try {
-    const aeroData = await fetchAerodromeData(graphApiKey, symbolToIds, addressToId);
+    const aeroData = await fetchAerodromeData(graphApiKey, symbolToIds, addressToId, signal);
     aerodromePriceObs = aeroData.aerodromePriceObs;
     aerodromeIsStable = aeroData.aerodromeIsStable;
   } catch (err) {
@@ -62,8 +62,8 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   let fallbackTokenPriceObs = new Map<string, DexPriceObs[]>();
   try {
     fallbackTokenPriceObs = useCg
-      ? await fetchCgTokenBatchPrices(addressToId)
-      : await fetchGtTokenBatch(addressToId);
+      ? await fetchCgTokenBatchPrices(addressToId, signal)
+      : await fetchGtTokenBatch(addressToId, signal);
   } catch (err) {
     console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} token batch failed (non-fatal):`, err);
   }
@@ -73,11 +73,11 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
   let crawlPriceObs = new Map<string, DexPriceObs[]>();
   try {
     if (useCg) {
-      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps);
+      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal);
       crawlNewPools = cgResult.newPools;
       crawlPriceObs = cgResult.priceObs;
     } else {
-      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps);
+      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal);
       crawlNewPools = gtResult.newPools;
       crawlPriceObs = gtResult.priceObs;
     }
@@ -123,7 +123,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
   // 5c. DexScreener fallback for coins still at zero pools
   try {
-    const dsFallback = await fetchDsFallbackPools(metrics, knownPoolAddrs);
+    const dsFallback = await fetchDsFallbackPools(metrics, knownPoolAddrs, signal);
     mergeGtPools(metrics, dsFallback.newPools);
     for (const [id, obs] of dsFallback.priceObs) {
       const existing = priceObservations.get(id) ?? [];
@@ -136,7 +136,7 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
   // 5d. CoinGecko tickers fallback for orderbook DEXes (e.g. Kinesis Exchange for KAG/KAU)
   try {
-    const cgTickersFallback = await fetchCgTickersFallback(metrics);
+    const cgTickersFallback = await fetchCgTickersFallback(metrics, signal);
     mergeGtPools(metrics, cgTickersFallback.newPools);
     for (const [id, obs] of cgTickersFallback.priceObs) {
       const existing = priceObservations.get(id) ?? [];
