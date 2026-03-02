@@ -3051,23 +3051,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Physical gold bars (LBMA-certified 99.99%, Brink's & Malca-Amit, Singapore & Hong Kong)", pct: 100, risk: "very-low" },
     ],
   }),
-  other("gold-vro", "VeraOne", "VRO", "rwa-backed", "centralized", "GOLD", {
-    rwa: true, commodityOunces: 1 / 31.1035, geckoId: "veraone",
-    collateral: "LBMA-certified physical gold (999.9‰ fine) held in the Free Ports of Geneva, Switzerland (1 VRO = 1 gram)",
-    pegMechanism: "Direct 1:1 redemption for physical gold or fiat currency through VeraOne (LinGOLD Ltd); smaller amounts redeemable via partnered gold retailers worldwide",
-    proofOfReserves: { type: "independent-audit", url: "https://veraone.io/en/audit-processes-and-proof-of-reserves/", provider: "ALS Global" },
-    links: [
-      { label: "Website", url: "https://veraone.io/en/home/" },
-      { label: "Twitter", url: "https://x.com/VROtoken" },
-    ],
-    jurisdiction: { country: "United Kingdom" },
-    contracts: [
-      { chain: "ethereum", address: "0x10bc518c32fbae5e38ecb50a612160571bd81e44", decimals: 8 },
-    ],
-    reserves: [
-      { name: "Physical gold (LBMA 999.9, Geneva Free Ports)", pct: 100, risk: "very-low" },
-    ],
-  }),
+  // gold-vro (VeraOne VRO) removed — too small, unreliable supply data
   other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "comtech-gold",
     collateral: "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
