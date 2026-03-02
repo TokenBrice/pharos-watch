@@ -210,6 +210,42 @@ export function categorizeCollateral(name: string): string {
   return "Other RWA";
 }
 
+export function computeGroupedExposure(
+  raw: UpstreamExposure[],
+  totalUsd: number,
+): UpstreamExposure[] {
+  // Stablecoin entries pass through unchanged
+  const stablecoinEntries = raw.filter((e) => !e.isCollateral);
+
+  // Collateral entries: collapse by category
+  const categoryMap = new Map<string, { usd: number }>();
+  for (const entry of raw) {
+    if (entry.isCollateral) {
+      const category = categorizeCollateral(entry.name);
+      const existing = categoryMap.get(category);
+      if (existing) {
+        existing.usd += entry.usd;
+      } else {
+        categoryMap.set(category, { usd: entry.usd });
+      }
+    }
+  }
+
+  const collateralEntries: UpstreamExposure[] = Array.from(categoryMap.entries()).map(
+    ([category, { usd }]) => ({
+      coinId: `__category_${category.toLowerCase().replace(/[^a-z0-9]/g, "_")}__`,
+      name: category,
+      symbol: category,
+      usd,
+      pct: totalUsd > 0 ? (usd / totalUsd) * 100 : 0,
+      isCollateral: true,
+    }),
+  );
+
+  collateralEntries.sort((a, b) => b.usd - a.usd);
+  return [...stablecoinEntries, ...collateralEntries];
+}
+
 // ---------------------------------------------------------------------------
 // Upstream exposure walker
 // ---------------------------------------------------------------------------

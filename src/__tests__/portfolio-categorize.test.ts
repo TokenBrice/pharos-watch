@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { categorizeCollateral } from "@/hooks/use-portfolio";
+import { categorizeCollateral, computeGroupedExposure } from "@/hooks/use-portfolio";
+import type { UpstreamExposure } from "@/hooks/use-portfolio";
 
 describe("categorizeCollateral", () => {
   it("maps T-bill variants to U.S. Treasury Bills", () => {
@@ -76,5 +77,64 @@ describe("categorizeCollateral", () => {
     expect(categorizeCollateral("U.S. private credit ABS (SMB receivables)")).toBe("Other RWA");
     expect(categorizeCollateral("Asian sovereign bonds (BBB+ min)")).toBe("Other RWA");
     expect(categorizeCollateral("Something completely unknown")).toBe("Other RWA");
+  });
+});
+
+describe("computeGroupedExposure", () => {
+  const totalUsd = 100_000;
+
+  it("collapses multiple T-bill collateral entries into one", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "__collateral_buidl__", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", symbol: "BUIDL", usd: 30_000, pct: 30, isCollateral: true },
+      { coinId: "__collateral_wm__", name: "wM / U.S. Treasury Bills (via M0 Protocol)", symbol: "wM", usd: 20_000, pct: 20, isCollateral: true },
+      { coinId: "__collateral_ustb__", name: "Superstate USTB (tokenized T-bills)", symbol: "USTB", usd: 10_000, pct: 10, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, totalUsd);
+    expect(grouped).toHaveLength(1);
+    expect(grouped[0].name).toBe("U.S. Treasury Bills");
+    expect(grouped[0].usd).toBe(60_000);
+    expect(grouped[0].pct).toBeCloseTo(60);
+    expect(grouped[0].isCollateral).toBe(true);
+  });
+
+  it("passes stablecoin entries (isCollateral: false) through unchanged", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "2", name: "USD Coin", symbol: "USDC", usd: 50_000, pct: 50, isCollateral: false },
+      { coinId: "__collateral_buidl__", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", symbol: "BUIDL", usd: 50_000, pct: 50, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, totalUsd);
+    const stableEntry = grouped.find((e) => !e.isCollateral);
+    expect(stableEntry?.symbol).toBe("USDC");
+    expect(stableEntry?.usd).toBe(50_000);
+  });
+
+  it("keeps collateral entries from different categories separate", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "__collateral_tbills__", name: "Short-term U.S. Treasury bills", symbol: "T-Bills", usd: 40_000, pct: 40, isCollateral: true },
+      { coinId: "__collateral_eth__", name: "wstETH (Lido)", symbol: "wstETH", usd: 60_000, pct: 60, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, totalUsd);
+    expect(grouped).toHaveLength(2);
+    expect(grouped.map((e) => e.name).sort()).toEqual(["ETH / Liquid Staking", "U.S. Treasury Bills"].sort());
+  });
+
+  it("returns entries sorted stablecoins first then collateral descending by usd", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "__c_eth__", name: "ETH (overcollateralized CDP)", symbol: "ETH", usd: 10_000, pct: 10, isCollateral: true },
+      { coinId: "2", name: "USD Coin", symbol: "USDC", usd: 40_000, pct: 40, isCollateral: false },
+      { coinId: "__c_tbills__", name: "Short-term U.S. Treasury bills", symbol: "T-Bills", usd: 50_000, pct: 50, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, totalUsd);
+    expect(grouped[0].isCollateral).toBe(false);
+    expect(grouped[1].name).toBe("U.S. Treasury Bills");
+    expect(grouped[2].name).toBe("ETH / Liquid Staking");
+  });
+
+  it("recalculates pct based on totalUsd", () => {
+    const raw: UpstreamExposure[] = [
+      { coinId: "__c_t__", name: "Short-term U.S. Treasury bills", symbol: "T-Bills", usd: 25_000, pct: 25, isCollateral: true },
+    ];
+    const grouped = computeGroupedExposure(raw, 100_000);
+    expect(grouped[0].pct).toBeCloseTo(25);
   });
 });
