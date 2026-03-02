@@ -8,7 +8,7 @@ import { createRateLimiter } from "./lib/evm-logs";
 import { syncUsdsStatus } from "./cron/sync-usds-status";
 import { syncBluechip } from "./cron/sync-bluechip";
 import { syncFxRates } from "./cron/sync-fx-rates";
-import { syncDexLiquidity } from "./cron/sync-dex-liquidity";
+import { syncDexLiquidity } from "./cron/dex-liquidity";
 import { snapshotSupply } from "./cron/snapshot-supply";
 import { generateDailyDigest } from "./cron/daily-digest";
 import { computeAndStoreStabilityIndex } from "./cron/stability-index";

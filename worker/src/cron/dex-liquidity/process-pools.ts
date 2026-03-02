@@ -1,0 +1,232 @@
+import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { BLOCKED_DEX_IDS, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
+import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
+import {
+  parsePoolSymbols, classifyPoolType, getQualityMultiplier,
+  normalizeProtocol, computePoolPairQuality, computePoolStress,
+  initMetrics, isCryptoSwap,
+} from "./pool-helpers";
+
+/** Match DeFiLlama pools to tracked stablecoins and compute per-pool metrics. */
+export function processPoolMetrics(
+  pools: LlamaPool[],
+  dexProjects: Set<string>,
+  symbolToIds: Map<string, string[]>,
+  addressToId: Map<string, string>,
+  curvePoolMap: Map<string, CurvePoolEntry>,
+  uniV3PoolFees: Map<string, number>,
+  uniV3SymbolFees: Map<string, number>,
+  aerodromeIsStable: Map<string, boolean>,
+): Map<string, LiquidityMetrics> {
+  const metrics = new Map<string, LiquidityMetrics>();
+
+  for (const pool of pools) {
+    if (!pool.tvlUsd || pool.tvlUsd < 10_000 || pool.tvlUsd > 1e12) continue; // Skip dust and corrupt values
+    if (!dexProjects.has(pool.project)) continue; // Only count DEX pools
+    if (BLOCKED_DEX_IDS.has(pool.project)) continue; // Skip explicitly blocked dead DEXes
+    // v2: skip lending pools (single-asset exposure, not DEX liquidity)
+    if (pool.exposure === "single") continue;
+
+    // Parse pool symbol into constituent tokens
+    const poolSymbols = parsePoolSymbols(pool.symbol);
+    const matchedIds = new Set<string>();
+
+    // Step 1: Address-based matching from underlyingTokens (most reliable)
+    if (pool.underlyingTokens?.length) {
+      for (const addr of pool.underlyingTokens) {
+        const id = addressToId.get(addr.toLowerCase());
+        if (id) matchedIds.add(id);
+      }
+      // Learn addresses for unambiguous symbols (enrich addressToId for future pools)
+      if (poolSymbols.length === pool.underlyingTokens.length) {
+        // 1:1 correspondence possible — learn from unambiguous symbols
+        for (let ti = 0; ti < poolSymbols.length; ti++) {
+          const sym = poolSymbols[ti].toUpperCase();
+          const ids = symbolToIds.get(sym);
+          if (ids?.length === 1) {
+            addressToId.set(pool.underlyingTokens[ti].toLowerCase(), ids[0]);
+          }
+        }
+      }
+    }
+
+    // Step 2: Symbol-based fallback (with collision avoidance)
+    for (const sym of poolSymbols) {
+      const symKey = sym.toUpperCase();
+      const ids = symbolToIds.get(symKey);
+      if (!ids) continue;
+      if (ids.length === 1) {
+        // Unambiguous symbol → always safe to add
+        matchedIds.add(ids[0]);
+      } else {
+        // Colliding symbol → only keep IDs already confirmed by address match
+        // (if no address resolved any of these IDs, this symbol is skipped entirely)
+      }
+    }
+
+    if (matchedIds.size === 0) continue;
+
+    const poolType = classifyPoolType(pool.project);
+    const protocol = normalizeProtocol(pool.project);
+    const vol1d = pool.volumeUsd1d ?? 0;
+    const vol7d = pool.volumeUsd7d ?? 0;
+
+    // Try to find Curve enrichment data (address-based first, symbol-combo fallback)
+    const chainNorm = pool.chain.toLowerCase();
+    const curveData = curvePoolMap.get(`${chainNorm}:${pool.pool.toLowerCase()}`)
+      ?? curvePoolMap.get(`${chainNorm}:${poolSymbols.map((s) => s.toUpperCase()).sort().join("-")}`);
+
+    // --- v2: Enhanced quality resolution ---
+    let qualMult: number;
+    let resolvedPoolType = poolType;
+    let feeTierForExtra: number | undefined;
+    let balanceRatio = 1;
+    let balanceHealth = 1;
+    let poolMaturityDays = 0;
+    let organicFraction = 0.5; // neutral default
+    let effectivePoolTvl = pool.tvlUsd;
+    let balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[] | undefined;
+
+    if (curveData) {
+      balanceRatio = curveData.balanceRatio;
+      balanceHealth = Math.pow(balanceRatio, 1.5);
+      balanceDetails = curveData.balanceDetails;
+      // v2: CryptoSwap vs StableSwap
+      if (isCryptoSwap(curveData.registryId)) {
+        resolvedPoolType = "curve-cryptoswap";
+        qualMult = QUALITY_MULTIPLIERS["curve-cryptoswap"]!;
+      } else {
+        resolvedPoolType = curveData.A >= 500 ? "curve-stableswap-high-a" : "curve-stableswap";
+        qualMult = getQualityMultiplier(resolvedPoolType, curveData.A);
+      }
+      // Use metapool-adjusted TVL for effective calculation
+      effectivePoolTvl = curveData.metapoolAdjustedTvl;
+      // Pool maturity from Curve creation timestamp
+      if (curveData.creationTs > 0) {
+        poolMaturityDays = Math.floor((Date.now() / 1000 - curveData.creationTs) / 86400);
+      }
+    } else if (poolType === "uniswap-v3-5bp" && uniV3PoolFees.size > 0) {
+      // Try to resolve exact fee tier from subgraph data
+      const addrKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+      let feeTier = uniV3PoolFees.get(addrKey);
+      if (feeTier == null) {
+        const symKey = `${chainNorm}:${poolSymbols.map((s) => s.toUpperCase()).sort().join(":")}`;
+        feeTier = uniV3SymbolFees.get(symKey);
+      }
+      if (feeTier != null) {
+        feeTierForExtra = feeTier;
+        if (feeTier <= 100) resolvedPoolType = "uniswap-v3-1bp";
+        else if (feeTier <= 500) resolvedPoolType = "uniswap-v3-5bp";
+        else resolvedPoolType = "uniswap-v3-30bp";
+      }
+      qualMult = getQualityMultiplier(resolvedPoolType);
+    } else if (poolType === "aerodrome-volatile" && aerodromeIsStable.size > 0) {
+      // Refine Aerodrome pool type using isStable flag from subgraph
+      const addrKey = `${chainNorm}:${pool.pool.toLowerCase()}`;
+      const isStable = aerodromeIsStable.get(addrKey);
+      if (isStable === true) {
+        resolvedPoolType = "aerodrome-stable";
+      }
+      qualMult = getQualityMultiplier(resolvedPoolType);
+    } else {
+      qualMult = getQualityMultiplier(poolType);
+    }
+
+    // Organic fraction from DeFiLlama APY data
+    if (pool.apyBase != null && pool.apy > 0.01) {
+      organicFraction = Math.min(1, Math.max(0, pool.apyBase / pool.apy));
+    } else if (pool.apyBase != null) {
+      organicFraction = pool.apyBase > 0 ? 1.0 : 0;
+    }
+
+    // Pool maturity from DeFiLlama count (fallback for non-Curve)
+    if (poolMaturityDays === 0 && pool.count > 0) {
+      poolMaturityDays = pool.count; // ~1 data point per day
+    }
+
+    for (const id of matchedIds) {
+      const meta = TRACKED_STABLECOINS.find((s) => s.id === id);
+      if (!meta) continue;
+
+      let m = metrics.get(id);
+      if (!m) {
+        m = initMetrics(id, meta.symbol);
+        metrics.set(id, m);
+      }
+
+      // Per-stablecoin pair quality
+      const coinPairQuality = computePoolPairQuality(poolSymbols, meta.symbol);
+
+      // Combined pool quality (mechanism × balance × pair)
+      const combinedQuality = qualMult * balanceHealth * coinPairQuality;
+      const poolEffTvl = effectivePoolTvl * combinedQuality;
+
+      // Pool stress for this pool
+      const stressIdx = computePoolStress(balanceRatio, organicFraction, poolMaturityDays, coinPairQuality);
+
+      m.totalTvlUsd += pool.tvlUsd;
+      m.totalVolume24hUsd += vol1d;
+      m.totalVolume7dUsd += vol7d;
+      m.poolCount++;
+      m.chains.add(pool.chain);
+      m.pairs.add(pool.symbol);
+      m.qualityAdjustedTvl += pool.tvlUsd * qualMult * balanceHealth;
+      m.effectiveTvl += poolEffTvl;
+
+      // Weighted balance ratio tracking (Curve pools only)
+      if (curveData) {
+        m.balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
+        m.totalTvlForBalance += pool.tvlUsd;
+      }
+
+      // Weighted organic fraction tracking
+      if (pool.apyBase != null) {
+        m.organicTvlWeightedSum += pool.tvlUsd * organicFraction;
+        m.totalTvlForOrganic += pool.tvlUsd;
+      }
+
+      // Stress tracking (TVL-weighted)
+      m.stressWeightedSum += pool.tvlUsd * stressIdx;
+
+      // Track oldest pool
+      m.oldestPoolDays = Math.max(m.oldestPoolDays, poolMaturityDays);
+
+      // Protocol and chain TVL
+      m.protocolTvl[protocol] = (m.protocolTvl[protocol] ?? 0) + pool.tvlUsd;
+      m.chainTvl[pool.chain] = (m.chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
+
+      // Pool entry with enriched extra
+      m.topPools.push({
+        poolId: `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`,
+        project: pool.project,
+        chain: pool.chain,
+        tvlUsd: pool.tvlUsd,
+        symbol: pool.symbol,
+        volumeUsd1d: vol1d,
+        poolType: resolvedPoolType,
+        source: "dl",
+        extra: {
+          ...(curveData
+            ? {
+                amplificationCoefficient: curveData.A,
+                balanceRatio: Math.round(balanceRatio * 100) / 100,
+                registryId: curveData.registryId,
+                isMetaPool: curveData.isMetaPool,
+                balanceDetails,
+              }
+            : feeTierForExtra != null
+              ? { feeTier: feeTierForExtra }
+              : {}),
+          effectiveTvl: Math.round(poolEffTvl),
+          organicFraction: Math.round(organicFraction * 100) / 100,
+          pairQuality: Math.round(coinPairQuality * 100) / 100,
+          stressIndex: stressIdx,
+          maturityDays: poolMaturityDays,
+        },
+      });
+    }
+  }
+
+  console.log(`[dex-liquidity] Matched ${metrics.size} stablecoins with DEX liquidity`);
+  return metrics;
+}

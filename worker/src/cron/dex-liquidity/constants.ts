@@ -1,0 +1,85 @@
+import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+
+export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
+export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";
+export const CURVE_API_BASE = "https://api.curve.finance/v1/getPools/all";
+export const CURVE_CHAINS = ["ethereum", "base", "arbitrum", "polygon"] as const;
+
+// Uniswap V3 subgraph IDs per chain
+export const UNIV3_SUBGRAPHS: Record<string, string> = {
+  ethereum: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
+  base: "FUbEPQw1oMghy39fwWBFY5fE6MXPXZQtjncQy2cXdrNS",
+  arbitrum: "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aJM",
+  polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
+};
+
+export const UNIV3_POOL_QUERY = `{
+  pools(
+    first: 1000,
+    orderBy: totalValueLockedUSD,
+    orderDirection: desc,
+    where: { totalValueLockedUSD_gt: "10000" }
+  ) {
+    id
+    token0 { id symbol }
+    token1 { id symbol }
+    feeTier
+    totalValueLockedUSD
+    volumeUSD
+    token0Price
+    token1Price
+    totalValueLockedToken0
+    totalValueLockedToken1
+  }
+}`;
+
+export const AERODROME_SUBGRAPHS: Record<string, string> = {
+  base: "GENunSHWLBXm59mBSgPzQ8metBEp9YDfdqwFr91Av1UM",
+};
+
+export const AERODROME_PAIR_QUERY = `{
+  pairs(
+    first: 500,
+    orderBy: reserveUSD,
+    orderDirection: desc,
+    where: { reserveUSD_gt: "10000" }
+  ) {
+    id
+    token0 { id symbol }
+    token1 { id symbol }
+    reserve0
+    reserve1
+    reserveUSD
+    token0Price
+    token1Price
+    isStable
+  }
+}`;
+
+/** Quality score for non-stablecoin pairing assets */
+export const VOLATILE_PAIR_QUALITY: Record<string, number> = {
+  WETH: 0.65, ETH: 0.65, STETH: 0.65, WSTETH: 0.65, RETH: 0.65,
+  WBTC: 0.6, TBTC: 0.55, CBBTC: 0.6,
+};
+
+/** Symbol → governance type lookup from TRACKED_STABLECOINS */
+export const SYMBOL_GOVERNANCE = new Map<string, string>();
+for (const meta of TRACKED_STABLECOINS) {
+  SYMBOL_GOVERNANCE.set(meta.symbol.toUpperCase(), meta.flags.governance);
+}
+
+export const CG_TICKERS_BASE = "https://api.coingecko.com/api/v3/coins";
+export const CG_TICKERS_RATE_MS = 2500; // conservative: ~24 req/min well under free-tier limit
+
+/**
+ * Synthetic TVL factor for orderbook exchanges.
+ * volume × factor = estimated standing order-book depth.
+ * 3× assumes ~33% daily turnover, conservative for precious-metals markets.
+ */
+export const ORDERBOOK_TVL_FACTOR = 3;
+
+/** CoinGecko coin IDs we accept as USD-equivalent quote assets */
+export const USD_QUOTE_COIN_IDS = new Set([
+  "tether", "usd-coin", "dai", "true-usd", "frax", "c1usd",
+  "binance-usd", "paxos-standard",
+]);
