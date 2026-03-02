@@ -62,7 +62,7 @@ export function deterministicOffset(id: string): number {
  */
 export function deterministicRadiusOffset(id: string, zoneWidth: number): number {
   if (id.length === 0) return 0;
-  if (zoneWidth === 0) return 0;
+  if (zoneWidth <= 0) return 0;
   const sum = id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   return sum % zoneWidth;
 }
