@@ -184,7 +184,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Ethena staking (sUSDe)", yieldType: "lending-vault" },
     geckoId: "ethena-usde",
-    collateral: "ETH (including stETH), BTC, and SOL in delta-neutral positions (spot long + short perpetual futures), plus liquid stablecoins (USDC, USDT, USDtb) as non-hedged backing",
+    collateral: "Predominantly liquid stablecoins (~77%: USDtb by Ethena backed by BlackRock BUIDL, plus USDC/USDT) as non-hedged backing; remainder in delta-neutral positions — BTC (~16%) and ETH/stETH (~8%) spot long + equal short perpetual futures on CEXes (Binance, Bybit, OKX)",
     pegMechanism: "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Coinbase) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
     proofOfReserves: { type: "real-time", url: "https://app.ethena.fi/dashboards/transparency", provider: "Chaos Labs / Chainlink / Harris & Trotter / LlamaRisk" },
     links: [
@@ -226,10 +226,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "cex",
     reserves: [
-      { name: "ETH / stETH", pct: 45, risk: "low" },
-      { name: "BTC", pct: 25, risk: "very-low" },
-      { name: "SOL", pct: 10, risk: "high" },
-      { name: "Stablecoins (USDC/USDT)", pct: 20, risk: "low", coinId: "2" },
+      { name: "Liquid Stables (USDtb / USDC / USDT)", pct: 76, risk: "low", coinId: "221" },
+      { name: "BTC (delta-neutral)", pct: 16, risk: "medium" },
+      { name: "ETH / ETH LSTs (delta-neutral)", pct: 8, risk: "medium" },
     ],
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
