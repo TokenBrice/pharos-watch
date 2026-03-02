@@ -344,6 +344,34 @@ function DEWSRadar({
 }
 
 // ---------------------------------------------------------------------------
+// DEWSLegend
+// ---------------------------------------------------------------------------
+
+function DEWSLegend({ updatedAt }: { updatedAt: number }) {
+  const minsAgo = Math.max(0, Math.round((Date.now() - updatedAt) / 60_000));
+  const ageLabel = minsAgo <= 1 ? "just now" : `${minsAgo}m ago`;
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 border-t">
+      {RING_BANDS.map((band) => (
+        <div key={band} className="flex items-center gap-1.5">
+          <svg width={20} height={4} aria-hidden="true">
+            <line x1={0} y1={2} x2={20} y2={2}
+              stroke={THREAT_BAND_HEX[band]} strokeWidth={2} />
+          </svg>
+          <span className="text-xs text-muted-foreground capitalize">
+            {band.charAt(0) + band.slice(1).toLowerCase()}
+          </span>
+        </div>
+      ))}
+      <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums font-mono">
+        Updated {ageLabel}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Public component
 // ---------------------------------------------------------------------------
 
@@ -352,8 +380,8 @@ interface DEWSSummaryProps {
 }
 
 export function DEWSSummary({ logos }: DEWSSummaryProps) {
-  const router = useRouter();
   const { data, isLoading } = useStressSignals();
+  const router = useRouter();
 
   if (isLoading) {
     return (
@@ -377,15 +405,23 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {elevated.length > 0
+              ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
+              : `All ${totalCount} coins calm`}
+          </span>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-0 pb-4">
         <DEWSRadar
           elevated={elevated}
           highest={highest}
           totalCount={totalCount}
           onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
         />
+        <DEWSLegend updatedAt={data.updatedAt * 1000} />
       </CardContent>
     </Card>
   );
