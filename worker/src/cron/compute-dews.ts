@@ -24,7 +24,7 @@ for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
   for (const id of ids) BLACKLIST_ID_TO_SYMBOL.set(id, sym);
 }
 
-export async function computeAndStoreDEWS(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function computeAndStoreDEWS(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
 
   // 1. Read stablecoins cache

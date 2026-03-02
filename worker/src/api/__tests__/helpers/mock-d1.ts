@@ -19,7 +19,7 @@ export function mockD1(tables: MockTable[] = []): D1Database {
   }
 
   const stmt = (sql: string) => ({
-    bind: (..._: unknown[]) => ({
+    bind: (..._args: unknown[]) => ({
       all: async <T>() => ({
         results: (findTable(sql)?.rows ?? []) as T[],
         success: true,

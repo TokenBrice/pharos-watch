@@ -26,6 +26,10 @@ const eslintConfig = defineConfig([
       "react-hooks/purity": "warn",
       "react-hooks/incompatible-library": "warn",
       "@next/next/no-img-element": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+      }],
     },
   },
 ]);

@@ -297,7 +297,7 @@ describe("syncYieldData", () => {
     vi.mocked(getCache).mockResolvedValue(null);
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
-    const fetchSpy = mockFetch([]);
+    mockFetch([]);
 
     const result = await syncYieldData(db);
 

@@ -5,7 +5,7 @@ import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 
-export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
+export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   const stablecoinsCache = await getCache(db, "stablecoins");
   if (!stablecoinsCache) {
     return { metadata: "skipped: no stablecoins cache" };

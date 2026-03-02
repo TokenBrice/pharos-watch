@@ -518,7 +518,7 @@ describe("fetchDualPrimaryPrices", () => {
       { id: "1", name: "NoGecko", symbol: "NG", pegType: "peggedUSD", circulating: {} },
     ];
 
-    const fetchSpy = vi.stubGlobal("fetch", vi.fn(async () =>
+    vi.stubGlobal("fetch", vi.fn(async () =>
       new Response(JSON.stringify({}), { status: 200 })
     ));
 

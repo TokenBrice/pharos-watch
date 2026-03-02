@@ -61,7 +61,7 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((b: { count: number; limit: number }) => b.count >= b.limit),
-  decodeUint256: vi.fn((_hex: string, _decimals: number) => 50000),
+  decodeUint256: vi.fn(() => 50000),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
   getEvmBlockNumber: vi.fn(async () => 22000000),
   fetchEvmLogsForTopics: vi.fn(async () => []),

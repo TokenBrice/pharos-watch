@@ -20,8 +20,6 @@ vi.mock("../../../../src/lib/supply", () => ({
 import { snapshotSupply } from "../snapshot-supply";
 
 describe("snapshotSupply", () => {
-  const nowSec = Math.floor(Date.now() / 1000);
-
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T08:30:00Z"));
