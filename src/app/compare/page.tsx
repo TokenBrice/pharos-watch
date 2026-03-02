@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FeatureStatusBadge } from "@/components/feature-status-badge";
 
 const CompareClient = dynamic(
   () => import("./client").then((m) => ({ default: m.CompareClient })),
@@ -47,9 +48,7 @@ export default function ComparePage() {
           <span>/</span>
           <span className="text-foreground">Compare</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">
-          Compare Stablecoins
-        </h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Compare Stablecoins <FeatureStatusBadge status="mature" /></h1>
         <p className="text-sm text-muted-foreground">
           Select up to 5 stablecoins to compare side-by-side.
         </p>

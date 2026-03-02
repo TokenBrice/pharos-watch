@@ -13,6 +13,7 @@ import { BlacklistStats } from "@/components/blacklist-stats";
 import { BlacklistChart } from "@/components/blacklist-chart";
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
+import { FeatureStatusBadge } from "@/components/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { BlacklistStablecoin, BlacklistEventType } from "@/lib/types";
@@ -79,7 +80,7 @@ function BlacklistPageInner() {
           <span>/</span>
           <span className="text-foreground">Blacklist Tracker</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Blacklist Tracker</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Blacklist Tracker <FeatureStatusBadge status="mature" /></h1>
         <p className="text-sm text-muted-foreground">
           Who got frozen. When. Why it matters.
         </p>

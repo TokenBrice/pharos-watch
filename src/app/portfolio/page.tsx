@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FeatureStatusBadge } from "@/components/feature-status-badge";
 
 const PortfolioClient = dynamic(
   () => import("./client").then((m) => ({ default: m.PortfolioClient })),
@@ -37,7 +38,7 @@ export default function PortfolioPage() {
           <span>/</span>
           <span className="text-foreground">Portfolio</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Portfolio</h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Portfolio <FeatureStatusBadge status="experimental" /></h1>
         <p className="text-sm text-muted-foreground">
           Track your stablecoin holdings and assess your personal risk exposure.
         </p>

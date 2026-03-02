@@ -9,6 +9,7 @@ import { FlowGauge } from "@/components/flow-gauge";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { FeatureStatusBadge } from "@/components/feature-status-badge";
 
 const TIME_RANGES = [
   { value: "24", label: "24h", hours: 24 },
@@ -39,9 +40,7 @@ function FlowsPageInner() {
           <span>/</span>
           <span className="text-foreground">Mint/Burn Flows</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">
-          Mint/Burn Flows
-        </h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Mint/Burn Flows <FeatureStatusBadge status="testing-in-prod" /></h1>
         <p className="text-sm text-muted-foreground">
           Real-time minting and redemption flows for tracked stablecoins.
         </p>
