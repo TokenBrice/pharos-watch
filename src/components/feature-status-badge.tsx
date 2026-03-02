@@ -11,7 +11,7 @@ interface FeatureStatusBadgeProps {
 export function FeatureStatusBadge({ status, version }: FeatureStatusBadgeProps) {
   const { label, cls } = FEATURE_STATUS_CONFIG[status];
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-1.5 tracking-normal font-normal">
       <Badge variant="outline" className={cls}>
         {label}
       </Badge>

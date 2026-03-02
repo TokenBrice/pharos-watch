@@ -324,15 +324,15 @@ export type FeatureStatus = "mature" | "experimental" | "testing-in-prod";
 
 export const FEATURE_STATUS_CONFIG: Record<FeatureStatus, { label: string; cls: string }> = {
   mature: {
-    label: "Mature",
+    label: "Feature Status: Mature",
     cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400 dark:border-emerald-500/40",
   },
   experimental: {
-    label: "Experimental",
+    label: "Feature Status: Experimental",
     cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400 dark:border-amber-500/40",
   },
   "testing-in-prod": {
-    label: "Testing in Prod",
+    label: "Feature Status: Testing in Prod",
     cls: "bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400 dark:border-orange-500/40",
   },
 };
