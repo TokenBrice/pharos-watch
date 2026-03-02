@@ -44,6 +44,26 @@ const SPOKES = Array.from({ length: 8 }, (_, i) => {
 // The sweep line points right (0°). The wake is the quadrant behind it (-90° to 0°).
 const WAKE_PATH = `M ${CX} ${CY} L ${CX} ${CY - OUTER_R} A ${OUTER_R} ${OUTER_R} 0 0 1 ${CX + OUTER_R} ${CY} Z`;
 
+const RADAR_KEYFRAMES = `
+  @keyframes dews-sweep-rotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes dews-glow {
+    0%, 100% { opacity: 0.10; }
+    50%      { opacity: 0.35; }
+  }
+  @keyframes dews-center-pulse {
+    0%, 100% { opacity: 0.65; }
+    50%      { opacity: 1.00; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .dews-sweep-g  { animation-play-state: paused !important; }
+    .dews-glow-r   { animation: none !important; opacity: 0.15; }
+    .dews-center-r { animation: none !important; opacity: 0.80; }
+  }
+`;
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -106,34 +126,69 @@ function computePositions(
 // Sub-components (unexported)
 // ---------------------------------------------------------------------------
 
-// Placeholder — will be replaced in Task 4
-function DEWSRadarSkeleton({ hex }: { hex: string }) {
+function DEWSRadar({
+  elevated,
+  highest,
+  totalCount,
+  onCoinClick,
+}: {
+  elevated: ElevatedCoin[];
+  highest: ThreatBand;
+  totalCount: number;
+  onCoinClick: (id: string) => void;
+}) {
+  const uid = useId();
+  const wakeGradId = `dews-wake-${uid}`;
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  const hex = THREAT_BAND_HEX[highest];
+  const dur = sweepDuration(highest);
+
   return (
     <svg viewBox="0 0 560 480" width="100%" style={{ maxHeight: 440 }}
-      aria-label="DEWS radar" role="img">
+      aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}`}`}
+      role="img">
+      <defs>
+        <style>{RADAR_KEYFRAMES}</style>
+        <radialGradient id={wakeGradId} cx={CX} cy={CY} r={OUTER_R} gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stopColor={hex} stopOpacity={0.18} />
+          <stop offset="100%" stopColor={hex} stopOpacity={0} />
+        </radialGradient>
+      </defs>
+
       {/* Spokes */}
       {SPOKES.map((s, i) => (
         <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
           stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
       ))}
+
       {/* Band ring boundaries */}
       {RING_BANDS.map((band) => (
         <circle key={band} cx={CX} cy={CY} r={RING_RADII[band]}
           fill="none" stroke={THREAT_BAND_HEX[band]}
           strokeOpacity={0.25} strokeWidth={1} strokeDasharray="4 6" />
       ))}
-      {/* Outer boundary */}
       <circle cx={CX} cy={CY} r={OUTER_R}
-        fill="none" stroke={hex}
-        strokeOpacity={0.35} strokeWidth={1} strokeDasharray="4 6" />
-      {/* Center placeholder */}
-      <circle cx={CX} cy={CY} r={38}
-        fill={hex} fillOpacity={0.12}
-        stroke={hex} strokeOpacity={0.35} strokeWidth={1.5} />
-      <text x={CX} y={CY - 4} textAnchor="middle" dominantBaseline="middle"
-        fill={hex} fontSize={11} fontWeight={700} fontFamily="var(--font-mono)" letterSpacing={1}>
-        DEWS
-      </text>
+        fill="none" stroke={hex} strokeOpacity={0.35} strokeWidth={1} strokeDasharray="4 6" />
+
+      {/* Sweep group — wake arc + line, rotates together */}
+      <g
+        className="dews-sweep-g"
+        style={{
+          transformOrigin: `${CX}px ${CY}px`,
+          animation: `dews-sweep-rotate ${dur}s linear infinite`,
+        }}
+      >
+        <path d={WAKE_PATH} fill={`url(#${wakeGradId})`} />
+        <line
+          x1={CX} y1={CY} x2={CX + OUTER_R} y2={CY}
+          stroke={hex} strokeOpacity={0.65} strokeWidth={1.5} strokeLinecap="round"
+        />
+      </g>
+
+      {/* Coin dots — Task 5 */}
+      {/* Center readout — Task 6 */}
+      {/* Tooltip — Task 7 */}
     </svg>
   );
 }
@@ -164,9 +219,9 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
 
   if (!data?.signals || Object.keys(data.signals).length === 0) return null;
 
+  const totalCount = Object.keys(data.signals).length;
   const elevated = computePositions(data.signals, logos);
   const highest = highestBand(elevated.map((c) => c.band));
-  const hex = THREAT_BAND_HEX[highest];
 
   return (
     <Card>
@@ -174,7 +229,12 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
         <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
       </CardHeader>
       <CardContent>
-        <DEWSRadarSkeleton hex={hex} />
+        <DEWSRadar
+          elevated={elevated}
+          highest={highest}
+          totalCount={totalCount}
+          onCoinClick={(_id) => { /* navigation wired in Task 7 */ }}
+        />
       </CardContent>
     </Card>
   );
