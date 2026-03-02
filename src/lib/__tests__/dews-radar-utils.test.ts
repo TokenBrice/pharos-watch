@@ -81,6 +81,12 @@ describe("deterministicRadiusOffset", () => {
     // "1" charSum=49; 49 % 10 = 9
     expect(deterministicRadiusOffset("1", 10)).toBe(9);
   });
+  it("returns 0 for zoneWidth of 0", () => {
+    expect(deterministicRadiusOffset("abc", 0)).toBe(0);
+  });
+  it("returns 0 for negative zoneWidth", () => {
+    expect(deterministicRadiusOffset("abc", -5)).toBe(0);
+  });
 });
 
 describe("distributeAngles", () => {

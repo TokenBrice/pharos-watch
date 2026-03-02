@@ -205,3 +205,19 @@ Validates DEWS against historical depeg events. Reports TP rate and lead time.
 **Classification constants:** `ThreatBand`, `THREAT_BAND_COLORS`, `THREAT_BAND_HEX`, `THREAT_BAND_LABELS` in `src/lib/classification.ts`
 
 **Design tokens:** `--dews-calm` through `--dews-danger` in `src/styles/tokens/semantic.css`
+
+### Radar Layout (`DEWSSummary`)
+
+The radar is center-is-danger: higher threat bands occupy inner rings, CALM coins form an ambient starfield at the periphery.
+
+| Zone | Radius range | Description |
+|------|-------------|-------------|
+| Center label | r 0–38 | Highest band label + count |
+| DANGER | r 45–90 | Innermost elevated ring |
+| WARNING | r 95–140 | |
+| ALERT | r 143–175 | |
+| WATCH | r 178–208 | Outermost elevated ring |
+| CALM starfield | r 212–238 | Non-interactive ambient dots (r=2, 12% opacity) |
+| Outer boundary | r 240 | Radar edge |
+
+Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) using the zone's threat color, plus a faint gray ring at r=212 delimiting the calm zone. CALM dots are scattered deterministically using `deterministicRadiusOffset(id, 26)` from `src/lib/dews-radar-utils.ts`. The legend renders bands in center-out order: DANGER → WARNING → ALERT → WATCH.
