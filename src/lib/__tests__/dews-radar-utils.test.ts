@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   scoreToRadius,
   deterministicOffset,
+  deterministicRadiusOffset,
   distributeAngles,
   highestBand,
   sweepDuration,
