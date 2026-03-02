@@ -18,11 +18,14 @@ const eslintConfig = defineConfig([
   {
     // Downgrade React Compiler rules to warnings — these flag valid patterns
     // that aren't optimal for the compiler but work correctly at runtime.
+    // Suppress no-img-element — static export with unoptimized images makes
+    // next/image functionally identical to <img>.
     rules: {
       "react-hooks/preserve-manual-memoization": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/purity": "warn",
       "react-hooks/incompatible-library": "warn",
+      "@next/next/no-img-element": "off",
     },
   },
 ]);

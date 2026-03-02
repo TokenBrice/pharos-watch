@@ -138,7 +138,10 @@ export function ReportCardsClient() {
   }, [stressTest.targetCoinId, stressTest.targetGrade, router]);
 
   // When stress test is active, show simulated cards in the grid
-  const displayCards = stressTest.stressedCards ?? reportData?.cards ?? [];
+  const displayCards = useMemo(
+    () => stressTest.stressedCards ?? reportData?.cards ?? [],
+    [stressTest.stressedCards, reportData?.cards],
+  );
   const affectedIds = stressTest.allAffectedIds;
   const originalCardMap = useMemo(
     () => new Map(reportData?.cards?.map((c) => [c.id, c]) ?? []),

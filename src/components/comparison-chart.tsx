@@ -74,12 +74,11 @@ export function ComparisonChart({
   }, [setLocalRange, onRangeChange]);
 
   // Sync external range prop into local state
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- localRange intentionally omitted to avoid infinite loop
   useEffect(() => {
-    if (range != null && range !== localRange) {
+    if (range != null) {
       setLocalRange(range);
     }
-  }, [range]);
+  }, [range, setLocalRange]);
 
   // Normalize: percent change from first available value per series
   const displayData = useMemo(() => {

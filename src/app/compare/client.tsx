@@ -26,7 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Share2, Twitter, Download, Search } from "lucide-react";

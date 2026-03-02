@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
 import { computePegScore, coinTrackingStart } from "../peg-score";
-import type { PegScoreResult } from "../peg-score";
 import { computePegStability } from "../peg-stability";
 import type { DepegEvent } from "../types";
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { isReasonablePrice, hasMissingPrice, PRICE_BOUNDS, enrichMissingPrices, fetchDualPrimaryPrices } from "../enrich-prices";
 import type { PeggedAsset } from "../enrich-prices";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
@@ -339,10 +339,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    // Call counter to differentiate DL coins vs CG calls
-    let callCount = 0;
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      callCount++;
       if (url.includes("coins.llama.fi")) {
         // DL coins API returns no price for this asset
         return new Response(JSON.stringify({ coins: {} }), { status: 200 });
