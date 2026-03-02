@@ -602,11 +602,11 @@ export function CompareClient() {
             detailErrors={detailErrors}
           />
 
-          {detailLoading ? (
-            <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" />
-          ) : (
-            <>
-              {supplySeries.length >= 2 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {detailLoading ? (
+              <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" />
+            ) : (
+              supplySeries.length >= 2 && (
                 <ComparisonChart
                   title="Market Cap History"
                   series={supplySeries}
@@ -615,33 +615,33 @@ export function CompareClient() {
                   onRangeChange={setRange}
                   normalizable
                 />
-              )}
-            </>
-          )}
+              )
+            )}
 
-          {radarCards.length >= 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Safety Score Comparison</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CompareRadar cards={radarCards} size={350} />
-                <div className="flex flex-wrap gap-3 justify-center mt-3">
-                  {radarCards.map(({ card, color }) => (
-                    <div key={card.id} className="flex items-center gap-1.5 text-sm">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span>
-                        {card.symbol}: {card.overallGrade}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {radarCards.length >= 2 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Safety Score Comparison</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CompareRadar cards={radarCards} size={350} />
+                  <div className="flex flex-wrap gap-3 justify-center mt-3">
+                    {radarCards.map(({ card, color }) => (
+                      <div key={card.id} className="flex items-center gap-1.5 text-sm">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                        <span>
+                          {card.symbol}: {card.overallGrade}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       )}
     </div>
