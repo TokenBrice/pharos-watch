@@ -153,14 +153,15 @@ function computeCalmDots(
 // ---------------------------------------------------------------------------
 
 function DEWSCalmDot({ x, y }: CalmDot) {
+  const cx = x.toFixed(1);
+  const cy = y.toFixed(1);
   return (
-    <circle
-      cx={x.toFixed(1)}
-      cy={y.toFixed(1)}
-      r={2}
-      fill="var(--color-muted-foreground)"
-      fillOpacity={0.12}
-    />
+    <g>
+      {/* Bloom halo */}
+      <circle cx={cx} cy={cy} r={5} fill="white" fillOpacity={0.06} />
+      {/* Core */}
+      <circle cx={cx} cy={cy} r={2} fill="white" fillOpacity={0.28} />
+    </g>
   );
 }
 
