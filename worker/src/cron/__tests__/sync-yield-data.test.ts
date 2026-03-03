@@ -101,6 +101,7 @@ vi.mock("../yield-config", () => ({
   AUTO_LENDING_POOL_MAP: {
     "336": "pool-u-venus",
   },
+  AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["336"]),
 }));
 
 // Stub report-cards (used for safety score computation)

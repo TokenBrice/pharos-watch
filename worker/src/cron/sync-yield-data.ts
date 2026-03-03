@@ -16,7 +16,8 @@ import {
 } from "./yield-helpers";
 import {
   YIELD_VARIANT_MAP, YIELD_POOL_MAP, ON_CHAIN_RATE_CONFIGS,
-  LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS, AUTO_LENDING_POOL_MAP,
+  LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS,
+  AUTO_LENDING_POOL_MAP, AUTO_LENDING_SAFETY_BYPASS_IDS,
 } from "./yield-config";
 import {
   computeOverallGrade, isBlacklistable, scoreDecentralization, scoreDependencyRisk,
@@ -298,6 +299,10 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
       const pool = dlPools.find((p) => p.pool === poolId);
       if (!pool) continue;
+
+      const safetyScore = safetyScores.get(stablecoinId)?.score ?? 0;
+      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
+      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
 
       const eligible = (
         pool.exposure === "single" &&

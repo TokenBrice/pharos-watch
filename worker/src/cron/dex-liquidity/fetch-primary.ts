@@ -60,6 +60,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
               pool: p.pool, project: p.project, symbol: p.symbol,
               tvlUsd: p.tvlUsd, apy: p.apy, apyBase: p.apyBase,
               apyReward: p.apyReward, stablecoin: true, exposure: "single",
+              underlyingTokens: p.underlyingTokens ?? null,
             }));
           await setCache(db, "dl-stablecoin-pools", JSON.stringify(minimalPools));
         } catch (e) {

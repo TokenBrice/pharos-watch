@@ -243,4 +243,20 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
 export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
   // U (United Stables) - venus-core-pool on BSC, ~$15M TVL, ~2.4% APY
   "336": "d8e9bb79-79d3-4897-8a4f-8d489040097d",
+  // pmUSD - yearn-finance (symbol drift: PMFRXUSD), Ethereum
+  "332": "099fab49-5103-4c85-b5e6-fff734eb1691",
+  // USDH - morpho-v1 (symbol drift: FEUSDH), HyperEVM
+  "321": "1c9fb97d-f432-44fb-89a0-8120b4cae95c",
+  // EURCV - morpho-v1 (symbol drift: STEAKEURCV), Ethereum
+  "254": "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
+  // EUSD - morpho-v1 (symbol drift: MEUSD), Base
+  "106": "44a4e84a-4ad1-4783-ac83-3d7e432220ea",
 };
+
+/**
+ * Deterministic IDs that may bypass MIN_SAFETY_SCORE_FOR_YIELD.
+ * Reserved for explicit edge-case inclusions.
+ */
+export const AUTO_LENDING_SAFETY_BYPASS_IDS = new Set([
+  "336", // U: explicitly requested inclusion despite D-grade score
+]);
