@@ -36,7 +36,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 ### Additional Metadata
 
-Key fields on `StablecoinMeta` (see `src/lib/types.ts` for the full 22-field interface):
+Key fields on `StablecoinMeta` (see `src/lib/types.ts` for the full interface):
 
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
@@ -48,10 +48,10 @@ Key fields on `StablecoinMeta` (see `src/lib/types.ts` for the full 22-field int
 - `links?: StablecoinLink[]` — external links (website, docs, twitter)
 - `jurisdiction?: Jurisdiction` — regulatory jurisdiction
 - `contracts?: ContractDeployment[]` — on-chain contract addresses per chain
-- `dependencies?: Dependency[]` — upstream stablecoin dependencies (for report cards)
+- `dependencies?: DependencyWeight[]` — upstream stablecoin dependencies (for report cards)
 - `canBeBlacklisted?: boolean | "possible"` — blacklist capability (for resilience scoring)
 - `chainTier? / deploymentModel? / collateralQuality? / custodyModel? / governanceQuality?` — report card resilience/decentralization overrides
-- `reserves?: ReserveComposition` — reserve composition data
+- `reserves?: ReserveSlice[]` — reserve composition data
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 
 ### Bluechip Grade
@@ -62,13 +62,13 @@ Key fields on `StablecoinMeta` (see `src/lib/types.ts` for the full 22-field int
 
 Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `src/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` (from DefiLlama data) with >$1M supply. This avoids hardcoding FX rates. The function always returns a `PegRatesResult` containing both `rates` (the numeric lookup) and `sources` (which source was used per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
 
-For thin peg groups (GBP, CHF, BRL, RUB, JPY — often <3 qualifying coins), a `FALLBACK_RATES` map provides approximate FX rates. If the median from <3 coins deviates >10% from the fallback, the fallback is used instead. This prevents a single depegged coin from becoming its own reference rate (which would always show 0 bps deviation).
+For thin peg groups (often <3 qualifying coins), live `fxFallbackRates` from `sync-fx-rates.ts` are used when available. In `derivePegRates()`, if a peg group has fewer than 3 qualifying coins and a fallback rate exists, the fallback is used directly instead of the peer median. This prevents one or two coins from becoming their own unstable peg reference.
 
 Live FX rates are fetched every 15 minutes by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN. RUB, UAH, and ARS use a secondary API (`fawazahmed0/exchange-api` via jsDelivr CDN) since ECB doesn't publish these currencies.
 
 ## Commodity & Non-DefiLlama Stablecoins
 
-Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These are identified by their `geckoId` and/or `protocolSlug` fields in `StablecoinMeta` (in `src/lib/stablecoins.ts`), and use synthetic IDs (e.g., `gold-xaut`, `cg-jpyc`).
+Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These are identified by their `geckoId` and/or `protocolSlug` fields in `StablecoinMeta` (in `src/lib/stablecoins.ts`), and use synthetic IDs (e.g., `gold-xaut`, `silver-kag`, `cg-jpyc`).
 
 The Worker's `sync-stablecoins` cron derives the list of commodity and CoinGecko-only tokens directly from `TRACKED_STABLECOINS` by filtering on `geckoId` and `pegType`. Data is fetched from CoinGecko, shaped into DefiLlama-compatible format, and merged into the `peggedAssets` array before caching.
 

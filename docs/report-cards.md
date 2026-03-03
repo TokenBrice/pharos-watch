@@ -103,7 +103,7 @@ For coins without curated reserves, the legacy enum-based scoring is used:
 | `crypto-backed` + `centralized-dependent` | ethereum | single-chain | eth-lst | onchain |
 | `algorithmic` + any | ethereum | single-chain | native | onchain |
 
-Explicit overrides exist for ~25 coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
+Explicit overrides exist for coins where defaults are incorrect (e.g. HYUSD on Solana, USDe with CEX custody, BOLD with third-party bridge).
 
 Data sources: `collateralQuality`, `custodyModel` optional fields on `StablecoinMeta`. `canBeBlacklisted` field (falls back to governance type). Reserve compositions on `StablecoinMeta.reserves`.
 
@@ -178,7 +178,7 @@ Examples: BOLD (immutable-code) = **100** (no chain penalty). LUSD (immutable-co
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `src/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta` (7 coins currently use this fallback).
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `src/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
 
 **Scoring:**
 - **No dependencies**: 95 (any governance tier)
@@ -248,7 +248,7 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 `GET /api/report-cards` — all coins graded with per-dimension breakdown and methodology metadata. Cache: standard (5-min edge).
 
-Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
+Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.

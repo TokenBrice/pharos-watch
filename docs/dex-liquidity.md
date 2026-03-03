@@ -111,7 +111,7 @@ DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-..
 
 ### Storage
 
-Stored in D1 `dex_liquidity` table (migration 0009 + 0012) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`. Stablecoins with no DEX presence store `liquidity_score = NULL` (NR semantics).
+Stored in D1 `dex_liquidity` table (created in migration 0009; extended in 0010, 0012, 0024, and 0036) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`, `locked_liquidity_pct`, and `methodology_version`. Stablecoins with no DEX presence store `liquidity_score = NULL` (NR semantics).
 
 Both `dex_liquidity` and `dex_liquidity_history` also carry `methodology_version` (migration 0036), reconstructed from commit-history version windows in `src/lib/liquidity-score-version.ts`.
 

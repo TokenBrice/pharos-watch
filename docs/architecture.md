@@ -34,7 +34,7 @@
 | `GET /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (requires `X-Admin-Key`) |
 | `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `GET /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
-| `GET /api/backfill-dews` | Admin: backfill DEWS scores (requires `X-Admin-Key`) |
+| `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
 | `GET /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
 | `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
@@ -75,7 +75,11 @@ src/                              # Next.js frontend (static export)
 │   ├── methodology/              # Detailed methodology documentation
 │   │   ├── page.tsx
 │   │   ├── error.tsx
-│   │   └── scoring-changelog/page.tsx  # Historical scoring methodology changes
+│   │   ├── scoring-changelog/page.tsx  # Safety Score methodology changelog
+│   │   ├── depeg-changelog/page.tsx    # Depeg/DEWS methodology changelog
+│   │   ├── liquidity-score-changelog/page.tsx # Liquidity score changelog
+│   │   ├── stability-index-changelog/page.tsx # PSI methodology changelog
+│   │   └── blacklist-tracker-changelog/page.tsx # Blacklist tracker changelog
 │   ├── portfolio/                # Portfolio stress testing & upstream exposure
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -279,7 +283,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (35 total)
+├── migrations/                   # D1 SQL migrations (38 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -351,7 +355,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
-    ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
+        ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
         ├── alerts.ts             # Alert sending (ntfy push notifications on cron failures)
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)
@@ -361,9 +365,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
-        ├── coingecko.ts            # CoinGecko API key initialization (shared across crons)
-        ├── coingecko-onchain.ts   # CoinGecko Onchain API client (12 chains, pool discovery, locked liquidity)
-        ├── twitter.ts             # Twitter/X API client for daily digest posting
+        ├── coingecko.ts          # CoinGecko API key initialization (shared across crons)
+        ├── coingecko-onchain.ts  # CoinGecko Onchain API client (15 chains, pool discovery, locked liquidity)
+        ├── twitter.ts            # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
         ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)

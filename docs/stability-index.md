@@ -119,7 +119,7 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 
 ## API
 
-`GET /api/stability-index` — latest score + 90-day history (default). With `?detail=true`, full history with per-day component breakdowns. Cache: standard (5-min edge, 1-min browser).
+`GET /api/stability-index` — latest score + recent history (default response uses the latest ~90 daily rows, with today's running average prepended when available). With `?detail=true`, full history with per-day component breakdowns. Cache: standard (5-min edge, 1-min browser).
 
 See `docs/api-reference.md` for full response shape.
 

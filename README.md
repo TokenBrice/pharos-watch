@@ -117,7 +117,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoints (29 router handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (35 total)
+└── migrations/                   D1 SQL migrations (38 total)
 ```
 
 ## Infrastructure

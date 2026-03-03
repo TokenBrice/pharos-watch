@@ -52,12 +52,16 @@ This ordering prevents a frontend deploy if the newly deployed worker fails crit
 **Config:** `vitest.config.ts`
 
 ```ts
-test: { globals: true }           // describe/it/expect available without imports
-resolve: { alias: { "@": "src" }} // Same path alias as Next.js
-coverage: {
-  provider: "v8",
-  thresholds: { lines: 50 }       // Coverage gate — CI fails if lines < 50%
-}
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      thresholds: { lines: 50 }, // Coverage gate — CI fails if lines < 50%
+    },
+  },
+  resolve: { alias: { "@": path.resolve(__dirname, "src") } }, // Same path alias as Next.js
+});
 ```
 
 **Locations:**
@@ -133,6 +137,12 @@ const row = makeBlacklistRow({ stablecoin: "2", event_type: "freeze" });
 ```
 
 ## Test File Inventory
+
+This inventory is representative, not exhaustive. For the full current list, run:
+
+```bash
+find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
+```
 
 ### Frontend Library Tests (`src/lib/__tests__/`)
 
@@ -239,8 +249,6 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 ## Coverage
 
 **Threshold:** 50% lines (enforced by `vitest.config.ts` thresholds)
-
-Current coverage: ~68% lines, ~70% statements (as of Phase 2 completion).
 
 Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
 
@@ -355,20 +363,24 @@ describe("syncFxRates", () => {
 
 ### Zod Runtime Validation
 
-Five high-priority API response types have Zod schemas in `src/lib/types.ts`:
+Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current schema-validated response paths include:
 - `StablecoinListResponseSchema`
 - `PegSummaryResponseSchema`
-- `ReportCardsResponseSchema`
+- `DexLiquidityMapSchema`
+- `StabilityIndexResponseSchema`
+- `ReportCardsResponseSchema` (wired with a typed cast in `use-report-cards.ts`)
 - `MintBurnFlowsResponseSchema`
 - `MintBurnPerCoinResponseSchema`
+- `StressSignalsAllResponseSchema`
+- `StressSignalDetailResponseSchema`
 
-Four of these are wired into their hooks via `useApiQuery`'s `schema` option: `StablecoinListResponse`, `PegSummaryResponse`, `MintBurnFlowsResponse`, and `MintBurnPerCoinResponse`. On validation failure: `console.warn` with details, return data as-is (graceful degradation). `ReportCardsResponse` keeps a hand-written interface (narrow `ReportCardGrade`/`DimensionKey` types needed by downstream components) — its schema is exported for contract tests but not wired into the hook. Most types are derived via `z.infer<>`.
+On validation failure, hooks log warnings and return data in degraded mode rather than hard-crashing the UI.
 
 When adding a new API endpoint:
 1. Define the response schema in `src/lib/types.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
 2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
-**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), Zod schemas infer `string` instead. In that case, keep the hand-written `interface` for TypeScript and export the Zod schema separately for contract tests only — don't wire it into the hook via `useApiQuery`. See `ReportCardsResponse` / `ReportCardsResponseSchema` for the pattern.
+**Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), Zod schemas infer `string`. In those cases, keep hand-written interfaces and cast schema wiring intentionally where needed (see `use-report-cards.ts`).
 
 **Worker CI note:** `src/lib/types.ts` imports `zod`, and the worker type-checks that file via its `@/*` path alias in the `validate` job (`cd worker && npx tsc --noEmit`) before any deploy step runs. Root deps are installed first (`npm ci`) so shared `src/lib/` imports resolve during worker type-check. If you add new npm packages imported at the top level of shared `src/lib/` files, they'll be resolved from root `node_modules/` — no need to add them to `worker/package.json` unless the worker uses them at runtime.

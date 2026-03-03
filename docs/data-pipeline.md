@@ -100,14 +100,14 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 
 ### Backfill (backfill-depegs.ts)
 
-- **Endpoint**: `GET /v1/timeseries?api_key=KEY&start_date=...&end_date=...&currency=USD&unit=toz`
-- **Windowing**: The 4-year backfill range is split into 30-day windows (API limit), all fetched in parallel (~49 requests, one-time).
-- **Output**: Returns both gold and silver daily series in `{ GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }` format, used by `buildFxLookup()` for time-varying peg references.
-- **Fallback**: If no API key is provided, commodity series are empty and the backfill uses current peg rates as static fallback.
+- Commodity backfill does **not** call a gold-api.com timeseries endpoint.
+- Instead, it builds daily GOLD/SILVER peg references from CoinGecko historical prices across tracked commodity tokens (`buildCommodityMedianSeriesFromCg()`), normalized to per-troy-ounce and median-aggregated per day.
+- The resulting `{ GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }` series feeds `buildFxLookup()` for time-varying commodity peg references.
+- Fallback behavior: if series data is sparse/missing for a timestamp, `buildFxLookup()` falls back to the current peg reference derived from live rates.
 
 ### Budget
 
-The live `/price/` endpoint requires no API key and has no documented rate limit — it is called every 15-minute sync run (2 requests: gold + silver), ~5,760/month. The historical `/v1/timeseries` endpoint used by backfills requires an API key; the free tier allows 100 requests/month. The one-time 4-year backfill uses ~49 timeseries requests.
+The live `/price/` endpoint requires no API key and has no documented rate limit — it is called every 15-minute sync run (2 requests: gold + silver), ~5,760/month. Backfills source commodity history from CoinGecko market-chart data (via existing CoinGecko integration), so there is no separate gold-api.com historical-request budget.
 
 ## Stability Index (PSI) Computation
 

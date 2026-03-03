@@ -86,7 +86,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 | File | Exports | Purpose |
 |------|---------|---------|
 | `src/lib/chart-colors.ts` | `CHART_PALETTE`, `CHART_BLUE`, `PSI_BAND_COLORS`, `RECHARTS_TOOLTIP_STYLES` | Chart fill/stroke colors (also has module-private `TOKEN` map) |
-| `src/lib/severity-colors.ts` | `deviationColorHex()` | Peg deviation hex values (also has module-private `SEVERITY_HEX` map) |
+| `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers | Peg-deviation and score-tier color helpers shared across UI + charts |
 
 These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css`.
 

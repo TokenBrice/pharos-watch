@@ -16,6 +16,7 @@ Most endpoints use the Pharos stablecoin ID, which comes in three forms:
 |------|---------|--------|
 | Numeric string | `"1"` (USDT), `"122"` (GYEN) | DefiLlama numeric ID |
 | `gold-*` prefix | `"gold-paxg"` | Commodity (gold) token |
+| `silver-*` prefix | `"silver-kag"` | Commodity (silver) token |
 | `cg-*` prefix | `"cg-xyz"` | CoinGecko-only token |
 
 ---
@@ -87,7 +88,7 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 | `id` | `string` | Pharos stablecoin ID |
 | `name` | `string` | Full name (e.g. `"Tether"`) |
 | `symbol` | `string` | Ticker (e.g. `"USDT"`) |
-| `gecko_id` | `string \| null` | CoinGecko ID |
+| `geckoId` | `string \| null` | CoinGecko ID (normalized output key; upstream DefiLlama uses `gecko_id`) |
 | `pegType` | `string` | DefiLlama peg type (e.g. `"peggedUSD"`, `"peggedEUR"`) |
 | `pegMechanism` | `string` | `"fiat-backed"`, `"crypto-backed-algorithmic"`, etc. |
 | `priceSource` | `string` | Source of the current price (`"defillama"`, `"coingecko"`, `"defillama+coingecko"`, `"dexscreener"`) |
@@ -105,10 +106,10 @@ Full stablecoin list with current supply, price, chain breakdown, and FX rates. 
 
 ```json
 {
-  "current": { "peggedUSD": 50000000 },
-  "circulatingPrevDay": { "peggedUSD": 49000000 },
-  "circulatingPrevWeek": { "peggedUSD": 47000000 },
-  "circulatingPrevMonth": { "peggedUSD": 44000000 }
+  "current": 50000000,
+  "circulatingPrevDay": 49000000,
+  "circulatingPrevWeek": 47000000,
+  "circulatingPrevMonth": 44000000
 }
 ```
 
@@ -374,6 +375,8 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `worstCurrent` | `{ id, symbol, bps } \| null` | Coin with the largest current deviation |
 | `coinsAtPeg` | `number` | Coins with current deviation < 100 bps |
 | `totalTracked` | `number` | Total coins in the response |
+| `depegEventsToday` | `number` | Number of depeg events whose `startedAt` is in the current UTC day |
+| `depegEventsYesterday` | `number` | Number of depeg events whose `startedAt` is in the previous UTC day |
 | `fallbackPegRates` | `string[]` | *(optional)* pegType keys using stale FX fallback rates |
 
 **`methodology`** — same fields and semantics as `/api/depeg-events`
@@ -489,6 +492,7 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 | `organicFraction` | `number \| null` | Fraction of TVL from organic (non-incentivized) pools |
 | `durabilityScore` | `number \| null` | Score for pool maturity and reliability |
 | `scoreComponents` | `ScoreComponents \| null` | Breakdown of the composite liquidity score |
+| `lockedLiquidityPct` | `number \| null` | TVL-weighted fraction of liquidity reported as locked by source pools |
 | `methodologyVersion` | `string` | Methodology version attributed to this row |
 
 **`ScoreComponents`**
@@ -615,19 +619,18 @@ Latest AI-generated market summary, produced daily at 08:00 UTC via the Claude A
 
 ```json
 {
-  "digest": "USDC absorbed $812M of the market's $1.36B weekly inflow…",
-  "digestTitle": "USDC Eats the Week",
-  "digestExtended": "Longer editorial commentary for website display…",
-  "generatedAt": 1771839719
+  "digest": "USDC absorbed $812M of the market's $1.36B weekly inflow…"
 }
 ```
+
+If no digest exists yet, the endpoint returns only `{ "digest": null }`.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `digest` | `string \| null` | Tweet-ready summary (≤ 240 characters). `null` if no digest has been generated yet. |
 | `digestTitle` | `string \| null` | Short headline for the digest |
 | `digestExtended` | `string \| null` | Extended commentary for the website view |
-| `generatedAt` | `number` | Unix seconds when this digest was generated |
+| `generatedAt` | `number` | Unix seconds when this digest was generated (present only when `digest` is non-null) |
 
 ---
 
@@ -646,7 +649,10 @@ All daily digests, newest-first.
       "digestText": "USDC absorbed $812M…",
       "digestTitle": "USDC Eats the Week",
       "digestExtended": "Longer editorial…",
-      "generatedAt": 1771839719
+      "generatedAt": 1771839719,
+      "psiScore": 81.1,
+      "psiBand": "STEADY",
+      "totalMcapUsd": 234500000000
     }
   ]
 }
@@ -660,6 +666,9 @@ Each element uses `digestText` (note: differs from the singular `/api/daily-dige
 | `digestTitle` | `string \| null` | Short headline |
 | `digestExtended` | `string \| null` | Extended commentary |
 | `generatedAt` | `number` | Unix seconds of generation time |
+| `psiScore` | `number \| null` | PSI score parsed from archived digest input data |
+| `psiBand` | `string \| null` | PSI condition band parsed from archived digest input data |
+| `totalMcapUsd` | `number \| null` | Ecosystem market cap parsed from archived digest input data |
 
 ---
 
@@ -795,7 +804,11 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 | `current` | `object \| null` | Latest PSI score and components. `null` if cron has not yet run |
 | `current.score` | `number` | PSI score 0–100 |
 | `current.band` | `string` | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
+| `current.avg24h` | `number \| undefined` | Rolling 24 h average PSI score |
+| `current.avg24hBand` | `string \| undefined` | Condition band for `avg24h` |
 | `current.components` | `object` | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend` |
+| `current.contributors` | `array` | Top per-coin contributors from `input_snapshot.contributors` (empty when unavailable) |
+| `current.totalMcapUsd` | `number` | Total ecosystem market cap from the latest input snapshot (`0` when unavailable) |
 | `current.computedAt` | `number` | Unix seconds of computation |
 | `current.methodologyVersion` | `string` | Methodology version used to compute the current score |
 | `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
@@ -823,6 +836,7 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
   "methodology": {
     "version": "5.5",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
+    "pegMultiplierExponent": 0.2,
     "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
   },
   "updatedAt": 1771977600
@@ -1024,6 +1038,8 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 | `mintCount24h` | `number` | Number of mint events |
 | `burnCount24h` | `number` | Number of burn events |
 | `netFlow7dUsd` | `number` | 7-day net flow (USD) |
+| `netFlow30dUsd` | `number` | 30-day net flow (USD) |
+| `netFlow90dUsd` | `number` | 90-day net flow (USD) |
 | `largestEvent24h` | `object \| null` | Largest event in the last 24h: `{ direction, amountUsd, txHash, timestamp }` |
 
 **`HourlyFlow`**
@@ -1212,7 +1228,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
   "expectedValue": "Optional expected behavior/value",
   "stablecoinId": "Optional stablecoin id",
   "stablecoinName": "Optional stablecoin name",
-  "pageUrl": "https://pharos.watch/...",
+  "pageUrl": "/stablecoin/1",
   "pegValue": "Optional UI value snapshot",
   "website": ""
 }
@@ -1221,10 +1237,11 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | `type` | `"bug" \| "data-correction" \| "feature-request"` | Yes | Submission category |
+| `title` | `string` | Conditional | Required for `bug` and `feature-request` (3–100 chars); optional for `data-correction` |
 | `description` | `string` | Yes | 10–2000 chars |
-| `pageUrl` | `string` | Yes | Source page URL |
+| `pageUrl` | `string` | Yes | Relative app path (must start with `/`) |
 | `website` | `string` | No | Honeypot field; non-empty is silently accepted/dropped |
-| `title`, `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string` | No | Optional metadata |
+| `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string` | No | Optional metadata |
 
 **Response**
 
