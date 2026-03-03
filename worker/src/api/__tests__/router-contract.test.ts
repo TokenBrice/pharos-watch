@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { STRICT_CONTRACT_PATHS } from "../../../../src/lib/api";
 import { route } from "../../router";
 import { mockD1 } from "./helpers/mock-d1";
+
+const STRICT_CONTRACT_PATHS = [
+  "/api/stablecoins",
+  "/api/peg-summary",
+  "/api/report-cards",
+  "/api/stability-index",
+  "/api/dex-liquidity",
+  "/api/stress-signals",
+  "/api/mint-burn-flows",
+] as const;
 
 const db = mockD1();
 const ctx = {
