@@ -108,7 +108,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
               className="text-right"
               title="30-day average annual percentage yield"
             />
-            <TableHead className="hidden md:table-cell text-center" title="Pharos Safety Grade">Grade</TableHead>
+            <TableHead className="hidden md:table-cell text-center" title="Pharos Safety Grade / Score">Safety</TableHead>
             <SortableTableHead
               sortKey="pys"
               currentSortKey={sortKey}
@@ -160,6 +160,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
         <TableBody>
           {paginated.map((row, index) => {
             const grade = row.safetyGrade;
+            const safetyScore = row.safetyScore;
             return (
               <TableRow
                 key={row.id}
@@ -187,8 +188,17 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                     <Badge
                       variant="outline"
                       className={`text-xs font-mono px-1 py-0 ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+                      title={safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade}
                     >
                       {grade}
+                    </Badge>
+                  ) : safetyScore !== null ? (
+                    <Badge
+                      variant="outline"
+                      className="text-xs font-mono px-1 py-0 text-muted-foreground"
+                      title={`Safety score: ${Math.round(safetyScore)}/100 (grade unavailable)`}
+                    >
+                      {Math.round(safetyScore)}
                     </Badge>
                   ) : (
                     <span className="text-muted-foreground">--</span>
