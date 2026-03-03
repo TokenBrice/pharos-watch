@@ -150,6 +150,29 @@ describe("fetchAlchemyLogs", () => {
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("builds correct sparse topic array for multi-topic filters", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 1, result: [] }),
+      { status: 200 },
+    ));
+    const budget = createBudget(100);
+    await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract",
+      [
+        { index: 0, value: "0xddf252ad..." },
+        { index: 2, value: "0x0000000000000000000000000000000000000000000000000000000000000000" },
+      ],
+      100, 200, budget,
+    );
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.params[0].topics).toEqual([
+      "0xddf252ad...",
+      null,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+    ]);
+  });
 });
 
 // --- resolveBlockTimestamps ---

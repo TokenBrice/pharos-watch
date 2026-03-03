@@ -51,7 +51,13 @@ async function jsonRpcCall<T>(
     await res.body?.cancel();
     return null;
   }
-  const json = (await res.json()) as JsonRpcResponse<T>;
+  let json: JsonRpcResponse<T>;
+  try {
+    json = (await res.json()) as JsonRpcResponse<T>;
+  } catch {
+    console.warn(`[alchemy-logs] ${method} HTTP ${res.status} non-JSON body`);
+    return null;
+  }
   if (json.error) {
     console.warn(`[alchemy-logs] ${method} error (${json.error.code}): ${json.error.message}`);
     return null;
