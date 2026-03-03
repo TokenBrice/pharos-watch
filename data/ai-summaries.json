@@ -728,5 +728,35 @@
     "title": "Dividends as Collateral",
     "text": "Apyx introduced what might be the most creative collateral backing in stablecoins: preferred shares from Digital Asset Treasury companies — publicly traded equity from firms like Strategy that hold large crypto positions. The theory is that variable-rate preferred shares trade near par regardless of crypto price volatility, providing stable collateral for a dollar token. Launched on Ethereum in February 2026 with DeFi Development Corp as an early investor, apxUSD is so new that market cap data barely exists. The Protocol-Owned Liquidity buffer is meant to absorb stress, but the underlying question is whether equity dividends from crypto-holding companies are truly uncorrelated with the crypto market they depend on.",
     "updatedAt": "2026-03-02"
+  },
+  "cg-ustb": {
+    "title": "T-Bills Awaiting a Charter",
+    "text": "Superstate's USTB is what happens when a fintech company decides the path to institutional credibility runs through the SEC's traditional fund registration process. At ~$876 million it is one of the larger tokenized T-bill products, trading at ~$11/share — a number that surprises anyone who expects a stablecoin dashboard entry to hold at $1. BNY Mellon holds the segregated account, Ernst & Young signs off annually, and sub-advisor Federated Hermes manages the actual T-bills while Superstate handles the on-chain tokenization. A pending conversion to a Section 2(a)(7) registered money market fund would make it the first on-chain MMF with that designation, unlocking institutional mandates currently blocked by fund policy. USTB's real market position is as yield-bearing infrastructure: it appears in the collateral stacks of frxUSD, m^0, and other stablecoins that want T-bill exposure without managing the compliance themselves.",
+    "updatedAt": "2026-03-03"
+  },
+  "cg-ousg": {
+    "title": "The Hundred-Dollar Stablecoin",
+    "text": "OUSG entered the market as a tokenized T-bill fund and quietly became BlackRock's largest single on-chain client — Ondo I LP migrated $95 million into BUIDL in March 2024 and has held that position since, making OUSG essentially a first-class derivative of BlackRock's tokenized money market presence. At roughly $113 per token, it is the least dollar-like entry on any stablecoin dashboard, which is why Ondo maintains rOUSG — a rebasing sibling that stays at $1 while OUSG appreciates. The November 2025 closure of an SEC investigation without charges removed the key regulatory overhang that had been suppressing institutional inflows. Restricted to U.S. Qualified Purchasers with on-chain KYC enforcement — tokens literally cannot transfer to non-whitelisted addresses — OUSG is less a stablecoin and more a tokenized mutual fund that borrowed the infrastructure.",
+    "updatedAt": "2026-03-03"
+  },
+  "cg-uscc": {
+    "title": "The Basis Trade, Institutionalized",
+    "text": "Calling USCC an RWA fund is technically accurate and culturally misleading — roughly half the portfolio consists of crypto cash-and-carry trades running long BTC, ETH, SOL, and XRP spot against short futures, with T-bills and Superstate's own USTB providing the buffer. The structure targets T-bill-plus returns without directional crypto exposure, a delta-neutral thesis compelling enough that Aave V3 absorbed $123 million of it as collateral and Sky (MakerDAO) allocated another $100 million. Whether the basis trade delivers consistent premium over T-bills depends on futures markets staying in contango — which tends to be true in bull markets and suspiciously fragile when it matters most. USCC is Superstate's more interesting product: less obvious than a T-bill fund, and less obvious about what its risk profile actually looks like during a crypto deleveraging event.",
+    "updatedAt": "2026-03-03"
+  },
+  "cg-mtbill": {
+    "title": "Europe's T-Bill Token",
+    "text": "mTBILL is Midas's compliance-first answer to the tokenized T-bill race: a BlackRock IB01 ETF wrapper issued as a Liechtenstein FMA-approved MiFID II instrument, which is exactly the bureaucratic sentence required to legally sell T-bill exposure to European professionals. Ankura Trust provides daily on-chain NAV attestations, custody sits at Maerki Baumann in Switzerland, and the token contract is identical on Ethereum and Base — convenient deployment, if mildly unusual. The 'not available to U.S. or UK retail persons' restriction is the mirror image of USTB and OUSG's American access gates, carving out a European institutional niche in a market dominated by U.S. issuers. At $47 million mTBILL is the infrastructure layer in Midas's product stack — mF-ONE's liquidity sleeve depends on it, and it functions as stable collateral in third-party structured products.",
+    "updatedAt": "2026-03-03"
+  },
+  "355": {
+    "title": "The Circle Spinout Nobody Googles",
+    "text": "OpenTrade was spun out from Circle, which is why its vault contracts run on Circle's own open-source Perimeter Protocol — an origin that lends credibility and implies institutional DNA without requiring Circle's blessing. XMMF holds Fidelity's USD Money Market Fund through a Cayman SPC with J.P. Morgan as both custodian and broker, which is institutional plumbing worthy of a product ten times its $39 million size. Avalanche hosts roughly three-quarters of supply, an unusual distribution for an EVM-native product, explained by early partnerships with Avalanche-native institutional DeFi integrations. With no CoinGecko listing and no DefiLlama stablecoin coverage, XMMF exists almost entirely within the authenticated OpenTrade dashboard and a handful of Avalanche protocols — the tokenized equivalent of a well-run operation that has no particular interest in being discovered.",
+    "updatedAt": "2026-03-03"
+  },
+  "cg-dinari-usd": {
+    "title": "The Recycled Symbol",
+    "text": "The USD+ ticker is doing its second tour on this dashboard — its predecessor from Overnight Finance was removed as abandoned in 2025, and Dinari has claimed the same symbol for a completely different product. Dinari is primarily a tokenized equity company (dShares), and USD+ reads as a logical adjacency: if you are already tokenizing stocks, the cash sitting alongside them should be on-chain too. The token maintains $1 while balances rebase upward as T-bill yield accrues, tracking the Bloomberg U.S. Treasury Floating Rate Bond Index — a more specific benchmark than most competing rebasing stablecoins bother to name. At $10 million and explicitly unavailable to U.S. persons despite the issuer being an SEC-registered U.S. transfer agent, USD+ occupies a peculiar position: American infrastructure, serving everyone except Americans.",
+    "updatedAt": "2026-03-03"
   }
 }

@@ -2909,6 +2909,158 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
 
+  // ── Tokenized treasury / RWA fund tokens ──────────────────────────
+  usd("cg-ustb", "Superstate USTB", "USTB", "rwa-backed", "centralized", {
+    geckoId: "superstate-short-duration-us-government-securities-fund-ustb",
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Superstate T-bill fund", yieldType: "nav-appreciation" },
+    collateral: "Short-duration U.S. Treasury Bills and government agency securities (weighted average maturity ~28 days), held in a segregated non-rehypothecated account at The Bank of New York Mellon; holdings disclosed publicly on a daily basis; sub-advised by Federated Hermes",
+    pegMechanism: "NAV-accreting fund share token (not pegged to $1); price launched at ~$10/share and appreciates continuously as Treasury income accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services each NYSE/Federal Reserve business day",
+    proofOfReserves: { type: "independent-audit", url: "https://superstate.com/assets/ustb", provider: "Ernst & Young LLP (annual audit); Chronicle VAO + Chainlink oracle provide daily on-chain NAV transparency" },
+    links: [
+      { label: "Website", url: "https://superstate.com/assets/ustb" },
+      { label: "Twitter", url: "https://x.com/superstatefunds" },
+      { label: "Docs", url: "https://docs.superstate.com/ustb" },
+    ],
+    jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Delaware Statutory Trust; restricted to U.S. Qualified Purchasers and Accredited Investors" },
+    contracts: [
+      { chain: "ethereum", address: "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e", decimals: 6 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    reserves: [
+      { name: "Short-term U.S. Treasury Bills and government agency securities (WAM ~28 days)", pct: 100, risk: "very-low" },
+    ],
+  }),
+  usd("cg-ousg", "Ondo OUSG", "OUSG", "rwa-backed", "centralized", {
+    geckoId: "ousg",
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Ondo Finance T-bill fund", yieldType: "nav-appreciation" },
+    collateral: "Primarily BlackRock USD Institutional Digital Liquidity Fund (BUIDL), which holds short-term U.S. Treasury bills, cash, and repurchase agreements; secondary allocations to BlackRock FedFund (TFDXX) and USDC for liquidity; Ondo I LP is the largest single holder of BUIDL; migrated from iShares SHV ETF to BUIDL in March 2024",
+    pegMechanism: "NAV-accreting fund share token (not pegged to $1); token price rises daily as Treasury income accrues; instant mint/redemption at daily NAV via OUSGInstantManager against USDC (T+0 settlement via BUIDL on-chain liquidity); token transfers restricted to KYC-verified whitelisted addresses on-chain",
+    proofOfReserves: { type: "self-reported", url: "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing", provider: "NAV Consulting, Inc. (fund administrator; daily NAV reports published with up to 3-day lag)" },
+    links: [
+      { label: "Website", url: "https://ondo.finance/ousg" },
+      { label: "Twitter", url: "https://x.com/ondofinance" },
+      { label: "Docs", url: "https://docs.ondo.finance/qualified-access-products/ousg" },
+      { label: "Proof of Reserve", url: "https://drive.google.com/drive/folders/1Ti8IzoXTibM3B2RWxystT38ISrPH-rRP?usp=sharing" },
+    ],
+    jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers" },
+    contracts: [
+      { chain: "ethereum", address: "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92", decimals: 18 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    reserves: [
+      // Source: Ondo Finance docs + Arbitrum STEP application. Migrated from SHV ETF to BUIDL in March 2024.
+      { name: "BlackRock BUIDL (U.S. T-bills, cash, repos)", pct: 85, risk: "low", coinId: "173" },
+      { name: "BlackRock FedFund (TFDXX) and USDC liquidity", pct: 15, risk: "very-low" },
+    ],
+  }),
+  usd("cg-uscc", "Superstate USCC", "USCC", "rwa-backed", "centralized", {
+    geckoId: "superstate-uscc",
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Superstate crypto carry fund", yieldType: "nav-appreciation" },
+    collateral: "Crypto cash-and-carry (basis) trades across Bitcoin, Ether, Solana (including staking), and XRP spot positions with offsetting short futures/forwards on CME and OTC counterparties (e.g. FalconX); uninvested capital and collateral reserves held in USD, USDC, and/or Superstate USTB; custodied at Anchorage Digital Bank N.A.",
+    pegMechanism: "NAV-accreting fund share token (not pegged to $1); token price launched at $10/share and appreciates as carry yield accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services at 17:00 ET on NYSE business days",
+    proofOfReserves: { type: "independent-audit", url: "https://superstate.com/assets/uscc", provider: "Ernst & Young LLP (annual audit); weekly holdings and daily NAV published publicly at superstate.com/assets/uscc" },
+    links: [
+      { label: "Website", url: "https://superstate.com/assets/uscc" },
+      { label: "Twitter", url: "https://x.com/superstatefunds" },
+      { label: "Docs", url: "https://docs.superstate.com/superstate-funds/uscc" },
+    ],
+    jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers" },
+    contracts: [
+      { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
+    ],
+    collateralQuality: "exotic",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    reserves: [
+      // Source: Superstate USCC public holdings page, 2026-03-03. Allocation changes dynamically.
+      { name: "USD collateral and USDC", pct: 27, risk: "very-low" },
+      { name: "Superstate USTB (tokenized T-bills)", pct: 22, risk: "low", coinId: "cg-ustb" },
+      { name: "Staked SOL (basis trade, long spot + short futures)", pct: 20, risk: "medium" },
+      { name: "XRP spot custody (basis trade, long spot + short futures)", pct: 15, risk: "medium" },
+      { name: "EtherFi wrapped eETH (basis trade)", pct: 12, risk: "medium" },
+      { name: "BTC and ETH positions (basis trades)", pct: 4, risk: "medium" },
+    ],
+  }),
+  usd("cg-mtbill", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
+    geckoId: "midas-mtbill",
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Midas T-bill fund", yieldType: "nav-appreciation" },
+    collateral: "Short-duration U.S. Treasury Bills (maturity <3 months) via BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01); physical custody by Maerki Baumann & Co. AG (Switzerland); security ring-fencing by ATG Azimut Treuhandgesellschaft mbH; target return = 8-week U.S. T-Bill yield minus ~50 bps",
+    pegMechanism: "NAV-accreting token (not pegged to $1); price launched at ~$1.00 and appreciates continuously as T-bill yield accrues; permissioned mint/redeem at daily NAV via Midas smart contracts in USDC/USDT or fiat; NAV oracle published daily by Ankura Trust Company",
+    proofOfReserves: { type: "independent-audit", url: "https://midas.app/transparency", provider: "Ankura Trust Company (independent third-party; provides daily on-chain NAV attestations)" },
+    links: [
+      { label: "Website", url: "https://midas.app/mtbill" },
+      { label: "Twitter", url: "https://x.com/MidasRWA" },
+      { label: "Docs", url: "https://docs.midas.app/tokens/mtbill" },
+    ],
+    jurisdiction: { country: "Germany", regulator: "Liechtenstein FMA", license: "MiFID II Derivative Debt Instrument; EEA-passported; not available to U.S. or UK retail persons" },
+    contracts: [
+      { chain: "ethereum", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18 },
+      { chain: "base", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    reserves: [
+      { name: "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)", pct: 97, risk: "very-low" },
+      { name: "USD cash buffer", pct: 3, risk: "very-low" },
+    ],
+  }),
+  usd("355", "OpenTrade XMMF", "XMMF", "rwa-backed", "centralized", {
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "OpenTrade money market fund", yieldType: "nav-appreciation" },
+    collateral: "U.S. Treasury bills and Fidelity USD Money Market Fund; assets held in a bankruptcy-remote Cayman SPC (OpenTrade SPC) custodied at J.P. Morgan; subscriptions in USDC or USDT",
+    pegMechanism: "NAV-accreting vault token (not pegged to $1); XMMF/USDC exchange rate increases daily as interest accrues (compounded at 23:59 GMT by investment advisor Five Sigma Finance); investors deposit USDC/USDT and redeem same-day before 18:00 UK time; benchmark = 4-week Bank Discount Daily Treasury Rate minus 50 bps",
+    proofOfReserves: { type: "self-reported", url: "https://app.opentrade.io", provider: "Five Sigma Finance Ltd. (FCA appointed representative; weekly attestations via authenticated client dashboard)" },
+    links: [
+      { label: "Website", url: "https://www.opentrade.io" },
+      { label: "Twitter", url: "https://x.com/opentrade_io" },
+      { label: "Docs", url: "https://docs.opentrade.io" },
+    ],
+    jurisdiction: { country: "Cayman Islands", regulator: "UK FCA (via Five Sigma Finance Ltd., appointed representative of Capricorn Fund Managers)", license: "Non-regulated Cayman SPC; investment advisor FCA-regulated; restricted to qualified/professional investors" },
+    contracts: [
+      { chain: "avalanche", address: "0x09ca60ca323a6313ae144778c3ebdfccfbb5e5d2", decimals: 6 },
+      { chain: "ethereum", address: "0x1e571c87556f216662fa8d25143b1b0618512ef6", decimals: 6 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    reserves: [
+      { name: "Fidelity USD Money Market Fund", pct: 90, risk: "very-low" },
+      { name: "USD and USDC liquidity", pct: 10, risk: "very-low" },
+    ],
+  }),
+  usd("cg-dinari-usd", "Dinari USD+", "USD+", "rwa-backed", "centralized", {
+    geckoId: "dinari-usd",
+    yieldBearing: true, rwa: true,
+    yieldConfig: { yieldSource: "Short-term U.S. Treasury bills", yieldType: "rebase" },
+    collateral: "Short-term U.S. Treasury Bills managed to track the Bloomberg U.S. Treasury Floating Rate Bond Index; held in a bankruptcy-remote Reserves Vault with a third-party custodian (undisclosed)",
+    pegMechanism: "1:1 mint and redemption against USDC or USDT; peg held at $1.00 while yield from T-bill returns is distributed to all holders via on-chain rebasing — balances automatically increase without manual staking",
+    proofOfReserves: { type: "self-reported", url: "https://usd.dinari.com/transparency", provider: "Third-party custodian (undisclosed); Dinari states regular reserve audits but does not publicly name the attestation firm" },
+    links: [
+      { label: "Website", url: "https://usd.dinari.com/" },
+      { label: "Twitter", url: "https://x.com/DinariGlobal" },
+      { label: "Docs", url: "https://docs.dinari.com/" },
+    ],
+    jurisdiction: { country: "United States", regulator: "SEC", license: "Registered Transfer Agent (Section 17A(c)); not available to U.S. persons" },
+    contracts: [
+      { chain: "arbitrum", address: "0xfc90518d5136585ba45e34ed5e1d108bd3950cfa", decimals: 6 },
+    ],
+    collateralQuality: "rwa",
+    custodyModel: "institutional",
+    governanceQuality: "regulated-entity",
+    reserves: [
+      { name: "Short-term U.S. Treasury Bills (Bloomberg Floating Rate Index)", pct: 100, risk: "very-low" },
+    ],
+  }),
+
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
     geckoId: "xsgd",
