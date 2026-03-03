@@ -64,4 +64,21 @@ describe("handleDexLiquidity", () => {
     const res = await handleDexLiquidity(db);
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
+
+  it("reconstructs methodologyVersion from updatedAt when DB version is null", async () => {
+    const legacyRow = {
+      ...makeDexLiquidityRow({
+        updated_at: 1772280000, // v3.0 window
+      }),
+      methodology_version: null,
+    };
+    const db = mockD1([
+      { match: "dex_liquidity", rows: [legacyRow] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const res = await handleDexLiquidity(db);
+    const body = (await res.json()) as Record<string, { methodologyVersion: string }>;
+    expect(body["1"]?.methodologyVersion).toBe("3.0");
+  });
 });

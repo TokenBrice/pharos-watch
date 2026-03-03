@@ -261,7 +261,16 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
 ```json
 {
   "events": [DepegEvent, ...],
-  "total": 4080
+  "total": 4080,
+  "methodology": {
+    "version": "4.4",
+    "versionLabel": "v4.4",
+    "currentVersion": "4.4",
+    "currentVersionLabel": "v4.4",
+    "changelogPath": "/methodology/depeg-changelog/",
+    "asOf": 1772606400,
+    "isCurrent": true
+  }
 }
 ```
 
@@ -285,6 +294,18 @@ Results are ordered by `startedAt` descending (most recent first).
 | `pegReference` | `number` | Reference peg value used (USD) |
 | `source` | `"live" \| "backfill"` | Detection method |
 
+**`methodology`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | `string` | Methodology version attributed from the latest returned event timestamp |
+| `versionLabel` | `string` | Display label (e.g. `"v4.4"`) |
+| `currentVersion` | `string` | Latest methodology version |
+| `currentVersionLabel` | `string` | Display label for latest methodology version |
+| `changelogPath` | `string` | Relative URL to the methodology changelog page |
+| `asOf` | `number` | Unix timestamp used for methodology attribution |
+| `isCurrent` | `boolean` | Whether `version` matches `currentVersion` |
+
 ---
 
 ### `GET /api/peg-summary`
@@ -298,7 +319,16 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 ```json
 {
   "coins": [PegSummaryCoin, ...],
-  "summary": PegSummaryStats
+  "summary": PegSummaryStats,
+  "methodology": {
+    "version": "4.4",
+    "versionLabel": "v4.4",
+    "currentVersion": "4.4",
+    "currentVersionLabel": "v4.4",
+    "changelogPath": "/methodology/depeg-changelog/",
+    "asOf": 1772606400,
+    "isCurrent": true
+  }
 }
 ```
 
@@ -322,6 +352,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `activeDepeg` | `boolean` | Whether a depeg event is currently open |
 | `lastEventAt` | `number \| null` | Unix seconds of most recent depeg event |
 | `trackingSpanDays` | `number` | Days of history used for score computation |
+| `methodologyVersion` | `string` | Methodology version attributed to this coin snapshot |
 | `dexPriceCheck` | `DexPriceCheck \| null` | Optional cross-validation against DEX price |
 
 **`DexPriceCheck`**
@@ -344,6 +375,8 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `coinsAtPeg` | `number` | Coins with current deviation < 100 bps |
 | `totalTracked` | `number` | Total coins in the response |
 | `fallbackPegRates` | `string[]` | *(optional)* pegType keys using stale FX fallback rates |
+
+**`methodology`** — same fields and semantics as `/api/depeg-events`
 
 ---
 
@@ -456,6 +489,7 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 | `organicFraction` | `number \| null` | Fraction of TVL from organic (non-incentivized) pools |
 | `durabilityScore` | `number \| null` | Score for pool maturity and reliability |
 | `scoreComponents` | `ScoreComponents \| null` | Breakdown of the composite liquidity score |
+| `methodologyVersion` | `string` | Methodology version attributed to this row |
 
 **`ScoreComponents`**
 
@@ -517,7 +551,8 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
     "tvl": 1658000000,
     "volume24h": 1700000000,
     "score": 93,
-    "date": 1771500000
+    "date": 1771500000,
+    "methodologyVersion": "3.1"
   }
 ]
 ```
@@ -528,6 +563,7 @@ Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC m
 | `volume24h` | `number` | 24 h volume at time of snapshot (USD) |
 | `score` | `number \| null` | Liquidity score at time of snapshot |
 | `date` | `number` | Unix seconds |
+| `methodologyVersion` | `string` | Methodology version attributed to this snapshot |
 
 ---
 
@@ -1094,9 +1130,27 @@ Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
 ```json
 {
   "signals": {
-    "1": { "score": 5, "band": "CALM", "signals": { "supply": { "value": 2, "available": true }, ... }, "computedAt": 1740000000 }
+    "1": {
+      "score": 5,
+      "band": "CALM",
+      "signals": {
+        "supply": { "value": 2, "available": true },
+        "price": { "value": 1, "available": true }
+      },
+      "computedAt": 1740000000,
+      "methodologyVersion": "4.4"
+    }
   },
-  "updatedAt": 1740000000
+  "updatedAt": 1740000000,
+  "methodology": {
+    "version": "4.4",
+    "versionLabel": "v4.4",
+    "currentVersion": "4.4",
+    "currentVersionLabel": "v4.4",
+    "changelogPath": "/methodology/depeg-changelog/",
+    "asOf": 1740000000,
+    "isCurrent": true
+  }
 }
 ```
 
@@ -1104,10 +1158,41 @@ Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
 
 ```json
 {
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
-  "history": [{ "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... } }]
+  "current": {
+    "score": 5,
+    "band": "CALM",
+    "signals": {
+      "supply": { "value": 2, "available": true },
+      "price": { "value": 1, "available": true }
+    },
+    "computedAt": 1740000000,
+    "methodologyVersion": "4.4"
+  },
+  "history": [
+    {
+      "date": 1739900000,
+      "score": 3,
+      "band": "CALM",
+      "signals": {
+        "supply": { "value": 1, "available": true },
+        "price": { "value": 1, "available": true }
+      },
+      "methodologyVersion": "4.3"
+    }
+  ],
+  "methodology": {
+    "version": "4.4",
+    "versionLabel": "v4.4",
+    "currentVersion": "4.4",
+    "currentVersionLabel": "v4.4",
+    "changelogPath": "/methodology/depeg-changelog/",
+    "asOf": 1740000000,
+    "isCurrent": true
+  }
 }
 ```
+
+**`methodology`** — same fields and semantics as `/api/depeg-events`
 
 ---
 

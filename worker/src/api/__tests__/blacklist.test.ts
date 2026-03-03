@@ -85,6 +85,15 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(400);
   });
 
+  it("accepts valid stablecoin symbol filters", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "blacklist_events", rows: [row] },
+    ]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
+    expect(res.status).toBe(200);
+  });
+
   it("rejects invalid chain parameter with 400", async () => {
     const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chain=InvalidChain"));

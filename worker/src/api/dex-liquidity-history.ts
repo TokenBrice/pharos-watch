@@ -1,6 +1,6 @@
 import { withErrorHandler, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "../../../src/lib/liquidity-score-version";
+import { getLiquidityMethodologyVersionAt } from "../../../src/lib/liquidity-score-version";
 
 interface LiquidityHistoryRow {
   total_tvl_usd: number;
@@ -56,7 +56,7 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
     volume24h: row.total_volume_24h_usd,
     score: row.liquidity_score,
     date: row.snapshot_date,
-    methodologyVersion: row.methodology_version ?? LIQUIDITY_METHODOLOGY_VERSION,
+    methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.snapshot_date),
   }));
 
   return jsonResponse(history, { "Cache-Control": CACHE_PROFILES.slow });

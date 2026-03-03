@@ -1,4 +1,4 @@
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "../../../src/lib/chains";
@@ -10,6 +10,7 @@ import {
   toBlacklistTrackerMethodologyVersionLabel,
 } from "../../../src/lib/blacklist-tracker-version";
 
+const VALID_STABLECOINS = new Set(["USDC", "USDT", "PAXG", "XAUT"]);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
 
@@ -25,11 +26,12 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   const filterBindings: (string | number)[] = [];
 
   if (stablecoin) {
-    if (!isValidStablecoinId(stablecoin)) {
-      return errorResponse(400, "Invalid stablecoin ID");
+    const normalized = stablecoin.toUpperCase();
+    if (!VALID_STABLECOINS.has(normalized)) {
+      return errorResponse(400, "Invalid stablecoin parameter");
     }
     conditions.push("stablecoin = ?");
-    filterBindings.push(stablecoin);
+    filterBindings.push(normalized);
   }
   if (chain) {
     if (!VALID_CHAIN_NAMES.has(chain)) {

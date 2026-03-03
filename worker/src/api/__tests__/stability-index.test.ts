@@ -68,4 +68,41 @@ describe("handleStabilityIndex contract tests", () => {
       expect(typedBody.history[0]).toHaveProperty("methodologyVersion");
     }
   });
+
+  it("reconstructs methodology version from timestamps when DB version is null", async () => {
+    const legacySample = {
+      stored_at: 1772068000, // PSI v1.3 window
+      score: 68.4,
+      band: "TREMOR",
+      components: JSON.stringify({ severity: 20, breadth: 8, trend: 1 }),
+      input_snapshot: JSON.stringify({ contributors: [] }),
+      methodology_version: null,
+    };
+
+    const legacyHistory = {
+      computed_at: 1772068000,
+      score: 68.4,
+      band: "TREMOR",
+      components: JSON.stringify({ severity: 20, breadth: 8, trend: 1 }),
+      input_snapshot: null,
+      methodology_version: null,
+    };
+
+    const db = mockD1([
+      { match: "stability_index_samples", rows: [legacySample], first: legacySample },
+      { match: "stability_index", rows: [legacyHistory] },
+    ]);
+
+    const res = await handleStabilityIndex(db, new URL("https://x/api/stability-index"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      current: { methodologyVersion: string };
+      history: Array<{ methodologyVersion: string }>;
+      methodology: { version: string };
+    };
+
+    expect(body.current.methodologyVersion).toBe("1.3");
+    expect(body.history[0]?.methodologyVersion).toBe("1.3");
+    expect(body.methodology.version).toBe("1.3");
+  });
 });

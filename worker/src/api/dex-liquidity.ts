@@ -1,6 +1,6 @@
 import { withErrorHandler, safeParse, addFreshnessHeaders, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "../../../src/lib/liquidity-score-version";
+import { getLiquidityMethodologyVersionAt } from "../../../src/lib/liquidity-score-version";
 
 interface DexLiquidityRow {
   stablecoin_id: string;
@@ -135,7 +135,7 @@ export const handleDexLiquidity = withErrorHandler("dex-liquidity", async (db: D
       durabilityScore: row.durability_score ?? null,
       scoreComponents: safeParse<unknown>(row.score_components_json, null),
       lockedLiquidityPct: row.locked_liquidity_pct ?? null,
-      methodologyVersion: row.methodology_version ?? LIQUIDITY_METHODOLOGY_VERSION,
+      methodologyVersion: row.methodology_version ?? getLiquidityMethodologyVersionAt(row.updated_at),
     };
   }
 

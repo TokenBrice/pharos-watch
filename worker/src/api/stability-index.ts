@@ -5,6 +5,7 @@ import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION_LABEL,
+  getPsiMethodologyVersionAt,
   toPsiMethodologyVersionLabel,
 } from "../../../src/lib/stability-index-version";
 
@@ -64,6 +65,8 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   const avg24h = avg24hRow?.avg != null ? Math.round(avg24hRow.avg * 10) / 10 : undefined;
   const avg24hBand = avg24h != null ? getConditionBand(avg24h) : undefined;
+  const resolveMethodologyVersion = (version: string | null | undefined, ts: number) =>
+    version ?? getPsiMethodologyVersionAt(ts);
 
   // Build history array (newest-first from stability_index)
   const history = results.map((r) => detail
@@ -72,13 +75,13 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       score: r.score,
       band: r.band,
       components: safeParse(r.components, {}),
-      methodologyVersion: r.methodology_version ?? PSI_METHODOLOGY_VERSION,
+      methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
     }
     : {
       date: r.computed_at,
       score: r.score,
       band: r.band,
-      methodologyVersion: r.methodology_version ?? PSI_METHODOLOGY_VERSION,
+      methodologyVersion: resolveMethodologyVersion(r.methodology_version, r.computed_at),
     }
   );
 
@@ -86,10 +89,13 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   if (todayAvgRow?.avg != null) {
     const todayScore = Math.round(todayAvgRow.avg * 10) / 10;
     const todayBand = getConditionBand(todayScore);
+    const latestSampleTs = latestSample?.stored_at ?? todayMidnight;
     const todayMethodologyVersion =
-      latestSample?.methodology_version ??
-      results[0]?.methodology_version ??
-      PSI_METHODOLOGY_VERSION;
+      latestSample
+        ? resolveMethodologyVersion(latestSample.methodology_version, latestSampleTs)
+        : results[0]
+          ? resolveMethodologyVersion(results[0].methodology_version, results[0].computed_at)
+          : getPsiMethodologyVersionAt(todayMidnight);
     // Prepend to newest-first array (today is the newest)
     history.unshift({
       date: todayMidnight,
@@ -100,10 +106,9 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   }
 
   const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
+  const currentMethodologyTs = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? computedAt);
   const methodologyVersion =
-    currentSource.methodology_version ??
-    results[0]?.methodology_version ??
-    PSI_METHODOLOGY_VERSION;
+    resolveMethodologyVersion(currentSource.methodology_version, currentMethodologyTs);
 
   return jsonResponse({
     current: {
