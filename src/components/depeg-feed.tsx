@@ -55,7 +55,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
           Recent Depeg Events
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5" aria-live="polite">
+      <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
         {visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
           return (
@@ -109,7 +109,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
         })}
 
         {hasMore && (
-          <div className="pt-2 text-center">
+          <div className="pt-2 text-center lg:col-span-3">
             <Button
               variant="ghost"
               size="sm"

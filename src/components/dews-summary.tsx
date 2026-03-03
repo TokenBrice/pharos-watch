@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
@@ -320,6 +320,15 @@ function DEWSRadar({
   const uid = useId();
   const wakeGradId = `dews-wake-${uid}`;
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [isFinePointer, setIsFinePointer] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const sync = () => setIsFinePointer(mql.matches);
+    sync();
+    mql.addEventListener("change", sync);
+    return () => mql.removeEventListener("change", sync);
+  }, []);
 
   const hex = THREAT_BAND_HEX[highest];
   const dur = sweepDuration(highest);
@@ -380,7 +389,13 @@ function DEWSRadar({
           key={coin.id}
           coin={coin}
           onHover={setHoveredId}
-          onClick={onCoinClick}
+          onClick={(id) => {
+            if (isFinePointer) {
+              onCoinClick(id);
+              return;
+            }
+            setHoveredId((current) => (current === id ? null : id));
+          }}
         />
       ))}
       {hoveredId && (() => {
