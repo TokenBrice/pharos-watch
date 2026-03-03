@@ -34,10 +34,14 @@ describe("handleStressSignals contract tests", () => {
     const res = await handleStressSignals(db, url);
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const json = await res.json();
 
-    const parsed = StressSignalsAllResponseSchema.safeParse(body);
+    const parsed = StressSignalsAllResponseSchema.safeParse(json);
     expect(parsed.success).toBe(true);
+    if (!parsed.success) {
+      throw new Error("StressSignalsAllResponseSchema parse failed");
+    }
+    const body = parsed.data;
     expect(body).toHaveProperty("signals");
     expect(body).toHaveProperty("updatedAt");
     expect(body).toHaveProperty("methodology");
@@ -73,10 +77,14 @@ describe("handleStressSignals contract tests", () => {
     const res = await handleStressSignals(db, url);
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const json = await res.json();
 
-    const parsed = StressSignalDetailResponseSchema.safeParse(body);
+    const parsed = StressSignalDetailResponseSchema.safeParse(json);
     expect(parsed.success).toBe(true);
+    if (!parsed.success) {
+      throw new Error("StressSignalDetailResponseSchema parse failed");
+    }
+    const body = parsed.data;
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
     expect(body).toHaveProperty("methodology");
