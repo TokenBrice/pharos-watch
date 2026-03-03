@@ -1,16 +1,15 @@
 # Mint/Burn Flow Tracker
 
-On-chain mint and burn event tracker for stablecoins. Detects Transfer events (and USDT-specific Issue/Redeem events) on Ethereum, aggregates them into hourly flow buckets, computes per-coin Flow Intensity Scores, a market-cap-weighted Bank Run Gauge, and flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
-
-**Phase 1:** Ethereum only, 10 stablecoins tracked.
+On-chain mint and burn event tracker for stablecoins across multiple EVM chains via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, computes per-coin Flow Intensity Scores, a market-cap-weighted Bank Run Gauge, and flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
 
 ---
 
 ## Cron Schedule
 
 - **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
-- **Shares slot with:** `sync-blacklist` (both share one Etherscan rate limiter)
-- **Function:** `syncMintBurn(db, etherscanApiKey, etherscanRL)`
+- **Shares slot with:** `sync-blacklist` (independent providers — Alchemy for mint/burn, Etherscan for blacklist)
+- **Function:** `syncMintBurn(db, alchemyApiKey)`
+- **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** `worker/src/index.ts` (line 231)
 - **Returns:** `{ itemCount, metadata: JSON { contractsProcessed, contractsSkipped, apiErrors } }`
@@ -30,9 +29,9 @@ On-chain mint and burn event tracker for stablecoins. Detects Transfer events (a
 | `NEUTRAL` | 50 | Neutral Flow Intensity Score |
 | `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
-| `MAX_SCAN_RANGE` | 50,000 | Max block range per contract per cycle (~7 days of ETH blocks) |
+| `CHAIN_SCAN_RANGE` | 50K (ETH/ARB/BASE/OPT), 10K (AVAX), 2K (Polygon) | Max block range per contract per cycle (per-chain Alchemy limits) |
 | `startBlock` | 21,900,000 | All 10 contracts start scanning from this Ethereum block |
-| Subrequest budget | 200 per cron run | Etherscan API call budget |
+| Subrequest budget | 200 per cron run | Alchemy API call budget |
 
 ---
 
@@ -77,11 +76,12 @@ Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-qua
 ## Sync Algorithm
 
 1. **Load sync state** — batch query `mint_burn_sync_state` for all 10 contract config keys. Falls back to `startBlock - 1` for new configs.
-2. **Get chain head** — single Etherscan `eth_blockNumber` call (shared budget).
+2. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
 3. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
 4. **For each contract config:**
    - Skip if `fromBlock > chainHead` or subrequest budget exhausted.
-   - For each event definition, call Etherscan v2 `getLogs` with compound topic filters.
+   - For each event definition, call Alchemy `eth_getLogs` with compound topic filters.
+   - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs.
    - Parse logs: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price).
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`.
@@ -327,12 +327,22 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | Price unavailable at sync time | `amount_usd` stored as NULL; backfillable via admin endpoint |
 | Fewer than 7 days of flow history | FIS returns `null`; coin excluded from gauge weighting |
 | All coins have null FIS | Gauge score returns `null`; frontend shows "Calibrating" state |
-| Etherscan API error for a config | `apiErrors` incremented; sync state NOT advanced (retried next cycle) |
+| Alchemy API error for a config | `apiErrors` incremented; sync state NOT advanced (retried next cycle) |
+| Incomplete timestamp resolution | `configError = true`; sync state not advanced, retried next cycle |
 | Subrequest budget exhausted | Remaining configs skipped; picked up in next cron cycle |
 | Block explorer indexing lag | 75-block safety margin prevents advancing past un-indexed blocks |
 | Duplicate events | `INSERT OR IGNORE` on deterministic `id` key prevents duplicates |
 | Unknown stablecoin ID in per-coin API | Returns 404 with descriptive error |
 | Missing `stablecoin` param in events API | Returns 400 |
+
+### Circuit Breaker Separation
+
+Blacklist and mint/burn have independent circuit breakers:
+
+- **`CIRCUIT_SOURCE.ETHERSCAN`** — used by `sync-blacklist` (Etherscan REST API)
+- **`CIRCUIT_SOURCE.ALCHEMY`** — used by `sync-mint-burn` (Alchemy JSON-RPC)
+
+An Alchemy outage does not block blacklist sync, and vice versa. Each circuit breaker opens after consecutive failures and probes independently.
 
 ---
 
@@ -351,12 +361,12 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 ---
 
-## Phase 2 (Planned)
+## Future Work
 
-Not yet implemented. Constants defined in `mint-burn-contracts.ts`:
+Multi-chain EVM support (Ethereum, Arbitrum, Base, Optimism, Avalanche) is implemented via Alchemy JSON-RPC. Remaining items:
 
-- **Tron support:** USDT Issue/Redeem topic hashes already defined
-- **Additional EVM chains:** Base, Arbitrum, Optimism, Polygon
+- **Tron support:** USDT Issue/Redeem topic hashes already defined in `mint-burn-contracts.ts`
+- **Polygon:** Alchemy supports it (2K block range limit), but no contract configs use it yet
 - **Curve Finance detection:** DEX-level flow tracking
 
 ---

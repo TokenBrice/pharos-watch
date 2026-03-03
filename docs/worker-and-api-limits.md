@@ -112,7 +112,7 @@ Primary source for TVL, supply data, and protocol metadata. No documented hard r
 
 ## Etherscan V2 (Free API Key)
 
-Used for blacklist event fetching and on-chain balance lookups.
+Used for blacklist event fetching and on-chain balance lookups. Mint/burn flows have been migrated to Alchemy.
 
 | Resource | Limit |
 |---|---|
@@ -141,7 +141,7 @@ Used for USDT-Tron blacklist event fetching.
 
 ---
 
-## Alchemy (Free Plan)
+## Alchemy (PAYG Plan)
 
 Primary RPC provider for EVM chains (Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Tron).
 
@@ -153,7 +153,18 @@ Primary RPC provider for EVM chains (Ethereum, Arbitrum, Base, Optimism, Polygon
 | **`eth_call` cost** | 26 CUs |
 | **Overage** | HTTP 429 — no auto-upgrade |
 
-> **Key constraint**: The on-chain supply cron is the biggest consumer. Batch `eth_call` calls (our code supports up to 25 per batch on Alchemy). 30M CUs ÷ 26 CU/call = ~1.15 M `eth_call`s/month.
+> **Key constraint**: The on-chain supply cron and mint/burn flow sync are the two biggest consumers. Batch `eth_call` calls (our code supports up to 25 per batch on Alchemy). 30M CUs ÷ 26 CU/call = ~1.15 M `eth_call`s/month.
+
+**Mint/burn usage**: `sync-mint-burn` now uses Alchemy for all `eth_getLogs` and `eth_blockNumber` calls.
+Steady-state: ~35 getLogs + 4 blockNumbers + ~30 batch timestamp lookups per run → ~3,000 CUs/run.
+72 runs/day × 30 days → ~6.5M CUs/month (22% of 30M free-tier CU cap).
+
+**Per-chain `eth_getLogs` block range limits (PAYG):**
+| Chain | Limit |
+|---|---|
+| Ethereum, Arbitrum, Base, Optimism | Unlimited |
+| Avalanche | 10,000 blocks |
+| Polygon | 2,000 blocks |
 
 ---
 
@@ -312,7 +323,7 @@ Fallback for FX rates when Frankfurter is unavailable.
 | CoinGecko monthly quota (500K calls) | Medium — pool crawl can spike | 🟡 Monitor `/key` endpoint for usage |
 | D1 storage (10 GB hard cap) | Plenty now, but supply history + liquidity history grows | 🟡 Add periodic pruning if tables grow fast |
 | Etherscan free tier (chains) | Base/BNB/Avalanche/Optimism need paid plan | 🟡 Paid at $49/chain/mo if we track those |
-| Alchemy free CUs (30M/month) | Tight if on-chain supply cron is frequent | 🟡 Monitor usage |
+| Alchemy PAYG CUs (30M free + $0.40/M over) | ~6.5M CUs/month for supply + mint/burn combined | 🟢 Plenty of headroom |
 | CoinMarketCap Basic (10K credits/month) | Fine as last-resort fallback only | 🟢 |
 | GeckoTerminal crawl budget (15 min/run) | Enforced by code — not all coins crawled every run | 🟢 Accepted tradeoff |
 | Twitter Free tier (500 posts/month) | 1/day = ~30/month | 🟢 |

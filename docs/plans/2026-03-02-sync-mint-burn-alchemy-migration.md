@@ -1,3 +1,5 @@
+> **Status: IMPLEMENTED** — See implementation plan: `2026-03-02-sync-mint-burn-alchemy-migration-plan.md`
+
 # Mint/Burn Log Fetching: Etherscan → Alchemy Migration
 
 > Research & design handover document — 2026-03-02
