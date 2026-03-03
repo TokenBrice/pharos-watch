@@ -14,6 +14,7 @@ const LAST_EDITED: Record<string, string> = {
   "/methodology/": "2026-02-28",
   "/methodology/scoring-changelog/": "2026-02-28",
   "/methodology/blacklist-tracker-changelog/": "2026-03-03",
+  "/methodology/liquidity-score-changelog/": "2026-03-03",
   "/methodology/stability-index-changelog/": "2026-03-03",
   "/depeg/": "2026-03-02",
   "/yield/": "2026-03-02",
@@ -117,6 +118,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: "https://pharos.watch/methodology/blacklist-tracker-changelog/",
       lastModified: new Date(LAST_EDITED["/methodology/blacklist-tracker-changelog/"]!),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: "https://pharos.watch/methodology/liquidity-score-changelog/",
+      lastModified: new Date(LAST_EDITED["/methodology/liquidity-score-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },

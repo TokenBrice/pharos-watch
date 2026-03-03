@@ -8,6 +8,7 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/blacklist-tracker-version";
+import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@/lib/liquidity-score-version";
 
 export const metadata: Metadata = {
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -738,8 +739,19 @@ export default function MethodologyPage() {
 
       {/* Liquidity Score */}
       <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
-        <CardHeader>
-          <CardTitle as="h2">Liquidity Score</CardTitle>
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Liquidity Score</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-500">
+              {LIQUIDITY_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href="/methodology/liquidity-score-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic changes.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
