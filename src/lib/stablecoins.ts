@@ -2945,10 +2945,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Delaware Statutory Trust; restricted to U.S. Qualified Purchasers and Accredited Investors" },
     contracts: [
       { chain: "ethereum", address: "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e", decimals: 6 },
+      { chain: "plume", address: "0xe4fa682f94610ccd170680cc3b045d77d9e528a8", decimals: 6 },
     ],
     collateralQuality: "rwa",
     custodyModel: "institutional",
     governanceQuality: "regulated-entity",
+    deploymentModel: "native-multichain",
     reserves: [
       { name: "Short-term U.S. Treasury Bills and government agency securities (WAM ~28 days)", pct: 100, risk: "very-low" },
     ],
@@ -2969,10 +2971,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers" },
     contracts: [
       { chain: "ethereum", address: "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92", decimals: 18 },
+      { chain: "polygon", address: "0xba11c5effa33c4d6f8f593cfa394241cfe925811", decimals: 18 },
+      { chain: "solana", address: "i7u4r16TcsJTgq1kAG8opmVZyVnAKBwLKu6ZPMwzxNc", decimals: 6 },
     ],
     collateralQuality: "rwa",
     custodyModel: "institutional",
     governanceQuality: "regulated-entity",
+    deploymentModel: "third-party-bridge",
     reserves: [
       // Source: Ondo Finance docs + Arbitrum STEP application. Migrated from SHV ETF to BUIDL in March 2024.
       { name: "BlackRock BUIDL (U.S. T-bills, cash, repos)", pct: 85, risk: "low", coinId: "173" },
@@ -2994,10 +2999,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers" },
     contracts: [
       { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
+      { chain: "plume", address: "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", decimals: 6 },
     ],
     collateralQuality: "exotic",
     custodyModel: "institutional",
     governanceQuality: "regulated-entity",
+    deploymentModel: "native-multichain",
     reserves: [
       // Source: Superstate USCC public holdings page, 2026-03-03. Allocation changes dynamically.
       { name: "USD collateral and USDC", pct: 27, risk: "very-low" },
@@ -3024,10 +3031,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     contracts: [
       { chain: "ethereum", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18 },
       { chain: "base", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18 },
+      { chain: "rootstock", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18 },
+      { chain: "plume", address: "0xe85f2b707ec5ae8e07238f99562264f304e30109", decimals: 18 },
+      { chain: "etherlink", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18 },
     ],
     collateralQuality: "rwa",
     custodyModel: "institutional",
     governanceQuality: "regulated-entity",
+    deploymentModel: "native-multichain",
     reserves: [
       { name: "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)", pct: 97, risk: "very-low" },
       { name: "USD cash buffer", pct: 3, risk: "very-low" },
@@ -3052,6 +3063,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "rwa",
     custodyModel: "institutional",
     governanceQuality: "regulated-entity",
+    chainTier: "established-alt-l1",
+    deploymentModel: "native-multichain",
     reserves: [
       { name: "Fidelity USD Money Market Fund", pct: 90, risk: "very-low" },
       { name: "USD and USDC liquidity", pct: 10, risk: "very-low" },
@@ -3076,6 +3089,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "rwa",
     custodyModel: "institutional",
     governanceQuality: "regulated-entity",
+    chainTier: "stage1-l2",
+    deploymentModel: "third-party-bridge",
     reserves: [
       { name: "Short-term U.S. Treasury Bills (Bloomberg Floating Rate Index)", pct: 100, risk: "very-low" },
     ],

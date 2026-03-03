@@ -99,4 +99,5 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   injective:      { name: "Injective",       explorerUrl: "https://explorer.injective.network",           evmChainId: null,     type: "other", logoPath: "/chains/injective.png"      },
   movement:       { name: "Movement",        explorerUrl: "https://explorer.movementnetwork.xyz",         evmChainId: null,     type: "other", logoPath: "/chains/movement.png"       },
   stacks:         { name: "Stacks",          explorerUrl: "https://explorer.hiro.so",                     evmChainId: null,     type: "other", logoPath: "/chains/stacks.png"         },
+  rootstock:      { name: "Rootstock",       explorerUrl: "https://rootstock.blockscout.com",              evmChainId: 30,       type: "evm",   logoPath: "/chains/rootstock.png"      },
 };

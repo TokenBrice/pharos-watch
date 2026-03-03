@@ -1,6 +1,6 @@
 # Adding a New Stablecoin
 
-Step-by-step reference for adding a coin to `TRACKED_STABLECOINS` in `src/lib/stablecoins.ts`. The process has six phases; all are automatable via the skills listed below.
+Step-by-step reference for adding a coin to `TRACKED_STABLECOINS` in `src/lib/stablecoins.ts`. The process has seven phases; all are automatable via the skills listed below.
 
 ---
 
@@ -140,7 +140,39 @@ usd("cg-example", "Acme Stablecoin", "AUSD", "rwa-backed", "centralized", {
 
 ---
 
-## Phase 4 — Optional enrichment skills
+## Phase 4 — Add the logo
+
+Logos are served from `public/logos/` and mapped in `data/logos.json`. Both must be updated.
+
+### 1. Place the image file
+
+| ID type | File name convention | Example |
+|---------|----------------------|---------|
+| Numeric DL ID | `{id}-{symbol-lowercase}.{ext}` | `129-usdy.png` |
+| `cg-` prefix | `{id}.{ext}` | `cg-ousg.png` |
+| Custom string ID | `{id}.{ext}` | `gold-vro.png` |
+
+Accepted formats: `.png`, `.svg`, `.jpg`, `.webp`. Prefer `.svg` > `.png` > `.webp` > `.jpg`. Aim for at least 64×64 px; square or near-square crops look best in the UI.
+
+**Sources (in order of preference):**
+1. Official project website or GitHub repo (often has a high-res SVG/PNG in press kits or `assets/`)
+2. CoinGecko coin page (the thumbnail URL is usually `assets.coingecko.com/coins/images/{n}/large/...`)
+3. DefiLlama coin page
+
+### 2. Register it in `data/logos.json`
+
+Add one line mapping the coin's ID to its public path:
+
+```json
+"129": "/logos/129-usdy.png",
+"cg-ousg": "/logos/cg-ousg.png",
+```
+
+Keep the file sorted by key (numeric IDs first in insertion order, `cg-` and custom string IDs at the end) — this matches the existing file layout.
+
+---
+
+## Phase 5 — Optional enrichment skills
 
 Run these after the base entry is in place, depending on what data is still missing:
 
@@ -153,7 +185,7 @@ Run these after the base entry is in place, depending on what data is still miss
 
 ---
 
-## Phase 5 — AI summary
+## Phase 6 — AI summary
 
 Run the `write-ai-summaries` skill. It reads the coin's entry from `stablecoins.ts` and writes a sardonic, data-driven editorial summary to `data/ai-summaries.json`.
 
@@ -165,7 +197,7 @@ Key voice guidelines (see the skill for full detail):
 
 ---
 
-## Phase 6 — Backfill supply history
+## Phase 7 — Backfill supply history
 
 Newly added coins have no historical rows in the `supply_history` table. Without a backfill the market cap chart on the detail page will be empty until tomorrow's daily snapshot cron runs (and will stay empty forever for all prior dates).
 
@@ -203,13 +235,13 @@ curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=cg-ousg
 
 ---
 
-## Phase 7 — Verify and push
+## Phase 8 — Verify and push
 
 ```bash
 npm run build          # TypeScript compile + static export; must pass with zero errors
 python3 -m json.tool data/ai-summaries.json > /dev/null  # validate JSON
 npm test               # run test suite (optional but recommended)
-git add src/lib/stablecoins.ts data/ai-summaries.json
+git add src/lib/stablecoins.ts data/ai-summaries.json data/logos.json public/logos/
 git commit -m "Add {SYMBOL}: {one-line description}"
 git push origin main
 ```
