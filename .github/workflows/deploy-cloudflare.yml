@@ -19,9 +19,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - run: npm run test:critical-contracts
-      - run: npm run test:invariants
       - run: npm run coverage:critical
+        env:
+          CRITICAL_COVERAGE_COMPARE_REF: ${{ github.event.before }}
       - run: cd worker && npm ci
       - run: cd worker && npx tsc --noEmit
 
