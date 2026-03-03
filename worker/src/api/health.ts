@@ -6,6 +6,7 @@ interface HealthResponse {
   timestamp: number;
   caches: Record<string, CacheStatus>;
   blacklist: { totalEvents: number; missingAmounts: number };
+  mintBurn: { totalEvents: number };
   circuits: Record<string, CircuitRecord>;
 }
 
@@ -31,6 +32,22 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
     console.error("[health] Failed to query blacklist counts:", err);
   }
 
+  let mintBurn = { totalEvents: 0 };
+  try {
+    const counts = await db
+      .prepare(
+        `SELECT
+           COALESCE(SUM(mint_count + burn_count), 0) as total
+         FROM mint_burn_hourly`,
+      )
+      .first<{ total: number }>();
+    if (counts) {
+      mintBurn = { totalEvents: counts.total };
+    }
+  } catch (err) {
+    console.error("[health] Failed to query mint/burn counts:", err);
+  }
+
   // Check circuit breaker states
   let circuits: Record<string, CircuitRecord> = {};
   try {
@@ -46,7 +63,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
   const status: HealthResponse["status"] =
     worstRatioMut > 2 ? "stale" : worstRatioMut > 1.5 ? "degraded" : "healthy";
 
-  const body: HealthResponse = { status, timestamp: now, caches, blacklist, circuits };
+  const body: HealthResponse = { status, timestamp: now, caches, blacklist, mintBurn, circuits };
 
   return jsonResponse(body, { "Cache-Control": "no-store" });
 });

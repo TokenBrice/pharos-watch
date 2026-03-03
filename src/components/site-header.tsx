@@ -21,9 +21,18 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: dexMap } = useDexLiquidity();
 
   const blacklistEvents = health?.blacklist.totalEvents;
+  const mintBurnEvents = health?.mintBurn?.totalEvents;
   const totalPools = useMemo(
     () => dexMap ? Object.values(dexMap).reduce((sum, d) => sum + d.poolCount, 0) : undefined,
     [dexMap],
+  );
+  const trackedStats = useMemo(
+    () => [
+      totalPools != null ? `${formatCount(totalPools)} pools processed` : null,
+      blacklistEvents != null ? `${formatCount(blacklistEvents)} blacklist events recorded` : null,
+      mintBurnEvents != null ? `${formatCount(mintBurnEvents)} mint/burn events recorded` : null,
+    ].filter((entry): entry is string => entry !== null),
+    [totalPools, blacklistEvents, mintBurnEvents],
   );
 
   return (
@@ -32,9 +41,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
       <h1 className="text-xl font-mono uppercase tracking-[0.2em] font-semibold">Pharos</h1>
       <span className="text-xs text-muted-foreground/60 font-mono">
         {total} stablecoins tracking {pegCount} pegs on {chainCount} chains.
-        {totalPools != null && <> {formatCount(totalPools)} pools processed,</>}
-        {blacklistEvents != null && <> {formatCount(blacklistEvents)} blacklist events recorded</>}
-        {(totalPools != null || blacklistEvents != null) && <>: </>}
+        {trackedStats.length > 0 && <> {trackedStats.join(", ")}: </>}
         <span className="italic text-muted-foreground/40">Pharos sees it all</span>
       </span>
     </div>

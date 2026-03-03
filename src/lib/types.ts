@@ -774,6 +774,7 @@ export interface HealthResponse {
   timestamp: number;
   caches: Record<string, CacheStatus>;
   blacklist: { totalEvents: number; missingAmounts: number };
+  mintBurn: { totalEvents: number };
   circuits: Record<string, CircuitRecord>;
 }
 
