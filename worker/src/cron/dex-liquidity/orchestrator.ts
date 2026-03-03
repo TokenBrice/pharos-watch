@@ -172,10 +172,10 @@ export async function syncDexLiquidity(
   await computeDexPrices(db, priceObservations, nowSec);
 
   return {
-    itemCount: scoreResults.length,
+    itemCount: scoreResults.size,
     metadata: JSON.stringify({
       rowsRead: dataSources.pools.length,
-      rowsWritten: scoreResults.length,
+      rowsWritten: scoreResults.size,
       rowsDropped: 0,
       sourceCoverage: {
         dlYieldsAvailable: dataSources.dlYieldsAvailable,
