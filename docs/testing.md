@@ -16,11 +16,12 @@ npm run test:critical-contracts # Critical endpoint contract suite
 npm run test:invariants # Critical numerical/schema invariant suite
 npm run coverage:critical # Full coverage + critical-path line-coverage gate
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints
+npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check (Playwright CLI)
 ```
 
 ## CI Pipeline
 
-Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys are now gated in four jobs:
+Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys now run in five jobs:
 
 1. `validate` (runs before any deployment):
    - `npm run lint`
@@ -40,8 +41,11 @@ Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys are now gated in f
    - `npm run build`
    - `npm run seo:check`
    - Deploy to Cloudflare Pages
+5. `smoke-ui` (needs `deploy-pages`):
+   - Run `npm run test:smoke-ui`
+   - Uses `SMOKE_UI_URL` from `vars.SMOKE_UI_URL` (fallback: `https://pharos.watch`)
 
-This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks.
+This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
 
 ## Test Setup
 
@@ -141,6 +145,7 @@ const row = makeBlacklistRow({ stablecoin: "2", event_type: "freeze" });
 | `reserve-templates.test.ts` | `src/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
 | `reserve-coinid-validation.test.ts` | `src/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
+| `strict-path-drift.test.ts` | `src/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage |
 
 ### Frontend Component Tests (`src/__tests__/`)
 
@@ -264,7 +269,8 @@ Current critical file set:
 
 - `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus router mapping tests to guarantee these paths are wired in `worker/src/router.ts`.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
-- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health`, `/api/stablecoins`, and `/api/peg-summary`.
+- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions.
+- `npm run test:smoke-ui` performs a fast browser smoke check on the live homepage and fails on the `Failed to load data` outage state.
 
 ## Adding a New Test
 

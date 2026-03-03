@@ -1,0 +1,9 @@
+[
+  "/api/stablecoins",
+  "/api/peg-summary",
+  "/api/report-cards",
+  "/api/stability-index",
+  "/api/dex-liquidity",
+  "/api/stress-signals",
+  "/api/mint-burn-flows"
+]

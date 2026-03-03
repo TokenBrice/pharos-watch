@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { STRICT_CONTRACT_PATHS_LIST } from "../../../../src/lib/strict-contract-paths";
 import { route } from "../../router";
 import { mockD1 } from "./helpers/mock-d1";
-
-const STRICT_CONTRACT_PATHS = [
-  "/api/stablecoins",
-  "/api/peg-summary",
-  "/api/report-cards",
-  "/api/stability-index",
-  "/api/dex-liquidity",
-  "/api/stress-signals",
-  "/api/mint-burn-flows",
-] as const;
 
 const db = mockD1();
 const ctx = {
@@ -20,7 +11,7 @@ const ctx = {
 
 describe("router contract: strict frontend paths are routable", () => {
   it("routes all strict contract paths", async () => {
-    for (const path of STRICT_CONTRACT_PATHS) {
+    for (const path of STRICT_CONTRACT_PATHS_LIST) {
       const result = route(new URL(`https://api.pharos.watch${path}`), db, ctx);
       expect(result, `expected route for ${path}`).not.toBeNull();
 

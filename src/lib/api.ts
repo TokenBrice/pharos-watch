@@ -1,4 +1,5 @@
 import type { ZodType } from "zod";
+import { STRICT_CONTRACT_PATHS_LIST } from "./strict-contract-paths";
 
 export function resolveApiBase(
   hostname?: string | null,
@@ -23,15 +24,7 @@ export function resolveApiBase(
 const browserHostname = typeof window !== "undefined" ? window.location.hostname : null;
 export const API_BASE = resolveApiBase(browserHostname);
 
-export const STRICT_CONTRACT_PATHS = new Set([
-  "/api/stablecoins",
-  "/api/peg-summary",
-  "/api/report-cards",
-  "/api/stability-index",
-  "/api/dex-liquidity",
-  "/api/stress-signals",
-  "/api/mint-burn-flows",
-]);
+export const STRICT_CONTRACT_PATHS = new Set(STRICT_CONTRACT_PATHS_LIST);
 
 export class SchemaValidationError extends Error {
   readonly path: string;
