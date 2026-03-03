@@ -10,12 +10,13 @@ describe("handleDexLiquidityHistory", () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
     const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=1"));
     expect(res.status).toBe(200);
-    const body = (await res.json()) as Array<{ tvl: number; volume24h: number; score: number | null; date: number }>;
+    const body = (await res.json()) as Array<{ tvl: number; volume24h: number; score: number | null; date: number; methodologyVersion: string }>;
     expect(body).toHaveLength(1);
     expect(body[0]).toHaveProperty("tvl");
     expect(body[0]).toHaveProperty("volume24h");
     expect(body[0]).toHaveProperty("score");
     expect(body[0]).toHaveProperty("date");
+    expect(body[0]).toHaveProperty("methodologyVersion");
   });
 
   it("returns 200 with empty array when no data", async () => {

@@ -462,6 +462,7 @@ export interface DexLiquidityData {
     crossChain: number;
   } | null;
   lockedLiquidityPct?: number | null;
+  methodologyVersion: string;
 }
 
 export const DexLiquidityDataSchema = z.object({
@@ -499,6 +500,7 @@ export const DexLiquidityDataSchema = z.object({
     crossChain: z.number(),
   }).nullable(),
   lockedLiquidityPct: z.number().nullable().optional(),
+  methodologyVersion: z.string(),
 });
 
 export interface DexLiquidityHistoryPoint {
@@ -506,6 +508,7 @@ export interface DexLiquidityHistoryPoint {
   volume24h: number;
   score: number | null;
   date: number;
+  methodologyVersion: string;
 }
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;

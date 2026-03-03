@@ -5,6 +5,7 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@/lib/liquidity-score-version";
 
 const LiquidityClient = dynamic(
   () => import("./client").then((m) => ({ default: m.LiquidityClient })),
@@ -40,7 +41,7 @@ export default function LiquidityPage() {
           <span>/</span>
           <span className="text-foreground">DEX Liquidity</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">DEX Liquidity <FeatureStatusBadge status="mature" /></h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">DEX Liquidity <FeatureStatusBadge status="mature" version={LIQUIDITY_METHODOLOGY_VERSION_LABEL} /></h1>
         <p className="text-sm text-muted-foreground">
           Liquidity scores, pool depth, and protocol breakdowns for {TRACKED_STABLECOINS.length} stablecoins
           across decentralized exchanges.

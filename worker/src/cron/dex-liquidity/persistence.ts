@@ -1,4 +1,5 @@
 import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "../../../../src/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import type { LiquidityMetrics, ScoreResult, FullScoreResult, GlobalAgg } from "./types";
 
@@ -25,8 +26,8 @@ export async function persistScores(
              top_pools_json, liquidity_score, concentration_hhi,
              avg_pool_stress, weighted_balance_ratio, organic_fraction,
              effective_tvl_usd, durability_score, score_components_json,
-             locked_liquidity_pct, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             locked_liquidity_pct, methodology_version, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .bind(
           id,
@@ -49,6 +50,7 @@ export async function persistScores(
           sr.durability,
           JSON.stringify(sr.components),
           sr.lockedLiqPct,
+          LIQUIDITY_METHODOLOGY_VERSION,
           nowSec,
         ),
     );
@@ -64,10 +66,10 @@ export async function persistScores(
             `INSERT OR REPLACE INTO dex_liquidity
               (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
                pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json,
-               top_pools_json, liquidity_score, effective_tvl_usd, updated_at)
-            VALUES (?, ?, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, 0, ?)`
+               top_pools_json, liquidity_score, effective_tvl_usd, methodology_version, updated_at)
+            VALUES (?, ?, 0, 0, 0, 0, 0, 0, NULL, NULL, NULL, NULL, 0, ?, ?)`
           )
-          .bind(meta.id, meta.symbol, nowSec),
+          .bind(meta.id, meta.symbol, LIQUIDITY_METHODOLOGY_VERSION, nowSec),
       );
     }
   }
@@ -79,8 +81,8 @@ export async function persistScores(
         `INSERT OR REPLACE INTO dex_liquidity
           (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
            pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json,
-           top_pools_json, liquidity_score, effective_tvl_usd, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, 0, ?)`
+           top_pools_json, liquidity_score, effective_tvl_usd, methodology_version, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, NULL, NULL, 0, ?, ?)`
       )
       .bind(
         "__global__",
@@ -92,6 +94,7 @@ export async function persistScores(
         globalAgg.chainCount,
         JSON.stringify(globalAgg.protocolTvl),
         JSON.stringify(globalAgg.chainTvl),
+        LIQUIDITY_METHODOLOGY_VERSION,
         nowSec,
       ),
   );
@@ -120,10 +123,10 @@ export async function writeHistoricalSnapshots(
           db
             .prepare(
               `INSERT OR IGNORE INTO dex_liquidity_history
-                (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date)
-              VALUES (?, ?, ?, ?, ?)`
+                (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
+              VALUES (?, ?, ?, ?, ?, ?)`
             )
-            .bind(id, data.tvl, data.vol24h, data.score, todayMidnight)
+            .bind(id, data.tvl, data.vol24h, data.score, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
         );
       }
       // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
@@ -133,10 +136,10 @@ export async function writeHistoricalSnapshots(
             db
               .prepare(
                 `INSERT OR IGNORE INTO dex_liquidity_history
-                  (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date)
-                VALUES (?, 0, 0, NULL, ?)`
+                  (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
+                VALUES (?, 0, 0, NULL, ?, ?)`
               )
-              .bind(meta.id, todayMidnight)
+              .bind(meta.id, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
           );
         }
       }

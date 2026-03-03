@@ -110,6 +110,7 @@ export function makeDexLiquidityRow(overrides: Partial<{
   avg_pool_stress: number | null; weighted_balance_ratio: number | null;
   organic_fraction: number | null; durability_score: number | null;
   score_components_json: string | null; locked_liquidity_pct: number | null;
+  methodology_version: string | null;
 }> = {}) {
   return {
     stablecoin_id: overrides.stablecoin_id ?? "1",
@@ -133,6 +134,7 @@ export function makeDexLiquidityRow(overrides: Partial<{
     durability_score: overrides.durability_score ?? 75,
     score_components_json: overrides.score_components_json ?? null,
     locked_liquidity_pct: overrides.locked_liquidity_pct ?? null,
+    methodology_version: overrides.methodology_version ?? "3.2",
   };
 }
 
@@ -154,12 +156,14 @@ export function makeYieldHistoryRow(overrides: Partial<{
 export function makeDexLiquidityHistoryRow(overrides: Partial<{
   total_tvl_usd: number; total_volume_24h_usd: number;
   liquidity_score: number | null; snapshot_date: number;
+  methodology_version: string | null;
 }> = {}) {
   return {
     total_tvl_usd: overrides.total_tvl_usd ?? 500_000_000,
     total_volume_24h_usd: overrides.total_volume_24h_usd ?? 10_000_000,
     liquidity_score: overrides.liquidity_score ?? 85,
     snapshot_date: overrides.snapshot_date ?? Math.floor(Date.now() / 1000) - 86400,
+    methodology_version: overrides.methodology_version ?? "3.2",
   };
 }
 

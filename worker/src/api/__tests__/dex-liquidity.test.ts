@@ -24,6 +24,7 @@ describe("handleDexLiquidity", () => {
     expect(coin).toHaveProperty("protocolTvl");
     expect(coin).toHaveProperty("topPools");
     expect(coin).toHaveProperty("updatedAt");
+    expect(coin).toHaveProperty("methodologyVersion");
   });
 
   it("returns 200 with empty map when no data", async () => {
