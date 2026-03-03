@@ -18,7 +18,7 @@ const TIME_RANGES = [
 ] as const;
 
 function FlowsPageInner() {
-  const [hours, setHours] = useState(24);
+  const [hours, setHours] = useState(720);
   const { data, isLoading, error, dataUpdatedAt, refetch } =
     useMintBurnFlows(hours);
 
