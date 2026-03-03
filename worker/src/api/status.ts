@@ -126,10 +126,14 @@ export const handleStatus = withErrorHandler(
     for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
       const runs = cronByJob.get(job) ?? [];
       const lastRun = runs.length > 0 ? runs[0] : null;
+      const isFresh = lastRun != null && now - lastRun.startedAt <= interval * 2;
+      const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
       const healthy =
-        lastRun != null &&
-        lastRun.status === "ok" &&
-        now - lastRun.startedAt <= interval * 2;
+        isFresh &&
+        (
+          lastRun!.status === "ok" ||
+          (lastRun!.status === "skipped_locked" && hasFreshOk)
+        );
 
       if (!healthy) unhealthyCrons++;
       if (lastRun?.status === "error") {

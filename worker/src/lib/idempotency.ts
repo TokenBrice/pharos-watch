@@ -40,7 +40,9 @@ async function requestFingerprint(request: Request): Promise<string> {
   const clone = request.clone();
   const body = await clone.text().catch(() => "");
   const url = new URL(request.url);
-  const canonical = `${request.method}\n${url.pathname}\n${url.searchParams.toString()}\n${body}`;
+  const sortedSearchParams = new URLSearchParams(url.searchParams);
+  sortedSearchParams.sort();
+  const canonical = `${request.method}\n${url.pathname}\n${sortedSearchParams.toString()}\n${body}`;
   return sha256Hex(canonical);
 }
 

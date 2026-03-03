@@ -177,4 +177,35 @@ describe("handleStatus", () => {
     expect(syncStablecoins).toHaveProperty("healthy");
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
   });
+
+  it("keeps cron healthy when latest run is skipped_locked but a fresh ok run exists", async () => {
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      {
+        match: "cron_runs",
+        rows: [
+          makeCronRow("sync-stablecoins", "skipped_locked", 30),
+          makeCronRow("sync-stablecoins", "ok", 90),
+        ],
+      },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+    ]);
+
+    const request = new Request("https://x/api/status", {
+      headers: { "X-Admin-Key": "secret-key" },
+    });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      crons: Record<string, { healthy: boolean }>;
+    };
+
+    expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
+  });
 });

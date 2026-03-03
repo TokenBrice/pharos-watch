@@ -143,4 +143,34 @@ describe("runIdempotentAdminAction", () => {
     expect(firstResponse.status).toBe(200);
     expect(calls).toBe(1);
   });
+
+  it("treats equivalent query params with different ordering as the same request", async () => {
+    const db = makeIdempotencyDb();
+    const requestA = new Request("https://x/api/backfill-depegs?batch=1&dry-run=false", {
+      method: "POST",
+      headers: { "Idempotency-Key": "abc-order" },
+      body: JSON.stringify({ batch: 1 }),
+    });
+    const requestB = new Request("https://x/api/backfill-depegs?dry-run=false&batch=1", {
+      method: "POST",
+      headers: { "Idempotency-Key": "abc-order" },
+      body: JSON.stringify({ batch: 1 }),
+    });
+
+    let calls = 0;
+    const execute = async () => {
+      calls++;
+      return new Response(JSON.stringify({ ok: true, calls }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+
+    const first = await runIdempotentAdminAction(db, "backfill-depegs", requestA, execute);
+    const second = await runIdempotentAdminAction(db, "backfill-depegs", requestB, execute);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(calls).toBe(1);
+    expect(second.headers.get("X-Idempotent-Replay")).toBe("true");
+  });
 });
