@@ -187,6 +187,14 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
 ];
 
 /**
+ * Deterministic price-derived fallback for yield-bearing coins that have no
+ * usable on-chain rate source and no DeFiLlama pool.
+ */
+export const PRICE_DERIVED_FALLBACK_IDS = new Set([
+  "173", // BUIDL - BlackRock/Securitize fund (not tracked in DL Yields)
+]);
+
+/**
  * Curated protocol allowlist for automatic lending pool discovery (Wave 2).
  * Only pools from these protocols are considered for non-yield-bearing coins.
  *
@@ -195,6 +203,9 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
  *
  * Tier 2 (established, well-audited):
  *   fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle
+ *
+ * Tier 3 (targeted additions to expand coverage):
+ *   justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx
  */
 export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   // Tier 1
@@ -211,4 +222,10 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "kamino-lend",
   "morpho-v1",
   "pendle",
+  // Tier 3
+  "justlend",
+  "openeden-usdo",
+  "multipli.fi",
+  "jupiter-lend",
+  "stables-labs-usdx",
 ]);

@@ -82,8 +82,12 @@ export const TREASURY_FISCAL_DATA_URL =
 export const PYS_SCALING_FACTOR = 5;
 /** Default safety score for unrated coins (navTokens, coins with insufficient data). */
 export const DEFAULT_SAFETY_SCORE = 40;
-/** Minimum report-card score for a coin to qualify for automatic yield discovery (C+ = 60). */
-export const MIN_SAFETY_SCORE_FOR_YIELD = 60;
+/** Minimum report-card score for a coin to qualify for automatic yield discovery (C- = 50). */
+export const MIN_SAFETY_SCORE_FOR_YIELD = 50;
+/** Minimum APY (%) for auto-discovered lending pools to be eligible. */
+export const MIN_LENDING_POOL_APY = 0.5;
+/** Minimum TVL (USD) for auto-discovered lending pools to be eligible. */
+export const MIN_LENDING_POOL_TVL_USD = 1_000_000;
 
 // --- Circuit breaker source names ---
 

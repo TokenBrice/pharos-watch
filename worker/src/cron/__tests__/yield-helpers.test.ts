@@ -188,4 +188,9 @@ describe("findBestLendingPool", () => {
     const result = findBestLendingPool("usdt", pools, allowlist);
     expect(result).not.toBeNull();
   });
+
+  it("applies optional min APY and TVL quality gates", () => {
+    const result = findBestLendingPool("USDT", pools, allowlist, { minApy: 3.1, minTvlUsd: 15_000_000 });
+    expect(result).toBeNull();
+  });
 });

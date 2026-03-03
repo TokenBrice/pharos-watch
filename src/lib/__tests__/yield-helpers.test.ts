@@ -175,4 +175,13 @@ describe("findBestLendingPool", () => {
     const result = findBestLendingPool("XSGD", [], allowlist);
     expect(result).toBeNull();
   });
+
+  it("applies optional min APY and TVL quality gates", () => {
+    const pools = [
+      makeDlPool({ pool: "a", project: "aave-v3", apy: 0.4, tvlUsd: 10_000_000 }),
+      makeDlPool({ pool: "b", project: "aave-v3", apy: 3.0, tvlUsd: 500_000 }),
+    ];
+    const result = findBestLendingPool("USDC", pools, allowlist, { minApy: 0.5, minTvlUsd: 1_000_000 });
+    expect(result).toBeNull();
+  });
 });

@@ -5,6 +5,7 @@ import { getCache, setCache, batchExecute, getFirstSeenDates } from "../lib/db";
 import {
   USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
   PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE, MIN_SAFETY_SCORE_FOR_YIELD,
+  MIN_LENDING_POOL_APY, MIN_LENDING_POOL_TVL_USD,
 } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getChainRpc } from "../lib/chain-rpcs";
@@ -15,7 +16,7 @@ import {
 } from "./yield-helpers";
 import {
   YIELD_VARIANT_MAP, YIELD_POOL_MAP, ON_CHAIN_RATE_CONFIGS,
-  LENDING_PROTOCOL_ALLOWLIST,
+  LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS,
 } from "./yield-config";
 import {
   computeOverallGrade, isBlacklistable, scoreDecentralization, scoreDependencyRisk,
@@ -259,8 +260,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       continue;
     }
 
-    // Tier 3: Price-derived (navTokens only)
-    if (meta.flags.navToken) {
+    // Tier 3: Price-derived fallback for NAV tokens and explicit fallback IDs.
+    if (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(id)) {
       const apy = await getPriceDerivedApy(db, id);
       if (apy != null) {
         resolved.push({
@@ -290,12 +291,18 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       !yieldBearingIds.has(m.id) &&
       (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
     );
-    console.log(`[sync-yield-data] Auto-discovery: ${lendingCandidates.length} candidates from ${TRACKED_STABLECOINS.length} tracked, ${yieldBearingIds.size} yield-bearing excluded`);
+    console.log(
+      `[sync-yield-data] Auto-discovery: ${lendingCandidates.length} candidates from ${TRACKED_STABLECOINS.length} tracked, ` +
+      `${yieldBearingIds.size} yield-bearing excluded (minSafety=${MIN_SAFETY_SCORE_FOR_YIELD}, minApy=${MIN_LENDING_POOL_APY}, minTvl=${MIN_LENDING_POOL_TVL_USD})`
+    );
 
     let autoCount = 0;
     for (const meta of lendingCandidates) {
-      const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST);
-      if (pool && pool.apy != null && pool.apy >= 0) {
+      const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST, {
+        minApy: MIN_LENDING_POOL_APY,
+        minTvlUsd: MIN_LENDING_POOL_TVL_USD,
+      });
+      if (pool) {
         resolved.push({
           id: meta.id,
           symbol: meta.symbol,

@@ -71,6 +71,7 @@ export function detectWarningSignals(input: WarningInput): string[] {
  * Used for non-yield-bearing stablecoins rated C+ or above (Wave 2).
  *
  * Filters: single exposure, stablecoin = true, project in allowlist, symbol match.
+ * Optional quality gates: minimum APY and minimum TVL.
  * Picks the highest-TVL pool.
  */
 export function findBestLendingPool(
@@ -81,14 +82,22 @@ export function findBestLendingPool(
     stablecoin: boolean; exposure: string;
   }>,
   allowlist: Set<string>,
+  options?: {
+    minApy?: number;
+    minTvlUsd?: number;
+  },
 ): { pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number; project: string } | null {
   const symLower = symbol.toLowerCase();
+  const minApy = options?.minApy ?? 0;
+  const minTvlUsd = options?.minTvlUsd ?? 0;
 
   const candidates = dlPools.filter((p) =>
     p.exposure === "single" &&
     p.stablecoin &&
     allowlist.has(p.project) &&
-    p.symbol.toLowerCase() === symLower
+    p.symbol.toLowerCase() === symLower &&
+    p.apy >= minApy &&
+    p.tvlUsd >= minTvlUsd
   );
 
   if (candidates.length === 0) return null;

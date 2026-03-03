@@ -84,6 +84,7 @@ vi.mock("../yield-config", () => ({
   YIELD_POOL_MAP: {},
   ON_CHAIN_RATE_CONFIGS: [],
   LENDING_PROTOCOL_ALLOWLIST: new Set(),
+  PRICE_DERIVED_FALLBACK_IDS: new Set(),
 }));
 
 // Stub report-cards (used for safety score computation)
@@ -129,7 +130,9 @@ vi.mock("../../lib/constants", () => ({
   RISK_FREE_RATE_FALLBACK: 4.5,
   PYS_SCALING_FACTOR: 1.0,
   DEFAULT_SAFETY_SCORE: 50,
-  MIN_SAFETY_SCORE_FOR_YIELD: 60,
+  MIN_SAFETY_SCORE_FOR_YIELD: 50,
+  MIN_LENDING_POOL_APY: 0.5,
+  MIN_LENDING_POOL_TVL_USD: 1_000_000,
 }));
 
 import { syncYieldData } from "../sync-yield-data";
