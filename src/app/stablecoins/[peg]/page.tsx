@@ -99,6 +99,29 @@ export default async function PegLandingPage({
           <p className="text-sm text-muted-foreground">{intro}</p>
         )}
       </div>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Stablecoin Directory
+        </h2>
+        <details className="rounded-lg border border-border/60 bg-muted/20">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+            Browse all {coins.length} {label} stablecoins
+          </summary>
+          <div className="flex flex-wrap gap-2 px-4 pb-4">
+            {coins.map((coin) => (
+              <Link
+                key={coin.id}
+                href={`/stablecoin/${coin.id}/`}
+                className="inline-flex items-center rounded-full border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors"
+              >
+                {coin.name} ({coin.symbol})
+              </Link>
+            ))}
+          </div>
+        </details>
+      </section>
+
       <PegLandingClient pegCurrency={pegCurrency} />
     </div>
   );
