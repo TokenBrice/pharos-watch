@@ -1,5 +1,5 @@
 import { ALCHEMY_CHAINS } from "./chain-rpcs";
-import type { SubrequestBudget } from "./evm-logs";
+import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 
 // --- Types ---
@@ -77,6 +77,43 @@ export async function getAlchemyBlockNumber(
     if (!result || !result.startsWith("0x")) return null;
     return parseInt(result, 16);
   } catch {
+    return null;
+  }
+}
+
+// --- Log fetching ---
+
+export async function fetchAlchemyLogs(
+  alchemyUrl: string,
+  contractAddress: string,
+  topics: TopicFilter[],
+  fromBlock: number,
+  toBlock: number,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<AlchemyLogEntry[] | null> {
+  if (budgetExhausted(budget)) return null;
+  budget.count++;
+
+  const topicArray: (string | null)[] = [];
+  for (const { index, value } of topics) {
+    while (topicArray.length <= index) topicArray.push(null);
+    topicArray[index] = value;
+  }
+
+  const params = [{
+    address: contractAddress,
+    fromBlock: "0x" + fromBlock.toString(16),
+    toBlock: "0x" + toBlock.toString(16),
+    topics: topicArray,
+  }];
+
+  try {
+    const result = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal);
+    if (result === null) return null;
+    return Array.isArray(result) ? result : null;
+  } catch (e) {
+    console.warn(`[alchemy-logs] eth_getLogs failed:`, e);
     return null;
   }
 }

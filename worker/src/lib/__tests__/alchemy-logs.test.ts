@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildAlchemyUrl, getAlchemyBlockNumber } from "../alchemy-logs";
+import { buildAlchemyUrl, getAlchemyBlockNumber, fetchAlchemyLogs } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
 
 const fetchMock = vi.fn();
@@ -65,6 +65,83 @@ describe("getAlchemyBlockNumber", () => {
   it("returns null when budget exhausted", async () => {
     const budget = createBudget(0);
     const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// --- fetchAlchemyLogs ---
+
+describe("fetchAlchemyLogs", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("returns parsed log entries on success", async () => {
+    const mockLogs = [
+      {
+        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        topics: ["0xddf252ad...", "0x0000..."],
+        data: "0x00000000000000000000000000000000000000000000000000000002540be400",
+        blockNumber: "0x176f050",
+        transactionHash: "0xabc123",
+        transactionIndex: "0x0",
+        blockHash: "0xdef456",
+        logIndex: "0x0",
+        removed: false,
+      },
+    ];
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 1, result: mockLogs }),
+      { status: 200 },
+    ));
+    const budget = createBudget(100);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      [{ index: 0, value: "0xddf252ad..." }],
+      0x176f000, 0x176f100, budget,
+    );
+    expect(result).toHaveLength(1);
+    expect(result![0].transactionHash).toBe("0xabc123");
+    expect(budget.count).toBe(1);
+  });
+
+  it("returns empty array when no logs found", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 1, result: [] }),
+      { status: 200 },
+    ));
+    const budget = createBudget(100);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract", [{ index: 0, value: "0xtopic" }],
+      100, 200, budget,
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("returns null on JSON-RPC error", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32600, message: "bad range" } }),
+      { status: 400 },
+    ));
+    const budget = createBudget(100);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract", [{ index: 0, value: "0xtopic" }],
+      100, 200, budget,
+    );
+    expect(result).toBeNull();
+  });
+
+  it("returns null when budget exhausted", async () => {
+    const budget = createBudget(0);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract", [{ index: 0, value: "0xtopic" }],
+      100, 200, budget,
+    );
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
