@@ -218,7 +218,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
                       {coin.name.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <h1 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h1>
+                  <h2 className="text-2xl font-extrabold tracking-tighter">{coin.name}</h2>
                   <span className="text-lg text-muted-foreground font-mono">{coin.symbol}</span>
                   <BluechipHeaderBadge stablecoinId={coin.id} />
                 </div>

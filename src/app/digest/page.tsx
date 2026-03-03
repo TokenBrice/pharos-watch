@@ -26,11 +26,18 @@ export default function DigestArchivePage() {
   return (
     <div className="space-y-6">
       <BreadcrumbJsonLd name="Daily Digest Archive" path="/digest/" />
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-        <span>/</span>
-        <span className="text-foreground">Daily Digest Archive</span>
-      </nav>
+      <div className="space-y-2">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+          <span>/</span>
+          <span className="text-foreground">Daily Digest Archive</span>
+        </nav>
+        <h1 className="text-4xl font-extrabold tracking-tighter">Daily Digest Archive</h1>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Every daily stablecoin recap, newest first. Browse historical entries to track major peg events,
+          market-cap shifts, and ecosystem risk transitions over time.
+        </p>
+      </div>
 
       <DigestArchiveClient />
 

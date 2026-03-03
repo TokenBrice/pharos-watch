@@ -86,6 +86,12 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
         </div>
       ) : (
         <>
+          <div className="sr-only">
+            <h1>{`${coin.name} (${coin.symbol}) Stablecoin Analytics`}</h1>
+            <p>
+              {`Live price, market cap, supply trends, chain distribution, peg score, and depeg history for ${coin.name}.`}
+            </p>
+          </div>
           <StablecoinDetailClient
             id={id}
             summary={typedSummaries[id] ?? null}

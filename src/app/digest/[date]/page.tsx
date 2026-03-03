@@ -111,10 +111,8 @@ export default async function DigestDetailPage({
           <span>/</span>
           <span className="text-foreground">{formatted}</span>
         </nav>
-        <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          {digest.title}
-          <span className="font-normal tracking-wide"> &middot; {formatted}</span>
-        </p>
+        <h1 className="text-3xl font-extrabold tracking-tighter">{digest.title}</h1>
+        <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 
       <article>
