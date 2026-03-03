@@ -3,7 +3,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 // --- Module-level mocks ---
 
-// Stub the stablecoins list — one yield-bearing, one non-yield-bearing
+// Stub the stablecoins list — one yield-bearing, two non-yield-bearing
 vi.mock("../../../../src/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     {
@@ -31,6 +31,19 @@ vi.mock("../../../../src/lib/stablecoins", () => ({
       flags: {
         pegCurrency: "USD",
         backing: "fiat-backed",
+        yieldBearing: false,
+        navToken: false,
+        governance: "centralized",
+      },
+    },
+    {
+      id: "336",
+      name: "United Stables",
+      symbol: "U",
+      geckoId: "united-stables",
+      flags: {
+        pegCurrency: "USD",
+        backing: "rwa-backed",
         yieldBearing: false,
         navToken: false,
         governance: "centralized",
@@ -83,8 +96,11 @@ vi.mock("../yield-config", () => ({
   YIELD_VARIANT_MAP: {},
   YIELD_POOL_MAP: {},
   ON_CHAIN_RATE_CONFIGS: [],
-  LENDING_PROTOCOL_ALLOWLIST: new Set(),
+  LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool"]),
   PRICE_DERIVED_FALLBACK_IDS: new Set(),
+  AUTO_LENDING_POOL_MAP: {
+    "336": "pool-u-venus",
+  },
 }));
 
 // Stub report-cards (used for safety score computation)
@@ -259,6 +275,78 @@ describe("syncYieldData", () => {
       (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi")
     );
     expect(yieldCalls.length).toBe(0);
+  });
+
+  it("applies deterministic auto-discovery override for U (id 336)", async () => {
+    const db = makeDb();
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-u-venus",
+              chain: "BSC",
+              project: "venus-core-pool",
+              symbol: "U",
+              tvlUsd: 15_000_000,
+              apy: 2.4,
+              apyBase: 2.4,
+              apyReward: null,
+              apyMean30d: 2.3,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    // sDAI cannot resolve in this fixture; deterministic override should add U.
+    expect(result.itemCount).toBe(1);
+  });
+
+  it("keeps deterministic override quality-gated (min TVL/APY/allowlist still apply)", async () => {
+    const db = makeDb();
+
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-u-venus",
+              chain: "BSC",
+              project: "venus-core-pool",
+              symbol: "U",
+              tvlUsd: 250_000, // below min TVL threshold
+              apy: 2.4,
+              apyBase: 2.4,
+              apyReward: null,
+              apyMean30d: 2.3,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: Math.floor(Date.now() / 1000),
+        };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    // Override pool exists but fails min TVL gate, so nothing should be written.
+    expect(result.itemCount).toBe(0);
   });
 
   it("handles DL yields API failure gracefully — no cached pools, API down", async () => {

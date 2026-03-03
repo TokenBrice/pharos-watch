@@ -229,3 +229,18 @@ export const LENDING_PROTOCOL_ALLOWLIST = new Set([
   "jupiter-lend",
   "stables-labs-usdx",
 ]);
+
+/**
+ * Deterministic auto-discovery overrides for non-yield-bearing coins.
+ * Maps Pharos stablecoin ID -> DeFiLlama lending pool UUID.
+ *
+ * Use this when symbol-based matching is ambiguous or prone to misses.
+ * Guardrails are still enforced at runtime:
+ * - pool must be stablecoin + single exposure
+ * - pool project must be allowlisted
+ * - pool must satisfy minimum APY and TVL thresholds
+ */
+export const AUTO_LENDING_POOL_MAP: Record<string, string> = {
+  // U (United Stables) - venus-core-pool on BSC, ~$15M TVL, ~2.4% APY
+  "336": "d8e9bb79-79d3-4897-8a4f-8d489040097d",
+};

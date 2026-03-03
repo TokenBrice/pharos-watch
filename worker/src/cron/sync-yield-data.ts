@@ -16,7 +16,7 @@ import {
 } from "./yield-helpers";
 import {
   YIELD_VARIANT_MAP, YIELD_POOL_MAP, ON_CHAIN_RATE_CONFIGS,
-  LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS,
+  LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS, AUTO_LENDING_POOL_MAP,
 } from "./yield-config";
 import {
   computeOverallGrade, isBlacklistable, scoreDecentralization, scoreDependencyRisk,
@@ -287,16 +287,58 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   // 5b. Auto-discovery: find lending pools for non-yield-bearing C+ coins
   if (dlPools.length > 0) {
     const yieldBearingIds = new Set(yieldCoins.map((m) => m.id));
+    const resolvedIds = new Set(resolved.filter((r) => r.yield != null).map((r) => r.id));
+
+    let autoCount = 0;
+    let deterministicCount = 0;
+
+    // Deterministic overrides for edge symbols that can miss dynamic matching.
+    for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
+      if (yieldBearingIds.has(stablecoinId) || resolvedIds.has(stablecoinId)) continue;
+
+      const pool = dlPools.find((p) => p.pool === poolId);
+      if (!pool) continue;
+
+      const eligible = (
+        pool.exposure === "single" &&
+        pool.stablecoin &&
+        LENDING_PROTOCOL_ALLOWLIST.has(pool.project) &&
+        pool.apy >= MIN_LENDING_POOL_APY &&
+        pool.tvlUsd >= MIN_LENDING_POOL_TVL_USD
+      );
+      if (!eligible) continue;
+
+      const meta = TRACKED_STABLECOINS.find((m) => m.id === stablecoinId);
+      if (!meta) continue;
+
+      resolved.push({
+        id: meta.id,
+        symbol: meta.symbol,
+        yield: {
+          currentApy: pool.apy,
+          apyBase: pool.apyBase,
+          apyReward: pool.apyReward,
+          sourcePool: pool.pool,
+          sourceTvlUsd: pool.tvlUsd,
+          dataSource: "defillama-auto",
+          exchangeRate: null,
+        },
+      });
+      resolvedIds.add(meta.id);
+      autoCount++;
+      deterministicCount++;
+    }
+
     const lendingCandidates = TRACKED_STABLECOINS.filter((m) =>
       !yieldBearingIds.has(m.id) &&
+      !resolvedIds.has(m.id) &&
       (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
     );
     console.log(
-      `[sync-yield-data] Auto-discovery: ${lendingCandidates.length} candidates from ${TRACKED_STABLECOINS.length} tracked, ` +
+      `[sync-yield-data] Auto-discovery: ${lendingCandidates.length} dynamic candidates from ${TRACKED_STABLECOINS.length} tracked, ` +
       `${yieldBearingIds.size} yield-bearing excluded (minSafety=${MIN_SAFETY_SCORE_FOR_YIELD}, minApy=${MIN_LENDING_POOL_APY}, minTvl=${MIN_LENDING_POOL_TVL_USD})`
     );
 
-    let autoCount = 0;
     for (const meta of lendingCandidates) {
       const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST, {
         minApy: MIN_LENDING_POOL_APY,
@@ -316,10 +358,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
             exchangeRate: null,
           },
         });
+        resolvedIds.add(meta.id);
         autoCount++;
       }
     }
-    console.log(`[sync-yield-data] Auto-discovery: found ${autoCount} lending pools`);
+    console.log(
+      `[sync-yield-data] Auto-discovery: found ${autoCount} lending pools ` +
+      `(${deterministicCount} deterministic, ${autoCount - deterministicCount} dynamic)`
+    );
   }
 
   // 6. Compute trailing averages, PYS, and store
