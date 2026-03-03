@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { scoreToGrade, DIMENSION_ORDER } from "@/lib/report-cards";
 import type {
@@ -31,6 +30,7 @@ export interface UpstreamExposure {
 }
 
 export interface PortfolioState {
+  initialized: boolean;
   holdings: PortfolioHolding[];
   totalUsd: number;
   portfolioGrade: ReportCardGrade;
@@ -413,24 +413,30 @@ function computeUpstreamExposure(
 // ---------------------------------------------------------------------------
 
 export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
-  const searchParams = useSearchParams();
-  const urlParam = searchParams.get("p");
+  // Start empty, then hydrate from URL or localStorage after mount.
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
+  const [isFromUrl, setIsFromUrl] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
-  // Determine if holdings come from URL
-  const isFromUrl = urlParam !== null && urlParam.length > 0;
-
-  // Initialize state: URL param > localStorage > empty
-  const [holdings, setHoldings] = useState<PortfolioHolding[]>(() => {
-    if (isFromUrl) return parseUrlParam(urlParam);
-    return loadFromStorage();
-  });
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParam = new URLSearchParams(window.location.search).get("p");
+    if (urlParam) {
+      setIsFromUrl(true);
+      setHoldings(parseUrlParam(urlParam));
+    } else {
+      setIsFromUrl(false);
+      setHoldings(loadFromStorage());
+    }
+    setInitialized(true);
+  }, []);
 
   // Persist to localStorage when holdings change (only if NOT from URL)
   useEffect(() => {
-    if (!isFromUrl) {
+    if (initialized && !isFromUrl) {
       saveToStorage(holdings);
     }
-  }, [holdings, isFromUrl]);
+  }, [holdings, isFromUrl, initialized]);
 
   // --- Actions ---
 
@@ -546,6 +552,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
   );
 
   return {
+    initialized,
     holdings,
     totalUsd,
     portfolioGrade,

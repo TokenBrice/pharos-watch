@@ -218,6 +218,8 @@ export function PortfolioClient() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!portfolio.initialized) return;
+
     const params = new URLSearchParams();
 
     // Encode portfolio holdings as ?p=symbol:amount,...
@@ -233,7 +235,7 @@ export function PortfolioClient() {
     const qs = params.toString();
     const newPath = qs ? `/portfolio/?${qs}` : "/portfolio/";
     router.replace(newPath, { scroll: false });
-  }, [portfolio.holdings, router]);
+  }, [portfolio.holdings, portfolio.initialized, router]);
 
   // Build synthetic ReportCard for the portfolio radar chart
   const portfolioRadarCard = useMemo((): ReportCard | null => {

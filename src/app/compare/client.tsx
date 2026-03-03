@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
@@ -113,8 +112,31 @@ const COMPARISON_PRESETS = [
 
 export function CompareClient() {
   const { data: logos } = useLogos();
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const [search, setSearch] = useState("");
+
+  const syncSearchFromLocation = useCallback(() => {
+    if (typeof window === "undefined") return;
+    setSearch(window.location.search);
+  }, []);
+
+  useEffect(() => {
+    syncSearchFromLocation();
+    window.addEventListener("popstate", syncSearchFromLocation);
+    return () => window.removeEventListener("popstate", syncSearchFromLocation);
+  }, [syncSearchFromLocation]);
+
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+
+  const replaceSearchParams = useCallback((params: URLSearchParams) => {
+    if (typeof window === "undefined") return;
+    const qs = params.toString();
+    const nextSearch = qs ? `?${qs}` : "";
+    const nextUrl = `${window.location.pathname}${nextSearch}`;
+    if (window.location.search !== nextSearch) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+    setSearch(nextSearch);
+  }, []);
 
   // Derive selected IDs from URL (single source of truth).
   // Accepts both numeric IDs (new format) and lowercase symbols (legacy/presets).
@@ -143,10 +165,9 @@ export function CompareClient() {
       } else {
         params.set("range", newRange);
       }
-      const qs = params.toString();
-      router.replace(qs ? `/compare/?${qs}` : "/compare/", { scroll: false });
+      replaceSearchParams(params);
     },
-    [searchParams, router],
+    [searchParams, replaceSearchParams],
   );
 
   // Write selected IDs to URL (using numeric IDs to avoid duplicate-symbol collisions)
@@ -155,12 +176,10 @@ export function CompareClient() {
       const next = updater(selectedIds);
       const params = new URLSearchParams();
       if (next.length > 0) params.set("coins", next.join(","));
-      const currentRange = searchParams.get("range");
-      if (currentRange) params.set("range", currentRange);
-      const qs = params.toString();
-      router.replace(qs ? `/compare/?${qs}` : "/compare/", { scroll: false });
+      if (range !== "all") params.set("range", range);
+      replaceSearchParams(params);
     },
-    [selectedIds, router, searchParams],
+    [selectedIds, range, replaceSearchParams],
   );
 
   const coinOptions = useMemo<CoinOption[]>(
@@ -547,9 +566,7 @@ export function CompareClient() {
                   });
                   const params = new URLSearchParams();
                   params.set("coins", preset.coins.join(","));
-                  router.replace(`/compare/?${params.toString()}`, {
-                    scroll: false,
-                  });
+                  replaceSearchParams(params);
                 };
                 return (
                 <Card

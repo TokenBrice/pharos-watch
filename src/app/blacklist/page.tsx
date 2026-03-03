@@ -1,12 +1,11 @@
 "use client";
 
-import { useMemo, useCallback, Suspense } from "react";
+import { useMemo, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { CRON_20MIN } from "@/hooks/use-api-query";
-import { useUrlFilters } from "@/hooks/use-url-filters";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
@@ -24,39 +23,124 @@ const PAGE_SIZE = 50;
 const VALID_STABLECOINS = new Set(["all", "USDC", "USDT", "PAXG", "XAUT"]);
 const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]);
 
+type FilterState = {
+  stablecoinFilter: BlacklistStablecoin | "all";
+  chainFilter: string;
+  eventTypeFilter: BlacklistEventType | "all";
+  page: number;
+  searchQuery: string;
+};
+
+const DEFAULT_FILTERS: FilterState = {
+  stablecoinFilter: "all",
+  chainFilter: "all",
+  eventTypeFilter: "all",
+  page: 1,
+  searchQuery: "",
+};
+
+function parseFilters(search: string): FilterState {
+  const params = new URLSearchParams(search);
+  const rawStablecoin = params.get("stablecoin") ?? "all";
+  const rawChain = params.get("chain") ?? "all";
+  const rawEventType = params.get("event") ?? "all";
+  const rawPage = params.get("page");
+  const rawQuery = params.get("q") ?? "";
+
+  const stablecoinFilter = (VALID_STABLECOINS.has(rawStablecoin) ? rawStablecoin : "all") as BlacklistStablecoin | "all";
+  const chainFilter = rawChain || "all";
+  const eventTypeFilter = (VALID_EVENT_TYPES.has(rawEventType) ? rawEventType : "all") as BlacklistEventType | "all";
+  const page = rawPage ? Math.max(1, Number.parseInt(rawPage, 10) || 1) : 1;
+  const searchQuery = rawQuery === "all" ? "" : rawQuery;
+
+  return {
+    stablecoinFilter,
+    chainFilter,
+    eventTypeFilter,
+    page,
+    searchQuery,
+  };
+}
+
+function buildQueryString(filters: FilterState): string {
+  const params = new URLSearchParams();
+  if (filters.stablecoinFilter !== "all") params.set("stablecoin", filters.stablecoinFilter);
+  if (filters.chainFilter !== "all") params.set("chain", filters.chainFilter);
+  if (filters.eventTypeFilter !== "all") params.set("event", filters.eventTypeFilter);
+  if (filters.page > 1) params.set("page", String(filters.page));
+  const query = filters.searchQuery.trim();
+  if (query) params.set("q", query);
+  return params.toString();
+}
+
 function BlacklistPageInner() {
   const { data, isLoading, isError, error, dataUpdatedAt } = useBlacklistEvents();
   const events = data?.events;
 
-  const { getParam, setParams: updateParams } = useUrlFilters();
+  const [stablecoinFilter, setStablecoinFilter] = useState<BlacklistStablecoin | "all">(DEFAULT_FILTERS.stablecoinFilter);
+  const [chainFilter, setChainFilter] = useState<string>(DEFAULT_FILTERS.chainFilter);
+  const [eventTypeFilter, setEventTypeFilter] = useState<BlacklistEventType | "all">(DEFAULT_FILTERS.eventTypeFilter);
+  const [page, setPage] = useState<number>(DEFAULT_FILTERS.page);
+  const [searchQuery, setSearchQuery] = useState<string>(DEFAULT_FILTERS.searchQuery);
 
-  const rawStablecoin = getParam("stablecoin", "all");
-  const rawChain = getParam("chain", "all");
-  const rawEventType = getParam("event", "all");
-  const rawPage = getParam("page");
-  const searchQuery = getParam("q");
+  const syncFiltersFromLocation = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const parsed = parseFilters(window.location.search);
+    setStablecoinFilter(parsed.stablecoinFilter);
+    setChainFilter(parsed.chainFilter);
+    setEventTypeFilter(parsed.eventTypeFilter);
+    setPage(parsed.page);
+    setSearchQuery(parsed.searchQuery);
+  }, []);
 
-  const stablecoinFilter = (VALID_STABLECOINS.has(rawStablecoin) ? rawStablecoin : "all") as BlacklistStablecoin | "all";
-  const chainFilter = rawChain;
-  const eventTypeFilter = (VALID_EVENT_TYPES.has(rawEventType) ? rawEventType : "all") as BlacklistEventType | "all";
-  const page = rawPage ? Math.max(1, parseInt(rawPage, 10) || 1) : 1;
+  useEffect(() => {
+    syncFiltersFromLocation();
+    window.addEventListener("popstate", syncFiltersFromLocation);
+    return () => window.removeEventListener("popstate", syncFiltersFromLocation);
+  }, [syncFiltersFromLocation]);
+
+  const replaceUrl = useCallback((updates: Partial<FilterState>) => {
+    if (typeof window === "undefined") return;
+    const next: FilterState = {
+      stablecoinFilter,
+      chainFilter,
+      eventTypeFilter,
+      page,
+      searchQuery,
+      ...updates,
+    };
+    const qs = buildQueryString(next);
+    const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
+    window.history.replaceState(null, "", nextUrl);
+  }, [stablecoinFilter, chainFilter, eventTypeFilter, page, searchQuery]);
 
   const handleStablecoinChange = useCallback((v: BlacklistStablecoin | "all") => {
     trackEvent("filter_applied", { page: "blacklist", filter_type: "stablecoin", filter_value: v });
-    updateParams({ stablecoin: v, page: "1" });
-  }, [updateParams]);
+    setStablecoinFilter(v);
+    setPage(1);
+    replaceUrl({ stablecoinFilter: v, page: 1 });
+  }, [replaceUrl]);
+
   const handleChainChange = useCallback((v: string) => {
     trackEvent("filter_applied", { page: "blacklist", filter_type: "chain", filter_value: v });
-    updateParams({ chain: v, page: "1" });
-  }, [updateParams]);
+    setChainFilter(v);
+    setPage(1);
+    replaceUrl({ chainFilter: v, page: 1 });
+  }, [replaceUrl]);
+
   const handleEventTypeChange = useCallback((v: BlacklistEventType | "all") => {
     trackEvent("filter_applied", { page: "blacklist", filter_type: "event_type", filter_value: v });
-    updateParams({ event: v, page: "1" });
-  }, [updateParams]);
+    setEventTypeFilter(v);
+    setPage(1);
+    replaceUrl({ eventTypeFilter: v, page: 1 });
+  }, [replaceUrl]);
+
   const handleSearchChange = useCallback((v: string) => {
     trackSearch("blacklist", v.length);
-    updateParams({ q: v || "all", page: "1" });
-  }, [updateParams]);
+    setSearchQuery(v);
+    setPage(1);
+    replaceUrl({ searchQuery: v, page: 1 });
+  }, [replaceUrl]);
 
   const filtered = useMemo(() => {
     if (!events) return [];
@@ -144,7 +228,11 @@ function BlacklistPageInner() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => updateParams({ page: String(Math.max(1, page - 1)) })}
+              onClick={() => {
+                const nextPage = Math.max(1, page - 1);
+                setPage(nextPage);
+                replaceUrl({ page: nextPage });
+              }}
               disabled={page <= 1}
             >
               Previous
@@ -152,7 +240,11 @@ function BlacklistPageInner() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => updateParams({ page: String(Math.min(totalPages, page + 1)) })}
+              onClick={() => {
+                const nextPage = Math.min(totalPages, page + 1);
+                setPage(nextPage);
+                replaceUrl({ page: nextPage });
+              }}
               disabled={page >= totalPages}
             >
               Next
@@ -170,13 +262,5 @@ function BlacklistPageInner() {
 }
 
 export default function BlacklistPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
-      </div>
-    }>
-      <BlacklistPageInner />
-    </Suspense>
-  );
+  return <BlacklistPageInner />;
 }

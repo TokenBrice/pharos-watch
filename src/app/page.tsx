@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { CHAIN_META } from "@/lib/chains";
@@ -35,13 +34,7 @@ export default function HomePage() {
       />
       <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
       <KpiBar />
-      <Suspense fallback={
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <div className="h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse" />
-        </div>
-      }>
-        <HomepageClient />
-      </Suspense>
+      <HomepageClient />
     </div>
   );
 }

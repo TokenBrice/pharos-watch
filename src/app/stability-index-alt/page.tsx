@@ -14,7 +14,8 @@ const description = "Historical Pharos Stability Index scores, component breakdo
 export const metadata: Metadata = {
   title: "Stability Index (Alt): Pharos Stablecoin Market Health",
   description,
-  alternates: { canonical: "/stability-index-alt/" },
+  alternates: { canonical: "/stability-index/" },
+  robots: { index: false, follow: true },
   openGraph: {
     title: "Stability Index (Alt): Pharos Stablecoin Market Health",
     description,

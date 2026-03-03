@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
 import { computeStressedGrades, GRADE_THRESHOLDS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type {
@@ -112,17 +111,16 @@ export function useStressTest(
   reportData: ReportCardsResponse | undefined,
   mcapMap?: Map<string, number>,
 ): StressTestState {
-  const searchParams = useSearchParams();
-
   const [targetCoinId, setTargetCoinId] = useState<string | null>(null);
   const [targetGrade, setTargetGrade] = useState<ReportCardGrade | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   // --- URL init: read ?stress=usdc&grade=D on mount ---
   useEffect(() => {
-    if (initialized) return;
+    if (initialized || typeof window === "undefined") return;
     setInitialized(true);
 
+    const searchParams = new URLSearchParams(window.location.search);
     const stressParam = searchParams.get("stress");
     const gradeParam = searchParams.get("grade");
     if (!stressParam) return;
@@ -141,7 +139,7 @@ export function useStressTest(
         setTargetGrade(validGrade.grade);
       }
     }
-  }, [initialized, searchParams]);
+  }, [initialized]);
 
   // --- Card lookup ---
   const cardMap = useMemo(() => {

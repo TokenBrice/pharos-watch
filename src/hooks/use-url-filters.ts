@@ -1,7 +1,6 @@
 "use client";
 
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**
  * Shared hook for managing URL search-param-based filters.
@@ -15,9 +14,20 @@ import { useCallback } from "react";
  * jumps and keep the browser history clean.
  */
 export function useUrlFilters() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const [search, setSearch] = useState("");
+
+  const syncFromLocation = useCallback(() => {
+    if (typeof window === "undefined") return;
+    setSearch(window.location.search);
+  }, []);
+
+  useEffect(() => {
+    syncFromLocation();
+    window.addEventListener("popstate", syncFromLocation);
+    return () => window.removeEventListener("popstate", syncFromLocation);
+  }, [syncFromLocation]);
+
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
 
   const getParam = useCallback(
     (key: string, defaultValue = ""): string => {
@@ -29,6 +39,17 @@ export function useUrlFilters() {
   const isClearValue = (value: string): boolean =>
     value === "all" || value === "" || value === "1";
 
+  const writeParams = useCallback((params: URLSearchParams) => {
+    if (typeof window === "undefined") return;
+    const qs = params.toString();
+    const nextSearch = qs ? `?${qs}` : "";
+    const nextUrl = `${window.location.pathname}${nextSearch}`;
+    if (window.location.search !== nextSearch) {
+      window.history.replaceState(null, "", nextUrl);
+    }
+    setSearch(nextSearch);
+  }, []);
+
   const setParam = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -37,10 +58,9 @@ export function useUrlFilters() {
       } else {
         params.set(key, value);
       }
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      writeParams(params);
     },
-    [searchParams, router, pathname],
+    [searchParams, writeParams],
   );
 
   const setParams = useCallback(
@@ -53,10 +73,9 @@ export function useUrlFilters() {
           params.set(key, value);
         }
       }
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      writeParams(params);
     },
-    [searchParams, router, pathname],
+    [searchParams, writeParams],
   );
 
   return { searchParams, getParam, setParam, setParams };
