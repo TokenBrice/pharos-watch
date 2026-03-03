@@ -314,7 +314,10 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData): Promise<unkn
     return FIAT_CG_METAS
       .map((meta) => {
         const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        if (!priceInfo) return null;
+        // DefiLlama Coins API may not index every CoinGecko token (e.g. NAV-appreciating
+        // tokens like wsrUSD). Fall back to the CoinGecko price already fetched in cgData.
+        const price = priceInfo?.price ?? (meta.geckoId ? cgData[meta.geckoId]?.usd : undefined);
+        if (price == null) return null;
 
         const mcap = mcapMap[meta.id];
         if (!mcap) {
@@ -330,8 +333,8 @@ async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData): Promise<unkn
           geckoId: meta.geckoId,
           pegType: pKey,
           pegMechanism: meta.flags.backing,
-          price: priceInfo.price,
-          priceSource: "defillama",
+          price,
+          priceSource: priceInfo ? "defillama" : "coingecko",
           circulating: { [pKey]: mcap },
           circulatingPrevDay: null,
           circulatingPrevWeek: null,
