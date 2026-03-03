@@ -357,6 +357,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Falcon Finance savings (sUSDf)", yieldType: "lending-vault" },
     geckoId: "falcon-finance",
     deploymentModel: "third-party-bridge",
     collateral: "Overcollateralized: stablecoins (USDC, USDT, USD1, FDUSD) minted 1:1; volatile assets (BTC, ETH, SOL, select altcoins) with dynamic overcollateralization ratios based on volatility and liquidity",
@@ -624,6 +626,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "USD.AI savings (sUSDai)", yieldType: "lending-vault" },
     geckoId: "usdai",
     deploymentModel: "third-party-bridge",
     collateral: "GPU-backed infrastructure loans (NVIDIA hardware tokenized as on-chain warehouse receipts under UCC law via the CALIBER framework); base USDai is backed 1:1 by wM (M0 Protocol T-bills) and PYUSD (PayPal USD, added as a reserve and settlement asset via a PayPal partnership in December 2025) while sUSDai earns yield from hardware-collateralized credit to AI compute operators",
@@ -952,6 +956,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
   usd("220", "Avalon USDa", "USDA", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Avalon savings (sUSDa)", yieldType: "lending-vault" },
     geckoId: "usda-2",
     deploymentModel: "third-party-bridge",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -1083,6 +1089,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "infiniFi savings (siUSD)", yieldType: "lending-vault" },
     geckoId: "infinifi-usd",
     collateralQuality: "exotic",
     collateral: "USDC; deployed across liquid DeFi yield strategies (Aave, Fluid, Euler) and illiquid strategies (Pendle PTs, Ethena/sUSDe), duration-matched to user lock-up periods",
@@ -1297,6 +1305,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("271", "Avant USD", "avUSD", "rwa-backed", "centralized", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Avant savings (savUSD)", yieldType: "lending-vault" },
     geckoId: "avant-usd",
     deploymentModel: "third-party-bridge",
     collateral: "USDC reserves held in protocol smart contracts",
@@ -1490,6 +1500,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("283", "Unitas", "USDU", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Unitas savings (sUSDu)", yieldType: "governance-set" },
     geckoId: "usdu",
     dependencies: [{ id: "2", weight: 0.8 }],
     deploymentModel: "native-multichain",
@@ -2152,6 +2164,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("230", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Noon savings (sUSN)", yieldType: "governance-set" },
     geckoId: "noon-usn",
     collateralQuality: "exotic",
     custodyModel: "institutional",
@@ -2386,6 +2400,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // ── Additional tracked ─────────────────────────────────────────────
   usd("346", "Neutrl USD", "NUSD", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Neutrl savings (sNUSD)", yieldType: "lending-vault" },
     geckoId: "nusd-2",
     collateralQuality: "exotic",
     custodyModel: "institutional",
@@ -2407,6 +2423,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("344", "Yuzu USD", "YZUSD", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Yuzu savings (syzUSD)", yieldType: "lending-vault" },
     geckoId: "yuzu-usd",
     collateral: "Overcollateralized by diversified on-chain DeFi yield strategies (leveraged loops, Pendle liquidity, Euler lending markets) deployed on Plasma chain; backed by >$1 in on-chain assets per yzUSD",
     pegMechanism: "Eligible investors (accredited/institutional, KYC/AML required) mint/redeem at 1:1 with USDT0; peg maintained by overcollateralization and risk tranching via yzPP junior tranche absorbing first losses",
@@ -2597,6 +2615,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("297", "Main Street USD", "MSUSD", "crypto-backed", "centralized-dependent", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "Main Street savings (msY)", yieldType: "lending-vault" },
     geckoId: "main-street-usd",
     collateral: "USDC held 1:1 as reserve; yield generated by deploying USDC into delta-neutral options volatility arbitrage strategies (options box spreads) on centralized exchanges via msY staking",
     pegMechanism: "Direct 1:1 redemption for USDC; peg maintained by full USDC reserve backing; yield accrues to stakers (msY) not to msUSD holders",
@@ -3631,6 +3651,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("353", "GAIB AID", "AID", "rwa-backed", "centralized", {
+    yieldBearing: true,
+    yieldConfig: { yieldSource: "GAIB savings (sAID)", yieldType: "lending-vault" },
     geckoId: "gaib-aid",
     rwa: true,
     collateral: "U.S. Treasury bills and accepted stablecoins (USDC, USDT); the companion sAID token accrues yield from GPU/AI infrastructure financing agreements",

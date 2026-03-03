@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency } from "@/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
-import type { YieldRanking } from "@/lib/types";
+import type { YieldRanking, AltYieldSource } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
@@ -30,6 +30,46 @@ function getPysColor(pys: number | null): string {
   if (pys > 40) return "text-emerald-500";
   if (pys > 20) return "text-amber-500";
   return "text-red-500";
+}
+
+/** Small pill badge that opens an inline popover listing alternative yield sources. */
+function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-block shrink-0">
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); } }}
+        className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-mono text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        aria-label={`${altSources.length} alternative yield source${altSources.length > 1 ? "s" : ""}`}
+        aria-expanded={open}
+      >
+        +{altSources.length}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border bg-card shadow-lg p-2 text-xs">
+          <p className="text-muted-foreground mb-1.5 font-medium">Alt sources</p>
+          {altSources.map((src) => (
+            <div key={src.sourceKey} className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
+              <span className="truncate text-foreground">{src.yieldSource}</span>
+              <span className="font-mono text-emerald-500 shrink-0">{src.currentApy.toFixed(2)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface YieldLeaderboardProps {
@@ -203,8 +243,11 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                     {row.pharosYieldScore !== null ? row.pharosYieldScore.toFixed(1) : "--"}
                   </span>
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground truncate max-w-[160px]">
-                  {row.yieldSource}
+                <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
+                  <div className="flex items-center gap-1">
+                    <span className="truncate">{row.yieldSource}</span>
+                    {row.altSources.length > 0 && <AltSourcesPopover altSources={row.altSources} />}
+                  </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-center">
                   <Badge

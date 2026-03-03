@@ -80,16 +80,20 @@ vi.mock("../../lib/chain-rpcs", () => ({
   getChainRpc: vi.fn(() => null),
 }));
 
-// Stub yield-helpers
-vi.mock("../yield-helpers", () => ({
-  computeApyFromRate: vi.fn(() => 5.0),
-  computeApyFromPrice: vi.fn(() => 4.0),
-  computePYS: vi.fn(() => 75.0),
-  computeYieldStability: vi.fn(() => 0.95),
-  computeApyVarianceScore: vi.fn(() => 90),
-  detectWarningSignals: vi.fn(() => []),
-  findBestLendingPool: vi.fn(() => null),
-}));
+// Stub yield-helpers — keep matchAllDlPools real (pure function, no I/O)
+vi.mock("../yield-helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../yield-helpers")>();
+  return {
+    ...actual,
+    computeApyFromRate: vi.fn(() => 5.0),
+    computeApyFromPrice: vi.fn(() => 4.0),
+    computePYS: vi.fn(() => 75.0),
+    computeYieldStability: vi.fn(() => 0.95),
+    computeApyVarianceScore: vi.fn(() => 90),
+    detectWarningSignals: vi.fn(() => []),
+    findBestLendingPool: vi.fn(() => null),
+  };
+});
 
 // Stub yield-config
 vi.mock("../yield-config", () => ({

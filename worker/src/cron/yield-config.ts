@@ -8,6 +8,10 @@ export interface YieldVariant {
   variantAddress?: string;
   /** Phase 2: chain for on-chain rate queries. */
   variantChain?: string;
+  /** Label used as yield_source when this wrapper is the source row. */
+  yieldSource?: string;
+  /** Yield mechanism type for this wrapper. */
+  yieldType?: string;
 }
 
 /**
@@ -67,6 +71,91 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
   "269": {
     variantSymbol: "yBOLD",
     variantChain: "ethereum",
+  },
+
+  // USD.AI -> sUSDai (savings wrapper, $338M TVL on Stablewatch)
+  "309": {
+    variantSymbol: "sUSDai",
+    variantChain: "ethereum",
+    yieldSource: "USD.AI savings (sUSDai)",
+    yieldType: "lending-vault",
+  },
+  // Neutrl USD -> sNUSD (savings wrapper, $188M TVL)
+  "346": {
+    variantSymbol: "sNUSD",
+    variantChain: "ethereum",
+    yieldSource: "Neutrl savings (sNUSD)",
+    yieldType: "lending-vault",
+  },
+  // Avalon USDa -> sUSDa (savings wrapper, $162M TVL)
+  "220": {
+    variantSymbol: "sUSDa",
+    variantChain: "ethereum",
+    yieldSource: "Avalon savings (sUSDa)",
+    yieldType: "lending-vault",
+  },
+  // infiniFi USD -> siUSD (savings wrapper, $157M TVL)
+  "298": {
+    variantSymbol: "siUSD",
+    variantChain: "ethereum",
+    yieldSource: "infiniFi savings (siUSD)",
+    yieldType: "lending-vault",
+  },
+  // Falcon USD -> sUSDf (savings wrapper, $87M TVL)
+  "246": {
+    variantSymbol: "sUSDf",
+    variantChain: "ethereum",
+    yieldSource: "Falcon Finance savings (sUSDf)",
+    yieldType: "lending-vault",
+  },
+  // Avant USD -> savUSD (savings wrapper, $86M TVL)
+  "271": {
+    variantSymbol: "savUSD",
+    variantChain: "ethereum",
+    yieldSource: "Avant savings (savUSD)",
+    yieldType: "lending-vault",
+  },
+  // Unitas -> sUSDu (savings wrapper, $64M TVL — governance-set rate)
+  "283": {
+    variantSymbol: "sUSDu",
+    variantChain: "solana",
+    yieldSource: "Unitas savings (sUSDu)",
+    yieldType: "governance-set",
+  },
+  // Yuzu USD -> syzUSD (savings wrapper, $56M TVL)
+  "344": {
+    variantSymbol: "syzUSD",
+    variantChain: "ethereum",
+    yieldSource: "Yuzu savings (syzUSD)",
+    yieldType: "lending-vault",
+  },
+  // fxUSD -> fxSAVE (savings wrapper, $31M TVL — second source alongside Stability Pool)
+  "168": {
+    variantSymbol: "fxSAVE",
+    variantChain: "ethereum",
+    yieldSource: "f(x) Protocol Savings (fxSAVE)",
+    yieldType: "lending-vault",
+  },
+  // Noon USN -> sUSN (savings wrapper, $24M TVL — governance-set rate)
+  "230": {
+    variantSymbol: "sUSN",
+    variantChain: "ethereum",
+    yieldSource: "Noon savings (sUSN)",
+    yieldType: "governance-set",
+  },
+  // Main Street USD -> msY (savings wrapper, $23M TVL)
+  "297": {
+    variantSymbol: "msY",
+    variantChain: "ethereum",
+    yieldSource: "Main Street savings (msY)",
+    yieldType: "lending-vault",
+  },
+  // GAIB AID -> sAID (savings wrapper, $15M TVL)
+  "353": {
+    variantSymbol: "sAID",
+    variantChain: "ethereum",
+    yieldSource: "GAIB savings (sAID)",
+    yieldType: "lending-vault",
   },
 };
 
@@ -154,6 +243,20 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // fxUSD - fx-protocol Stability Pool, Ethereum, $33.9M TVL, ~4.0% APY
   //         (DL symbol is FXUSDSTABILITYPOOLV2.0, not fxUSD — must use static map)
   "168": "abd6c9e1-3b52-459a-a31b-9022a4dcf7e2",
+
+  // ── Stablewatch Wave 1: New wrapper pools ─────────────────────────
+
+  // infiniFi USD -> siUSD - infinifi native savings, Ethereum, $121M TVL, ~4.8% APY
+  "298": "8fa2e60e-365a-41fc-8d50-fadde5041f94",
+
+  // Falcon USD -> sUSDf - falcon-finance native savings, Ethereum, $87M TVL, ~5.9% APY
+  "246": "0f67a08c-3f24-4a4b-963e-541f5a5c0364",
+
+  // Unitas -> sUSDu - unitas native savings, Solana, $49M TVL, ~12.9% APY
+  "283": "7f980c43-5b87-4690-a11a-b0e8a5e37a63",
+
+  // GAIB AID -> sAID - gaib native savings, Ethereum, $15M TVL, ~11.4% APY
+  "353": "e575606e-5642-4f87-b9ad-3e53d6f83c82",
 };
 
 /** On-chain exchange rate config for Tier 1 vault tokens. */

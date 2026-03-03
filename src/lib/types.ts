@@ -906,6 +906,26 @@ export interface YieldConfig {
   yieldType: YieldType;
 }
 
+export interface AltYieldSource {
+  sourceKey: string;
+  yieldSource: string;
+  yieldType: YieldType;
+  currentApy: number;
+  apy30d: number;
+  sourceTvlUsd: number | null;
+  dataSource: string;
+}
+
+export const AltYieldSourceSchema = z.object({
+  sourceKey: z.string(),
+  yieldSource: z.string(),
+  yieldType: z.string(),
+  currentApy: z.number(),
+  apy30d: z.number(),
+  sourceTvlUsd: z.number().nullable(),
+  dataSource: z.string(),
+});
+
 export interface YieldRanking {
   id: string;
   symbol: string;
@@ -929,6 +949,7 @@ export interface YieldRanking {
   apyMin30d: number | null;
   apyMax30d: number | null;
   warningSignals: string[];
+  altSources: AltYieldSource[];
 }
 
 export const YieldRankingSchema = z.object({
@@ -954,6 +975,7 @@ export const YieldRankingSchema = z.object({
   apyMin30d: z.number().nullable(),
   apyMax30d: z.number().nullable(),
   warningSignals: z.array(z.string()),
+  altSources: z.array(AltYieldSourceSchema).optional().default([]),
 });
 
 export interface YieldRankingsResponse {

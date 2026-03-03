@@ -67,6 +67,69 @@ export function detectWarningSignals(input: WarningInput): string[] {
 }
 
 /**
+ * Returns ALL DL pools that are yield sources for the given coin.
+ *
+ * Layer 1: YIELD_POOL_MAP (native/primary pool — stablecoin + single exposure required)
+ * Layer 2: YIELD_VARIANT_MAP (wrapper/savings pool — single exposure only; stablecoin
+ *          flag relaxed because savings wrappers like fxSAVE are not flagged as
+ *          stablecoin=true in DeFiLlama)
+ * Layer 3: Base-symbol fallback (only when both static maps miss — stablecoin + single
+ *          exposure required, picks highest TVL)
+ *
+ * Deduplicates by pool UUID. Used by sync-yield-data to support multiple sources per coin.
+ */
+export function matchAllDlPools(
+  stablecoinId: string,
+  symbol: string,
+  dlPools: Array<{
+    pool: string; symbol: string; tvlUsd: number;
+    apy: number; apyBase: number | null; apyReward: number | null;
+    stablecoin: boolean; exposure: string;
+  }>,
+  poolMap: Record<string, string>,
+  variantMap: Record<string, { variantSymbol: string }>,
+): Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> {
+  const found: Array<{ pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number }> = [];
+  const seenUuids = new Set<string>();
+
+  // Layer 1: Static pool map (native/primary source — stablecoin=true required)
+  const nativeId = poolMap[stablecoinId];
+  if (nativeId) {
+    const p = dlPools.find(p => p.pool === nativeId && p.exposure === "single");
+    if (p) {
+      found.push({ pool: p.pool, apy: p.apy, apyBase: p.apyBase, apyReward: p.apyReward, tvlUsd: p.tvlUsd });
+      seenUuids.add(p.pool);
+    }
+  }
+
+  // Layer 2: Variant map (wrapper/savings pool — stablecoin flag relaxed)
+  const variant = variantMap[stablecoinId];
+  if (variant) {
+    const sym = variant.variantSymbol.toLowerCase();
+    const candidates = dlPools.filter(p => p.exposure === "single" && p.symbol.toLowerCase().includes(sym));
+    if (candidates.length > 0) {
+      const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
+      if (!seenUuids.has(best.pool)) {
+        found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
+        seenUuids.add(best.pool);
+      }
+    }
+  }
+
+  // Layer 3: Base-symbol fallback (only when both static maps miss — stablecoin=true required)
+  if (found.length === 0) {
+    const sym = symbol.toLowerCase();
+    const candidates = dlPools.filter(p => p.exposure === "single" && p.stablecoin && p.symbol.toLowerCase().includes(sym));
+    if (candidates.length > 0) {
+      const best = candidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
+      found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
+    }
+  }
+
+  return found;
+}
+
+/**
  * Auto-discovery: find the best lending pool for a coin from allowlisted protocols.
  * Used for non-yield-bearing stablecoins rated C+ or above (Wave 2).
  *

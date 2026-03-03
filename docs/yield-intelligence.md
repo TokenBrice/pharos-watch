@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 24 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
+Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 41 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -60,14 +60,17 @@ apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 
 Falls through to Tier 2 if no previous exchange rate exists yet (first sync).
 
-### Tier 2: DeFiLlama Yields API
+### Tier 2: DeFiLlama Yields API (Multi-Source)
 
-Matches each coin to a DeFiLlama pool via two layers:
+Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers). Each unique pool found becomes a separate row in `yield_data`. The row with the highest `currentApy` per coin is marked `is_best = 1`; others are `is_best = 0`.
 
-1. **Static map** — `YIELD_POOL_MAP` maps Pharos ID to DL pool UUID. 21 of 24 coins mapped.
-2. **Fallback matching** — searches DL pools by symbol (including `YIELD_VARIANT_MAP` variant symbols). Filters for `exposure === "single"` and `stablecoin === true`, picks highest TVL.
+**Layer 1 — Static map:** `YIELD_POOL_MAP` maps Pharos ID to a DL pool UUID. Filters for `exposure === "single"`. Finds the native/primary yield source.
 
-**Variant mapping:** Some tracked coins earn yield through a separate wrapper token. `YIELD_VARIANT_MAP` maps the base coin to its wrapper for pool matching:
+**Layer 2 — Variant map:** `YIELD_VARIANT_MAP` maps to a wrapper/savings pool symbol. Filters for `exposure === "single"` only (stablecoin flag intentionally relaxed, since savings wrappers like fxSAVE are not flagged `stablecoin = true` in DeFiLlama). Picks highest TVL.
+
+**Layer 3 — Base-symbol fallback:** Used only when both static maps miss. Searches DL pools by coin symbol. Filters for `exposure === "single"` and `stablecoin === true`. Picks highest TVL.
+
+**Variant mapping:** `YIELD_VARIANT_MAP` entries supply labels and pool matching for wrapper/savings tokens:
 
 | Base Coin | Wrapper | Purpose |
 |-----------|---------|---------|
@@ -81,6 +84,18 @@ Matches each coin to a DeFiLlama pool via two layers:
 | BOLD (269) | yBOLD | Liquity yield BOLD |
 | reUSD (339) | stUSR | Resolv staking wrapper |
 | AZND (327) | loAZND | Mu Digital locked wrapper |
+| USD.AI (309) | sUSDai | GAIB USD.AI savings |
+| Neutrl USD (346) | sNUSD | Neutrl staked USD |
+| Avalon USDa (220) | sUSDa | Avalon staked USDa |
+| infiniFi USD (298) | siUSD | infiniFi savings |
+| Falcon USD (246) | sUSDf | Falcon Finance savings |
+| Avant USD (271) | savUSD | Avant savings |
+| Unitas (283) | sUSDu | Unitas savings |
+| Yuzu USD (344) | sYUSD | Yuzu savings |
+| fxUSD (168) | fxSAVE | Concentrator savings |
+| Noon USN (230) | sUSN | Noon savings |
+| Main Street USD (297) | sUSDM | Main Street savings |
+| GAIB AID (353) | sAID | GAIB AID staking |
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
 
@@ -191,13 +206,14 @@ https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od
 
 ## Database Schema
 
-**Migration:** `worker/migrations/0031_yield_data.sql`
+**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK)
 
-### `yield_data` — Current Snapshot (one row per coin)
+### `yield_data` — Current Snapshot (one row per coin per source)
 
 ```sql
 CREATE TABLE yield_data (
-  stablecoin_id       TEXT PRIMARY KEY,
+  stablecoin_id       TEXT NOT NULL,
+  source_key          TEXT NOT NULL,  -- DL pool UUID or "price-derived"
   symbol              TEXT NOT NULL,
   current_apy         REAL NOT NULL,
   apy_base            REAL,
@@ -221,11 +237,15 @@ CREATE TABLE yield_data (
   exchange_rate       REAL,           -- current vault rate (Tier 1 only)
   exchange_rate_prev  REAL,           -- 7d-ago vault rate
   warning_signals     TEXT,           -- JSON array of active signal keys (migration 0033)
-  updated_at          INTEGER NOT NULL
+  is_best             INTEGER NOT NULL DEFAULT 1,  -- 1 = highest-APY source per coin
+  updated_at          INTEGER NOT NULL,
+  PRIMARY KEY (stablecoin_id, source_key)
 );
 ```
 
-**Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC).
+**Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC), `idx_yield_best` (stablecoin_id, is_best).
+
+**Multi-source behavior:** Coins with both a native pool and a savings wrapper get two rows — one with `is_best = 1` (highest current APY), one with `is_best = 0`. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. Stale `is_best = 0` rows not written in the current run are purged after each batch write.
 
 ### `yield_history` — Historical Data Points
 
@@ -265,12 +285,14 @@ CREATE TABLE yield_history (
 3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
 4. Read cached risk-free rate from D1
 5. Compute safety scores inline (full report-card dimensions — same logic as `daily-digest.ts`)
-6. Resolve APY for each coin (Tier 1 → 2 → 3)
-7. Load 30-day APY history from `yield_history`, compute trailing averages and PYS
-8. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
-9. Batch upsert `yield_data` + insert `yield_history` point
-10. Prune `yield_history` older than 365 days
-11. Cache rankings JSON in `cache` table (key `"yield-rankings"`) for fast API reads
+6. Resolve APY for each coin (Tier 1 → 2 → 3, potentially multiple sources per coin)
+7. Determine `is_best` per coin: source with highest `currentApy` wins
+8. Load 30-day APY history from `yield_history`, compute trailing averages and PYS
+9. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
+10. Batch upsert `yield_data` (all sources) + insert `yield_history` point (best source only)
+11. Purge stale `is_best = 0` rows not written in this run
+12. Prune `yield_history` older than 365 days
+13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, cache rankings JSON
 
 **Inline safety scores:** The report-cards API handler doesn't cache results, so the cron computes all five dimensions (peg stability, liquidity, resilience, decentralization, dependency risk) and overall grade for each yield-bearing coin itself. Uses a two-phase approach: independent coins first, then CeFi-dependent coins.
 
@@ -319,7 +341,18 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
       "yieldStability": 0.82,
       "apyVariance30d": 2.1,
       "apyMin30d": 7.5,
-      "apyMax30d": 15.3
+      "apyMax30d": 15.3,
+      "altSources": [
+        {
+          "sourceKey": "ee0b7069-...",
+          "yieldSource": "Concentrator (fxSAVE)",
+          "yieldType": "lending-vault",
+          "currentApy": 9.1,
+          "apy30d": 8.8,
+          "sourceTvlUsd": 31000000,
+          "dataSource": "defillama"
+        }
+      ]
     }
   ],
   "riskFreeRate": 3.76,
@@ -328,7 +361,7 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
 }
 ```
 
-Default sort: `pharos_yield_score` DESC.
+Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source.
 
 ### `GET /api/yield-history?stablecoin=<id>&days=<n>`
 
@@ -383,6 +416,8 @@ Sortable, paginated table (25 rows/page). Default sort: PYS descending.
 
 Stability display multiplies the raw 0–1 value by 100 for both the bar width and the percentage text.
 
+**Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name and its current APY.
+
 ### Hooks
 
 | Hook | File | Endpoint | Stale Time |
@@ -419,6 +454,7 @@ Covers all pure functions in `yield-helpers.ts`:
 - `computeYieldStability` — stable vs. volatile yields, empty/single samples, near-zero mean guard
 - `computeApyVarianceScore` — near-zero mean guard (no Infinity from floating-point)
 - `detectWarningSignals` — yield spike, reward-heavy, TVL outflow, healthy baseline
+- `matchAllDlPools` — Layer 1/2/3 source matching, dedup, relaxed Layer 2 stablecoin filter, highest-TVL selection
 
 ---
 
@@ -438,18 +474,19 @@ Covers all pure functions in `yield-helpers.ts`:
 | File | Role |
 |------|------|
 | `worker/migrations/0031_yield_data.sql` | D1 schema: `yield_data` + `yield_history` tables |
-| `worker/src/cron/sync-yield-data.ts` | Main sync cron: three-tier resolution, PYS, safety scores, caching |
+| `worker/migrations/0041_yield_data_multi_source.sql` | Adds `source_key` + `is_best` columns, changes PK to `(stablecoin_id, source_key)` |
+| `worker/src/cron/sync-yield-data.ts` | Main sync cron: three-tier resolution, multi-source matching, PYS, safety scores, caching |
 | `worker/src/cron/yield-config.ts` | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS` |
-| `worker/src/cron/yield-helpers.ts` | Pure functions: APY, PYS, stability, variance, warning signals |
+| `worker/src/cron/yield-helpers.ts` | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools` |
 | `worker/src/cron/fetch-tbill-rate.ts` | Daily T-bill rate cron |
 | `worker/src/api/yield-rankings.ts` | `GET /api/yield-rankings` handler |
 | `worker/src/api/yield-history.ts` | `GET /api/yield-history` handler |
-| `src/lib/types.ts` | `YieldConfig`, `YieldType`, `YieldRanking` (`.yieldType: YieldType`, `.safetyGrade: ReportCardGrade \| null`), `YieldRankingsResponse`, `YieldHistoryPoint` |
+| `src/lib/types.ts` | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `src/lib/classification.ts` | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES` |
 | `src/hooks/use-yield-rankings.ts` | TanStack Query hook for rankings |
 | `src/hooks/use-yield-history.ts` | TanStack Query hook for history |
 | `src/app/yield/page.tsx` | SSG page wrapper with metadata |
 | `src/app/yield/client.tsx` | Interactive page: stats, scatter, leaderboard |
-| `src/components/yield-leaderboard.tsx` | Sortable rankings table |
+| `src/components/yield-leaderboard.tsx` | Sortable rankings table with `+N` alt-source pill badge |
 | `src/components/yield-scatter-plot.tsx` | Risk-adjusted scatter visualization |
 | `src/lib/__tests__/yield-helpers.test.ts` | Unit tests for all pure yield functions |

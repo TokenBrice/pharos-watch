@@ -7,6 +7,7 @@ import {
   computeApyVarianceScore,
   detectWarningSignals,
   findBestLendingPool,
+  matchAllDlPools,
 } from "../../../worker/src/cron/yield-helpers";
 
 describe("computeApyFromRate", () => {
@@ -225,5 +226,90 @@ describe("findBestLendingPool", () => {
     ];
     const result = findBestLendingPool("USDC", pools, allowlist, { minApy: 0.5, minTvlUsd: 1_000_000 });
     expect(result).toBeNull();
+  });
+});
+
+// Minimal DL pool fixture for matchAllDlPools tests
+const mkPool = (id: string, sym: string, tvl = 1_000_000, stable = true) => ({
+  pool: id, symbol: sym, tvlUsd: tvl,
+  apy: 5.0, apyBase: 5.0, apyReward: null,
+  stablecoin: stable, exposure: "single",
+});
+
+describe("matchAllDlPools", () => {
+  it("returns static YIELD_POOL_MAP entry when present", () => {
+    const dlPools = [mkPool("uuid-a", "DAI")];
+    const result = matchAllDlPools("5", "DAI", dlPools, { "5": "uuid-a" }, {});
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-a");
+  });
+
+  it("returns wrapper pool from YIELD_VARIANT_MAP as a second source", () => {
+    const dlPools = [mkPool("uuid-a", "DAI"), mkPool("uuid-b", "sDAI", 2_000_000)];
+    const result = matchAllDlPools(
+      "5", "DAI", dlPools,
+      { "5": "uuid-a" },
+      { "5": { variantSymbol: "sDAI" } },
+    );
+    expect(result).toHaveLength(2);
+    expect(result.map(p => p.pool)).toContain("uuid-a");
+    expect(result.map(p => p.pool)).toContain("uuid-b");
+  });
+
+  it("deduplicates when YIELD_POOL_MAP and wrapper search return the same pool", () => {
+    const dlPools = [mkPool("uuid-a", "sDAI")];
+    const result = matchAllDlPools(
+      "5", "DAI", dlPools,
+      { "5": "uuid-a" },
+      { "5": { variantSymbol: "sDAI" } },
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-a");
+  });
+
+  it("falls back to base-symbol search when no static maps match", () => {
+    const dlPools = [mkPool("uuid-a", "LUSD"), mkPool("uuid-b", "LUSD", 2_000_000)];
+    const result = matchAllDlPools("999", "LUSD", dlPools, {}, {});
+    expect(result).toHaveLength(1);
+    expect(result[0].tvlUsd).toBe(2_000_000); // picks highest TVL
+  });
+
+  it("returns empty array when no pool found", () => {
+    const result = matchAllDlPools("999", "NOPE", [mkPool("uuid-a", "DAI")], {}, {});
+    expect(result).toHaveLength(0);
+  });
+
+  it("picks highest TVL when multiple wrapper matches exist", () => {
+    const dlPools = [mkPool("uuid-a", "sGHO", 100_000), mkPool("uuid-b", "sGHO", 500_000)];
+    const result = matchAllDlPools(
+      "118", "GHO", dlPools, {},
+      { "118": { variantSymbol: "sGHO" } },
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-b"); // highest TVL wins
+  });
+
+  it("filters out multi-exposure pools", () => {
+    const lpPool = { ...mkPool("uuid-a", "sDAI"), exposure: "multi" };
+    const result = matchAllDlPools("5", "DAI", [lpPool], {}, { "5": { variantSymbol: "sDAI" } });
+    expect(result).toHaveLength(0);
+  });
+
+  it("Layer 2 finds non-stablecoin savings wrapper (e.g. fxSAVE)", () => {
+    // fxSAVE has stablecoin=false in DL but is a valid savings wrapper
+    const fxSavePool = mkPool("uuid-fxsave", "FXSAVE", 31_000_000, false);
+    const result = matchAllDlPools(
+      "168", "fxUSD", [fxSavePool], {},
+      { "168": { variantSymbol: "fxSAVE" } },
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].pool).toBe("uuid-fxsave");
+  });
+
+  it("Layer 3 fallback requires stablecoin=true", () => {
+    // A non-stablecoin pool should not be picked by base-symbol fallback
+    const nonStablePool = mkPool("uuid-a", "LUSD", 5_000_000, false);
+    const result = matchAllDlPools("999", "LUSD", [nonStablePool], {}, {});
+    expect(result).toHaveLength(0);
   });
 });
