@@ -10,10 +10,11 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
 
     // 1. Load current prices
     const priceCache = await getPriceCache(db);
+    const needsRepairWhere = "(amount_usd IS NULL OR price_used IS NULL OR price_timestamp IS NULL OR price_source IS NULL)";
 
-    // 2. Find distinct stablecoin_ids with NULL amount_usd
+    // 2. Find distinct stablecoin_ids with incomplete valuation/audit fields
     const nullRows = await db
-      .prepare("SELECT DISTINCT stablecoin_id FROM mint_burn_events WHERE amount_usd IS NULL")
+      .prepare(`SELECT DISTINCT stablecoin_id FROM mint_burn_events WHERE ${needsRepairWhere}`)
       .all<{ stablecoin_id: string }>();
 
     let totalUpdated = 0;
@@ -26,10 +27,12 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
         continue;
       }
 
-      // 3. Update amount_usd = amount * price for all NULL rows of this coin
+      // 3. Repair valuation and audit fields for rows missing any required value
       const result = await db
         .prepare(
-          "UPDATE mint_burn_events SET amount_usd = amount * ?, price_used = ?, price_timestamp = ?, price_source = 'backfill-price-cache' WHERE stablecoin_id = ? AND amount_usd IS NULL"
+          `UPDATE mint_burn_events
+           SET amount_usd = amount * ?, price_used = ?, price_timestamp = ?, price_source = 'backfill-price-cache'
+           WHERE stablecoin_id = ? AND ${needsRepairWhere}`
         )
         .bind(cached.price, cached.price, cached.updatedAt, stablecoin_id)
         .run();
