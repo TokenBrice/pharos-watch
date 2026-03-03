@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildAlchemyUrl, getAlchemyBlockNumber, fetchAlchemyLogs } from "../alchemy-logs";
+import {
+  buildAlchemyUrl,
+  getAlchemyBlockNumber,
+  fetchAlchemyLogs,
+  resolveBlockTimestamps,
+} from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
 
 const fetchMock = vi.fn();
@@ -144,5 +149,81 @@ describe("fetchAlchemyLogs", () => {
     );
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// --- resolveBlockTimestamps ---
+
+describe("resolveBlockTimestamps", () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
+  it("batch-fetches timestamps for multiple blocks", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify([
+        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
+        { jsonrpc: "2.0", id: 1, result: { timestamp: "0x6651a2cc" } },
+      ]),
+      { status: 200 },
+    ));
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050, 0x176f051], budget,
+    );
+    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+    expect(result.get(0x176f051)).toBe(0x6651a2cc);
+    expect(budget.count).toBe(1);
+  });
+
+  it("returns empty map for empty input", async () => {
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [], budget,
+    );
+    expect(result.size).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("splits into batches of 50", async () => {
+    const blocks = Array.from({ length: 60 }, (_, i) => 1000 + i);
+    const makeBatchResponse = (count: number, startIdx: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        jsonrpc: "2.0", id: startIdx + i,
+        result: { timestamp: "0x" + (1700000000 + startIdx + i).toString(16) },
+      }));
+
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify(makeBatchResponse(50, 0)), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(makeBatchResponse(10, 50)), { status: 200 }));
+
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      blocks, budget,
+    );
+    expect(result.size).toBe(60);
+    expect(budget.count).toBe(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns partial map when budget exhausted mid-batch", async () => {
+    const blocks = Array.from({ length: 60 }, (_, i) => 1000 + i);
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify(Array.from({ length: 50 }, (_, i) => ({
+        jsonrpc: "2.0", id: i,
+        result: { timestamp: "0x" + (1700000000 + i).toString(16) },
+      }))),
+      { status: 200 },
+    ));
+
+    const budget = createBudget(1);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      blocks, budget,
+    );
+    expect(result.size).toBe(50);
   });
 });

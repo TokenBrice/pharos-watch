@@ -117,3 +117,54 @@ export async function fetchAlchemyLogs(
     return null;
   }
 }
+
+// --- Block timestamps ---
+
+const TIMESTAMP_BATCH_SIZE = 50;
+
+export async function resolveBlockTimestamps(
+  alchemyUrl: string,
+  blockNumbers: number[],
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<Map<number, number>> {
+  const timestamps = new Map<number, number>();
+  if (blockNumbers.length === 0) return timestamps;
+
+  for (let i = 0; i < blockNumbers.length; i += TIMESTAMP_BATCH_SIZE) {
+    if (budgetExhausted(budget)) break;
+    budget.count++;
+
+    const batch = blockNumbers.slice(i, i + TIMESTAMP_BATCH_SIZE);
+    const payload = batch.map((block, idx) => ({
+      jsonrpc: "2.0",
+      id: idx,
+      method: "eth_getBlockByNumber",
+      params: ["0x" + block.toString(16), false],
+    }));
+
+    try {
+      const timeout = AbortSignal.timeout(30_000);
+      const res = await fetch(alchemyUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+      });
+      if (!res.ok) {
+        console.warn(`[alchemy-logs] batch eth_getBlockByNumber HTTP ${res.status}`);
+        await res.body?.cancel();
+        continue;
+      }
+      const responses = (await res.json()) as JsonRpcResponse<{ timestamp: string }>[];
+      for (let j = 0; j < responses.length; j++) {
+        const ts = responses[j]?.result?.timestamp;
+        if (ts) timestamps.set(batch[j], parseInt(ts, 16));
+      }
+    } catch (e) {
+      console.warn(`[alchemy-logs] batch timestamp fetch failed:`, e);
+    }
+  }
+
+  return timestamps;
+}
