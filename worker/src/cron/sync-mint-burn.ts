@@ -23,11 +23,21 @@ const EVM_BLOCK_TIME: Record<number, number> = {
 };
 
 // Maximum block range to scan per contract per cron cycle.
-// Prevents exponential recursion in fetchEvmLogsForTopics from exhausting the
-// shared subrequest budget when scanning dense contracts (e.g. USDC) over large ranges.
-// 50K blocks ≈ 7 days of Ethereum blocks. Full backfill of 2.6M blocks takes ~17 hours.
-// Note: for fast chains like Arbitrum (0.25s blocks), 50K blocks ≈ 3.5 hours.
-const MAX_SCAN_RANGE = 50_000;
+// Respects Alchemy PAYG eth_getLogs block range limits per chain.
+// ETH/ARB/BASE/OPT = unlimited on PAYG — we self-cap at 50K for budget control.
+// Avalanche ("all other chains") = 10K. Polygon = 2K.
+const CHAIN_SCAN_RANGE: Record<number, number> = {
+  1:     50_000,  // Ethereum — unlimited on PAYG, self-capped
+  42161: 50_000,  // Arbitrum — unlimited on PAYG, self-capped
+  8453:  50_000,  // Base — unlimited on PAYG, self-capped
+  10:    50_000,  // Optimism — unlimited on PAYG, self-capped
+  43114: 10_000,  // Avalanche — 10K Alchemy limit
+  137:   2_000,   // Polygon — 2K Alchemy limit
+};
+
+function getMaxScanRange(evmChainId: number): number {
+  return CHAIN_SCAN_RANGE[evmChainId] ?? 10_000;
+}
 
 function evmSafetyMarginBlocks(evmChainId: number): number {
   const blockTime = EVM_BLOCK_TIME[evmChainId] ?? 2;
@@ -113,7 +123,7 @@ export async function syncMintBurn(
     // Cap scan range to prevent exponential recursion exhausting the budget.
     // Historical ranges (scanTo < chainHead) are safe to advance to fully;
     // near chain head the safety margin protects against indexing lag.
-    const scanTo = Math.min(fromBlock + MAX_SCAN_RANGE, chainHead);
+    const scanTo = Math.min(fromBlock + getMaxScanRange(evmChainId), chainHead);
 
     let maxBlockSeen = 0;
     let configEvents = 0;
