@@ -252,12 +252,8 @@ const worker = {
           runLeasedCron("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal))
         ));
         // DEWS depends on stablecoins cache + dex data — run after sync
-        const telegramCreds =
-          env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID
-            ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
-            : null;
         ctx.waitUntil(stablecoinsSync.then(() =>
-          runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(db, signal, telegramCreds))
+          runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(db, signal))
         ));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {

@@ -10,10 +10,6 @@ import { getCache, batchExecute } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput, PoolEntry } from "../lib/dews";
-import { postDewsAlert, extractTopSignals, type TelegramCreds, type DewsAlertParams } from "../lib/telegram";
-
-const BAND_ORDER = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"] as const;
-const ALERT_BANDS = new Set(["WARNING", "DANGER"]);
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
@@ -31,7 +27,6 @@ for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
 export async function computeAndStoreDEWS(
   db: D1Database,
   _signal?: AbortSignal,
-  telegramCreds: TelegramCreds | null = null,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
 
@@ -331,46 +326,6 @@ export async function computeAndStoreDEWS(
         .bind(r.stablecoinId, nowSec, r.score, r.band, JSON.stringify(r.signals)),
     );
     await batchExecute(db, stmts);
-  }
-
-  // 9b. Post Telegram alerts for WARNING/DANGER band entries (non-fatal)
-  if (telegramCreds && results.length > 0) {
-    for (const r of results) {
-      if (!ALERT_BANDS.has(r.band)) continue;
-      const prevBand = prevBandMap.get(r.stablecoinId);
-      if (!prevBand) continue; // no previous reading — skip first run
-      const prevIdx = BAND_ORDER.indexOf(prevBand as typeof BAND_ORDER[number]);
-      const newIdx = BAND_ORDER.indexOf(r.band as typeof BAND_ORDER[number]);
-      if (prevIdx === -1 || newIdx === -1) continue; // unrecognised band — treat as no reading
-      if (newIdx <= prevIdx) continue; // not an upward transition
-
-      const meta = PSI_ELIGIBLE_META_BY_ID.get(r.stablecoinId);
-      if (!meta) continue;
-      const asset = assetById.get(r.stablecoinId);
-
-      const signals = r.signals as Record<string, { value: number; available: boolean }>;
-      const topSignals = extractTopSignals(signals);
-
-      const params: DewsAlertParams = {
-        stablecoinId: r.stablecoinId,
-        name: meta.name,
-        symbol: meta.symbol,
-        backing: meta.flags.backing,
-        governance: meta.flags.governance,
-        mcapUsd: asset ? getCirculatingRaw(asset) : 0,
-        price: asset?.price ?? null,
-        score: r.score,
-        band: r.band,
-        prevBand,
-        topSignals,
-      };
-
-      try {
-        await postDewsAlert(params, telegramCreds);
-      } catch (err) {
-        console.warn(`[dews] Failed to post Telegram alert for ${meta.symbol} (non-fatal):`, err);
-      }
-    }
   }
 
   // 10. Daily snapshot (first run of UTC day)
