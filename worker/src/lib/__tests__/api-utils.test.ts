@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { errorResponse, parseIntParam, jsonResponse } from "../api-utils";
+import { z } from "zod";
+import { errorResponse, parseIntParam, jsonResponse, validatePayloadWithSchema } from "../api-utils";
 
 describe("errorResponse", () => {
   it("returns JSON error with given status", async () => {
@@ -59,5 +60,21 @@ describe("jsonResponse", () => {
     const res = jsonResponse({ ok: true }, { "Cache-Control": "no-store" });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(res.headers.get("Content-Type")).toBe("application/json");
+  });
+});
+
+describe("validatePayloadWithSchema", () => {
+  it("returns parsed data when schema matches", () => {
+    const schema = z.object({ ok: z.boolean() });
+    const result = validatePayloadWithSchema(schema, { ok: true }, "test");
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data).toEqual({ ok: true });
+  });
+
+  it("returns issues when schema fails", () => {
+    const schema = z.object({ ok: z.boolean() });
+    const result = validatePayloadWithSchema(schema, { ok: "yes" }, "test");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.length).toBeGreaterThan(0);
   });
 });

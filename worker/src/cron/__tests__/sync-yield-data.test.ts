@@ -150,6 +150,17 @@ function makeDb() {
   ]);
 }
 
+function makeBrokenYieldRankingsDb() {
+  return mockD1([
+    { match: "cache", rows: [] },
+    { match: "yield_data", rows: [{ symbol: "BROKEN", current_apy: 5 }] },
+    { match: "yield_history", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "dex_liquidity", rows: [] },
+  ]);
+}
+
 describe("syncYieldData", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -305,5 +316,19 @@ describe("syncYieldData", () => {
     // With no pools available, yield resolution produces 0 updates
     expect(result.itemCount).toBe(0);
     expect(typeof result.metadata).toBe("string");
+  });
+
+  it("skips yield-rankings cache write when response payload fails schema validation", async () => {
+    const db = makeBrokenYieldRankingsDb();
+    vi.mocked(getCache).mockResolvedValue(null);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    const result = await syncYieldData(db);
+
+    expect(result.metadata).toContain("cacheWriteSkipped=schema-validation-failed");
+    const cacheCalls = vi.mocked(setCache).mock.calls;
+    const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
+    expect(wroteYieldRankings).toBe(false);
   });
 });

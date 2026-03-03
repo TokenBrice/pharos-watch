@@ -371,6 +371,39 @@ export interface DexPriceSource {
   tvl: number;
 }
 
+export const DexLiquidityPoolSchema = z.object({
+  project: z.string(),
+  chain: z.string(),
+  tvlUsd: z.number(),
+  symbol: z.string(),
+  volumeUsd1d: z.number(),
+  poolType: z.string(),
+  extra: z.object({
+    amplificationCoefficient: z.number().optional(),
+    balanceRatio: z.number().optional(),
+    feeTier: z.number().optional(),
+    effectiveTvl: z.number().optional(),
+    organicFraction: z.number().optional(),
+    pairQuality: z.number().optional(),
+    stressIndex: z.number().optional(),
+    isMetaPool: z.boolean().optional(),
+    maturityDays: z.number().optional(),
+    registryId: z.string().optional(),
+    balanceDetails: z.array(z.object({
+      symbol: z.string(),
+      balancePct: z.number(),
+      isTracked: z.boolean(),
+    })).optional(),
+  }).optional(),
+});
+
+export const DexPriceSourceSchema = z.object({
+  protocol: z.string(),
+  chain: z.string(),
+  price: z.number(),
+  tvl: z.number(),
+});
+
 export interface DexLiquidityData {
   totalTvlUsd: number;
   totalVolume24hUsd: number;
@@ -406,7 +439,45 @@ export interface DexLiquidityData {
     pairDiversity: number;
     crossChain: number;
   } | null;
+  lockedLiquidityPct?: number | null;
 }
+
+export const DexLiquidityDataSchema = z.object({
+  totalTvlUsd: z.number(),
+  totalVolume24hUsd: z.number(),
+  totalVolume7dUsd: z.number(),
+  poolCount: z.number(),
+  pairCount: z.number(),
+  chainCount: z.number(),
+  protocolTvl: z.record(z.string(), z.number()),
+  chainTvl: z.record(z.string(), z.number()),
+  topPools: z.array(DexLiquidityPoolSchema),
+  liquidityScore: z.number().nullable(),
+  concentrationHhi: z.number().nullable(),
+  depthStability: z.number().nullable(),
+  tvlChange24h: z.number().nullable(),
+  tvlChange7d: z.number().nullable(),
+  updatedAt: z.number(),
+  dexPriceUsd: z.number().nullable(),
+  dexDeviationBps: z.number().nullable(),
+  priceSourceCount: z.number().nullable(),
+  priceSourceTvl: z.number().nullable(),
+  priceSources: z.array(DexPriceSourceSchema).nullable(),
+  effectiveTvlUsd: z.number(),
+  avgPoolStress: z.number().nullable(),
+  weightedBalanceRatio: z.number().nullable(),
+  organicFraction: z.number().nullable(),
+  durabilityScore: z.number().nullable(),
+  scoreComponents: z.object({
+    tvlDepth: z.number(),
+    volumeActivity: z.number(),
+    poolQuality: z.number(),
+    durability: z.number(),
+    pairDiversity: z.number(),
+    crossChain: z.number(),
+  }).nullable(),
+  lockedLiquidityPct: z.number().nullable().optional(),
+});
 
 export interface DexLiquidityHistoryPoint {
   tvl: number;
@@ -416,6 +487,7 @@ export interface DexLiquidityHistoryPoint {
 }
 
 export type DexLiquidityMap = Record<string, DexLiquidityData>;
+export const DexLiquidityMapSchema = z.record(z.string(), DexLiquidityDataSchema);
 
 /** Sentinel key for global deduped aggregates in DexLiquidityMap */
 export const DEX_GLOBAL_KEY = "__global__";
@@ -704,12 +776,44 @@ export interface YieldRanking {
   warningSignals: string[];
 }
 
+export const YieldRankingSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  name: z.string(),
+  currentApy: z.number(),
+  apy7d: z.number(),
+  apy30d: z.number(),
+  apyBase: z.number().nullable(),
+  apyReward: z.number().nullable(),
+  yieldSource: z.string(),
+  yieldType: z.string(),
+  dataSource: z.string(),
+  sourceTvlUsd: z.number().nullable(),
+  pharosYieldScore: z.number().nullable(),
+  safetyScore: z.number().nullable(),
+  safetyGrade: z.string().nullable(),
+  yieldToRisk: z.number().nullable(),
+  excessYield: z.number().nullable(),
+  yieldStability: z.number().nullable(),
+  apyVariance30d: z.number().nullable(),
+  apyMin30d: z.number().nullable(),
+  apyMax30d: z.number().nullable(),
+  warningSignals: z.array(z.string()),
+});
+
 export interface YieldRankingsResponse {
   rankings: YieldRanking[];
   riskFreeRate: number;
   scalingFactor: number;
   updatedAt: number;
 }
+
+export const YieldRankingsResponseSchema = z.object({
+  rankings: z.array(YieldRankingSchema),
+  riskFreeRate: z.number(),
+  scalingFactor: z.number(),
+  updatedAt: z.number(),
+});
 
 export interface YieldHistoryPoint {
   date: number;

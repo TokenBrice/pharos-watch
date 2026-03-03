@@ -1,5 +1,5 @@
 import { route } from "./router";
-import { logCronRun, getCache } from "./lib/db";
+import { logCronRun, getCache, runCronWithLease, type CronResult } from "./lib/db";
 import { syncStablecoins } from "./cron/sync-stablecoins";
 import { syncStablecoinCharts } from "./cron/sync-stablecoin-charts";
 import { syncBlacklist } from "./cron/sync-blacklist";
@@ -198,16 +198,58 @@ const worker = {
     initCoinGecko(env.COINGECKO_API_KEY);
     const db = env.DB;
     const cron = event.cron;
+    const runLeasedCron = (job: string, fn: (signal: AbortSignal) => Promise<CronResult | void>) =>
+      logCronRun(db, job, async (signal): Promise<CronResult> => {
+        const lease = await runCronWithLease(db, job, async () => fn(signal));
+        if (lease.status === "skipped_locked") {
+          return {
+            status: "skipped_locked",
+            metadata: JSON.stringify({
+              reason: "lease-locked",
+              leaseOwner: lease.leaseOwner,
+              renewFailures: lease.renewFailures,
+            }),
+          };
+        }
+
+        const result = lease.result;
+        if (!result) {
+          return {
+            metadata: JSON.stringify({
+              leaseOwner: lease.leaseOwner,
+              renewFailures: lease.renewFailures,
+            }),
+          };
+        }
+
+        const leaseMeta = {
+          leaseOwner: lease.leaseOwner,
+          renewFailures: lease.renewFailures,
+        };
+        let metadata = result.metadata;
+        if (!metadata) {
+          metadata = JSON.stringify(leaseMeta);
+        } else {
+          try {
+            const parsed = JSON.parse(metadata) as Record<string, unknown>;
+            metadata = JSON.stringify({ ...parsed, ...leaseMeta });
+          } catch {
+            metadata = `${metadata} | lease=${JSON.stringify(leaseMeta)}`;
+          }
+        }
+
+        return { ...result, metadata };
+      });
 
     switch (cron) {
       case "*/15 * * * *": {
-        const stablecoinsSync = logCronRun(db, "sync-stablecoins", (signal) => syncStablecoins(db, env.CMC_API_KEY, signal));
+        const stablecoinsSync = runLeasedCron("sync-stablecoins", (signal) => syncStablecoins(db, env.CMC_API_KEY, signal));
         ctx.waitUntil(stablecoinsSync);
-        ctx.waitUntil(logCronRun(db, "sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
-        ctx.waitUntil(logCronRun(db, "sync-fx-rates", (signal) => syncFxRates(db, signal)));
+        ctx.waitUntil(runLeasedCron("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
+        ctx.waitUntil(runLeasedCron("sync-fx-rates", (signal) => syncFxRates(db, signal)));
         // PSI depends on stablecoins cache + depeg_events — run after sync completes
         ctx.waitUntil(stablecoinsSync.then(() =>
-          logCronRun(db, "stability-index", (signal) => computeAndStoreStabilityIndex(db, signal))
+          runLeasedCron("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal))
         ));
         // DEWS depends on stablecoins cache + dex data — run after sync
         const telegramCreds =
@@ -215,7 +257,7 @@ const worker = {
             ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
             : null;
         ctx.waitUntil(stablecoinsSync.then(() =>
-          logCronRun(db, "compute-dews", (signal) => computeAndStoreDEWS(db, signal, telegramCreds))
+          runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(db, signal, telegramCreds))
         ));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {
@@ -239,7 +281,7 @@ const worker = {
         if (etherscanAllowed) {
           const etherscanRL = createRateLimiter(4);
           const etherscanKey = env.ETHERSCAN_API_KEY ?? null;
-          const blacklistJob = logCronRun(db, "sync-blacklist", (signal) =>
+          const blacklistJob = runLeasedCron("sync-blacklist", (signal) =>
             syncBlacklist(db, etherscanKey, env.TRONGRID_API_KEY ?? null, env.DRPC_API_KEY ?? null, etherscanRL, signal)
           );
           ctx.waitUntil(blacklistJob);
@@ -254,7 +296,7 @@ const worker = {
         // Mint/burn — gated by Alchemy circuit breaker
         const alchemyAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ALCHEMY);
         if (alchemyAllowed) {
-          const mintBurnJob = logCronRun(db, "sync-mint-burn", (signal) =>
+          const mintBurnJob = runLeasedCron("sync-mint-burn", (signal) =>
             syncMintBurn(db, env.ALCHEMY_API_KEY ?? null, signal)
           );
           ctx.waitUntil(mintBurnJob);
@@ -270,21 +312,21 @@ const worker = {
       // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
       // Yield depends on dex_liquidity for safety scores — chain after DEX sync
       case "10,40 * * * *": {
-        const dexSync = logCronRun(db, "sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null, signal));
+        const dexSync = runLeasedCron("sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null, signal));
         ctx.waitUntil(dexSync);
         ctx.waitUntil(dexSync.then(() =>
-          logCronRun(db, "sync-yield-data", (signal) => syncYieldData(db, signal))
+          runLeasedCron("sync-yield-data", (signal) => syncYieldData(db, signal))
         ));
         break;
       }
       case "0 8 * * *": {
-        ctx.waitUntil(logCronRun(db, "snapshot-supply", (signal) => snapshotSupply(db, signal)));
-        ctx.waitUntil(logCronRun(db, "fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
-        const psiPromise = logCronRun(db, "snapshot-psi", (signal) => snapshotPsiDaily(db, signal));
+        ctx.waitUntil(runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal)));
+        ctx.waitUntil(runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
+        const psiPromise = runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal));
         ctx.waitUntil(psiPromise);
-        ctx.waitUntil(logCronRun(db, "sync-usds-status", (signal) => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null, signal)));
-        ctx.waitUntil(logCronRun(db, "sync-bluechip", (signal) => syncBluechip(db, signal)));
-        ctx.waitUntil(psiPromise.then(() => logCronRun(db, "daily-digest", (signal) => {
+        ctx.waitUntil(runLeasedCron("sync-usds-status", (signal) => syncUsdsStatus(db, env.ETHERSCAN_API_KEY ?? null, signal)));
+        ctx.waitUntil(runLeasedCron("sync-bluechip", (signal) => syncBluechip(db, signal)));
+        ctx.waitUntil(psiPromise.then(() => runLeasedCron("daily-digest", (signal) => {
           const twitterCreds =
             env.TWITTER_API_KEY &&
             env.TWITTER_API_SECRET &&

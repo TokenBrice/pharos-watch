@@ -23,8 +23,9 @@ import {
 } from "../../../src/lib/report-cards";
 import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import type { StablecoinData, PegSummaryCoin, DexLiquidityData } from "../../../src/lib/types";
+import { YieldRankingsResponseSchema, type StablecoinData, type PegSummaryCoin, type DexLiquidityData } from "../../../src/lib/types";
 import type { CronResult } from "../lib/db";
+import { validatePayloadWithSchema } from "../lib/api-utils";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
 
@@ -443,15 +444,30 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
   // 9. Cache the rankings response for fast API reads
   const rankingsData = await db.prepare("SELECT * FROM yield_data ORDER BY pharos_yield_score DESC").all();
-  await setCache(db, "yield-rankings", JSON.stringify({
+  const rankingsPayload = {
     rankings: (rankingsData.results ?? []).map(rowToRanking),
     riskFreeRate,
     scalingFactor: PYS_SCALING_FACTOR,
     updatedAt: startSec,
-  }));
+  };
+  const validation = validatePayloadWithSchema(
+    YieldRankingsResponseSchema,
+    rankingsPayload,
+    "sync-yield-data:yield-rankings",
+  );
+  if (validation.ok) {
+    await setCache(db, "yield-rankings", JSON.stringify(validation.data));
+  } else {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
+  }
 
   console.log(`[sync-yield-data] Updated ${updatedCount} coins (${yieldCoins.length} yield-bearing + auto-discovered)`);
-  return { itemCount: updatedCount, metadata: `${updatedCount} coins, rf=${riskFreeRate}%` };
+  return {
+    itemCount: updatedCount,
+    metadata: validation.ok
+      ? `${updatedCount} coins, rf=${riskFreeRate}%`
+      : `${updatedCount} coins, rf=${riskFreeRate}%, cacheWriteSkipped=schema-validation-failed`,
+  };
 }
 
 // -- Helpers -----------------------------------------------------------------

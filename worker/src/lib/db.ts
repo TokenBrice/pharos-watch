@@ -143,6 +143,139 @@ export async function getFirstSeenDates(db: D1Database): Promise<Map<string, num
 export interface CronResult {
   itemCount?: number;
   metadata?: string;
+  status?: "ok" | "skipped_locked";
+}
+
+// --- Cron lease primitives ---
+
+export interface CronLeaseOptions {
+  ttlSec?: number;
+  heartbeatSec?: number;
+  owner?: string;
+}
+
+export interface CronLeaseRunResult<T> {
+  status: "ok" | "skipped_locked";
+  leaseOwner: string;
+  renewFailures: number;
+  result?: T;
+}
+
+function createLeaseOwner(job: string): string {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/** Acquire or take over an expired cron lease. Returns false when another active owner holds the lease. */
+export async function acquireCronLease(
+  db: D1Database,
+  job: string,
+  owner: string,
+  ttlSec: number,
+): Promise<boolean> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const leaseUntil = nowSec + ttlSec;
+  const result = await db
+    .prepare(
+      `INSERT INTO cron_leases (job, lease_owner, lease_until, heartbeat_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(job) DO UPDATE SET
+         lease_owner = excluded.lease_owner,
+         lease_until = excluded.lease_until,
+         heartbeat_at = excluded.heartbeat_at,
+         updated_at = excluded.updated_at
+       WHERE cron_leases.lease_until < ? OR cron_leases.lease_owner = excluded.lease_owner`
+    )
+    .bind(job, owner, leaseUntil, nowSec, nowSec, nowSec)
+    .run();
+
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/** Renew an existing lease. Returns false when lease ownership was lost. */
+export async function renewCronLease(
+  db: D1Database,
+  job: string,
+  owner: string,
+  ttlSec: number,
+): Promise<boolean> {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const leaseUntil = nowSec + ttlSec;
+  const result = await db
+    .prepare(
+      `UPDATE cron_leases
+       SET lease_until = ?, heartbeat_at = ?, updated_at = ?
+       WHERE job = ? AND lease_owner = ?`
+    )
+    .bind(leaseUntil, nowSec, nowSec, job, owner)
+    .run();
+  return (result.meta.changes ?? 0) > 0;
+}
+
+/** Release a lease if and only if caller still owns it. */
+export async function releaseCronLease(
+  db: D1Database,
+  job: string,
+  owner: string,
+): Promise<void> {
+  await db
+    .prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ?")
+    .bind(job, owner)
+    .run();
+}
+
+/**
+ * Lease wrapper primitive for cron jobs. Acquires lease, keeps it alive with heartbeats,
+ * runs the job, and releases lease in finally.
+ *
+ * This helper does not yet wire cron status logging; integration is handled separately.
+ */
+export async function runCronWithLease<T>(
+  db: D1Database,
+  job: string,
+  fn: (ctx: { leaseOwner: string }) => Promise<T>,
+  opts?: CronLeaseOptions,
+): Promise<CronLeaseRunResult<T>> {
+  const timeoutSec = Math.ceil((CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS) / 1000);
+  const ttlSec = opts?.ttlSec ?? timeoutSec + 60;
+  const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
+  const owner = opts?.owner ?? createLeaseOwner(job);
+
+  const acquired = await acquireCronLease(db, job, owner, ttlSec);
+  if (!acquired) {
+    return {
+      status: "skipped_locked",
+      leaseOwner: owner,
+      renewFailures: 0,
+    };
+  }
+
+  let renewFailures = 0;
+  const timer = setInterval(() => {
+    void renewCronLease(db, job, owner, ttlSec)
+      .then((ok) => {
+        if (!ok) renewFailures++;
+      })
+      .catch(() => {
+        renewFailures++;
+      });
+  }, heartbeatSec * 1000);
+  if (typeof timer === "object" && "unref" in timer && typeof timer.unref === "function") {
+    timer.unref();
+  }
+
+  try {
+    const result = await fn({ leaseOwner: owner });
+    return {
+      status: "ok",
+      leaseOwner: owner,
+      renewFailures,
+      result,
+    };
+  } finally {
+    clearInterval(timer);
+    await releaseCronLease(db, job, owner);
+  }
 }
 
 // --- Per-job cron timeout configuration ---
@@ -181,7 +314,7 @@ export async function logCronRun(
         job,
         startSec,
         Date.now() - startMs,
-        "ok",
+        result?.status ?? "ok",
         result?.itemCount ?? null,
         result?.metadata ?? null
       )

@@ -11,7 +11,8 @@ import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import type { StablecoinMeta } from "../../../src/lib/types";
+import { StablecoinListResponseSchema, type StablecoinMeta } from "../../../src/lib/types";
+import { validatePayloadWithSchema } from "../lib/api-utils";
 
 // Derive commodity + CG-only fiat token lists from the central registry
 const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
@@ -391,7 +392,23 @@ async function fallbackToCgSupply(
   }
 
   const llamaData = { peggedAssets: assets, fxFallbackRates };
-  await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
+  const validation = validatePayloadWithSchema(
+    StablecoinListResponseSchema,
+    llamaData,
+    "sync-stablecoins:stablecoins:fallback",
+  );
+  if (!validation.ok) {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        source: "coingecko-fallback",
+        assetCount: assets.length,
+        cacheWriteSkipped: "schema-validation-failed",
+        validationIssues: validation.issues,
+      }),
+    };
+  }
+  await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
   console.log(`[sync-stablecoins] CG fallback: cached ${assets.length} assets`);
 
   // Still run depeg detection
@@ -721,7 +738,23 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     llamaData.fxFallbackRates = fxRates;
   }
 
-  await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
+  const validation = validatePayloadWithSchema(
+    StablecoinListResponseSchema,
+    llamaData,
+    "sync-stablecoins:stablecoins",
+  );
+  if (!validation.ok) {
+    return {
+      itemCount: 0,
+      metadata: JSON.stringify({
+        assetCount: llamaData.peggedAssets.length,
+        cacheWriteSkipped: "schema-validation-failed",
+        validationIssues: validation.issues,
+      }),
+    };
+  }
+
+  await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
   console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
   // Detect depeg events from current price data

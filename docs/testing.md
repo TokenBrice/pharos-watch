@@ -12,6 +12,9 @@ npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
+npm run test:critical-contracts # Critical endpoint contract suite
+npm run test:invariants # Critical numerical/schema invariant suite
+npm run coverage:critical # Full coverage + critical-path line-coverage gate
 ```
 
 ## CI Pipeline
@@ -20,9 +23,12 @@ Defined in `.github/workflows/deploy-cloudflare.yml`. The `deploy-pages` job run
 
 1. `npm run lint` — ESLint must pass (warnings OK, errors block)
 2. `npm test` — Vitest must pass (exit code 0)
-3. `npx tsx scripts/sync-digests.ts` — Fetch latest digests for SSG
-4. `npm run build` — Next.js static export (also runs TypeScript type-checking)
-5. Deploy to Cloudflare Pages
+3. `npm run test:critical-contracts` — Critical endpoint contract tests must pass
+4. `npm run test:invariants` — Critical invariants (finite numbers, schema-safe cache writes) must pass
+5. `npm run coverage:critical` — Critical files must meet line-coverage threshold
+6. `npx tsx scripts/sync-digests.ts` — Fetch latest digests for SSG
+7. `npm run build` — Next.js static export (also runs TypeScript type-checking)
+8. Deploy to Cloudflare Pages
 
 The `deploy-worker` job runs first (deploy-pages has `needs: deploy-worker`). It installs root deps (`npm ci`) for shared `src/lib/` type resolution, then installs worker deps and type-checks (`npx tsc --noEmit`).
 
@@ -142,6 +148,7 @@ const row = makeBlacklistRow({ stablecoin: "2", event_type: "freeze" });
 | `dews.test.ts` | `worker/src/lib/dews.ts` | `computeDEWS` — DEWS scoring, sub-signal computation, threat band assignment |
 | `circuit-breaker.test.ts` | `worker/src/lib/circuit-breaker.ts` | Circuit state machine: closed/open/half-open transitions, probe intervals, alerts |
 | `stability-index.test.ts` | `worker/src/lib/stability-index.ts` | PSI computation and component scoring |
+| `cron-leases.test.ts` | `worker/src/lib/db.ts` | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease` |
 
 ### API Contract Tests (`worker/src/api/__tests__/`)
 
@@ -219,6 +226,32 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 Current coverage: ~68% lines, ~70% statements (as of Phase 2 completion).
 
 Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
+
+### Critical Coverage Gate
+
+In addition to the global 50% line threshold, CI enforces a critical-path gate via `npm run coverage:critical`:
+
+- Runs coverage for the critical suites only (contract + invariant tests)
+- Parses `coverage/lcov.info`
+- Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 35%)
+
+Gate script: `scripts/check-critical-coverage.mjs`
+
+Current critical file set:
+- `src/lib/api.ts`
+- `worker/src/lib/api-utils.ts`
+- `worker/src/cron/sync-stablecoins.ts`
+- `worker/src/cron/sync-yield-data.ts`
+- `worker/src/api/peg-summary.ts`
+- `worker/src/api/report-cards.ts`
+- `worker/src/api/dex-liquidity.ts`
+- `worker/src/api/stress-signals.ts`
+- `worker/src/api/mint-burn-flows.ts`
+
+### Critical Test Suites
+
+- `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with API/fetch contract tests.
+- `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 
 ## Adding a New Test
 

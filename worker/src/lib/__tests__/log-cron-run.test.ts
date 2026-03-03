@@ -56,4 +56,35 @@ describe("logCronRun", () => {
       return { itemCount: 10, metadata: "test" };
     });
   });
+
+  it("persists custom status such as skipped_locked", async () => {
+    let insertedStatus: string | null = null;
+    const dbWithCapture = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_runs")) {
+              insertedStatus = String(args[3] ?? null);
+            }
+            return { success: true, meta: { changes: 1 } };
+          },
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => null,
+        }),
+        run: async () => ({ success: true, meta: { changes: 1 } }),
+        all: async () => ({ results: [], success: true, meta: {} }),
+        first: async () => null,
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    await logCronRun(dbWithCapture, "test-job", async () => ({
+      status: "skipped_locked",
+      metadata: "{\"reason\":\"lease-locked\"}",
+    }));
+
+    expect(insertedStatus).toBe("skipped_locked");
+  });
 });

@@ -2,6 +2,45 @@ import type { ZodType } from "zod";
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
+export const STRICT_CONTRACT_PATHS = new Set([
+  "/api/stablecoins",
+  "/api/peg-summary",
+  "/api/report-cards",
+  "/api/dex-liquidity",
+  "/api/stress-signals",
+  "/api/mint-burn-flows",
+]);
+
+export class SchemaValidationError extends Error {
+  readonly path: string;
+  readonly issues: string;
+
+  constructor(path: string, issues: string) {
+    super(`Schema validation failed for ${path}: ${issues}`);
+    this.name = "SchemaValidationError";
+    this.path = path;
+    this.issues = issues;
+  }
+}
+
+function normalizePath(path: string): string {
+  try {
+    return new URL(path, API_BASE || "http://localhost").pathname;
+  } catch {
+    return path.split("?")[0] ?? path;
+  }
+}
+
+function formatIssues(
+  issues: readonly { path: readonly PropertyKey[]; message: string }[],
+): string {
+  return issues.map((i) => `${i.path.map(String).join(".")}: ${i.message}`).join(", ");
+}
+
+function isStrictContractPath(path: string): boolean {
+  return STRICT_CONTRACT_PATHS.has(normalizePath(path));
+}
+
 // --- Data freshness metadata ---
 
 export interface ApiMeta {
@@ -24,10 +63,11 @@ export async function apiFetch<T>(path: string, schema?: ZodType<T>): Promise<T>
   if (schema) {
     const result = schema.safeParse(data);
     if (!result.success) {
-      console.warn(
-        `[API] Schema validation failed for ${path}:`,
-        result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", "),
-      );
+      const issues = formatIssues(result.error.issues);
+      if (isStrictContractPath(path)) {
+        throw new SchemaValidationError(path, issues);
+      }
+      console.warn(`[API] Schema validation failed for ${path}:`, issues);
       return data as T;
     }
     return result.data;
@@ -76,10 +116,11 @@ export async function apiFetchWithMeta<T>(
   if (schema) {
     const result = schema.safeParse(data);
     if (!result.success) {
-      console.warn(
-        `[API] Schema validation failed for ${path}:`,
-        result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join(", "),
-      );
+      const issues = formatIssues(result.error.issues);
+      if (isStrictContractPath(path)) {
+        throw new SchemaValidationError(path, issues);
+      }
+      console.warn(`[API] Schema validation failed for ${path}:`, issues);
       return { data: data as T, meta };
     }
     return { data: result.data, meta };

@@ -197,13 +197,15 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 
 **File:** `worker/src/lib/db.ts`
 
-Every cron job is wrapped: `ctx.waitUntil(logCronRun(db, "job-name", () => fn(db, ...)))`
+Every cron job is wrapped with `runCronWithLease(...)` + `logCronRun(...)`:
+
+`ctx.waitUntil(logCronRun(db, "job-name", (signal) => runCronWithLease(db, "job-name", async () => fn(db, signal))))`
 
 ```typescript
 async function logCronRun(
   db: D1Database,
   job: string,
-  fn: () => Promise<CronResult | void>
+  fn: (signal: AbortSignal) => Promise<CronResult | void>
 ): Promise<void>
 ```
 
@@ -211,6 +213,7 @@ async function logCronRun(
 - Records start time (Unix seconds)
 - Executes the job function
 - On success: inserts row into `cron_runs` with `status='ok'`, `item_count`, and `metadata`
+- On lease contention: inserts row with `status='skipped_locked'` and lease metadata
 - On error: inserts row with `status='error'` and error message, calls `sendAlert()`, re-throws
 - After each run: prunes rows older than 7 days (`started_at < now - 604800`); if prune fails, falls back to keeping only the top 5000 rows by rowid DESC
 
@@ -319,6 +322,38 @@ async function batchExecute(
 ```
 
 Chunks statements into batches of 100 (D1's batch limit) and executes sequentially.
+
+### Cron Lease Primitives (Phase C)
+
+Lease primitives are implemented in `worker/src/lib/db.ts` and backed by migration `0034_cron_leases.sql`.
+These are infrastructure primitives only; scheduler-wide wiring is handled separately in later phases.
+
+```sql
+CREATE TABLE IF NOT EXISTS cron_leases (
+  job TEXT PRIMARY KEY,
+  lease_owner TEXT NOT NULL,
+  lease_until INTEGER NOT NULL,
+  heartbeat_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+```
+
+| Function | Description |
+|----------|-------------|
+| `acquireCronLease(db, job, owner, ttlSec)` | Acquires lease for a job, or takes over when expired. Returns `true` on success, `false` if another active owner holds the lease. |
+| `renewCronLease(db, job, owner, ttlSec)` | Extends `lease_until` for the current owner. Returns `false` if ownership was lost. |
+| `releaseCronLease(db, job, owner)` | Deletes lease row only when caller still owns it. |
+| `runCronWithLease(db, job, fn, opts)` | Wrapper primitive: acquire → heartbeat renewals → run fn → release; returns `ok` or `skipped_locked` with metadata. |
+
+Default behavior in `runCronWithLease`:
+- Lease TTL defaults to `jobTimeout + 60s`
+- Heartbeat defaults to `max(15s, ttl/3)`
+- Owner defaults to `crypto.randomUUID()` when available
+
+### Lease Integration Status
+
+Lease primitives are now wired into scheduled cron execution in `worker/src/index.ts` for all cron jobs.
+When a lease cannot be acquired, the run is skipped (non-fatal) and recorded as `status='skipped_locked'` in `cron_runs`.
 
 ### Block Tracking (Blacklist)
 
@@ -494,7 +529,7 @@ A job is marked "unhealthy" if its last run had `status='error'` or if the last 
 |------|------|
 | `worker/src/index.ts` | Entry point: Env interface, CORS, edge cache, method routing, admin endpoints, scheduled handler |
 | `worker/wrangler.toml` | Deployment config: custom domain, cron triggers, D1 binding, vars |
-| `worker/src/lib/db.ts` | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache |
+| `worker/src/lib/db.ts` | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache, cron lease primitives |
 | `worker/src/lib/auth.ts` | Admin auth: timing-safe `X-Admin-Key` comparison |
 | `worker/src/lib/alerts.ts` | Webhook alerts: auto-detects Discord/Slack format |
 | `worker/src/lib/constants.ts` | Shared constants: API URLs, thresholds, cache profiles |

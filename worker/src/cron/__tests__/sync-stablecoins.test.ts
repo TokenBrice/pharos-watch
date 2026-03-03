@@ -81,6 +81,7 @@ import { syncStablecoins } from "../sync-stablecoins";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import * as apiUtils from "../../lib/api-utils";
 
 // --- Helpers ---
 
@@ -89,9 +90,17 @@ function makeDlResponse(assetCount: number) {
     id: String(i + 1),
     name: `Stablecoin ${i + 1}`,
     symbol: `SC${i + 1}`,
+    geckoId: null,
     price: 1.0,
+    priceSource: "defillama",
+    priceConfidence: "high",
+    supplySource: "defillama",
     pegType: "peggedUSD",
+    pegMechanism: "fiat-backed",
     circulating: { peggedUSD: 1_000_000 },
+    circulatingPrevDay: { peggedUSD: 1_000_000 },
+    circulatingPrevWeek: { peggedUSD: 1_000_000 },
+    circulatingPrevMonth: { peggedUSD: 1_000_000 },
     chainCirculating: {},
     chains: ["Ethereum"],
   }));
@@ -286,6 +295,37 @@ describe("syncStablecoins", () => {
 
     // 55 valid assets remain, malformed ones dropped
     expect(result.itemCount).toBe(55);
+  });
+
+  it("skips cache write when final stablecoins payload fails schema validation", async () => {
+    const db = makeDb();
+    const prepareSpy = vi.fn();
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      prepareSpy(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    const dlData = makeDlResponse(60);
+    vi.spyOn(apiUtils, "validatePayloadWithSchema").mockReturnValueOnce({
+      ok: false,
+      issues: "forced-test-validation-failure",
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(result.metadata).toContain("schema-validation-failed");
+    const cacheWrites = prepareSpy.mock.calls.filter(
+      (args) => (args[0] as string).includes("INSERT INTO cache")
+    );
+    expect(cacheWrites.length).toBe(0);
   });
 
   it("records DL success outcome when fetch succeeds", async () => {

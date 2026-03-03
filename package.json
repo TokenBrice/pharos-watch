@@ -12,6 +12,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:critical-contracts": "vitest run src/lib/__tests__/api-fetch-contracts.test.ts worker/src/api/__tests__/cache-passthrough.test.ts worker/src/api/__tests__/peg-summary.test.ts worker/src/api/__tests__/report-cards.test.ts worker/src/api/__tests__/dex-liquidity.test.ts worker/src/api/__tests__/stress-signals.test.ts worker/src/api/__tests__/mint-burn-flows.test.ts",
+    "test:invariants": "vitest run src/lib/__tests__/critical-invariants.test.ts worker/src/lib/__tests__/api-utils.test.ts worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data.test.ts",
+    "coverage:critical": "vitest run --coverage src/lib/__tests__/api-fetch-contracts.test.ts src/lib/__tests__/critical-invariants.test.ts worker/src/lib/__tests__/api-utils.test.ts worker/src/api/__tests__/cache-passthrough.test.ts worker/src/api/__tests__/peg-summary.test.ts worker/src/api/__tests__/report-cards.test.ts worker/src/api/__tests__/dex-liquidity.test.ts worker/src/api/__tests__/stress-signals.test.ts worker/src/api/__tests__/mint-burn-flows.test.ts worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data.test.ts && node scripts/check-critical-coverage.mjs",
     "test:watch": "vitest",
     "sync:digests": "tsx scripts/sync-digests.ts",
     "format": "prettier --write ."

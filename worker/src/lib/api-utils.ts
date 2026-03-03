@@ -1,6 +1,7 @@
 import { getCache } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import type { CacheStatus } from "../../../src/lib/types";
+import type { ZodType } from "zod";
 
 export type { CacheStatus };
 
@@ -145,6 +146,21 @@ export function jsonResponse(body: unknown, headers?: Record<string, string>): R
   return new Response(JSON.stringify(body), {
     headers: { "Content-Type": "application/json", ...headers },
   });
+}
+
+/** Validate payload with a Zod schema before cache/db write; logs parse issues for observability. */
+export function validatePayloadWithSchema<T>(
+  schema: ZodType<T>,
+  payload: unknown,
+  context: string,
+): { ok: true; data: T } | { ok: false; issues: string } {
+  const parsed = schema.safeParse(payload);
+  if (parsed.success) return { ok: true, data: parsed.data };
+  const issues = parsed.error.issues
+    .map((i) => `${i.path.map(String).join(".")}: ${i.message}`)
+    .join(", ");
+  console.error(`[validate] ${context} schema validation failed: ${issues}`);
+  return { ok: false, issues };
 }
 
 /**
