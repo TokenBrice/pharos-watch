@@ -806,6 +806,26 @@ export interface DepegEvent {
 
 // --- Peg Summary types (from /api/peg-summary) ---
 
+export const DepegDewsMethodologySchema = z.object({
+  version: z.string(),
+  versionLabel: z.string(),
+  currentVersion: z.string(),
+  currentVersionLabel: z.string(),
+  changelogPath: z.string(),
+  asOf: z.number(),
+  isCurrent: z.boolean(),
+});
+
+export interface DepegDewsMethodology {
+  version: string;
+  versionLabel: string;
+  currentVersion: string;
+  currentVersionLabel: string;
+  changelogPath: string;
+  asOf: number;
+  isCurrent: boolean;
+}
+
 export const PegSummaryCoinSchema = z.object({
   id: z.string(),
   symbol: z.string(),
@@ -823,6 +843,7 @@ export const PegSummaryCoinSchema = z.object({
   activeDepeg: z.boolean(),
   lastEventAt: z.number().nullable(),
   trackingSpanDays: z.number(),
+  methodologyVersion: z.string(),
   dexPriceCheck: z.object({
     dexPrice: z.number(),
     dexDeviationBps: z.number(),
@@ -847,6 +868,7 @@ export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
 export const PegSummaryResponseSchema = z.object({
   coins: z.array(PegSummaryCoinSchema),
   summary: PegSummaryStatsSchema.nullable(),
+  methodology: DepegDewsMethodologySchema,
 });
 export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 
@@ -1060,6 +1082,7 @@ export const StressSignalEntrySchema = z.object({
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),
   computedAt: z.number(),
+  methodologyVersion: z.string(),
 });
 
 export interface StressSignalEntry {
@@ -1067,16 +1090,19 @@ export interface StressSignalEntry {
   band: string;
   signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
   computedAt: number;
+  methodologyVersion: string;
 }
 
 export const StressSignalsAllResponseSchema = z.object({
   signals: z.record(z.string(), StressSignalEntrySchema),
   updatedAt: z.number(),
+  methodology: DepegDewsMethodologySchema,
 });
 
 export interface StressSignalsAllResponse {
   signals: Record<string, StressSignalEntry>;
   updatedAt: number;
+  methodology: DepegDewsMethodology;
 }
 
 export const StressSignalHistoryEntrySchema = z.object({
@@ -1084,14 +1110,23 @@ export const StressSignalHistoryEntrySchema = z.object({
   score: z.number(),
   band: z.string(),
   signals: z.record(z.string(), SignalDetailSchema),
+  methodologyVersion: z.string(),
 });
 
 export const StressSignalDetailResponseSchema = z.object({
   current: StressSignalEntrySchema.nullable(),
   history: z.array(StressSignalHistoryEntrySchema),
+  methodology: DepegDewsMethodologySchema,
 });
 
 export interface StressSignalDetailResponse {
   current: StressSignalEntry | null;
-  history: { date: number; score: number; band: string; signals: Record<string, { value: number; available: boolean; [key: string]: unknown }> }[];
+  history: {
+    date: number;
+    score: number;
+    band: string;
+    signals: Record<string, { value: number; available: boolean; [key: string]: unknown }>;
+    methodologyVersion: string;
+  }[];
+  methodology: DepegDewsMethodology;
 }

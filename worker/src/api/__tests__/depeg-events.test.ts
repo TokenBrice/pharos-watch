@@ -13,9 +13,15 @@ describe("handleDepegEvents", () => {
     ]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { events: unknown[]; total: number };
+    const body = (await res.json()) as {
+      events: unknown[];
+      total: number;
+      methodology: Record<string, unknown>;
+    };
     expect(body.events).toHaveLength(1);
     expect(body.total).toBe(1);
+    expect(body.methodology).toHaveProperty("version");
+    expect(body.methodology).toHaveProperty("changelogPath");
   });
 
   it("maps snake_case to camelCase via rowToDepegEvent", async () => {

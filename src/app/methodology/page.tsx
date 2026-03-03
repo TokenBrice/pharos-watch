@@ -8,6 +8,10 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/blacklist-tracker-version";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@/lib/liquidity-score-version";
 
 export const metadata: Metadata = {
@@ -292,6 +296,33 @@ export default function MethodologyPage() {
               </table>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Depeg Tracker + DEWS Methodology</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-500">
+              {DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition changes.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
+            and a per-coin peg score that penalizes time off peg, event severity, active depegs, and unstable event spread.
+          </p>
+          <p>
+            DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,
+            confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
+          </p>
         </CardContent>
       </Card>
 

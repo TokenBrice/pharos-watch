@@ -8,6 +8,13 @@ import type { StablecoinData, DepegEvent } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
 import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_VERSION,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+  getDepegDewsMethodologyVersionAt,
+  toDepegDewsMethodologyVersionLabel,
+} from "../../../src/lib/depeg-dews-version";
 
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
@@ -51,6 +58,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
   const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
   const now = Math.floor(Date.now() / 1000);
+  const methodologyVersion = getDepegDewsMethodologyVersionAt(cached.updatedAt);
 
   // 4-year-ago fallback for tracking start
   const fourYearsAgo = now - 4 * 365.25 * 86400;
@@ -73,6 +81,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     activeDepeg: boolean;
     lastEventAt: number | null;
     trackingSpanDays: number;
+    methodologyVersion: string;
     dexPriceCheck?: {
       dexPrice: number;
       dexDeviationBps: number;
@@ -155,6 +164,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       activeDepeg: scoreResult.activeDepeg,
       lastEventAt: scoreResult.lastEventAt,
       trackingSpanDays: scoreResult.trackingSpanDays,
+      methodologyVersion,
       dexPriceCheck: dexPriceCheck ?? undefined,
     });
 
@@ -204,6 +214,15 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       depegEventsToday,
       depegEventsYesterday,
       ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
+    },
+    methodology: {
+      version: methodologyVersion,
+      versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+      currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+      currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+      changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+      asOf: cached.updatedAt,
+      isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
     },
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,

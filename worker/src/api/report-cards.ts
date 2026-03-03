@@ -8,6 +8,7 @@ import { sumPegBuckets } from "../../../src/lib/supply";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { deriveDependencies } from "../../../src/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "../../../src/lib/dead-stablecoins";
+import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -121,6 +122,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
   const { rates: pegRates } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
   const now = Math.floor(Date.now() / 1000);
   const fourYearsAgo = now - 4 * 365.25 * 86400;
+  const methodologyVersion = getDepegDewsMethodologyVersionAt(stablecoinsCached.updatedAt);
 
   // 4. Compute peg summary data per coin (same logic as peg-summary)
   const pegDataById = new Map<string, PegSummaryCoin>();
@@ -163,6 +165,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       activeDepeg: scoreResult.activeDepeg,
       lastEventAt: scoreResult.lastEventAt,
       trackingSpanDays: scoreResult.trackingSpanDays,
+      methodologyVersion,
     });
   }
 

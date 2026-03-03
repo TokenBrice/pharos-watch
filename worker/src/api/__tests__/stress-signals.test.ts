@@ -40,6 +40,8 @@ describe("handleStressSignals contract tests", () => {
     expect(parsed.success).toBe(true);
     expect(body).toHaveProperty("signals");
     expect(body).toHaveProperty("updatedAt");
+    expect(body).toHaveProperty("methodology");
+    expect(body.signals["1"]).toHaveProperty("methodologyVersion");
   });
 
   it("single-coin mode returns shape matching StressSignalDetailResponseSchema", async () => {
@@ -77,6 +79,9 @@ describe("handleStressSignals contract tests", () => {
     expect(parsed.success).toBe(true);
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
+    expect(body).toHaveProperty("methodology");
+    expect(body.current).toHaveProperty("methodologyVersion");
+    expect(body.history[0]).toHaveProperty("methodologyVersion");
   });
 
   it("rejects invalid stablecoin ID with 400", async () => {

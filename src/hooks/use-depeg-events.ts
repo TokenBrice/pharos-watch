@@ -6,6 +6,15 @@ import { useApiQuery, CRON_15MIN } from "./use-api-query";
 interface DepegEventsResponse {
   events: DepegEvent[];
   total: number;
+  methodology?: {
+    version: string;
+    versionLabel: string;
+    currentVersion: string;
+    currentVersionLabel: string;
+    changelogPath: string;
+    asOf: number;
+    isCurrent: boolean;
+  };
 }
 
 export function useDepegEvents(stablecoinId?: string) {

@@ -13,6 +13,7 @@ import {
   scoreToGrade,
   isBlacklistable,
 } from "../../../src/lib/report-cards";
+import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
 import { getCache, getFirstSeenDates } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
@@ -483,6 +484,7 @@ export async function generateDailyDigest(
         .filter(m => isBlacklistable(m) === true)
         .map(m => m.id)
     );
+    const methodologyVersion = getDepegDewsMethodologyVersionAt(nowSec);
 
     // Phase 1: non-dependent coins
     for (const meta of TRACKED_STABLECOINS) {
@@ -504,6 +506,7 @@ export async function generateDailyDigest(
         worstDeviationBps: scoreResult.worstDeviationBps,
         activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
         trackingSpanDays: scoreResult.trackingSpanDays,
+        methodologyVersion,
       };
 
       const canBl = isBlacklistable(meta, blacklistableIds);
@@ -544,6 +547,7 @@ export async function generateDailyDigest(
         worstDeviationBps: scoreResult.worstDeviationBps,
         activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
         trackingSpanDays: scoreResult.trackingSpanDays,
+        methodologyVersion,
       };
 
       const canBl = isBlacklistable(meta, blacklistableIds);

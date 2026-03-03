@@ -65,9 +65,19 @@ describe("critical invariants", () => {
             peg: { value: 10, available: true },
           },
           computedAt: 1700000000,
+          methodologyVersion: "4.0",
         },
       },
       updatedAt: 1700000000,
+      methodology: {
+        version: "4.0",
+        versionLabel: "v4.0",
+        currentVersion: "4.4",
+        currentVersionLabel: "v4.4",
+        changelogPath: "/methodology/depeg-changelog/",
+        asOf: 1700000000,
+        isCurrent: false,
+      },
     };
     expect(StressSignalsAllResponseSchema.safeParse(stress).success).toBe(true);
     expect(

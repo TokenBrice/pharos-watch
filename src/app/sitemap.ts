@@ -11,8 +11,9 @@ const LAST_EDITED: Record<string, string> = {
   "/cemetery/": "2026-02-26",
   "/privacy/": "2026-02-26",
   "/compare/": "2026-02-26",
-  "/methodology/": "2026-02-28",
+  "/methodology/": "2026-03-03",
   "/methodology/scoring-changelog/": "2026-02-28",
+  "/methodology/depeg-changelog/": "2026-03-03",
   "/methodology/blacklist-tracker-changelog/": "2026-03-03",
   "/methodology/liquidity-score-changelog/": "2026-03-03",
   "/methodology/stability-index-changelog/": "2026-03-03",
@@ -112,6 +113,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: "https://pharos.watch/methodology/scoring-changelog/",
       lastModified: new Date(LAST_EDITED["/methodology/scoring-changelog/"]!),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: "https://pharos.watch/methodology/depeg-changelog/",
+      lastModified: new Date(LAST_EDITED["/methodology/depeg-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },

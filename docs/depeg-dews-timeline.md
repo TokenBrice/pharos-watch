@@ -1,0 +1,138 @@
+# Depeg Tracker + DEWS Methodology — Version Timeline
+
+Internal changelog reconstructed from git history. Covers `v1.0` through `v4.4` (2026-02-18 -> 2026-03-02).
+
+---
+
+## v4.4 — No-history coins now return null peg score (Mar 2, 2026)
+
+**Commit:** `71cc096`
+
+- `coinTrackingStart()` now returns `null` when both first-seen data and depeg events are absent
+- Prevents synthetic "perfect peg" scores for insufficient-history coins
+
+---
+
+## v4.3 — Young-coin fairness + stronger active penalties (Mar 1, 2026)
+
+**Commit:** `fd83a46`
+
+- Tracking start formalized as `max(firstSeen, fourYearsAgo)` with earliest-event fallback
+- Event severity now uses `max(durationPenalty, magnitudeFloor)`
+- Active-depeg penalty steepened to `max(5, absBps / 50)`, capped at 50
+
+---
+
+## v4.2 — DEWS wave-2: yield + PSI context (Mar 1, 2026)
+
+**Commit:** `dcdefde`
+
+- Added 8th DEWS sub-signal: yield anomaly (`weight = 0.05`)
+- Added PSI-based amplifier (up to +30% when PSI < 75)
+- Cron now reads `yield_data.warning_signals` and latest PSI sample before scoring
+
+---
+
+## v4.1 — DEWS pool stress calibration fix (Mar 1, 2026)
+
+**Commit:** `2d8f867`
+
+- Fixed pool signal scaling: `avg_pool_stress` is already `0-100` (removed erroneous `* 100`)
+
+---
+
+## v4.0 — DEWS launch (Mar 1, 2026)
+
+**Commits:** `a87876c`, `9bfe791`
+
+- Initial DEWS model launched with 7 sub-signals
+- Threat bands introduced: CALM / WATCH / ALERT / WARNING / DANGER
+- 15-minute cron persistence to `stress_signals` + daily snapshots to `stress_signal_history`
+
+---
+
+## v3.2 — Tracking-window direction fix (Feb 27, 2026)
+
+**Commit:** `74aa1cd`
+
+- Fixed lookback boundary from `min(firstSeen, fourYearsAgo)` to `max(...)`
+- Removed young-coin dilution across pre-launch periods
+
+---
+
+## v3.1 — Confirmation hardening (Feb 26, 2026)
+
+**Commits:** `c2832ae`, `61e8f9b`, `c868ba2`, `76aa8c6`
+
+- Added guards for invalid/non-finite peg references
+- Pending confirmation mutations now execute atomically in batch
+- Hardened error handling around DEX table loads
+
+---
+
+## v3.0 — Two-stage confirmation for large-cap depegs (Feb 25, 2026)
+
+**Commits:** `ece06dd`, `c1adfa7`, `5fac720`, `9854efe`, `8c5a9b9`
+
+- Added `depeg_pending` table and confirmation constants
+- `>= $1B` coins now require secondary-source confirmation (CoinGecko or DEX) before promotion
+- `sync-stablecoins` now runs detection + confirmation each cycle
+
+---
+
+## v2.1 — Four-year lookback window (Feb 20, 2026)
+
+**Commit:** `29c1bdc`
+
+- Added explicit 4-year peg-score lookback for detail-path scoring
+
+---
+
+## v2.0 — Peg-score severity rebalance + spread penalty (Feb 20, 2026)
+
+**Commit:** `d2954c3`
+
+- Severity moved from `sqrt` scaling to linear `peakBps/100` scaling
+- Added spread penalty from event-magnitude standard deviation (cap 15)
+- Composite became:
+
+```text
+score = 0.5*pegPct + 0.5*severity - activePenalty - spreadPenalty
+```
+
+---
+
+## v1.2 — Non-USD thresholds + ongoing false-positive controls (Feb 20, 2026)
+
+**Commits:** `9c0d1a6`, `7bc5361`, `8b01716`
+
+- Non-USD depeg threshold raised to `150 bps` (`USD` remains `100 bps`)
+- Cleanup migration removed old non-USD events below 150 bps
+- Ongoing events now auto-close after sustained DEX disagreement (30m+, >=$1M TVL)
+
+---
+
+## v1.1 — Early hardening + active penalty floor (Feb 18, 2026)
+
+**Commits:** `cb67892`, `c6c1391`, `4c818f5`, `8b0fe61`
+
+- Added active-depeg penalty, then added a minimum floor
+- Merged overlapping intervals to avoid double-counting depeg time
+- Closed orphan open events deterministically during detection runs
+
+---
+
+## v1.0 — Initial depeg scoring + live detection (Feb 18, 2026)
+
+**Commits:** `f1ea0d8`, `2556ae4`
+
+- Initial peg score computation shipped
+- Live depeg detection pipeline shipped
+- Duplicate open-event merge and new-event DEX suppression introduced
+
+---
+
+## Notes
+
+- Versions above are reconstructed retroactively from methodology-impacting commit boundaries.
+- Canonical machine-readable source: `src/lib/depeg-dews-version.ts`.

@@ -24,6 +24,7 @@ import {
   scoreLiquidity, scorePegStability, scoreResilience,
 } from "../../../src/lib/report-cards";
 import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
+import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { YieldRankingsResponseSchema, type StablecoinData, type PegSummaryCoin, type DexLiquidityData } from "../../../src/lib/types";
 import type { CronResult } from "../lib/db";
@@ -590,6 +591,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
         .filter(m => isBlacklistable(m) === true)
         .map(m => m.id)
     );
+    const methodologyVersion = getDepegDewsMethodologyVersionAt(nowSec);
 
     // Phase 1: non-dependent coins
     for (const meta of TRACKED_STABLECOINS) {
@@ -610,6 +612,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
         worstDeviationBps: scoreResult.worstDeviationBps,
         activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
         trackingSpanDays: scoreResult.trackingSpanDays,
+        methodologyVersion,
       };
 
       const canBl = isBlacklistable(meta, blacklistableIds);
@@ -646,6 +649,7 @@ async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyRe
         worstDeviationBps: scoreResult.worstDeviationBps,
         activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
         trackingSpanDays: scoreResult.trackingSpanDays,
+        methodologyVersion,
       };
 
       const canBl = isBlacklistable(meta, blacklistableIds);

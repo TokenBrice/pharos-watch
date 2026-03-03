@@ -1,5 +1,12 @@
 import { withErrorHandler, isValidStablecoinId, addFreshnessHeaders, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_VERSION,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+  getDepegDewsMethodologyVersionAt,
+  toDepegDewsMethodologyVersionLabel,
+} from "../../../src/lib/depeg-dews-version";
 
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
@@ -44,6 +51,7 @@ export const handleStressSignals = withErrorHandler(
         }>();
 
       const computedAt = latest?.computed_at ?? Math.floor(Date.now() / 1000);
+      const methodologyVersion = getDepegDewsMethodologyVersionAt(computedAt);
       return jsonResponse({
         current: latest
           ? {
@@ -51,6 +59,7 @@ export const handleStressSignals = withErrorHandler(
               band: latest.band,
               signals: JSON.parse(latest.signals_json),
               computedAt: latest.computed_at,
+              methodologyVersion: getDepegDewsMethodologyVersionAt(latest.computed_at),
             }
           : null,
         history: history.results.map((r) => ({
@@ -58,7 +67,17 @@ export const handleStressSignals = withErrorHandler(
           score: r.score,
           band: r.band,
           signals: JSON.parse(r.signals_json),
+          methodologyVersion: getDepegDewsMethodologyVersionAt(r.snapshot_date),
         })),
+        methodology: {
+          version: methodologyVersion,
+          versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+          currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+          currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+          changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+          asOf: computedAt,
+          isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
+        },
       }, addFreshnessHeaders({
         "Cache-Control": CACHE_PROFILES.standard,
       }, computedAt, 900));
@@ -85,17 +104,30 @@ export const handleStressSignals = withErrorHandler(
     const signals: Record<string, object> = {};
     let updatedAt = 0;
     for (const row of rows.results) {
+      const methodologyVersion = getDepegDewsMethodologyVersionAt(row.computed_at);
       signals[row.stablecoin_id] = {
         score: row.score,
         band: row.band,
         signals: JSON.parse(row.signals_json),
         computedAt: row.computed_at,
+        methodologyVersion,
       };
       updatedAt = Math.max(updatedAt, row.computed_at);
     }
 
-    return jsonResponse({ signals, updatedAt }, addFreshnessHeaders({
+    const asOf = updatedAt > 0 ? updatedAt : Math.floor(Date.now() / 1000);
+    const methodologyVersion = getDepegDewsMethodologyVersionAt(asOf);
+
+    return jsonResponse({ signals, updatedAt, methodology: {
+      version: methodologyVersion,
+      versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
+      currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
+      currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+      changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+      asOf,
+      isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
+    } }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
-    }, updatedAt, 900));
+    }, asOf, 900));
   },
 );

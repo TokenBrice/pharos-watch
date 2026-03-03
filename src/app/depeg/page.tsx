@@ -5,6 +5,10 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import {
+  DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
+  DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/depeg-dews-version";
 
 const DepegClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DepegClient })),
@@ -75,11 +79,17 @@ export default function DepegPage() {
           <span>/</span>
           <span className="text-foreground">Depeg Tracker</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Depeg Tracker <FeatureStatusBadge status="mature" /></h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Depeg Tracker <FeatureStatusBadge status="mature" version={DEPEG_DEWS_METHODOLOGY_VERSION_LABEL} /></h1>
         <p className="text-sm text-muted-foreground">
           Real-time peg monitoring across {TRACKED_STABLECOINS.length} stablecoins.
           Peg scores, DEWS early warning signals, live deviation heatmaps, and a
           full history of depeg events — all in one place.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Methodology version {DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}.{" "}
+          <Link href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Version history &rarr;
+          </Link>
         </p>
       </div>
       <DepegClient />
