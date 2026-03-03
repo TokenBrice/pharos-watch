@@ -261,24 +261,46 @@ const ChainCirculatingSchema = z.record(z.string(), z.object({
   circulatingPrevMonth: z.number(),
 }));
 
-export const StablecoinDataSchema = z.object({
+const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fallback"]);
+
+const StablecoinDataRawSchema = z.object({
   id: z.string(),
   name: z.string(),
   symbol: z.string(),
-  geckoId: z.string().nullable(),
+  geckoId: z.string().nullable().optional(),
+  gecko_id: z.string().nullable().optional(),
   pegType: z.string(),
   pegMechanism: z.string(),
   price: z.number().nullable(),
   priceSource: z.string(),
-  priceConfidence: z.enum(["high", "single-source", "low", "fallback"]).nullable(),
+  priceConfidence: PriceConfidenceSchema.nullable().optional(),
   supplySource: z.string().optional(),
   circulating: PegBucketsSchema,
-  circulatingPrevDay: PegBucketsSchema,
-  circulatingPrevWeek: PegBucketsSchema,
-  circulatingPrevMonth: PegBucketsSchema,
+  circulatingPrevDay: PegBucketsSchema.nullish(),
+  circulatingPrevWeek: PegBucketsSchema.nullish(),
+  circulatingPrevMonth: PegBucketsSchema.nullish(),
   chainCirculating: ChainCirculatingSchema,
   chains: z.array(z.string()),
 });
+
+export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) => ({
+  id: asset.id,
+  name: asset.name,
+  symbol: asset.symbol,
+  geckoId: asset.geckoId ?? asset.gecko_id ?? null,
+  pegType: asset.pegType,
+  pegMechanism: asset.pegMechanism,
+  price: asset.price,
+  priceSource: asset.priceSource,
+  priceConfidence: asset.priceConfidence ?? null,
+  supplySource: asset.supplySource,
+  circulating: asset.circulating,
+  circulatingPrevDay: asset.circulatingPrevDay ?? {},
+  circulatingPrevWeek: asset.circulatingPrevWeek ?? {},
+  circulatingPrevMonth: asset.circulatingPrevMonth ?? {},
+  chainCirculating: asset.chainCirculating,
+  chains: asset.chains,
+}));
 export type StablecoinData = z.infer<typeof StablecoinDataSchema>;
 
 export const StablecoinListResponseSchema = z.object({

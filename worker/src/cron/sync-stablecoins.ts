@@ -27,6 +27,64 @@ function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;
 }
 
+type StablecoinsPayload = {
+  peggedAssets: PeggedAsset[];
+  fxFallbackRates?: Record<string, number>;
+};
+
+function resolveGeckoId(asset: PeggedAsset): string | undefined {
+  if (typeof asset.geckoId === "string" && asset.geckoId.length > 0) {
+    return asset.geckoId;
+  }
+  const snakeCase = asset["gecko_id"];
+  if (typeof snakeCase === "string" && snakeCase.length > 0) {
+    return snakeCase;
+  }
+  return undefined;
+}
+
+function toPegBuckets(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object") return {};
+  const out: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof raw === "number" && Number.isFinite(raw)) {
+      out[key] = raw;
+    }
+  }
+  return out;
+}
+
+function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPayload {
+  return {
+    ...payload,
+    peggedAssets: payload.peggedAssets.map((asset) => {
+      const { gecko_id: _ignoredSnakeCase, ...rest } = asset as PeggedAsset & { gecko_id?: unknown };
+      const confidence = asset.priceConfidence;
+      const normalizedConfidence =
+        confidence === "high" || confidence === "single-source" || confidence === "low" || confidence === "fallback"
+          ? confidence
+          : null;
+
+      return {
+        ...rest,
+        geckoId: resolveGeckoId(asset),
+        priceConfidence: normalizedConfidence,
+        circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
+        circulatingPrevWeek: toPegBuckets(asset.circulatingPrevWeek),
+        circulatingPrevMonth: toPegBuckets(asset.circulatingPrevMonth),
+      };
+    }),
+  };
+}
+
+function hydrateGeckoIdAliases(assets: PeggedAsset[]): void {
+  for (const asset of assets) {
+    if (typeof asset.geckoId === "string" && asset.geckoId.length > 0) continue;
+    const geckoId = resolveGeckoId(asset);
+    if (geckoId) asset.geckoId = geckoId;
+  }
+}
+
 async function fetchSilverTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
   if (SILVER_METAS.length === 0) return [];
   try {
@@ -392,19 +450,20 @@ async function fallbackToCgSupply(
     } catch { /* ignore */ }
   }
 
-  const llamaData = { peggedAssets: assets, fxFallbackRates };
+  const llamaData: StablecoinsPayload = { peggedAssets: assets, fxFallbackRates };
+  const normalizedPayload = normalizeStablecoinsPayload(llamaData);
   const validation = validatePayloadWithSchema(
     StablecoinListResponseSchema,
-    llamaData,
+    normalizedPayload,
     "sync-stablecoins:stablecoins:fallback",
   );
   if (!validation.ok) {
-    console.error("[sync-stablecoins] Schema validation failed in CG fallback; writing guarded unvalidated payload:", validation.issues);
+    console.error("[sync-stablecoins] Schema validation failed in CG fallback; writing guarded normalized payload:", validation.issues);
     await sendAlert(
       "Stablecoins schema validation warning",
       `CG fallback payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
     );
-    await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
+    await setCacheIfNewer(db, "stablecoins", JSON.stringify(normalizedPayload), syncStartSec);
     return {
       itemCount: assets.length,
       metadata: JSON.stringify({
@@ -485,6 +544,10 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     console.warn(`[sync-stablecoins] Dropped ${llamaData.peggedAssets.length - validAssets.length} malformed assets`);
     llamaData.peggedAssets = validAssets;
   }
+
+  // DefiLlama may emit `gecko_id` (snake_case). Hydrate `geckoId` early so
+  // dual-primary and enrichment passes can still use CoinGecko identifiers.
+  hydrateGeckoIdAliases(llamaData.peggedAssets);
 
   // Normalize chainCirculating: DL returns peg-bucket objects ({peggedUSD: N})
   // for current/prev values — flatten to plain numbers so the frontend schema
@@ -745,18 +808,19 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     llamaData.fxFallbackRates = fxRates;
   }
 
+  const normalizedPayload = normalizeStablecoinsPayload(llamaData);
   const validation = validatePayloadWithSchema(
     StablecoinListResponseSchema,
-    llamaData,
+    normalizedPayload,
     "sync-stablecoins:stablecoins",
   );
   if (!validation.ok) {
-    console.error("[sync-stablecoins] Schema validation failed; writing guarded unvalidated payload:", validation.issues);
+    console.error("[sync-stablecoins] Schema validation failed; writing guarded normalized payload:", validation.issues);
     await sendAlert(
       "Stablecoins schema validation warning",
       `Payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
     );
-    await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
+    await setCacheIfNewer(db, "stablecoins", JSON.stringify(normalizedPayload), syncStartSec);
     return {
       itemCount: llamaData.peggedAssets.length,
       metadata: JSON.stringify({

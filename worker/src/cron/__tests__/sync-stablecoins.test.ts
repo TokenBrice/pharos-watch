@@ -376,4 +376,40 @@ describe("syncStablecoins", () => {
     // Should succeed without errors — normalization happens internally
     expect(result.itemCount).toBe(60);
   });
+
+  it("normalizes gecko_id aliases and nullable buckets before final schema validation", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const target = dlData.peggedAssets[2] as Record<string, unknown>;
+    delete target.geckoId;
+    target.gecko_id = "coin-three";
+    delete target.priceConfidence;
+    target.circulatingPrevDay = null;
+    target.circulatingPrevWeek = null;
+    target.circulatingPrevMonth = null;
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "3");
+    expect(normalized).toBeDefined();
+    expect(normalized?.geckoId).toBe("coin-three");
+    expect("gecko_id" in (normalized ?? {})).toBe(false);
+    expect(normalized?.priceConfidence).toBe("single-source");
+    expect(normalized?.circulatingPrevDay).toEqual({});
+    expect(normalized?.circulatingPrevWeek).toEqual({});
+    expect(normalized?.circulatingPrevMonth).toEqual({});
+  });
 });
