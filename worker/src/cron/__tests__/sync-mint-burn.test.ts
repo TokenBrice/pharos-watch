@@ -57,15 +57,23 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
   ],
 }));
 
-// Stub evm-logs — heavy EVM interaction primitives
+// Stub alchemy-logs — new Alchemy JSON-RPC functions
+vi.mock("../../lib/alchemy-logs", () => ({
+  buildAlchemyUrl: vi.fn((_chainId: string, _apiKey: string) =>
+    "https://eth-mainnet.g.alchemy.com/v2/test-key"
+  ),
+  getAlchemyBlockNumber: vi.fn(async () => 22000000),
+  fetchAlchemyLogs: vi.fn(async () => []),
+  resolveBlockTimestamps: vi.fn(async () => new Map()),
+}));
+
+// Keep evm-logs helpers (budget, decode) — they're still imported by sync-mint-burn
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 200) => ({ count: 0, limit })),
   budgetExhausted: vi.fn((b: { count: number; limit: number }) => b.count >= b.limit),
   decodeUint256: vi.fn(() => 50000),
   decodeUint256AtSlot: vi.fn(() => 50000),
   decodeAddress: vi.fn((hex: string) => "0x" + hex.slice(-40)),
-  getEvmBlockNumber: vi.fn(async () => 22000000),
-  fetchEvmLogsForTopics: vi.fn(async () => []),
 }));
 
 // Stub db helpers
@@ -86,7 +94,7 @@ vi.mock("../../../../src/lib/chains", () => ({
 
 import { syncMintBurn } from "../sync-mint-burn";
 import { batchExecute } from "../../lib/db";
-import { getEvmBlockNumber, fetchEvmLogsForTopics } from "../../lib/evm-logs";
+import { getAlchemyBlockNumber, fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 
 // --- Helpers ---
 
@@ -99,9 +107,8 @@ function makeDb() {
   ]);
 }
 
-function makeMintLog(opts: { blockNumber?: number; timestamp?: number; txHash?: string; logIndex?: number } = {}) {
+function makeMintLog(opts: { blockNumber?: number; txHash?: string; logIndex?: number } = {}) {
   const block = opts.blockNumber ?? 22000000;
-  const ts = opts.timestamp ?? 1718650752;
   return {
     address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
     topics: [
@@ -109,27 +116,23 @@ function makeMintLog(opts: { blockNumber?: number; timestamp?: number; txHash?: 
       "0x0000000000000000000000000000000000000000000000000000000000000000",
       "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
     ],
-    data: "0x00000000000000000000000000000000000000000000000000000002540be400", // 10B in 6-decimal
+    data: "0x00000000000000000000000000000000000000000000000000000002540be400",
     blockNumber: "0x" + block.toString(16),
-    timeStamp: "0x" + ts.toString(16),
     transactionHash: opts.txHash ?? "0xabc123",
-    logIndex: "0x" + (opts.logIndex ?? 0).toString(16),
     transactionIndex: "0x0",
     blockHash: "0x0",
-    gasPrice: "0x0",
-    gasUsed: "0x0",
+    logIndex: "0x" + (opts.logIndex ?? 0).toString(16),
+    removed: false,
   };
 }
 
 describe("syncMintBurn", () => {
-  const etherscanRL = async <T>(fn: () => Promise<T>) => fn();
-
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
-    // Reset mocks to factory defaults
-    vi.mocked(getEvmBlockNumber).mockReset().mockResolvedValue(22000000);
-    vi.mocked(fetchEvmLogsForTopics).mockReset().mockResolvedValue([]);
+    vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22000000);
+    vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue([]);
+    vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
     vi.mocked(batchExecute).mockReset().mockResolvedValue(undefined);
   });
 
@@ -142,11 +145,14 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     // First config (USDT) returns one mint log, second (USDC) returns empty
-    vi.mocked(fetchEvmLogsForTopics)
+    vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce([makeMintLog()])
       .mockResolvedValueOnce([]);
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(
+      new Map([[22000000, 1718650752]])
+    );
 
-    const result = await syncMintBurn(db, "etherscan-key", etherscanRL);
+    const result = await syncMintBurn(db, "alchemy-key");
 
     expect(result.itemCount).toBe(1);
     const meta = JSON.parse(result.metadata);
@@ -160,12 +166,15 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     // First config (USDT) — API error (null logs)
-    vi.mocked(fetchEvmLogsForTopics)
+    vi.mocked(fetchAlchemyLogs)
       .mockResolvedValueOnce(null as unknown as never[])
       // Second config (USDC) — one event
       .mockResolvedValueOnce([makeMintLog({ txHash: "0xdef456" })]);
+    // resolveBlockTimestamps is only called for USDC (USDT errored before reaching it)
+    vi.mocked(resolveBlockTimestamps)
+      .mockResolvedValueOnce(new Map([[22000000, 1718650752]]));
 
-    const result = await syncMintBurn(db, "etherscan-key", etherscanRL);
+    const result = await syncMintBurn(db, "alchemy-key");
 
     // USDC event should be processed despite USDT failure
     expect(result.itemCount).toBe(1);
@@ -178,9 +187,9 @@ describe("syncMintBurn", () => {
     const db = makeDb();
 
     // Chain head returns null — total failure
-    vi.mocked(getEvmBlockNumber).mockResolvedValue(null);
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(null);
 
-    const result = await syncMintBurn(db, "etherscan-key", etherscanRL);
+    const result = await syncMintBurn(db, "alchemy-key");
 
     expect(result.itemCount).toBe(0);
     const meta = JSON.parse(result.metadata);
@@ -199,24 +208,27 @@ describe("syncMintBurn", () => {
       { match: "price_cache", rows: [{ asset_id: "1", price: 1.0 }, { asset_id: "2", price: 0.999 }] },
     ]);
 
-    const result = await syncMintBurn(db, "etherscan-key", etherscanRL);
+    const result = await syncMintBurn(db, "alchemy-key");
 
     expect(result.itemCount).toBe(0);
     const meta = JSON.parse(result.metadata);
     expect(meta.contractsSkipped).toBe(2);
     // No fetch should have been attempted
-    expect(vi.mocked(fetchEvmLogsForTopics)).not.toHaveBeenCalled();
+    expect(vi.mocked(fetchAlchemyLogs)).not.toHaveBeenCalled();
   });
 
   it("recalculates affected hourly buckets after inserting events", async () => {
     const db = makeDb();
 
-    vi.mocked(fetchEvmLogsForTopics).mockResolvedValueOnce([
-      makeMintLog({ timestamp: 1718650000 }),
-      makeMintLog({ txHash: "0xsecond", logIndex: 1, timestamp: 1718650100 }),
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce([
+      makeMintLog(),
+      makeMintLog({ txHash: "0xsecond", logIndex: 1 }),
     ]).mockResolvedValueOnce([]);
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(
+      new Map([[22000000, 1718650000]])
+    );
 
-    const result = await syncMintBurn(db, "etherscan-key", etherscanRL);
+    const result = await syncMintBurn(db, "alchemy-key");
 
     expect(result.itemCount).toBe(2);
     // batchExecute called at least twice: once for event inserts, once for hourly aggregation
