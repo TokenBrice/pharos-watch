@@ -57,8 +57,11 @@ export function ReportCardMini({
               <img
                 src={logo}
                 alt={`${card.name} logo`}
+                width={24}
+                height={24}
                 className="w-6 h-6 rounded-full shrink-0"
                 loading="lazy"
+                decoding="async"
               />
             )}
             <span className="truncate text-sm font-medium">{card.name}</span>

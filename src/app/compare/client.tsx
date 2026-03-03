@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins, detailToSupplyHistory } from "@/hooks/use-stablecoins";
@@ -15,9 +16,6 @@ import { apiFetch } from "@/lib/api";
 import { CRON_1H, CRON_15MIN, CRON_30MIN, CRON_24H } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
-import { ComparisonTable } from "@/components/comparison-table";
-import { ComparisonChart } from "@/components/comparison-chart";
-import { CompareRadar } from "@/components/radar-chart";
 import {
   Card,
   CardContent,
@@ -45,6 +43,21 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
+
+const ComparisonTable = dynamic(
+  () => import("@/components/comparison-table").then((m) => m.ComparisonTable),
+  { loading: () => <ChartSkeleton className="h-[340px] rounded-xl" /> },
+);
+
+const ComparisonChart = dynamic(
+  () => import("@/components/comparison-chart").then((m) => m.ComparisonChart),
+  { loading: () => <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" /> },
+);
+
+const CompareRadar = dynamic(
+  () => import("@/components/radar-chart").then((m) => m.CompareRadar),
+  { loading: () => <ChartSkeleton className="h-[420px] rounded-xl" /> },
+);
 
 /** Lookup from lowercased symbol to coin — used for preset cards and legacy URL fallback. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
@@ -595,6 +608,10 @@ export function CompareClient() {
                               key={sym}
                               src={src}
                               alt={sym.toUpperCase()}
+                              loading="lazy"
+                              decoding="async"
+                              width={20}
+                              height={20}
                               className="h-5 w-5 rounded-full"
                             />
                           ) : null;

@@ -14,7 +14,15 @@ export function EurcBlacklistCard() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left sm:gap-4">
-          <img src="/logos/50-eurc.png" alt="EURC" className="size-12 sm:size-14 shrink-0 rounded-full opacity-60 saturate-50" />
+          <img
+            src="/logos/50-eurc.png"
+            alt="EURC"
+            width={56}
+            height={56}
+            loading="lazy"
+            decoding="async"
+            className="size-12 sm:size-14 shrink-0 rounded-full opacity-60 saturate-50"
+          />
           <p className="text-sm text-muted-foreground">
             Circle blacklists addresses across all its tokens simultaneously. When an address is frozen on USDC, it is also frozen on EURC. Pharos tracks USDC events only to avoid duplicate zero-balance entries.
           </p>
