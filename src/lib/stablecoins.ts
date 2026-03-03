@@ -675,7 +675,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "M by M^0 (tokenized T-bills)", pct: 15, risk: "low", coinId: "213" },
       { name: "USDtb by Ethena (BUIDL + USDC)", pct: 10, risk: "low", coinId: "221" },
       { name: "BlackRock BUIDL", pct: 5, risk: "low", coinId: "173" },
-      { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low" },
+      { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low", coinId: "cg-ousg" },
       { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "2" },
     ],
   }),
@@ -3042,32 +3042,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       { name: "BlackRock iShares $ Treasury Bond 0-1yr UCITS ETF (IB01)", pct: 97, risk: "very-low" },
       { name: "USD cash buffer", pct: 3, risk: "very-low" },
-    ],
-  }),
-  usd("355", "OpenTrade XMMF", "XMMF", "rwa-backed", "centralized", {
-    yieldBearing: true, rwa: true, navToken: true,
-    yieldConfig: { yieldSource: "OpenTrade money market fund", yieldType: "nav-appreciation" },
-    collateral: "U.S. Treasury bills and Fidelity USD Money Market Fund; assets held in a bankruptcy-remote Cayman SPC (OpenTrade SPC) custodied at J.P. Morgan; subscriptions in USDC or USDT",
-    pegMechanism: "NAV-accreting vault token (not pegged to $1); XMMF/USDC exchange rate increases daily as interest accrues (compounded at 23:59 GMT by investment advisor Five Sigma Finance); investors deposit USDC/USDT and redeem same-day before 18:00 UK time; benchmark = 4-week Bank Discount Daily Treasury Rate minus 50 bps",
-    proofOfReserves: { type: "self-reported", url: "https://app.opentrade.io", provider: "Five Sigma Finance Ltd. (FCA appointed representative; weekly attestations via authenticated client dashboard)" },
-    links: [
-      { label: "Website", url: "https://www.opentrade.io" },
-      { label: "Twitter", url: "https://x.com/opentrade_io" },
-      { label: "Docs", url: "https://docs.opentrade.io" },
-    ],
-    jurisdiction: { country: "Cayman Islands", regulator: "UK FCA (via Five Sigma Finance Ltd., appointed representative of Capricorn Fund Managers)", license: "Non-regulated Cayman SPC; investment advisor FCA-regulated; restricted to qualified/professional investors" },
-    contracts: [
-      { chain: "avalanche", address: "0x09ca60ca323a6313ae144778c3ebdfccfbb5e5d2", decimals: 6 },
-      { chain: "ethereum", address: "0x1e571c87556f216662fa8d25143b1b0618512ef6", decimals: 6 },
-    ],
-    collateralQuality: "rwa",
-    custodyModel: "institutional",
-    governanceQuality: "regulated-entity",
-    chainTier: "established-alt-l1",
-    deploymentModel: "native-multichain",
-    reserves: [
-      { name: "Fidelity USD Money Market Fund", pct: 90, risk: "very-low" },
-      { name: "USD and USDC liquidity", pct: 10, risk: "very-low" },
     ],
   }),
   usd("cg-dinari-usd", "Dinari USD+", "USD+", "rwa-backed", "centralized", {
