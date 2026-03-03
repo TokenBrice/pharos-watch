@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
 import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
@@ -13,6 +15,75 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@/lib/liquidity-score-version";
+
+const METHODOLOGY_SECTIONS = [
+  { id: "stability-index-methodology", label: "Stability Index" },
+  { id: "safety-scores-methodology", label: "Safety Scores" },
+  { id: "liquidity-methodology", label: "Liquidity Score" },
+  { id: "mint-burn-flow-methodology", label: "Mint/Burn Flow" },
+  { id: "yield-intelligence-methodology", label: "Yield Intelligence" },
+  { id: "pegscore-dews-methodology", label: "PegScore + DEWS" },
+  { id: "contagion-stress-test-methodology", label: "Contagion Test" },
+  { id: "blacklist-tracker-methodology", label: "Blacklist Tracker" },
+];
+
+function MethodologyDetails({
+  children,
+  summary,
+  defaultOpen = false,
+  primary = false,
+}: {
+  children: ReactNode;
+  summary: string;
+  defaultOpen?: boolean;
+  primary?: boolean;
+}) {
+  return (
+    <details
+      data-methodology-details="true"
+      data-methodology-primary={primary ? "true" : undefined}
+      open={defaultOpen}
+      className="group rounded-lg border border-border/60 bg-muted/20"
+    >
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">
+        {summary}
+      </summary>
+      <div className="space-y-6 px-4 pb-4">{children}</div>
+    </details>
+  );
+}
+
+function MethodologyFacts({
+  facts,
+}: {
+  facts: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {facts.map((fact) => (
+        <div key={fact.label} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+          <p className="text-xs uppercase tracking-wide">{fact.label}</p>
+          <p className="text-foreground">{fact.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorkedExample({
+  children,
+  summary,
+}: {
+  children: ReactNode;
+  summary: string;
+}) {
+  return (
+    <details className="rounded-lg border border-border/60 bg-background/80">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">{summary}</summary>
+      <div className="space-y-2 px-4 pb-4 text-xs text-muted-foreground leading-relaxed">{children}</div>
+    </details>
+  );
+}
 
 export const metadata: Metadata = {
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -35,7 +106,7 @@ export const metadata: Metadata = {
 
 export default function MethodologyPage() {
   return (
-    <div className="space-y-8">
+    <div className="mx-auto w-full max-w-6xl space-y-8">
       <BreadcrumbJsonLd name="Methodology" path="/methodology/" />
       <script
         type="application/ld+json"
@@ -86,7 +157,55 @@ export default function MethodologyPage() {
         </p>
       </div>
 
-      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
+      <div className="sticky top-14 md:top-0 z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">Jump to Section</p>
+          <div className="hidden md:block">
+            <MethodologyModeToggle />
+          </div>
+        </div>
+        <nav aria-label="Methodology section controls" className="mt-2 flex gap-2 overflow-x-auto scrollbar-none">
+          {METHODOLOGY_SECTIONS.map((section) => (
+            <a
+              key={`sticky-${section.id}`}
+              href={`#${section.id}`}
+              className="shrink-0 whitespace-nowrap rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground transition-colors hover:border-foreground/30 hover:bg-muted"
+            >
+              {section.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      <Card className="rounded-xl border-dashed border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+        <CardHeader className="space-y-2">
+          <CardTitle as="h2">How to Read This Page</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Start with each section&apos;s summary, then expand technical details only when you need formulas and edge cases.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Analyst mode expands all technical sections automatically.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-muted-foreground">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Cadence</p>
+              <p className="text-sm text-foreground">Most models refresh every 15–30m</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Interpretation</p>
+              <p className="text-sm text-foreground">Higher scores = healthier conditions</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background px-3 py-2">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Transparency</p>
+              <p className="text-sm text-foreground">Every model has a versioned changelog</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card id="stability-index-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Stability Index Methodology</CardTitle>
@@ -107,6 +226,45 @@ export default function MethodologyPage() {
             It is recomputed every 15 minutes from live depeg conditions and stress signals, then aggregated into
             daily history snapshots.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Update cadence</p>
+              <p className="text-foreground">15m refresh</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Score range</p>
+              <p className="text-foreground">0-100 market health</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Main use</p>
+              <p className="text-foreground">Bands: BEDROCK to MELTDOWN</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "No minimum; scorer accepts empty depeg sets" },
+                { label: "Required sources", value: "Market-cap totals + active depeg inputs (DEWS breadth optional)" },
+                { label: "Failure behavior", value: "Never null; output is clamped to [0,100] and rounded to 0.1" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked example (verified against computeStabilityIndex)">
+            <p className="font-mono">
+              Inputs: bps=-120, depegMcap=$2B, totalMcap=$200B, age=10d, trend=+1.2, stressBreadth=1.5
+            </p>
+            <p className="font-mono">
+              severity=1.141, breadth=4.243, score=100-1.141-4.243-1.5+1.2=94.316&rarr;94.3
+            </p>
+            <p>Result: <span className="text-foreground">PSI 94.3 (BEDROCK)</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails
+            defaultOpen
+            primary
+            summary="Technical details: formula, component math, depeg handling, and condition bands"
+          >
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Scoring Formula</h3>
@@ -269,11 +427,12 @@ export default function MethodologyPage() {
               </table>
             </div>
           </div>
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
       {/* Grading Methodology */}
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+      <Card id="safety-scores-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
@@ -296,6 +455,44 @@ export default function MethodologyPage() {
             that penalizes coins with poor pegs while barely affecting well-pegged ones.
             When some base dimensions lack data (NR), their weight is redistributed proportionally among rated ones.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Model shape</p>
+              <p className="text-foreground">4 dimensions + peg multiplier</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Grade output</p>
+              <p className="text-foreground">A+ to F, with NR</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Key caveat</p>
+              <p className="text-foreground">No DEX data = 10% penalty</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "At least 2 rated non-peg dimensions" },
+                { label: "Required sources", value: "Peg summary, DEX liquidity, and dependency/metadata inputs" },
+                { label: "Failure behavior", value: "NR if peg is missing on non-NAV coins; no-liquidity applies 0.9 multiplier" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked example (verified against computeOverallGrade)">
+            <p className="font-mono">
+              Inputs: Liq 80, Res 70, Decen 60, Dep 75, Peg 92
+            </p>
+            <p className="font-mono">
+              base=(80*0.30+70*0.20+60*0.15+75*0.25)/0.90=73.06
+            </p>
+            <p className="font-mono">
+              final=round(base*(92/100)^0.20)=round(73.06*0.9835)=72
+            </p>
+            <p>Result: <span className="text-foreground">Score 72 (grade B)</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails summary="Technical details: full pipeline, dimension formulas, thresholds, and caveats">
 
           {/* Scoring pipeline diagram — desktop: horizontal dimension row then vertical flow */}
           <div className="hidden md:flex flex-col items-center gap-3">
@@ -589,12 +786,12 @@ export default function MethodologyPage() {
               <li>Dependency map is manually maintained &mdash; may not capture every collateral relationship</li>
             </ul>
           </div>
-
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
       {/* Liquidity Score */}
-      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
+      <Card id="liquidity-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Liquidity Score</CardTitle>
@@ -614,6 +811,44 @@ export default function MethodologyPage() {
             Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes.
             Aggregates pool data across all major DEXes and chains.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Update cadence</p>
+              <p className="text-foreground">30m refresh</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Signal mix</p>
+              <p className="text-foreground">6 weighted liquidity components</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Output</p>
+              <p className="text-foreground">0-100 DEX depth score</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "No hard minimum in scorer; missing stability history defaults to neutral 50 sub-scores" },
+                { label: "Required sources", value: "Pool TVL/volume/chain data plus mechanism and pair-quality metadata" },
+                { label: "Failure behavior", value: "If liquidity score is null/missing, report-card liquidity dimension is NR" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked example (verified against computeLiquidityScore)">
+            <p className="font-mono">
+              Inputs: effectiveTVL=$25M, TVL=$20M, volume24h=$8M, qualityTVL=$18M, durability=68, pools=12, chains=4
+            </p>
+            <p className="font-mono">
+              tvlDepth=67.96, volume=80, quality=65.11, pair=60, crossChain=51
+            </p>
+            <p className="font-mono">
+              score=round(0.30*67.96+0.20*80+0.20*65.11+0.15*68+0.075*60+0.075*51)=68
+            </p>
+            <p>Result: <span className="text-foreground">Liquidity score 68</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails summary="Technical details: component weights, TVL scaling, and quality adjustments">
 
           {/* Liquidity component diagram — desktop: 3×2 grid */}
           <div className="hidden md:flex flex-col items-center gap-3">
@@ -742,11 +977,12 @@ export default function MethodologyPage() {
               <li><span className="text-foreground">Metapool dedup</span> &mdash; uses TVL excluding base pool to prevent double-counting across Curve metapools</li>
             </ul>
           </div>
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
       {/* Mint/Burn Flow Scoring */}
-      <Card className="rounded-xl border-l-[3px] border-l-orange-500">
+      <Card id="mint-burn-flow-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-orange-500">
         <CardHeader>
           <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
         </CardHeader>
@@ -756,6 +992,44 @@ export default function MethodologyPage() {
             plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and scored to detect abnormal flow
             patterns that may signal market stress or capital rotation.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Data source</p>
+              <p className="text-foreground">On-chain mint + burn events</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Primary score</p>
+              <p className="text-foreground">FIS (0-100)</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Main outputs</p>
+              <p className="text-foreground">Bank-run gauge + FtQ signal</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "FIS requires at least 7 days of flow history per coin" },
+                { label: "Required sources", value: "24h mint/burn totals plus 30-day baseline aggregates" },
+                { label: "Failure behavior", value: "FIS can be null; gauge is null when no weighted inputs contribute; FtQ needs ±$100M dual threshold" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked example (verified against computeFlowIntensity)">
+            <p className="font-mono">
+              Inputs: currentNet=-$220M, baselineNet=-$40M, baselineAbs=$500M
+            </p>
+            <p className="font-mono">
+              denominator=max(500M*0.3,1M)=150M; z=(-220M-(-40M))/150M=-1.2
+            </p>
+            <p className="font-mono">
+              FIS=clamp(0,100,50+z*25)=20
+            </p>
+            <p>Result: <span className="text-foreground">FIS 20 (STRESS band)</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails summary="Technical details: bucket pipeline, FIS formula, and threshold bands">
 
           {/* Flow pipeline diagram — desktop: horizontal */}
           <div className="hidden md:flex items-stretch gap-4">
@@ -898,11 +1172,12 @@ export default function MethodologyPage() {
               <li><span className="text-foreground">Intensity scaling</span> &mdash; min(100, |riskyOutflows| / $1B &times; 100), reflecting the magnitude of the rotation</li>
             </ul>
           </div>
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
       {/* Yield Intelligence */}
-      <Card className="rounded-xl border-l-[3px] border-l-violet-500">
+      <Card id="yield-intelligence-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-violet-500">
         <CardHeader>
           <CardTitle as="h2">Yield Intelligence</CardTitle>
         </CardHeader>
@@ -912,6 +1187,44 @@ export default function MethodologyPage() {
             Pharos Yield Score (PYS). Data is refreshed every 30 minutes using a three-tier APY
             resolution strategy.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Update cadence</p>
+              <p className="text-foreground">30m refresh</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">APY priority</p>
+              <p className="text-foreground">On-chain, then DeFiLlama, then price</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Output</p>
+              <p className="text-foreground">PYS (0-100)</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "Need one resolved APY tier; Tier 1 additionally needs a prior exchange-rate history point" },
+                { label: "Required sources", value: "On-chain rates or DeFiLlama pools; Tier 3 needs current and ~30d-old prices" },
+                { label: "Failure behavior", value: "No resolved tier skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 if missing)" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked example (verified against computePYS)">
+            <p className="font-mono">
+              Inputs: apy30d=8.4, safetyScore=72, apyVarianceScore=0.18, scalingFactor=5
+            </p>
+            <p className="font-mono">
+              riskPenalty=max(0.5,(101-72)/20)=1.45; yieldEfficiency=8.4/1.45=5.79; sustainability=1-0.18=0.82
+            </p>
+            <p className="font-mono">
+              PYS=min(100, round(5.79*0.82*5))=24
+            </p>
+            <p>Result: <span className="text-foreground">PYS 24</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails summary="Technical details: APY tier resolution, PYS formula, NAV handling, and limits">
 
           {/* Yield pipeline diagram — desktop: horizontal */}
           <div className="hidden md:flex items-stretch gap-4">
@@ -1043,11 +1356,12 @@ export default function MethodologyPage() {
               <li>Price-derived APY (Tier 3) can be noisy for low-liquidity NAV tokens</li>
             </ul>
           </div>
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
       {/* PegScore and Depeg Early Warning Score (DEWS) */}
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
+      <Card id="pegscore-dews-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">PegScore and Depeg Early Warning Score (DEWS)</CardTitle>
@@ -1075,6 +1389,47 @@ export default function MethodologyPage() {
             DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,
             confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">PegScore focus</p>
+              <p className="text-foreground">History: realized peg behavior</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">DEWS focus</p>
+              <p className="text-foreground">Forward stress probability</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Refresh</p>
+              <p className="text-foreground">15m refresh</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "PegScore requires >=30 tracking days; DEWS requires >=2 available signals (total weight >=0.30)" },
+                { label: "Required sources", value: "Peg events + tracking window inputs; DEWS consumes supply/liquidity/price plus optional flow/blacklist/yield signals" },
+                { label: "Failure behavior", value: "PegScore can be null; DEWS returns 0 (CALM) when signal coverage is below threshold" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked examples (verified against computePegScore and computeDEWS)">
+            <p className="font-mono">
+              PegScore input: 100-day tracking window, 1 event (2 days, 220 bps, inactive)
+            </p>
+            <p className="font-mono">
+              pegPct=98.0, severityScore=99.86, spread=0, activePenalty=0 &rarr; pegScore=99
+            </p>
+            <p className="font-mono">
+              DEWS input signals: supply=40, pool=55, liq=25, price=0, diverg=10 (others unavailable), psiScore=70
+            </p>
+            <p className="font-mono">
+              base=(0.25*40+0.2*55+0.15*25+0.15*0+0.15*10)/0.9=29.17; PSI amplifier=1.02 &rarr; DEWS=30
+            </p>
+            <p>Result: <span className="text-foreground">PegScore 99 and DEWS 30 (WATCH)</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails summary="Technical details: PegScore formula, DEWS signals, weights, and threat bands">
 
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">PegScore</h3>
@@ -1383,11 +1738,12 @@ export default function MethodologyPage() {
               <li>Missing DEX data: pool and liquidity signals marked unavailable, weight redistributed</li>
             </ul>
           </div>
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
       {/* Contagion Stress Test */}
-      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
+      <Card id="contagion-stress-test-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>
           <CardTitle as="h2">Contagion Stress Test</CardTitle>
         </CardHeader>
@@ -1396,6 +1752,44 @@ export default function MethodologyPage() {
             The stress test simulates dependency failures to reveal systemic concentration risk
             across the stablecoin ecosystem.
           </p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Simulation action</p>
+              <p className="text-foreground">Force one coin to grade D</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Propagation channel</p>
+              <p className="text-foreground">Dependency channel only</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+              <p className="text-xs uppercase tracking-wide">Primary output</p>
+              <p className="text-foreground">Affected coins + supply at risk</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Preconditions &amp; Failure Modes</h3>
+            <MethodologyFacts
+              facts={[
+                { label: "Minimum data", value: "Target coin must have dependents and mapped dependency weights" },
+                { label: "Required sources", value: "Current report-card scores plus dependency map inputs" },
+                { label: "Failure behavior", value: "Only direct dependency-risk channel is recomputed (no peg/liquidity/confidence feedback loops)" },
+              ]}
+            />
+          </div>
+          <WorkedExample summary="Worked example (verified against scoreDependencyRisk path used by stress test)">
+            <p className="font-mono">
+              Override upstream score to 40; dependent coin has 60% exposure and decentralized self-backed score 90
+            </p>
+            <p className="font-mono">
+              blended=0.6*40+0.4*90=60; weak-upstream penalty (score&lt;75) applies -10
+            </p>
+            <p className="font-mono">
+              dependencyRisk score=50
+            </p>
+            <p>Result: <span className="text-foreground">Dependency dimension falls to 50 before overall grade recomputation</span>.</p>
+          </WorkedExample>
+
+          <MethodologyDetails summary="Technical details: simulation pipeline, scoreboard logic, and limitations">
 
           {/* Stress test pipeline diagram — desktop: horizontal */}
           <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] gap-4 items-start">
@@ -1477,10 +1871,11 @@ export default function MethodologyPage() {
               <li>The stress test models only the dependency risk channel, not second-order market effects</li>
             </ul>
           </div>
+          </MethodologyDetails>
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border-l-[3px] border-l-rose-500">
+      <Card id="blacklist-tracker-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-rose-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Blacklist Tracker Methodology</CardTitle>
