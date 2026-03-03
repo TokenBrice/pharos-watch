@@ -4,6 +4,10 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
 import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/blacklist-tracker-version";
 
 export const metadata: Metadata = {
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -76,6 +80,33 @@ export default function MethodologyPage() {
           How Pharos grades stablecoins — transparent scoring across safety, peg stability, liquidity, and contagion risk.
         </p>
       </div>
+
+      <Card className="rounded-xl border-l-[3px] border-l-rose-500">
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Blacklist Tracker Methodology</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-rose-500">
+              {BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-rose-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic change.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, and XAUT contracts, including
+            blacklist, unblacklist, and destroy/wipe actions across EVM and Tron networks.
+          </p>
+          <p>
+            Methodology revisions document changes to event coverage, cross-chain decoding behavior, cursor safety policies,
+            and amount attribution rules that affect historical interpretation and comparability over time.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="space-y-2">

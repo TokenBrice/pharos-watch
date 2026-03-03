@@ -2,6 +2,11 @@ import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorRespon
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "../../../src/lib/chains";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+} from "../../../src/lib/blacklist-tracker-version";
 
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
@@ -75,7 +80,19 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
 
   const latestTs = events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
 
-  return jsonResponse({ events, total }, addFreshnessHeaders({
+  return jsonResponse({
+    events,
+    total,
+    methodology: {
+      version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+      versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+      currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
+      currentVersionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+      changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+      asOf: latestTs,
+      isCurrent: true,
+    },
+  }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
   }, latestTs, 900));
 });

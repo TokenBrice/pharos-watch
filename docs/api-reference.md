@@ -196,7 +196,16 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. 
 ```json
 {
   "events": [BlacklistEvent, ...],
-  "total": 13422
+  "total": 13422,
+  "methodology": {
+    "version": "3.1",
+    "versionLabel": "v3.1",
+    "currentVersion": "3.1",
+    "currentVersionLabel": "v3.1",
+    "changelogPath": "/methodology/blacklist-tracker-changelog/",
+    "asOf": 1772606400,
+    "isCurrent": true
+  }
 }
 ```
 
@@ -216,6 +225,18 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. 
 | `timestamp` | `number` | Unix seconds |
 | `explorerTxUrl` | `string` | Block explorer URL for the transaction |
 | `explorerAddressUrl` | `string` | Block explorer URL for the address |
+
+**`methodology`**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | `string` | Methodology version used for this response |
+| `versionLabel` | `string` | Display label (e.g. `"v3.1"`) |
+| `currentVersion` | `string` | Latest methodology version |
+| `currentVersionLabel` | `string` | Display label for latest methodology version |
+| `changelogPath` | `string` | Relative URL to the methodology changelog page |
+| `asOf` | `number` | Unix timestamp of latest event used for freshness |
+| `isCurrent` | `boolean` | Whether `version` matches `currentVersion` |
 
 ---
 

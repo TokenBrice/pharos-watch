@@ -18,6 +18,18 @@ describe("handleBlacklist", () => {
     expect(body.total).toBe(1);
   });
 
+  it("includes methodology version metadata", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "blacklist_events", rows: [row] },
+    ]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
+    const body = (await res.json()) as { methodology: Record<string, unknown> };
+    expect(body.methodology).toHaveProperty("version");
+    expect(body.methodology).toHaveProperty("versionLabel");
+    expect(body.methodology).toHaveProperty("changelogPath");
+  });
+
   it("maps snake_case DB columns to camelCase", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },

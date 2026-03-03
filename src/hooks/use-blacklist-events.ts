@@ -8,6 +8,15 @@ import { CRON_20MIN } from "./use-api-query";
 interface BlacklistResponse {
   events: BlacklistEvent[];
   total: number;
+  methodology?: {
+    version: string;
+    versionLabel: string;
+    currentVersion: string;
+    currentVersionLabel: string;
+    changelogPath: string;
+    asOf: number;
+    isCurrent: boolean;
+  };
 }
 
 async function fetchBlacklistEvents(): Promise<BlacklistResponse> {

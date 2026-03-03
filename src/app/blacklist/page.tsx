@@ -16,6 +16,10 @@ import { BlacklistTable } from "@/components/blacklist-table";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+  BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/blacklist-tracker-version";
 import type { BlacklistStablecoin, BlacklistEventType } from "@/lib/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 
@@ -165,7 +169,18 @@ function BlacklistPageInner() {
           <span>/</span>
           <span className="text-foreground">Blacklist Tracker</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Blacklist Tracker <FeatureStatusBadge status="mature" /></h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
+          Blacklist Tracker <FeatureStatusBadge status="mature" version={BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL} />
+        </h1>
+        <p className="text-xs text-muted-foreground">
+          Methodology {BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}.{" "}
+          <Link
+            href={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
+            className="underline underline-offset-4 hover:text-foreground transition-colors"
+          >
+            Version history &rarr;
+          </Link>
+        </p>
         <p className="text-sm text-muted-foreground">
           Who got frozen. When. Why it matters.
         </p>
