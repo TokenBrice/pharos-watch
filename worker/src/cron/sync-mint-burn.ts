@@ -24,6 +24,7 @@ const EVM_BLOCK_TIME: Record<number, number> = {
   1:     12,    // Ethereum
   42161: 0.25,  // Arbitrum
   8453:  2,     // Base
+  10:    2,     // Optimism
   43114: 2,     // Avalanche
 };
 
@@ -188,6 +189,8 @@ export async function syncMintBurn(
       );
       apiErrors++;
       configError = true;
+      // Count as processed (not skipped) — a fetch did occur, we just couldn't resolve timestamps.
+      // configError = true prevents sync state from advancing, so the range will be retried.
       contractsProcessed++;
       continue;
     }
