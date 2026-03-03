@@ -80,7 +80,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 18. **Cron prune resilience**: `logCronRun()` wraps old-entry pruning in try/catch so prune failures don't crash the cron after successful completion. The error-logging catch block is also protected — if logging the error to D1 fails, the original error is still re-thrown
 19. **Security headers**: Worker adds `X-Content-Type-Options: nosniff` to all responses
 20. **Admin cache bypass**: `/api/backfill-depegs` skips the response cache (alongside `/api/health` and `/api/status`)
-21. **Strict cache payload validation (stablecoins)**: `syncStablecoins()` validates the final `stablecoins` payload against `StablecoinListResponseSchema` before `setCacheIfNewer()`. On schema failure, cache write is skipped and previous valid cache is preserved
+21. **Guarded schema fallback (stablecoins)**: `syncStablecoins()` validates the final `stablecoins` payload against `StablecoinListResponseSchema` before `setCacheIfNewer()`. On schema failure, it sends an alert and writes a guarded fallback payload (same run output, with `cacheWriteMode: "schema-validation-fallback"` in cron metadata) to prevent stale-cache starvation
 22. **Strict cache payload validation (yield rankings)**: `syncYieldData()` validates the `yield-rankings` cache payload against `YieldRankingsResponseSchema` before `setCache()`. On schema failure, cache write is skipped to avoid corrupting downstream readers
 
 ## Gold & Silver Spot Prices (gold-api.com)

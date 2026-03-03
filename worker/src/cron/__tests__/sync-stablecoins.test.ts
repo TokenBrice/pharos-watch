@@ -81,6 +81,7 @@ import { syncStablecoins } from "../sync-stablecoins";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
+import { sendAlert } from "../../lib/alerts";
 import * as apiUtils from "../../lib/api-utils";
 
 // --- Helpers ---
@@ -297,7 +298,7 @@ describe("syncStablecoins", () => {
     expect(result.itemCount).toBe(55);
   });
 
-  it("skips cache write when final stablecoins payload fails schema validation", async () => {
+  it("writes guarded fallback payload when final stablecoins payload fails schema validation", async () => {
     const db = makeDb();
     const prepareSpy = vi.fn();
     const origPrepare = db.prepare.bind(db);
@@ -320,12 +321,16 @@ describe("syncStablecoins", () => {
 
     const result = await syncStablecoins(db);
 
-    expect(result.itemCount).toBe(0);
-    expect(result.metadata).toContain("schema-validation-failed");
+    expect(result.itemCount).toBe(60);
+    expect(result.metadata).toContain("schema-validation-fallback");
+    expect(sendAlert).toHaveBeenCalledWith(
+      "Stablecoins schema validation warning",
+      expect.stringContaining("forced-test-validation-failure"),
+    );
     const cacheWrites = prepareSpy.mock.calls.filter(
       (args) => (args[0] as string).includes("INSERT INTO cache")
     );
-    expect(cacheWrites.length).toBe(0);
+    expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
   });
 
   it("records DL success outcome when fetch succeeds", async () => {

@@ -13,6 +13,7 @@ import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { StablecoinListResponseSchema, type StablecoinMeta } from "../../../src/lib/types";
 import { validatePayloadWithSchema } from "../lib/api-utils";
+import { sendAlert } from "../lib/alerts";
 
 // Derive commodity + CG-only fiat token lists from the central registry
 const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
@@ -398,12 +399,18 @@ async function fallbackToCgSupply(
     "sync-stablecoins:stablecoins:fallback",
   );
   if (!validation.ok) {
+    console.error("[sync-stablecoins] Schema validation failed in CG fallback; writing guarded unvalidated payload:", validation.issues);
+    await sendAlert(
+      "Stablecoins schema validation warning",
+      `CG fallback payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
+    );
+    await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
     return {
-      itemCount: 0,
+      itemCount: assets.length,
       metadata: JSON.stringify({
         source: "coingecko-fallback",
         assetCount: assets.length,
-        cacheWriteSkipped: "schema-validation-failed",
+        cacheWriteMode: "schema-validation-fallback",
         validationIssues: validation.issues,
       }),
     };
@@ -744,11 +751,17 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     "sync-stablecoins:stablecoins",
   );
   if (!validation.ok) {
+    console.error("[sync-stablecoins] Schema validation failed; writing guarded unvalidated payload:", validation.issues);
+    await sendAlert(
+      "Stablecoins schema validation warning",
+      `Payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
+    );
+    await setCacheIfNewer(db, "stablecoins", JSON.stringify(llamaData), syncStartSec);
     return {
-      itemCount: 0,
+      itemCount: llamaData.peggedAssets.length,
       metadata: JSON.stringify({
         assetCount: llamaData.peggedAssets.length,
-        cacheWriteSkipped: "schema-validation-failed",
+        cacheWriteMode: "schema-validation-fallback",
         validationIssues: validation.issues,
       }),
     };
