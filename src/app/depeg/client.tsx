@@ -18,6 +18,7 @@ import { CRON_15MIN } from "@/hooks/use-api-query";
 import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
 import { DepegTrackerTable } from "@/components/depeg-tracker-table";
 import { DEWSSummary } from "@/components/dews-summary";
+import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
 import { trackEvent, trackSearch } from "@/lib/analytics";
@@ -86,6 +87,10 @@ export function DepegClient() {
       dews: dewsData?.signals?.[coin.id] ?? null,
     }));
   }, [filteredPegCoins, dewsData]);
+  const trackedIds = useMemo(
+    () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
+    [pegData],
+  );
 
   const handleRowClick = useCallback((id: string) => {
     router.push(`/stablecoin/${id}`);
@@ -130,7 +135,7 @@ export function DepegClient() {
         />
       )}
 
-      {/* DEWS radar + stat boxes + depeg feed — 2-column on desktop */}
+      {/* DEWS radar + stat boxes — 2-column on desktop */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
         <SectionErrorBoundary name="dews">
           <DEWSSummary logos={logos} />
@@ -141,10 +146,11 @@ export function DepegClient() {
               <DepegTrackerStats stats={pegData.summary} />
             </SectionErrorBoundary>
           )}
-          <SectionErrorBoundary name="depeg-feed">
-            <DepegFeed
-              events={eventsData?.events ?? []}
+          <SectionErrorBoundary name="dews-alert-feed">
+            <DEWSAlertFeed
+              signals={dewsData?.signals}
               logos={logos}
+              allowedIds={trackedIds}
               className="flex-1 min-h-0"
             />
           </SectionErrorBoundary>
@@ -202,6 +208,14 @@ export function DepegClient() {
             onRowClick={handleRowClick}
           />
         </div>
+      </SectionErrorBoundary>
+
+      {/* Recent Depeg Events */}
+      <SectionErrorBoundary name="depeg-feed">
+        <DepegFeed
+          events={eventsData?.events ?? []}
+          logos={logos}
+        />
       </SectionErrorBoundary>
 
       {/* Peg Heatmap (moved from homepage) — shares filter state */}

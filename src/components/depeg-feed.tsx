@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,11 +16,27 @@ interface DepegFeedProps {
   className?: string;
 }
 
-const PAGE_SIZE = 3;
+const MOBILE_PAGE_SIZE = 3;
+const DESKTOP_PAGE_SIZE = 6;
 
 export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(MOBILE_PAGE_SIZE);
+  const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
+
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const syncPageSize = () => {
+      const nextPageSize = mql.matches ? DESKTOP_PAGE_SIZE : MOBILE_PAGE_SIZE;
+      setPageSize(nextPageSize);
+      // Keep already-loaded rows visible, but ensure a larger desktop default when expanding.
+      setVisibleCount((current) => (current < nextPageSize ? nextPageSize : current));
+    };
+
+    syncPageSize();
+    mql.addEventListener("change", syncPageSize);
+    return () => mql.removeEventListener("change", syncPageSize);
+  }, []);
 
   const sorted = useMemo(
     () => [...events].sort((a, b) => b.startedAt - a.startedAt),
@@ -97,7 +113,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              onClick={() => setVisibleCount((c) => c + pageSize)}
               className="text-xs"
             >
               Load more ({sorted.length - visibleCount} remaining)
