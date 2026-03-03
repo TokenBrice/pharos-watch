@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
@@ -22,6 +23,7 @@ import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
+import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@/lib/peg-rates";
 import type { PegSummaryCoin } from "@/lib/types";
 
@@ -80,6 +82,26 @@ export function HomepageClient() {
 
       <SectionErrorBoundary name="table">
         <section>
+          <div className="space-y-2 mb-6">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Browse By Peg
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {ACTIVE_PEGS.map((peg) => {
+                const slug = PEG_SLUGS[peg];
+                if (!slug) return null;
+                return (
+                  <Link
+                    key={peg}
+                    href={`/stablecoins/${slug}/`}
+                    className="inline-flex items-center rounded-full border px-3 py-1.5 sm:py-1 min-h-11 sm:min-h-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
           <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
           <FilterBar {...filters} />
           <div className="mt-6">
