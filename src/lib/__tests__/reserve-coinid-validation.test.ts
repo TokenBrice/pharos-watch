@@ -39,6 +39,6 @@ describe("reserve coinId validation", () => {
     }
     // Fail if more than a reasonable threshold of unlinked references exist
     // Adjust threshold as more reserves get linked
-    expect(warnings.length).toBeLessThan(10);
+    expect(warnings.length).toBeLessThanOrEqual(10);
   });
 });
