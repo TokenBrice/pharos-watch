@@ -74,15 +74,15 @@ export function HomepageClient() {
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </SectionErrorBoundary>
 
+      <SectionErrorBoundary name="digest">
+        <DailyDigest />
+      </SectionErrorBoundary>
+
       <SectionErrorBoundary name="charts">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TotalMcapChart />
           <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
         </div>
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary name="digest">
-        <DailyDigest />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="table">
