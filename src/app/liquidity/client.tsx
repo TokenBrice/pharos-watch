@@ -9,6 +9,7 @@ import { Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_30MIN } from "@/hooks/use-api-query";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
@@ -133,9 +134,7 @@ export function LiquidityClient() {
   return (
     <div className="space-y-6">
       {isError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load liquidity data. {error instanceof Error ? error.message : "Please check your connection."}
-        </div>
+        <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={() => window.location.reload()} />
       )}
       {!isError && (
         <StaleDataBanner

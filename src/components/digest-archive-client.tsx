@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestArchive } from "@/hooks/use-digest-archive";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@/lib/psi-colors";
 import { formatCurrency } from "@/lib/format";
 import { CRON_24H } from "@/hooks/use-api-query";
@@ -32,7 +33,7 @@ function formatWireDate(ts: number): string {
 }
 
 export function DigestArchiveClient() {
-  const { data, isLoading, dataUpdatedAt } = useDigestArchive();
+  const { data, isLoading, dataUpdatedAt, error } = useDigestArchive();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const monthOptions = useMemo(() => {
@@ -92,6 +93,7 @@ export function DigestArchiveClient() {
 
   return (
     <div>
+      <QueryErrorNotice error={error} hasData={!!data?.digests?.length} onRetry={() => window.location.reload()} />
       <StaleDataBanner
         queries={[{ label: "Digests", dataUpdatedAt, staleTime: CRON_24H }]}
       />

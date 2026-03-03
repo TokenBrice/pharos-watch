@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_20MIN } from "@/hooks/use-api-query";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
@@ -176,9 +177,7 @@ function BlacklistPageInner() {
       </div>
 
       {isError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Signal lost. {error instanceof Error ? error.message : "Unknown error"}
-        </div>
+        <QueryErrorNotice error={error} hasData={!!events?.length} onRetry={() => window.location.reload()} />
       )}
       {!isError && (
         <StaleDataBanner

@@ -17,6 +17,7 @@ import { sumPegBuckets } from "@/lib/supply";
 import type { ReportCard, DimensionKey } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 
 // ---------------------------------------------------------------------------
@@ -96,9 +97,10 @@ function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, numbe
 // ---------------------------------------------------------------------------
 
 export function ReportCardsClient() {
-  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt } = useReportCards();
-  const { data: stablecoinsData, dataUpdatedAt: pricesUpdatedAt } = useStablecoins();
+  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt, error: reportCardsError } = useReportCards();
+  const { data: stablecoinsData, dataUpdatedAt: pricesUpdatedAt, error: pricesError } = useStablecoins();
   const { data: logos } = useLogos();
+  const globalError = reportCardsError ?? pricesError;
 
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("overall");
@@ -223,6 +225,11 @@ export function ReportCardsClient() {
 
   return (
     <div className="space-y-6">
+      <QueryErrorNotice
+        error={globalError}
+        hasData={!!reportData?.cards?.length || !!stablecoinsData?.peggedAssets?.length}
+        onRetry={() => window.location.reload()}
+      />
       <StaleDataBanner
         queries={[
           { label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },

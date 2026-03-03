@@ -2,6 +2,7 @@ import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils"
 import { requireAdmin } from "../lib/auth";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
+import { getPsiMethodologyVersionAt } from "../../../src/lib/stability-index-version";
 
 export const handleBackfillStabilityIndex = withErrorHandler(
   "backfill-stability-index",
@@ -123,16 +124,23 @@ export const handleBackfillStabilityIndex = withErrorHandler(
         : 0;
 
       const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct });
+      const methodologyVersion = getPsiMethodologyVersionAt(day);
 
       stmts.push(
         db.prepare(
-          "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)"
+          "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)"
         ).bind(
           day,
           result.score,
           result.band,
           JSON.stringify(result.components),
-          JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct }),
+          JSON.stringify({
+            depegCount: depegs.length,
+            totalMcapUsd,
+            mcap7dChangePct,
+            methodologyVersion,
+          }),
+          methodologyVersion,
         )
       );
       count++;

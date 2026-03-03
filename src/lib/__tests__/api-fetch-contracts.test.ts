@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   apiFetch,
   apiFetchWithMeta,
+  ApiFetchError,
+  resolveApiBase,
   SchemaValidationError,
   STRICT_CONTRACT_PATHS,
 } from "../api";
@@ -103,8 +105,46 @@ describe("api contract validation policy", () => {
     expect(STRICT_CONTRACT_PATHS.has("/api/stablecoins")).toBe(true);
     expect(STRICT_CONTRACT_PATHS.has("/api/peg-summary")).toBe(true);
     expect(STRICT_CONTRACT_PATHS.has("/api/report-cards")).toBe(true);
+    expect(STRICT_CONTRACT_PATHS.has("/api/stability-index")).toBe(true);
     expect(STRICT_CONTRACT_PATHS.has("/api/dex-liquidity")).toBe(true);
     expect(STRICT_CONTRACT_PATHS.has("/api/stress-signals")).toBe(true);
     expect(STRICT_CONTRACT_PATHS.has("/api/mint-burn-flows")).toBe(true);
+  });
+
+  it("resolves production API base from known hostnames when env is empty", () => {
+    expect(resolveApiBase("pharos.watch", "")).toBe("https://api.pharos.watch");
+    expect(resolveApiBase("c0e7dcc0.stablecoin-dashboard.pages.dev", "")).toBe("https://api.pharos.watch");
+  });
+
+  it("prefers explicit env API base over hostname inference", () => {
+    expect(resolveApiBase("pharos.watch", "https://custom.example")).toBe("https://custom.example");
+  });
+
+  it("throws ApiFetchError with status on non-OK responses", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "nope" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(apiFetch("/api/stablecoins")).rejects.toBeInstanceOf(ApiFetchError);
+  });
+
+  it("captures Warning header in apiFetchWithMeta", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Data-Age": "1900",
+          "Warning": '110 - "Response is stale (1900s old, max 900s)"',
+        },
+      })
+    );
+
+    const result = await apiFetchWithMeta("/api/daily-digest", z.object({ ok: z.boolean() }));
+    expect(result.meta?.warning).toContain("Response is stale");
+    expect(result.meta?.status).toBe("stale");
   });
 });

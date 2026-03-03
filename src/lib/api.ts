@@ -1,11 +1,33 @@
 import type { ZodType } from "zod";
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
+export function resolveApiBase(
+  hostname?: string | null,
+  envBase: string | undefined = process.env.NEXT_PUBLIC_API_BASE,
+): string {
+  const explicit = (envBase ?? "").trim();
+  if (explicit) return explicit;
+  if (!hostname) return "";
+
+  if (
+    hostname === "pharos.watch" ||
+    hostname.endsWith(".pharos.watch") ||
+    hostname === "stablecoin-dashboard.pages.dev" ||
+    hostname.endsWith(".stablecoin-dashboard.pages.dev")
+  ) {
+    return "https://api.pharos.watch";
+  }
+
+  return "";
+}
+
+const browserHostname = typeof window !== "undefined" ? window.location.hostname : null;
+export const API_BASE = resolveApiBase(browserHostname);
 
 export const STRICT_CONTRACT_PATHS = new Set([
   "/api/stablecoins",
   "/api/peg-summary",
   "/api/report-cards",
+  "/api/stability-index",
   "/api/dex-liquidity",
   "/api/stress-signals",
   "/api/mint-burn-flows",
@@ -20,6 +42,20 @@ export class SchemaValidationError extends Error {
     this.name = "SchemaValidationError";
     this.path = path;
     this.issues = issues;
+  }
+}
+
+export class ApiFetchError extends Error {
+  readonly status: number;
+  readonly path: string;
+  readonly bodyText: string | null;
+
+  constructor(path: string, status: number, bodyText: string | null) {
+    super(`Failed to fetch ${path}: ${status}`);
+    this.name = "ApiFetchError";
+    this.status = status;
+    this.path = path;
+    this.bodyText = bodyText;
   }
 }
 
@@ -41,12 +77,23 @@ function isStrictContractPath(path: string): boolean {
   return STRICT_CONTRACT_PATHS.has(normalizePath(path));
 }
 
+async function buildFetchError(path: string, res: Response): Promise<ApiFetchError> {
+  let bodyText: string | null = null;
+  try {
+    bodyText = await res.text();
+  } catch {
+    bodyText = null;
+  }
+  return new ApiFetchError(path, res.status, bodyText);
+}
+
 // --- Data freshness metadata ---
 
 export interface ApiMeta {
   updatedAt: number;
   ageSeconds: number;
   status: "fresh" | "degraded" | "stale";
+  warning?: string | null;
 }
 
 // --- Standard fetch (no meta) ---
@@ -56,7 +103,7 @@ export interface ApiMeta {
  *  (graceful degradation — returns data as-is on failure). */
 export async function apiFetch<T>(path: string, schema?: ZodType<T>): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`Failed to fetch ${path}: ${res.status}`);
+  if (!res.ok) throw await buildFetchError(path, res);
 
   const data: unknown = await res.json();
 
@@ -84,7 +131,7 @@ export async function apiFetchWithMeta<T>(
   schema?: ZodType<T>,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
   const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`Failed to fetch ${path}: ${res.status}`);
+  if (!res.ok) throw await buildFetchError(path, res);
 
   const json: unknown = await res.json();
 
@@ -109,6 +156,21 @@ export async function apiFetchWithMeta<T>(
         const status = ratio <= 1 ? "fresh" : ratio <= 1.5 ? "degraded" : "stale";
         meta = { updatedAt: Math.floor(Date.now() / 1000) - age, ageSeconds: age, status };
       }
+    }
+  }
+
+  const warningHeader = res.headers.get("Warning");
+  if (warningHeader) {
+    if (meta) {
+      meta = { ...meta, warning: warningHeader };
+    } else {
+      // Preserve warning context even when age metadata is absent.
+      meta = {
+        updatedAt: Math.floor(Date.now() / 1000),
+        ageSeconds: 0,
+        status: "degraded",
+        warning: warningHeader,
+      };
     }
   }
 

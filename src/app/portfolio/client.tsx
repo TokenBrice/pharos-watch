@@ -20,6 +20,7 @@ import type { ReportCard } from "@/lib/types";
 import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 
 // ---------------------------------------------------------------------------
@@ -203,7 +204,7 @@ function ExposureBar({
 // ---------------------------------------------------------------------------
 
 export function PortfolioClient() {
-  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt } = useReportCards();
+  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt, error: reportCardsError } = useReportCards();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
   const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
@@ -331,6 +332,11 @@ export function PortfolioClient() {
 
   return (
     <div className="space-y-6">
+      <QueryErrorNotice
+        error={reportCardsError}
+        hasData={!!reportData?.cards?.length}
+        onRetry={() => window.location.reload()}
+      />
       <StaleDataBanner
         queries={[{ label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN }]}
       />

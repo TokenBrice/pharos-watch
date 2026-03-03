@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_20MIN } from "@/hooks/use-api-query";
 import { FlowGauge } from "@/components/flow-gauge";
 import { FlowChart } from "@/components/flow-chart";
@@ -55,9 +56,7 @@ function FlowsPageInner() {
 
       {/* Error / stale banner */}
       {isError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Signal lost. {error instanceof Error ? error.message : "Unknown error"}
-        </div>
+        <QueryErrorNotice error={error} hasData={!!data} onRetry={() => window.location.reload()} />
       )}
       {!isError && (
         <StaleDataBanner

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankings } from "@/hooks/use-yield-rankings";
 import { useLogos } from "@/hooks/use-logos";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_30MIN } from "@/hooks/use-api-query";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
@@ -76,9 +77,7 @@ export function YieldClient() {
   return (
     <div className="space-y-6">
       {isError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load yield data. {error instanceof Error ? error.message : "Please check your connection."}
-        </div>
+        <QueryErrorNotice error={error} hasData={!!data} onRetry={() => window.location.reload()} />
       )}
       {!isError && (
         <StaleDataBanner

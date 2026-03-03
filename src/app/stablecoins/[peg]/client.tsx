@@ -8,6 +8,7 @@ import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates } from "@/lib/peg-rates";
@@ -15,7 +16,7 @@ import { pegCurrencyToFilterTag } from "@/lib/types";
 import type { PegCurrency, PegSummaryCoin } from "@/lib/types";
 
 export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) {
-  const { data, isLoading, dataUpdatedAt } = useStablecoins();
+  const { data, isLoading, dataUpdatedAt, error } = useStablecoins();
   const { data: logos } = useLogos();
   const { data: pegSummaryData } = usePegSummary();
   const { data: dexLiquidity } = useDexLiquidity();
@@ -45,6 +46,7 @@ export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) 
 
   return (
     <>
+      <QueryErrorNotice error={error} hasData={!!data?.peggedAssets?.length} onRetry={() => window.location.reload()} />
       <StaleDataBanner
         queries={[{ label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN }]}
       />

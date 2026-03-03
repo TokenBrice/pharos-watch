@@ -122,7 +122,12 @@ export function StabilityIndex() {
   const sparkColor = PSI_HEX_COLORS[displayBand as ConditionBand] ?? "#888";
 
   // Build sparkline points from history (oldest to newest) + current
-  const sparkData = [...history].reverse().concat({ date: computedAt, score: displayScore, band: displayBand });
+  const sparkData = [...history].reverse().concat({
+    date: computedAt,
+    score: displayScore,
+    band: displayBand,
+    methodologyVersion: data.methodology.version,
+  });
 
   return (
     <Link href="/stability-index" className="flex items-center gap-4 animate-in fade-in duration-300 hover:opacity-80 transition-opacity">

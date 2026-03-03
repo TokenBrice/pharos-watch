@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
 
 const StabilityIndexClient = dynamic(
   () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
@@ -37,14 +38,23 @@ export default function StabilityIndexPage() {
           <span>/</span>
           <span className="text-foreground">Stability Index</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Pharos Stability Index <FeatureStatusBadge status="mature" /></h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
+          Pharos Stability Index
+          <FeatureStatusBadge status="mature" version={PSI_METHODOLOGY_VERSION_LABEL} />
+        </h1>
         <p className="text-sm text-muted-foreground">
           Historical stablecoin market health scores, component breakdowns, and condition band analysis.
         </p>
+        <p className="text-xs text-muted-foreground">
+          Methodology version {PSI_METHODOLOGY_VERSION_LABEL}.{" "}
+          <Link href="/methodology/stability-index-changelog" className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Version history &rarr;
+          </Link>
+        </p>
         <p className="text-sm text-muted-foreground">
           The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity,
-          depeg breadth, and supply-weighted volatility into a single market health reading. Scores fall into
-          five condition bands, from Calm (80+) to Crisis (below 20), so you can gauge stablecoin market
+          depeg breadth, DEWS stress breadth, and 7-day market-cap trend into a single market health reading.
+          Scores fall into six condition bands, from BEDROCK (90+) to MELTDOWN (below 20), so you can gauge market
           stress at a glance.
         </p>
       </div>
@@ -58,9 +68,9 @@ export default function StabilityIndexPage() {
           </summary>
           <p className="px-4 pb-4 text-sm text-muted-foreground">
             The Pharos Stability Index (PSI) is a composite 0–100 score that measures the overall health of the
-            stablecoin market. It combines three signals: peg deviation severity (how far coins are from their target
-            price), depeg breadth (what fraction of coins are actively depegged), and supply-weighted volatility
-            (how much the largest stablecoins are fluctuating). A higher score means calmer markets.
+            stablecoin market. It combines four signals: peg deviation severity (how far coins are from their target
+            price), depeg breadth (what fraction of coins are actively depegged), DEWS stress breadth (coins under
+            elevated stress before full depegs), and 7-day market-cap trend. A higher score means calmer markets.
           </p>
         </details>
         <details className="group border border-border/50 rounded-lg">
@@ -68,10 +78,9 @@ export default function StabilityIndexPage() {
             What do the condition bands mean?
           </summary>
           <p className="px-4 pb-4 text-sm text-muted-foreground">
-            PSI scores map to five condition bands: Calm (80–100) means almost all stablecoins are holding their peg
-            with minimal volatility. Elevated (60–79) indicates some minor deviations. Stressed (40–59) means several
-            coins are significantly off-peg. Distressed (20–39) signals widespread depegging across the market. Crisis
-            (0–19) represents extreme market-wide peg failure.
+            PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74),
+            FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Each lower band reflects broader and deeper
+            stablecoin stress.
           </p>
         </details>
       </section>
@@ -87,7 +96,7 @@ export default function StabilityIndexPage() {
                 name: "What is the Pharos Stability Index?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The Pharos Stability Index (PSI) is a composite 0–100 score that measures the overall health of the stablecoin market. It combines three signals: peg deviation severity (how far coins are from their target price), depeg breadth (what fraction of coins are actively depegged), and supply-weighted volatility (how much the largest stablecoins are fluctuating). A higher score means calmer markets.",
+                  text: "The Pharos Stability Index (PSI) is a composite 0–100 score that measures stablecoin market health. It combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend. A higher score means calmer markets.",
                 },
               },
               {
@@ -95,7 +104,7 @@ export default function StabilityIndexPage() {
                 name: "What do the condition bands mean?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "PSI scores map to five condition bands: Calm (80–100) means almost all stablecoins are holding their peg with minimal volatility. Elevated (60–79) indicates some minor deviations. Stressed (40–59) means several coins are significantly off-peg. Distressed (20–39) signals widespread depegging across the market. Crisis (0–19) represents extreme market-wide peg failure.",
+                  text: "PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74), FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Lower bands indicate broader and deeper market instability.",
                 },
               },
             ],

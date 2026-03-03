@@ -13,6 +13,7 @@ import { useDepegEvents } from "@/hooks/use-depeg-events";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
@@ -121,9 +122,7 @@ export function DepegClient() {
   return (
     <div className="space-y-6">
       {isPegError && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load peg data. {pegError instanceof Error ? pegError.message : "Please check your connection."}
-        </div>
+        <QueryErrorNotice error={pegError} hasData={!!pegData?.coins?.length} onRetry={() => window.location.reload()} />
       )}
       {!isPegError && (
         <StaleDataBanner

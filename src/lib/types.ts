@@ -608,6 +608,112 @@ export interface ReportCardsResponse {
 
 export type ReportCardMap = Record<string, ReportCard>;
 
+// --- Stability Index types ---
+
+export const StabilityIndexComponentsSchema = z.object({
+  severity: z.number(),
+  breadth: z.number(),
+  stressBreadth: z.number().optional(),
+  trend: z.number(),
+});
+
+export const StabilityContributorSchema = z.object({
+  id: z.string(),
+  symbol: z.string(),
+  bps: z.number(),
+  mcapUsd: z.number(),
+  ageDays: z.number(),
+  factor: z.number(),
+});
+
+export const StabilityIndexMethodologySchema = z.object({
+  version: z.string(),
+  versionLabel: z.string(),
+  currentVersion: z.string(),
+  currentVersionLabel: z.string(),
+  changelogPath: z.string(),
+  asOf: z.number(),
+  isCurrent: z.boolean(),
+});
+
+export const StabilityIndexCurrentSchema = z.object({
+  score: z.number(),
+  band: z.string(),
+  avg24h: z.number().optional(),
+  avg24hBand: z.string().optional(),
+  components: StabilityIndexComponentsSchema,
+  contributors: z.array(StabilityContributorSchema).optional(),
+  totalMcapUsd: z.number().optional(),
+  computedAt: z.number(),
+  methodologyVersion: z.string(),
+});
+
+export const StabilityIndexHistoryPointSchema = z.object({
+  date: z.number(),
+  score: z.number(),
+  band: z.string(),
+  components: StabilityIndexComponentsSchema.optional(),
+  methodologyVersion: z.string(),
+});
+
+export const StabilityIndexResponseSchema = z.object({
+  current: StabilityIndexCurrentSchema.nullable(),
+  history: z.array(StabilityIndexHistoryPointSchema),
+  methodology: StabilityIndexMethodologySchema,
+});
+
+export interface StabilityIndexComponents {
+  severity: number;
+  breadth: number;
+  stressBreadth?: number;
+  trend: number;
+}
+
+export interface StabilityContributor {
+  id: string;
+  symbol: string;
+  bps: number;
+  mcapUsd: number;
+  ageDays: number;
+  factor: number;
+}
+
+export interface StabilityIndexMethodology {
+  version: string;
+  versionLabel: string;
+  currentVersion: string;
+  currentVersionLabel: string;
+  changelogPath: string;
+  asOf: number;
+  isCurrent: boolean;
+}
+
+export interface StabilityIndexCurrent {
+  score: number;
+  band: string;
+  avg24h?: number;
+  avg24hBand?: string;
+  components: StabilityIndexComponents;
+  contributors?: StabilityContributor[];
+  totalMcapUsd?: number;
+  computedAt: number;
+  methodologyVersion: string;
+}
+
+export interface StabilityIndexHistoryPoint {
+  date: number;
+  score: number;
+  band: string;
+  components?: StabilityIndexComponents;
+  methodologyVersion: string;
+}
+
+export interface StabilityIndexResponse {
+  current: StabilityIndexCurrent | null;
+  history: StabilityIndexHistoryPoint[];
+  methodology: StabilityIndexMethodology;
+}
+
 // --- Status page types ---
 
 export interface CacheStatus {

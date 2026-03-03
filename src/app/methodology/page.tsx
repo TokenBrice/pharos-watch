@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
+import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
 
 export const metadata: Metadata = {
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -75,6 +76,32 @@ export default function MethodologyPage() {
           How Pharos grades stablecoins — transparent scoring across safety, peg stability, liquidity, and contagion risk.
         </p>
       </div>
+
+      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Stability Index Methodology</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-500">
+              {PSI_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href="/methodology/stability-index-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when PSI formula, caps, bands, or component definitions change.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+          <p>
+            PSI is a 0–100 market-health score for the stablecoin ecosystem, computed from depeg severity,
+            depeg breadth, DEWS stress breadth, and 7-day market-cap trend.
+          </p>
+          <div className="rounded-lg border p-3 font-mono text-xs bg-muted">
+            Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Grading Methodology */}
       <Card className="rounded-xl border-l-[3px] border-l-amber-500">

@@ -714,11 +714,21 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
     "score": 81.1,
     "band": "STEADY",
     "components": { "severity": 4.59, "breadth": 15, "stressBreadth": 1.8, "trend": 0.65 },
-    "computedAt": 1771977600
+    "computedAt": 1771977600,
+    "methodologyVersion": "3.0"
   },
   "history": [
-    { "date": 1771891200, "score": 81.0, "band": "STEADY" }
-  ]
+    { "date": 1771891200, "score": 81.0, "band": "STEADY", "methodologyVersion": "2.1" }
+  ],
+  "methodology": {
+    "version": "3.0",
+    "versionLabel": "v3.0",
+    "currentVersion": "3.0",
+    "currentVersionLabel": "v3.0",
+    "changelogPath": "/methodology/stability-index-changelog/",
+    "asOf": 1771977600,
+    "isCurrent": true
+  }
 }
 ```
 
@@ -729,7 +739,12 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 | `current.band` | `string` | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
 | `current.components` | `object` | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend` |
 | `current.computedAt` | `number` | Unix seconds of computation |
+| `current.methodologyVersion` | `string` | Methodology version used to compute the current score |
 | `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
+| `history[].methodologyVersion` | `string` | Methodology version used for that history point |
+| `methodology` | `object` | Version metadata for current PSI methodology context |
+| `methodology.version` | `string` | Methodology version used by current score |
+| `methodology.changelogPath` | `string` | Relative path to full methodology changelog |
 
 ---
 

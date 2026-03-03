@@ -1,5 +1,6 @@
 import type { CronResult } from "../lib/db";
 import { getConditionBand } from "../lib/stability-index";
+import { PSI_METHODOLOGY_VERSION } from "../../../src/lib/stability-index-version";
 
 export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);
@@ -11,13 +12,25 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
       `SELECT AVG(score) as avg_score,
               AVG(json_extract(components, '$.severity')) as avg_severity,
               AVG(json_extract(components, '$.breadth')) as avg_breadth,
+              AVG(json_extract(components, '$.stressBreadth')) as avg_stress_breadth,
               AVG(json_extract(components, '$.trend')) as avg_trend,
               COUNT(*) as cnt
        FROM stability_index_samples
        WHERE stored_at >= ? AND stored_at < ?`
     )
     .bind(yesterdayMidnight, todayMidnight)
-    .first<{ avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_trend: number | null; cnt: number }>();
+    .first<{ avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number }>();
+
+  const versionRows = await db
+    .prepare(
+      `SELECT methodology_version, COUNT(*) as cnt
+       FROM stability_index_samples
+       WHERE stored_at >= ? AND stored_at < ?
+       GROUP BY methodology_version
+       ORDER BY cnt DESC, methodology_version DESC`
+    )
+    .bind(yesterdayMidnight, todayMidnight)
+    .all<{ methodology_version: string; cnt: number }>();
 
   if (!row || !row.cnt || row.avg_score == null) {
     return { metadata: "skipped: no samples for yesterday" };
@@ -28,20 +41,31 @@ export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): P
   const components = {
     severity: Math.round((row.avg_severity ?? 0) * 100) / 100,
     breadth: Math.round((row.avg_breadth ?? 0) * 100) / 100,
+    stressBreadth: Math.round((row.avg_stress_breadth ?? 0) * 100) / 100,
     trend: Math.round((row.avg_trend ?? 0) * 100) / 100,
   };
+  const methodologyVersion = versionRows.results?.[0]?.methodology_version ?? PSI_METHODOLOGY_VERSION;
+  const methodologyBreakdown = Object.fromEntries(
+    (versionRows.results ?? []).map((r) => [r.methodology_version, r.cnt]),
+  );
 
   await db
     .prepare(
-      `INSERT OR REPLACE INTO stability_index (computed_at, score, band, components, input_snapshot)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT OR REPLACE INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
     .bind(
       yesterdayMidnight,
       score,
       band,
       JSON.stringify(components),
-      JSON.stringify({ source: "daily-avg", sampleCount: row.cnt }),
+      JSON.stringify({
+        source: "daily-avg",
+        sampleCount: row.cnt,
+        methodologyVersion,
+        methodologyBreakdown,
+      }),
+      methodologyVersion,
     )
     .run();
 

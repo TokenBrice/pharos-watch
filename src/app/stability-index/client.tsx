@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import {
   AreaChart,
   Area,
@@ -11,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
@@ -22,6 +24,7 @@ import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@/lib/psi-colors";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
@@ -32,19 +35,22 @@ import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-cha
 const COMPONENT_COLORS = {
   severity: "#f97316",
   breadth: "#3b82f6",
+  stressBreadth: "#06b6d4",
   trend: "#22c55e",
 };
 
 const COMPONENT_LEGEND = [
   { label: "Severity", color: COMPONENT_COLORS.severity },
   { label: "Breadth", color: COMPONENT_COLORS.breadth },
+  { label: "Stress Breadth", color: COMPONENT_COLORS.stressBreadth },
   { label: "Trend", color: COMPONENT_COLORS.trend },
 ];
 
 const COMPONENT_DETAIL = [
-  { label: "Severity", sign: "−", color: "#f97316" },
-  { label: "Breadth", sign: "−", color: "#3b82f6" },
-  { label: "Trend", sign: "+", color: "#22c55e" },
+  { key: "severity", label: "Severity", sign: "−", color: COMPONENT_COLORS.severity },
+  { key: "breadth", label: "Breadth", sign: "−", color: COMPONENT_COLORS.breadth },
+  { key: "stressBreadth", label: "Stress Breadth", sign: "−", color: COMPONENT_COLORS.stressBreadth },
+  { key: "trend", label: "Trend", sign: "+", color: COMPONENT_COLORS.trend },
 ] as const;
 
 /* ─── EventTimeline ─────────────────────────────────────────────── */
@@ -116,7 +122,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
 function ComponentChart({
   data,
 }: {
-  data: { ts: number; severity: number; breadth: number; trend: number }[];
+  data: { ts: number; severity: number; breadth: number; stressBreadth: number; trend: number }[];
 }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
 
@@ -151,6 +157,10 @@ function ComponentChart({
                   <linearGradient id="psiBreadthGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.3} />
                     <stop offset="95%" stopColor={COMPONENT_COLORS.breadth} stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="psiStressBreadthGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COMPONENT_COLORS.stressBreadth} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COMPONENT_COLORS.stressBreadth} stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="psiTrendGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={COMPONENT_COLORS.trend} stopOpacity={0.3} />
@@ -206,6 +216,15 @@ function ComponentChart({
                   stackId="penalties"
                   stroke={COMPONENT_COLORS.breadth}
                   fill="url(#psiBreadthGrad)"
+                  strokeWidth={1.5}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="stressBreadth"
+                  name="Stress Breadth"
+                  stackId="penalties"
+                  stroke={COMPONENT_COLORS.stressBreadth}
+                  fill="url(#psiStressBreadthGrad)"
                   strokeWidth={1.5}
                 />
                 <Area
@@ -302,11 +321,39 @@ function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
 
 /* ─── Methodology ───────────────────────────────────────────────── */
 
-function Methodology() {
+function Methodology({
+  methodology,
+}: {
+  methodology: {
+    versionLabel: string;
+    currentVersionLabel: string;
+    changelogPath: string;
+    isCurrent: boolean;
+  };
+}) {
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader>
-        <CardTitle as="h2">Methodology</CardTitle>
+      <CardHeader className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle as="h2">Methodology</CardTitle>
+          <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/60">
+            {methodology.versionLabel}
+          </Badge>
+          {!methodology.isCurrent && (
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
+              latest {methodology.currentVersionLabel}
+            </Badge>
+          )}
+          <Link
+            href={methodology.changelogPath}
+            className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors"
+          >
+            Version history &rarr;
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Version increments when formula, caps, or component definitions change.
+        </p>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
@@ -314,7 +361,7 @@ function Methodology() {
             The Pharos Stability Index (PSI) is a single 0-100 score reflecting overall stablecoin market health.
           </p>
           <code className="block rounded-lg bg-muted px-4 py-3 text-sm font-mono">
-            Score = 100 &minus; severity &minus; breadth + trend
+            Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
           </code>
         </div>
 
@@ -339,6 +386,11 @@ function Methodology() {
                   <td className="py-2 pr-4 font-medium text-foreground">Breadth</td>
                   <td className="py-2 pr-4 tabular-nums">0 &ndash; 17</td>
                   <td className="py-2">Number of depegging coins, weighted so micro-caps barely register</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 pr-4 font-medium text-foreground">Stress Breadth</td>
+                  <td className="py-2 pr-4 tabular-nums">0 &ndash; 5</td>
+                  <td className="py-2">DEWS-derived breadth of elevated stress before full depegs</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-medium text-foreground">Trend</td>
@@ -499,7 +551,7 @@ function ContributorsTable({
 /* ─── Main Client Component ─────────────────────────────────────── */
 
 export function StabilityIndexClient() {
-  const { data, isLoading, isError, dataUpdatedAt } = useStabilityIndexDetail();
+  const { data, isLoading, isError, error, dataUpdatedAt } = useStabilityIndexDetail();
 
   const daysInBand = useMemo(() => {
     if (!data?.current || !data.history.length) return 0;
@@ -532,14 +584,16 @@ export function StabilityIndexClient() {
     return [
       ...reversed.map((p) => ({
         ts: p.date * 1000,
-        severity: p.components.severity,
-        breadth: p.components.breadth,
-        trend: p.components.trend,
+        severity: p.components?.severity ?? 0,
+        breadth: p.components?.breadth ?? 0,
+        stressBreadth: p.components?.stressBreadth ?? 0,
+        trend: p.components?.trend ?? 0,
       })),
       {
         ts: data.current.computedAt * 1000,
         severity: data.current.components.severity,
         breadth: data.current.components.breadth,
+        stressBreadth: data.current.components.stressBreadth ?? 0,
         trend: data.current.components.trend,
       },
     ];
@@ -578,15 +632,9 @@ export function StabilityIndexClient() {
   }
 
   if (isError || (!isLoading && !data?.current)) {
+    const uiError = error ?? new Error("Stability Index data is temporarily unavailable.");
     return (
-      <Card className="rounded-xl">
-        <CardContent className="py-12 text-center space-y-2">
-          <p className="text-sm font-medium">Unable to load Stability Index data</p>
-          <p className="text-sm text-muted-foreground">
-            Please try refreshing the page. If the problem persists, data may be temporarily unavailable.
-          </p>
-        </CardContent>
-      </Card>
+      <QueryErrorNotice error={uiError} hasData={false} onRetry={() => window.location.reload()} />
     );
   }
 
@@ -637,7 +685,7 @@ export function StabilityIndexClient() {
               <div key={c.label} className="flex flex-col items-center gap-0.5">
                 <span className="text-xs text-muted-foreground">{c.label}</span>
                 <span className="text-lg font-extrabold tabular-nums" style={{ color: c.color }}>
-                  {c.sign}{(components[c.label.toLowerCase() as keyof typeof components] ?? 0).toFixed(1)}
+                  {c.sign}{(components[c.key] ?? 0).toFixed(1)}
                 </span>
               </div>
             ))}
@@ -669,7 +717,7 @@ export function StabilityIndexClient() {
       <ComponentChart data={componentData} />
 
       {/* Methodology */}
-      <Methodology />
+      <Methodology methodology={data.methodology} />
     </div>
   );
 }

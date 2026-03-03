@@ -36,6 +36,7 @@ import { FlowEventFeed } from "@/components/flow-event-feed";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { DEWSDetail } from "@/components/dews-detail";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
 
 const DETAIL_SECTIONS = [
@@ -93,7 +94,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         <Button variant="ghost" asChild>
           <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
-        <p className="text-muted-foreground">Signal lost. Try again shortly.</p>
+        <QueryErrorNotice error={listError} hasData={false} onRetry={() => window.location.reload()} />
       </div>
     );
   }
@@ -159,9 +160,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   return (
     <div className="space-y-6">
       {supplyError && (
-        <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-600 dark:text-amber-400">
-          Supply history is temporarily unavailable.
-        </div>
+        <QueryErrorNotice error={supplyError} hasData={!!supplyData?.length} onRetry={() => window.location.reload()} />
       )}
 
       <StaleDataBanner

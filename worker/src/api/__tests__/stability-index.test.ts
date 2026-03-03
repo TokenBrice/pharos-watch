@@ -12,6 +12,7 @@ describe("handleStabilityIndex contract tests", () => {
     band: "Stable",
     components: JSON.stringify({ pricePeg: 85, supplyMomentum: 60 }),
     input_snapshot: JSON.stringify({ totalMcapUsd: 1e11, contributors: [] }),
+    methodology_version: "3.0",
   };
 
   const historyRow = {
@@ -20,6 +21,7 @@ describe("handleStabilityIndex contract tests", () => {
     band: "Stable",
     components: JSON.stringify({ pricePeg: 83, supplyMomentum: 59 }),
     input_snapshot: null,
+    methodology_version: "2.1",
   };
 
   // Order matters: "stability_index_samples" must come before "stability_index"
@@ -38,9 +40,13 @@ describe("handleStabilityIndex contract tests", () => {
 
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
+    expect(body).toHaveProperty("methodology");
     expect((body as { current: Record<string, unknown> }).current).toHaveProperty("score");
     expect((body as { current: Record<string, unknown> }).current).toHaveProperty("band");
     expect((body as { current: Record<string, unknown> }).current).toHaveProperty("components");
+    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("methodologyVersion");
+    expect((body as { methodology: Record<string, unknown> }).methodology).toHaveProperty("version");
+    expect((body as { methodology: Record<string, unknown> }).methodology).toHaveProperty("changelogPath");
     expect(Array.isArray((body as { history: unknown[] }).history)).toBe(true);
   });
 
@@ -53,11 +59,13 @@ describe("handleStabilityIndex contract tests", () => {
 
     expect(body).toHaveProperty("current");
     expect(body).toHaveProperty("history");
+    expect(body).toHaveProperty("methodology");
     const typedBody = body as { history: Record<string, unknown>[] };
     expect(Array.isArray(typedBody.history)).toBe(true);
     // Detail mode adds components to history items
     if (typedBody.history.length > 0) {
       expect(typedBody.history[0]).toHaveProperty("components");
+      expect(typedBody.history[0]).toHaveProperty("methodologyVersion");
     }
   });
 });

@@ -40,6 +40,7 @@ import type { StablecoinDetail } from "@/hooks/use-stablecoins";
 import type { ReportCard } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
@@ -216,11 +217,12 @@ export function CompareClient() {
   const disabledIds = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   // Global data hooks
-  const { data: listData, dataUpdatedAt } = useStablecoins();
-  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
-  const { data: bluechipData, dataUpdatedAt: bcUpdatedAt } = useBluechipRatings();
-  const { data: dexData, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
-  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
+  const { data: listData, dataUpdatedAt, error: listError } = useStablecoins();
+  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt, error: pegError } = usePegSummary();
+  const { data: bluechipData, dataUpdatedAt: bcUpdatedAt, error: bluechipError } = useBluechipRatings();
+  const { data: dexData, dataUpdatedAt: liqUpdatedAt, error: dexError } = useDexLiquidity();
+  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt, error: reportCardsError } = useReportCards();
+  const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, ReportCard>();
@@ -509,6 +511,11 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
+      <QueryErrorNotice
+        error={globalError}
+        hasData={!!listData?.peggedAssets?.length}
+        onRetry={() => window.location.reload()}
+      />
       <StaleDataBanner
         queries={[
           { label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN },

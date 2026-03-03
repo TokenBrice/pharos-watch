@@ -15,6 +15,7 @@ import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -49,15 +50,7 @@ export function HomepageClient() {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-destructive/10 p-4 text-destructive flex items-center justify-between">
-          <span>Failed to load stablecoin data. Please check your connection.</span>
-          <button
-            onClick={() => window.location.reload()}
-            className="text-sm font-medium underline hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
-          >
-            Retry
-          </button>
-        </div>
+        <QueryErrorNotice error={error} hasData={!!data?.peggedAssets?.length} onRetry={() => window.location.reload()} />
       )}
       {!error && (
         <StaleDataBanner

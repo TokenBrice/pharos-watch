@@ -1,6 +1,7 @@
 import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { PSI_ELIGIBLE_IDS } from "../../../src/lib/psi-eligible";
+import { PSI_METHODOLOGY_VERSION } from "../../../src/lib/stability-index-version";
 import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
@@ -115,15 +116,22 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
 
   await db
     .prepare(
-      `INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot, methodology_version)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
     .bind(
       now,
       result.score,
       result.band,
       JSON.stringify(result.components),
-      JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct, contributors }),
+      JSON.stringify({
+        depegCount: depegs.length,
+        totalMcapUsd,
+        mcap7dChangePct,
+        contributors,
+        methodologyVersion: PSI_METHODOLOGY_VERSION,
+      }),
+      PSI_METHODOLOGY_VERSION,
     )
     .run();
 

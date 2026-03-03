@@ -22,6 +22,7 @@ import { PsiLighthouse } from "@/components/stability-index";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS } from "@/lib/psi-colors";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { CRON_15MIN } from "@/hooks/use-api-query";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
@@ -503,7 +504,7 @@ function ContributorsTable({
 /* ─── Main Client Component ─────────────────────────────────────── */
 
 export function StabilityIndexClient() {
-  const { data, isLoading, isError, dataUpdatedAt } = useStabilityIndexDetail();
+  const { data, isLoading, isError, error, dataUpdatedAt } = useStabilityIndexDetail();
 
   const daysInBand = useMemo(() => {
     if (!data?.current || !data.history.length) return 0;
@@ -536,9 +537,9 @@ export function StabilityIndexClient() {
     return [
       ...reversed.map((p) => ({
         ts: p.date * 1000,
-        severity: p.components.severity,
-        breadth: p.components.breadth,
-        trend: p.components.trend,
+        severity: p.components?.severity ?? 0,
+        breadth: p.components?.breadth ?? 0,
+        trend: p.components?.trend ?? 0,
       })),
       {
         ts: data.current.computedAt * 1000,
@@ -582,15 +583,9 @@ export function StabilityIndexClient() {
   }
 
   if (isError || (!isLoading && !data?.current)) {
+    const uiError = error ?? new Error("Stability Index data is temporarily unavailable.");
     return (
-      <Card className="rounded-xl">
-        <CardContent className="py-12 text-center space-y-2">
-          <p className="text-sm font-medium">Unable to load Stability Index data</p>
-          <p className="text-sm text-muted-foreground">
-            Please try refreshing the page. If the problem persists, data may be temporarily unavailable.
-          </p>
-        </CardContent>
-      </Card>
+      <QueryErrorNotice error={uiError} hasData={false} onRetry={() => window.location.reload()} />
     );
   }
 

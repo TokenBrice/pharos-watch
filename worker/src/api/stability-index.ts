@@ -1,6 +1,12 @@
 import { withErrorHandler, addFreshnessHeaders, safeParse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getConditionBand } from "../lib/stability-index";
+import {
+  PSI_METHODOLOGY_CHANGELOG_PATH,
+  PSI_METHODOLOGY_VERSION,
+  PSI_METHODOLOGY_VERSION_LABEL,
+  toPsiMethodologyVersionLabel,
+} from "../../../src/lib/stability-index-version";
 
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";
@@ -9,8 +15,8 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Latest sample (live score)
   const latestSample = await db
-    .prepare("SELECT stored_at, score, band, components, input_snapshot FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
-    .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null }>();
+    .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
+    .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>();
 
   // 24h rolling average
   const avg24hRow = await db
@@ -26,17 +32,29 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Daily history from stability_index
   const historyQuery = detail
-    ? "SELECT computed_at, score, band, components, input_snapshot FROM stability_index ORDER BY computed_at DESC"
-    : "SELECT computed_at, score, band, components, input_snapshot FROM stability_index ORDER BY computed_at DESC LIMIT 91";
+    ? "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC"
+    : "SELECT computed_at, score, band, components, input_snapshot, methodology_version FROM stability_index ORDER BY computed_at DESC LIMIT 91";
 
   const rows = await db
     .prepare(historyQuery)
-    .all<{ computed_at: number; score: number; band: string; components: string; input_snapshot: string | null }>();
+    .all<{ computed_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>();
   const results = rows.results ?? [];
 
   // If no sample and no history, return empty
   if (!latestSample && results.length === 0) {
-    return jsonResponse({ current: null, history: [] }, { "Cache-Control": CACHE_PROFILES.standard });
+    return jsonResponse({
+      current: null,
+      history: [],
+      methodology: {
+        version: PSI_METHODOLOGY_VERSION,
+        versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
+        currentVersion: PSI_METHODOLOGY_VERSION,
+        currentVersionLabel: PSI_METHODOLOGY_VERSION_LABEL,
+        changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
+        asOf: now,
+        isCurrent: true,
+      },
+    }, { "Cache-Control": CACHE_PROFILES.standard });
   }
 
   // Build current from latest sample, falling back to latest history row
@@ -49,19 +67,43 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
 
   // Build history array (newest-first from stability_index)
   const history = results.map((r) => detail
-    ? { date: r.computed_at, score: r.score, band: r.band, components: safeParse(r.components, {}) }
-    : { date: r.computed_at, score: r.score, band: r.band }
+    ? {
+      date: r.computed_at,
+      score: r.score,
+      band: r.band,
+      components: safeParse(r.components, {}),
+      methodologyVersion: r.methodology_version ?? PSI_METHODOLOGY_VERSION,
+    }
+    : {
+      date: r.computed_at,
+      score: r.score,
+      band: r.band,
+      methodologyVersion: r.methodology_version ?? PSI_METHODOLOGY_VERSION,
+    }
   );
 
   // Append today's running average as the last point if we have samples today
   if (todayAvgRow?.avg != null) {
     const todayScore = Math.round(todayAvgRow.avg * 10) / 10;
     const todayBand = getConditionBand(todayScore);
+    const todayMethodologyVersion =
+      latestSample?.methodology_version ??
+      results[0]?.methodology_version ??
+      PSI_METHODOLOGY_VERSION;
     // Prepend to newest-first array (today is the newest)
-    history.unshift({ date: todayMidnight, score: todayScore, band: todayBand } as typeof history[number]);
+    history.unshift({
+      date: todayMidnight,
+      score: todayScore,
+      band: todayBand,
+      methodologyVersion: todayMethodologyVersion,
+    } as typeof history[number]);
   }
 
   const computedAt = latestSample ? latestSample.stored_at : (results[0]?.computed_at ?? now);
+  const methodologyVersion =
+    currentSource.methodology_version ??
+    results[0]?.methodology_version ??
+    PSI_METHODOLOGY_VERSION;
 
   return jsonResponse({
     current: {
@@ -73,8 +115,18 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       contributors,
       totalMcapUsd: snapshot.totalMcapUsd ?? 0,
       computedAt,
+      methodologyVersion,
     },
     history,
+    methodology: {
+      version: methodologyVersion,
+      versionLabel: toPsiMethodologyVersionLabel(methodologyVersion),
+      currentVersion: PSI_METHODOLOGY_VERSION,
+      currentVersionLabel: PSI_METHODOLOGY_VERSION_LABEL,
+      changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
+      asOf: computedAt,
+      isCurrent: methodologyVersion === PSI_METHODOLOGY_VERSION,
+    },
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
   }, computedAt, 86400));
