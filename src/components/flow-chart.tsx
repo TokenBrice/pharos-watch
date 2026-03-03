@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ComposedChart,
   Area,
@@ -31,13 +31,41 @@ interface ChartDatum {
 
 export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   const chartData = useMemo<ChartDatum[]>(() => {
-    return hourly.map((b) => ({
-      ts: b.hourTs * 1000,
-      mint: b.mintVolumeUsd,
-      burn: -b.burnVolumeUsd,
-      net: b.netFlowUsd,
-    }));
+    if (hourly.length === 0) return [];
+
+    const sorted = [...hourly].sort((a, b) => a.hourTs - b.hourTs);
+    const byHour = new Map(sorted.map((b) => [b.hourTs, b] as const));
+    const startHour = sorted[0].hourTs;
+    const endHour = sorted[sorted.length - 1].hourTs;
+
+    const filled: ChartDatum[] = [];
+    for (let hourTs = startHour; hourTs <= endHour; hourTs += 3600) {
+      const bucket = byHour.get(hourTs);
+      filled.push({
+        ts: hourTs * 1000,
+        mint: bucket?.mintVolumeUsd ?? 0,
+        burn: -(bucket?.burnVolumeUsd ?? 0),
+        net: bucket?.netFlowUsd ?? 0,
+      });
+    }
+    return filled;
   }, [hourly]);
+
+  const rangeHours = useMemo(() => {
+    if (chartData.length < 2) return 0;
+    return (chartData[chartData.length - 1].ts - chartData[0].ts) / 3_600_000;
+  }, [chartData]);
+
+  const formatXAxisTick = useCallback((ts: number) => {
+    const d = new Date(ts);
+    if (rangeHours <= 48) {
+      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    }
+    if (rangeHours <= 8 * 24) {
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", hour12: true });
+    }
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }, [rangeHours]);
 
   if (isLoading) {
     return <Skeleton className={`${CHART_HEIGHT} w-full rounded-xl`} />;
@@ -94,10 +122,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               tickLine={false}
               axisLine={false}
               minTickGap={72}
-              tickFormatter={(ts: number) => {
-                const d = new Date(ts);
-                return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-              }}
+              tickFormatter={formatXAxisTick}
             />
             <YAxis
               tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
@@ -111,7 +136,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
             />
             <ReferenceLine y={0} stroke="var(--color-border)" strokeWidth={1} />
             <Area
-              type="monotone"
+              type="linear"
               dataKey="mint"
               stroke={CHART_GREEN}
               fill="url(#mintGrad)"
@@ -119,22 +144,24 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               name="Minted"
               isAnimationActive={false}
             />
+            <Line
+              type="linear"
+              dataKey="net"
+              stroke={CHART_BLUE}
+              strokeWidth={1.5}
+              strokeOpacity={0.75}
+              strokeDasharray="5 3"
+              dot={false}
+              name="Net Flow"
+              isAnimationActive={false}
+            />
             <Area
-              type="monotone"
+              type="linear"
               dataKey="burn"
               stroke={CHART_RED}
               fill="url(#burnGrad)"
-              strokeWidth={1.5}
-              name="Burned"
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
-              dataKey="net"
-              stroke={CHART_BLUE}
               strokeWidth={2}
-              dot={false}
-              name="Net Flow"
+              name="Burned"
               isAnimationActive={false}
             />
           </ComposedChart>
@@ -163,16 +190,25 @@ function FlowTooltip({
     hour12: true,
   });
 
+  const ordered = [...payload].sort((a, b) => {
+    const order: Record<string, number> = { mint: 0, burn: 1, net: 2 };
+    return (order[a.dataKey] ?? 99) - (order[b.dataKey] ?? 99);
+  });
+
   return (
     <div className="rounded-lg border bg-card px-3 py-2 shadow-md text-sm" style={{ fontFamily: "var(--font-mono)" }}>
       <p className="font-semibold mb-1" style={{ fontFamily: "var(--font-sans)" }}>{time}</p>
-      {payload.map((p) => (
+      {ordered.map((p) => (
         <div key={p.dataKey} className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
             <span style={{ fontFamily: "var(--font-sans)" }}>{p.name}</span>
           </div>
-          <span className="tabular-nums">{formatCurrency(Math.abs(p.value))}</span>
+          <span className="tabular-nums">
+            {p.dataKey === "net"
+              ? `${p.value >= 0 ? "+" : "-"}${formatCurrency(Math.abs(p.value))}`
+              : formatCurrency(Math.abs(p.value))}
+          </span>
         </div>
       ))}
     </div>

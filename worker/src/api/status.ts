@@ -235,7 +235,17 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
   try {
     const bl = await db
       .prepare(
-        "SELECT COUNT(*) as total, SUM(CASE WHEN amount IS NULL THEN 1 ELSE 0 END) as missing FROM blacklist_events"
+        `SELECT
+           COUNT(*) as total,
+           SUM(
+             CASE
+               WHEN amount IS NULL
+                 AND NOT (chain_id = 'tron' AND event_type IN ('blacklist', 'unblacklist'))
+               THEN 1
+               ELSE 0
+             END
+           ) as missing
+         FROM blacklist_events`
       )
       .first<{ total: number; missing: number }>();
     if (bl) {

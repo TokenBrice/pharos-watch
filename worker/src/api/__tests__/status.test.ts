@@ -249,4 +249,43 @@ describe("handleStatus", () => {
     expect(body.dataQuality.onchainSupplyDivergences).toBe(0);
     expect(body.dataQualityStatus).toBe("healthy");
   });
+
+  it("excludes intentional Tron blacklist/unblacklist null amounts from blacklist gap metric", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 100, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+    ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
+
+    const seenSql: string[] = [];
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      seenSql.push(sql);
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    const request = new Request("https://x/api/status", {
+      headers: { "X-Admin-Key": "secret-key" },
+    });
+    const res = await handleStatus(db, "secret-key", request);
+    expect(res.status).toBe(200);
+
+    const blacklistSql = seenSql.find((sql) => sql.includes("FROM blacklist_events")) ?? "";
+    expect(blacklistSql).toContain("chain_id = 'tron'");
+    expect(blacklistSql).toContain("event_type IN ('blacklist', 'unblacklist')");
+  });
 });
