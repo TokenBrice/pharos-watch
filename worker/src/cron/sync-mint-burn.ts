@@ -1,12 +1,17 @@
-import type { RateLimitedFetch, EtherscanLogEntry } from "../lib/evm-logs";
+import type { AlchemyLogEntry } from "../lib/alchemy-logs";
+import {
+  buildAlchemyUrl,
+  getAlchemyBlockNumber,
+  fetchAlchemyLogs,
+  resolveBlockTimestamps,
+} from "../lib/alchemy-logs";
 import {
   createBudget,
   budgetExhausted,
-  getEvmBlockNumber,
-  fetchEvmLogsForTopics,
   decodeUint256AtSlot,
   decodeAddress,
 } from "../lib/evm-logs";
+import type { TopicFilter } from "../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig, type MintBurnEventDef } from "../lib/mint-burn-contracts";
 import { batchExecute } from "../lib/db";
 
@@ -46,8 +51,7 @@ function evmSafetyMarginBlocks(evmChainId: number): number {
 
 export async function syncMintBurn(
   db: D1Database,
-  etherscanApiKey: string | null,
-  etherscanRL: RateLimitedFetch,
+  alchemyApiKey: string | null,
   _signal?: AbortSignal,
 ): Promise<{ itemCount: number; metadata: string }> {
   const budget = createBudget(200);
@@ -75,17 +79,29 @@ export async function syncMintBurn(
 
   // 2. Get current block number per chain (lazy cache — fetched on first use per chain ID)
   const chainHeadCache = new Map<number, number>();
-  async function getChainHead(evmChainId: number): Promise<number | null> {
+  async function getChainHead(config: MintBurnContractConfig): Promise<number | null> {
+    const evmChainId = config.chain.evmChainId;
+    if (evmChainId === null) return null;
     if (chainHeadCache.has(evmChainId)) return chainHeadCache.get(evmChainId)!;
-    const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanRL, budget);
+    const url = buildAlchemyUrl(config.chain.chainId, alchemyApiKey!);
+    if (!url) return null;
+    const head = await getAlchemyBlockNumber(url, budget);
     if (head !== null) chainHeadCache.set(evmChainId, head);
     return head;
   }
 
+  // Pre-check: fail fast if no API key
+  if (!alchemyApiKey) {
+    return { itemCount: 0, metadata: JSON.stringify({ error: "No ALCHEMY_API_KEY configured" }) };
+  }
+
   // Pre-fetch Ethereum chain head so an early failure returns a clear error
-  const ethHead = await getChainHead(1);
-  if (ethHead === null) {
-    return { itemCount: 0, metadata: JSON.stringify({ error: "Failed to get Ethereum chain head" }) };
+  const ethConfig = MINT_BURN_CONFIGS.find((c) => c.chain.evmChainId === 1);
+  if (ethConfig) {
+    const ethHead = await getChainHead(ethConfig);
+    if (ethHead === null) {
+      return { itemCount: 0, metadata: JSON.stringify({ error: "Failed to get Ethereum chain head" }) };
+    }
   }
 
   // 3. Load current prices for USD conversion (one query, cached in Map)
@@ -109,7 +125,7 @@ export async function syncMintBurn(
     if (budgetExhausted(budget)) { contractsSkipped++; continue; }
 
     const evmChainId = config.chain.evmChainId;
-    const chainHead = await getChainHead(evmChainId);
+    const chainHead = await getChainHead(config);
     if (chainHead === null) { contractsSkipped++; continue; }
 
     const configKey = `${config.chain.chainId}-${config.contractAddress}`;
@@ -129,19 +145,21 @@ export async function syncMintBurn(
     let configEvents = 0;
     let configError = false;
 
+    // Collect all logs for this config (across all event definitions)
+    const allConfigLogs: { eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }[] = [];
+
     for (const eventDef of config.events) {
       if (budgetExhausted(budget)) break;
 
-      // Build compound topics: [topic0 (event sig), topicN (zero address filter)]
-      const topics = [{ index: 0, value: eventDef.topicHash }];
+      const topics: TopicFilter[] = [{ index: 0, value: eventDef.topicHash }];
       if (eventDef.filterTopic) {
         topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
       }
 
-      const logs = await fetchEvmLogsForTopics(
-        evmChainId, config.contractAddress, topics,
-        etherscanApiKey, fromBlock, scanTo, 0, etherscanRL, budget
-      );
+      const url = buildAlchemyUrl(config.chain.chainId, alchemyApiKey!);
+      if (!url) { configError = true; continue; }
+
+      const logs = await fetchAlchemyLogs(url, config.contractAddress, topics, fromBlock, scanTo, budget);
 
       if (logs === null) {
         apiErrors++;
@@ -149,17 +167,40 @@ export async function syncMintBurn(
         continue;
       }
 
-      // Parse logs into DB rows
-      const rows = parseMintBurnLogs(config, eventDef, logs, prices);
+      if (logs.length > 0) allConfigLogs.push({ eventDef, logs });
+    }
+
+    // Resolve block timestamps for all logs in a single batch
+    const uniqueBlocks = [
+      ...new Set(allConfigLogs.flatMap(({ logs }) => logs.map((l) => parseInt(l.blockNumber, 16))))
+    ];
+    const url = buildAlchemyUrl(config.chain.chainId, alchemyApiKey!);
+    const blockTimestamps = url && uniqueBlocks.length > 0
+      ? await resolveBlockTimestamps(url, uniqueBlocks, budget)
+      : new Map<number, number>();
+
+    // Guard: if any block has no timestamp, treat as config error.
+    if (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length) {
+      const missing = uniqueBlocks.length - blockTimestamps.size;
+      console.warn(
+        `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
+        `${missing}/${uniqueBlocks.length} blocks missing timestamps — skipping to retry next cycle`
+      );
+      apiErrors++;
+      configError = true;
+      contractsProcessed++;
+      continue;
+    }
+
+    // Parse and insert logs
+    for (const { eventDef, logs } of allConfigLogs) {
+      const rows = parseMintBurnLogs(config, eventDef, logs, blockTimestamps, prices);
       for (const row of rows) {
         maxBlockSeen = Math.max(maxBlockSeen, row.block_number);
-
-        // Track affected hour buckets for aggregation
         const hourTs = Math.floor(row.timestamp / 3600) * 3600;
         allNewEvents.push({ stablecoinId: config.stablecoinId, chainId: config.chain.chainId, hourTs });
       }
 
-      // Batch INSERT OR IGNORE
       if (rows.length > 0) {
         const stmts = rows.map((r) =>
           db.prepare(
@@ -261,7 +302,8 @@ interface MintBurnRow {
 function parseMintBurnLogs(
   config: MintBurnContractConfig,
   eventDef: MintBurnEventDef,
-  logs: EtherscanLogEntry[],
+  logs: AlchemyLogEntry[],
+  blockTimestamps: Map<number, number>,
   prices: Map<string, number>,
 ): MintBurnRow[] {
   const rows: MintBurnRow[] = [];
@@ -274,8 +316,8 @@ function parseMintBurnLogs(
 
     const blockNum = parseInt(log.blockNumber, 16);
     const logIndex = parseInt(log.logIndex, 16);
-    const timestamp = parseInt(log.timeStamp, 16);
-    if (isNaN(blockNum) || isNaN(timestamp)) continue;
+    const timestamp = blockTimestamps.get(blockNum) ?? 0;
+    if (isNaN(blockNum) || !timestamp) continue;
 
     const id = `${config.chain.chainId}-${log.transactionHash}-${logIndex}`;
 
