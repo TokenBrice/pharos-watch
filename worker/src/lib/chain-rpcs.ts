@@ -12,7 +12,7 @@ export interface ChainRpcConfig {
 }
 
 /** Alchemy chain slugs for their JSON-RPC endpoints */
-const ALCHEMY_CHAINS: Record<string, string> = {
+export const ALCHEMY_CHAINS: Record<string, string> = {
   ethereum: "eth-mainnet",
   arbitrum: "arb-mainnet",
   base: "base-mainnet",
