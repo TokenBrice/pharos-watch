@@ -272,33 +272,6 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-        <CardHeader className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <CardTitle as="h2">Depeg Tracker + DEWS Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-500">
-              {DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
-            </span>
-            <Link href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
-              Version history &rarr;
-            </Link>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition changes.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed">
-          <p>
-            Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
-            and a per-coin peg score that penalizes time off peg, event severity, active depegs, and unstable event spread.
-          </p>
-          <p>
-            DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,
-            confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
-          </p>
-        </CardContent>
-      </Card>
-
       {/* Grading Methodology */}
       <Card className="rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader className="space-y-2">
@@ -617,127 +590,6 @@ export default function MethodologyPage() {
             </ul>
           </div>
 
-        </CardContent>
-      </Card>
-
-      {/* Peg Score */}
-      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-        <CardHeader>
-          <CardTitle as="h2">Peg Score</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
-          <p>
-            Composite 0&ndash;100 score measuring how faithfully a stablecoin holds its peg.
-            The tracking window spans up to 4 years but is capped at the coin&apos;s actual age (earliest supply snapshot),
-            so young coins are not diluted across history they didn&apos;t exist for.
-            Requires at least 30 days of tracking data; returns null otherwise.
-          </p>
-
-          {/* Formula */}
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Formula</h3>
-            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
-              pegScore = 0.5 &times; pegPct + 0.5 &times; severityScore &minus; activeDepegPenalty &minus; spreadPenalty
-            </p>
-          </div>
-
-          {/* Peg score flow diagram — desktop */}
-          <div className="hidden md:flex flex-col items-center gap-3">
-            <div className="grid grid-cols-2 gap-3 w-full max-w-md">
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Time-at-Peg</p>
-                <p className="text-xs text-muted-foreground mt-0.5">50%</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium">Event Severity</p>
-                <p className="text-xs text-muted-foreground mt-0.5">50%</p>
-              </div>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border p-3 text-center w-64">
-              <p className="text-foreground font-medium">&minus; Penalties</p>
-              <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="rounded-lg border p-3 text-center w-64">
-              <p className="text-foreground font-medium">Peg Score</p>
-              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
-            </div>
-          </div>
-
-          {/* Peg score flow diagram — mobile */}
-          <div className="flex flex-col items-center gap-3 md:hidden">
-            <div className="grid grid-cols-2 gap-2 w-full">
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium text-xs">Time-at-Peg</p>
-                <p className="text-xs text-muted-foreground">50%</p>
-              </div>
-              <div className="rounded-lg border p-3 text-center">
-                <p className="text-foreground font-medium text-xs">Event Severity</p>
-                <p className="text-xs text-muted-foreground">50%</p>
-              </div>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border p-3 text-center">
-              <p className="text-foreground font-medium">&minus; Penalties</p>
-              <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
-            </div>
-            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
-            <div className="w-full rounded-lg border p-3 text-center">
-              <p className="text-foreground font-medium">Peg Score</p>
-              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
-            </div>
-          </div>
-
-          {/* Components */}
-          <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Components</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 pr-4 font-medium text-foreground">Component</th>
-                    <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
-                    <th className="py-2 pr-4 font-medium text-foreground">Range</th>
-                    <th className="py-2 font-medium text-foreground">How it works</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  <tr>
-                    <td className="py-2 pr-4 text-foreground">Time-at-Peg (pegPct)</td>
-                    <td className="py-2 pr-4">50%</td>
-                    <td className="py-2 pr-4">0&ndash;100</td>
-                    <td className="py-2">Percentage of time spent at peg. Overlapping depeg intervals are merged to avoid double-counting</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 pr-4 text-foreground">Event Severity</td>
-                    <td className="py-2 pr-4">50%</td>
-                    <td className="py-2 pr-4">0&ndash;100</td>
-                    <td className="py-2">
-                      Penalizes magnitude, duration, and recency of each depeg event.
-                      Per-event penalty: max(durationPenalty, magnitudeFloor), where
-                      durationPenalty = (peakBps&nbsp;/&nbsp;100) &times; (durationDays&nbsp;/&nbsp;30) &times; recencyWeight,
-                      magnitudeFloor = (peakBps&nbsp;/&nbsp;2000) &times; recencyWeight.
-                      The floor ensures even brief depegs carry a minimum penalty proportional to their severity.
-                      Recency weight = 1&nbsp;/&nbsp;(1&nbsp;+&nbsp;yearsAgo) so recent events count more. Duration capped at 90 days
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 pr-4 text-foreground">Active Depeg Penalty</td>
-                    <td className="py-2 pr-4">subtracted</td>
-                    <td className="py-2 pr-4">5&ndash;50</td>
-                    <td className="py-2">Applied only if an ongoing depeg exists (no end date). Scales with severity: clamp(absBps&nbsp;/&nbsp;50, 5, 50)</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 pr-4 text-foreground">Spread Penalty</td>
-                    <td className="py-2 pr-4">subtracted</td>
-                    <td className="py-2 pr-4">0&ndash;15</td>
-                    <td className="py-2">Standard deviation of peak deviations across events, scaled. Penalizes erratic, unpredictable depeg behaviour. Only applies when &ge;2 events exist</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -1194,17 +1046,160 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
-      {/* Depeg Early Warning Score (DEWS) */}
+      {/* PegScore and Depeg Early Warning Score (DEWS) */}
       <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-        <CardHeader>
-          <CardTitle as="h2">Depeg Early Warning Score (DEWS)</CardTitle>
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">PegScore and Depeg Early Warning Score (DEWS)</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-500">
+              {DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when depeg thresholds, confirmation policy, peg-score formula terms, or DEWS signal composition changes.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability.
-            It is computed every 15 minutes from 8 sub-signals. Only signals with available data
-            participate; weights are redistributed proportionally across available signals.
+            PegScore observes the past and present by scoring realized peg behavior, while DEWS is
+            forward-looking and tries to anticipate future depeg risk before it fully manifests.
           </p>
+          <p>
+            Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets,
+            and a per-coin peg score that penalizes time off peg, event severity, active depegs, and unstable event spread.
+          </p>
+          <p>
+            DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,
+            confidence, flow, and yield signals, with optional PSI-based amplification during systemic stress.
+          </p>
+
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">PegScore</h3>
+            <p>
+              Composite 0&ndash;100 score measuring how faithfully a stablecoin holds its peg.
+              The tracking window spans up to 4 years but is capped at the coin&apos;s actual age (earliest supply snapshot),
+              so young coins are not diluted across history they didn&apos;t exist for.
+              Requires at least 30 days of tracking data; returns null otherwise.
+            </p>
+          </div>
+
+          {/* Peg score formula */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">PegScore Formula</h3>
+            <p className="font-mono text-xs bg-muted rounded px-3 py-2">
+              pegScore = 0.5 &times; pegPct + 0.5 &times; severityScore &minus; activeDepegPenalty &minus; spreadPenalty
+            </p>
+          </div>
+
+          {/* Peg score flow diagram — desktop */}
+          <div className="hidden md:flex flex-col items-center gap-3">
+            <div className="grid grid-cols-2 gap-3 w-full max-w-md">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Time-at-Peg</p>
+                <p className="text-xs text-muted-foreground mt-0.5">50%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Event Severity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">50%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">&minus; Penalties</p>
+              <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-64">
+              <p className="text-foreground font-medium">PegScore</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
+            </div>
+          </div>
+
+          {/* Peg score flow diagram — mobile */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Time-at-Peg</p>
+                <p className="text-xs text-muted-foreground">50%</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Event Severity</p>
+                <p className="text-xs text-muted-foreground">50%</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">&minus; Penalties</p>
+              <p className="text-xs text-muted-foreground mt-0.5">active depeg + spread</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">PegScore</p>
+              <p className="text-xs text-muted-foreground mt-0.5">0&ndash;100</p>
+            </div>
+          </div>
+
+          {/* Peg score components */}
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">PegScore Components</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4 font-medium text-foreground">Component</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Weight</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Range</th>
+                    <th className="py-2 font-medium text-foreground">How it works</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Time-at-Peg (pegPct)</td>
+                    <td className="py-2 pr-4">50%</td>
+                    <td className="py-2 pr-4">0&ndash;100</td>
+                    <td className="py-2">Percentage of time spent at peg. Overlapping depeg intervals are merged to avoid double-counting</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Event Severity</td>
+                    <td className="py-2 pr-4">50%</td>
+                    <td className="py-2 pr-4">0&ndash;100</td>
+                    <td className="py-2">
+                      Penalizes magnitude, duration, and recency of each depeg event.
+                      Per-event penalty: max(durationPenalty, magnitudeFloor), where
+                      durationPenalty = (peakBps&nbsp;/&nbsp;100) &times; (durationDays&nbsp;/&nbsp;30) &times; recencyWeight,
+                      magnitudeFloor = (peakBps&nbsp;/&nbsp;2000) &times; recencyWeight.
+                      The floor ensures even brief depegs carry a minimum penalty proportional to their severity.
+                      Recency weight = 1&nbsp;/&nbsp;(1&nbsp;+&nbsp;yearsAgo) so recent events count more. Duration capped at 90 days
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Active Depeg Penalty</td>
+                    <td className="py-2 pr-4">subtracted</td>
+                    <td className="py-2 pr-4">5&ndash;50</td>
+                    <td className="py-2">Applied only if an ongoing depeg exists (no end date). Scales with severity: clamp(absBps&nbsp;/&nbsp;50, 5, 50)</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Spread Penalty</td>
+                    <td className="py-2 pr-4">subtracted</td>
+                    <td className="py-2 pr-4">0&ndash;15</td>
+                    <td className="py-2">Standard deviation of peak deviations across events, scaled. Penalizes erratic, unpredictable depeg behaviour. Only applies when &ge;2 events exist</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">DEWS</h3>
+            <p>
+              DEWS is a per-coin, forward-looking stress score (0&ndash;100) estimating depeg probability.
+              It is computed every 15 minutes from 8 sub-signals. Only signals with available data
+              participate; weights are redistributed proportionally across available signals.
+            </p>
+          </div>
 
           {/* DEWS pipeline diagram — desktop: horizontal */}
           <div className="hidden md:flex items-stretch gap-4">
