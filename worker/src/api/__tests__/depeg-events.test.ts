@@ -66,4 +66,16 @@ describe("handleDepegEvents", () => {
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
+
+  it("uses latest successful sync timestamp for freshness headers", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "depeg_events", rows: [makeDepegRow({ started_at: now - 7 * 86400 })] },
+      { match: "cron_runs", rows: [], first: { started_at: now - 45 } },
+    ]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    const age = Number(res.headers.get("X-Data-Age"));
+    expect(age).toBeLessThan(120);
+  });
 });

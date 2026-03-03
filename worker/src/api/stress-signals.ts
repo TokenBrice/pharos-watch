@@ -1,4 +1,12 @@
-import { withErrorHandler, isValidStablecoinId, addFreshnessHeaders, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  isValidStablecoinId,
+  addFreshnessHeaders,
+  errorResponse,
+  parseIntParam,
+  jsonResponse,
+  safeParse,
+} from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -52,23 +60,39 @@ export const handleStressSignals = withErrorHandler(
 
       const computedAt = latest?.computed_at ?? Math.floor(Date.now() / 1000);
       const methodologyVersion = getDepegDewsMethodologyVersionAt(computedAt);
+      let malformedRows = 0;
+      const currentSignals = latest
+        ? safeParse<Record<string, unknown> | null>(latest.signals_json, null)
+        : null;
+      if (latest && currentSignals == null) malformedRows++;
+
+      const historyRows = history.results.map((r) => {
+        const parsedSignals = safeParse<Record<string, unknown> | null>(r.signals_json, null);
+        if (parsedSignals == null) {
+          malformedRows++;
+          return null;
+        }
+        return {
+          date: r.snapshot_date,
+          score: r.score,
+          band: r.band,
+          signals: parsedSignals,
+          methodologyVersion: getDepegDewsMethodologyVersionAt(r.snapshot_date),
+        };
+      }).filter((row): row is NonNullable<typeof row> => row !== null);
+
       return jsonResponse({
-        current: latest
+        current: latest && currentSignals
           ? {
               score: latest.score,
               band: latest.band,
-              signals: JSON.parse(latest.signals_json),
+              signals: currentSignals,
               computedAt: latest.computed_at,
               methodologyVersion: getDepegDewsMethodologyVersionAt(latest.computed_at),
             }
           : null,
-        history: history.results.map((r) => ({
-          date: r.snapshot_date,
-          score: r.score,
-          band: r.band,
-          signals: JSON.parse(r.signals_json),
-          methodologyVersion: getDepegDewsMethodologyVersionAt(r.snapshot_date),
-        })),
+        history: historyRows,
+        malformedRows,
         methodology: {
           version: methodologyVersion,
           versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
@@ -103,12 +127,18 @@ export const handleStressSignals = withErrorHandler(
 
     const signals: Record<string, object> = {};
     let updatedAt = 0;
+    let malformedRows = 0;
     for (const row of rows.results) {
+      const parsedSignals = safeParse<Record<string, unknown> | null>(row.signals_json, null);
+      if (parsedSignals == null) {
+        malformedRows++;
+        continue;
+      }
       const methodologyVersion = getDepegDewsMethodologyVersionAt(row.computed_at);
       signals[row.stablecoin_id] = {
         score: row.score,
         band: row.band,
-        signals: JSON.parse(row.signals_json),
+        signals: parsedSignals,
         computedAt: row.computed_at,
         methodologyVersion,
       };
@@ -118,7 +148,7 @@ export const handleStressSignals = withErrorHandler(
     const asOf = updatedAt > 0 ? updatedAt : Math.floor(Date.now() / 1000);
     const methodologyVersion = getDepegDewsMethodologyVersionAt(asOf);
 
-    return jsonResponse({ signals, updatedAt, methodology: {
+    return jsonResponse({ signals, updatedAt, malformedRows, methodology: {
       version: methodologyVersion,
       versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,

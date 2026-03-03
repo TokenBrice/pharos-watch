@@ -1,4 +1,12 @@
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  addFreshnessHeaders,
+  isValidStablecoinId,
+  errorResponse,
+  parseIntParam,
+  jsonResponse,
+  getLatestSuccessfulCronTimestamp,
+} from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "../../../src/lib/chains";
@@ -19,6 +27,9 @@ interface EventRow {
   block_number: number;
   timestamp: number;
   explorer_tx_url: string;
+  price_used: number | null;
+  price_timestamp: number | null;
+  price_source: string | null;
 }
 
 export const handleMintBurnEvents = withErrorHandler(
@@ -94,15 +105,19 @@ export const handleMintBurnEvents = withErrorHandler(
       blockNumber: row.block_number,
       timestamp: row.timestamp,
       explorerTxUrl: row.explorer_tx_url,
+      priceUsed: row.price_used,
+      priceTimestamp: row.price_timestamp,
+      priceSource: row.price_source,
     }));
 
     const latestTs =
       events.length > 0
         ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity)
         : Math.floor(Date.now() / 1000);
+    const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-mint-burn", latestTs);
 
     return jsonResponse({ events, total }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.realtime,
-    }, latestTs, 900));
+    }, freshnessTs, 900));
   },
 );

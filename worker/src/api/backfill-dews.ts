@@ -38,25 +38,36 @@ export const handleBackfillDEWS = withErrorHandler(
 
     // Load supply_history for reconstructing historical inputs
     const supplyRows = await db
-      .prepare("SELECT stablecoin_id, snapshot_date, circulating FROM supply_history ORDER BY snapshot_date ASC")
-      .all<{ stablecoin_id: string; snapshot_date: number; circulating: number }>();
+      .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date ASC")
+      .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
 
     // Index supply by coin+date
     const supplyIndex = new Map<string, Map<number, number>>();
     for (const row of supplyRows.results) {
       if (!supplyIndex.has(row.stablecoin_id)) supplyIndex.set(row.stablecoin_id, new Map());
-      supplyIndex.get(row.stablecoin_id)!.set(row.snapshot_date, row.circulating);
+      supplyIndex.get(row.stablecoin_id)!.set(row.snapshot_date, row.circulating_usd);
     }
 
     // Load dex_liquidity_history for historical liquidity scores
     const liqRows = await db
-      .prepare("SELECT stablecoin_id, date, score, tvl FROM dex_liquidity_history ORDER BY date ASC")
-      .all<{ stablecoin_id: string; date: number; score: number; tvl: number }>();
+      .prepare(
+        "SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd FROM dex_liquidity_history ORDER BY snapshot_date ASC",
+      )
+      .all<{
+        stablecoin_id: string;
+        snapshot_date: number;
+        liquidity_score: number | null;
+        total_tvl_usd: number | null;
+      }>();
 
-    const liqIndex = new Map<string, { date: number; score: number; tvl: number }[]>();
+    const liqIndex = new Map<string, { snapshotDate: number; score: number | null; tvl: number | null }[]>();
     for (const row of liqRows.results) {
       if (!liqIndex.has(row.stablecoin_id)) liqIndex.set(row.stablecoin_id, []);
-      liqIndex.get(row.stablecoin_id)!.push(row);
+      liqIndex.get(row.stablecoin_id)!.push({
+        snapshotDate: row.snapshot_date,
+        score: row.liquidity_score,
+        tvl: row.total_tvl_usd,
+      });
     }
 
     const DAY = 86400;
@@ -85,9 +96,9 @@ export const handleBackfillDEWS = withErrorHandler(
         if (current <= 0) continue;
 
         // Find closest liquidity data
-        const liqNow = coinLiq.find((l) => Math.abs(l.date - dayMidnight) < 2 * DAY);
+        const liqNow = coinLiq.find((l) => Math.abs(l.snapshotDate - dayMidnight) < 2 * DAY);
         const liq7d = coinLiq.find(
-          (l) => Math.abs(l.date - (dayMidnight - 7 * DAY)) < 2 * DAY,
+          (l) => Math.abs(l.snapshotDate - (dayMidnight - 7 * DAY)) < 2 * DAY,
         );
 
         const input: DEWSInput = {

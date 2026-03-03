@@ -29,6 +29,9 @@ describe("handleMintBurnEvents", () => {
     expect(event).toHaveProperty("stablecoinId");
     expect(event).toHaveProperty("chainId");
     expect(event).toHaveProperty("amountUsd");
+    expect(event).toHaveProperty("priceUsed");
+    expect(event).toHaveProperty("priceTimestamp");
+    expect(event).toHaveProperty("priceSource");
     expect(event).toHaveProperty("txHash");
     expect(event).toHaveProperty("blockNumber");
     expect(event).toHaveProperty("explorerTxUrl");
@@ -60,5 +63,17 @@ describe("handleMintBurnEvents", () => {
     ]);
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1"));
     expect(res.headers.has("X-Data-Age")).toBe(true);
+  });
+
+  it("uses sync-mint-burn cron timestamp for freshness metadata", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [makeMintBurnRow({ timestamp: now - 10 * 86400 })] },
+      { match: "cron_runs", rows: [], first: { started_at: now - 20 } },
+    ]);
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1"));
+    const age = Number(res.headers.get("X-Data-Age"));
+    expect(age).toBeLessThan(120);
   });
 });

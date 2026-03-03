@@ -72,19 +72,30 @@ export async function computeAndStoreDEWS(
   // 4. Read dex_liquidity_history (7d lookback)
   const liqHistCutoff = nowSec - 8 * 86400;
   const target7d = nowSec - 7 * 86400;
-  const liqHist7dMap = new Map<string, { score: number; tvl: number; date: number }>();
+  const liqHist7dMap = new Map<string, { score: number | null; tvl: number | null; date: number }>();
+  let liqHistRowsRead = 0;
   try {
     const liqHistRows = await db
       .prepare(
-        "SELECT stablecoin_id, date, score, tvl FROM dex_liquidity_history WHERE date >= ? ORDER BY date ASC",
+        "SELECT stablecoin_id, snapshot_date, liquidity_score, total_tvl_usd FROM dex_liquidity_history WHERE snapshot_date >= ? ORDER BY snapshot_date ASC",
       )
       .bind(liqHistCutoff)
-      .all<{ stablecoin_id: string; date: number; score: number; tvl: number }>();
+      .all<{
+        stablecoin_id: string;
+        snapshot_date: number;
+        liquidity_score: number | null;
+        total_tvl_usd: number | null;
+      }>();
+    liqHistRowsRead = liqHistRows.results.length;
 
     for (const row of liqHistRows.results) {
       const existing = liqHist7dMap.get(row.stablecoin_id);
-      if (!existing || Math.abs(row.date - target7d) < Math.abs(existing.date - target7d)) {
-        liqHist7dMap.set(row.stablecoin_id, { score: row.score, tvl: row.tvl, date: row.date });
+      if (!existing || Math.abs(row.snapshot_date - target7d) < Math.abs(existing.date - target7d)) {
+        liqHist7dMap.set(row.stablecoin_id, {
+          score: row.liquidity_score ?? null,
+          tvl: row.total_tvl_usd ?? null,
+          date: row.snapshot_date,
+        });
       }
     }
   } catch {
@@ -231,6 +242,7 @@ export async function computeAndStoreDEWS(
     band: string;
     signals: Record<string, unknown>;
   }[] = [];
+  let liqHistCoverageCount = 0;
 
   for (const meta of PSI_ELIGIBLE_STABLECOINS) {
     // Skip NAV tokens (price appreciates, not pegged to $1)
@@ -248,6 +260,7 @@ export async function computeAndStoreDEWS(
     const dexLiq = dexLiqMap.get(meta.id);
     const dexPrice = dexPriceMap.get(meta.id);
     const liqHist = liqHist7dMap.get(meta.id);
+    if (liqHist) liqHistCoverageCount++;
     const prev = prevSignals.get(meta.id);
     const mb = mintBurnMap.get(meta.id);
 
@@ -359,6 +372,23 @@ export async function computeAndStoreDEWS(
     .bind(nowSec - 365 * 86400)
     .run();
 
+  const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
+  if (results.length > 0 && liqHistCoverage < 0.5) {
+    console.warn(
+      `[dews] Low 7d liquidity history coverage: ${liqHistCoverageCount}/${results.length} (${(liqHistCoverage * 100).toFixed(1)}%)`,
+    );
+  }
+
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
-  return { itemCount: results.length, metadata: `${results.length} coins` };
+  return {
+    itemCount: results.length,
+    metadata: JSON.stringify({
+      rowsRead: assets.length + dexLiqRows.results.length + liqHistRowsRead,
+      rowsWritten: results.length,
+      rowsDropped: 0,
+      sourceCoverage: { liquidityHistory7d: Number(liqHistCoverage.toFixed(4)) },
+      fallbackMode: null,
+      validationFailures: 0,
+    }),
+  };
 }

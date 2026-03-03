@@ -1059,6 +1059,9 @@ export interface MintBurnEvent {
   direction: "mint" | "burn";
   amount: number;
   amountUsd: number | null;
+  priceUsed?: number | null;
+  priceTimestamp?: number | null;
+  priceSource?: string | null;
   counterparty: string | null;
   txHash: string;
   blockNumber: number;
@@ -1097,12 +1100,14 @@ export interface StressSignalEntry {
 export const StressSignalsAllResponseSchema = z.object({
   signals: z.record(z.string(), StressSignalEntrySchema),
   updatedAt: z.number(),
+  malformedRows: z.number().optional(),
   methodology: DepegDewsMethodologySchema,
 });
 
 export interface StressSignalsAllResponse {
   signals: Record<string, StressSignalEntry>;
   updatedAt: number;
+  malformedRows?: number;
   methodology: DepegDewsMethodology;
 }
 
@@ -1117,6 +1122,7 @@ export const StressSignalHistoryEntrySchema = z.object({
 export const StressSignalDetailResponseSchema = z.object({
   current: StressSignalEntrySchema.nullable(),
   history: z.array(StressSignalHistoryEntrySchema),
+  malformedRows: z.number().optional(),
   methodology: DepegDewsMethodologySchema,
 });
 

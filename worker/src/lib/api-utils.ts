@@ -30,9 +30,9 @@ export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): Freshn
  * the `cache` key/value table, and need table-specific freshness queries.
  */
 const TABLE_FRESHNESS_QUERIES: Record<string, string> = {
-  "dex-liquidity": "SELECT MIN(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0",
-  "yield-data":    "SELECT MIN(? - updated_at) as age FROM yield_data",
-  "dews":          "SELECT MIN(? - computed_at) as age FROM stress_signals",
+  "dex-liquidity": "SELECT MAX(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0",
+  "yield-data":    "SELECT MAX(? - updated_at) as age FROM yield_data",
+  "dews":          "SELECT MAX(? - computed_at) as age FROM stress_signals",
 };
 
 /**
@@ -216,4 +216,24 @@ export function addFreshnessHeaders(
     result["Warning"] = `110 - "Response is stale (${age}s old, max ${maxAgeSec}s)"`;
   }
   return result;
+}
+
+/** Latest successful cron run timestamp for freshness metadata. */
+export async function getLatestSuccessfulCronTimestamp(
+  db: D1Database,
+  job: string,
+  fallback: number,
+): Promise<number> {
+  try {
+    const row = await db
+      .prepare(
+        "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+      )
+      .bind(job)
+      .first<{ started_at: number | null }>();
+    if (row?.started_at != null) return row.started_at;
+  } catch {
+    // Non-blocking: fall back to caller-provided timestamp.
+  }
+  return fallback;
 }

@@ -196,51 +196,6 @@ async function fetchEvmTokenBalance(
   return fetchEvmBalanceAtTag(config.chain.evmChainId!, config.contractAddress, address, blockTag, etherscanApiKey, rateLimit, config.decimals, budget, signal);
 }
 
-async function fetchTronTokenBalance(
-  contractAddress: string,
-  address: string,
-  apiKey: string | null,
-  rateLimit: RateLimitedFetch,
-  decimals: number,
-  budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<number | null> {
-  if (budgetExhausted(budget)) return null;
-
-  const headers: Record<string, string> = {};
-  if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
-
-  // Convert 0x-prefixed EVM format to Tron's 41-prefixed hex format
-  const tronAddress = address.startsWith("0x") ? "41" + address.slice(2) : address;
-
-  try {
-    budget.count++;
-    const json = await rateLimit(async () => {
-      const res = await fetch(`https://api.trongrid.io/v1/accounts/${tronAddress}`, { headers, signal });
-      if (!res.ok) { await res.body?.cancel(); return null; }
-      return res.json() as Promise<{
-        data: { trc20: Record<string, string>[] }[];
-        success: boolean;
-      }>;
-    });
-
-    if (!json?.success) return null;
-    if (!json.data?.[0]) return 0; // Account doesn't exist — 0 balance
-    if (!json.data[0].trc20) return 0;
-
-    for (const tokenEntry of json.data[0].trc20) {
-      if (contractAddress in tokenEntry) {
-        return bigIntToDecimal(BigInt(tokenEntry[contractAddress]), decimals);
-      }
-    }
-
-    return 0; // Account exists but has no balance of this token
-  } catch (e) {
-    console.warn("[sync-blacklist] fetchTronTokenBalance failed:", e);
-    return null;
-  }
-}
-
 // --- EVM log fetching imported from evm-logs.ts ---
 
 interface BlacklistRow {
@@ -477,9 +432,10 @@ async function enrichRowBalances(
     const blockForBalance = row.block_number - 1;
 
     if (config.chain.type === "tron") {
-      row.amount = await fetchTronTokenBalance(
-        config.contractAddress, row.address, trongridApiKey, tronLimiter, config.decimals, budget, signal
-      );
+      // TronGrid account balance endpoint returns current state, not event-time state.
+      // To avoid false precision, keep Tron blacklist/unblacklist amounts null unless
+      // the amount is emitted natively in the event payload (e.g. destroy).
+      continue;
     } else if (config.chain.evmChainId != null) {
       row.amount = await fetchEvmTokenBalance(
         config, row.address, blockForBalance, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
@@ -591,9 +547,9 @@ async function backfillAmounts(
         );
       }
     } else if (config.chain.type === "tron") {
-      amount = await fetchTronTokenBalance(
-        config.contractAddress, row.address, trongridApiKey, tronLimiter, config.decimals, budget, signal
-      );
+      // Skip Tron amount backfill for non-event-native amounts. Current-balance based
+      // reconstruction is not event-time accurate.
+      continue;
     } else if (config.chain.evmChainId != null) {
       amount = await fetchEvmTokenBalance(
         config, row.address, row.block_number - 1, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal

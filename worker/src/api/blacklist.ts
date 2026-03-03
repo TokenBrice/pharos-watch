@@ -1,4 +1,11 @@
-import { withErrorHandler, addFreshnessHeaders, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  addFreshnessHeaders,
+  errorResponse,
+  parseIntParam,
+  jsonResponse,
+  getLatestSuccessfulCronTimestamp,
+} from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import { CHAIN_META } from "../../../src/lib/chains";
@@ -85,6 +92,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   }));
 
   const latestTs = events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
+  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-blacklist", latestTs);
   const methodologyVersion = events[0]?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
   const methodologyVersionLabel = toBlacklistTrackerMethodologyVersionLabel(methodologyVersion);
 
@@ -102,5 +110,5 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
     },
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
-  }, latestTs, 900));
+  }, freshnessTs, 900));
 });

@@ -1,5 +1,13 @@
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  addFreshnessHeaders,
+  isValidStablecoinId,
+  errorResponse,
+  parseIntParam,
+  jsonResponse,
+  getLatestSuccessfulCronTimestamp,
+} from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
@@ -45,8 +53,9 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   const total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
   const events = ((dataBatch.results ?? []) as DepegRow[]).map(rowToDepegEvent);
 
-  const latestTs = events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000);
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(latestTs);
+  const latestEventTs = events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000);
+  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-stablecoins", latestEventTs);
+  const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
 
   return jsonResponse({ events, total, methodology: {
     version: methodologyVersion,
@@ -54,9 +63,9 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
     currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
     currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
-    asOf: latestTs,
+    asOf: latestEventTs,
     isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
   } }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
-  }, latestTs, 900));
+  }, freshnessTs, 900));
 });

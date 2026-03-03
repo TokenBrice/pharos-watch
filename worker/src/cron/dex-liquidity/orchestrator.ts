@@ -1,4 +1,5 @@
 import { initOnchainAvailability, isOnchainAvailable } from "../../lib/coingecko-onchain";
+import type { CronResult } from "../../lib/db";
 import type { CgNewPool, GtNewPool, DexPriceObs } from "./types";
 import { buildSymbolLookups } from "./pool-helpers";
 import {
@@ -12,7 +13,12 @@ import { processPoolMetrics } from "./process-pools";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 
-export async function syncDexLiquidity(db: D1Database, graphApiKey: string | null, cgApiKey: string | null = null, signal?: AbortSignal): Promise<void> {
+export async function syncDexLiquidity(
+  db: D1Database,
+  graphApiKey: string | null,
+  cgApiKey: string | null = null,
+  signal?: AbortSignal,
+): Promise<CronResult> {
   initOnchainAvailability(cgApiKey ?? undefined);
   const useCg = isOnchainAvailable();
   console.log(`[dex-liquidity] Starting sync`);
@@ -20,7 +26,9 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
   // 1. Fetch all external data sources
   const dataSources = await fetchDataSources(graphApiKey, db, signal);
-  if (!dataSources) return;
+  if (!dataSources) {
+    throw new Error("dex-liquidity: catastrophic source failure (DL yields + Curve unavailable)");
+  }
   if (!dataSources.dlYieldsAvailable) {
     console.log("[dex-liquidity] DL yields unavailable — CG/GT pool crawl will be the only pool source");
   }
@@ -162,4 +170,20 @@ export async function syncDexLiquidity(db: D1Database, graphApiKey: string | nul
 
   // 10. Compute and persist DEX-implied prices from ALL observations
   await computeDexPrices(db, priceObservations, nowSec);
+
+  return {
+    itemCount: scoreResults.length,
+    metadata: JSON.stringify({
+      rowsRead: dataSources.pools.length,
+      rowsWritten: scoreResults.length,
+      rowsDropped: 0,
+      sourceCoverage: {
+        dlYieldsAvailable: dataSources.dlYieldsAvailable,
+        dlProtocolsAvailable: dataSources.dlProtocolsAvailable,
+        priceObservationCoins: priceObservations.size,
+      },
+      fallbackMode: dataSources.dlYieldsAvailable ? null : (useCg ? "cg-crawl-primary" : "gt-crawl-primary"),
+      validationFailures: 0,
+    }),
+  };
 }

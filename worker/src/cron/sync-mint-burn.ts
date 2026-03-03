@@ -60,6 +60,8 @@ export async function syncMintBurn(
   let contractsProcessed = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
+  let rowsRead = 0;
+  let rowsDropped = 0;
 
   // 1. Load last_block for all configs in one batch query
   const configKeys = MINT_BURN_CONFIGS.map(
@@ -115,6 +117,23 @@ export async function syncMintBurn(
   for (const row of priceRows.results) {
     prices.set(row.asset_id, row.price);
   }
+  const runTimestamp = Math.floor(Date.now() / 1000);
+
+  // 3b. Load daily historical price snapshots for event-time USD valuation
+  const priceHistoryRows = await db
+    .prepare(
+      "SELECT stablecoin_id, snapshot_date, price FROM supply_history WHERE stablecoin_id IN (" +
+      stablecoinIds.map(() => "?").join(",") +
+      ") AND price IS NOT NULL ORDER BY stablecoin_id, snapshot_date ASC",
+    )
+    .bind(...stablecoinIds)
+    .all<{ stablecoin_id: string; snapshot_date: number; price: number }>();
+  const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
+  for (const row of priceHistoryRows.results) {
+    const series = priceHistory.get(row.stablecoin_id) ?? [];
+    series.push({ snapshotDate: row.snapshot_date, price: row.price });
+    priceHistory.set(row.stablecoin_id, series);
+  }
 
   // 4. Process each config
   const allNewEvents: Array<{
@@ -167,6 +186,7 @@ export async function syncMintBurn(
         configError = true;
         continue;
       }
+      rowsRead += logs.length;
 
       if (logs.length > 0) allConfigLogs.push({ eventDef, logs });
     }
@@ -197,7 +217,17 @@ export async function syncMintBurn(
 
     // Parse and insert logs
     for (const { eventDef, logs } of allConfigLogs) {
-      const rows = parseMintBurnLogs(config, eventDef, logs, blockTimestamps, prices);
+      const parsed = parseMintBurnLogs(
+        config,
+        eventDef,
+        logs,
+        blockTimestamps,
+        prices,
+        priceHistory,
+        runTimestamp,
+      );
+      const rows = parsed.rows;
+      rowsDropped += parsed.dropped;
       for (const row of rows) {
         maxBlockSeen = Math.max(maxBlockSeen, row.block_number);
         const hourTs = Math.floor(row.timestamp / 3600) * 3600;
@@ -208,13 +238,13 @@ export async function syncMintBurn(
         const stmts = rows.map((r) =>
           db.prepare(
             `INSERT OR IGNORE INTO mint_burn_events
-             (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd,
+             (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
               counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           ).bind(
             r.id, r.stablecoin_id, r.symbol, r.chain_id, r.direction,
-            r.amount, r.amount_usd, r.counterparty, r.tx_hash, r.block_number,
-            r.timestamp, r.explorer_tx_url
+            r.amount, r.amount_usd, r.price_used, r.price_timestamp, r.price_source,
+            r.counterparty, r.tx_hash, r.block_number, r.timestamp, r.explorer_tx_url
           )
         );
         await batchExecute(db, stmts);
@@ -287,7 +317,21 @@ export async function syncMintBurn(
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests`);
   return {
     itemCount: totalNewEvents,
-    metadata: JSON.stringify({ contractsProcessed, contractsSkipped, apiErrors }),
+    metadata: JSON.stringify({
+      rowsRead,
+      rowsWritten: totalNewEvents,
+      rowsDropped,
+      sourceCoverage: {
+        contractsProcessed,
+        contractsTotal: MINT_BURN_CONFIGS.length,
+        contractsSkipped,
+      },
+      fallbackMode: null,
+      validationFailures: apiErrors,
+      contractsProcessed,
+      contractsSkipped,
+      apiErrors,
+    }),
   };
 }
 
@@ -301,11 +345,59 @@ interface MintBurnRow {
   direction: string;
   amount: number;
   amount_usd: number | null;
+  price_used: number | null;
+  price_timestamp: number | null;
+  price_source: string | null;
   counterparty: string | null;
   tx_hash: string;
   block_number: number;
   timestamp: number;
   explorer_tx_url: string;
+}
+
+function resolveEventPrice(
+  stablecoinId: string,
+  timestamp: number,
+  prices: Map<string, number>,
+  priceHistory: Map<string, { snapshotDate: number; price: number }[]>,
+  runTimestamp: number,
+): { price: number | null; priceTimestamp: number | null; priceSource: string | null } {
+  const eventDay = Math.floor(timestamp / 86400) * 86400;
+  const history = priceHistory.get(stablecoinId) ?? [];
+
+  // Latest daily snapshot at or before event day.
+  let bestIdx = -1;
+  let lo = 0;
+  let hi = history.length - 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (history[mid].snapshotDate <= eventDay) {
+      bestIdx = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  if (bestIdx >= 0) {
+    const hit = history[bestIdx];
+    return {
+      price: hit.price,
+      priceTimestamp: hit.snapshotDate,
+      priceSource: "supply-history-daily",
+    };
+  }
+
+  // Fallback to current price cache when historical snapshot is unavailable.
+  const current = prices.get(stablecoinId);
+  if (current != null) {
+    return {
+      price: current,
+      priceTimestamp: runTimestamp,
+      priceSource: "price-cache-current",
+    };
+  }
+
+  return { price: null, priceTimestamp: null, priceSource: null };
 }
 
 function parseMintBurnLogs(
@@ -314,19 +406,28 @@ function parseMintBurnLogs(
   logs: AlchemyLogEntry[],
   blockTimestamps: Map<number, number>,
   prices: Map<string, number>,
-): MintBurnRow[] {
+  priceHistory: Map<string, { snapshotDate: number; price: number }[]>,
+  runTimestamp: number,
+): { rows: MintBurnRow[]; dropped: number } {
   const rows: MintBurnRow[] = [];
   const direction = eventDef.direction;
+  let dropped = 0;
 
   for (const log of logs) {
     const slot = eventDef.amountEncoding === "nth-data-uint256" ? (eventDef.dataSlot ?? 0) : 0;
     const amount = decodeUint256AtSlot(log.data, slot, config.decimals);
-    if (amount <= 0 || amount < config.dustThreshold) continue;
+    if (amount <= 0 || amount < config.dustThreshold) {
+      dropped++;
+      continue;
+    }
 
     const blockNum = parseInt(log.blockNumber, 16);
     const logIndex = parseInt(log.logIndex, 16);
     const timestamp = blockTimestamps.get(blockNum) ?? 0;
-    if (isNaN(blockNum) || !timestamp) continue;
+    if (isNaN(blockNum) || !timestamp) {
+      dropped++;
+      continue;
+    }
 
     const id = `${config.chain.chainId}-${log.transactionHash}-${logIndex}`;
 
@@ -334,8 +435,14 @@ function parseMintBurnLogs(
     const counterpartyTopic = direction === "mint" ? log.topics[2] : log.topics[1];
     const counterparty = counterpartyTopic ? decodeAddress(counterpartyTopic) : null;
 
-    const price = prices.get(config.stablecoinId);
-    const amountUsd = price != null ? amount * price : null;
+    const eventPrice = resolveEventPrice(
+      config.stablecoinId,
+      timestamp,
+      prices,
+      priceHistory,
+      runTimestamp,
+    );
+    const amountUsd = eventPrice.price != null ? amount * eventPrice.price : null;
 
     rows.push({
       id,
@@ -345,6 +452,9 @@ function parseMintBurnLogs(
       direction,
       amount,
       amount_usd: amountUsd,
+      price_used: eventPrice.price,
+      price_timestamp: eventPrice.priceTimestamp,
+      price_source: eventPrice.priceSource,
       counterparty,
       tx_hash: log.transactionHash,
       block_number: blockNum,
@@ -353,5 +463,5 @@ function parseMintBurnLogs(
     });
   }
 
-  return rows;
+  return { rows, dropped };
 }

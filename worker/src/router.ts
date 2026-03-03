@@ -28,6 +28,7 @@ import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
+import { runIdempotentAdminAction } from "./lib/idempotency";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -39,6 +40,22 @@ export function route(
   adminKey?: string,
 ): Promise<Response> | null {
   const path = url.pathname;
+  const mutatingAdminPaths = new Set([
+    "/api/backfill-depegs",
+    "/api/backfill-supply-history",
+    "/api/backfill-cg-prices",
+    "/api/backfill-stability-index",
+    "/api/backfill-mint-burn-prices",
+  ]);
+
+  if (request?.method === "GET" && mutatingAdminPaths.has(path)) {
+    return Promise.resolve(
+      new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
+        status: 405,
+        headers: { "Content-Type": "application/json", "Allow": "POST" },
+      }),
+    );
+  }
 
   if (path === "/api/stablecoins") {
     return handleStablecoins(db);
@@ -57,11 +74,21 @@ export function route(
   }
 
   if (path === "/api/backfill-depegs") {
-    return handleBackfillDepegs(db, url, adminKey, request);
+    return runIdempotentAdminAction(
+      db,
+      "backfill-depegs",
+      request,
+      () => handleBackfillDepegs(db, url, adminKey, request),
+    );
   }
 
   if (path === "/api/backfill-supply-history") {
-    return handleBackfillSupplyHistory(db, url, adminKey, request);
+    return runIdempotentAdminAction(
+      db,
+      "backfill-supply-history",
+      request,
+      () => handleBackfillSupplyHistory(db, url, adminKey, request),
+    );
   }
 
   if (path === "/api/peg-summary") {
@@ -113,7 +140,12 @@ export function route(
   }
 
   if (path === "/api/backfill-stability-index") {
-    return handleBackfillStabilityIndex(db, adminKey, request);
+    return runIdempotentAdminAction(
+      db,
+      "backfill-stability-index",
+      request,
+      () => handleBackfillStabilityIndex(db, adminKey, request),
+    );
   }
 
   if (path === "/api/audit-depeg-history") {
@@ -121,7 +153,12 @@ export function route(
   }
 
   if (path === "/api/backfill-cg-prices") {
-    return handleBackfillCgPrices(db, url, adminKey, request);
+    return runIdempotentAdminAction(
+      db,
+      "backfill-cg-prices",
+      request,
+      () => handleBackfillCgPrices(db, url, adminKey, request),
+    );
   }
 
   if (path === "/api/report-cards") {
@@ -145,7 +182,12 @@ export function route(
   }
 
   if (path === "/api/backfill-mint-burn-prices") {
-    return handleBackfillMintBurnPrices(db, url, adminKey, request);
+    return runIdempotentAdminAction(
+      db,
+      "backfill-mint-burn-prices",
+      request,
+      () => handleBackfillMintBurnPrices(db, url, adminKey, request),
+    );
   }
 
   if (path === "/api/stress-signals") {

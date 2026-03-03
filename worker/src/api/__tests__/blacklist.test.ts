@@ -114,4 +114,16 @@ describe("handleBlacklist", () => {
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
+
+  it("derives freshness from sync-blacklist cron timestamp", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: now - 14 * 86400 })] },
+      { match: "cron_runs", rows: [], first: { started_at: now - 30 } },
+    ]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
+    const age = Number(res.headers.get("X-Data-Age"));
+    expect(age).toBeLessThan(120);
+  });
 });

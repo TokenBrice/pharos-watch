@@ -164,7 +164,7 @@ describe("syncStablecoins", () => {
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("validates asset count and skips cache write when too few assets", async () => {
+  it("fails the run when DL payload is structurally invalid and fallback is insufficient", async () => {
     const db = makeDb();
     const prepareSpy = vi.fn();
     const origPrepare = db.prepare.bind(db);
@@ -182,13 +182,12 @@ describe("syncStablecoins", () => {
       { match: "coins.llama.fi/prices", body: { coins: {} } },
     ]);
 
-    const result = await syncStablecoins(db);
-
-    // Should return empty result (no cache write)
-    expect(result.itemCount).toBeUndefined();
+    await expect(syncStablecoins(db)).rejects.toThrow(
+      "DefiLlama payload was structurally invalid",
+    );
   });
 
-  it("falls back to CoinGecko supply when DL returns 500", async () => {
+  it("fails the run when DL returns 500 and fallback is insufficient", async () => {
     const db = makeDb();
 
     mockFetch([
@@ -204,11 +203,9 @@ describe("syncStablecoins", () => {
       { match: "stablecoins.llama.fi", body: { error: "Internal Server Error" }, status: 500 },
     ]);
 
-    const result = await syncStablecoins(db);
-
-    // With only 2 tracked stablecoins in our mock, CG fallback gets 2 assets,
-    // which is below MIN_VALID_ASSET_COUNT (50), so no cache write
-    expect(result.itemCount).toBeUndefined();
+    await expect(syncStablecoins(db)).rejects.toThrow(
+      "DefiLlama stablecoins API failed and CoinGecko fallback was insufficient",
+    );
     // recordOutcome should have been called with failure for DL
     expect(recordOutcome).toHaveBeenCalledWith(
       expect.anything(),
@@ -217,7 +214,7 @@ describe("syncStablecoins", () => {
     );
   });
 
-  it("skips DL fetch when circuit breaker is open", async () => {
+  it("fails when circuit is open and fallback is insufficient", async () => {
     const db = makeDb();
 
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
@@ -233,10 +230,9 @@ describe("syncStablecoins", () => {
       },
     ]);
 
-    const result = await syncStablecoins(db);
-
-    // CG fallback path — too few assets for cache write with only 2 tracked
-    expect(result.itemCount).toBeUndefined();
+    await expect(syncStablecoins(db)).rejects.toThrow(
+      "DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient",
+    );
   });
 
   it("runs depeg detection after successful DL sync", async () => {

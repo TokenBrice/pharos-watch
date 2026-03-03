@@ -162,49 +162,50 @@ describe("syncBlacklist", () => {
     vi.mocked(fetchEvmLogsForTopic).mockResolvedValueOnce(null as unknown as never[]);
 
     // Tron fetch succeeds with one event for AddedBlackList only
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | Request) => {
-        const urlStr = typeof url === "string" ? url : url.url;
-        if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              data: [
-                {
-                  block_number: 50000000,
-                  block_timestamp: 1718650752000,
-                  transaction_id: "tx-tron-1",
-                  event_index: 0,
-                  event_name: "AddedBlackList",
-                  result: { _user: "0xdeadbeef" },
-                },
-              ],
-              meta: {},
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        if (urlStr.includes("trongrid.io/v1/contracts")) {
-          // Other Tron event names return empty
-          return new Response(
-            JSON.stringify({ success: true, data: [] }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        // Etherscan balance/block fetches — success with dummy data
-        if (urlStr.includes("etherscan.io")) {
-          return new Response(
-            JSON.stringify({ result: "0x1312d00" }),
-            { status: 200, headers: { "Content-Type": "application/json" } }
-          );
-        }
-        // Default: TronGrid account lookups
+    const fetchMock = vi.fn(async (url: string | Request) => {
+      const urlStr = typeof url === "string" ? url : url.url;
+      if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
         return new Response(
-          JSON.stringify({ success: true, data: [{ trc20: [] }] }),
+          JSON.stringify({
+            success: true,
+            data: [
+              {
+                block_number: 50000000,
+                block_timestamp: 1718650752000,
+                transaction_id: "tx-tron-1",
+                event_index: 0,
+                event_name: "AddedBlackList",
+                result: { _user: "0xdeadbeef" },
+              },
+            ],
+            meta: {},
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
-      })
+      }
+      if (urlStr.includes("trongrid.io/v1/contracts")) {
+        // Other Tron event names return empty
+        return new Response(
+          JSON.stringify({ success: true, data: [] }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      // Etherscan balance/block fetches — success with dummy data
+      if (urlStr.includes("etherscan.io")) {
+        return new Response(
+          JSON.stringify({ result: "0x1312d00" }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      // Default: TronGrid account lookups
+      return new Response(
+        JSON.stringify({ success: true, data: [{ trc20: [] }] }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    });
+    vi.stubGlobal(
+      "fetch",
+      fetchMock
     );
 
     const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
@@ -214,6 +215,7 @@ describe("syncBlacklist", () => {
     const meta = JSON.parse(result.metadata);
     // The EVM config had an API error (null logs) — recorded but did not crash
     expect(meta.apiErrors).toBe(1);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/v1/accounts/"))).toBe(false);
   });
 
   it("returns zero events when all APIs return empty", async () => {

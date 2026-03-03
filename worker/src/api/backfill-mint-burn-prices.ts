@@ -29,9 +29,9 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
       // 3. Update amount_usd = amount * price for all NULL rows of this coin
       const result = await db
         .prepare(
-          "UPDATE mint_burn_events SET amount_usd = amount * ? WHERE stablecoin_id = ? AND amount_usd IS NULL"
+          "UPDATE mint_burn_events SET amount_usd = amount * ?, price_used = ?, price_timestamp = ?, price_source = 'backfill-price-cache' WHERE stablecoin_id = ? AND amount_usd IS NULL"
         )
-        .bind(cached.price, stablecoin_id)
+        .bind(cached.price, cached.price, cached.updatedAt, stablecoin_id)
         .run();
 
       const updated = result.meta?.changes ?? 0;

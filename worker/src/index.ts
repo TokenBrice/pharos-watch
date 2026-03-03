@@ -21,6 +21,7 @@ import { initAlerts, sendAlert } from "./lib/alerts";
 import { initCoinGecko } from "./lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "./lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "./lib/constants";
+import { runIdempotentAdminAction } from "./lib/idempotency";
 
 interface Env {
   DB: D1Database;
@@ -86,6 +87,16 @@ const worker = {
     }
 
     const url = new URL(request.url);
+    const mutatingAdminPaths = new Set([
+      "/api/trigger-digest",
+      "/api/reset-blacklist-sync",
+      "/api/backfill-depegs",
+      "/api/backfill-supply-history",
+      "/api/backfill-cg-prices",
+      "/api/backfill-stability-index",
+      "/api/backfill-mint-burn-prices",
+    ]);
+    const isMutatingAdminPath = mutatingAdminPaths.has(url.pathname);
 
     // POST /api/feedback — in-app feedback submission (public, no edge cache)
     if (request.method === "POST" && url.pathname === "/api/feedback") {
@@ -102,11 +113,31 @@ const worker = {
       );
     }
 
-    if (request.method !== "GET") {
+    if (request.method === "GET" && isMutatingAdminPath) {
+      return addCorsHeaders(
+        new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
+          status: 405,
+          headers: { "Content-Type": "application/json", "Allow": "POST" },
+        }),
+        origin
+      );
+    }
+
+    if (request.method === "POST" && !isMutatingAdminPath) {
       return addCorsHeaders(
         new Response(JSON.stringify({ error: "Method not allowed" }), {
           status: 405,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Allow": "GET" },
+        }),
+        origin
+      );
+    }
+
+    if (request.method !== "GET" && request.method !== "POST") {
+      return addCorsHeaders(
+        new Response(JSON.stringify({ error: "Method not allowed" }), {
+          status: 405,
+          headers: { "Content-Type": "application/json", "Allow": "GET, POST" },
         }),
         origin
       );
@@ -125,8 +156,24 @@ const worker = {
           ? { botToken: env.TELEGRAM_BOT_TOKEN, chatId: env.TELEGRAM_CHAT_ID }
           : null;
       try {
-        const result = await generateDailyDigest(env.DB, env.ANTHROPIC_API_KEY ?? null, twitterCreds, true, telegramCreds);
-        return addCorsHeaders(new Response(JSON.stringify({ ok: true, result }), { headers: { "Content-Type": "application/json" } }), origin);
+        const response = await runIdempotentAdminAction(
+          env.DB,
+          "trigger-digest",
+          request,
+          async () => {
+            const result = await generateDailyDigest(
+              env.DB,
+              env.ANTHROPIC_API_KEY ?? null,
+              twitterCreds,
+              true,
+              telegramCreds,
+            );
+            return new Response(JSON.stringify({ ok: true, result }), {
+              headers: { "Content-Type": "application/json" },
+            });
+          },
+        );
+        return addCorsHeaders(response, origin);
       } catch (err) {
         return addCorsHeaders(new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { "Content-Type": "application/json" } }), origin);
       }
@@ -140,13 +187,24 @@ const worker = {
       const authError = await (await import("./lib/auth")).requireAdmin(request, env.ADMIN_KEY);
       if (authError) return addCorsHeaders(authError, origin);
       try {
-        const result = await env.DB.batch([
-          env.DB.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'"),
-          env.DB.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'"),
-        ]);
-        const evmChanged = result[0]?.meta?.changes ?? 0;
-        const tronChanged = result[1]?.meta?.changes ?? 0;
-        return addCorsHeaders(new Response(JSON.stringify({ ok: true, evmReset: evmChanged, tronReset: tronChanged }), { headers: { "Content-Type": "application/json" } }), origin);
+        const response = await runIdempotentAdminAction(
+          env.DB,
+          "reset-blacklist-sync",
+          request,
+          async () => {
+            const result = await env.DB.batch([
+              env.DB.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'"),
+              env.DB.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'"),
+            ]);
+            const evmChanged = result[0]?.meta?.changes ?? 0;
+            const tronChanged = result[1]?.meta?.changes ?? 0;
+            return new Response(
+              JSON.stringify({ ok: true, evmReset: evmChanged, tronReset: tronChanged }),
+              { headers: { "Content-Type": "application/json" } },
+            );
+          },
+        );
+        return addCorsHeaders(response, origin);
       } catch (err) {
         return addCorsHeaders(new Response(JSON.stringify({ ok: false, error: String(err) }), { status: 500, headers: { "Content-Type": "application/json" } }), origin);
       }
@@ -160,7 +218,17 @@ const worker = {
       return addCorsHeaders(new Response(JSON.stringify(rows.results), { headers: { "Content-Type": "application/json" } }), origin);
     }
 
-    const skipCache = url.pathname === "/api/health" || url.pathname === "/api/status" || url.pathname === "/api/backfill-depegs" || url.pathname === "/api/backfill-supply-history" || url.pathname === "/api/backfill-cg-prices" || url.pathname === "/api/audit-depeg-history" || url.pathname === "/api/backfill-stability-index" || url.pathname === "/api/backfill-mint-burn-prices" || url.pathname === "/api/backfill-dews";
+    const skipCache =
+      request.method !== "GET" ||
+      url.pathname === "/api/health" ||
+      url.pathname === "/api/status" ||
+      url.pathname === "/api/backfill-depegs" ||
+      url.pathname === "/api/backfill-supply-history" ||
+      url.pathname === "/api/backfill-cg-prices" ||
+      url.pathname === "/api/audit-depeg-history" ||
+      url.pathname === "/api/backfill-stability-index" ||
+      url.pathname === "/api/backfill-mint-burn-prices" ||
+      url.pathname === "/api/backfill-dews";
 
     // Check edge cache first
     const cache = caches.default;
@@ -198,6 +266,27 @@ const worker = {
     initCoinGecko(env.COINGECKO_API_KEY);
     const db = env.DB;
     const cron = event.cron;
+    const normalizeCronMetadata = (result: CronResult): string | undefined => {
+      const parsed: Record<string, unknown> = {};
+      if (result.metadata) {
+        try {
+          Object.assign(parsed, JSON.parse(result.metadata) as Record<string, unknown>);
+        } catch {
+          parsed.rawMetadata = result.metadata;
+        }
+      }
+      const rowsWrittenDefault =
+        typeof result.itemCount === "number" ? result.itemCount : null;
+      return JSON.stringify({
+        rowsRead: parsed.rowsRead ?? null,
+        rowsWritten: parsed.rowsWritten ?? rowsWrittenDefault,
+        rowsDropped: parsed.rowsDropped ?? 0,
+        sourceCoverage: parsed.sourceCoverage ?? null,
+        fallbackMode: parsed.fallbackMode ?? null,
+        validationFailures: parsed.validationFailures ?? 0,
+        ...parsed,
+      });
+    };
     const runLeasedCron = (job: string, fn: (signal: AbortSignal) => Promise<CronResult | void>) =>
       logCronRun(db, job, async (signal): Promise<CronResult> => {
         const lease = await runCronWithLease(db, job, async () => fn(signal));
@@ -226,7 +315,8 @@ const worker = {
           leaseOwner: lease.leaseOwner,
           renewFailures: lease.renewFailures,
         };
-        let metadata = result.metadata;
+        const normalized = normalizeCronMetadata(result);
+        let metadata = normalized;
         if (!metadata) {
           metadata = JSON.stringify(leaseMeta);
         } else {

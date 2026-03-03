@@ -101,4 +101,38 @@ describe("handleStressSignals contract tests", () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("Invalid");
   });
+
+  it("skips malformed rows instead of failing the whole response", async () => {
+    const db = mockD1([
+      {
+        match: "stress_signals",
+        rows: [
+          {
+            stablecoin_id: "1",
+            score: 12,
+            band: "CALM",
+            signals_json: signalsJson,
+            computed_at: nowSec,
+          },
+          {
+            stablecoin_id: "2",
+            score: 40,
+            band: "WATCH",
+            signals_json: "{invalid-json",
+            computed_at: nowSec,
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      signals: Record<string, unknown>;
+      malformedRows: number;
+    };
+    expect(body.signals).toHaveProperty("1");
+    expect(body.signals).not.toHaveProperty("2");
+    expect(body.malformedRows).toBe(1);
+  });
 });

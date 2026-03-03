@@ -411,7 +411,16 @@ async function fallbackToCgSupply(
 
   if (assets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] CG fallback only got ${assets.length} assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
-    return {};
+    return {
+      metadata: JSON.stringify({
+        rowsRead: assets.length,
+        rowsWritten: 0,
+        rowsDropped: 0,
+        sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
+        fallbackMode: "coingecko-supply-fallback",
+        validationFailures: 1,
+      }),
+    };
   }
 
   // Try to restore stale chainCirculating from previous DL cache
@@ -467,10 +476,13 @@ async function fallbackToCgSupply(
     return {
       itemCount: assets.length,
       metadata: JSON.stringify({
-        source: "coingecko-fallback",
-        assetCount: assets.length,
+        rowsRead: assets.length,
+        rowsWritten: assets.length,
+        rowsDropped: 0,
+        sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
+        fallbackMode: "coingecko-supply-fallback",
+        validationFailures: 1,
         cacheWriteMode: "schema-validation-fallback",
-        validationIssues: validation.issues,
       }),
     };
   }
@@ -487,8 +499,12 @@ async function fallbackToCgSupply(
   return {
     itemCount: assets.length,
     metadata: JSON.stringify({
-      source: "coingecko-fallback",
-      assetCount: assets.length,
+      rowsRead: assets.length,
+      rowsWritten: assets.length,
+      rowsDropped: 0,
+      sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
+      fallbackMode: "coingecko-supply-fallback",
+      validationFailures: 0,
       enrichment: enrichStats,
     }),
   };
@@ -513,32 +529,46 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   // Record DL outcome and fallback if needed
   if (dlAllowed) {
-    if (llamaRes?.ok) {
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
-    } else {
+    if (!llamaRes?.ok) {
       console.error(`[sync-stablecoins] DefiLlama API error: ${llamaRes?.status ?? "no response"}`);
       await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
-      return fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec);
+      const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec);
+      if (fallback.itemCount && fallback.itemCount > 0) return fallback;
+      throw new Error("DefiLlama stablecoins API failed and CoinGecko fallback was insufficient");
     }
   } else {
     console.warn("[sync-stablecoins] DL stablecoins circuit open — using CG supply fallback");
-    return fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec);
+    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec);
+    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
+    throw new Error("DefiLlama stablecoins circuit open and CoinGecko fallback was insufficient");
   }
 
   const llamaData = await llamaRes!.json() as { peggedAssets: PeggedAsset[]; fxFallbackRates?: Record<string, number> };
+  const rawAssetCount = llamaData.peggedAssets?.length ?? 0;
 
   if (!llamaData.peggedAssets || llamaData.peggedAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Unexpected asset count (${llamaData.peggedAssets?.length}), need ${MIN_VALID_ASSET_COUNT}+, skipping cache write`);
-    return {};
+    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
+    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec);
+    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
+    throw new Error(
+      `DefiLlama payload was structurally invalid (asset count=${llamaData.peggedAssets?.length ?? 0}) and fallback failed`,
+    );
   }
 
   // Structural validation: ensure assets have required fields
   const validAssets = llamaData.peggedAssets.filter(
     (a) => a.id != null && typeof a.name === "string" && typeof a.symbol === "string" && a.circulating != null
   );
+  const droppedMalformedAssets = rawAssetCount - validAssets.length;
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
-    return {};
+    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
+    const fallback = await fallbackToCgSupply(db, cgData, cmcApiKey, syncStartSec);
+    if (fallback.itemCount && fallback.itemCount > 0) return fallback;
+    throw new Error(
+      `DefiLlama payload had too many malformed assets (valid=${validAssets.length}) and fallback failed`,
+    );
   }
   if (validAssets.length < llamaData.peggedAssets.length) {
     console.warn(`[sync-stablecoins] Dropped ${llamaData.peggedAssets.length - validAssets.length} malformed assets`);
@@ -816,6 +846,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   );
   if (!validation.ok) {
     console.error("[sync-stablecoins] Schema validation failed; writing guarded normalized payload:", validation.issues);
+    await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     await sendAlert(
       "Stablecoins schema validation warning",
       `Payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
@@ -824,14 +855,19 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     return {
       itemCount: llamaData.peggedAssets.length,
       metadata: JSON.stringify({
-        assetCount: llamaData.peggedAssets.length,
+        rowsRead: rawAssetCount,
+        rowsWritten: llamaData.peggedAssets.length,
+        rowsDropped: droppedMalformedAssets,
+        sourceCoverage: { defillama: true },
+        fallbackMode: "schema-validation-fallback",
+        validationFailures: 1,
         cacheWriteMode: "schema-validation-fallback",
-        validationIssues: validation.issues,
       }),
     };
   }
 
   await setCacheIfNewer(db, "stablecoins", JSON.stringify(validation.data), syncStartSec);
+  await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
   console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
   // Detect depeg events from current price data
@@ -854,6 +890,12 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Build metadata for cron_runs observability
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
   const metadata: Record<string, unknown> = {
+    rowsRead: rawAssetCount,
+    rowsWritten: llamaData.peggedAssets.length,
+    rowsDropped: droppedMalformedAssets,
+    sourceCoverage: { defillama: true },
+    fallbackMode: null,
+    validationFailures: 0,
     assetCount: llamaData.peggedAssets.length,
     enrichment: enrichStats,
     dualPrimary: dualPriceStats,
