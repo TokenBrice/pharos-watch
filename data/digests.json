@@ -1,5 +1,33 @@
 [
   {
+    "date": "2026-03-03",
+    "title": "BEDROCK Slips, Quietly",
+    "text": "PSI down 3.1 points to 91.9 in BEDROCK. USDC added $1.25B to $76.02B. KAU resolved 2036 bps on $408M in 8h. USDT ran 3 destroy events totaling $2.83M on Ethereum. NECT: F-rated, liquidity 16, still 146 bps off-peg.",
+    "extended": "PSI pulls back to 91.9 in BEDROCK, down from 95 yesterday, with severity ticking up to 0.09 and breadth holding at 7. The index remains well inside its most stable band, but four points in one session is not nothing; it is the market clearing its throat.\n\nThe resolved story deserves more attention than the active one. KAU shed a 2036 bps depeg in 8 hours and KAG managed two separate recoveries, including a 755 bps event over 15 hours, all on a combined float north of $700M. That kind of turbulence resolving cleanly is what BEDROCK is supposed to look like from the outside. What it looks like from the inside is 17 blacklist events in 24 hours, $4.40M affected, with $1.12M and $1.10M destroy events on USDT-Ethereum arriving in close succession, which is either routine enforcement hygiene or a very busy morning for one compliance desk.\n\nUSDC added $1.25B this week to reach $76.02B, a clean number on a coin rated B+ with a liquidity score of 97. NECT sits 146 bps below peg on $18.29M with an F safety grade and a liquidity score of 16, which is the kind of structural profile that does not resolve, it persists, quietly, until it does not.",
+    "generatedAt": 1772524867
+  },
+  {
+    "date": "2026-03-02",
+    "title": "KAU's Busy Week, USDT's Busy Morning",
+    "text": "PSI 92.5, BEDROCK. USDT, USDC, and PYUSD all reversed supply direction in 24 hours. KAU resolved a 2036 bps depeg on $411.52M. LUSD sits 138 bps off-peg with a liquidity score of 38.",
+    "extended": "PSI rises to 92.5 in BEDROCK, up from 91.3 yesterday, with severity at 0.08 and breadth at 7.65. The market added $1.28B this week on a $317.42B base, which is the kind of growth that sounds meaningful until you notice USDC contributed $686.23M of it and then quietly reversed, shedding $74.95M yesterday alone after a week of steady accumulation.\n\nKAU resolved three separate depegs this week, the largest at 2036 bps over 8 hours on a $411.52M float, which is the most dramatic number in today's data and also the most resolved. What remains unresolved is the supply reversal story: USDT added $106.22M yesterday after losing $5.45M across the week, USDC drained $74.95M after gaining $681.94M, and PYUSD shed $1.20M after a $121.38M weekly run. Three of the four largest stablecoins changed direction in a single day, simultaneously, which is either a coincidence or a signal, and BEDROCK does not tell you which.\n\nThe 5 blacklist events in 24 hours totaled $989.53K, led by two USDT-on-Tron freezes accounting for $953.73K between them. LUSD sits 138 bps off-peg on $31.19M with a liquidity score of 38, which is the only active depeg worth watching; a B-rated coin with near-bottom liquidity holding a modest deviation is not a crisis, it is a posture.",
+    "generatedAt": 1772438475
+  },
+  {
+    "date": "2026-03-01",
+    "title": "Gold Spikes, USDS Surges",
+    "text": "KAU depegged twice in one day on $399.63M. USDT reversed $85M after a $861M week. USDS accelerated to +$406M. PSI 94.3, BEDROCK, median safety C.",
+    "extended": "PSI holds at 94.3 in BEDROCK, severity 0.31, breadth 6.27, trend inching upward by 0.85 , the kind of reading that looks like tranquility until you notice 7 of the rated coins sit below B and the median safety score across the ecosystem is a C.\n\nThe actual news today is a resolved one: KAU printed two depegs within hours of each other, 1015 bps and 783 bps on a $399.63M float, and KAG hit 605 bps on $329.84M before recovering , a tokenized gold trifecta of volatility that made XAUT's quiet $7.07M single-day outflow look almost dignified. XAUT has a B- safety score and 71 on liquidity; the gold alternatives apparently needed all 14 hours to remember what their peg was. Meanwhile USDS added $405.99M yesterday alone and is accelerating into a week where USDT reversed direction with a $85M single-day drain after adding $860.63M across seven days , two of the three largest flows in the market pointing opposite directions on the same morning.\n\nUSDT at $183.60B remains immovable as a fact and unreassuring as a B+, while USDC also drained $68.20M yesterday after a $818.56M weekly run. Something changed in the last 24 hours for both giants simultaneously. USDS, rated B at 70, apparently did not get the memo.",
+    "generatedAt": 1772354358
+  },
+  {
+    "date": "2026-02-28",
+    "title": "Gold Moves, Cops Busy",
+    "text": "Gold Moves, Cops Busy\n\nXAUT +$222M and PAXG +$73M yesterday, both accelerating. USDT hit $183.56B while running 7 blacklist actions on $2.07M. PSI 95, BEDROCK. The stablecoin market is calm. Its largest issuer is not resting.",
+    "extended": "PSI settles at 95 in BEDROCK — severity 0.04, breadth 5.46, trend nudging upward by 0.46, which is the market's way of saying nothing broke but something is definitely being watched. The real action today is not in the depeg table, where EURS continues its 919 bps performance on $8.61M like a regional theater production nobody asked for, but in two places: tokenized gold and Tether's enforcement desk. XAUT added $222.63M yesterday alone and PAXG added $73.16M, both accelerating into a week already tilted toward hard-asset alternatives, which is either rational portfolio rotation or a quiet vote of no-confidence in fiat-backed stability — probably both. Meanwhile USDT's blacklist operation processed 7 events and $2.07M in 24 hours, including a $581.76K destroy on Ethereum, while USDT itself grew by $950.68M this week to $183.56B; Tether is simultaneously the largest stablecoin and its own most active regulator. CUSD and KAU both resolved depegs today — 276 bps over 3 hours on $111.99M and 220 bps over 5 hours on $417.84M respectively — recoveries clean enough to be unremarkable, which is exactly what a 95 PSI looks like from the inside.",
+    "generatedAt": 1772265625
+  },
+  {
     "date": "2026-02-27",
     "title": "BEDROCK, Untroubled",
     "text": "PSI ticks to 96.1 in BEDROCK, where severity sits at 0.03 and the loudest depeg is EURS at 919 bps on $8.59M — numbers that imply crisis and deliver almost none.",
