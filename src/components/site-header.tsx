@@ -27,11 +27,22 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
     [dexMap],
   );
   const trackedStats = useMemo(
-    () => [
-      totalPools != null ? `${formatCount(totalPools)} pools processed` : null,
-      blacklistEvents != null ? `${formatCount(blacklistEvents)} blacklist events recorded` : null,
-      mintBurnEvents != null ? `${formatCount(mintBurnEvents)} mint/burn events recorded` : null,
-    ].filter((entry): entry is string => entry !== null),
+    () => {
+      const stats: string[] = [];
+      if (totalPools != null) {
+        stats.push(`${formatCount(totalPools)} pools processed`);
+      }
+
+      if (mintBurnEvents != null && blacklistEvents != null) {
+        stats.push(`${formatCount(mintBurnEvents)} mint/burn & ${formatCount(blacklistEvents)} blacklist events recorded`);
+      } else if (mintBurnEvents != null) {
+        stats.push(`${formatCount(mintBurnEvents)} mint/burn events recorded`);
+      } else if (blacklistEvents != null) {
+        stats.push(`${formatCount(blacklistEvents)} blacklist events recorded`);
+      }
+
+      return stats;
+    },
     [totalPools, blacklistEvents, mintBurnEvents],
   );
 
