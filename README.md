@@ -172,11 +172,14 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`:
 
-1. **Worker:** `npm ci` → `d1 migrations apply` → `wrangler deploy`
-2. **Pages:** `npm ci` → `npm run build` → `wrangler pages deploy out`
+1. **Validate gate:** `npm run lint` → `npm test` → `npm run test:critical-contracts` → `npm run test:invariants` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`
+3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE_URL` (or `API_BASE_URL` fallback)
+4. **Pages deploy:** `npm ci` → `npx tsx scripts/sync-digests.ts` → `npm run build` → `npm run seo:check` → `wrangler pages deploy out`
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
 Required GitHub variable: `API_BASE_URL`
+Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a dedicated API host)
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
 
