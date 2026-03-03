@@ -888,6 +888,7 @@ export interface BlacklistEvent {
   txHash: string;
   blockNumber: number;
   timestamp: number;               // Unix seconds
+  methodologyVersion: string;
   explorerTxUrl: string;
   explorerAddressUrl: string;
 }

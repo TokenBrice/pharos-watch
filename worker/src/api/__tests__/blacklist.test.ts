@@ -30,6 +30,21 @@ describe("handleBlacklist", () => {
     expect(body.methodology).toHaveProperty("changelogPath");
   });
 
+  it("derives response methodology from latest returned event", async () => {
+    const historicalRow = makeBlacklistRow({
+      timestamp: 1771000000,
+      methodology_version: "2.0",
+    });
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "blacklist_events", rows: [historicalRow] },
+    ]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
+    const body = (await res.json()) as { methodology: { version: string; isCurrent: boolean } };
+    expect(body.methodology.version).toBe("2.0");
+    expect(body.methodology.isCurrent).toBe(false);
+  });
+
   it("maps snake_case DB columns to camelCase", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
@@ -45,9 +60,11 @@ describe("handleBlacklist", () => {
     expect(event).toHaveProperty("blockNumber");
     expect(event).toHaveProperty("explorerTxUrl");
     expect(event).toHaveProperty("explorerAddressUrl");
+    expect(event).toHaveProperty("methodologyVersion");
     // Should NOT have snake_case keys
     expect(event).not.toHaveProperty("chain_id");
     expect(event).not.toHaveProperty("event_type");
+    expect(event).not.toHaveProperty("methodology_version");
   });
 
   it("returns 200 with empty results when no data", async () => {

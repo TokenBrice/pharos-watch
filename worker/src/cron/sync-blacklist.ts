@@ -19,6 +19,7 @@ import {
   fetchEvmLogsForTopic,
   getEvmBlockNumber,
 } from "../lib/evm-logs";
+import { getBlacklistTrackerMethodologyVersionAt } from "../../../src/lib/blacklist-tracker-version";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
@@ -253,6 +254,7 @@ interface BlacklistRow {
   tx_hash: string;
   block_number: number;
   timestamp: number;
+  methodology_version: string;
   explorer_tx_url: string;
   explorer_address_url: string;
 }
@@ -280,6 +282,7 @@ function parseEvmLogs(
     const blockNumber = parseInt(log.blockNumber, 16);
     const timestamp = parseInt(log.timeStamp, 16);
     if (isNaN(blockNumber) || isNaN(timestamp)) return null;
+    const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
 
     return {
       id: `${config.chain.chainId}-${log.transactionHash}-${log.logIndex}`,
@@ -292,6 +295,7 @@ function parseEvmLogs(
       tx_hash: log.transactionHash,
       block_number: blockNumber,
       timestamp,
+      methodology_version: methodologyVersion,
       explorer_tx_url: buildExplorerTxUrl(config.chain, log.transactionHash),
       explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
     };
@@ -420,6 +424,8 @@ async function fetchTronEventsIncremental(
           eventType === "destroy" && (evt.result._balance || evt.result._value || evt.result["1"])
             ? Number(evt.result._balance || evt.result._value || evt.result["1"]) / Math.pow(10, config.decimals)
             : null;
+        const timestamp = Math.floor(evt.block_timestamp / 1000);
+        const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
 
         if (evt.block_timestamp > maxBlock) maxBlock = evt.block_timestamp;
 
@@ -433,7 +439,8 @@ async function fetchTronEventsIncremental(
           amount,
           tx_hash: evt.transaction_id,
           block_number: evt.block_number,
-          timestamp: Math.floor(evt.block_timestamp / 1000),
+          timestamp,
+          methodology_version: methodologyVersion,
           explorer_tx_url: buildExplorerTxUrl(config.chain, evt.transaction_id),
           explorer_address_url: buildExplorerAddressUrl(config.chain, affectedAddress),
         });
@@ -615,8 +622,8 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<void> {
     db
       .prepare(
         `INSERT OR IGNORE INTO blacklist_events
-         (id, stablecoin, chain_id, chain_name, event_type, address, amount, tx_hash, block_number, timestamp, explorer_tx_url, explorer_address_url)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (id, stablecoin, chain_id, chain_name, event_type, address, amount, tx_hash, block_number, timestamp, methodology_version, explorer_tx_url, explorer_address_url)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         row.id,
@@ -629,6 +636,7 @@ async function insertRows(db: D1Database, rows: BlacklistRow[]): Promise<void> {
         row.tx_hash,
         row.block_number,
         row.timestamp,
+        row.methodology_version,
         row.explorer_tx_url,
         row.explorer_address_url
       )

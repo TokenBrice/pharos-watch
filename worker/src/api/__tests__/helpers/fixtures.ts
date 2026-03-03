@@ -25,6 +25,7 @@ export function makeBlacklistRow(overrides: Partial<{
   id: string; stablecoin: string; chain_id: string; chain_name: string;
   event_type: string; address: string; amount: number | null;
   tx_hash: string; block_number: number; timestamp: number;
+  methodology_version: string | null;
   explorer_tx_url: string; explorer_address_url: string;
 }> = {}) {
   return {
@@ -38,6 +39,7 @@ export function makeBlacklistRow(overrides: Partial<{
     tx_hash: overrides.tx_hash ?? "0xtx1",
     block_number: overrides.block_number ?? 19000000,
     timestamp: overrides.timestamp ?? Math.floor(Date.now() / 1000) - 3600,
+    methodology_version: overrides.methodology_version ?? "3.1",
     explorer_tx_url: overrides.explorer_tx_url ?? "https://etherscan.io/tx/0xtx1",
     explorer_address_url: overrides.explorer_address_url ?? "https://etherscan.io/address/0xabc123",
   };

@@ -6,6 +6,8 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+  getBlacklistTrackerMethodologyVersionAt,
+  toBlacklistTrackerMethodologyVersionLabel,
 } from "../../../src/lib/blacklist-tracker-version";
 
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
@@ -61,9 +63,11 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   type BlacklistRow = {
     id: string; stablecoin: string; chain_id: string; chain_name: string;
     event_type: string; address: string; amount: number | null; tx_hash: string;
-    block_number: number; timestamp: number; explorer_tx_url: string; explorer_address_url: string;
+    block_number: number; timestamp: number; methodology_version: string | null;
+    explorer_tx_url: string; explorer_address_url: string;
   };
   const events = ((dataBatch.results ?? []) as BlacklistRow[]).map((row) => ({
+    methodologyVersion: row.methodology_version ?? getBlacklistTrackerMethodologyVersionAt(row.timestamp),
     id: row.id,
     stablecoin: row.stablecoin,
     chainId: row.chain_id,
@@ -79,18 +83,20 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
   }));
 
   const latestTs = events.length > 0 ? events.reduce((m, e) => Math.max(m, e.timestamp), -Infinity) : Math.floor(Date.now() / 1000);
+  const methodologyVersion = events[0]?.methodologyVersion ?? getBlacklistTrackerMethodologyVersionAt(latestTs);
+  const methodologyVersionLabel = toBlacklistTrackerMethodologyVersionLabel(methodologyVersion);
 
   return jsonResponse({
     events,
     total,
     methodology: {
-      version: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
-      versionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+      version: methodologyVersion,
+      versionLabel: methodologyVersionLabel,
       currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
       currentVersionLabel: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
       changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       asOf: latestTs,
-      isCurrent: true,
+      isCurrent: methodologyVersion === BLACKLIST_TRACKER_METHODOLOGY_VERSION,
     },
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,

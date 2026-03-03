@@ -223,6 +223,7 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. 
 | `txHash` | `string` | Transaction hash |
 | `blockNumber` | `number` | Block number |
 | `timestamp` | `number` | Unix seconds |
+| `methodologyVersion` | `string` | Methodology version attributed to this event row |
 | `explorerTxUrl` | `string` | Block explorer URL for the transaction |
 | `explorerAddressUrl` | `string` | Block explorer URL for the address |
 
@@ -230,7 +231,7 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `version` | `string` | Methodology version used for this response |
+| `version` | `string` | Methodology version of the latest returned event in this response |
 | `versionLabel` | `string` | Display label (e.g. `"v3.1"`) |
 | `currentVersion` | `string` | Latest methodology version |
 | `currentVersionLabel` | `string` | Display label for latest methodology version |

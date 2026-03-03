@@ -176,7 +176,7 @@ FrozenAddressWiped(address indexed)
 
 ### blacklist_events table
 
-**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`
+**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`
 
 ```sql
 CREATE TABLE blacklist_events (
@@ -190,6 +190,7 @@ CREATE TABLE blacklist_events (
   tx_hash TEXT NOT NULL,
   block_number INTEGER NOT NULL,
   timestamp INTEGER NOT NULL,
+  methodology_version TEXT NOT NULL DEFAULT '3.1',
   explorer_tx_url TEXT NOT NULL,
   explorer_address_url TEXT NOT NULL
 );
@@ -426,6 +427,7 @@ Both admin endpoints are defined inline in `worker/src/index.ts`.
 | `worker/src/lib/db.ts` | `getLastBlock()`, `setLastBlock()`, `batchExecute()` |
 | `worker/migrations/0001_initial.sql` | `blacklist_events` + `blacklist_sync_state` tables |
 | `worker/migrations/0028_blacklist_indexes.sql` | `chain_name` + `event_type` indexes |
+| `worker/migrations/0037_blacklist_methodology_version.sql` | Adds `methodology_version` to blacklist events and backfills by timestamp windows |
 | `src/hooks/use-blacklist-events.ts` | TanStack Query hook |
 | `src/app/blacklist/page.tsx` | Blacklist page with filters, stats, chart, table |
 | `src/components/blacklist-filters.tsx` | Filter UI (stablecoin, chain, event type) |
