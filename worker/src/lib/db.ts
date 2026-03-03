@@ -162,7 +162,8 @@ export interface CronLeaseRunResult<T> {
 }
 
 function createLeaseOwner(job: string): string {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
   return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
@@ -260,9 +261,6 @@ export async function runCronWithLease<T>(
         renewFailures++;
       });
   }, heartbeatSec * 1000);
-  if (typeof timer === "object" && "unref" in timer && typeof timer.unref === "function") {
-    timer.unref();
-  }
 
   try {
     const result = await fn({ leaseOwner: owner });
