@@ -93,7 +93,7 @@ export async function syncMintBurn(
 
   // Pre-check: fail fast if no API key
   if (!alchemyApiKey) {
-    return { itemCount: 0, metadata: JSON.stringify({ error: "No ALCHEMY_API_KEY configured" }) };
+    throw new Error("No ALCHEMY_API_KEY configured");
   }
 
   // Pre-fetch Ethereum chain head so an early failure returns a clear error
@@ -101,7 +101,7 @@ export async function syncMintBurn(
   if (ethConfig) {
     const ethHead = await getChainHead(ethConfig);
     if (ethHead === null) {
-      return { itemCount: 0, metadata: JSON.stringify({ error: "Failed to get Ethereum chain head" }) };
+      throw new Error("Failed to get Ethereum chain head");
     }
   }
 
@@ -276,6 +276,12 @@ export async function syncMintBurn(
       aggStmt.bind(h.stablecoinId, h.chainId, h.hourTs, h.hourTs + 3600)
     );
     await batchExecute(db, aggBatches);
+  }
+
+  // If every attempted contract failed at provider/API level, surface as a hard failure.
+  // This keeps circuit-breaker health aligned when no useful work was completed.
+  if (contractsProcessed === 0 && apiErrors > 0) {
+    throw new Error("All mint/burn contract fetches failed due to provider/API errors");
   }
 
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests`);

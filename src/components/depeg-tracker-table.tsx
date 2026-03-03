@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -108,12 +108,9 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
     });
   }, [rows, sort]);
 
-  // Reset page when row count changes (filter change)
-  const [prevRowCount, setPrevRowCount] = useState(rows.length);
-  if (prevRowCount !== rows.length) {
-    setPrevRowCount(rows.length);
+  useEffect(() => {
     setPage(0);
-  }
+  }, [rows.length]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);

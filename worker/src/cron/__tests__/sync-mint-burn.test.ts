@@ -183,17 +183,18 @@ describe("syncMintBurn", () => {
     expect(meta.contractsProcessed).toBe(2);
   });
 
-  it("returns zero events and error when chain head fetch fails", async () => {
+  it("rejects when chain head fetch fails", async () => {
     const db = makeDb();
 
     // Chain head returns null — total failure
     vi.mocked(getAlchemyBlockNumber).mockResolvedValue(null);
 
-    const result = await syncMintBurn(db, "alchemy-key");
+    await expect(syncMintBurn(db, "alchemy-key")).rejects.toThrow("Failed to get Ethereum chain head");
+  });
 
-    expect(result.itemCount).toBe(0);
-    const meta = JSON.parse(result.metadata);
-    expect(meta.error).toBe("Failed to get Ethereum chain head");
+  it("rejects when ALCHEMY_API_KEY is missing", async () => {
+    const db = makeDb();
+    await expect(syncMintBurn(db, null)).rejects.toThrow("No ALCHEMY_API_KEY configured");
   });
 
   it("skips contracts when fromBlock exceeds chain head", async () => {

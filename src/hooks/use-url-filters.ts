@@ -7,12 +7,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
  *
  * - `getParam(key, default?)` — read a param (falls back to default or "")
  * - `setParam(key, value)` — set a single param; deletes it when value is a
- *   "clear" sentinel ("all", "", "1")
+ *   "clear" sentinel ("all", "")
  * - `setParams(updates)` — batch-set multiple params in one router.replace()
  *
  * All updates use `router.replace` with `{ scroll: false }` to avoid scroll
  * jumps and keep the browser history clean.
  */
+
+export function isUrlFilterClearValue(value: string): boolean {
+  return value === "all" || value === "";
+}
+
 export function useUrlFilters() {
   const [search, setSearch] = useState("");
 
@@ -36,9 +41,6 @@ export function useUrlFilters() {
     [searchParams],
   );
 
-  const isClearValue = (value: string): boolean =>
-    value === "all" || value === "" || value === "1";
-
   const writeParams = useCallback((params: URLSearchParams) => {
     if (typeof window === "undefined") return;
     const qs = params.toString();
@@ -53,7 +55,7 @@ export function useUrlFilters() {
   const setParam = useCallback(
     (key: string, value: string) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (isClearValue(value)) {
+      if (isUrlFilterClearValue(value)) {
         params.delete(key);
       } else {
         params.set(key, value);
@@ -67,7 +69,7 @@ export function useUrlFilters() {
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(updates)) {
-        if (isClearValue(value)) {
+        if (isUrlFilterClearValue(value)) {
           params.delete(key);
         } else {
           params.set(key, value);

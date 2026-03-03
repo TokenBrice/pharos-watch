@@ -200,6 +200,25 @@ describe("resolveBlockTimestamps", () => {
     expect(budget.count).toBe(1);
   });
 
+  it("maps timestamps by JSON-RPC id even when response order is shuffled", async () => {
+    const blockA = 0x176f050;
+    const blockB = 0x176f051;
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify([
+        { jsonrpc: "2.0", id: 1, result: { timestamp: "0x6651a2cc" } },
+        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
+      ]),
+      { status: 200 },
+    ));
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [blockA, blockB], budget,
+    );
+    expect(result.get(blockA)).toBe(0x6651a2c0);
+    expect(result.get(blockB)).toBe(0x6651a2cc);
+  });
+
   it("returns empty map for empty input", async () => {
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps(
@@ -212,10 +231,10 @@ describe("resolveBlockTimestamps", () => {
 
   it("splits into batches of 50", async () => {
     const blocks = Array.from({ length: 60 }, (_, i) => 1000 + i);
-    const makeBatchResponse = (count: number, startIdx: number) =>
+    const makeBatchResponse = (count: number, blockOffset: number) =>
       Array.from({ length: count }, (_, i) => ({
-        jsonrpc: "2.0", id: startIdx + i,
-        result: { timestamp: "0x" + (1700000000 + startIdx + i).toString(16) },
+        jsonrpc: "2.0", id: i,
+        result: { timestamp: "0x" + (1700000000 + blockOffset + i).toString(16) },
       }));
 
     fetchMock
@@ -248,5 +267,54 @@ describe("resolveBlockTimestamps", () => {
       blocks, budget,
     );
     expect(result.size).toBe(50);
+  });
+
+  it("ignores out-of-range response ids", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify([
+        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
+        { jsonrpc: "2.0", id: 999, result: { timestamp: "0x6651a2cc" } },
+      ]),
+      { status: 200 },
+    ));
+
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050], budget,
+    );
+    expect(result.size).toBe(1);
+    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+  });
+
+  it("uses the last valid mapping for duplicate ids", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify([
+        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
+        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2ff" } },
+      ]),
+      { status: 200 },
+    ));
+
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050], budget,
+    );
+    expect(result.get(0x176f050)).toBe(0x6651a2ff);
+  });
+
+  it("safely handles non-array JSON response bodies", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(
+      JSON.stringify({ jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } }),
+      { status: 200 },
+    ));
+
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050], budget,
+    );
+    expect(result.size).toBe(0);
   });
 });

@@ -162,10 +162,27 @@ export async function resolveBlockTimestamps(
         await res.body?.cancel();
         continue;
       }
-      const responses = (await res.json()) as JsonRpcResponse<{ timestamp: string }>[];
-      for (let j = 0; j < responses.length; j++) {
-        const ts = responses[j]?.result?.timestamp;
-        if (ts) timestamps.set(batch[j], parseInt(ts, 16));
+      const parsed = await res.json() as unknown;
+      if (!Array.isArray(parsed)) {
+        console.warn("[alchemy-logs] batch eth_getBlockByNumber returned non-array JSON body");
+        continue;
+      }
+
+      for (const response of parsed) {
+        if (!response || typeof response !== "object") continue;
+        const rpc = response as Partial<JsonRpcResponse<{ timestamp: string }>>;
+        const requestIndex = rpc.id;
+        if (typeof requestIndex !== "number" || !Number.isInteger(requestIndex)) continue;
+        if (requestIndex < 0 || requestIndex >= batch.length) continue;
+
+        const tsHex = rpc.result?.timestamp;
+        if (typeof tsHex !== "string") continue;
+
+        const ts = parseInt(tsHex, 16);
+        if (Number.isFinite(ts)) {
+          // Duplicate IDs are deterministic: the last valid mapping wins.
+          timestamps.set(batch[requestIndex], ts);
+        }
       }
     } catch (e) {
       console.warn(`[alchemy-logs] batch timestamp fetch failed:`, e);

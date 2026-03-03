@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -80,12 +80,9 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
     });
   }, [rankings, sort]);
 
-  // Reset page when rankings change
-  const [prevCount, setPrevCount] = useState(rankings.length);
-  if (prevCount !== rankings.length) {
-    setPrevCount(rankings.length);
+  useEffect(() => {
     setPage(0);
-  }
+  }, [rankings.length]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);

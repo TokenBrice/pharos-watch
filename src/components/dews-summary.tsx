@@ -90,6 +90,11 @@ interface ElevatedCoin {
   y: number;
 }
 
+interface RadarClickOutcome {
+  shouldNavigate: boolean;
+  nextHoveredId: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -146,6 +151,20 @@ function computeCalmDots(
       y: CY + r * Math.sin(angle),
     };
   });
+}
+
+export function resolveRadarClick(
+  isFinePointer: boolean,
+  hoveredId: string | null,
+  tappedId: string,
+): RadarClickOutcome {
+  if (isFinePointer) {
+    return { shouldNavigate: true, nextHoveredId: hoveredId };
+  }
+  if (hoveredId === tappedId) {
+    return { shouldNavigate: true, nextHoveredId: null };
+  }
+  return { shouldNavigate: false, nextHoveredId: tappedId };
 }
 
 // ---------------------------------------------------------------------------
@@ -330,6 +349,12 @@ function DEWSRadar({
     return () => mql.removeEventListener("change", sync);
   }, []);
 
+  useEffect(() => {
+    if (!isFinePointer) {
+      setHoveredId(null);
+    }
+  }, [isFinePointer]);
+
   const hex = THREAT_BAND_HEX[highest];
   const dur = sweepDuration(highest);
 
@@ -388,13 +413,17 @@ function DEWSRadar({
         <DEWSDot
           key={coin.id}
           coin={coin}
-          onHover={setHoveredId}
-          onClick={(id) => {
+          onHover={(id) => {
             if (isFinePointer) {
-              onCoinClick(id);
-              return;
+              setHoveredId(id);
             }
-            setHoveredId((current) => (current === id ? null : id));
+          }}
+          onClick={(id) => {
+            const outcome = resolveRadarClick(isFinePointer, hoveredId, id);
+            setHoveredId(outcome.nextHoveredId);
+            if (outcome.shouldNavigate) {
+              onCoinClick(id);
+            }
           }}
         />
       ))}
