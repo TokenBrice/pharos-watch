@@ -4,6 +4,25 @@ import {
   StressSignalsAllResponseSchema,
   YieldRankingsResponseSchema,
 } from "../types";
+import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
+import type { DepegEvent } from "../types";
+
+function makeDepegEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">): DepegEvent {
+  return {
+    id: 1,
+    stablecoinId: "1",
+    symbol: "USDT",
+    pegType: "USD",
+    direction: overrides.peakDeviationBps < 0 ? "below" : "above",
+    startPrice: 1,
+    peakPrice: null,
+    recoveryPrice: null,
+    pegReference: 1,
+    source: "live",
+    endedAt: null,
+    ...overrides,
+  };
+}
 
 describe("critical invariants", () => {
   it("rejects non-finite numbers in yield rankings payloads", () => {
@@ -110,5 +129,16 @@ describe("critical invariants", () => {
         gauge: { ...flows.gauge, trackedMcapUsd: Number.POSITIVE_INFINITY },
       }).success,
     ).toBe(false);
+  });
+
+  it("preserves depeg interval merge and worst signed deviation invariants", () => {
+    const events = [
+      makeDepegEvent({ startedAt: 100, endedAt: 200, peakDeviationBps: -120 }),
+      makeDepegEvent({ id: 2, startedAt: 180, endedAt: 260, peakDeviationBps: 95 }),
+      makeDepegEvent({ id: 3, startedAt: 400, endedAt: 450, peakDeviationBps: -310 }),
+    ];
+
+    expect(mergeDepegSeconds(events, 0, 500)).toBe(210);
+    expect(worstDeviation(events)).toBe(-310);
   });
 });

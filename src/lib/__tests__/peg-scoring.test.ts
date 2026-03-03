@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
-import { computePegScore, coinTrackingStart } from "../peg-score";
+import { coinTrackingStart, computePegScore, computePegScoreWithWindow } from "../peg-score";
 import { computePegStability } from "../peg-stability";
 import type { DepegEvent } from "../types";
 
@@ -534,6 +534,37 @@ describe("coinTrackingStart", () => {
     ];
     // firstSeen (300d) > fourYearsAgo → use firstSeen
     expect(coinTrackingStart(events, FOUR_YEARS_AGO, firstSeen)).toBe(firstSeen);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computePegScoreWithWindow
+// ---------------------------------------------------------------------------
+describe("computePegScoreWithWindow", () => {
+  const NOW = 1_700_000_000;
+
+  it("returns null for NAV tokens", () => {
+    const result = computePegScoreWithWindow(true, [], String(NOW - 30 * DAY));
+    expect(result).toBeNull();
+  });
+
+  it("returns null when events are missing", () => {
+    const result = computePegScoreWithWindow(false, null, String(NOW - 30 * DAY));
+    expect(result).toBeNull();
+  });
+
+  it("uses earliestTrackingDate when provided", () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+    const events = [
+      makeEvent({ startedAt: NOW - 10 * DAY, endedAt: NOW - 9 * DAY, peakDeviationBps: -200 }),
+    ];
+    const result = computePegScoreWithWindow(false, events, String(NOW - 120 * DAY));
+
+    expect(result).not.toBeNull();
+    expect(result!.eventCount).toBe(1);
+    expect(result!.trackingSpanDays).toBe(120);
+    expect(result!.worstDeviationBps).toBe(-200);
+    nowSpy.mockRestore();
   });
 });
 

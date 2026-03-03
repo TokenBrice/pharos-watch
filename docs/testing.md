@@ -24,7 +24,7 @@ npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke che
 
 Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys now run in five jobs:
 
-For worktree merge workflow and hook setup, see `docs/deployment-process.md`.
+For deployment/worktree operating procedure (including the local merge gate before pushing `main`), see `docs/deployment-process.md`.
 
 1. `validate` (runs before any deployment):
    - `npm run lint`
@@ -55,10 +55,11 @@ This ordering prevents a frontend deploy if the newly deployed worker fails crit
 ```ts
 export default defineConfig({
   test: {
+    exclude: [".worktrees/**", ".next/**", "out/**", "coverage/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      thresholds: { lines: 50 }, // Coverage gate — CI fails if lines < 50%
+      thresholds: { lines: 55 }, // Coverage gate — CI fails if lines < 55%
     },
   },
   resolve: { alias: { "@": path.resolve(__dirname, "src") } }, // Same path alias as Next.js
@@ -249,17 +250,17 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 
 ## Coverage
 
-**Threshold:** 50% lines (enforced by `vitest.config.ts` thresholds)
+**Threshold:** 55% lines (enforced by `vitest.config.ts` thresholds)
 
 Run `npm test -- --coverage` to generate a detailed report. The V8 provider generates both text output and an `lcov` report for CI integration.
 
 ### Critical Coverage Gate
 
-In addition to the global 50% line threshold, CI enforces a critical-path gate via `npm run coverage:critical`:
+In addition to the global 55% line threshold, CI enforces a critical-path gate via `npm run coverage:critical`:
 
 - Runs coverage for the critical suites only (contract + invariant tests)
 - Parses `coverage/lcov.info`
-- Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 35%)
+- Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
 - For touched critical files, also enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 
 Gate script: `scripts/check-critical-coverage.mjs`
@@ -362,7 +363,7 @@ describe("syncFxRates", () => {
 | `react-hooks/purity` | warn | `Date.now()` in render is intentional for timestamp-based UIs |
 | `react-hooks/incompatible-library` | warn | TanStack Virtual `useVirtualizer()` — known library limitation |
 
-**Ignored paths:** `.next/`, `out/`, `build/`, `worker/.wrangler/` (auto-generated build artifacts).
+**Ignored paths:** `.next/`, `out/`, `build/`, `coverage/`, `.worktrees/`, `worker/.wrangler/` (auto-generated build artifacts).
 
 ### Zod Runtime Validation
 

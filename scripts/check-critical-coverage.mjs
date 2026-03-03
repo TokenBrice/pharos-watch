@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { execSync } from "node:child_process";
 
 const LCOV_PATH = "coverage/lcov.info";
-const THRESHOLD = Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD ?? "35");
+const THRESHOLD = Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD ?? "40");
 const RATCHET_TOLERANCE = Number.parseFloat(process.env.CRITICAL_COVERAGE_RATCHET_TOLERANCE ?? "0");
 const BASELINE_PATH = process.env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critical-coverage-baseline.json";
 const COMPARE_REF = (process.env.CRITICAL_COVERAGE_COMPARE_REF ?? "").trim();
