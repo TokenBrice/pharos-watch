@@ -3070,6 +3070,41 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
 
+  usd("cg-wrapped-savings-rusd", "Wrapped Savings rUSD", "wsrUSD", "rwa-backed", "centralized-dependent", {
+    geckoId: "wrapped-savings-rusd",
+    yieldBearing: true, rwa: true, navToken: true,
+    yieldConfig: { yieldSource: "Reservoir savings vault (srUSD)", yieldType: "nav-appreciation" },
+    collateral: "T-bills and government securities (RWA allocation via governance-approved Asset Adapters), overcollateralized DeFi lending in Morpho and Euler vaults (curators include Steakhouse, Re7, MEV Capital, Gauntlet, Objective Labs), and crypto funding-rate / basis strategies; Credit Enforcer smart contracts enforce minimum 105% Liquidity, Solvency, and Capital Ratios before any leverage-increasing action",
+    pegMechanism: "wsrUSD is a non-rebasing ERC-4626 vault token that accrues yield per block as rUSD is deposited into the srUSD savings vault; token price appreciates continuously from $1.00 as protocol yield accrues; users can unwrap wsrUSD → srUSD → rUSD at any time; rUSD itself is minted 1:1 via a Peg Stability Module (PSM) against USDC, auto-topped every 10 minutes on each chain",
+    proofOfReserves: { type: "real-time", url: "https://app.reservoir.xyz/reserves", provider: "Reservoir Protocol (on-chain live balance sheet)" },
+    links: [
+      { label: "Website", url: "https://reservoir.xyz" },
+      { label: "Twitter", url: "https://x.com/reservoir_xyz" },
+      { label: "Docs", url: "https://docs.reservoir.xyz" },
+      { label: "Proof of Reserve", url: "https://app.reservoir.xyz/reserves" },
+    ],
+    contracts: [
+      { chain: "ethereum",   address: "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094", decimals: 18 },
+      { chain: "base",       address: "0x62344be8ca1c339b46274a4017dd87af436900b1", decimals: 18 },
+      { chain: "berachain",  address: "0x316cd39632cac4f4cdfc21757c4500fe12f64514", decimals: 18 },
+      { chain: "sonic",      address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "arbitrum",   address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "bsc",        address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "avalanche",  address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "unichain",   address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "plume",      address: "0x0bbcc2c1991d0af8ec6a5ed922e6f5606923fe15", decimals: 18 },
+      { chain: "sei",        address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "worldchain", address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "katana",     address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "hyperevm",   address: "0x04716db62c085d9e08050fcf6f7d775a03d07720", decimals: 18 },
+      { chain: "linea",      address: "0x4809010926aec940b550d34a46a52739f996d75d", decimals: 18 },
+      { chain: "solana",     address: "7bxM8cRFZpzonzZtzmrcWHNX1dijrEVU4VkjjtVyBmqE", decimals: 9 },
+    ],
+    collateralQuality: "exotic",
+    custodyModel: "institutional",
+    governanceQuality: "multisig",
+  }),
+
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
     geckoId: "xsgd",
