@@ -4,7 +4,7 @@
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/stablecoins` | Full stablecoin list with supply, price, chains. Returns `X-Data-Updated-At` header |
+| `GET /api/stablecoins` | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header |
 | `GET /api/stablecoin/:id` | Per-coin detail (cache-aside, 5min TTL) |
 | `GET /api/stablecoin-charts` | Historical total supply chart data |
 | `GET /api/blacklist` | Freeze/blacklist events (filterable by token, chain) |
@@ -251,7 +251,7 @@ src/                              # Next.js frontend (static export)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, ReserveSlice (with coinId/depType), RawDimensionInputs, CacheStatus (shared with worker)
     ├── reserve-templates.ts      # Reserve composition templates, getReserves(), deriveDependencies() (reserve slices → DependencyWeight[])
-    ├── stablecoins.ts            # Master list of ~145 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── stablecoins.ts            # Master list of ~144 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
     ├── dead-stablecoins.ts       # 79 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
@@ -279,7 +279,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (34 total)
+├── migrations/                   # D1 SQL migrations (35 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -314,7 +314,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # US Treasury T-bill rate fetcher (Fiscal Data API)
     │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
-    │   └── sync-mint-burn.ts     # On-chain mint/burn Transfer event sync via Etherscan (every 20min)
+    │   └── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id

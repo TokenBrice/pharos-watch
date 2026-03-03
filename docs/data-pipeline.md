@@ -18,7 +18,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`, `etherscan`.
+Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`, `etherscan`, `alchemy`.
 
 ### DefiLlama list vs detail API
 
@@ -68,10 +68,10 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 6. **Depeg dedup**: `UNIQUE INDEX (stablecoin_id, started_at, source)` prevents duplicate depeg events. Partial index on `ended_at IS NULL` speeds up open-event queries
 7. **Depeg interval merge**: `computePegScore()` and `computePegStability()` merge overlapping depeg intervals before summing duration
 8. **Depeg direction handling**: If a coin flips from below-peg to above-peg (or vice versa) without recovering, the old event is closed and a new one opened with the correct direction
-9. **Peg score consistency**: Both the detail page and peg-summary API use the same tracking window: `Math.min(dataStart, fourYearsAgo)`
+9. **Peg score consistency**: Both the detail page and peg-summary API use the same tracking-window start helper: `coinTrackingStart(...)`, which applies `max(firstSeen, fourYearsAgo)` when first-seen data exists
 10. **Backfill atomicity**: `backfill-depegs.ts` runs DELETE + INSERT via `batchExecute()` (auto-chunks to D1's 100-statement batch limit while maintaining transactional semantics per chunk)
 11. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
-12. **Freshness header**: `/api/stablecoins` returns `X-Data-Updated-At` header from the cache timestamp
+12. **Freshness header**: `/api/stablecoins` returns `X-Data-Age` (seconds since last cache write)
 13. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) hash both keys with SHA-256 before `crypto.subtle.timingSafeEqual()`, preventing both timing side-channel attacks and length-leak attacks
 14. **Pagination defaults**: `/api/depeg-events` defaults `limit` to 100 and caps at 1000 (`Math.min(Math.max(parsed || 100, 1), 1000)`); `/api/blacklist` defaults `limit` to 0 (all results) and caps at 5000 (`Math.min(Math.max(parsed || 0, 0), 5000)`)
 15. **Unbounded query guard**: `/api/peg-summary` bounds via the 4-year `started_at >` filter on the depeg_events query
@@ -111,7 +111,7 @@ The live `/price/` endpoint requires no API key and has no documented rate limit
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth + trend`. See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 

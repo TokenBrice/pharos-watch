@@ -39,7 +39,7 @@ Endpoints backed by the cron cache include these additional headers:
 | standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings |
 | per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
 | slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history |
-| no-store | `no-store` | health |
+| no-store | `no-store` | health, status |
 
 ---
 
@@ -391,7 +391,7 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 ### `GET /api/dex-liquidity`
 
-DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all tracked stablecoins. Updated every 15 minutes. Includes 7-day trend data computed from stored history snapshots.
+DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all tracked stablecoins. Updated every 30 minutes. Includes 7-day trend data computed from stored history snapshots.
 
 **Cache:** standard
 
@@ -471,7 +471,7 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 
 ### `GET /api/dex-liquidity-history`
 
-Per-coin historical DEX liquidity snapshots. Snapshots are recorded every 15 minutes.
+Per-coin historical DEX liquidity snapshots. Snapshots are recorded daily (UTC midnight, first sync after day rollover).
 
 **Cache:** slow
 
@@ -696,7 +696,7 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 
 ### `GET /api/stability-index`
 
-Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) aggregating peg integrity, supply growth, and liquidity depth across all tracked stablecoins.
+Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend.
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
@@ -713,7 +713,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
   "current": {
     "score": 81.1,
     "band": "STEADY",
-    "components": { "severity": 4.59, "breadth": 15, "trend": 0.65 },
+    "components": { "severity": 4.59, "breadth": 15, "stressBreadth": 1.8, "trend": 0.65 },
     "computedAt": 1771977600
   },
   "history": [
@@ -727,7 +727,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 | `current` | `object \| null` | Latest PSI score and components. `null` if cron has not yet run |
 | `current.score` | `number` | PSI score 0–100 |
 | `current.band` | `string` | Condition band: `"BEDROCK"`, `"STEADY"`, `"TREMOR"`, `"FRACTURE"`, `"CRISIS"`, `"MELTDOWN"` |
-| `current.components` | `object` | Component breakdown: `severity`, `breadth`, `trend` |
+| `current.components` | `object` | Component breakdown: `severity`, `breadth`, `stressBreadth`, `trend` |
 | `current.computedAt` | `number` | Unix seconds of computation |
 | `history` | `array` | Historical scores, newest first. With `detail=true`, each entry includes `components` |
 
@@ -748,7 +748,7 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
     "edges": [{ "from": "2", "to": "5" }, ...]
   },
   "methodology": {
-    "version": "5.1",
+    "version": "5.5",
     "weights": { "pegStability": 0, "liquidity": 0.30, "resilience": 0.20, "decentralization": 0.15, "dependencyRisk": 0.25 },
     "thresholds": [{ "grade": "A+", "min": 87 }, { "grade": "A", "min": 83 }, ...]
   },
@@ -786,7 +786,7 @@ Stablecoin risk grade cards with dimension-level scores. Grades are computed fro
 | `liquidityScore` | `number \| null` |
 | `concentrationHhi` | `number \| null` |
 | `bluechipGrade` | `BluechipGrade \| null` |
-| `canBeBlacklisted` | `boolean \| "possible"` |
+| `canBeBlacklisted` | `boolean \| "possible" \| "possible-inherited"` |
 | `chainTier` | `ChainTier` |
 | `deploymentModel` | `DeploymentModel` |
 | `collateralQuality` | `CollateralQuality` |
@@ -985,7 +985,7 @@ Returns per-chain breakdown and hourly timeseries for a single coin. Returns `40
 
 ### `GET /api/mint-burn-events`
 
-Paginated list of individual mint/burn Transfer events for a specific stablecoin. Events are sourced from on-chain logs via Etherscan.
+Paginated list of individual mint/burn events for a specific stablecoin. Events are sourced from on-chain logs via Alchemy JSON-RPC.
 
 **Cache:** realtime
 
@@ -1035,6 +1035,89 @@ Results are ordered by `timestamp` descending (most recent first).
 
 ---
 
+### `GET /api/stress-signals`
+
+Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
+
+**All coins (no params):** Latest DEWS score + signal breakdown per coin.
+
+**Single coin:** Add `?stablecoin=ID&days=30` for latest + daily history.
+
+**Cache:** standard (`public, s-maxage=300, max-age=60`)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `stablecoin` | `string` | — | Single coin mode: return latest + daily history |
+| `days` | `integer` | `30` | History lookback (max 365) |
+
+**Response (all coins)**
+
+```json
+{
+  "signals": {
+    "1": { "score": 5, "band": "CALM", "signals": { "supply": { "value": 2, "available": true }, ... }, "computedAt": 1740000000 }
+  },
+  "updatedAt": 1740000000
+}
+```
+
+**Response (single coin)**
+
+```json
+{
+  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+  "history": [{ "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... } }]
+}
+```
+
+---
+
+### `POST /api/feedback`
+
+Public feedback ingestion endpoint used by the in-app feedback modal. Validates payloads, applies IP-based rate limiting, and forwards submissions to GitHub Issues/Discussions.
+
+**Cache:** no edge cache (POST passthrough)
+
+**Request body**
+
+```json
+{
+  "type": "bug",
+  "title": "Optional short title",
+  "description": "Required, 10-2000 characters",
+  "expectedValue": "Optional expected behavior/value",
+  "stablecoinId": "Optional stablecoin id",
+  "stablecoinName": "Optional stablecoin name",
+  "pageUrl": "https://pharos.watch/...",
+  "pegValue": "Optional UI value snapshot",
+  "website": ""
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `type` | `"bug" \| "data-correction" \| "feature-request"` | Yes | Submission category |
+| `description` | `string` | Yes | 10–2000 chars |
+| `pageUrl` | `string` | Yes | Source page URL |
+| `website` | `string` | No | Honeypot field; non-empty is silently accepted/dropped |
+| `title`, `expectedValue`, `stablecoinId`, `stablecoinName`, `pegValue` | `string` | No | Optional metadata |
+
+**Response**
+
+```json
+{ "ok": true }
+```
+
+**Error responses**
+
+- `400` invalid payload
+- `429` rate limited (3 submissions / 10 minutes per salted IP hash)
+- `500` forwarding/processing failure
+
+---
+
 ## Admin Endpoints
 
 These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker secret. Unauthorized requests receive a `401` response. They are not intended for public consumption.
@@ -1054,7 +1137,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
   "caches": { ... },
   "crons": {
     "sync-stablecoins": {
-      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "success", "itemCount": 142 },
+      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 142 },
       "recentRuns": [...],
       "expectedIntervalSec": 900,
       "healthy": true
@@ -1134,43 +1217,6 @@ Backfills `amount_usd` for all mint-burn events with NULL values using current p
     { "id": "1", "updated": 49 },
     { "id": "2", "updated": 15119 }
   ]
-}
-```
-
-### `GET /api/stress-signals`
-
-Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
-
-**All coins (no params):** Latest DEWS score + signal breakdown per coin.
-
-**Single coin:** Add `?stablecoin=ID&days=30` for latest + daily history.
-
-**Cache:** standard (`public, s-maxage=300, max-age=60`)
-
-**Query parameters**
-
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Single coin mode: return latest + daily history |
-| `days` | `integer` | `30` | History lookback (max 365) |
-
-**Response (all coins)**
-
-```json
-{
-  "signals": {
-    "1": { "score": 5, "band": "CALM", "signals": { "supply": { "value": 2, "available": true }, ... }, "computedAt": 1740000000 }
-  },
-  "updatedAt": 1740000000
-}
-```
-
-**Response (single coin)**
-
-```json
-{
-  "current": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
-  "history": [{ "date": 1739900000, "score": 3, "band": "CALM", "signals": { ... } }]
 }
 ```
 

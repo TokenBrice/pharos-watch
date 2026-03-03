@@ -30,7 +30,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 | `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
 | `CHAIN_SCAN_RANGE` | 50K (ETH/ARB/BASE/OPT), 10K (AVAX), 2K (Polygon) | Max block range per contract per cycle (per-chain Alchemy limits) |
-| `startBlock` | 21,900,000 | All 10 contracts start scanning from this Ethereum block |
+| `startBlock` | per-config (non-uniform) | Each contract config has its own start block; includes multi-chain reUSD vault configs |
 | Subrequest budget | 200 per cron run | Alchemy API call budget |
 
 ---
@@ -40,6 +40,8 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
 ### Tracked Stablecoins
+
+Current scope: **18 contract configs** across **11 symbols** (10 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -53,6 +55,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 | USDS | 209 | 18 | Risky | Transfer |
 | FRXUSD | 235 | 18 | Risky | Transfer |
 | BOLD | 269 | 18 | Risky | Transfer |
+| reUSD | 339 | 6/18 | Risky | Deposited + InstantRedemptionProcessed (8 configs across Ethereum/Arbitrum/Base/Avalanche) |
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
 
@@ -71,11 +74,13 @@ Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-qua
 | `Issue(uint256)` | `0xcb8241ad...` | `first-data-uint256` |
 | `Redeem(uint256)` | `0x702d5967...` | `first-data-uint256` |
 
+**reUSD special handling:** Re Protocol vault contracts emit custom deposit/redeem events instead of standard mint/burn Transfers. Deposits are decoded from `Deposited(address,address,uint256)` (`dataSlot=2`, 6-decimal collateral amount), and burns from `InstantRedemptionProcessed(address,uint256,uint256)` (`first-data-uint256`, 18-decimal shares burned).
+
 ---
 
 ## Sync Algorithm
 
-1. **Load sync state** — batch query `mint_burn_sync_state` for all 10 contract config keys. Falls back to `startBlock - 1` for new configs.
+1. **Load sync state** — batch query `mint_burn_sync_state` for all configured contract keys. Falls back to `startBlock - 1` for new configs.
 2. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
 3. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
 4. **For each contract config:**

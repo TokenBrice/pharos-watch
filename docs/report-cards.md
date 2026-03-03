@@ -2,7 +2,7 @@
 
 Multi-dimensional risk grades (A+ through F) for every tracked stablecoin. Computed on-demand by the API from live data.
 
-## Overall Grade (v5.4)
+## Overall Grade (v5.5)
 
 Three-step computation:
 
@@ -32,6 +32,7 @@ Cemetery coins get a permanent F.
 ### Peg Stability Details
 
 - Direct passthrough of `computePegScore()` output (see `docs/depeg-detection.md` for the composite formula)
+- v5.5 peg fairness fixes apply automatically: tracking window is capped to coin age (`coinTrackingStart()`), per-event magnitude floors prevent brief severe depegs from being under-penalized, and active-depeg penalties are steeper
 - NAV tokens (yield-accruing, price-appreciating) receive NR — multiplier 1.0, no penalty
 - Yield-bearing annotation added to detail text
 

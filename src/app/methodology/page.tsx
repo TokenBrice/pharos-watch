@@ -38,7 +38,7 @@ export default function MethodologyPage() {
                 name: "How does Pharos grade stablecoins?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied instead of redistributing the weight. Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at v5.4.",
+                  text: "Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied instead of redistributing the weight. Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at v5.5.",
                 },
               },
               {
@@ -384,7 +384,7 @@ export default function MethodologyPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v5.4. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version v5.5. Version increments when weights, thresholds, or dimension definitions change.
             {" "}
             <Link href="/methodology/scoring-changelog" className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
               View full version history &rarr;
@@ -662,8 +662,8 @@ export default function MethodologyPage() {
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            Pharos tracks on-chain Transfer events (mints from address(0) and burns to address(0)) for major stablecoins
-            via Etherscan. These raw events are aggregated into hourly buckets and scored to detect abnormal flow
+            Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns
+            plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and scored to detect abnormal flow
             patterns that may signal market stress or capital rotation.
           </p>
 
@@ -789,8 +789,8 @@ export default function MethodologyPage() {
               </table>
             </div>
             <p>
-              Returns null when any tracked coin lacks sufficient data (fewer than 7 days of history),
-              since a partial composite would be misleading.
+              Returns null only when all tracked coins lack sufficient data (fewer than 7 days of history).
+              Coins with null FIS are skipped from the market-cap-weighted composite.
             </p>
           </div>
 
@@ -970,7 +970,7 @@ export default function MethodologyPage() {
 
           {/* DEWS pipeline diagram — desktop: horizontal */}
           <div className="hidden md:flex items-stretch gap-4">
-            {/* 7 signals */}
+            {/* 8 signals */}
             <div className="grid grid-cols-2 gap-2 flex-1">
               <div className="rounded-lg border p-2 text-center">
                 <p className="text-foreground font-medium text-xs">Supply Velocity</p>
@@ -996,9 +996,13 @@ export default function MethodologyPage() {
                 <p className="text-foreground font-medium text-xs">Blacklist Activity</p>
                 <p className="text-xs text-muted-foreground">0.10</p>
               </div>
-              <div className="col-span-2 rounded-lg border p-2 text-center">
+              <div className="rounded-lg border p-2 text-center">
                 <p className="text-foreground font-medium text-xs">Mint/Burn Flow</p>
                 <p className="text-xs text-muted-foreground">0.10</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Yield Anomaly</p>
+                <p className="text-xs text-muted-foreground">0.05</p>
               </div>
             </div>
             <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
@@ -1061,9 +1065,13 @@ export default function MethodologyPage() {
                 <p className="text-foreground font-medium text-xs">Blacklist Activity</p>
                 <p className="text-xs text-muted-foreground">0.10</p>
               </div>
-              <div className="col-span-2 rounded-lg border p-2 text-center">
+              <div className="rounded-lg border p-2 text-center">
                 <p className="text-foreground font-medium text-xs">Mint/Burn Flow</p>
                 <p className="text-xs text-muted-foreground">0.10</p>
+              </div>
+              <div className="rounded-lg border p-2 text-center">
+                <p className="text-foreground font-medium text-xs">Yield Anomaly</p>
+                <p className="text-xs text-muted-foreground">0.05</p>
               </div>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
@@ -1116,6 +1124,7 @@ export default function MethodologyPage() {
               <li><span className="text-foreground">Cross-Source Divergence (0.15)</span> &mdash; fragmented pricing between primary price, DEX price, and peg reference</li>
               <li><span className="text-foreground">Blacklist Activity (0.10)</span> &mdash; issuer emergency freeze surges for USDC, USDT, PAXG, XAUT</li>
               <li><span className="text-foreground">Mint/Burn Flow (0.10)</span> &mdash; redemption surge vs minting from on-chain Transfer event data</li>
+              <li><span className="text-foreground">Yield Anomaly (0.05)</span> &mdash; warning-signal accumulation from yield spikes, divergence, TVL outflows, negative trends, and reward-heavy regimes</li>
             </ul>
           </div>
 

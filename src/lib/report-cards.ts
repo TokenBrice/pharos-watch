@@ -30,7 +30,7 @@ import { deriveDependencies } from "./reserve-templates";
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "5.4";
+export const METHODOLOGY_VERSION = "5.5";
 
 /**
  * Base dimension weights for the overall grade.

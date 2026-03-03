@@ -1,6 +1,6 @@
 # Report Cards Scoring — Version Timeline
 
-Internal changelog reconstructed from git history. Covers v1.0 through v5.4 (2026-02-25 → 2026-02-28).
+Internal changelog reconstructed from git history. Covers v1.0 through v5.5 (2026-02-25 → 2026-03-01).
 
 ---
 
@@ -123,10 +123,10 @@ Also: decentralization 10%→15%, dependency risk 25%→25% (confirmed).
 **Biggest structural change.** Peg Stability removed from weighted dimensions entirely. Applied as a post-hoc power-curve multiplier:
 
 ```
-final = base × (PSI / 100) ^ 0.20
+final = base × (pegScore / 100) ^ 0.20
 ```
 
-| PSI  | Multiplier | Impact  |
+| pegScore  | Multiplier | Impact  |
 |------|------------|---------|
 | 100  | 1.000      | none    |
 | 90   | ~0.979     | −2%     |
@@ -241,6 +241,16 @@ Previously, NR dimensions redistributed weight to rated ones, inflating scores f
 
 Applied as the last step before clamping, after the peg multiplier.
 
+### v5.5 — Peg score fairness for young coins (Mar 1)
+
+Three fixes landed in peg scoring to prevent young coins with repeated brief depegs from being over-scored:
+
+- **Tracking window capped to coin age:** when first-seen supply history exists, tracking starts at `max(firstSeen, fourYearsAgo)` via `coinTrackingStart(...)`.
+- **Severity magnitude floor:** each depeg contributes at least `(peakBps / 2000) * recencyWeight`, even when duration is short.
+- **Steeper active-depeg penalty:** active events now penalize via `max(5, absBps / 50)` (capped at 50).
+
+Weights and grade thresholds are unchanged from v5.4.
+
 ---
 
 ## Quick Reference: Weight Evolution
@@ -254,7 +264,7 @@ Applied as the last step before clamping, after the peg multiplier.
 | v3.3       | 25%        | 20%       | —       | 20%        | 15%              | 25%      |
 | v4.0       | multiplier | 25%       | —       | 25%        | 10%              | 30%      |
 | v4.1       | multiplier | 30%       | —       | 20%        | 15%              | 25%      |
-| **v5.0–5.4** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
+| **v5.0–5.5** | **multiplier** | **30%** | **—** | **20%**  | **15%**          | **25%**  |
 
 ## Quick Reference: Grade Thresholds
 

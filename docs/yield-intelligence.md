@@ -6,12 +6,12 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 24 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C+ or above. Each must also have a `yieldConfig` specifying:
+Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 24 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `yieldSource` | `string` | Human-readable source name (e.g. "Ethena staking") |
-| `yieldType` | `YieldType` | Mechanism classification (see below) |
+| `yieldSource` | `string` | Human-readable source name (e.g. "Ethena staking"). Optional for auto-discovered lending rows |
+| `yieldType` | `YieldType` | Mechanism classification (see below). Optional for auto-discovered lending rows |
 
 ### Yield Types
 
@@ -23,6 +23,7 @@ Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` ent
 | `lp-receipt` | LP Receipt | LP position wrapped as stablecoin |
 | `nav-appreciation` | NAV | Token price appreciates as backing grows |
 | `governance-set` | Gov. Set | Yield rate set by governance vote |
+| `lending-opportunity` | Lending Opp. | Auto-discovered best lending market for non-yield-bearing coins |
 
 Labels and styles are centralized in `src/lib/classification.ts` (`YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`), both typed as `Record<YieldType, ...>` so adding a new variant without updating the maps is a compile error.
 
@@ -95,7 +96,7 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 
 ### Automatic Lending Pool Discovery (Wave 2)
 
-For stablecoins **not** flagged `yieldBearing` but rated C+ or above (safety score >= 60), the sync cron automatically discovers the best lending pool from a curated protocol allowlist.
+For stablecoins **not** flagged `yieldBearing` but rated C- or above (safety score >= 50), the sync cron automatically discovers the best lending pool from a curated protocol allowlist.
 
 **Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/cron/yield-config.ts`):
 
@@ -103,6 +104,7 @@ For stablecoins **not** flagged `yieldBearing` but rated C+ or above (safety sco
 |------|-----------|
 | Tier 1 | aave-v3, compound-v3, sparklend, spark-savings, maple, yearn-finance |
 | Tier 2 | fluid-lending, euler-v2, venus-core-pool, kamino-lend, morpho-v1, pendle |
+| Tier 3 | justlend, openeden-usdo, multipli.fi, jupiter-lend, stables-labs-usdx |
 
 **Discovery logic:** Filters DL pools by `exposure === "single"`, `stablecoin === true`, project in allowlist, exact symbol match (case-insensitive). Picks highest TVL.
 
@@ -110,7 +112,7 @@ For stablecoins **not** flagged `yieldBearing` but rated C+ or above (safety sco
 
 **Data source:** `defillama-auto` — distinguishes from static-mapped `defillama` pools.
 
-**Eligibility evaluated dynamically:** If a coin's safety score drops below 60, it stops receiving yield data. If it rises above 60, it starts automatically.
+**Eligibility evaluated dynamically:** If a coin's safety score drops below 50, it stops receiving auto-discovered yield data. If it rises back to 50 or above, it starts automatically.
 
 ---
 
@@ -206,7 +208,7 @@ CREATE TABLE yield_data (
   yield_type          TEXT NOT NULL,
   source_pool         TEXT,           -- DL pool UUID
   source_tvl_usd      REAL,
-  data_source         TEXT NOT NULL,  -- "onchain" | "defillama" | "price-derived"
+  data_source         TEXT NOT NULL,  -- "onchain" | "defillama" | "defillama-auto" | "price-derived"
   safety_score        REAL,
   safety_grade        TEXT,
   pharos_yield_score  REAL,

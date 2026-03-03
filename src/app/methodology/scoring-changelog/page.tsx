@@ -772,7 +772,7 @@ export default function ScoringChangelogPage() {
                       "25%",
                     ],
                     [
-                      "v5.0\u20135.4",
+                      "v5.0\u20135.5",
                       "multiplier",
                       "30%",
                       "\u2014",

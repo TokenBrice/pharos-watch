@@ -44,8 +44,8 @@ Three modules use a lazy-init pattern to receive API keys from the `Env` at runt
 | Initializer | Called in | Purpose |
 |-------------|----------|---------|
 | `initCoinGecko(env.COINGECKO_API_KEY)` | `fetch` + `scheduled` | Switches CoinGecko base URL between free/pro tier |
-| `initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `scheduled` only | Builds chain RPC configs with Alchemy/dRPC primaries |
-| `initAlerts(env.ALERT_WEBHOOK_URL)` | `scheduled` only | Configures webhook URL for error alerts |
+| `initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
+| `initAlerts(env.ALERT_WEBHOOK_URL)` | `fetch` + `scheduled` | Configures webhook URL for error alerts |
 
 This pattern exists because Cloudflare Workers don't have persistent module state across invocations — `Env` bindings are only available inside handler functions.
 
@@ -157,7 +157,7 @@ crons = [
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
 | `sync-mint-burn` | `syncMintBurn()` | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 
-**Shared Etherscan rate limiter:** Both `sync-blacklist` and `sync-mint-burn` use the Etherscan V2 API. To stay within the free-tier 5 req/sec cap, a single `createRateLimiter(4)` instance is created at the trigger level and passed into both jobs. This ensures combined Etherscan requests from both crons never exceed 4 req/sec, leaving headroom for retries.
+**Provider split + independent controls:** `sync-blacklist` uses Etherscan/TronGrid/dRPC and receives a shared Etherscan `createRateLimiter(4)` to stay below free-tier caps. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker.
 
 ### Trigger 3: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
@@ -253,7 +253,8 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `CG_PRICES` | `coingecko-prices` | `enrich-prices` |
 | `CG_MCAP` | `coingecko-mcap` | `sync-stablecoins` (CG supply fallback) |
 | `TREASURY_RATES` | `treasury-rates` | `fetch-tbill-rate` |
-| `ETHERSCAN` | `etherscan` | `sync-blacklist`, `sync-mint-burn` |
+| `ETHERSCAN` | `etherscan` | `sync-blacklist` |
+| `ALCHEMY` | `alchemy` | `sync-mint-burn` |
 
 ---
 
@@ -539,7 +540,7 @@ A job is marked "unhealthy" if its last run had `status='error'` or if the last 
 | `worker/src/lib/mint-burn-contracts.ts` | Mint/burn contract configs: stablecoin/chain mappings, mint addresses, decimals, `startBlock` (earliest block to scan), `SAFE_HAVEN_IDS` |
 | `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
-| `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Etherscan Transfer event scanning, hourly aggregation |
+| `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation |
 | `worker/src/cron/sync-usds-status.ts` | USDS freeze monitor: ERC-1967 proxy inspection |
 | `worker/src/cron/sync-bluechip.ts` | Bluechip ratings: batch fetch from bluechip.org |
 | `worker/migrations/0001_initial.sql` | `cache`, `blacklist_events`, `blacklist_sync_state` tables |
