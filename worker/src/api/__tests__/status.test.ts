@@ -208,4 +208,45 @@ describe("handleStatus", () => {
 
     expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
   });
+
+  it("marks on-chain monitor unavailable instead of forcing stale data quality", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      // Latest on-chain update is too old -> monitor unavailable.
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+    ]);
+
+    const request = new Request("https://x/api/status", {
+      headers: { "X-Admin-Key": "secret-key" },
+    });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      dataQuality: {
+        onchainSupplyMonitoring: string;
+        staleOnchainSupply: number;
+        onchainSupplyDivergences: number;
+      };
+    };
+
+    expect(body.dataQuality.onchainSupplyMonitoring).toBe("unavailable");
+    expect(body.dataQuality.staleOnchainSupply).toBe(0);
+    expect(body.dataQuality.onchainSupplyDivergences).toBe(0);
+    expect(body.dataQualityStatus).toBe("healthy");
+  });
 });

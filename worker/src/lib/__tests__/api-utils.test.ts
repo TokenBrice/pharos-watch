@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { errorResponse, parseIntParam, jsonResponse, validatePayloadWithSchema } from "../api-utils";
+import {
+  errorResponse,
+  parseIntParam,
+  jsonResponse,
+  validatePayloadWithSchema,
+  buildCacheStatuses,
+} from "../api-utils";
 
 describe("errorResponse", () => {
   it("returns JSON error with given status", async () => {
@@ -76,5 +82,93 @@ describe("validatePayloadWithSchema", () => {
     const result = validatePayloadWithSchema(schema, { ok: "yes" }, "test");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.issues.length).toBeGreaterThan(0);
+  });
+});
+
+describe("buildCacheStatuses", () => {
+  function makeDb(nowSec: number) {
+    const seenSql: string[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        seenSql.push(sql);
+        const first = async <T>() => {
+          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+            return { age: 120 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => {
+              if (sql.includes("cache WHERE key IN")) {
+                return {
+                  results: [{ key: "stablecoins", updated_at: nowSec - 60 }] as T[],
+                  success: true,
+                  meta: {},
+                };
+              }
+              return { results: [] as T[], success: true, meta: {} };
+            },
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+    return { db, seenSql };
+  }
+
+  it("queries table-backed freshness using latest timestamps", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { db, seenSql } = makeDb(nowSec);
+
+    await buildCacheStatuses(db, nowSec);
+
+    const dexSql = seenSql.find((s) => s.includes("dex_liquidity"));
+    const yieldSql = seenSql.find((s) => s.includes("yield_data"));
+    const dewsSql = seenSql.find((s) => s.includes("stress_signals"));
+
+    expect(dexSql).toContain("? - MAX(updated_at)");
+    expect(yieldSql).toContain("? - MAX(updated_at)");
+    expect(yieldSql).toContain("is_best = 1");
+    expect(dewsSql).toContain("? - MAX(computed_at)");
+  });
+
+  it("clamps negative table ages to zero", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = {
+      prepare: (sql: string) => {
+        const first = async <T>() => {
+          if (sql.includes("MAX(updated_at)") || sql.includes("MAX(computed_at)")) {
+            return { age: -30 } as T;
+          }
+          return null as T | null;
+        };
+        return {
+          bind: (..._args: unknown[]) => ({
+            all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+            first,
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+          first,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const { caches } = await buildCacheStatuses(db, nowSec);
+    expect(caches["dex-liquidity"]?.ageSeconds).toBe(0);
+    expect(caches["yield-data"]?.ageSeconds).toBe(0);
+    expect(caches.dews?.ageSeconds).toBe(0);
   });
 });

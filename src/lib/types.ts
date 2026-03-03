@@ -747,16 +747,26 @@ export interface DataQuality {
   blacklistMissingAmounts: number;
   blacklistTotal: number;
   onchainSupplyDivergences: number;
+  onchainSupplyMonitoring: "active" | "unavailable";
+  onchainSupplyLatestAt: number | null;
+  onchainSupplyTrackedCoins: number;
   activeDepegs: number;
   staleOnchainSupply: number;
 }
 
 export interface StatusResponse {
   timestamp: number;
+  availabilityStatus: "healthy" | "degraded" | "stale";
+  dataQualityStatus: "healthy" | "degraded" | "stale";
   overallStatus: "healthy" | "degraded" | "stale";
   caches: Record<string, CacheStatus>;
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
+  summary: {
+    unhealthyCrons: number;
+    cronErrors: number;
+    worstCacheRatio: number;
+  };
 }
 
 // --- Health endpoint types ---

@@ -30,9 +30,10 @@ export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): Freshn
  * the `cache` key/value table, and need table-specific freshness queries.
  */
 const TABLE_FRESHNESS_QUERIES: Record<string, string> = {
-  "dex-liquidity": "SELECT MAX(? - updated_at) as age FROM dex_liquidity WHERE liquidity_score > 0",
-  "yield-data":    "SELECT MAX(? - updated_at) as age FROM yield_data",
-  "dews":          "SELECT MAX(? - computed_at) as age FROM stress_signals",
+  // Use latest-row freshness (now - MAX(timestamp)); oldest-row checks create false stale signals.
+  "dex-liquidity": "SELECT (? - MAX(updated_at)) as age FROM dex_liquidity WHERE liquidity_score > 0",
+  "yield-data":    "SELECT (? - MAX(updated_at)) as age FROM yield_data WHERE is_best = 1",
+  "dews":          "SELECT (? - MAX(computed_at)) as age FROM stress_signals",
 };
 
 /**
@@ -68,7 +69,7 @@ export async function buildCacheStatuses(
           .prepare(TABLE_FRESHNESS_QUERIES[key])
           .bind(now)
           .first<{ age: number | null }>();
-        ageSeconds = row?.age ?? null;
+        ageSeconds = row?.age != null ? Math.max(0, row.age) : null;
       } catch {
         ageSeconds = null;
       }

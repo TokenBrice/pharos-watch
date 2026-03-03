@@ -133,12 +133,20 @@ function DataQualityCards({ dq }: {
     blacklistMissingAmounts: number;
     blacklistTotal: number;
     onchainSupplyDivergences: number;
+    onchainSupplyMonitoring: "active" | "unavailable";
+    onchainSupplyLatestAt: number | null;
+    onchainSupplyTrackedCoins: number;
     activeDepegs: number;
     staleOnchainSupply: number;
   };
 }) {
-  type Severity = "green" | "amber" | "red";
-  const cards: Array<{ label: string; value: number; detail: string; severity: Severity }> = [
+  type Severity = "green" | "amber" | "red" | "neutral";
+  const onchainUnavailable = dq.onchainSupplyMonitoring === "unavailable";
+  const onchainStalenessDetail = onchainUnavailable
+    ? "monitor unavailable"
+    : `/${dq.onchainSupplyTrackedCoins} coins >2h old`;
+
+  const cards: Array<{ label: string; value: number | string; detail: string; severity: Severity }> = [
     {
       label: "Missing Prices",
       value: dq.missingPrices,
@@ -153,9 +161,11 @@ function DataQualityCards({ dq }: {
     },
     {
       label: "On-chain Divergences",
-      value: dq.onchainSupplyDivergences,
-      detail: "coins >5% off",
-      severity: dq.onchainSupplyDivergences > 3 ? "red" : dq.onchainSupplyDivergences > 0 ? "amber" : "green",
+      value: onchainUnavailable ? "N/A" : dq.onchainSupplyDivergences,
+      detail: onchainUnavailable ? "monitor unavailable" : "coins >5% off",
+      severity: onchainUnavailable
+        ? "neutral"
+        : dq.onchainSupplyDivergences > 3 ? "red" : dq.onchainSupplyDivergences > 0 ? "amber" : "green",
     },
     {
       label: "Active Depegs",
@@ -165,9 +175,11 @@ function DataQualityCards({ dq }: {
     },
     {
       label: "Stale On-chain",
-      value: dq.staleOnchainSupply,
-      detail: "coins >2h old",
-      severity: dq.staleOnchainSupply > 5 ? "red" : dq.staleOnchainSupply > 0 ? "amber" : "green",
+      value: onchainUnavailable ? "N/A" : dq.staleOnchainSupply,
+      detail: onchainStalenessDetail,
+      severity: onchainUnavailable
+        ? "neutral"
+        : dq.staleOnchainSupply > 5 ? "red" : dq.staleOnchainSupply > 0 ? "amber" : "green",
     },
   ];
 
@@ -175,6 +187,7 @@ function DataQualityCards({ dq }: {
     green: "text-green-600 dark:text-green-400",
     amber: "text-amber-600 dark:text-amber-400",
     red: "text-red-600 dark:text-red-400",
+    neutral: "text-muted-foreground",
   };
 
   return (
@@ -434,17 +447,18 @@ interface AdminAction {
   path: string;
   confirm: string;
   destructive: boolean;
+  method: "GET" | "POST";
 }
 
 const ADMIN_ACTIONS: AdminAction[] = [
-  { label: "Trigger Digest", path: "/api/trigger-digest", confirm: "Trigger daily digest? Bypasses 1h dedup window.", destructive: false },
-  { label: "Reset Blacklist Sync", path: "/api/reset-blacklist-sync", confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.", destructive: true },
-  { label: "Debug Sync State", path: "/api/debug-sync-state", confirm: "Fetch sync state debug dump?", destructive: false },
-  { label: "Backfill Depegs", path: "/api/backfill-depegs", confirm: "Run depeg backfill? This may take several minutes.", destructive: false },
-  { label: "Backfill Supply", path: "/api/backfill-supply-history", confirm: "Backfill supply history snapshots?", destructive: false },
-  { label: "Backfill CG Prices", path: "/api/backfill-cg-prices", confirm: "Backfill CoinGecko prices?", destructive: false },
-  { label: "Backfill PSI", path: "/api/backfill-stability-index", confirm: "Backfill stability index history?", destructive: false },
-  { label: "Audit Depegs", path: "/api/audit-depeg-history?dry-run=true", confirm: "Run depeg history audit (dry-run)?", destructive: false },
+  { label: "Trigger Digest", path: "/api/trigger-digest", confirm: "Trigger daily digest? Bypasses 1h dedup window.", destructive: false, method: "POST" },
+  { label: "Reset Blacklist Sync", path: "/api/reset-blacklist-sync", confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.", destructive: true, method: "POST" },
+  { label: "Debug Sync State", path: "/api/debug-sync-state", confirm: "Fetch sync state debug dump?", destructive: false, method: "GET" },
+  { label: "Backfill Depegs", path: "/api/backfill-depegs", confirm: "Run depeg backfill? This may take several minutes.", destructive: false, method: "POST" },
+  { label: "Backfill Supply", path: "/api/backfill-supply-history", confirm: "Backfill supply history snapshots?", destructive: false, method: "POST" },
+  { label: "Backfill CG Prices", path: "/api/backfill-cg-prices", confirm: "Backfill CoinGecko prices?", destructive: false, method: "POST" },
+  { label: "Backfill PSI", path: "/api/backfill-stability-index", confirm: "Backfill stability index history?", destructive: false, method: "POST" },
+  { label: "Audit Depegs", path: "/api/audit-depeg-history?dry-run=true", confirm: "Run depeg history audit (dry-run)?", destructive: false, method: "GET" },
 ];
 
 function AdminActionButton({ action, adminKey }: { action: AdminAction; adminKey: string }) {
@@ -459,6 +473,7 @@ function AdminActionButton({ action, adminKey }: { action: AdminAction; adminKey
     setError(null);
     try {
       const res = await fetch(`${API_BASE}${action.path}`, {
+        method: action.method,
         headers: { "X-Admin-Key": adminKey },
       });
       const text = await res.text();

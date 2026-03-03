@@ -26,6 +26,9 @@ interface DataQuality {
   blacklistMissingAmounts: number;
   blacklistTotal: number;
   onchainSupplyDivergences: number;
+  onchainSupplyMonitoring: "active" | "unavailable";
+  onchainSupplyLatestAt: number | null;
+  onchainSupplyTrackedCoins: number;
   activeDepegs: number;
   staleOnchainSupply: number;
 }
@@ -162,15 +165,18 @@ export const handleStatus = withErrorHandler(
 
     const missingPriceRatio =
       dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
+    const hasActiveOnchainMonitor = dataQuality.onchainSupplyMonitoring === "active";
+    const staleOnchainSupply = hasActiveOnchainMonitor ? dataQuality.staleOnchainSupply : 0;
+    const onchainSupplyDivergences = hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0;
     const dataQualityStatus: StatusResponse["dataQualityStatus"] =
       missingPriceRatio > 0.4 ||
-      dataQuality.staleOnchainSupply >= 5 ||
-      dataQuality.onchainSupplyDivergences >= 10
+      staleOnchainSupply >= 5 ||
+      onchainSupplyDivergences >= 10
         ? "stale"
         : missingPriceRatio > 0.15 ||
             dataQuality.blacklistMissingAmounts > 0 ||
-            dataQuality.staleOnchainSupply > 0 ||
-            dataQuality.onchainSupplyDivergences > 0
+            staleOnchainSupply > 0 ||
+            onchainSupplyDivergences > 0
           ? "degraded"
           : "healthy";
 
@@ -253,52 +259,80 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
 
   // Stale on-chain supply (rows older than 2h)
   let staleOnchainSupply = 0;
+  let onchainSupplyDivergences = 0;
+  let onchainSupplyMonitoring: DataQuality["onchainSupplyMonitoring"] = "unavailable";
+  let onchainSupplyLatestAt: number | null = null;
+  let onchainSupplyTrackedCoins = 0;
   try {
-    const stale = await db
+    const monitor = await db
       .prepare(
-        "SELECT COUNT(DISTINCT stablecoin_id) as cnt FROM onchain_supply WHERE updated_at < ?"
+        "SELECT MAX(updated_at) as latest, COUNT(DISTINCT stablecoin_id) as tracked FROM onchain_supply"
       )
-      .bind(now - 7200)
-      .first<{ cnt: number }>();
-    if (stale) staleOnchainSupply = stale.cnt;
+      .first<{ latest: number | null; tracked: number }>();
+    onchainSupplyLatestAt = monitor?.latest ?? null;
+    onchainSupplyTrackedCoins = monitor?.tracked ?? 0;
+
+    // The on-chain supply monitor is considered active only when rows are recent.
+    if (onchainSupplyLatestAt != null && (now - onchainSupplyLatestAt) <= 3 * 86400) {
+      onchainSupplyMonitoring = "active";
+    }
   } catch (e) {
     console.error("[status] Failed to query stale on-chain supply:", e);
   }
 
-  // On-chain supply divergences (compare on-chain vs DefiLlama)
-  let onchainSupplyDivergences = 0;
-  try {
-    const onchainRows = await db
-      .prepare(
-        "SELECT stablecoin_id, SUM(supply) as total_supply FROM onchain_supply WHERE updated_at > ? GROUP BY stablecoin_id"
-      )
-      .bind(now - 7200)
-      .all<{ stablecoin_id: string; total_supply: number }>();
+  if (onchainSupplyMonitoring === "active") {
+    try {
+      const stale = await db
+        .prepare(
+          `SELECT COUNT(*) as cnt
+           FROM (
+             SELECT stablecoin_id, MAX(updated_at) as latest_update
+             FROM onchain_supply
+             GROUP BY stablecoin_id
+             HAVING latest_update < ?
+           )`
+        )
+        .bind(now - 7200)
+        .first<{ cnt: number }>();
+      if (stale) staleOnchainSupply = stale.cnt;
+    } catch (e) {
+      console.error("[status] Failed to query stale on-chain supply:", e);
+    }
 
-    if (onchainRows.results && onchainRows.results.length > 0) {
-      const cached = await getCache(db, "stablecoins");
-      if (cached) {
-        const data = JSON.parse(cached.value);
-        const assets: Array<{ id: string; price?: number; circulating?: Record<string, number> }> =
-          Array.isArray(data) ? data : data?.peggedAssets ?? [];
-        const assetMap = new Map(assets.map((a) => [a.id, a]));
+    // On-chain supply divergences (compare on-chain vs DefiLlama)
+    try {
+      const onchainRows = await db
+        .prepare(
+          "SELECT stablecoin_id, SUM(supply) as total_supply FROM onchain_supply WHERE updated_at > ? GROUP BY stablecoin_id"
+        )
+        .bind(now - 7200)
+        .all<{ stablecoin_id: string; total_supply: number }>();
 
-        for (const row of onchainRows.results) {
-          const asset = assetMap.get(row.stablecoin_id);
-          if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
-          // DefiLlama circulating values are in USD
-          const llamaValues = Object.values(asset.circulating);
-          const llamaTotal = llamaValues.reduce((s, v) => s + (v ?? 0), 0);
-          const llamaSupply = llamaTotal / asset.price;
-          if (llamaSupply > 0) {
-            const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
-            if (divergence > 0.05) onchainSupplyDivergences++;
+      if (onchainRows.results && onchainRows.results.length > 0) {
+        const cached = await getCache(db, "stablecoins");
+        if (cached) {
+          const data = JSON.parse(cached.value);
+          const assets: Array<{ id: string; price?: number; circulating?: Record<string, number> }> =
+            Array.isArray(data) ? data : data?.peggedAssets ?? [];
+          const assetMap = new Map(assets.map((a) => [a.id, a]));
+
+          for (const row of onchainRows.results) {
+            const asset = assetMap.get(row.stablecoin_id);
+            if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
+            // DefiLlama circulating values are in USD
+            const llamaValues = Object.values(asset.circulating);
+            const llamaTotal = llamaValues.reduce((s, v) => s + (v ?? 0), 0);
+            const llamaSupply = llamaTotal / asset.price;
+            if (llamaSupply > 0) {
+              const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
+              if (divergence > 0.05) onchainSupplyDivergences++;
+            }
           }
         }
       }
+    } catch (e) {
+      console.error("[status] Failed to check on-chain supply divergences:", e);
     }
-  } catch (e) {
-    console.error("[status] Failed to check on-chain supply divergences:", e);
   }
 
   return {
@@ -307,6 +341,9 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
     blacklistMissingAmounts,
     blacklistTotal,
     onchainSupplyDivergences,
+    onchainSupplyMonitoring,
+    onchainSupplyLatestAt,
+    onchainSupplyTrackedCoins,
     activeDepegs,
     staleOnchainSupply,
   };

@@ -26,22 +26,21 @@ export const ENDPOINT_GROUPS = {
   ],
   admin: [
     "/api/status",
-    "/api/backfill-depegs",
-    "/api/backfill-supply-history",
-    "/api/backfill-cg-prices",
-    "/api/audit-depeg-history",
-    "/api/backfill-stability-index",
+    "/api/debug-sync-state",
   ],
   inlineAdmin: [
     "/api/trigger-digest",
     "/api/reset-blacklist-sync",
-    "/api/debug-sync-state",
+    "/api/backfill-depegs",
+    "/api/backfill-supply-history",
+    "/api/backfill-cg-prices",
+    "/api/backfill-stability-index",
+    "/api/audit-depeg-history?dry-run=true",
   ],
 } as const;
 
-/** Only public + admin endpoints are probed. inlineAdmin endpoints have
- *  side effects and must NOT be auto-probed (they're triggered manually
- *  via the Admin Actions panel with confirmation dialogs). */
+/** Only public + admin endpoints are probed. inlineAdmin endpoints are
+ *  manual actions and must NOT be auto-probed from the dashboard loop. */
 const ALL_ENDPOINTS = [
   ...ENDPOINT_GROUPS.public,
   ...ENDPOINT_GROUPS.admin,
