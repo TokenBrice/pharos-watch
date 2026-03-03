@@ -45,10 +45,20 @@ function parseHomepageSearch(search: string): {
   };
 }
 
+function getInitialHomepageFilters() {
+  if (typeof window === "undefined") {
+    return { groupSelections: {} as Record<string, FilterTag | "">, searchQuery: "" };
+  }
+  return parseHomepageSearch(window.location.search);
+}
+
 export function useHomepageFilters() {
-  const [groupSelections, setGroupSelections] = useState<Record<string, FilterTag | "">>({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const [initialized, setInitialized] = useState(false);
+  const [groupSelections, setGroupSelections] = useState<Record<string, FilterTag | "">>(
+    () => getInitialHomepageFilters().groupSelections,
+  );
+  const [searchQuery, setSearchQuery] = useState(
+    () => getInitialHomepageFilters().searchQuery,
+  );
 
   const syncFromLocation = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -58,15 +68,13 @@ export function useHomepageFilters() {
   }, []);
 
   useEffect(() => {
-    syncFromLocation();
-    setInitialized(true);
     window.addEventListener("popstate", syncFromLocation);
     return () => window.removeEventListener("popstate", syncFromLocation);
   }, [syncFromLocation]);
 
   // Sync state changes to URL
   useEffect(() => {
-    if (!initialized || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
     const params = new URLSearchParams();
     for (const [groupLabel, value] of Object.entries(groupSelections)) {
@@ -82,7 +90,7 @@ export function useHomepageFilters() {
     const nextSearch = qs ? `?${qs}` : "";
     if (window.location.search === nextSearch) return;
     window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}`);
-  }, [groupSelections, searchQuery, initialized]);
+  }, [groupSelections, searchQuery]);
 
   const handleGroupChange = useCallback((groupLabel: string, value: string) => {
     setGroupSelections((prev) => ({

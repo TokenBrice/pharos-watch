@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -108,12 +108,9 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
     });
   }, [rows, sort]);
 
-  useEffect(() => {
-    setPage(0);
-  }, [rows.length]);
-
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const effectivePage = page >= totalPages ? 0 : page;
+  const paginated = sorted.slice(effectivePage * PAGE_SIZE, (effectivePage + 1) * PAGE_SIZE);
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
@@ -220,7 +217,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
             const dews = row.dews;
             const absDev = Math.abs(coin.currentDeviationBps ?? 0);
             const accent = rowAccentClass(row);
-            const rank = page * PAGE_SIZE + i + 1;
+            const rank = effectivePage * PAGE_SIZE + i + 1;
 
             return (
               <TableRow
@@ -325,13 +322,13 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
         </TableBody>
       </Table>
       <TablePagination
-        page={page}
+        page={effectivePage}
         totalPages={totalPages}
-        rangeStart={sorted.length === 0 ? 0 : page * PAGE_SIZE + 1}
-        rangeEnd={Math.min((page + 1) * PAGE_SIZE, sorted.length)}
+        rangeStart={sorted.length === 0 ? 0 : effectivePage * PAGE_SIZE + 1}
+        rangeEnd={Math.min((effectivePage + 1) * PAGE_SIZE, sorted.length)}
         total={sorted.length}
-        onPrevious={() => setPage((p) => Math.max(0, p - 1))}
-        onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+        onPrevious={() => setPage(Math.max(0, effectivePage - 1))}
+        onNext={() => setPage(Math.min(totalPages - 1, effectivePage + 1))}
         noun="stablecoins"
       />
     </div>

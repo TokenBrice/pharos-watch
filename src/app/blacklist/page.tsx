@@ -6,7 +6,6 @@ import { Search } from "lucide-react";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_20MIN } from "@/hooks/use-api-query";
 import { UsdsStatusCard } from "@/components/usds-status-card";
 import { EurcBlacklistCard } from "@/components/eurc-blacklist-card";
 import { BlacklistStats } from "@/components/blacklist-stats";
@@ -44,6 +43,11 @@ const DEFAULT_FILTERS: FilterState = {
   searchQuery: "",
 };
 
+function getInitialFilters(): FilterState {
+  if (typeof window === "undefined") return DEFAULT_FILTERS;
+  return parseFilters(window.location.search);
+}
+
 function parseFilters(search: string): FilterState {
   const params = new URLSearchParams(search);
   const rawStablecoin = params.get("stablecoin") ?? "all";
@@ -79,14 +83,22 @@ function buildQueryString(filters: FilterState): string {
 }
 
 function BlacklistPageInner() {
-  const { data, isLoading, isError, error, dataUpdatedAt } = useBlacklistEvents();
+  const { data, isLoading, error, dataUpdatedAt, refetch } = useBlacklistEvents();
   const events = data?.events;
 
-  const [stablecoinFilter, setStablecoinFilter] = useState<BlacklistStablecoin | "all">(DEFAULT_FILTERS.stablecoinFilter);
-  const [chainFilter, setChainFilter] = useState<string>(DEFAULT_FILTERS.chainFilter);
-  const [eventTypeFilter, setEventTypeFilter] = useState<BlacklistEventType | "all">(DEFAULT_FILTERS.eventTypeFilter);
-  const [page, setPage] = useState<number>(DEFAULT_FILTERS.page);
-  const [searchQuery, setSearchQuery] = useState<string>(DEFAULT_FILTERS.searchQuery);
+  const [stablecoinFilter, setStablecoinFilter] = useState<BlacklistStablecoin | "all">(
+    () => getInitialFilters().stablecoinFilter,
+  );
+  const [chainFilter, setChainFilter] = useState<string>(
+    () => getInitialFilters().chainFilter,
+  );
+  const [eventTypeFilter, setEventTypeFilter] = useState<BlacklistEventType | "all">(
+    () => getInitialFilters().eventTypeFilter,
+  );
+  const [page, setPage] = useState<number>(() => getInitialFilters().page);
+  const [searchQuery, setSearchQuery] = useState<string>(
+    () => getInitialFilters().searchQuery,
+  );
 
   const syncFiltersFromLocation = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -99,7 +111,6 @@ function BlacklistPageInner() {
   }, []);
 
   useEffect(() => {
-    syncFiltersFromLocation();
     window.addEventListener("popstate", syncFiltersFromLocation);
     return () => window.removeEventListener("popstate", syncFiltersFromLocation);
   }, [syncFiltersFromLocation]);
@@ -191,14 +202,16 @@ function BlacklistPageInner() {
         </p>
       </div>
 
-      {isError && (
-        <QueryErrorNotice error={error} hasData={!!events?.length} onRetry={() => window.location.reload()} />
-      )}
-      {!isError && (
-        <StaleDataBanner
-          queries={[{ label: "Blacklist", dataUpdatedAt, staleTime: CRON_20MIN }]}
-        />
-      )}
+      <QueryErrorNotice
+        error={error}
+        hasData={!!events?.length}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
+      <StaleDataBanner
+        queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!events?.length }]}
+      />
 
       <BlacklistStats events={events} isLoading={isLoading} />
 

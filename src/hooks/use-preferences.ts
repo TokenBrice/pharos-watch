@@ -7,31 +7,25 @@ import { useState, useEffect, useCallback } from "react";
  * SSR-safe: returns defaultValue during hydration, syncs after mount.
  */
 export function usePreference<T>(key: string, defaultValue: T): [T, (value: T | ((prev: T) => T)) => void, () => void] {
-  const [value, setValue] = useState<T>(defaultValue);
-  const [hydrated, setHydrated] = useState(false);
-
-  // Read from localStorage on mount
-  useEffect(() => {
+  const [value, setValue] = useState<T>(() => {
+    if (typeof window === "undefined") return defaultValue;
     try {
       const stored = localStorage.getItem(key);
-      if (stored !== null) {
-        setValue(JSON.parse(stored) as T);
-      }
+      return stored !== null ? (JSON.parse(stored) as T) : defaultValue;
     } catch {
-      // Ignore parse errors, keep default
+      return defaultValue;
     }
-    setHydrated(true);
-  }, [key]);
+  });
 
-  // Persist to localStorage on change (skip initial hydration)
+  // Persist to localStorage on change
   useEffect(() => {
-    if (!hydrated) return;
+    if (typeof window === "undefined") return;
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch {
       // Ignore quota errors
     }
-  }, [key, value, hydrated]);
+  }, [key, value]);
 
   const reset = useCallback(() => {
     setValue(defaultValue);

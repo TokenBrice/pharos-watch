@@ -70,15 +70,16 @@ interface DEWSDetailProps {
 
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const { data, isLoading } = useStressSignalDetail(stablecoinId);
+  const history = data?.history;
 
   const chartData = useMemo(() => {
-    if (!data?.history?.length) return [];
-    return data.history.map((h) => ({
+    if (!history?.length) return [];
+    return history.map((h) => ({
       ts: h.date * 1000,
       score: h.score,
       band: h.band,
     }));
-  }, [data?.history]);
+  }, [history]);
 
   if (isLoading) {
     return (

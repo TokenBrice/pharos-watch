@@ -19,7 +19,9 @@ export function isUrlFilterClearValue(value: string): boolean {
 }
 
 export function useUrlFilters() {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() => (
+    typeof window !== "undefined" ? window.location.search : ""
+  ));
 
   const syncFromLocation = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -27,7 +29,6 @@ export function useUrlFilters() {
   }, []);
 
   useEffect(() => {
-    syncFromLocation();
     window.addEventListener("popstate", syncFromLocation);
     return () => window.removeEventListener("popstate", syncFromLocation);
   }, [syncFromLocation]);

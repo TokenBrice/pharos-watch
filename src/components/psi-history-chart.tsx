@@ -107,10 +107,12 @@ export const PSI_EVENTS = [
 /* ─── Helpers ──────────────────────────────────────────────────── */
 
 function useIsMobile(breakpoint = 640) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches;
+  });
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
-    setIsMobile(mql.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
@@ -298,15 +300,17 @@ export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score:
 
 export function PsiHistoryChart({ excludeEvents }: { excludeEvents?: string[] } = {}) {
   const { data, isLoading } = useStabilityIndexDetail();
+  const history = data?.history;
+  const current = data?.current;
 
   const chartData = useMemo(() => {
-    if (!data?.current) return [];
-    const reversed = [...data.history].reverse();
+    if (!current || !history) return [];
+    const reversed = [...history].reverse();
     return [
       ...reversed.map((p) => ({ ts: p.date * 1000, score: p.score })),
-      { ts: data.current.computedAt * 1000, score: data.current.score },
+      { ts: current.computedAt * 1000, score: current.score },
     ];
-  }, [data]);
+  }, [current, history]);
 
   if (isLoading) {
     return (

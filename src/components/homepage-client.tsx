@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
@@ -20,7 +20,6 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
@@ -28,11 +27,32 @@ import { derivePegRates } from "@/lib/peg-rates";
 import type { PegSummaryCoin } from "@/lib/types";
 
 export function HomepageClient() {
-  const { data, isLoading, error, dataUpdatedAt } = useStablecoins();
+  const {
+    data,
+    isLoading,
+    error: pricesError,
+    dataUpdatedAt,
+    refetch: refetchPrices,
+  } = useStablecoins();
   const { data: logos } = useLogos();
-  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
-  const { data: dexLiquidity, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
-  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
+  const {
+    data: pegSummaryData,
+    dataUpdatedAt: pegUpdatedAt,
+    error: pegError,
+    refetch: refetchPeg,
+  } = usePegSummary();
+  const {
+    data: dexLiquidity,
+    dataUpdatedAt: liqUpdatedAt,
+    error: liquidityError,
+    refetch: refetchLiquidity,
+  } = useDexLiquidity();
+  const {
+    data: reportCardsData,
+    dataUpdatedAt: rcUpdatedAt,
+    error: reportCardsError,
+    refetch: refetchReportCards,
+  } = useReportCards();
   const metaById = TRACKED_META_BY_ID;
   const pegScores = useMemo(() => {
     const map = new Map<string, PegSummaryCoin>();
@@ -48,22 +68,31 @@ export function HomepageClient() {
   }, [reportCardsData]);
   const { rates: pegRates } = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
   const filters = useHomepageFilters();
+  const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
+  const handleRetry = useCallback(() => {
+    void Promise.allSettled([
+      refetchPrices(),
+      refetchPeg(),
+      refetchLiquidity(),
+      refetchReportCards(),
+    ]);
+  }, [refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards]);
 
   return (
     <div className="space-y-6">
-      {error && (
-        <QueryErrorNotice error={error} hasData={!!data?.peggedAssets?.length} onRetry={() => window.location.reload()} />
-      )}
-      {!error && (
-        <StaleDataBanner
-          queries={[
-            { label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN },
-            { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
-            { label: "Liquidity", dataUpdatedAt: liqUpdatedAt, staleTime: CRON_30MIN },
-            { label: "Report Cards", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
-          ]}
-        />
-      )}
+      <QueryErrorNotice
+        error={globalError}
+        hasData={!!data?.peggedAssets?.length}
+        onRetry={handleRetry}
+      />
+      <StaleDataBanner
+        queries={[
+          { preset: "stablecoins", dataUpdatedAt, error: pricesError, hasData: !!data?.peggedAssets?.length },
+          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummaryData?.coins?.length },
+          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: liquidityError, hasData: !!dexLiquidity },
+          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportCardsData?.cards?.length },
+        ]}
+      />
 
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />

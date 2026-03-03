@@ -214,6 +214,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       posMap.set(n.id, { x: n.x ?? WIDTH / 2, y: n.y ?? HEIGHT / 2 });
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- commit simulation output after each recompute.
     setPositions(posMap);
   }, [nodes, links]);
 

@@ -34,14 +34,12 @@ function useSidebar() {
 }
 
 function useExpanded(): SidebarState {
-  const [pinned, setPinned] = useState(true);
+  const [pinned, setPinned] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(STORAGE_KEY) !== "false";
+  });
   const [hovered, setHovered] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "false") setPinned(false);
-  }, []);
 
   const togglePin = useCallback(() => {
     setPinned((prev) => {

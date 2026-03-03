@@ -10,7 +10,6 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@/lib/psi-colors";
 import { formatCurrency } from "@/lib/format";
-import { CRON_24H } from "@/hooks/use-api-query";
 
 function tsToDateSlug(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);
@@ -33,7 +32,7 @@ function formatWireDate(ts: number): string {
 }
 
 export function DigestArchiveClient() {
-  const { data, isLoading, dataUpdatedAt, error } = useDigestArchive();
+  const { data, isLoading, dataUpdatedAt, error, refetch } = useDigestArchive();
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
 
   const monthOptions = useMemo(() => {
@@ -93,9 +92,15 @@ export function DigestArchiveClient() {
 
   return (
     <div>
-      <QueryErrorNotice error={error} hasData={!!data?.digests?.length} onRetry={() => window.location.reload()} />
+      <QueryErrorNotice
+        error={error}
+        hasData={!!data?.digests?.length}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
       <StaleDataBanner
-        queries={[{ label: "Digests", dataUpdatedAt, staleTime: CRON_24H }]}
+        queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length }]}
       />
 
       {/* Broadsheet: today's digest */}

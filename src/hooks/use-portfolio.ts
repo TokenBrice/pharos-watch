@@ -135,6 +135,29 @@ function saveToStorage(holdings: PortfolioHolding[]): void {
   }
 }
 
+function getInitialPortfolioState(): {
+  holdings: PortfolioHolding[];
+  isFromUrl: boolean;
+  initialized: boolean;
+} {
+  if (typeof window === "undefined") {
+    return { holdings: [], isFromUrl: false, initialized: false };
+  }
+  const urlParam = new URLSearchParams(window.location.search).get("p");
+  if (urlParam) {
+    return {
+      holdings: parseUrlParam(urlParam),
+      isFromUrl: true,
+      initialized: true,
+    };
+  }
+  return {
+    holdings: loadFromStorage(),
+    isFromUrl: false,
+    initialized: true,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers for reserve-based collateral breakdown
 // ---------------------------------------------------------------------------
@@ -413,23 +436,10 @@ function computeUpstreamExposure(
 // ---------------------------------------------------------------------------
 
 export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
-  // Start empty, then hydrate from URL or localStorage after mount.
-  const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
-  const [isFromUrl, setIsFromUrl] = useState(false);
-  const [initialized, setInitialized] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const urlParam = new URLSearchParams(window.location.search).get("p");
-    if (urlParam) {
-      setIsFromUrl(true);
-      setHoldings(parseUrlParam(urlParam));
-    } else {
-      setIsFromUrl(false);
-      setHoldings(loadFromStorage());
-    }
-    setInitialized(true);
-  }, []);
+  const [bootState] = useState(getInitialPortfolioState);
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>(bootState.holdings);
+  const [isFromUrl] = useState(bootState.isFromUrl);
+  const initialized = bootState.initialized;
 
   // Persist to localStorage when holdings change (only if NOT from URL)
   useEffect(() => {

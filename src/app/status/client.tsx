@@ -63,7 +63,7 @@ function formatInterval(seconds: number): string {
   return `${seconds / 3600}h`;
 }
 
-function CronCard({ job, cron }: {
+function CronCard({ job, cron, nowSeconds }: {
   job: string;
   cron: {
     lastRun: { startedAt: number; durationMs: number; status: string; error?: string; itemCount?: number } | null;
@@ -71,8 +71,8 @@ function CronCard({ job, cron }: {
     expectedIntervalSec: number;
     healthy: boolean;
   };
+  nowSeconds: number;
 }) {
-  const now = Math.floor(Date.now() / 1000);
   const borderColor = cron.healthy ? "border-green-500/30" : "border-red-500/30";
 
   return (
@@ -90,7 +90,7 @@ function CronCard({ job, cron }: {
               <Badge variant={cron.lastRun.status === "ok" ? "secondary" : "destructive"} className="text-xs">
                 {cron.lastRun.status}
               </Badge>
-              <span className="text-muted-foreground">{formatAge(now - cron.lastRun.startedAt)} ago</span>
+              <span className="text-muted-foreground">{formatAge(nowSeconds - cron.lastRun.startedAt)} ago</span>
               <span className="text-muted-foreground">({formatDuration(cron.lastRun.durationMs)})</span>
               {cron.lastRun.itemCount != null && (
                 <span className="text-muted-foreground">{cron.lastRun.itemCount} items</span>
@@ -236,16 +236,15 @@ function CacheFreshnessTable({ caches }: { caches: Record<string, { ageSeconds: 
 
 // --- Refresh Countdown ---
 
-function RefreshCountdown({ lastUpdated, onRefresh }: { lastUpdated: number; onRefresh: () => void }) {
-  const [now, setNow] = useState(Date.now());
+function RefreshCountdown({ onRefresh }: { onRefresh: () => void }) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setElapsedSeconds((prev) => prev + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const elapsed = Math.floor((now - lastUpdated) / 1000);
-  const secondsLeft = Math.max(0, 60 - elapsed);
+  const secondsLeft = Math.max(0, 60 - elapsedSeconds);
 
   return (
     <div className="flex items-center gap-2">
@@ -583,14 +582,10 @@ function AdminKeyForm({ onSubmit }: { onSubmit: (key: string) => void }) {
 // --- Main Page ---
 
 export default function StatusClient() {
-  const [adminKey, setAdminKey] = useState("");
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    if (stored) setAdminKey(stored);
-    setReady(true);
-  }, []);
+  const [adminKey, setAdminKey] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return sessionStorage.getItem(SESSION_KEY) ?? "";
+  });
 
   const handleKeySubmit = useCallback((key: string) => {
     sessionStorage.setItem(SESSION_KEY, key);
@@ -601,10 +596,6 @@ export default function StatusClient() {
     sessionStorage.removeItem(SESSION_KEY);
     setAdminKey("");
   }, []);
-
-  if (!ready) {
-    return <div className="py-20 text-center text-muted-foreground">Loading...</div>;
-  }
 
   if (!adminKey) {
     return <AdminKeyForm onSubmit={handleKeySubmit} />;
@@ -653,7 +644,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold tracking-tighter">Pharos System Status</h1>
         <div className="flex items-center gap-3">
-          <RefreshCountdown lastUpdated={lastUpdated} onRefresh={handleRefresh} />
+          <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
           <Button variant="outline" size="sm" onClick={onSignOut}>Sign out</Button>
         </div>
       </div>
@@ -681,7 +672,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         <h2 className="mb-3 text-xl font-semibold">Cron Jobs</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {Object.entries(data.crons).map(([job, cron]) => (
-            <CronCard key={job} job={job} cron={cron} />
+            <CronCard key={job} job={job} cron={cron} nowSeconds={data.timestamp} />
           ))}
         </div>
       </section>

@@ -119,14 +119,7 @@ const FEATURES = [
 const DISPLAY_COUNT = 6;
 
 export function FeatureHighlights() {
-  const selected = useMemo(() => {
-    const shuffled = [...FEATURES];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled.slice(0, DISPLAY_COUNT);
-  }, []);
+  const selected = useMemo(() => FEATURES.slice(0, DISPLAY_COUNT), []);
 
   return (
     <section>

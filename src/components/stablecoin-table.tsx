@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -296,14 +296,18 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
 
   const [feedbackCoin, setFeedbackCoin] = useState<{ id: string; name: string } | null>(null);
 
-  // Reset scroll when filters, search, or sort change
-  const [prev, setPrev] = useState({ filtered, sort });
-  if (prev.filtered !== filtered || prev.sort !== sort) {
-    setPrev({ filtered, sort });
-    scrollRef.current?.scrollTo({ top: 0 });
-  }
+  // Reset scroll when filters, search, or sort change.
+  const prevRef = useRef<{ filtered: typeof filtered; sort: typeof sort } | null>(null);
+  useEffect(() => {
+    const prev = prevRef.current;
+    if (prev && (prev.filtered !== filtered || prev.sort !== sort)) {
+      scrollRef.current?.scrollTo({ top: 0 });
+    }
+    prevRef.current = { filtered, sort };
+  }, [filtered, sort]);
 
   // Virtual scrolling
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual is intentional for large datasets.
   const virtualizer = useVirtualizer({
     count: sorted.length,
     getScrollElement: () => scrollRef.current,

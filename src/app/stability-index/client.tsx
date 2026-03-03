@@ -25,7 +25,6 @@ import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@/lib/psi-
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_15MIN } from "@/hooks/use-api-query";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
@@ -551,14 +550,16 @@ function ContributorsTable({
 /* ─── Main Client Component ─────────────────────────────────────── */
 
 export function StabilityIndexClient() {
-  const { data, isLoading, isError, error, dataUpdatedAt } = useStabilityIndexDetail();
+  const { data, isLoading, isError, error, dataUpdatedAt, refetch } = useStabilityIndexDetail();
+  const history = data?.history;
+  const current = data?.current;
 
   const daysInBand = useMemo(() => {
-    if (!data?.current || !data.history.length) return 0;
-    const currentBand = data.current.avg24hBand ?? data.current.band;
+    if (!current || !history?.length) return 0;
+    const currentBand = current.avg24hBand ?? current.band;
     // History is newest-first; count consecutive days with same band
     let count = 0;
-    for (const point of data.history) {
+    for (const point of history) {
       if (point.band === currentBand) {
         count++;
       } else {
@@ -567,20 +568,20 @@ export function StabilityIndexClient() {
     }
     // Add 1 for today (current)
     return count + 1;
-  }, [data]);
+  }, [current, history]);
 
   const chartData = useMemo(() => {
-    if (!data?.current) return [];
-    const reversed = [...data.history].reverse();
+    if (!current || !history) return [];
+    const reversed = [...history].reverse();
     return [
       ...reversed.map((p) => ({ ts: p.date * 1000, score: p.score })),
-      { ts: data.current.computedAt * 1000, score: data.current.score },
+      { ts: current.computedAt * 1000, score: current.score },
     ];
-  }, [data]);
+  }, [current, history]);
 
   const componentData = useMemo(() => {
-    if (!data?.current) return [];
-    const reversed = [...data.history].filter((p) => p.components).reverse();
+    if (!current || !history) return [];
+    const reversed = [...history].filter((p) => p.components).reverse();
     return [
       ...reversed.map((p) => ({
         ts: p.date * 1000,
@@ -590,14 +591,14 @@ export function StabilityIndexClient() {
         trend: p.components?.trend ?? 0,
       })),
       {
-        ts: data.current.computedAt * 1000,
-        severity: data.current.components.severity,
-        breadth: data.current.components.breadth,
-        stressBreadth: data.current.components.stressBreadth ?? 0,
-        trend: data.current.components.trend,
+        ts: current.computedAt * 1000,
+        severity: current.components.severity,
+        breadth: current.components.breadth,
+        stressBreadth: current.components.stressBreadth ?? 0,
+        trend: current.components.trend,
       },
     ];
-  }, [data]);
+  }, [current, history]);
 
   if (isLoading) {
     return (
@@ -634,7 +635,13 @@ export function StabilityIndexClient() {
   if (isError || (!isLoading && !data?.current)) {
     const uiError = error ?? new Error("Stability Index data is temporarily unavailable.");
     return (
-      <QueryErrorNotice error={uiError} hasData={false} onRetry={() => window.location.reload()} />
+      <QueryErrorNotice
+        error={uiError}
+        hasData={false}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
     );
   }
 
@@ -651,7 +658,7 @@ export function StabilityIndexClient() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <StaleDataBanner
-        queries={[{ label: "Stability Index", dataUpdatedAt, staleTime: CRON_15MIN }]}
+        queries={[{ preset: "stabilityIndex", dataUpdatedAt, error, hasData: !!data?.current }]}
       />
       {/* Hero — score + components + history stats in one card */}
       <Card className="rounded-xl">

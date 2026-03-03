@@ -75,5 +75,8 @@ export function useSupplyHistory(id: string) {
     data,
     isLoading: query.isLoading,
     isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+    dataUpdatedAt: query.dataUpdatedAt,
   };
 }

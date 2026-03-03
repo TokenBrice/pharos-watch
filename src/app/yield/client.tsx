@@ -8,12 +8,11 @@ import { useYieldRankings } from "@/hooks/use-yield-rankings";
 import { useLogos } from "@/hooks/use-logos";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_30MIN } from "@/hooks/use-api-query";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 
 export function YieldClient() {
-  const { data, isLoading, isError, error, dataUpdatedAt } = useYieldRankings();
+  const { data, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -76,14 +75,16 @@ export function YieldClient() {
 
   return (
     <div className="space-y-6">
-      {isError && (
-        <QueryErrorNotice error={error} hasData={!!data} onRetry={() => window.location.reload()} />
-      )}
-      {!isError && (
-        <StaleDataBanner
-          queries={[{ label: "Yield Rankings", dataUpdatedAt, staleTime: CRON_30MIN }]}
-        />
-      )}
+      <QueryErrorNotice
+        error={error}
+        hasData={!!data}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
+      <StaleDataBanner
+        queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data }]}
+      />
 
       {/* Summary stat cards */}
       {stats && (

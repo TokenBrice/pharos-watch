@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, ArrowLeftRight, Flag } from "lucide-react";
@@ -37,7 +37,8 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { DEWSDetail } from "@/components/dews-detail";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_15MIN, CRON_30MIN } from "@/hooks/use-api-query";
+
+const SESSION_NOW_MS = Date.now();
 
 const DETAIL_SECTIONS = [
   { id: "report-card", label: "Safety Score" },
@@ -64,11 +65,38 @@ interface StablecoinDetailClientProps {
 
 export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: StablecoinDetailClientProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const { data: supplyData, isLoading: supplyLoading, isError: supplyError } = useSupplyHistory(id);
-  const { data: listData, isLoading: listLoading, isError: listError, dataUpdatedAt: listUpdatedAt } = useStablecoins();
-  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
-  const { data: liquidityMap, dataUpdatedAt: liqUpdatedAt } = useDexLiquidity();
-  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt } = useReportCards();
+  const {
+    data: supplyData,
+    isLoading: supplyLoading,
+    error: supplyError,
+    refetch: refetchSupply,
+  } = useSupplyHistory(id);
+  const {
+    data: listData,
+    isLoading: listLoading,
+    isError: isListError,
+    error: listError,
+    dataUpdatedAt: listUpdatedAt,
+    refetch: refetchList,
+  } = useStablecoins();
+  const {
+    data: pegSummaryData,
+    dataUpdatedAt: pegUpdatedAt,
+    error: pegError,
+    refetch: refetchPeg,
+  } = usePegSummary();
+  const {
+    data: liquidityMap,
+    dataUpdatedAt: liqUpdatedAt,
+    error: liquidityError,
+    refetch: refetchLiquidity,
+  } = useDexLiquidity();
+  const {
+    data: reportCardsData,
+    dataUpdatedAt: rcUpdatedAt,
+    error: reportCardsError,
+    refetch: refetchReportCards,
+  } = useReportCards();
   const reportCard = reportCardsData?.cards.find((c) => c.id === id);
   const { data: flowsData, isLoading: isFlowsLoading } = useMintBurnFlows();
   const hasFlows = isFlowsLoading || !!flowsData?.coins.find((c) => c.stablecoinId === id);
@@ -78,6 +106,15 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   const isNavToken = coin.flags.navToken ?? false;
 
   const isLoading = supplyLoading || listLoading;
+  const handleRetryAll = useCallback(() => {
+    void Promise.allSettled([
+      refetchSupply(),
+      refetchList(),
+      refetchPeg(),
+      refetchLiquidity(),
+      refetchReportCards(),
+    ]);
+  }, [refetchLiquidity, refetchList, refetchPeg, refetchReportCards, refetchSupply]);
 
   if (isLoading) {
     return (
@@ -88,13 +125,13 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
-  if (listError) {
+  if (isListError) {
     return (
       <div className="space-y-4">
         <Button variant="ghost" asChild>
           <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
-        <QueryErrorNotice error={listError} hasData={false} onRetry={() => window.location.reload()} />
+        <QueryErrorNotice error={listError} hasData={false} onRetry={handleRetryAll} />
       </div>
     );
   }
@@ -143,7 +180,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   // Compute 90d mcap from supply history for change display
   const prev90d = (() => {
     if (supplyHistory.length === 0) return 0;
-    const now = Date.now();
+    const now = SESSION_NOW_MS;
     const target = now - 90 * 24 * 60 * 60 * 1000;
     let closest = supplyHistory[0];
     for (const entry of supplyHistory) {
@@ -160,15 +197,15 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
   return (
     <div className="space-y-6">
       {supplyError && (
-        <QueryErrorNotice error={supplyError} hasData={!!supplyData?.length} onRetry={() => window.location.reload()} />
+        <QueryErrorNotice error={supplyError} hasData={!!supplyData?.length} onRetry={handleRetryAll} />
       )}
 
       <StaleDataBanner
         queries={[
-          { label: "Prices", dataUpdatedAt: listUpdatedAt, staleTime: CRON_15MIN },
-          { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
-          { label: "Liquidity", dataUpdatedAt: liqUpdatedAt, staleTime: CRON_30MIN },
-          { label: "Report Cards", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
+          { preset: "stablecoins", dataUpdatedAt: listUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length },
+          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummaryData?.coins?.length },
+          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: liquidityError, hasData: !!liquidityMap },
+          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportCardsData?.cards?.length },
         ]}
       />
 

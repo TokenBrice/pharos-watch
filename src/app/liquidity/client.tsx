@@ -10,7 +10,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_30MIN } from "@/hooks/use-api-query";
 import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
@@ -30,7 +29,7 @@ const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
 ];
 
 export function LiquidityClient() {
-  const { data: liquidityMap, isLoading, isError, error, dataUpdatedAt } = useDexLiquidity();
+  const { data: liquidityMap, isLoading, error, dataUpdatedAt, refetch } = useDexLiquidity();
   const { data: logos } = useLogos();
   const { getParam, setParam } = useUrlFilters();
   const pegFilter = (getParam("peg", "all")) as PegCurrency | "all";
@@ -114,6 +113,9 @@ export function LiquidityClient() {
   const handleRowClick = useCallback((id: string) => {
     router.push(`/stablecoin/${id}`);
   }, [router]);
+  const handleRetry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -133,14 +135,10 @@ export function LiquidityClient() {
 
   return (
     <div className="space-y-6">
-      {isError && (
-        <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={() => window.location.reload()} />
-      )}
-      {!isError && (
-        <StaleDataBanner
-          queries={[{ label: "Liquidity", dataUpdatedAt, staleTime: CRON_30MIN }]}
-        />
-      )}
+      <QueryErrorNotice error={error} hasData={!!liquidityMap} onRetry={handleRetry} />
+      <StaleDataBanner
+        queries={[{ preset: "dexLiquidity", dataUpdatedAt, error, hasData: !!liquidityMap }]}
+      />
 
       {summaryStats && liquidityMap && (
         <LiquidityStats stats={summaryStats} liquidityMap={liquidityMap} />

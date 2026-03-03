@@ -349,12 +349,6 @@ function DEWSRadar({
     return () => mql.removeEventListener("change", sync);
   }, []);
 
-  useEffect(() => {
-    if (!isFinePointer) {
-      setHoveredId(null);
-    }
-  }, [isFinePointer]);
-
   const hex = THREAT_BAND_HEX[highest];
   const dur = sweepDuration(highest);
 
@@ -445,10 +439,7 @@ function DEWSRadar({
 // DEWSLegend
 // ---------------------------------------------------------------------------
 
-function DEWSLegend({ updatedAt }: { updatedAt: number }) {
-  const minsAgo = Math.max(0, Math.round((Date.now() - updatedAt) / 60_000));
-  const ageLabel = minsAgo <= 1 ? "just now" : `${minsAgo}m ago`;
-
+function DEWSLegend({ updatedAtLabel }: { updatedAtLabel: string }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 border-t">
       {[...RING_BANDS].reverse().map((band) => (
@@ -463,7 +454,7 @@ function DEWSLegend({ updatedAt }: { updatedAt: number }) {
         </div>
       ))}
       <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums font-mono">
-        Updated {ageLabel}
+        Updated {updatedAtLabel}
       </span>
     </div>
   );
@@ -500,6 +491,13 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
   const elevated = computePositions(data.signals, logos);
   const calmDots = computeCalmDots(data.signals);
   const highest = highestBand(elevated.map((c) => c.band));
+  const updatedAtLabel = new Date(data.updatedAt * 1000).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  });
 
   return (
     <Card>
@@ -521,7 +519,7 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
           totalCount={totalCount}
           onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
         />
-        <DEWSLegend updatedAt={data.updatedAt * 1000} />
+        <DEWSLegend updatedAtLabel={updatedAtLabel} />
       </CardContent>
     </Card>
   );

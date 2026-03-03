@@ -15,7 +15,6 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { CRON_15MIN } from "@/hooks/use-api-query";
 import { DepegTrackerStats } from "@/components/depeg-tracker-stats";
 import { DepegTrackerTable } from "@/components/depeg-tracker-table";
 import { DEWSSummary } from "@/components/dews-summary";
@@ -41,9 +40,25 @@ const TYPE_FILTERS: { value: GovernanceType | "all"; label: string }[] = [
 ];
 
 export function DepegClient() {
-  const { data: pegData, isLoading: isPegLoading, isError: isPegError, error: pegError, dataUpdatedAt: pegUpdatedAt } = usePegSummary();
-  const { data: dewsData, dataUpdatedAt: dewsUpdatedAt } = useStressSignals();
-  const { data: eventsData, dataUpdatedAt: eventsUpdatedAt } = useDepegEvents();
+  const {
+    data: pegData,
+    isLoading: isPegLoading,
+    error: pegError,
+    dataUpdatedAt: pegUpdatedAt,
+    refetch: refetchPeg,
+  } = usePegSummary();
+  const {
+    data: dewsData,
+    error: dewsError,
+    dataUpdatedAt: dewsUpdatedAt,
+    refetch: refetchDews,
+  } = useStressSignals();
+  const {
+    data: eventsData,
+    error: eventsError,
+    dataUpdatedAt: eventsUpdatedAt,
+    refetch: refetchEvents,
+  } = useDepegEvents();
   const { data: logos } = useLogos();
   const router = useRouter();
 
@@ -96,6 +111,10 @@ export function DepegClient() {
   const handleRowClick = useCallback((id: string) => {
     router.push(`/stablecoin/${id}`);
   }, [router]);
+  const globalError = pegError ?? dewsError ?? eventsError;
+  const handleRetry = useCallback(() => {
+    void Promise.allSettled([refetchPeg(), refetchDews(), refetchEvents()]);
+  }, [refetchDews, refetchEvents, refetchPeg]);
 
   // Loading state
   if (isPegLoading) {
@@ -120,19 +139,15 @@ export function DepegClient() {
   }
 
   return (
-    <div className="space-y-6">
-      {isPegError && (
-        <QueryErrorNotice error={pegError} hasData={!!pegData?.coins?.length} onRetry={() => window.location.reload()} />
-      )}
-      {!isPegError && (
-        <StaleDataBanner
-          queries={[
-            { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
-            { label: "DEWS", dataUpdatedAt: dewsUpdatedAt, staleTime: CRON_15MIN },
-            { label: "Depeg Events", dataUpdatedAt: eventsUpdatedAt, staleTime: CRON_15MIN },
-          ]}
-        />
-      )}
+      <div className="space-y-6">
+      <QueryErrorNotice error={globalError} hasData={!!pegData?.coins?.length} onRetry={handleRetry} />
+      <StaleDataBanner
+        queries={[
+          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length },
+          { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals },
+          { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: !!eventsData?.events?.length },
+        ]}
+      />
 
       {/* DEWS radar + stat boxes — 2-column on desktop */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">

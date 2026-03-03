@@ -13,7 +13,7 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import { derivePegRates, getPegReference } from "@/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@/lib/format";
 import { apiFetch } from "@/lib/api";
-import { CRON_1H, CRON_15MIN, CRON_30MIN, CRON_24H } from "@/hooks/use-api-query";
+import { CRON_1H } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
 import {
@@ -217,11 +217,36 @@ export function CompareClient() {
   const disabledIds = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   // Global data hooks
-  const { data: listData, dataUpdatedAt, error: listError } = useStablecoins();
-  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt, error: pegError } = usePegSummary();
-  const { data: bluechipData, dataUpdatedAt: bcUpdatedAt, error: bluechipError } = useBluechipRatings();
-  const { data: dexData, dataUpdatedAt: liqUpdatedAt, error: dexError } = useDexLiquidity();
-  const { data: reportCardsData, dataUpdatedAt: rcUpdatedAt, error: reportCardsError } = useReportCards();
+  const {
+    data: listData,
+    dataUpdatedAt,
+    error: listError,
+    refetch: refetchList,
+  } = useStablecoins();
+  const {
+    data: pegSummary,
+    dataUpdatedAt: pegUpdatedAt,
+    error: pegError,
+    refetch: refetchPeg,
+  } = usePegSummary();
+  const {
+    data: bluechipData,
+    dataUpdatedAt: bcUpdatedAt,
+    error: bluechipError,
+    refetch: refetchBluechip,
+  } = useBluechipRatings();
+  const {
+    data: dexData,
+    dataUpdatedAt: liqUpdatedAt,
+    error: dexError,
+    refetch: refetchLiquidity,
+  } = useDexLiquidity();
+  const {
+    data: reportCardsData,
+    dataUpdatedAt: rcUpdatedAt,
+    error: reportCardsError,
+    refetch: refetchReportCards,
+  } = useReportCards();
   const globalError = listError ?? pegError ?? bluechipError ?? dexError ?? reportCardsError;
 
   const cardMap = useMemo(() => {
@@ -311,6 +336,23 @@ export function CompareClient() {
   }, [selectedIds, detailQueries, CHART_COLORS]);
 
   const detailLoading = detailQueries.some((q) => q.isLoading);
+  const handleRetry = useCallback(() => {
+    void Promise.allSettled([
+      refetchList(),
+      refetchPeg(),
+      refetchBluechip(),
+      refetchLiquidity(),
+      refetchReportCards(),
+      ...detailQueries.map((q) => q.refetch()),
+    ]);
+  }, [
+    detailQueries,
+    refetchBluechip,
+    refetchLiquidity,
+    refetchList,
+    refetchPeg,
+    refetchReportCards,
+  ]);
 
   const handleSelect = (slotIndex: number, coin: CoinOption) => {
     setSelectedIds((prev) => {
@@ -514,15 +556,15 @@ export function CompareClient() {
       <QueryErrorNotice
         error={globalError}
         hasData={!!listData?.peggedAssets?.length}
-        onRetry={() => window.location.reload()}
+        onRetry={handleRetry}
       />
       <StaleDataBanner
         queries={[
-          { label: "Prices", dataUpdatedAt, staleTime: CRON_15MIN },
-          { label: "Peg Data", dataUpdatedAt: pegUpdatedAt, staleTime: CRON_15MIN },
-          { label: "Liquidity", dataUpdatedAt: liqUpdatedAt, staleTime: CRON_30MIN },
-          { label: "Report Cards", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
-          { label: "Bluechip", dataUpdatedAt: bcUpdatedAt, staleTime: CRON_24H },
+          { preset: "stablecoins", dataUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length },
+          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummary?.coins?.length },
+          { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: dexError, hasData: !!dexData },
+          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportCardsData?.cards?.length },
+          { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData },
         ]}
       />
       {selectedIds.length >= 2 && (

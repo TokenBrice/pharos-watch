@@ -9,6 +9,8 @@ import { TRACKED_IDS } from "@/lib/stablecoins";
 import { GOVERNANCE_TIER_COLORS, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
 import type { StablecoinData, PegSummaryCoin, PegSummaryStats, BlacklistEvent, GovernanceType } from "@/lib/types";
 
+const SESSION_NOW_SEC = Math.floor(Date.now() / 1000);
+
 interface MarketPulseProps {
   data: StablecoinData[] | undefined;
   pegSummary?: { coins: PegSummaryCoin[]; summary: PegSummaryStats | null };
@@ -39,7 +41,7 @@ function KeyNumbers({
     const gov = computeGovernanceBreakdown(trackedData);
 
     // 24h freezes
-    const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
+    const oneDayAgo = SESSION_NOW_SEC - 86400;
     const freezes24h = blacklistEvents?.events
       ? blacklistEvents.events.filter((e) => e.timestamp > oneDayAgo).length
       : 0;
@@ -273,13 +275,12 @@ function ActivityTicker({
 
     // Active depegs
     if (pegSummary?.coins) {
-      const nowSec = Math.floor(Date.now() / 1000);
       for (const coin of pegSummary.coins) {
         if (!coin.activeDepeg) continue;
         const bps = coin.currentDeviationBps ?? 0;
         entries.push({
           text: `${coin.symbol} depegged ${bps >= 0 ? "+" : ""}${bps}bps \u2014 active`,
-          timestamp: nowSec,
+          timestamp: SESSION_NOW_SEC,
         });
       }
     }

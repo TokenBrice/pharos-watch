@@ -21,7 +21,6 @@ import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_15MIN } from "@/hooks/use-api-query";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
@@ -78,14 +77,9 @@ function HoldingRow({
 }) {
   const meta = TRACKED_META_BY_ID.get(coinId);
   const [editing, setEditing] = useState(false);
-  const [rawValue, setRawValue] = useState(usdFormatterCompact.format(amount));
+  const [rawValue, setRawValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!editing) {
-      setRawValue(amount > 0 ? usdFormatterCompact.format(amount) : "");
-    }
-  }, [amount, editing]);
+  const inputValue = editing ? rawValue : amount > 0 ? usdFormatterCompact.format(amount) : "";
 
   const handleFocus = useCallback(() => {
     setEditing(true);
@@ -125,7 +119,7 @@ function HoldingRow({
             ref={inputRef}
             type="text"
             inputMode="decimal"
-            value={rawValue}
+            value={inputValue}
             onFocus={handleFocus}
             onBlur={handleBlur}
             onChange={handleChange}
@@ -204,7 +198,13 @@ function ExposureBar({
 // ---------------------------------------------------------------------------
 
 export function PortfolioClient() {
-  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt, error: reportCardsError } = useReportCards();
+  const {
+    data: reportData,
+    isLoading: isLoadingCards,
+    dataUpdatedAt: rcUpdatedAt,
+    error: reportCardsError,
+    refetch: refetchReportCards,
+  } = useReportCards();
   const { data: logos } = useLogos();
   const [toast, setToast] = useState<string | null>(null);
   const [showUpstreamDetail, setShowUpstreamDetail] = useState(false);
@@ -335,10 +335,19 @@ export function PortfolioClient() {
       <QueryErrorNotice
         error={reportCardsError}
         hasData={!!reportData?.cards?.length}
-        onRetry={() => window.location.reload()}
+        onRetry={() => {
+          void refetchReportCards();
+        }}
       />
       <StaleDataBanner
-        queries={[{ label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN }]}
+        queries={[
+          {
+            preset: "reportCards",
+            dataUpdatedAt: rcUpdatedAt,
+            error: reportCardsError,
+            hasData: !!reportData?.cards?.length,
+          },
+        ]}
       />
       {/* Holdings editor */}
       <Card>

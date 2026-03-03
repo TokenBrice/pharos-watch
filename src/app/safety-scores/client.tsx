@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,7 +18,6 @@ import type { ReportCard, DimensionKey } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_15MIN } from "@/hooks/use-api-query";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -97,10 +96,24 @@ function getSortScore(card: ReportCard, key: SortKey, mcapMap: Map<string, numbe
 // ---------------------------------------------------------------------------
 
 export function ReportCardsClient() {
-  const { data: reportData, isLoading: isLoadingCards, dataUpdatedAt: rcUpdatedAt, error: reportCardsError } = useReportCards();
-  const { data: stablecoinsData, dataUpdatedAt: pricesUpdatedAt, error: pricesError } = useStablecoins();
+  const {
+    data: reportData,
+    isLoading: isLoadingCards,
+    dataUpdatedAt: rcUpdatedAt,
+    error: reportCardsError,
+    refetch: refetchReportCards,
+  } = useReportCards();
+  const {
+    data: stablecoinsData,
+    dataUpdatedAt: pricesUpdatedAt,
+    error: pricesError,
+    refetch: refetchPrices,
+  } = useStablecoins();
   const { data: logos } = useLogos();
   const globalError = reportCardsError ?? pricesError;
+  const handleRetry = useCallback(() => {
+    void Promise.allSettled([refetchReportCards(), refetchPrices()]);
+  }, [refetchPrices, refetchReportCards]);
 
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("overall");
@@ -228,12 +241,12 @@ export function ReportCardsClient() {
       <QueryErrorNotice
         error={globalError}
         hasData={!!reportData?.cards?.length || !!stablecoinsData?.peggedAssets?.length}
-        onRetry={() => window.location.reload()}
+        onRetry={handleRetry}
       />
       <StaleDataBanner
         queries={[
-          { label: "Grades", dataUpdatedAt: rcUpdatedAt, staleTime: CRON_15MIN },
-          { label: "Prices", dataUpdatedAt: pricesUpdatedAt, staleTime: CRON_15MIN },
+          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportData?.cards?.length },
+          { preset: "stablecoins", dataUpdatedAt: pricesUpdatedAt, error: pricesError, hasData: !!stablecoinsData?.peggedAssets?.length },
         ]}
       />
       {/* Grade distribution bar */}

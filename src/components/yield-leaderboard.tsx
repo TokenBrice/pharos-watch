@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -80,12 +80,9 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
     });
   }, [rankings, sort]);
 
-  useEffect(() => {
-    setPage(0);
-  }, [rankings.length]);
-
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const effectivePage = page >= totalPages ? 0 : page;
+  const paginated = sorted.slice(effectivePage * PAGE_SIZE, (effectivePage + 1) * PAGE_SIZE);
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
@@ -168,7 +165,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 tabIndex={0}
               >
                 <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
-                  {page * PAGE_SIZE + index + 1}
+                  {effectivePage * PAGE_SIZE + index + 1}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -256,13 +253,13 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
       </Table>
       {sorted.length > 0 && (
         <TablePagination
-          page={page}
+          page={effectivePage}
           totalPages={totalPages}
-          rangeStart={sorted.length === 0 ? 0 : page * PAGE_SIZE + 1}
-          rangeEnd={Math.min((page + 1) * PAGE_SIZE, sorted.length)}
+          rangeStart={sorted.length === 0 ? 0 : effectivePage * PAGE_SIZE + 1}
+          rangeEnd={Math.min((effectivePage + 1) * PAGE_SIZE, sorted.length)}
           total={sorted.length}
-          onPrevious={() => setPage((p) => Math.max(0, p - 1))}
-          onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          onPrevious={() => setPage(Math.max(0, effectivePage - 1))}
+          onNext={() => setPage(Math.min(totalPages - 1, effectivePage + 1))}
           noun="coins"
         />
       )}

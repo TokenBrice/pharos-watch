@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { CRON_20MIN } from "@/hooks/use-api-query";
 import { FlowGauge } from "@/components/flow-gauge";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
@@ -20,7 +19,7 @@ const TIME_RANGES = [
 
 function FlowsPageInner() {
   const [hours, setHours] = useState(24);
-  const { data, isLoading, isError, error, dataUpdatedAt } =
+  const { data, isLoading, error, dataUpdatedAt, refetch } =
     useMintBurnFlows(hours);
 
   const gauge = data?.gauge;
@@ -55,16 +54,18 @@ function FlowsPageInner() {
       </div>
 
       {/* Error / stale banner */}
-      {isError && (
-        <QueryErrorNotice error={error} hasData={!!data} onRetry={() => window.location.reload()} />
-      )}
-      {!isError && (
-        <StaleDataBanner
-          queries={[
-            { label: "Mint/Burn Flows", dataUpdatedAt, staleTime: CRON_20MIN },
-          ]}
-        />
-      )}
+      <QueryErrorNotice
+        error={error}
+        hasData={!!data}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
+      <StaleDataBanner
+        queries={[
+          { preset: "mintBurnFlows", dataUpdatedAt, error, hasData: !!data },
+        ]}
+      />
 
       {/* Section 1: Bank Run Gauge (hero) */}
       <section aria-labelledby="gauge-heading">

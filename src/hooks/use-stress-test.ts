@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { computeStressedGrades, GRADE_THRESHOLDS } from "@/lib/report-cards";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import type {
@@ -103,6 +103,32 @@ function getDowngradeOptions(currentGrade: ReportCardGrade): ReportCardGrade[] {
   return gradeList.slice(idx + 1);
 }
 
+function parseInitialStressSelection(): { coinId: string | null; grade: ReportCardGrade | null } {
+  if (typeof window === "undefined") {
+    return { coinId: null, grade: null };
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const stressParam = searchParams.get("stress");
+  if (!stressParam) {
+    return { coinId: null, grade: null };
+  }
+
+  const coinId = symbolToId.get(stressParam.toLowerCase());
+  if (!coinId) {
+    return { coinId: null, grade: null };
+  }
+
+  const gradeParam = searchParams.get("grade");
+  if (!gradeParam) {
+    return { coinId, grade: null };
+  }
+
+  const normalizedGrade = gradeParam.toUpperCase();
+  const validGrade = GRADE_THRESHOLDS.find((t) => t.grade === normalizedGrade);
+  return { coinId, grade: validGrade?.grade ?? null };
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -111,35 +137,8 @@ export function useStressTest(
   reportData: ReportCardsResponse | undefined,
   mcapMap?: Map<string, number>,
 ): StressTestState {
-  const [targetCoinId, setTargetCoinId] = useState<string | null>(null);
-  const [targetGrade, setTargetGrade] = useState<ReportCardGrade | null>(null);
-  const [initialized, setInitialized] = useState(false);
-
-  // --- URL init: read ?stress=usdc&grade=D on mount ---
-  useEffect(() => {
-    if (initialized || typeof window === "undefined") return;
-    setInitialized(true);
-
-    const searchParams = new URLSearchParams(window.location.search);
-    const stressParam = searchParams.get("stress");
-    const gradeParam = searchParams.get("grade");
-    if (!stressParam) return;
-
-    const coinId = symbolToId.get(stressParam.toLowerCase());
-    if (!coinId) return;
-
-    setTargetCoinId(coinId);
-
-    if (gradeParam) {
-      // Validate grade param against known grades
-      const validGrade = GRADE_THRESHOLDS.find(
-        (t) => t.grade === gradeParam.toUpperCase() || t.grade === gradeParam,
-      );
-      if (validGrade) {
-        setTargetGrade(validGrade.grade);
-      }
-    }
-  }, [initialized]);
+  const [targetCoinId, setTargetCoinId] = useState<string | null>(() => parseInitialStressSelection().coinId);
+  const [targetGrade, setTargetGrade] = useState<ReportCardGrade | null>(() => parseInitialStressSelection().grade);
 
   // --- Card lookup ---
   const cardMap = useMemo(() => {
