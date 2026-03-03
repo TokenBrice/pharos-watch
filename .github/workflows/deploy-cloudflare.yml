@@ -51,6 +51,7 @@ jobs:
       - run: npm run build
         env:
           NEXT_PUBLIC_API_BASE: ${{ vars.API_BASE_URL }}
+      - run: npm run seo:check
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
