@@ -3711,6 +3711,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "rwa",
     custodyModel: "institutional",
     governanceQuality: "single-entity",
+    reserves: [
+      // Illustrative example allocation from https://docs.apyx.fi/solution-overview/example-collateral-allocation
+      // Actual composition rebalances dynamically. No live per-asset breakdown is publicly available.
+      { name: "STRC (Strategy preferred equity, BTC-linked)", pct: 40, risk: "high" },
+      { name: "BMNR preferred equity (ETH-linked)", pct: 15, risk: "high" },
+      { name: "SATA (Strive preferred equity, BTC-linked)", pct: 10, risk: "high" },
+      { name: "DFDV preferred equity (SOL-linked)", pct: 10, risk: "high" },
+      { name: "U.S. Treasury Bills (liquidity buffer)", pct: 25, risk: "low" },
+    ],
   }),
 ];
 
