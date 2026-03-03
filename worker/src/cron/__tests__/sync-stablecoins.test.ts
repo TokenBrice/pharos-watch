@@ -408,4 +408,119 @@ describe("syncStablecoins", () => {
     expect(normalized?.circulatingPrevWeek).toEqual({});
     expect(normalized?.circulatingPrevMonth).toEqual({});
   });
+
+  it("flags staleness warning metadata when prices are nearly identical to previous cache", async () => {
+    const dlData = makeDlResponse(60);
+    const previousPayload = JSON.stringify({
+      peggedAssets: dlData.peggedAssets.map((a) => ({ id: a.id, price: a.price })),
+    });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [{ value: previousPayload, updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) }],
+        first: { value: previousPayload, updated_at: Math.floor(Date.now() / 1000) - (8 * 3600) },
+      },
+      { match: "supply_history", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "cache", rows: [] },
+    ]);
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.stalenessWarning).toBe(true);
+  });
+
+  it("fills missing circulatingPrev buckets from supply_history snapshots", async () => {
+    const dlData = makeDlResponse(60);
+    const target = dlData.peggedAssets[0] as unknown as Record<string, unknown>;
+    target.circulatingPrevDay = null;
+    target.circulatingPrevWeek = null;
+    target.circulatingPrevMonth = null;
+    target.circulating = { peggedUSD: 1_000_000 };
+
+    const now = new Date();
+    const utcMidnight = (daysAgo: number) => {
+      const d = new Date(now);
+      d.setUTCDate(d.getUTCDate() - daysAgo);
+      return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000);
+    };
+    const db = mockD1([
+      {
+        match: "supply_history",
+        rows: [
+          { stablecoin_id: "1", snapshot_date: utcMidnight(1), circulating_usd: 900_000 },
+          { stablecoin_id: "1", snapshot_date: utcMidnight(7), circulating_usd: 890_000 },
+          { stablecoin_id: "1", snapshot_date: utcMidnight(30), circulating_usd: 880_000 },
+        ],
+      },
+      { match: "cache", rows: [] },
+      { match: "price_cache", rows: [] },
+      { match: "circuit", rows: [] },
+    ]);
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "1");
+    expect(normalized?.circulatingPrevDay).toEqual({ peggedUSD: 900_000 });
+    expect(normalized?.circulatingPrevWeek).toEqual({ peggedUSD: 890_000 });
+    expect(normalized?.circulatingPrevMonth).toEqual({ peggedUSD: 880_000 });
+  });
+
+  it("applies recent price_cache fallback when asset price remains missing", async () => {
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[0].price = 0;
+    (dlData.peggedAssets[0] as unknown as Record<string, unknown>).priceConfidence = null;
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "SELECT asset_id, price, updated_at FROM price_cache",
+        rows: [{ asset_id: "1", price: 0.999, updated_at: nowSec - 60 }],
+      },
+      { match: "cache", rows: [] },
+      { match: "supply_history", rows: [] },
+      { match: "circuit", rows: [] },
+      { match: "price_cache", rows: [] },
+    ]);
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "1");
+    expect(normalized?.price).toBe(0.999);
+  });
 });

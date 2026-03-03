@@ -15,6 +15,7 @@ npm test -- --coverage # Run tests with V8 coverage report
 npm run test:critical-contracts # Critical endpoint contract suite
 npm run test:invariants # Critical numerical/schema invariant suite
 npm run coverage:critical # Full coverage + critical-path line-coverage gate
+npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints
 npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check (Playwright CLI)
 ```
@@ -23,11 +24,11 @@ npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke che
 
 Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys now run in five jobs:
 
+For worktree merge workflow and hook setup, see `docs/deployment-process.md`.
+
 1. `validate` (runs before any deployment):
    - `npm run lint`
    - `npm test`
-   - `npm run test:critical-contracts`
-   - `npm run test:invariants`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
 2. `deploy-worker` (needs `validate`):
@@ -259,6 +260,7 @@ In addition to the global 50% line threshold, CI enforces a critical-path gate v
 - Runs coverage for the critical suites only (contract + invariant tests)
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 35%)
+- For touched critical files, also enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 
 Gate script: `scripts/check-critical-coverage.mjs`
 
@@ -277,6 +279,7 @@ Current critical file set:
 
 - `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus router mapping tests to guarantee these paths are wired in `worker/src/router.ts`.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
+- `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live homepage and fails on the `Failed to load data` outage state.
 
