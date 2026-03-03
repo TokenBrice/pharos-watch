@@ -31,14 +31,14 @@ function PipelineSources() {
 export const metadata: Metadata = {
   title: "About Pharos: Shining a Light on Every Peg",
   description:
-    "About Pharos, an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+    "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
   alternates: {
     canonical: "/about/",
   },
   openGraph: {
     title: "About Pharos: Shining a Light on Every Peg",
     description:
-      "About Pharos, an open stablecoin analytics dashboard by TokenBrice. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+      "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
   },
 };
@@ -59,7 +59,7 @@ export default function AboutPage() {
                 name: "Why does Pharos exist?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Pharos is a project by TokenBrice and Claude. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+                  text: "Pharos is a project by TokenBrice, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
                 },
               },
               {
@@ -124,6 +124,13 @@ export default function AboutPage() {
               height={80}
               className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
             />
+            <Image
+              src="/codex.svg"
+              alt="Codex"
+              width={80}
+              height={80}
+              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
+            />
           </div>
           <div className="space-y-3">
             <p>
@@ -145,6 +152,16 @@ export default function AboutPage() {
                 className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
               >
                 Claude
+                <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+              </a>
+              {", and "}
+              <a
+                href="https://openai.com/codex/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+              >
+                Codex
                 <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
               </a>
               . It puts the stablecoin data you want to monitor in one place: honest
