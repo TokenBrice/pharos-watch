@@ -21,6 +21,7 @@ import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
+import { getConditionBand } from "../lib/stability-index";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -301,17 +302,38 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to query active depegs:", e);
   }
 
-  // 3. Stability index — real-time sample (matches homepage) + yesterday's daily snapshot
+  // 3. Stability index — match homepage/stability page display logic
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
 
-  // Current: latest 15-min real-time sample (same source as homepage)
+  // Current source: latest 15-min sample, fallback to latest daily snapshot if needed
   const latestSample = await db
     .prepare("SELECT score, band, components FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
     .first<{ score: number; band: string; components: string }>();
-  const stabilityIndex = latestSample
-    ? { score: latestSample.score, band: latestSample.band, components: JSON.parse(latestSample.components) }
+  const latestDaily = latestSample
+    ? null
+    : await db
+      .prepare("SELECT score, band, components FROM stability_index ORDER BY computed_at DESC LIMIT 1")
+      .first<{ score: number; band: string; components: string }>();
+  const currentPsiSource = latestSample ?? latestDaily;
+
+  // Displayed PSI on both pages is avg24h if available, else current source score
+  const avg24hRow = await db
+    .prepare("SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?")
+    .bind(nowSec - SECONDS.ONE_DAY)
+    .first<{ avg: number | null }>();
+  const avg24h = avg24hRow?.avg != null
+    ? Math.round(avg24hRow.avg * 10) / 10
+    : null;
+
+  const displayScore = avg24h ?? currentPsiSource?.score ?? null;
+  const displayBand = avg24h != null
+    ? getConditionBand(avg24h)
+    : currentPsiSource?.band ?? null;
+
+  const stabilityIndex = currentPsiSource && displayScore != null && displayBand
+    ? { score: displayScore, band: displayBand, components: JSON.parse(currentPsiSource.components) }
     : null;
 
   // Yesterday: daily snapshot for comparison
