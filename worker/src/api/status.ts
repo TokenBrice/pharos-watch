@@ -32,10 +32,17 @@ interface DataQuality {
 
 interface StatusResponse {
   timestamp: number;
+  availabilityStatus: "healthy" | "degraded" | "stale";
+  dataQualityStatus: "healthy" | "degraded" | "stale";
   overallStatus: "healthy" | "degraded" | "stale";
   caches: Record<string, CacheStatus>;
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
+  summary: {
+    unhealthyCrons: number;
+    cronErrors: number;
+    worstCacheRatio: number;
+  };
 }
 
 // --- Config ---
@@ -114,6 +121,8 @@ export const handleStatus = withErrorHandler(
 
     const crons: Record<string, CronStatus> = {};
     let anyCronError = false;
+    let unhealthyCrons = 0;
+    let cronErrorCount = 0;
     for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
       const runs = cronByJob.get(job) ?? [];
       const lastRun = runs.length > 0 ? runs[0] : null;
@@ -122,7 +131,11 @@ export const handleStatus = withErrorHandler(
         lastRun.status === "ok" &&
         now - lastRun.startedAt <= interval * 2;
 
-      if (lastRun?.status === "error") anyCronError = true;
+      if (!healthy) unhealthyCrons++;
+      if (lastRun?.status === "error") {
+        anyCronError = true;
+        cronErrorCount++;
+      }
 
       crons[job] = {
         lastRun,
@@ -136,19 +149,50 @@ export const handleStatus = withErrorHandler(
     const dataQuality = await getDataQuality(db, now);
 
     // 4. Overall status
-    const overallStatus: StatusResponse["overallStatus"] =
-      worstCacheRatio > 2 || anyCronError
+    const availabilityStatus: StatusResponse["availabilityStatus"] =
+      worstCacheRatio > 2 || anyCronError || unhealthyCrons >= 3
         ? "stale"
-        : worstCacheRatio > 1.5
+        : worstCacheRatio > 1.5 || unhealthyCrons > 0
           ? "degraded"
           : "healthy";
 
+    const missingPriceRatio =
+      dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
+    const dataQualityStatus: StatusResponse["dataQualityStatus"] =
+      missingPriceRatio > 0.4 ||
+      dataQuality.staleOnchainSupply >= 5 ||
+      dataQuality.onchainSupplyDivergences >= 10
+        ? "stale"
+        : missingPriceRatio > 0.15 ||
+            dataQuality.blacklistMissingAmounts > 0 ||
+            dataQuality.staleOnchainSupply > 0 ||
+            dataQuality.onchainSupplyDivergences > 0
+          ? "degraded"
+          : "healthy";
+
+    const severity: Record<StatusResponse["overallStatus"], number> = {
+      healthy: 0,
+      degraded: 1,
+      stale: 2,
+    };
+    const overallStatus: StatusResponse["overallStatus"] =
+      severity[availabilityStatus] >= severity[dataQualityStatus]
+        ? availabilityStatus
+        : dataQualityStatus;
+
     const body: StatusResponse = {
       timestamp: now,
+      availabilityStatus,
+      dataQualityStatus,
       overallStatus,
       caches,
       crons,
       dataQuality,
+      summary: {
+        unhealthyCrons,
+        cronErrors: cronErrorCount,
+        worstCacheRatio,
+      },
     };
 
     return jsonResponse(body, { "Cache-Control": "no-store" });

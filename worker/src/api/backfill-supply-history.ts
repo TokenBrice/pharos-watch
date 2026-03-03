@@ -181,6 +181,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     if (authError) return authError;
 
     const singleId = url.searchParams.get("stablecoin");
+    const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
 
     let coins;
     if (singleId) {
@@ -277,17 +278,21 @@ export const handleBackfillSupplyHistory = withErrorHandler(
         continue;
       }
 
-      // For non-USD coins: fall back to DL's current price when historical prices unavailable
+      // For non-USD coins: require historical price data by default.
+      // Optional emergency fallback can use current price for only a short recent window.
       const hasHistoricalPrices = historicalPrices.length > 0;
       const fallbackPrice = (needsConversion && detail?.price) ? detail.price : null;
       if (needsConversion && !hasHistoricalPrices) {
-        if (fallbackPrice) {
-          const reason = !geckoId ? "no geckoId" : "price API returned no data";
-          console.warn(`[backfill] ${meta.symbol}: ${reason}, using DL current price $${fallbackPrice} as constant`);
-        } else {
-          errors.push(`${meta.symbol}: non-USD coin with no price data available — skipping`);
+        if (!allowConstantPriceFallback) {
+          errors.push(`${meta.symbol}: non-USD coin missing historical prices (set allow-constant-price-fallback=true for emergency short-window fallback)`);
           continue;
         }
+        if (!fallbackPrice) {
+          errors.push(`${meta.symbol}: non-USD coin missing historical prices and fallback price`);
+          continue;
+        }
+        const reason = !geckoId ? "no geckoId" : "price API returned no data";
+        console.warn(`[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`);
       }
 
       function findHistoricalPrice(date: number): number | null {
@@ -296,6 +301,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
 
       const stmts: D1PreparedStatement[] = [];
 
+      const fallbackWindowStart = Math.floor(Date.now() / 1000) - 7 * 86400;
       for (const entry of tokens) {
         const circ = entry.circulating;
         if (!circ) continue;
@@ -312,7 +318,15 @@ export const handleBackfillSupplyHistory = withErrorHandler(
 
         if (needsConversion) {
           // Non-USD: multiply native supply by USD price to get market cap
-          price = findHistoricalPrice(entry.date) ?? fallbackPrice;
+          price = findHistoricalPrice(entry.date);
+          if (
+            price == null &&
+            allowConstantPriceFallback &&
+            fallbackPrice &&
+            entry.date >= fallbackWindowStart
+          ) {
+            price = fallbackPrice;
+          }
           if (!price || price <= 0) continue;
           marketCapUsd = rawSum * price;
         } else {

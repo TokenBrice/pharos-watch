@@ -111,41 +111,48 @@ export async function writeHistoricalSnapshots(
   scoreMap: Map<string, ScoreResult>,
 ): Promise<void> {
   const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400; // epoch seconds at UTC midnight
+  const expectedRowCount = TRACKED_STABLECOINS.length;
   try {
-    const lastSnap = await db
-      .prepare("SELECT MAX(snapshot_date) as last_date FROM dex_liquidity_history")
-      .first<{ last_date: number | null }>();
+    const existing = await db
+      .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity_history WHERE snapshot_date = ?")
+      .bind(todayMidnight)
+      .first<{ cnt: number }>();
+    const existingCount = existing?.cnt ?? 0;
 
-    if (!lastSnap?.last_date || lastSnap.last_date < todayMidnight) {
-      const snapStmts: D1PreparedStatement[] = [];
-      for (const [id, data] of scoreMap) {
+    if (existingCount >= expectedRowCount) {
+      return;
+    }
+
+    const snapStmts: D1PreparedStatement[] = [];
+    for (const [id, data] of scoreMap) {
+      snapStmts.push(
+        db
+          .prepare(
+            `INSERT OR REPLACE INTO dex_liquidity_history
+              (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
+            VALUES (?, ?, ?, ?, ?, ?)`
+          )
+          .bind(id, data.tvl, data.vol24h, data.score, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
+      );
+    }
+    // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
+    for (const meta of TRACKED_STABLECOINS) {
+      if (!scoreMap.has(meta.id)) {
         snapStmts.push(
           db
             .prepare(
-              `INSERT OR IGNORE INTO dex_liquidity_history
+              `INSERT OR REPLACE INTO dex_liquidity_history
                 (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
-              VALUES (?, ?, ?, ?, ?, ?)`
+              VALUES (?, 0, 0, NULL, ?, ?)`
             )
-            .bind(id, data.tvl, data.vol24h, data.score, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
+            .bind(meta.id, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
         );
       }
-      // Also insert placeholder rows for coins without DEX presence (NULL score = NR)
-      for (const meta of TRACKED_STABLECOINS) {
-        if (!scoreMap.has(meta.id)) {
-          snapStmts.push(
-            db
-              .prepare(
-                `INSERT OR IGNORE INTO dex_liquidity_history
-                  (stablecoin_id, total_tvl_usd, total_volume_24h_usd, liquidity_score, snapshot_date, methodology_version)
-                VALUES (?, 0, 0, NULL, ?, ?)`
-              )
-              .bind(meta.id, todayMidnight, LIQUIDITY_METHODOLOGY_VERSION)
-          );
-        }
-      }
-      await batchExecute(db, snapStmts);
-      console.log(`[dex-liquidity] Wrote daily snapshot (${snapStmts.length} rows) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`);
     }
+    await batchExecute(db, snapStmts);
+    console.log(
+      `[dex-liquidity] Reconciled daily snapshot (${existingCount} -> ${snapStmts.length}/${expectedRowCount}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
+    );
   } catch (err) {
     console.warn("[dex-liquidity] Daily snapshot failed:", err);
   }

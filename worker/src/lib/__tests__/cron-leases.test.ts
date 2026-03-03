@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acquireCronLease,
+  CronLeaseLostError,
   renewCronLease,
   releaseCronLease,
   runCronWithLease,
@@ -228,6 +229,41 @@ describe("runCronWithLease", () => {
 
     const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
     expect(reacquired).toBe(true);
+  });
+
+  it("aborts when lease renewal repeatedly fails", async () => {
+    const alwaysFailRenewDb = {
+      prepare: (sql: string) => ({
+        bind: (..._args: unknown[]) => ({
+          run: async () => {
+            if (sql.includes("INSERT INTO cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            if (sql.includes("UPDATE cron_leases")) {
+              return { success: true, meta: { changes: 0 } };
+            }
+            if (sql.includes("DELETE FROM cron_leases")) {
+              return { success: true, meta: { changes: 1 } };
+            }
+            return { success: true, meta: { changes: 0 } };
+          },
+        }),
+      }),
+      batch: async () => [],
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+
+    const runPromise = runCronWithLease(
+      alwaysFailRenewDb,
+      "sync-stablecoins",
+      async () => new Promise((_resolve) => {}),
+      { owner: "owner-z", ttlSec: 120, heartbeatSec: 1, maxRenewFailures: 1 },
+    );
+    const leaseLossExpectation = expect(runPromise).rejects.toBeInstanceOf(CronLeaseLostError);
+
+    await vi.advanceTimersByTimeAsync(1500);
+    await leaseLossExpectation;
   });
 
   afterEach(() => {

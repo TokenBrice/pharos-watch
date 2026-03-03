@@ -59,7 +59,19 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       return Math.abs(best.date - day) <= 14 * DAY ? best.mcap : 0;
     }
 
-    // Iterate day by day — build all statements first, then atomically replace
+    await db.exec(`
+      DROP TABLE IF EXISTS stability_index_rebuild;
+      CREATE TABLE stability_index_rebuild (
+        computed_at INTEGER PRIMARY KEY,
+        score REAL NOT NULL,
+        band TEXT NOT NULL,
+        components TEXT NOT NULL,
+        input_snapshot TEXT NOT NULL,
+        methodology_version TEXT NOT NULL
+      );
+    `);
+
+    // Iterate day by day — build all statements first, then atomically swap
     const stmts: D1PreparedStatement[] = [];
     let count = 0;
 
@@ -128,7 +140,7 @@ export const handleBackfillStabilityIndex = withErrorHandler(
 
       stmts.push(
         db.prepare(
-          "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)"
+          "INSERT INTO stability_index_rebuild (computed_at, score, band, components, input_snapshot, methodology_version) VALUES (?, ?, ?, ?, ?, ?)"
         ).bind(
           day,
           result.score,
@@ -146,10 +158,24 @@ export const handleBackfillStabilityIndex = withErrorHandler(
       count++;
     }
 
-    // Atomic replace: DELETE + INSERT in a single batch to minimize the window
-    // where the table is empty (concurrent cron reads could see stale data)
-    const deleteStmt = db.prepare("DELETE FROM stability_index");
-    await batchExecute(db, [deleteStmt, ...stmts]);
+    await batchExecute(db, stmts);
+
+    try {
+      await db.exec(`
+        BEGIN IMMEDIATE;
+        DELETE FROM stability_index;
+        INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+        SELECT computed_at, score, band, components, input_snapshot, methodology_version
+        FROM stability_index_rebuild
+        ORDER BY computed_at;
+        COMMIT;
+      `);
+    } catch (err) {
+      await db.exec("ROLLBACK").catch(() => {});
+      throw err;
+    } finally {
+      await db.exec("DROP TABLE IF EXISTS stability_index_rebuild").catch(() => {});
+    }
 
     return jsonResponse({ ok: true, daysBackfilled: count });
   }

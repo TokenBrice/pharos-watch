@@ -627,8 +627,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Load FX rates early for dynamic price bounds in isReasonablePrice
   let fxRates: Record<string, number> | undefined;
   const fxCacheEarly = await getCache(db, "fx-rates");
+  const maxFxAgeSec = 6 * 3600;
   if (fxCacheEarly) {
-    try { fxRates = JSON.parse(fxCacheEarly.value); } catch { /* ignore */ }
+    const fxAgeSec = Math.floor(Date.now() / 1000) - fxCacheEarly.updatedAt;
+    if (fxAgeSec <= maxFxAgeSec) {
+      try { fxRates = JSON.parse(fxCacheEarly.value); } catch { /* ignore */ }
+    } else {
+      console.warn(`[sync-stablecoins] Ignoring stale FX cache (${fxAgeSec}s old)`);
+    }
   }
 
   // --- Dual-primary price validation ---

@@ -1,6 +1,6 @@
 import { requireAdmin } from "../lib/auth";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { getPriceCache, batchExecute } from "../lib/db";
+import { getPriceCache } from "../lib/db";
 
 export const handleBackfillMintBurnPrices = withErrorHandler(
   "backfill-mint-burn-prices",
@@ -31,7 +31,10 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
       const result = await db
         .prepare(
           `UPDATE mint_burn_events
-           SET amount_usd = amount * ?, price_used = ?, price_timestamp = ?, price_source = 'backfill-price-cache'
+           SET amount_usd = COALESCE(amount_usd, amount * ?),
+               price_used = COALESCE(price_used, ?),
+               price_timestamp = COALESCE(price_timestamp, ?),
+               price_source = COALESCE(price_source, 'backfill-price-cache')
            WHERE stablecoin_id = ? AND ${needsRepairWhere}`
         )
         .bind(cached.price, cached.price, cached.updatedAt, stablecoin_id)
@@ -46,31 +49,28 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
     if (totalUpdated > 0) {
       const affectedIds = coinResults.filter((c) => c.updated > 0).map((c) => c.id);
 
-      // Delete existing hourly rows for affected coins, then re-aggregate
-      const deleteStmts = affectedIds.map((id) =>
-        db.prepare("DELETE FROM mint_burn_hourly WHERE stablecoin_id = ?").bind(id)
-      );
-      await batchExecute(db, deleteStmts);
-
-      const insertStmts = affectedIds.map((id) =>
-        db.prepare(`
-          INSERT OR REPLACE INTO mint_burn_hourly
-            (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-             mint_volume_usd, burn_volume_usd, net_flow_usd)
-          SELECT
-            stablecoin_id, chain_id,
-            (timestamp / 3600) * 3600 AS hour_ts,
-            SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN direction = 'burn' THEN 1 ELSE 0 END),
-            COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN direction = 'burn' THEN amount_usd ELSE 0 END), 0),
-            COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE -amount_usd END), 0)
-          FROM mint_burn_events
-          WHERE stablecoin_id = ?
-          GROUP BY stablecoin_id, chain_id, hour_ts
-        `).bind(id)
-      );
-      await batchExecute(db, insertStmts);
+      // Rebuild each coin atomically (delete + insert in one batch).
+      for (const id of affectedIds) {
+        await db.batch([
+          db.prepare("DELETE FROM mint_burn_hourly WHERE stablecoin_id = ?").bind(id),
+          db.prepare(`
+            INSERT OR REPLACE INTO mint_burn_hourly
+              (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+               mint_volume_usd, burn_volume_usd, net_flow_usd)
+            SELECT
+              stablecoin_id, chain_id,
+              (timestamp / 3600) * 3600 AS hour_ts,
+              SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
+              SUM(CASE WHEN direction = 'burn' THEN 1 ELSE 0 END),
+              COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN direction = 'burn' THEN amount_usd ELSE 0 END), 0),
+              COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE -amount_usd END), 0)
+            FROM mint_burn_events
+            WHERE stablecoin_id = ?
+            GROUP BY stablecoin_id, chain_id, hour_ts
+          `).bind(id),
+        ]);
+      }
     }
 
     return jsonResponse({ totalUpdated, coins: coinResults });

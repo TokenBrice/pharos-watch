@@ -58,7 +58,7 @@ describe("syncFxRates", () => {
     expect(metadata.rateCount).toBeGreaterThan(5);
   });
 
-  it("falls back gracefully when frankfurter.app returns error", async () => {
+  it("throws when frankfurter.app returns error", async () => {
     mockFetch([
       {
         match: "frankfurter.app",
@@ -71,9 +71,7 @@ describe("syncFxRates", () => {
       { match: "cache", rows: [], first: null },
     ]);
 
-    const result = await syncFxRates(db);
-    // Should return empty result (no items) but not throw
-    expect(result).toBeDefined();
+    await expect(syncFxRates(db)).rejects.toThrow("frankfurter.app returned 503");
   });
 
   it("uses secondary API for RUB/UAH/ARS rates", async () => {

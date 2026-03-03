@@ -46,9 +46,13 @@ export function route(
     "/api/backfill-cg-prices",
     "/api/backfill-stability-index",
     "/api/backfill-mint-burn-prices",
+    "/api/audit-depeg-history",
   ]);
 
-  if (request?.method === "GET" && mutatingAdminPaths.has(path)) {
+  const allowAuditDryRunGet =
+    path === "/api/audit-depeg-history" && url.searchParams.get("dry-run") === "true";
+
+  if (request?.method === "GET" && mutatingAdminPaths.has(path) && !allowAuditDryRunGet) {
     return Promise.resolve(
       new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
         status: 405,
@@ -149,6 +153,14 @@ export function route(
   }
 
   if (path === "/api/audit-depeg-history") {
+    if (request?.method === "POST") {
+      return runIdempotentAdminAction(
+        db,
+        "audit-depeg-history",
+        request,
+        () => handleAuditDepegHistory(db, url, adminKey, request),
+      );
+    }
     return handleAuditDepegHistory(db, url, adminKey, request);
   }
 

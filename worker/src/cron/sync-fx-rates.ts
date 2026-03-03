@@ -101,8 +101,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
     });
 
     if (!res || !res.ok) {
-      console.error(`[sync-fx-rates] frankfurter.app returned ${res?.status ?? "no response"}`);
-      return {};
+      throw new Error(`frankfurter.app returned ${res?.status ?? "no response"}`);
     }
 
     const data: FrankfurterResponse = await res.json();
@@ -222,6 +221,9 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
     // Sanity check: we should have rates for all mapped currencies
     const expected = Object.values(CURRENCY_TO_PEG);
     const missing = expected.filter((k) => !(k in rates));
+    if (Object.keys(rates).length === 0) {
+      throw new Error("sync-fx-rates produced zero usable rates");
+    }
     if (missing.length > 0) {
       console.warn(`[sync-fx-rates] Missing rates for: ${missing.join(", ")}`);
     }
@@ -241,6 +243,6 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
     return { itemCount: Object.keys(rates).length, metadata: JSON.stringify(metadata) };
   } catch (err) {
     console.error(`[sync-fx-rates] Failed:`, err);
-    return {};
+    throw err instanceof Error ? err : new Error(String(err));
   }
 }

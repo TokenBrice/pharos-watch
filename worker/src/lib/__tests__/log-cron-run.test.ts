@@ -87,4 +87,14 @@ describe("logCronRun", () => {
 
     expect(insertedStatus).toBe("skipped_locked");
   });
+
+  it("fails fast with timeout error when job exceeds timeout", async () => {
+    vi.useFakeTimers();
+    const hangingJob = logCronRun(db, "test-job", async () => new Promise(() => {}));
+    const timeoutExpectation = expect(hangingJob).rejects.toThrow(/timed out/i);
+
+    await vi.advanceTimersByTimeAsync(5 * 60_000 + 100);
+    await timeoutExpectation;
+    vi.useRealTimers();
+  });
 });

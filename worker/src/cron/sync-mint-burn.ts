@@ -53,8 +53,15 @@ function evmSafetyMarginBlocks(evmChainId: number): number {
 export async function syncMintBurn(
   db: D1Database,
   alchemyApiKey: string | null,
-  _signal?: AbortSignal,
+  signal?: AbortSignal,
 ): Promise<{ itemCount: number; metadata: string }> {
+  const throwIfAborted = () => {
+    if (signal?.aborted) {
+      throw signal.reason instanceof Error ? signal.reason : new Error("sync-mint-burn aborted");
+    }
+  };
+
+  throwIfAborted();
   const budget = createBudget(200);
   let totalNewEvents = 0;
   let contractsProcessed = 0;
@@ -88,7 +95,7 @@ export async function syncMintBurn(
     if (chainHeadCache.has(evmChainId)) return chainHeadCache.get(evmChainId)!;
     const url = buildAlchemyUrl(config.chain.chainId, alchemyApiKey!);
     if (!url) return null;
-    const head = await getAlchemyBlockNumber(url, budget);
+    const head = await getAlchemyBlockNumber(url, budget, signal);
     if (head !== null) chainHeadCache.set(evmChainId, head);
     return head;
   }
@@ -141,6 +148,7 @@ export async function syncMintBurn(
   }> = [];
 
   for (const config of MINT_BURN_CONFIGS) {
+    throwIfAborted();
     if (config.chain.evmChainId === null) { contractsSkipped++; continue; }
     if (budgetExhausted(budget)) { contractsSkipped++; continue; }
 
@@ -179,7 +187,7 @@ export async function syncMintBurn(
       const url = buildAlchemyUrl(config.chain.chainId, alchemyApiKey!);
       if (!url) { configError = true; continue; }
 
-      const logs = await fetchAlchemyLogs(url, config.contractAddress, topics, fromBlock, scanTo, budget);
+      const logs = await fetchAlchemyLogs(url, config.contractAddress, topics, fromBlock, scanTo, budget, signal);
 
       if (logs === null) {
         apiErrors++;
@@ -197,7 +205,7 @@ export async function syncMintBurn(
     ];
     const url = buildAlchemyUrl(config.chain.chainId, alchemyApiKey!);
     const blockTimestamps = url && uniqueBlocks.length > 0
-      ? await resolveBlockTimestamps(url, uniqueBlocks, budget)
+      ? await resolveBlockTimestamps(url, uniqueBlocks, budget, signal)
       : new Map<number, number>();
 
     // Guard: if any block has no timestamp, treat as config error.

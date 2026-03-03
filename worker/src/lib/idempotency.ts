@@ -4,7 +4,10 @@ interface IdempotencyRecord {
   request_hash: string;
   response_status: number;
   response_body: string;
+  created_at: number;
 }
+
+const PENDING_RESPONSE_STATUS = -1;
 
 async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -53,17 +56,46 @@ export async function runIdempotentAdminAction(
   }
 
   const fingerprint = await requestFingerprint(request);
+  const now = Math.floor(Date.now() / 1000);
+  const reserveResult = await db
+    .prepare(
+      "INSERT OR IGNORE INTO admin_idempotency_keys (action, idempotency_key, request_hash, response_status, response_body, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(action, key, fingerprint, PENDING_RESPONSE_STATUS, "", now)
+    .run();
+  const insertedReservation = (reserveResult.meta?.changes ?? 0) > 0;
+
   const existing = await db
     .prepare(
-      "SELECT request_hash, response_status, response_body FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ?",
+      "SELECT request_hash, response_status, response_body, created_at FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ?",
     )
     .bind(action, key)
     .first<IdempotencyRecord>();
 
-  if (existing) {
-    if (existing.request_hash !== fingerprint) {
-      return errorResponse(409, "Idempotency key reuse with different request payload");
+  if (!existing) {
+    return errorResponse(500, "Failed to reserve idempotency key");
+  }
+
+  if (existing.request_hash !== fingerprint) {
+    if (insertedReservation) {
+      await db
+        .prepare("DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND response_status = ?")
+        .bind(action, key, PENDING_RESPONSE_STATUS)
+        .run()
+        .catch(() => {});
     }
+    return errorResponse(409, "Idempotency key reuse with different request payload");
+  }
+
+  if (existing.response_status === PENDING_RESPONSE_STATUS && !insertedReservation) {
+    return withIdempotencyHeaders(
+      errorResponse(409, "Idempotency key is currently in progress"),
+      key,
+      true,
+    );
+  }
+
+  if (existing.response_status !== PENDING_RESPONSE_STATUS) {
     return withIdempotencyHeaders(
       new Response(existing.response_body, {
         status: existing.response_status,
@@ -74,15 +106,26 @@ export async function runIdempotentAdminAction(
     );
   }
 
-  const response = await execute();
+  let response: Response;
+  try {
+    response = await execute();
+  } catch (err) {
+    await db
+      .prepare(
+        "DELETE FROM admin_idempotency_keys WHERE action = ? AND idempotency_key = ? AND request_hash = ? AND response_status = ?",
+      )
+      .bind(action, key, fingerprint, PENDING_RESPONSE_STATUS)
+      .run()
+      .catch(() => {});
+    throw err;
+  }
   const responseBody = await response.clone().text();
-  const now = Math.floor(Date.now() / 1000);
 
   await db
     .prepare(
-      "INSERT OR IGNORE INTO admin_idempotency_keys (action, idempotency_key, request_hash, response_status, response_body, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      "UPDATE admin_idempotency_keys SET response_status = ?, response_body = ?, created_at = ? WHERE action = ? AND idempotency_key = ? AND request_hash = ?",
     )
-    .bind(action, key, fingerprint, response.status, responseBody, now)
+    .bind(response.status, responseBody, now, action, key, fingerprint)
     .run();
 
   // Keep table bounded.

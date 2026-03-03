@@ -452,4 +452,41 @@ describe("detectDepegEvents", () => {
     );
     expect(closures.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("does not orphan-close tracked events during transient data gaps", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      {
+        match: "depeg_events",
+        rows: [{
+          id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
+          start_price: 0.976, peak_price: 0.976, peg_reference: 1,
+          recovery_price: null, ended_at: null, source: "live",
+        }],
+      },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      {
+        id: "1",
+        symbol: "USDT",
+        pegType: "peggedUSD",
+        price: Number.NaN, // missing price this cycle
+        circulating: { ethereum: 10_000_000 },
+      } as ReturnType<typeof makeAsset>,
+    ]);
+
+    const orphanClosures = preparedSqls.filter((sql) =>
+      sql.includes("UPDATE depeg_events SET ended_at = ?, recovery_price = NULL")
+    );
+    expect(orphanClosures).toHaveLength(0);
+  });
 });

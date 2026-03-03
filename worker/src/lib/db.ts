@@ -152,13 +152,29 @@ export interface CronLeaseOptions {
   ttlSec?: number;
   heartbeatSec?: number;
   owner?: string;
+  maxRenewFailures?: number;
 }
 
 export interface CronLeaseRunResult<T> {
   status: "ok" | "skipped_locked";
   leaseOwner: string;
   renewFailures: number;
+  leaseLost?: boolean;
   result?: T;
+}
+
+export class CronLeaseLostError extends Error {
+  constructor(job: string, renewFailures: number) {
+    super(`Cron lease lost for "${job}" after ${renewFailures} failed renewals`);
+    this.name = "CronLeaseLostError";
+  }
+}
+
+export class CronTimeoutError extends Error {
+  constructor(job: string, timeoutMs: number) {
+    super(`Cron job "${job}" timed out after ${Math.round(timeoutMs / 1000)}s`);
+    this.name = "CronTimeoutError";
+  }
 }
 
 function createLeaseOwner(job: string): string {
@@ -234,12 +250,13 @@ export async function releaseCronLease(
 export async function runCronWithLease<T>(
   db: D1Database,
   job: string,
-  fn: (ctx: { leaseOwner: string }) => Promise<T>,
+  fn: (ctx: { leaseOwner: string; signal: AbortSignal }) => Promise<T>,
   opts?: CronLeaseOptions,
 ): Promise<CronLeaseRunResult<T>> {
   const timeoutSec = Math.ceil((CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS) / 1000);
   const ttlSec = opts?.ttlSec ?? timeoutSec + 60;
   const heartbeatSec = opts?.heartbeatSec ?? Math.max(15, Math.floor(ttlSec / 3));
+  const maxRenewFailures = opts?.maxRenewFailures ?? 2;
   const owner = opts?.owner ?? createLeaseOwner(job);
 
   const acquired = await acquireCronLease(db, job, owner, ttlSec);
@@ -252,22 +269,48 @@ export async function runCronWithLease<T>(
   }
 
   let renewFailures = 0;
+  let leaseLost = false;
+  const leaseController = new AbortController();
+  const markLeaseFailure = () => {
+    renewFailures++;
+    if (!leaseLost && renewFailures >= maxRenewFailures) {
+      leaseLost = true;
+      leaseController.abort(new CronLeaseLostError(job, renewFailures));
+    }
+  };
+
   const timer = setInterval(() => {
     void renewCronLease(db, job, owner, ttlSec)
       .then((ok) => {
-        if (!ok) renewFailures++;
+        if (!ok) markLeaseFailure();
       })
       .catch(() => {
-        renewFailures++;
+        markLeaseFailure();
       });
   }, heartbeatSec * 1000);
 
+  const leaseLossPromise = new Promise<never>((_resolve, reject) => {
+    const rejectReason = () => {
+      const reason = leaseController.signal.reason;
+      reject(reason instanceof Error ? reason : new CronLeaseLostError(job, renewFailures));
+    };
+    if (leaseController.signal.aborted) {
+      rejectReason();
+      return;
+    }
+    leaseController.signal.addEventListener("abort", rejectReason, { once: true });
+  });
+
   try {
-    const result = await fn({ leaseOwner: owner });
+    const result = await Promise.race([
+      fn({ leaseOwner: owner, signal: leaseController.signal }),
+      leaseLossPromise,
+    ]);
     return {
       status: "ok",
       leaseOwner: owner,
       renewFailures,
+      leaseLost,
       result,
     };
   } finally {
@@ -300,10 +343,20 @@ export async function logCronRun(
   const startSec = Math.floor(startMs / 1000);
   const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
   const ac = new AbortController();
-  const timer = setTimeout(() => ac.abort(new Error(`Cron job "${job}" timed out after ${timeoutMs / 1000}s`)), timeoutMs);
+  const timeoutError = new CronTimeoutError(job, timeoutMs);
+  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    timeoutHandle = setTimeout(() => {
+      ac.abort(timeoutError);
+      reject(timeoutError);
+    }, timeoutMs);
+  });
+
   try {
-    const result = await fn(ac.signal);
-    clearTimeout(timer);
+    const result = await Promise.race([
+      fn(ac.signal),
+      timeoutPromise,
+    ]);
     await db
       .prepare(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, ?, ?, ?, ?)"
@@ -318,7 +371,6 @@ export async function logCronRun(
       )
       .run();
   } catch (e) {
-    clearTimeout(timer);
     try {
       await db
         .prepare(
@@ -332,6 +384,8 @@ export async function logCronRun(
     // Alert on cron failure (non-blocking)
     sendAlert(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`).catch(() => {});
     throw e;
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
   }
   // Prune rows older than 7 days
   try {

@@ -347,11 +347,12 @@ export async function computeAndStoreDEWS(
     Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()) / 1000,
   );
   const existing = await db
-    .prepare("SELECT 1 FROM stress_signal_history WHERE snapshot_date = ? LIMIT 1")
+    .prepare("SELECT COUNT(*) as cnt FROM stress_signal_history WHERE snapshot_date = ?")
     .bind(todayMidnight)
-    .first();
+    .first<{ cnt: number }>();
+  const existingCount = existing?.cnt ?? 0;
 
-  if (!existing && results.length > 0) {
+  if (results.length > 0 && existingCount < results.length) {
     const histStmts = results.map((r) =>
       db
         .prepare(
@@ -360,6 +361,9 @@ export async function computeAndStoreDEWS(
         .bind(r.stablecoinId, todayMidnight, r.score, r.band, JSON.stringify(r.signals)),
     );
     await batchExecute(db, histStmts);
+    console.log(
+      `[dews] Reconciled daily snapshot (${existingCount} -> ${histStmts.length}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
+    );
   }
 
   // 11. Prune old data (7 days for signals, 365 for history)

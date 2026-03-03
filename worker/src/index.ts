@@ -52,7 +52,7 @@ function corsHeaders(origin: string): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
+    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key, Idempotency-Key",
     "Access-Control-Expose-Headers": "X-Data-Age, Warning",
     "Access-Control-Max-Age": "86400",
     "X-Content-Type-Options": "nosniff",
@@ -95,8 +95,11 @@ const worker = {
       "/api/backfill-cg-prices",
       "/api/backfill-stability-index",
       "/api/backfill-mint-burn-prices",
+      "/api/audit-depeg-history",
     ]);
     const isMutatingAdminPath = mutatingAdminPaths.has(url.pathname);
+    const allowAuditDryRunGet =
+      url.pathname === "/api/audit-depeg-history" && url.searchParams.get("dry-run") === "true";
 
     // POST /api/feedback — in-app feedback submission (public, no edge cache)
     if (request.method === "POST" && url.pathname === "/api/feedback") {
@@ -113,7 +116,7 @@ const worker = {
       );
     }
 
-    if (request.method === "GET" && isMutatingAdminPath) {
+    if (request.method === "GET" && isMutatingAdminPath && !allowAuditDryRunGet) {
       return addCorsHeaders(
         new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
           status: 405,
@@ -289,7 +292,12 @@ const worker = {
     };
     const runLeasedCron = (job: string, fn: (signal: AbortSignal) => Promise<CronResult | void>) =>
       logCronRun(db, job, async (signal): Promise<CronResult> => {
-        const lease = await runCronWithLease(db, job, async () => fn(signal));
+        const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
+          const mergedSignal = typeof AbortSignal.any === "function"
+            ? AbortSignal.any([signal, leaseSignal])
+            : signal;
+          return fn(mergedSignal);
+        });
         if (lease.status === "skipped_locked") {
           return {
             status: "skipped_locked",
@@ -335,6 +343,11 @@ const worker = {
       case "*/15 * * * *": {
         const stablecoinsSync = runLeasedCron("sync-stablecoins", (signal) => syncStablecoins(db, env.CMC_API_KEY, signal));
         ctx.waitUntil(stablecoinsSync);
+        // Retry daily supply snapshots throughout the day so a stale-cache skip at 08:00
+        // cannot permanently leave a missing date.
+        ctx.waitUntil(stablecoinsSync.then(() =>
+          runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal))
+        ));
         ctx.waitUntil(runLeasedCron("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
         ctx.waitUntil(runLeasedCron("sync-fx-rates", (signal) => syncFxRates(db, signal)));
         // PSI depends on stablecoins cache + depeg_events — run after sync completes

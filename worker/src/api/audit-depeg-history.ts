@@ -6,6 +6,7 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
+import { getPsiMethodologyVersionAt } from "../../../src/lib/stability-index-version";
 
 const DAY = 86400;
 
@@ -44,6 +45,13 @@ export const handleAuditDepegHistory = withErrorHandler(
     const deleteIds = url.searchParams.get("delete");
     // Dry run: preview deletions without touching the DB
     const dryRun = url.searchParams.get("dry-run") === "true";
+    const method = request?.method ?? "GET";
+    if (method === "GET" && !dryRun) {
+      return new Response(
+        JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
+        { status: 405, headers: { "Content-Type": "application/json", "Allow": "POST" } },
+      );
+    }
     // Optional supply filter: ?min-supply=N (default 0 = audit everything with a geckoId)
     const minSupply = parseIntParam(url.searchParams.get("min-supply"), 0, 0, Number.MAX_SAFE_INTEGER);
     // Optional symbol filter: ?symbol=USDC (case-insensitive)
@@ -295,8 +303,8 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
   const now = Math.floor(Date.now() / 1000);
 
   const remainingDepegs = await db
-    .prepare("SELECT stablecoin_id, peak_deviation_bps, started_at, ended_at FROM depeg_events ORDER BY started_at")
-    .all<{ stablecoin_id: string; peak_deviation_bps: number; started_at: number; ended_at: number | null }>();
+    .prepare("SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
+    .all<{ stablecoin_id: string; peak_deviation_bps: number; peg_reference: number; started_at: number; ended_at: number | null }>();
   const depegEvents = remainingDepegs.results ?? [];
 
   const allSupply = await db
@@ -326,10 +334,30 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
     const activeDepegs = depegEvents.filter(
       (e) => e.started_at <= day && (e.ended_at === null ? day <= now : e.ended_at > day)
     );
-    const depegs = activeDepegs.map((e) => ({
-      bps: e.peak_deviation_bps,
-      mcapUsd: getMcapForDay(e.stablecoin_id, day),
-    }));
+
+    const grouped = new Map<string, typeof activeDepegs>();
+    for (const e of activeDepegs) {
+      const list = grouped.get(e.stablecoin_id) ?? [];
+      list.push(e);
+      grouped.set(e.stablecoin_id, list);
+    }
+
+    const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
+    for (const [coinId, events] of grouped) {
+      let worstBps = 0;
+      let earliestStart = Infinity;
+      for (const e of events) {
+        if (e.peg_reference <= 0) continue;
+        if (Math.abs(e.peak_deviation_bps) > Math.abs(worstBps)) worstBps = e.peak_deviation_bps;
+        if (e.started_at < earliestStart) earliestStart = e.started_at;
+      }
+      if (earliestStart === Infinity) continue;
+      depegs.push({
+        bps: worstBps,
+        mcapUsd: getMcapForDay(coinId, day),
+        depegAgeDays: Math.max(0, (day - earliestStart) / DAY),
+      });
+    }
 
     let totalMcapUsd = 0;
     for (const [, snapshots] of supplyByCoin) {
@@ -361,22 +389,25 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
       totalMcapUsd,
       mcap7dChangePct,
     });
+    const methodologyVersion = getPsiMethodologyVersionAt(day);
 
     stmts.push(
       db.prepare(
-        `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(computed_at) DO UPDATE SET
            score = excluded.score,
            band = excluded.band,
            components = excluded.components,
-           input_snapshot = excluded.input_snapshot`
+           input_snapshot = excluded.input_snapshot,
+           methodology_version = excluded.methodology_version`
       ).bind(
         day,
         indexResult.score,
         indexResult.band,
         JSON.stringify(indexResult.components),
-        JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct }),
+        JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct, methodologyVersion }),
+        methodologyVersion,
       )
     );
   }

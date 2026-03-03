@@ -419,6 +419,11 @@ interface BackfillEvent {
   pegRef: number;
 }
 
+interface SupplySnapshot {
+  ts: number;
+  supply: number;
+}
+
 /**
  * Known CoinGecko data quality issues: date ranges where above-peg prices
  * are systematic artifacts, not real market events. Prices in these windows
@@ -434,7 +439,7 @@ async function backfillCoin(
   meta: StablecoinMeta,
   geckoId: string,
   getPegRef: (timestamp: number) => number,
-  supplyByDate: Map<number, number>,
+  supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
 ): Promise<BackfillEvent[] | null> {
   const pegType = `pegged${meta.flags.pegCurrency}`;
@@ -578,7 +583,7 @@ async function fetchDlPriceChart(coinId: string, start: number): Promise<PricePo
   }
 }
 
-function parseSupplyData(tokens: SupplyPoint[]): Map<number, number> {
+function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
   const map = new Map<number, number>();
   for (const point of tokens) {
     const ts = parseInt(point.date, 10);
@@ -586,29 +591,40 @@ function parseSupplyData(tokens: SupplyPoint[]): Map<number, number> {
     const supply = sumPegBuckets(point.circulating);
     map.set(ts, supply);
   }
-  return map;
+  return Array.from(map.entries())
+    .map(([ts, supply]) => ({ ts, supply }))
+    .sort((a, b) => a.ts - b.ts);
 }
 
-function findNearestSupply(supplyByDate: Map<number, number>, timestamp: number): number | null {
-  if (supplyByDate.size === 0) return null;
-  let closest: number | null = null;
-  let closestDist = Infinity;
-  for (const [ts, supply] of supplyByDate) {
-    const dist = Math.abs(ts - timestamp);
-    if (dist < closestDist) {
-      closestDist = dist;
-      closest = supply;
+function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): number | null {
+  if (supplyByDate.length === 0) return null;
+
+  let lo = 0;
+  let hi = supplyByDate.length - 1;
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (supplyByDate[mid].ts < timestamp) {
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
     }
-    if (ts > timestamp + 7 * 86400) break;
   }
-  return closest;
+
+  const candidates = [
+    lo > 0 ? supplyByDate[lo - 1] : null,
+    lo < supplyByDate.length ? supplyByDate[lo] : null,
+  ].filter((x): x is SupplySnapshot => x !== null);
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => Math.abs(a.ts - timestamp) - Math.abs(b.ts - timestamp));
+  return candidates[0].supply;
 }
 
 function extractDepegEvents(
   prices: PricePoint[],
   getPegRef: (timestamp: number) => number,
   pegType: string,
-  supplyByDate: Map<number, number>,
+  supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
 ): BackfillEvent[] {
   const threshold = getDepegThresholdBps(pegType);
@@ -649,7 +665,7 @@ function extractDepegEvents(
     if (price <= 0) continue;
     if (!isReasonablePrice(price, pegType, fxRates)) continue;
 
-    if (supplyByDate.size > 0) {
+    if (supplyByDate.length > 0) {
       const supply = findNearestSupply(supplyByDate, timestamp);
       if (supply !== null && supply < 1_000_000) continue;
     }

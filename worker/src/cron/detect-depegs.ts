@@ -93,6 +93,9 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
 
   // Track event IDs that are still legitimately open after this run
   const seen = new Set<number>();
+  // Track coins that are still part of the current tracked universe (even if data is missing).
+  // This prevents false "recovery" closes during transient upstream data gaps.
+  const trackedCoinIds = new Set<string>();
 
   const stmts: D1PreparedStatement[] = [];
 
@@ -100,6 +103,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     const meta = metaById.get(asset.id);
     if (!meta) continue; // not tracked
     if (meta.flags.navToken) continue; // skip NAV tokens
+    trackedCoinIds.add(asset.id);
 
     const price = asset.price;
     if (price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
@@ -247,6 +251,8 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     if (seen.has(row.id)) continue;
     // Skip events just created in this run (their IDs weren't known during the loop)
     if (row.started_at >= syncStart) continue;
+    // Skip tracked coins even if not observed this run (usually missing/stale inputs).
+    if (trackedCoinIds.has(row.stablecoin_id)) continue;
     // This event is orphaned — close it
     orphanStmts.push(
       db.prepare(

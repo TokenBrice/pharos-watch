@@ -115,7 +115,10 @@ describe("handleBackfillMintBurnPrices", () => {
     const updateSql = queries.find(
       (q) => q.kind === "run" && q.sql.includes("UPDATE mint_burn_events"),
     )?.sql;
-    expect(updateSql).toContain("price_source = 'backfill-price-cache'");
+    expect(updateSql).toContain("amount_usd = COALESCE(amount_usd, amount * ?)");
+    expect(updateSql).toContain("price_used = COALESCE(price_used, ?)");
+    expect(updateSql).toContain("price_timestamp = COALESCE(price_timestamp, ?)");
+    expect(updateSql).toContain("price_source = COALESCE(price_source, 'backfill-price-cache')");
     expect(updateSql).toContain("amount_usd IS NULL");
     expect(updateSql).toContain("price_used IS NULL");
     expect(updateSql).toContain("price_timestamp IS NULL");
