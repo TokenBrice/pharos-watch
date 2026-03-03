@@ -165,7 +165,45 @@ Key voice guidelines (see the skill for full detail):
 
 ---
 
-## Phase 6 — Verify and push
+## Phase 6 — Backfill supply history
+
+Newly added coins have no historical rows in the `supply_history` table. Without a backfill the market cap chart on the detail page will be empty until tomorrow's daily snapshot cron runs (and will stay empty forever for all prior dates).
+
+The right backfill endpoint depends on the coin's ID type:
+
+| ID type | Endpoint | What it does |
+|---------|----------|-------------|
+| Numeric DL ID (e.g. `"129"`) | `POST /api/backfill-supply-history?stablecoin={id}` | Reads full DL history via `/stablecoin/{id}` |
+| `cg-` prefix (e.g. `"cg-ousg"`) | `POST /api/backfill-cg-prices?stablecoin={id}` | Reads CoinGecko `market_chart` (prices + market caps) and inserts rows |
+| Custom integer with no geckoId (e.g. `"355"`) | None — no historical data available | Chart will stay empty; document this in the coin's notes |
+
+Both endpoints require the `X-Admin-Key` header and **POST** method. Call them immediately after pushing the new entries to production.
+
+```bash
+# For a DL-tracked coin (numeric ID):
+curl -X POST "https://api.pharos.watch/api/backfill-supply-history?stablecoin=129" \
+  -H "X-Admin-Key: $ADMIN_KEY"
+
+# For a CoinGecko-only coin (cg- prefix):
+curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=cg-ousg" \
+  -H "X-Admin-Key: $ADMIN_KEY"
+```
+
+`backfill-cg-prices` also back-fills `price` for any existing rows that have `NULL` in that column, so it is safe to run on any coin with a `geckoId` — not just `cg-` coins.
+
+**Response shape (backfill-cg-prices):**
+```json
+{
+  "coinsProcessed": 1,
+  "totalPricesFilled": 0,
+  "totalRowsInserted": 365,
+  "coinDetails": [{ "id": "cg-ousg", "symbol": "OUSG", "pricesFilled": 0, "rowsInserted": 365 }]
+}
+```
+
+---
+
+## Phase 7 — Verify and push
 
 ```bash
 npm run build          # TypeScript compile + static export; must pass with zero errors
