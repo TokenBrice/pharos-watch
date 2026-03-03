@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
 
 export const metadata: Metadata = {
   title: "Methodology: How Pharos Grades Stablecoins",
@@ -38,7 +39,7 @@ export default function MethodologyPage() {
                 name: "How does Pharos grade stablecoins?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied instead of redistributing the weight. Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at v5.5.",
+                  text: `Pharos computes a weighted average of four base dimensions — Liquidity (30%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%) — then applies a peg stability power-curve multiplier. When liquidity data is absent, a 10% penalty is applied instead of redistributing the weight. Grades range from A+ (87+) to F (0–39), with NR for insufficient data. The methodology is currently at ${SAFETY_SCORE_VERSION_LABEL}.`,
                 },
               },
               {
@@ -384,7 +385,7 @@ export default function MethodologyPage() {
 
           {/* Versioning */}
           <p className="text-xs text-muted-foreground italic">
-            Methodology version v5.5. Version increments when weights, thresholds, or dimension definitions change.
+            Methodology version {SAFETY_SCORE_VERSION_LABEL}. Version increments when weights, thresholds, or dimension definitions change.
             {" "}
             <Link href="/methodology/scoring-changelog" className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
               View full version history &rarr;

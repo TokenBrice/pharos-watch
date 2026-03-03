@@ -25,12 +25,13 @@ import type {
   ReserveSlice,
 } from "./types";
 import { deriveDependencies } from "./reserve-templates";
+import { SAFETY_SCORE_VERSION } from "./safety-score-version";
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-export const METHODOLOGY_VERSION = "5.5";
+export const METHODOLOGY_VERSION = SAFETY_SCORE_VERSION;
 
 /**
  * Base dimension weights for the overall grade.

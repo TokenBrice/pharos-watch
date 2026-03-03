@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
 import {
   Card,
   CardContent,
@@ -11,12 +12,12 @@ import {
 export const metadata: Metadata = {
   title: "Safety Scores Changelog — Version History",
   description:
-    "Full version history of the Pharos safety scoring methodology, from v1.0 through v5.5. Every weight change, new dimension, and structural decision documented.",
+    `Full version history of the Pharos safety scoring methodology, from v1.0 through ${SAFETY_SCORE_VERSION_LABEL}. Every weight change, new dimension, and structural decision documented.`,
   alternates: { canonical: "/methodology/scoring-changelog/" },
   openGraph: {
     title: "Safety Scores Changelog — Version History",
     description:
-      "Full version history of the Pharos safety scoring methodology, from v1.0 through v5.5.",
+      `Full version history of the Pharos safety scoring methodology, from v1.0 through ${SAFETY_SCORE_VERSION_LABEL}.`,
     url: "/methodology/scoring-changelog/",
   },
 };
@@ -143,13 +144,13 @@ export default function ScoringChangelogPage() {
         </h1>
         <p className="text-sm text-muted-foreground">
           Full version history of the grading methodology &mdash; every weight
-          change, new dimension, and structural decision from v1.0 to v5.5.
+          change, new dimension, and structural decision from v1.0 to {SAFETY_SCORE_VERSION_LABEL}.
         </p>
       </div>
 
       {/* ──────────── v5.5 ──────────── */}
       <VersionCard
-        version="v5.5"
+        version={SAFETY_SCORE_VERSION_LABEL}
         title="Peg score fairness for young coins"
         date="Mar 1"
         accent="border-l-amber-500"
@@ -772,7 +773,7 @@ export default function ScoringChangelogPage() {
                       "25%",
                     ],
                     [
-                      "v5.0\u20135.5",
+                      `v5.0\u2013${SAFETY_SCORE_VERSION_LABEL.replace(/^v/, "")}`,
                       "multiplier",
                       "30%",
                       "\u2014",
