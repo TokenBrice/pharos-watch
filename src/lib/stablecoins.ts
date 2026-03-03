@@ -698,7 +698,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ink", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
       { chain: "avalanche", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
       { chain: "mantle", address: "0xfc421aD3C883Bf9E7C4f42dE845C4e4405799e73", decimals: 18 },
-      { chain: "ink", address: "0xfc421ad3c883bf9e7c4f42de845c4e4405799e73", decimals: 18 },
     ],
     proofOfReserves: { type: "independent-audit", url: "https://github.com/aave-dao/gho-origin/tree/main/audits", provider: "OpenZeppelin, ABDK, Sigma Prime, Certora" },
     reserves: [
