@@ -78,8 +78,19 @@ export default function MethodologyPage() {
 
       {/* Grading Methodology */}
       <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-        <CardHeader>
-          <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-500">
+              {SAFETY_SCORE_VERSION_LABEL}
+            </span>
+            <Link href="/methodology/scoring-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when weights, thresholds, or dimension definitions change.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
@@ -383,14 +394,6 @@ export default function MethodologyPage() {
             </ul>
           </div>
 
-          {/* Versioning */}
-          <p className="text-xs text-muted-foreground italic">
-            Methodology version {SAFETY_SCORE_VERSION_LABEL}. Version increments when weights, thresholds, or dimension definitions change.
-            {" "}
-            <Link href="/methodology/scoring-changelog" className="text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
-              View full version history &rarr;
-            </Link>
-          </p>
         </CardContent>
       </Card>
 
