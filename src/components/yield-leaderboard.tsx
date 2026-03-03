@@ -246,7 +246,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
                   <div className="flex items-center gap-1">
                     <span className="truncate">{row.yieldSource}</span>
-                    {row.altSources.length > 0 && <AltSourcesPopover altSources={row.altSources} />}
+                    {(row.altSources?.length ?? 0) > 0 && <AltSourcesPopover altSources={row.altSources} />}
                   </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-center">
