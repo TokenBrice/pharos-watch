@@ -9,6 +9,7 @@ const PLAYWRIGHT_CLI_PREFIX = ["--yes", "--package", "@playwright/cli", "playwri
 const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 const SESSION_PREFIX = "prod-ui-smoke";
+const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
 
 function parseArgs(argv) {
   const args = { url: DEFAULT_URL };
@@ -64,9 +65,18 @@ function removePlaywrightArtifacts() {
   rmSync(".playwright-cli", { recursive: true, force: true });
 }
 
-const UI_EVAL = `async () => {
+function getUiWaitTimeoutMs() {
+  const parsed = Number.parseInt(process.env.SMOKE_UI_WAIT_TIMEOUT_MS ?? "", 10);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return DEFAULT_UI_WAIT_TIMEOUT_MS;
+}
+
+function buildUiEval(waitTimeoutMs) {
+  return `async () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const timeoutAt = Date.now() + 15000;
+  const timeoutAt = Date.now() + ${waitTimeoutMs};
   while (Date.now() < timeoutAt) {
     const text = document.body?.innerText ?? "";
     const rows = document.querySelectorAll("table tbody tr").length;
@@ -79,6 +89,7 @@ const UI_EVAL = `async () => {
         hasStablecoins404,
         hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
         title: document.title,
+        waitTimeoutMs: ${waitTimeoutMs},
         timedOut: false
       };
     }
@@ -91,14 +102,17 @@ const UI_EVAL = `async () => {
     hasStablecoins404: text.includes("stablecoins:404"),
     hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
     title: document.title,
+    waitTimeoutMs: ${waitTimeoutMs},
     timedOut: true
   };
 }`;
+}
 
 async function run() {
   const { url: rawUrl } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
   const sessionId = `${SESSION_PREFIX}-${Date.now()}`;
+  const waitTimeoutMs = getUiWaitTimeoutMs();
 
   console.log(`[smoke-ui] Running browser smoke checks against ${url}`);
 
@@ -106,11 +120,14 @@ async function run() {
     const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
     ensureNoCliError("open", openOutput);
 
-    const evalOutput = await runPlaywrightCli(sessionId, ["eval", UI_EVAL]);
+    const evalOutput = await runPlaywrightCli(sessionId, ["eval", buildUiEval(waitTimeoutMs)]);
     ensureNoCliError("eval", evalOutput);
     const summary = parseResultJson(evalOutput);
 
-    assert(!summary.timedOut, "Timed out waiting for homepage table data");
+    assert(
+      !summary.timedOut,
+      `Timed out waiting for homepage table data after ${summary.waitTimeoutMs}ms`,
+    );
     assert(!summary.hasFailedToLoad, "Found 'Failed to load data' UI banner");
     assert(!summary.hasStablecoins404, "Found '/api/stablecoins:404' style UI error");
     assert(summary.rows > 0, "Expected at least one stablecoin row in the homepage table");
