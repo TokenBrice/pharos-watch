@@ -92,13 +92,173 @@ export default function MethodologyPage() {
             Version increments when PSI formula, caps, bands, or component definitions change.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+        <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>
-            PSI is a 0–100 market-health score for the stablecoin ecosystem, computed from depeg severity,
-            depeg breadth, DEWS stress breadth, and 7-day market-cap trend.
+            The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem.
+            It is recomputed every 15 minutes from live depeg conditions and stress signals, then aggregated into
+            daily history snapshots.
           </p>
-          <div className="rounded-lg border p-3 font-mono text-xs bg-muted">
-            Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
+
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Scoring Formula</h3>
+            <code className="block rounded-lg border bg-muted px-4 py-3 text-xs font-mono">
+              Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
+            </code>
+            <p className="text-xs">
+              The final value is clamped to [0, 100] and rounded to one decimal.
+            </p>
+          </div>
+
+          {/* PSI pipeline — desktop */}
+          <div className="hidden md:flex flex-col items-center gap-3">
+            <div className="grid grid-cols-4 gap-3 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Severity</p>
+                <p className="text-xs text-muted-foreground mt-0.5">0&ndash;68</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Breadth</p>
+                <p className="text-xs text-muted-foreground mt-0.5">0&ndash;17</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Stress Breadth</p>
+                <p className="text-xs text-muted-foreground mt-0.5">0&ndash;5</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium">Trend</p>
+                <p className="text-xs text-muted-foreground mt-0.5">&minus;5 to +5</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border p-3 text-center w-80">
+              <p className="text-foreground font-medium">Compute PSI</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                100 &minus; penalties + trend
+              </p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="rounded-lg border border-cyan-500/40 p-3 text-center w-80">
+              <p className="text-foreground font-medium">Condition Band</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                BEDROCK through MELTDOWN
+              </p>
+            </div>
+          </div>
+
+          {/* PSI pipeline — mobile */}
+          <div className="flex flex-col items-center gap-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Severity</p>
+                <p className="text-xs text-muted-foreground">0&ndash;68</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Breadth</p>
+                <p className="text-xs text-muted-foreground">0&ndash;17</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Stress Breadth</p>
+                <p className="text-xs text-muted-foreground">0&ndash;5</p>
+              </div>
+              <div className="rounded-lg border p-3 text-center">
+                <p className="text-foreground font-medium text-xs">Trend</p>
+                <p className="text-xs text-muted-foreground">&minus;5 to +5</p>
+              </div>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border p-3 text-center">
+              <p className="text-foreground font-medium">Compute PSI</p>
+              <p className="text-xs text-muted-foreground mt-0.5">100 &minus; penalties + trend</p>
+            </div>
+            <div className="text-muted-foreground text-xl font-bold">&darr;</div>
+            <div className="w-full rounded-lg border border-cyan-500/40 p-3 text-center">
+              <p className="text-foreground font-medium">Condition Band</p>
+              <p className="text-xs text-muted-foreground mt-0.5">BEDROCK through MELTDOWN</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Components</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4 font-medium text-foreground">Component</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Range</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Formula</th>
+                    <th className="py-2 font-medium text-foreground">Purpose</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Severity</td>
+                    <td className="py-2 pr-4">0&ndash;68</td>
+                    <td className="py-2 pr-4 font-mono text-xs">
+                      min(68, &Sigma;(abs(bps)/100 &times; share &times; log2(1+mcap/1B) &times; 60 &times; factor))
+                    </td>
+                    <td className="py-2">Magnitude-weighted depeg damage with extra emphasis on mega-cap instability</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Breadth</td>
+                    <td className="py-2 pr-4">0&ndash;17</td>
+                    <td className="py-2 pr-4 font-mono text-xs">min(17, &Sigma;(sqrt(mcap/1B) &times; 3 &times; factor))</td>
+                    <td className="py-2">How widely depegs are spreading across unique coins</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Stress Breadth</td>
+                    <td className="py-2 pr-4">0&ndash;5</td>
+                    <td className="py-2 pr-4 font-mono text-xs">min(5, dewsStressBreadth)</td>
+                    <td className="py-2">Early-warning pressure from DEWS stress signals before full depegs</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 text-foreground">Trend</td>
+                    <td className="py-2 pr-4">&minus;5 to +5</td>
+                    <td className="py-2 pr-4 font-mono text-xs">clamp(-5, 5, mcap7dChangePct)</td>
+                    <td className="py-2">7-day stablecoin market-cap momentum (supports or offsets penalties)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Depeg Handling Rules</h3>
+            <ul className="list-disc list-inside space-y-1">
+              <li>
+                <span className="text-foreground font-medium">Per-coin deduplication:</span> active events are grouped by coin;
+                each coin contributes once using the worst current deviation.
+              </li>
+              <li>
+                <span className="text-foreground font-medium">Age-aware depreciation:</span> fresh depegs get full weight for 30 days,
+                then decay linearly to a 25% floor over 120 days.
+              </li>
+            </ul>
+            <code className="block rounded-lg border bg-muted px-4 py-3 text-xs font-mono">
+              factor = ageDays &le; 30 ? 1.0 : max(0.25, 1.0 &minus; (ageDays &minus; 30)/120)
+            </code>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-foreground font-medium">Condition Bands</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="py-2 pr-4 font-medium text-foreground">Range</th>
+                    <th className="py-2 pr-4 font-medium text-foreground">Band</th>
+                    <th className="py-2 font-medium text-foreground">Meaning</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr><td className="py-2 pr-4">90&ndash;100</td><td className="py-2 pr-4 text-green-500 font-medium">BEDROCK</td><td className="py-2">Near-ideal market stability</td></tr>
+                  <tr><td className="py-2 pr-4">75&ndash;89</td><td className="py-2 pr-4 text-teal-500 font-medium">STEADY</td><td className="py-2">Normal conditions with minor stress</td></tr>
+                  <tr><td className="py-2 pr-4">60&ndash;74</td><td className="py-2 pr-4 text-yellow-500 font-medium">TREMOR</td><td className="py-2">Meaningful instability emerging</td></tr>
+                  <tr><td className="py-2 pr-4">40&ndash;59</td><td className="py-2 pr-4 text-orange-500 font-medium">FRACTURE</td><td className="py-2">Broad, significant market stress</td></tr>
+                  <tr><td className="py-2 pr-4">20&ndash;39</td><td className="py-2 pr-4 text-red-500 font-medium">CRISIS</td><td className="py-2">Contagion-level instability</td></tr>
+                  <tr><td className="py-2 pr-4">0&ndash;19</td><td className="py-2 pr-4 text-red-800 font-medium">MELTDOWN</td><td className="py-2">Systemic peg failure conditions</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </CardContent>
       </Card>
