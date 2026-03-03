@@ -4,20 +4,20 @@ import { CATEGORY_LINKS } from "@/lib/constants";
 export function Footer() {
   return (
     <footer className="border-t py-6">
-      <div className="container mx-auto px-4 space-y-4">
+      <div className="container mx-auto px-4 space-y-5">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
             <Link href="/stability-index" className="hover:text-foreground transition-colors">Stability Index</Link>
             <Link href="/safety-scores" className="hover:text-foreground transition-colors">Safety Scores</Link>
-<Link href="/blacklist" className="hover:text-foreground transition-colors">Blacklist Tracker</Link>
+            <Link href="/blacklist" className="hover:text-foreground transition-colors">Blacklist Tracker</Link>
             <Link href="/liquidity" className="hover:text-foreground transition-colors">Liquidity</Link>
             <Link href="/cemetery" className="hover:text-foreground transition-colors">Cemetery</Link>
             <Link href="/methodology" className="hover:text-foreground transition-colors">Methodology</Link>
             <Link href="/about" className="hover:text-foreground transition-colors">About</Link>
             <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
           </nav>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 text-xs text-muted-foreground">
             <a href="https://x.com/PharosWatch" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors" aria-label="Pharos on X/Twitter">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
             </a>
@@ -31,7 +31,25 @@ export function Footer() {
             <span className="font-mono">Watching the peg.</span>
           </div>
         </div>
-        <nav aria-label="Browse by category" className="flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
+
+        <details className="sm:hidden rounded-md border border-border/60 px-3 py-2">
+          <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Browse by category
+          </summary>
+          <nav aria-label="Browse by category" className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {CATEGORY_LINKS.map((cat) => (
+              <Link
+                key={cat.href}
+                href={cat.href}
+                className="hover:text-foreground transition-colors"
+              >
+                {cat.label}
+              </Link>
+            ))}
+          </nav>
+        </details>
+
+        <nav aria-label="Browse by category" className="hidden sm:flex flex-wrap items-center justify-center gap-3 text-xs text-muted-foreground">
           {CATEGORY_LINKS.map((cat) => (
             <Link
               key={cat.href}

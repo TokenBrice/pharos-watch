@@ -59,7 +59,7 @@ export function Header() {
 
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="icon" className="h-11 w-11">
               <Menu className="h-4 w-4" />
               <span className="sr-only">Menu</span>
             </Button>
@@ -75,7 +75,7 @@ export function Header() {
                 <Image src="/pharos-icon.png" alt="" width={28} height={28} className="rounded-lg" />
                 <SheetTitle className="text-lg font-mono uppercase tracking-[0.2em]">PHAROS</SheetTitle>
               </Link>
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setOpen(false)}>
+              <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close menu</span>
               </Button>
@@ -118,7 +118,7 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="gap-2"
+                className="gap-2 min-h-11"
                 onClick={() => {
                   setOpen(false);
                   window.dispatchEvent(new CustomEvent("open-command-palette"));

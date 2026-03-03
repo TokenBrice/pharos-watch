@@ -206,7 +206,7 @@ function BlacklistPageInner() {
             placeholder="Search by address..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-8 h-8 text-xs"
+            className="pl-8 h-11 sm:h-8 text-sm sm:text-xs"
             aria-label="Search events by address"
           />
         </div>
@@ -220,7 +220,7 @@ function BlacklistPageInner() {
       />
 
       {filtered.length > 0 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             Showing <span className="font-mono">{Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}</span>&ndash;<span className="font-mono">{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-mono">{filtered.length}</span> events
           </p>
@@ -228,6 +228,7 @@ function BlacklistPageInner() {
             <Button
               variant="outline"
               size="sm"
+              className="min-h-11 sm:min-h-8"
               onClick={() => {
                 const nextPage = Math.max(1, page - 1);
                 setPage(nextPage);
@@ -240,6 +241,7 @@ function BlacklistPageInner() {
             <Button
               variant="outline"
               size="sm"
+              className="min-h-11 sm:min-h-8"
               onClick={() => {
                 const nextPage = Math.min(totalPages, page + 1);
                 setPage(nextPage);

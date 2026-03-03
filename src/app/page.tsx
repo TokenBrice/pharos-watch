@@ -48,7 +48,7 @@ export default function HomePage() {
               <Link
                 key={peg}
                 href={`/stablecoins/${slug}/`}
-                className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="inline-flex items-center rounded-full border px-3 py-1.5 sm:py-1 min-h-11 sm:min-h-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
               </Link>

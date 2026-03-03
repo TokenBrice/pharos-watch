@@ -82,7 +82,7 @@ function BiggestDepegs({
             <Link
               key={d.id}
               href={`/stablecoin/${d.id}`}
-              className="flex items-center justify-between gap-2 group"
+              className="flex items-center justify-between gap-2 group py-1.5 min-h-11"
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 <StablecoinLogo
@@ -175,7 +175,7 @@ function FastestMovers({
               <Link
                 key={g.id}
                 href={`/stablecoin/${g.id}`}
-                className="flex items-center justify-between gap-1 group"
+                className="flex items-center justify-between gap-1 group py-1.5 min-h-11"
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <StablecoinLogo
@@ -203,7 +203,7 @@ function FastestMovers({
               <Link
                 key={s.id}
                 href={`/stablecoin/${s.id}`}
-                className="flex items-center justify-between gap-1 group"
+                className="flex items-center justify-between gap-1 group py-1.5 min-h-11"
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <StablecoinLogo

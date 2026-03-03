@@ -176,7 +176,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       {/* HERO CARD */}
       <Card className="rounded-xl gap-0">
         {/* Top bar: breadcrumb + compare */}
-        <div className="flex items-center justify-between px-5 pt-3 pb-2.5 border-b border-border/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 pt-3 pb-2.5 border-b border-border/30">
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
             <span>/</span>
@@ -192,7 +192,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         </div>
 
         {/* Hero body: 2-column layout */}
-        <div className="px-5 py-4">
+        <div className="px-4 sm:px-5 py-4">
           <div className="flex flex-col lg:flex-row lg:items-stretch gap-6">
 
             {/* LEFT: Identity + Price */}
@@ -243,7 +243,7 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
               </div>
 
               {/* Price + Gauge */}
-              <div className="flex items-center gap-4 mt-auto border-t border-border/30 pt-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-auto border-t border-border/30 pt-3">
                 {coinData.price != null && pegRef > 0 && (
                   <PegGauge
                     deviationBps={isNavToken ? 0 : deviationBps}

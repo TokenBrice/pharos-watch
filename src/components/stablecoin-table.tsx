@@ -99,9 +99,9 @@ function ColumnVisibilityDropdown({
   const hiddenCount = ALL_COLUMNS.length - visibleColumns.length;
 
   return (
-    <DropdownMenu>
+      <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8">
           <Columns3 className="h-3.5 w-3.5" />
           Columns
           {hiddenCount > 0 && (
@@ -376,12 +376,13 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   return (
     <div className="rounded-xl border animate-in fade-in duration-300">
       <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-b bg-muted/30">
+        <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
         <ColumnVisibilityDropdown
           visibleColumns={visibleColumns}
           setVisibleColumns={setVisibleColumns}
           resetColumns={resetColumns}
         />
-        <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={sorted.length === 0}>
+        <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
           <Download className="h-3.5 w-3.5" />
           Export CSV
         </Button>
@@ -431,7 +432,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="text-right"
+                  className="hidden sm:table-cell text-right"
                   title="Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first"
                 />
               )}
@@ -576,7 +577,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     </TableCell>
                   )}
                   {isVisible("peg") && (
-                    <TableCell className="text-right font-mono tabular-nums">
+                    <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">
                       {meta?.flags.navToken ? (
                         <span className="text-muted-foreground" title={meta.flags.pegCurrency === "VAR" ? "CPI-indexed, price tracks inflation" : "NAV token, price appreciates with yield"}>
                           {meta.flags.pegCurrency === "VAR" ? "CPI" : "NAV"}

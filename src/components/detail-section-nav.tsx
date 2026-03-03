@@ -62,8 +62,9 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
     <nav
       ref={navRef}
       aria-label="Section navigation"
-      className="sticky top-0 z-20 bg-card/95 backdrop-blur overflow-x-auto scrollbar-none"
+      className="sticky top-14 md:top-0 z-20 bg-card/95 backdrop-blur overflow-x-auto scrollbar-none relative"
     >
+      <p className="px-3 pt-1 text-[11px] text-muted-foreground/70 sm:hidden">Swipe for more sections</p>
       <div className="flex gap-0.5 p-1">
         {sections.map((section) => (
           <button
@@ -73,7 +74,7 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
             }}
             onClick={() => handleClick(section.id)}
             className={cn(
-              "px-3 py-2 text-sm font-medium whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              "px-3 py-2 h-11 text-sm font-medium whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
               activeId === section.id
                 ? "text-foreground bg-muted border-b-2 border-foreground/60"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -83,6 +84,7 @@ export function DetailSectionNav({ sections }: SectionNavProps) {
           </button>
         ))}
       </div>
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-card to-transparent sm:hidden" />
     </nav>
   );
 }

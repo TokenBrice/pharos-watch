@@ -192,8 +192,15 @@ function DEWSDot({
       onFocus={() => onHover(coin.id)}
       onBlur={() => onHover(null)}
       onClick={() => onClick(coin.id)}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onClick(coin.id); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick(coin.id);
+        }
+      }}
     >
+      {/* Touch-friendly hit area to improve mobile targeting precision */}
+      <circle r={18} fill="transparent" stroke="transparent" />
       {/* Animated glow ring */}
       <circle r={glowR} fill={hex}
         className="dews-glow-r"

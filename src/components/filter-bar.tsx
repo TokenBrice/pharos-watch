@@ -28,8 +28,8 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <div id="filter-bar" className="space-y-3 border-t pt-4 pb-3">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Filters
             {hasFilters && (
@@ -53,13 +53,13 @@ export function FilterBar({
             placeholder="Search by name or symbol..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 pr-8 h-9 sm:h-8 text-xs"
+            className="pl-8 pr-8 h-11 sm:h-8 text-sm sm:text-xs"
             aria-label="Search stablecoins by name or symbol"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />
@@ -84,7 +84,7 @@ export function FilterBar({
                   value={opt}
                   variant="outline"
                   size="sm"
-                  className="text-xs py-1.5 sm:py-1"
+                  className="text-xs py-1.5 sm:py-1 min-h-11 sm:min-h-8"
                 >
                   {FILTER_TAG_LABELS[opt]}
                 </ToggleGroupItem>

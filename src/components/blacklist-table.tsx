@@ -103,7 +103,8 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
   return (
     <div className="rounded-xl border overflow-x-auto">
       <div className="flex items-center justify-end px-3 py-1.5 border-b bg-muted/30">
-        <Button variant="outline" size="sm" onClick={handleCsvExport} disabled={sorted.length === 0}>
+        <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
+        <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
           <Download className="h-3.5 w-3.5" />
           Export CSV
         </Button>
@@ -148,9 +149,9 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
             />
-            <TableHead>Address</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead className="text-center">Tx</TableHead>
+            <TableHead className="hidden md:table-cell">Address</TableHead>
+            <TableHead className="hidden sm:table-cell text-right">Amount</TableHead>
+            <TableHead className="hidden sm:table-cell text-center">Tx</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -167,7 +168,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   {EVENT_LABELS[evt.eventType] ?? evt.eventType}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <a
                   href={evt.explorerAddressUrl}
                   target="_blank"
@@ -177,14 +178,14 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   {formatAddress(evt.address)}
                 </a>
               </TableCell>
-              <TableCell className="text-right font-mono">
+              <TableCell className="hidden sm:table-cell text-right font-mono">
                 {evt.amount != null && !(evt.amount === 0 && evt.eventType !== "destroy")
                   ? isGoldStablecoin(evt.stablecoin)
                     ? `${evt.amount.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${evt.stablecoin}`
                     : formatCurrency(evt.amount)
                   : "\u2014"}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="hidden sm:table-cell text-center">
                 <a
                   href={evt.explorerTxUrl}
                   target="_blank"
