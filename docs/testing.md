@@ -15,22 +15,33 @@ npm test -- --coverage # Run tests with V8 coverage report
 npm run test:critical-contracts # Critical endpoint contract suite
 npm run test:invariants # Critical numerical/schema invariant suite
 npm run coverage:critical # Full coverage + critical-path line-coverage gate
+npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints
 ```
 
 ## CI Pipeline
 
-Defined in `.github/workflows/deploy-cloudflare.yml`. The `deploy-pages` job runs sequentially:
+Defined in `.github/workflows/deploy-cloudflare.yml`. Deploys are now gated in four jobs:
 
-1. `npm run lint` — ESLint must pass (warnings OK, errors block)
-2. `npm test` — Vitest must pass (exit code 0)
-3. `npm run test:critical-contracts` — Critical endpoint contract tests must pass
-4. `npm run test:invariants` — Critical invariants (finite numbers, schema-safe cache writes) must pass
-5. `npm run coverage:critical` — Critical files must meet line-coverage threshold
-6. `npx tsx scripts/sync-digests.ts` — Fetch latest digests for SSG
-7. `npm run build` — Next.js static export (also runs TypeScript type-checking)
-8. Deploy to Cloudflare Pages
+1. `validate` (runs before any deployment):
+   - `npm run lint`
+   - `npm test`
+   - `npm run test:critical-contracts`
+   - `npm run test:invariants`
+   - `npm run coverage:critical`
+   - `cd worker && npx tsc --noEmit`
+2. `deploy-worker` (needs `validate`):
+   - Apply D1 migrations
+   - Deploy worker
+3. `smoke-api` (needs `deploy-worker`):
+   - Run `npm run test:smoke-api`
+   - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
+4. `deploy-pages` (needs `smoke-api`):
+   - `npx tsx scripts/sync-digests.ts`
+   - `npm run build`
+   - `npm run seo:check`
+   - Deploy to Cloudflare Pages
 
-The `deploy-worker` job runs first (deploy-pages has `needs: deploy-worker`). It installs root deps (`npm ci`) for shared `src/lib/` type resolution, then installs worker deps and type-checks (`npx tsc --noEmit`).
+This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks.
 
 ## Test Setup
 
@@ -154,6 +165,7 @@ const row = makeBlacklistRow({ stablecoin: "2", event_type: "freeze" });
 
 | File | Handler | Modes Tested |
 |------|---------|--------------|
+| `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts` and avoid accidental 404s |
 | `blacklist.test.ts` | `handleBlacklist` | 200 with events, empty results, 400 invalid params, camelCase mapping, X-Data-Age |
 | `depeg-events.test.ts` | `handleDepegEvents` | 200 with events, empty results, 400 invalid params, camelCase mapping |
 | `supply-history.test.ts` | `handleSupplyHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
@@ -250,8 +262,9 @@ Current critical file set:
 
 ### Critical Test Suites
 
-- `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with API/fetch contract tests.
+- `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus router mapping tests to guarantee these paths are wired in `worker/src/router.ts`.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
+- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health`, `/api/stablecoins`, and `/api/peg-summary`.
 
 ## Adding a New Test
 
