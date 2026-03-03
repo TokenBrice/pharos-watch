@@ -1117,20 +1117,6 @@ export const DEAD_STABLECOINS: DeadStablecoin[] = [
     sourceLabel: "Unchained",
   },
   {
-    name: "Reservoir rUSD",
-    symbol: "rUSD",
-    logo: "rusd.png",
-    pegCurrency: "USD",
-    causeOfDeath: "liquidity-drain",
-    deathDate: "2025-12",
-    peakMcap: 88_500_000,
-    epitaph: "$88M walked out the door",
-    obituary:
-      "Reservoir boasted about processing $285M in redemptions during November 2025 'without failure' — technically true, but the patient survived the surgery only to flatline. Supply dropped from $88M to under $700K as every dollar that could leave, did.",
-    sourceUrl: "https://defillama.com/stablecoin/reservoir-stablecoin",
-    sourceLabel: "DefiLlama",
-  },
-  {
     name: "US Permissionless Dollar",
     symbol: "USPD",
     llamaId: "315",
