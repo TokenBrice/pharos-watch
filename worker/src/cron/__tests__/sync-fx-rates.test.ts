@@ -58,7 +58,7 @@ describe("syncFxRates", () => {
     expect(metadata.rateCount).toBeGreaterThan(5);
   });
 
-  it("throws when frankfurter.app returns error", async () => {
+  it("falls back to cached rates when frankfurter.app is unavailable", async () => {
     mockFetch([
       {
         match: "frankfurter.app",
@@ -68,10 +68,20 @@ describe("syncFxRates", () => {
     ]);
 
     const db = mockD1([
-      { match: "cache", rows: [], first: null },
+      {
+        match: "cache",
+        rows: [],
+        first: {
+          value: JSON.stringify({ peggedEUR: 1.08, peggedRUB: 0.011 }),
+          updated_at: Math.floor(Date.now() / 1000) - 60,
+        },
+      },
     ]);
 
-    await expect(syncFxRates(db)).rejects.toThrow("frankfurter.app returned 503");
+    const result = await syncFxRates(db);
+    expect(result.itemCount).toBe(2);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.fallbackMode).toBe("cached-fx-rates");
   });
 
   it("uses secondary API for RUB/UAH/ARS rates", async () => {

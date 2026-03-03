@@ -101,6 +101,23 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
     });
 
     if (!res || !res.ok) {
+      const cachedRateCount = Object.keys(prevRates).length;
+      if (cachedRateCount > 0) {
+        console.warn(
+          `[sync-fx-rates] frankfurter.app unavailable (${res?.status ?? "no response"}), using ${cachedRateCount} cached rates`,
+        );
+        return {
+          itemCount: cachedRateCount,
+          metadata: JSON.stringify({
+            rateCount: cachedRateCount,
+            fallbackMode: "cached-fx-rates",
+            sources: {
+              frankfurter: "error",
+              cache: "ok",
+            },
+          }),
+        };
+      }
       throw new Error(`frankfurter.app returned ${res?.status ?? "no response"}`);
     }
 
