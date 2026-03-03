@@ -80,29 +80,50 @@ export function findBestLendingPool(
     pool: string; symbol: string; project: string; tvlUsd: number;
     apy: number; apyBase: number | null; apyReward: number | null;
     stablecoin: boolean; exposure: string;
+    underlyingTokens?: string[] | null;
   }>,
   allowlist: Set<string>,
   options?: {
     minApy?: number;
     minTvlUsd?: number;
+    contractAddresses?: string[];
   },
 ): { pool: string; apy: number; apyBase: number | null; apyReward: number | null; tvlUsd: number; project: string } | null {
   const symLower = symbol.toLowerCase();
   const minApy = options?.minApy ?? 0;
   const minTvlUsd = options?.minTvlUsd ?? 0;
+  const contractSet = new Set((options?.contractAddresses ?? []).map((a) => a.toLowerCase()));
 
-  const candidates = dlPools.filter((p) =>
+  const baseCandidates = dlPools.filter((p) =>
     p.exposure === "single" &&
     p.stablecoin &&
     allowlist.has(p.project) &&
-    p.symbol.toLowerCase() === symLower &&
     p.apy >= minApy &&
     p.tvlUsd >= minTvlUsd
   );
 
-  if (candidates.length === 0) return null;
+  // Primary match: exact symbol (existing behavior).
+  const symbolCandidates = baseCandidates.filter((p) => p.symbol.toLowerCase() === symLower);
+  if (symbolCandidates.length > 0) {
+    const best = symbolCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+    return {
+      pool: best.pool,
+      apy: best.apy,
+      apyBase: best.apyBase,
+      apyReward: best.apyReward,
+      tvlUsd: best.tvlUsd,
+      project: best.project,
+    };
+  }
 
-  const best = candidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
+  // Fallback: underlying token address match (covers symbol drift like FEUSDH/STEAKEURCV).
+  if (contractSet.size === 0) return null;
+  const addressCandidates = baseCandidates.filter((p) =>
+    (p.underlyingTokens ?? []).some((addr) => contractSet.has(addr.toLowerCase()))
+  );
+  if (addressCandidates.length === 0) return null;
+
+  const best = addressCandidates.reduce((a, b) => (b.tvlUsd > a.tvlUsd ? b : a));
   return {
     pool: best.pool,
     apy: best.apy,

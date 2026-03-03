@@ -332,6 +332,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     const lendingCandidates = TRACKED_STABLECOINS.filter((m) =>
       !yieldBearingIds.has(m.id) &&
       !resolvedIds.has(m.id) &&
+      m.flags.pegCurrency !== "GOLD" &&
+      m.flags.pegCurrency !== "SILVER" &&
       (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
     );
     console.log(
@@ -343,6 +345,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST, {
         minApy: MIN_LENDING_POOL_APY,
         minTvlUsd: MIN_LENDING_POOL_TVL_USD,
+        contractAddresses: (meta.contracts ?? []).map((c) => c.address),
       });
       if (pool) {
         resolved.push({

@@ -189,6 +189,66 @@ describe("findBestLendingPool", () => {
     expect(result).not.toBeNull();
   });
 
+  it("falls back to underlying token address when symbol does not match", () => {
+    const poolsWithUnderlying = [
+      ...pools,
+      {
+        pool: "p5",
+        symbol: "FEUSDH",
+        project: "aave-v3",
+        tvlUsd: 12_000_000,
+        apy: 4.2,
+        apyBase: 4.2,
+        apyReward: null,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: ["0x111111a1a0667d36bd57c0a9f569b98057111111"],
+      },
+    ];
+
+    const result = findBestLendingPool("USDH", poolsWithUnderlying, allowlist, {
+      contractAddresses: ["0x111111A1A0667d36Bd57c0A9f569b98057111111"],
+    });
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("p5");
+  });
+
+  it("prefers exact symbol match over address fallback", () => {
+    const poolsWithUnderlying = [
+      ...pools,
+      {
+        pool: "p5",
+        symbol: "USDH",
+        project: "aave-v3",
+        tvlUsd: 5_000_000,
+        apy: 3.4,
+        apyBase: 3.4,
+        apyReward: null,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: ["0xabc"],
+      },
+      {
+        pool: "p6",
+        symbol: "FEUSDH",
+        project: "aave-v3",
+        tvlUsd: 25_000_000,
+        apy: 4.8,
+        apyBase: 4.8,
+        apyReward: null,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: ["0xabc"],
+      },
+    ];
+
+    const result = findBestLendingPool("USDH", poolsWithUnderlying, allowlist, {
+      contractAddresses: ["0xAbC"],
+    });
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("p5");
+  });
+
   it("applies optional min APY and TVL quality gates", () => {
     const result = findBestLendingPool("USDT", pools, allowlist, { minApy: 3.1, minTvlUsd: 15_000_000 });
     expect(result).toBeNull();

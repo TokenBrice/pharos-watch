@@ -110,6 +110,7 @@ describe("findBestLendingPool", () => {
     pool: string; symbol: string; project: string; tvlUsd: number;
     apy: number; apyBase: number | null; apyReward: number | null;
     stablecoin: boolean; exposure: string; chain: string;
+    underlyingTokens: string[] | null;
   }>) => ({
     pool: "pool-1",
     symbol: "USDC",
@@ -169,6 +170,47 @@ describe("findBestLendingPool", () => {
     ];
     const result = findBestLendingPool("USDC", pools, allowlist);
     expect(result).not.toBeNull();
+  });
+
+  it("falls back to underlying token address when symbol does not match", () => {
+    const pools = [
+      makeDlPool({
+        pool: "a",
+        symbol: "FEUSDH",
+        project: "compound-v3",
+        tvlUsd: 3_000_000,
+        underlyingTokens: ["0x111111a1a0667d36bd57c0a9f569b98057111111"],
+      }),
+    ];
+    const result = findBestLendingPool("USDH", pools, allowlist, {
+      contractAddresses: ["0x111111A1A0667d36Bd57c0A9f569b98057111111"],
+    });
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("a");
+  });
+
+  it("prefers exact symbol match over address fallback", () => {
+    const pools = [
+      makeDlPool({
+        pool: "a",
+        symbol: "USDH",
+        project: "aave-v3",
+        tvlUsd: 1_000_000,
+        underlyingTokens: ["0xabc"],
+      }),
+      makeDlPool({
+        pool: "b",
+        symbol: "FEUSDH",
+        project: "compound-v3",
+        tvlUsd: 9_000_000,
+        underlyingTokens: ["0xabc"],
+      }),
+    ];
+    const result = findBestLendingPool("USDH", pools, allowlist, {
+      contractAddresses: ["0xAbC"],
+    });
+    expect(result).not.toBeNull();
+    expect(result!.pool).toBe("a");
   });
 
   it("returns null when no pools match", () => {
