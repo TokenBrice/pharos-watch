@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -14,6 +15,7 @@ import { SortableTableHead } from "@/components/sortable-table-head";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSort } from "@/hooks/use-sort";
 import { useLogos } from "@/hooks/use-logos";
+import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { MintBurnCoinFlow } from "@/lib/types";
@@ -26,9 +28,11 @@ interface FlowTableProps {
 type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "net30d" | "net90d" | "largest" | "fis";
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
+  const router = useRouter();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
     useSort<SortKey>("net24h", "desc");
   const { data: logos } = useLogos();
+  const prefetch = usePrefetchStablecoin();
 
   const sorted = useMemo(() => {
     return [...coins].sort((a, b) => {
@@ -206,7 +210,19 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const name = meta?.name ?? coin.symbol;
 
             return (
-              <TableRow key={coin.stablecoinId}>
+              <TableRow
+                key={coin.stablecoinId}
+                className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
+                onClick={() => router.push(`/stablecoin/${coin.stablecoinId}`)}
+                onMouseEnter={() => prefetch(coin.stablecoinId)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    router.push(`/stablecoin/${coin.stablecoinId}`);
+                  }
+                }}
+                tabIndex={0}
+              >
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <StablecoinLogo src={logos?.[coin.stablecoinId]} name={name} size={24} />
