@@ -356,7 +356,13 @@ export async function syncMintBurn(
 
   const runState = await getMintBurnRunState(db);
   const startIndex = runState.nextConfigIndex % enabledConfigs.length;
-  const configs = rotateArray(enabledConfigs, startIndex);
+  const rotatedConfigs = rotateArray(enabledConfigs, startIndex);
+  // Always process critical contracts first so extended backlogs cannot starve
+  // core coverage when budget pressure is high.
+  const configs = [
+    ...rotatedConfigs.filter((config) => configTier(config) === "critical"),
+    ...rotatedConfigs.filter((config) => configTier(config) === "extended"),
+  ];
 
   // Ensure every enabled config has a sync-state row.
   const initStateStmts = configs.map((config) =>
