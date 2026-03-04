@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, BarChart3, Droplets, ExternalLink, Flame, FlaskConical, Gauge, Github, Layers, Network, Newspaper, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
+import { Activity, BarChart3, Droplets, ExternalLink, Flame, FlaskConical, Gauge, Github, Layers, Network, Newspaper, Radio, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
@@ -361,6 +361,30 @@ export default function AboutPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Section: Learn More About Pharos */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold tracking-tight">Learn More About Pharos</h2>
+        <Card className="rounded-xl border-l-[3px] border-l-sky-500">
+          <CardContent className="flex items-start gap-4 text-sm text-muted-foreground leading-relaxed">
+            <Radio className="h-5 w-5 text-sky-500 mt-0.5 shrink-0" />
+            <div className="space-y-2">
+              <p>
+                TokenBrice walked through Pharos live on Leviathan News — covering the motivation behind the project, how the data pipeline works, and what each metric means in practice.
+              </p>
+              <a
+                href="https://x.com/i/broadcasts/1qxvvkeMlyAxB"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors"
+              >
+                Watch the broadcast on Leviathan News
+                <ExternalLink className="inline h-3.5 w-3.5" />
+              </a>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Section 4: Classification */}
