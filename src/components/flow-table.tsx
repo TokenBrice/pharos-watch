@@ -17,6 +17,7 @@ import { useSort } from "@/hooks/use-sort";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
+import { getSignedFlowIntensityDisplay, getSignedFlowIntensityMagnitude } from "@/lib/flow-intensity";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { MintBurnCoinFlow } from "@/lib/types";
 
@@ -208,6 +209,13 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           {sorted.map((coin) => {
             const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
             const name = meta?.name ?? coin.symbol;
+            const intensityDisplay = coin.flowIntensity != null
+              ? getSignedFlowIntensityDisplay(coin.flowIntensity)
+              : null;
+            const intensityMagnitude = intensityDisplay != null
+              ? getSignedFlowIntensityMagnitude(intensityDisplay)
+              : 0;
+            const isNegativeIntensity = (intensityDisplay ?? 0) < 0;
 
             return (
               <TableRow
@@ -232,13 +240,27 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="text-right">
                   {coin.flowIntensity != null ? (
                     <div className="flex items-center justify-end gap-2">
-                      <div className="hidden sm:block w-16 h-2 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-blue-500"
-                          style={{ width: `${Math.min(100, coin.flowIntensity)}%` }}
-                        />
+                      <div className="hidden sm:flex h-2 w-16 overflow-hidden rounded-full bg-muted">
+                        <div className="relative h-full w-1/2 border-r border-border/70">
+                          {isNegativeIntensity && intensityMagnitude > 0 && (
+                            <div
+                              className="absolute right-0 top-0 h-full bg-red-500"
+                              style={{ width: `${intensityMagnitude}%` }}
+                            />
+                          )}
+                        </div>
+                        <div className="relative h-full w-1/2">
+                          {!isNegativeIntensity && intensityMagnitude > 0 && (
+                            <div
+                              className="absolute left-0 top-0 h-full bg-blue-500"
+                              style={{ width: `${intensityMagnitude}%` }}
+                            />
+                          )}
+                        </div>
                       </div>
-                      <span className="font-mono tabular-nums text-sm">{Math.round(coin.flowIntensity)}</span>
+                      <span className={`font-mono tabular-nums text-sm ${getNetColor(intensityDisplay ?? 0)}`}>
+                        {getNetPrefix(intensityDisplay ?? 0)}{intensityDisplay}
+                      </span>
                     </div>
                   ) : (
                     <span className="text-muted-foreground">&mdash;</span>

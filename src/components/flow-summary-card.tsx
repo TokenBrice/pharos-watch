@@ -12,6 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMintBurnFlows, useMintBurnFlowsCoin } from "@/hooks/use-mint-burn-flows";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
+import { getSignedFlowIntensityDisplay, getSignedFlowIntensityMagnitude } from "@/lib/flow-intensity";
 import { getMintBurnSummaryTimeframe, getNetFlowForHours } from "@/lib/mint-burn-timeframes";
 import { GAUGE_BANDS } from "@/components/flow-gauge";
 import { cn } from "@/lib/utils";
@@ -71,13 +72,13 @@ function SummarySkeleton() {
 }
 
 interface MiniPrinterSceneProps {
-  intensity: number | null;
-  intensityDisplay: number | null;
+  signedIntensityDisplay: number | null;
   bandConfig: { label: string; hex: string; textClass: string; bgClass: string } | null;
 }
 
-function MiniPrinterScene({ intensity, intensityDisplay, bandConfig }: MiniPrinterSceneProps) {
-  const power = intensity == null ? 0.5 : clamp(intensity / 100, 0.08, 1);
+function MiniPrinterScene({ signedIntensityDisplay, bandConfig }: MiniPrinterSceneProps) {
+  const intensityMagnitude = signedIntensityDisplay == null ? 50 : getSignedFlowIntensityMagnitude(signedIntensityDisplay);
+  const power = clamp(intensityMagnitude / 100, 0.08, 1);
   const eased = Math.pow(power, 1.35);
   const sheetCount = clamp(Math.round(4 + eased * 14), 4, 18);
   const baseDuration = clamp(2.2 - eased * 1.4, 0.55, 2.2);
@@ -88,6 +89,7 @@ function MiniPrinterScene({ intensity, intensityDisplay, bandConfig }: MiniPrint
   const delayStep = clamp(0.16 - power * 0.08, 0.06, 0.16);
   const accent = bandConfig?.hex ?? "#6b7280";
   const spreadPattern = [-1, -0.75, -0.52, -0.3, -0.12, 0, 0.12, 0.3, 0.52, 0.75, 1];
+  const isNegativeIntensity = (signedIntensityDisplay ?? 0) < 0;
 
   return (
     <div className="relative h-[210px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-3">
@@ -97,7 +99,7 @@ function MiniPrinterScene({ intensity, intensityDisplay, bandConfig }: MiniPrint
           Printer
         </span>
         <span className="font-mono tabular-nums">
-          {intensityDisplay != null ? `${intensityDisplay}%` : "CAL"}
+          {signedIntensityDisplay != null ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}%` : "CAL"}
         </span>
       </div>
 
@@ -137,7 +139,12 @@ function MiniPrinterScene({ intensity, intensityDisplay, bandConfig }: MiniPrint
           return (
             <div
               key={i}
-              className="pointer-events-none absolute top-[86px] flex h-4.5 w-8 -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950 mini-paper-fly"
+              className={cn(
+                "pointer-events-none absolute top-[86px] flex h-4.5 w-8 -translate-x-1/2 items-center justify-center rounded-sm mini-paper-fly",
+                isNegativeIntensity
+                  ? "border border-red-500/45 bg-red-300/75 text-red-950"
+                  : "border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
+              )}
               style={style}
             >
               <Banknote className="h-2.5 w-2.5" />
@@ -251,7 +258,13 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     )
     : coin.netFlow7dUsd;
   const intensity = coin.flowIntensity;
-  const intensityDisplay = intensity != null ? Math.round(intensity) : null;
+  const signedIntensityDisplay = intensity != null
+    ? getSignedFlowIntensityDisplay(intensity)
+    : null;
+  const intensityMagnitude = signedIntensityDisplay != null
+    ? getSignedFlowIntensityMagnitude(signedIntensityDisplay)
+    : 0;
+  const isNegativeIntensity = (signedIntensityDisplay ?? 0) < 0;
   const bandKey = intensity != null ? getBandForScore(intensity) : null;
   const bandConfig = bandKey ? GAUGE_BANDS[bandKey] : null;
 
@@ -266,8 +279,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-2">
             <MiniPrinterScene
-              intensity={intensity}
-              intensityDisplay={intensityDisplay}
+              signedIntensityDisplay={signedIntensityDisplay}
               bandConfig={bandConfig ?? null}
             />
             <Link
@@ -284,8 +296,8 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Flow Intensity</p>
-                  <p className={cn("font-mono text-2xl font-black leading-none", bandConfig?.textClass ?? "text-muted-foreground")}>
-                    {intensityDisplay != null ? intensityDisplay : "\u2014"}
+                  <p className={cn("font-mono text-2xl font-black leading-none", getNetColor(signedIntensityDisplay ?? 0))}>
+                    {signedIntensityDisplay != null ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}` : "\u2014"}
                   </p>
                 </div>
                 {intensity != null && bandConfig ? (
@@ -303,16 +315,23 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   <span className="text-xs text-muted-foreground">Calibrating</span>
                 )}
               </div>
-              <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-                {intensity != null && bandConfig && (
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${Math.min(100, intensity)}%`,
-                      backgroundColor: bandConfig.hex,
-                    }}
-                  />
-                )}
+              <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">
+                <div className="relative h-full w-1/2 border-r border-border/70">
+                  {isNegativeIntensity && intensityMagnitude > 0 && (
+                    <div
+                      className="absolute right-0 top-0 h-full bg-red-500 transition-all duration-500"
+                      style={{ width: `${intensityMagnitude}%` }}
+                    />
+                  )}
+                </div>
+                <div className="relative h-full w-1/2">
+                  {!isNegativeIntensity && intensityMagnitude > 0 && (
+                    <div
+                      className="absolute left-0 top-0 h-full bg-blue-500 transition-all duration-500"
+                      style={{ width: `${intensityMagnitude}%` }}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
