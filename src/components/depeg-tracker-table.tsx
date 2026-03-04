@@ -180,20 +180,10 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
               className="text-right hidden lg:table-cell"
             />
             <SortableTableHead
-              sortKey="activeDepeg"
-              currentSortKey={sortKey}
-              sortDirection={sortDirection}
-              label="Status"
-              toggleSort={toggleSort}
-              getAriaSortValue={getAriaSortValue}
-              handleSortKeyDown={handleSortKeyDown}
-              className="text-center hidden lg:table-cell"
-            />
-            <SortableTableHead
               sortKey="dexAgrees"
               currentSortKey={sortKey}
               sortDirection={sortDirection}
-              label="DEX"
+              label="DEX Price Check"
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
@@ -282,19 +272,6 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                     <span className="text-muted-foreground">--</span>
                   )}
                 </TableCell>
-                <TableCell className="text-center hidden lg:table-cell">
-                  {coin.activeDepeg ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-500">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-                      </span>
-                      LIVE
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">--</span>
-                  )}
-                </TableCell>
                 <TableCell className="text-center hidden xl:table-cell">
                   {coin.dexPriceCheck ? (
                     coin.dexPriceCheck.agrees ? (
@@ -314,7 +291,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
           })}
           {paginated.length === 0 && (
             <TableRow>
-              <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                 No stablecoins match your filters
               </TableCell>
             </TableRow>
