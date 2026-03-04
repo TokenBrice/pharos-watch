@@ -17,10 +17,10 @@ export const metadata: Metadata = {
     title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",
     description: cemeteryDescription,
     url: "/cemetery/",
-    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 628 }],
   },
 };
 

@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
     description: liquidityDescription,
     url: "/liquidity/",
-    images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-liquidity.png", width: 1200, height: 628 }],
   },
 };
 

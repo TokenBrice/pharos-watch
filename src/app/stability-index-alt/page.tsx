@@ -20,10 +20,10 @@ export const metadata: Metadata = {
     title: "Stability Index (Alt): Pharos Stablecoin Market Health",
     description,
     url: "/stability-index-alt/",
-    images: [{ url: "https://pharos.watch/og-stability-index.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-stability-index.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-stability-index.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-stability-index.png", width: 1200, height: 628 }],
   },
 };
 

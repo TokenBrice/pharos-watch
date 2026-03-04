@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
     description: depegDescription,
     url: "/depeg/",
-    images: [{ url: "https://pharos.watch/og-depeg.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-depeg.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-depeg.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-depeg.png", width: 1200, height: 628 }],
   },
 };
 

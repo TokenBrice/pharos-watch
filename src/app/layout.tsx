@@ -57,13 +57,13 @@ export const metadata: Metadata = {
     url: "https://pharos.watch/",
     title: "Stablecoin Analytics Dashboard | Pharos",
     description: siteDescription,
-    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 628 }],
   },
   twitter: {
     card: "summary_large_image",
     site: "@PharosWatch",
     creator: "@TokenBrice",
-    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-card.png", width: 1200, height: 628 }],
   },
   alternates: {
     canonical: "https://pharos.watch/",

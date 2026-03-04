@@ -13,10 +13,10 @@ export const metadata: Metadata = {
     description:
       "Track USDC, USDT, EURC, PAXG, and XAUT address freezes and blacklist events across Ethereum, Tron, and L2 chains.",
     url: "/blacklist/",
-    images: [{ url: "https://pharos.watch/og-blacklist.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-blacklist.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-blacklist.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-blacklist.png", width: 1200, height: 628 }],
   },
 };
 

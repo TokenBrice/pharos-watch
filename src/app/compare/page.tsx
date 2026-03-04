@@ -23,10 +23,10 @@ export const metadata: Metadata = {
     title: "Compare Stablecoins: Side-by-Side Analysis",
     description: compareDescription,
     url: "/compare/",
-    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 628 }],
   },
 };
 

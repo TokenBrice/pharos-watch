@@ -21,10 +21,10 @@ export const metadata: Metadata = {
     title: "Dependency Map: Stablecoin Collateral Graph",
     description,
     url: "/dependency-map/",
-    images: [{ url: "https://pharos.watch/og-dependency-map.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-dependency-map.png", width: 1200, height: 628 }],
   },
   twitter: {
-    images: [{ url: "https://pharos.watch/og-dependency-map.png", width: 1200, height: 630 }],
+    images: [{ url: "https://pharos.watch/og-dependency-map.png", width: 1200, height: 628 }],
   },
 };
 
