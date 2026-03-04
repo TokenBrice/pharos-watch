@@ -11,7 +11,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
 - **Schedule:** `0 8 * * *` (daily at 08:00 UTC)
 - **Function:** `snapshotSupply(db: D1Database): Promise<CronResult>`
 - **File:** `worker/src/cron/snapshot-supply.ts`
-- **Registration:** `worker/src/index.ts` line 230
+- **Registration:** `worker/src/index.ts`
 
 ---
 
@@ -22,7 +22,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Cache age > 1200 seconds (20 min): **skip entire snapshot** (return `itemCount: 0`)
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse cached JSON, extract the `peggedAssets` array
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (the tracked set, ~143 coins)
+4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 150 entries: 148 tracked + 2 shadow)
 5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
@@ -178,7 +178,7 @@ ORDER BY snapshot_date ASC
 
 For CoinGecko-only coins (ID starts with `cg-`), commodity tokens (gold/silver), or any coin where external APIs return no data, the detail endpoint falls back to the `supply_history` table and reconstructs the `DetailToken` format.
 
-### GET /api/backfill-supply-history (admin)
+### POST /api/backfill-supply-history (admin)
 
 Admin endpoint (requires `X-Admin-Key`). Backfills `supply_history` from:
 

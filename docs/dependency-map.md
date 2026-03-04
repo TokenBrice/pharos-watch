@@ -15,7 +15,7 @@ The page combines three data sources:
 
 1. `useReportCards()` (`/api/report-cards`) for per-coin grade metadata.
 2. `useStablecoins()` (`/api/stablecoins`) for market-cap sizing (`sumPegBuckets(circulating)`).
-3. `useLogos()` (`/api/logos`) for node logos.
+3. `useLogos()` (static `data/logos.json` import) for node logos.
 
 Market-cap map construction lives in `src/app/dependency-map/client.tsx` and uses `sumPegBuckets()` from `src/lib/supply.ts`.
 

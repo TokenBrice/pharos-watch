@@ -1,6 +1,6 @@
 # Mint/Burn Flow Tracker
 
-On-chain mint and burn event tracker for stablecoins across multiple EVM chains via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, computes per-coin Flow Intensity Scores, a market-cap-weighted Bank Run Gauge, and flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
+On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, computes per-coin Flow Intensity Scores, a market-cap-weighted Bank Run Gauge, and flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
 
 ---
 
@@ -19,7 +19,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 - **Function:** `syncMintBurn(db, alchemyApiKey)`
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
-- **Registration:** `worker/src/index.ts` (line 231)
+- **Registration:** `worker/src/index.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows)
 - **Operator runbook:** `docs/runbooks/mint-burn-ingestion.md`
 
@@ -38,9 +38,9 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 | `INTENSITY_RANGE` | -100 to +100 | Signed Flow Intensity Score output range |
 | `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
-| `CHAIN_SCAN_RANGE` | 50K (ETH/ARB/BASE/OPT), 10K (AVAX), 2K (Polygon) | Max block range per contract per cycle (per-chain Alchemy limits) |
-| `startBlock` | per-config (non-uniform) | Each contract config has its own start block; includes multi-chain reUSD vault configs |
-| Subrequest budget | 200 per cron run | Global Alchemy API call budget (with per-chain quotas) |
+| `CHAIN_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
+| `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
+| Subrequest budget | 200 per cron run | Global Alchemy API call budget |
 | Config tier policy | `critical` / `extended` | Under budget pressure, extended configs can be deferred deterministically |
 
 ---
@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **90 contract configs** across **81 symbols** (82 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **84 contract configs** across **81 symbols** (81 transfer-only ERC-20 configs + 1 USDT mixed-event config + 2 reUSD custom-event configs).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -137,7 +137,7 @@ Current scope: **90 contract configs** across **81 symbols** (82 standard ERC-20
 | syrupUSDT | cg-syrupusdt | 6 | Extended | Transfer |
 | AID | 353 | 18 | Extended | Transfer |
 | apxUSD | 354 | 18 | Extended | Transfer |
-| reUSD | 339 | 6/18 | Risky | Deposited + InstantRedemptionProcessed (8 configs across Ethereum/Arbitrum/Base/Avalanche) |
+| reUSD | 339 | 18 | Risky | Deposited + InstantRedemptionProcessed (2 configs, Ethereum) |
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
 
@@ -355,7 +355,7 @@ Returns: `{ events[], total }`. Events sorted by `timestamp DESC`.
 
 **Cache:** `CACHE_PROFILES.realtime` (~900s freshness with 15-min staleness window)
 
-### GET /api/backfill-mint-burn-prices (admin)
+### POST /api/backfill-mint-burn-prices (admin)
 
 Backfills `amount_usd` for events that were synced without price data. Requires `X-Admin-Key` header.
 
@@ -464,10 +464,10 @@ An Alchemy outage does not block blacklist sync, and vice versa. Each circuit br
 
 ## Future Work
 
-Multi-chain EVM support (Ethereum, Arbitrum, Base, Optimism, Avalanche) is implemented via Alchemy JSON-RPC. Remaining items:
+Current production scope is Ethereum-only ingestion. Planned expansions:
 
-- **Tron support:** USDT Issue/Redeem topic hashes already defined in `mint-burn-contracts.ts`
-- **Polygon:** Alchemy supports it (2K block range limit), but no contract configs use it yet
+- **Additional EVM chains:** add contract configs + chain-specific scan policies after reliability gates are met
+- **Tron support:** USDT Issue/Redeem topic groundwork exists; ingestion path is not wired yet
 - **Curve Finance detection:** DEX-level flow tracking
 
 ---
@@ -482,7 +482,7 @@ Multi-chain EVM support (Ethereum, Arbitrum, Base, Optimism, Avalanche) is imple
 | `worker/src/api/mint-burn-flows.ts` | API handler: aggregate + per-coin flow data |
 | `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |
 | `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |
-| `worker/migrations/0031_mint_burn_v2.sql` | Database schema (3 tables) |
+| `worker/migrations/0031a_mint_burn_v2.sql` | Database schema (3 tables) |
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page |
 | `src/app/flows/layout.tsx` | Page metadata/layout |
@@ -492,6 +492,6 @@ Multi-chain EVM support (Ethereum, Arbitrum, Base, Optimism, Avalanche) is imple
 | `src/components/flow-table.tsx` | Sortable per-coin table |
 | `src/components/flow-event-feed.tsx` | Paginated event table |
 | `src/components/flow-summary-card.tsx` | Summary card for detail pages |
-| `src/lib/types.ts` (lines 719–806) | TypeScript types + Zod schemas |
+| `src/lib/types.ts` | TypeScript types + Zod schemas |
 | `worker/src/lib/__tests__/mint-burn-scoring.test.ts` | Scoring unit tests |
 | `worker/src/api/__tests__/mint-burn-flows.test.ts` | API contract tests |

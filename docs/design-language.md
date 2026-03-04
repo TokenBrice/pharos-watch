@@ -111,6 +111,21 @@ grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1.5
 
 ---
 
+## Shared Utilities
+
+For consistency across custom components, use the global utility classes in `globals.css`:
+
+| Utility | Purpose |
+|---------|---------|
+| `pharos-kicker` | Canonical tiny uppercase label style (`11px`, semi-bold, tracked) for card labels and section kickers |
+| `pharos-focus-ring` | Standard focus-visible ring (`ring-2`, `ring-ring/60`, offset) for links/buttons outside shadcn primitives |
+| `pharos-card-shell` | Shared card-like shell (`rounded-xl`, themed border, themed background) for custom containers |
+| `pharos-interactive-card` | Restrained hover/transition treatment for interactive cards |
+
+Prefer these over rewriting similar class strings in each component.
+
+---
+
 ## Cards
 
 ### Structure
@@ -400,7 +415,7 @@ const chartRef = useRef<HTMLDivElement>(null);
 
 | Element | Pattern |
 |---------|---------|
-| Cards | `hover:bg-muted/40 transition-colors` |
+| Cards | `pharos-interactive-card` (or `hover:bg-muted/40 transition-colors` for legacy surfaces) |
 | List items / feed rows | `hover:bg-accent/50 transition-colors` |
 | Muted text → primary | `hover:text-foreground transition-colors` |
 | Text underline reveal | `group-hover:underline` (via `group` on parent) |
@@ -411,6 +426,12 @@ Standard focus ring (all interactive elements):
 
 ```
 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none
+```
+
+Preferred shorthand for custom elements:
+
+```
+pharos-focus-ring
 ```
 
 Alternative (larger, for tab-like elements):

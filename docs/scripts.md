@@ -13,6 +13,8 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/smoke-api.mjs` | HTTP smoke checks for strict API contract paths | `--base-url` or `SMOKE_API_BASE` / `API_BASE_URL` | Exits non-zero on shape/range/status failures |
 | `scripts/smoke-ui.mjs` | Browser smoke check for live homepage data state | `--url` or `SMOKE_UI_URL` | Exits non-zero if homepage loads outage/empty state |
 | `scripts/check-critical-coverage.mjs` | Enforce line coverage floor for critical files | `coverage/lcov.info`, `CRITICAL_COVERAGE_THRESHOLD` | Exits non-zero if critical files are below threshold |
+| `scripts/test-merge-gate.mjs` | Delta-aware local gate for merged worktree changes | Local git diff + npm scripts | Runs targeted lint/test/coverage/type-check commands |
+| `scripts/update-critical-coverage-baseline.mjs` | Refresh `.ci/critical-coverage-baseline.json` from current report | `coverage/lcov.info` | Updates baseline coverage ratchet file |
 | `scripts/fetch-logos.ts` | Refresh logo map from DefiLlama + CoinGecko | Public APIs | Writes `data/logos.json` |
 | `scripts/backfill-gold-depegs.sh` | Batch-run depeg backfill for gold coins | `WORKER_URL`, `ADMIN_KEY` (or `worker/.dev.vars`) | Calls `/api/backfill-depegs?stablecoin=...` per gold coin |
 | `scripts/screenshot-og.mjs` | Capture OG images for public pages | Playwright + live `pharos.watch` | Writes `public/og-*.png` |
@@ -33,6 +35,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 
 - Reads `ADMIN_KEY` from environment first; falls back to `worker/.dev.vars`.
 - Defaults `WORKER_URL` to `https://api.pharos.watch`.
+- Uses `POST` requests (admin mutating endpoint contract).
 - Backfills only configured gold IDs in the script (`gold-xaut`, `gold-paxg`, etc.).
 
 ### `fetch-logos.ts`

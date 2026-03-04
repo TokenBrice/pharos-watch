@@ -1,6 +1,6 @@
 # Pharos — Stablecoin Analytics Dashboard
 
-Public-facing analytics dashboard tracking 144 stablecoins across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
+Public-facing analytics dashboard tracking 148 stablecoins (plus 2 shadow assets for PSI) across multiple peg currencies, backing types, and governance models. Pure information site — no wallet connectivity, no user accounts.
 
 **Live at [pharos.watch](https://pharos.watch)**
 
@@ -15,7 +15,7 @@ Public-facing analytics dashboard tracking 144 stablecoins across multiple peg c
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
 - **Stability Index** — composite daily health score (0–100) aggregating peg integrity, supply growth, and liquidity depth into a single ecosystem signal
-- **Stablecoin Cemetery** — 79 dead stablecoins documented with cause of death, peak market cap, and obituaries
+- **Stablecoin Cemetery** — 78 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
 - **Status dashboard** — cron health, cache freshness, and system monitoring
@@ -30,7 +30,7 @@ Public-facing analytics dashboard tracking 144 stablecoins across multiple peg c
 - **Styling:** Tailwind CSS v4, shadcn/ui (Radix primitives)
 - **Charts:** TanStack Query, Recharts
 - **API:** Cloudflare Worker (cron-based data fetching + REST endpoints)
-- **Database:** Cloudflare D1 (SQLite — caches stablecoin data, logos, blacklist events, depeg events)
+- **Database:** Cloudflare D1 (SQLite — caches stablecoin data and stores blacklist/depeg/liquidity/yield/mint-burn histories)
 - **Hosting:** Cloudflare Pages
 
 ## Data Sources
@@ -50,7 +50,7 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [CoinMarketCap](https://coinmarketcap.com/) | Fallback price enrichment for assets with CMC slugs | 15 min (rate-limited to 1/hour) |
 | [Etherscan v2](https://etherscan.io/) | USDC, USDT, PAXG, XAUT freeze/blacklist events (EVM chains) | 20 min |
 | [TronGrid](https://www.trongrid.io/) | USDT freeze events on Tron | 20 min |
-| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | Multi-chain RPC for historical balance lookups (blacklist) and mint/burn event ingestion | 20 min |
+| [dRPC](https://drpc.org/) / [Alchemy](https://www.alchemy.com/) | RPC reads for blacklist balance enrichment (dRPC/Alchemy) and Ethereum mint/burn event ingestion (Alchemy) | 20 min |
 | [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 15 min |
 | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 15 min |
 | [gold-api.com](https://gold-api.com/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | 15 min |
@@ -115,9 +115,9 @@ src/                              Frontend (Next.js static export)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (29 router handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
+│   ├── api/                      REST endpoints (30 router handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (38 total)
+└── migrations/                   D1 SQL migrations (48 total)
 ```
 
 ## Infrastructure
@@ -130,7 +130,7 @@ Cloudflare Worker (API layer)
   └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI) + T-bill rate
 
 Cloudflare D1 (SQLite database)
-  ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, logos) with CAS write guard
+  ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard
   ├── blacklist_events     → normalized freeze/blacklist events
   ├── blacklist_sync_state → incremental sync progress (block numbers for EVM, timestamps for Tron)
   ├── depeg_events         → peg deviation events with unique constraint + direction tracking
@@ -176,7 +176,7 @@ Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
 For mint/burn ingestion diagnostics and recovery, see `docs/runbooks/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run lint` → `npm test` → `npm run test:critical-contracts` → `npm run test:invariants` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run lint` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE_URL` (or `API_BASE_URL` fallback)
 4. **Pages deploy:** `npm ci` → `npx tsx scripts/sync-digests.ts` → `npm run build` → `npm run seo:check` → `wrangler pages deploy out`

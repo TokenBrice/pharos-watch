@@ -58,8 +58,8 @@ This pattern exists because Cloudflare Workers don't have persistent module stat
 | Method | Handling |
 |--------|----------|
 | `OPTIONS` | Returns 204 with CORS headers (preflight) |
-| `POST` | Only `/api/feedback` — all other paths return 405 |
-| `GET` | All API routes — dispatched to router or inline admin handlers |
+| `POST` | `/api/feedback` plus mutating admin routes (`/api/backfill-*`, `/api/audit-depeg-history`) |
+| `GET` | Read endpoints + inline admin endpoints; `/api/audit-depeg-history` GET is allowed only with `dry-run=true` |
 | Other | Returns 405 `{ error: "Method not allowed" }` |
 
 ### CORS Headers
@@ -70,7 +70,7 @@ Applied to every response via `addCorsHeaders()`:
 |--------|-------|
 | `Access-Control-Allow-Origin` | `CORS_ORIGIN` env var (static: `https://pharos.watch`) |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
-| `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key` |
+| `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key, Idempotency-Key` |
 | `Access-Control-Max-Age` | `86400` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
@@ -84,7 +84,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 1. **Skip list** — these endpoints bypass cache entirely:
    - `/api/health`, `/api/status`
    - `/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`
-   - `/api/audit-depeg-history`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`
+   - `/api/audit-depeg-history`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`, `/api/backfill-mint-burn`
    - `/api/backfill-dews`
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
@@ -480,6 +480,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 | `bluechip-ratings` | 86,400s (24h) |
 | `dex-liquidity` | 43,200s (12h) |
 | `yield-data` | 3,600s (1h) |
+| `dews` | 1,800s (30 min) |
 
 ### GET /api/status
 

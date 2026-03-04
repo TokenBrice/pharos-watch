@@ -68,6 +68,8 @@ export default defineConfig({
 
 **Locations:**
 - `src/lib/__tests__/` — frontend library tests (pure functions)
+- `src/components/__tests__/` — component-level pure/helper logic tests
+- `src/hooks/__tests__/` — hook utility/state tests
 - `src/__tests__/` — frontend component/integration tests
 - `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
 - `worker/src/api/__tests__/` — API handler contract tests
@@ -164,6 +166,14 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | File | What It Covers |
 |------|----------------|
 | `depeg-tracker-sort.test.ts` | Depeg event sorting logic |
+| `portfolio-categorize.test.ts` | Portfolio upstream exposure categorization |
+
+### Component / Hook Utility Tests
+
+| File | What It Covers |
+|------|----------------|
+| `src/components/__tests__/dews-summary.test.ts` | DEWS radar tap/click interaction resolver logic |
+| `src/hooks/__tests__/use-url-filters.test.ts` | URL param state helpers and encoding rules |
 
 ### Worker Library Tests (`worker/src/lib/__tests__/`)
 
@@ -224,7 +234,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 ### What NOT to test (for now)
 
-- **React components** — no jsdom/happy-dom environment configured. Component tests would need that added to `vitest.config.ts`.
+- **DOM-rendered React components** — no jsdom/happy-dom environment is configured. Full render tests would require adding one to `vitest.config.ts`.
 - **API/worker handlers (full integration)** — the D1 mock tests response shape, not SQL correctness. Full end-to-end worker testing would need a real D1 instance.
 - **TanStack Query hooks** — these are thin wrappers around fetch calls; testing them requires mocking the API layer.
 - **Complex cron orchestrators** — crons like `sync-dex-liquidity` have deep dependency chains. Test the pure helper functions they call, not the orchestrator itself. Integration-style tests mock `fetch` and D1 at the boundaries.

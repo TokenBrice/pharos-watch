@@ -27,15 +27,16 @@
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin FIS, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
 | `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=`, `?minAmount=`, `?limit=N&offset=M`) |
 | `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
-| `GET /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
-| `GET /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
-| `GET /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
-| `GET /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
-| `GET /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (requires `X-Admin-Key`) |
+| `POST /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
+| `POST /api/backfill-supply-history` | Admin: backfill per-coin supply history (requires `X-Admin-Key`) |
+| `POST /api/backfill-stability-index` | Admin: backfill historical stability index scores (requires `X-Admin-Key`) |
+| `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
+| `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (requires `X-Admin-Key`) |
+| `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; requires `X-Admin-Key`) |
 | `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `GET /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
-| `GET /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
+| `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
 | `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
 
@@ -256,9 +257,9 @@ src/                              # Next.js frontend (static export)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, ReserveSlice (with coinId/depType), RawDimensionInputs, CacheStatus (shared with worker)
     ├── reserve-templates.ts      # Reserve composition templates, getReserves(), deriveDependencies() (reserve slices → DependencyWeight[])
-    ├── stablecoins.ts            # Master list of ~144 tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
+    ├── stablecoins.ts            # Master list of tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
     ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
-    ├── dead-stablecoins.ts       # 79 dead stablecoins with cause of death, peak mcap, obituaries
+    ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
     ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
     ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
@@ -284,7 +285,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (38 total)
+├── migrations/                   # D1 SQL migrations (48 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -339,13 +340,14 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── status.ts             # GET /api/status (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
     │   ├── report-cards.ts       # GET /api/report-cards
-    │   ├── backfill-depegs.ts    # GET /api/backfill-depegs (admin)
-    │   ├── backfill-supply-history.ts # GET /api/backfill-supply-history (admin)
-    │   ├── backfill-stability-index.ts # GET /api/backfill-stability-index (admin)
-    │   ├── backfill-cg-prices.ts # GET /api/backfill-cg-prices (admin)
-    │   ├── audit-depeg-history.ts # GET /api/audit-depeg-history (admin)
+    │   ├── backfill-depegs.ts    # POST /api/backfill-depegs (admin)
+    │   ├── backfill-supply-history.ts # POST /api/backfill-supply-history (admin)
+    │   ├── backfill-stability-index.ts # POST /api/backfill-stability-index (admin)
+    │   ├── backfill-cg-prices.ts # POST /api/backfill-cg-prices (admin)
+    │   ├── audit-depeg-history.ts # POST /api/audit-depeg-history (admin; GET dry-run only)
     │   ├── backfill-dews.ts     # GET /api/backfill-dews (admin)
-    │   ├── backfill-mint-burn-prices.ts # GET /api/backfill-mint-burn-prices (admin)
+    │   ├── backfill-mint-burn-prices.ts # POST /api/backfill-mint-burn-prices (admin)
+    │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
     │   ├── yield-rankings.ts    # GET /api/yield-rankings
     │   ├── yield-history.ts     # GET /api/yield-history

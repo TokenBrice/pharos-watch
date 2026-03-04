@@ -79,7 +79,7 @@ Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins(
 1. `detectDepegEvents(db, peggedAssets, fxFallbackRates)` -- detection
 2. `confirmPendingDepegs(db, peggedAssets, fxFallbackRates)` -- confirmation
 
-Both calls are in `worker/src/cron/sync-stablecoins.ts` (lines 667 and 675). Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
+Both calls are in `worker/src/cron/sync-stablecoins.ts`. Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
 
 ## Stage 1 -- Detection
 

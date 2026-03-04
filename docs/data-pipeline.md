@@ -62,7 +62,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 
 1. **Structural validation**: DefiLlama response must contain `MIN_VALID_ASSET_COUNT` (50) assets with valid `id`, `name`, `symbol`, and `circulating` fields. Malformed objects are dropped before caching
 2. **Price validation ordering**: `isReasonablePrice()` rejects prices outside peg-type bounds **before** `savePriceCache()`, not after
-3. **Concurrent cron guard**: `setCacheIfNewer()` uses a compare-and-swap pattern — a slow sync run can't overwrite a newer run's data. Uses `syncStartSec` as CAS guard. Applied to all cache-writing crons (stablecoins, bluechip, USDS, daily-digest)
+3. **Concurrent cron guard**: `setCacheIfNewer()` uses a compare-and-swap pattern — a slow sync run can't overwrite a newer run's data. Uses `syncStartSec` as CAS guard. Applied to cache-writing crons such as stablecoins, stablecoin-charts, FX rates, bluechip ratings, and USDS status.
 4. **Detail JSON validation**: `stablecoin-detail.ts` parses response JSON before caching; skips cache on parse failure
 5. **fetchWithRetry**: Default 15s timeout prevents hanging Workers. Retries on 404 by default (configurable via `{ passthrough404: true }`, `{ timeoutMs: N }`)
 6. **Depeg dedup**: `UNIQUE INDEX (stablecoin_id, started_at, source)` prevents duplicate depeg events. Partial index on `ended_at IS NULL` speeds up open-event queries
@@ -79,7 +79,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 17. **Orphan depeg cleanup**: `detectDepegEvents()` closes open depeg events whose stablecoin was not processed during the current run (removed from tracked list, failed validation, etc.)
 18. **Cron prune resilience**: `logCronRun()` wraps old-entry pruning in try/catch so prune failures don't crash the cron after successful completion. The error-logging catch block is also protected — if logging the error to D1 fails, the original error is still re-thrown
 19. **Security headers**: Worker adds `X-Content-Type-Options: nosniff` to all responses
-20. **Admin cache bypass**: `/api/backfill-depegs` skips the response cache (alongside `/api/health` and `/api/status`)
+20. **Admin cache bypass**: mutating/backfill endpoints skip edge response caching (`/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`, `/api/backfill-mint-burn`, `/api/audit-depeg-history`, `/api/backfill-dews`) alongside `/api/health` and `/api/status`
 21. **Guarded schema fallback (stablecoins)**: `syncStablecoins()` validates the final `stablecoins` payload against `StablecoinListResponseSchema` before `setCacheIfNewer()`. On schema failure, it sends an alert and writes a guarded fallback payload (same run output, with `cacheWriteMode: "schema-validation-fallback"` in cron metadata) to prevent stale-cache starvation
 22. **Strict cache payload validation (yield rankings)**: `syncYieldData()` validates the `yield-rankings` cache payload against `YieldRankingsResponseSchema` before `setCache()`. On schema failure, cache write is skipped to avoid corrupting downstream readers
 

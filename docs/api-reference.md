@@ -4,7 +4,7 @@ The Pharos API is a read-only REST API served by a Cloudflare Worker backed by a
 
 **Base URL:** `https://api.pharos.watch`
 
-All responses are `Content-Type: application/json`. CORS headers are added to every response, so the API can be called from any browser origin.
+All responses are `Content-Type: application/json`. CORS headers are added to every response, but `Access-Control-Allow-Origin` is restricted by the Worker `CORS_ORIGIN` setting (production: `https://pharos.watch`).
 
 ---
 
@@ -1294,7 +1294,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 }
 ```
 
-### `GET /api/backfill-depegs`
+### `POST /api/backfill-depegs`
 
 Backfills historical depeg events from stored price data.
 
@@ -1307,7 +1307,7 @@ Backfills historical depeg events from stored price data.
 | `stablecoin` | `string` | — | Process a single stablecoin ID |
 | `batch` | `integer` | `0` | Batch offset (3 coins per batch) |
 
-### `GET /api/backfill-supply-history`
+### `POST /api/backfill-supply-history`
 
 Backfills per-coin supply history snapshots.
 
@@ -1320,14 +1320,15 @@ Backfills per-coin supply history snapshots.
 | `stablecoin` | `string` | — | Process a single stablecoin ID |
 | `batch` | `integer` | `0` | Batch offset for chunked processing |
 | `batchSize` | `integer` | `10` | Coins per batch |
+| `allow-constant-price-fallback` | `"true"` | — | Allow current-price fallback when historical non-USD prices are missing |
 
-### `GET /api/backfill-stability-index`
+### `POST /api/backfill-stability-index`
 
 Backfills historical stability index scores from stored depeg events and supply data.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
-### `GET /api/backfill-cg-prices`
+### `POST /api/backfill-cg-prices`
 
 Backfills CoinGecko historical prices into the price_cache table for more accurate depeg detection.
 
@@ -1341,7 +1342,7 @@ Backfills CoinGecko historical prices into the price_cache table for more accura
 | `batchSize` | `integer` | `10` | Coins per batch |
 | `batch` | `integer` | `0` | Batch offset for chunked processing |
 
-### `GET /api/backfill-mint-burn-prices`
+### `POST /api/backfill-mint-burn-prices`
 
 Backfills `amount_usd` for all mint-burn events with NULL values using current prices from `price_cache`. Recalculates affected hourly aggregation buckets.
 
@@ -1365,17 +1366,34 @@ Validates DEWS against historical depeg events. Reports true-positive rate and a
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
-### `GET /api/audit-depeg-history`
+### `POST /api/backfill-mint-burn`
 
-Audits existing depeg events against CoinGecko historical price data to detect false positives. Supports dry-run mode.
+Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
+
+**Request body or query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `configKey` | `string` | — | Required config key: `{chainId}-{contractAddress}` (currently Ethereum-only) |
+| `fromBlock` | `integer` | from sync state | Start block override |
+| `toBlock` | `integer` | chain head | End block override (clamped to chain head) |
+| `chunkSize` | `integer` | `50000` | Block span per fetch chunk (max 50000) |
+| `maxChunks` | `integer` | `24` | Maximum chunks to process per request |
+
+### `POST /api/audit-depeg-history`
+
+Audits existing depeg events against CoinGecko historical price data to detect false positives.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+`GET` is accepted only with `dry-run=true`; mutating audits require `POST`.
 
 **Query parameters**
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Audit a single stablecoin ID |
 | `limit` | `integer` | `200` | Max events to audit |
 | `offset` | `integer` | `0` | Pagination offset |
 | `delete` | `string` | — | Comma-separated event IDs to delete directly (skips CG audit) |
