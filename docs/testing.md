@@ -161,6 +161,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
 | `api-endpoints.test.ts` | `src/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags |
 | `strict-path-drift.test.ts` | `src/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage |
+| `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
 
 ### Frontend Component Tests (`src/__tests__/`)
 
@@ -188,6 +189,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `circuit-breaker.test.ts` | `worker/src/lib/circuit-breaker.ts` | Circuit state machine: closed/open/half-open transitions, probe intervals, alerts |
 | `stability-index.test.ts` | `worker/src/lib/stability-index.ts` | PSI computation and component scoring |
 | `cron-leases.test.ts` | `worker/src/lib/db.ts` | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease` |
+| `mint-burn-pipeline.test.ts` | `worker/src/lib/mint-burn-pipeline/*` | Shared ingestion helpers: inserted/ignored accounting, burn counters, affected-hour aggregation, sync-state upsert modes |
 
 ### API Contract Tests (`worker/src/api/__tests__/`)
 
@@ -209,6 +211,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `digest-snapshot.test.ts` | `handleDigestSnapshot` | 400 missing/invalid date, 404 no digest, 200 with snapshot |
 | `health.test.ts` | `handleHealth` | 200 health status shape, Cache-Control: no-store |
 | `mint-burn-flows.test.ts` | `handleMintBurnFlows` | Aggregate (gauge + coins[]), Per-coin (flat + chains[]), 404 |
+| `backfill-mint-burn.test.ts` | `handleBackfillMintBurn` | Auth/validation, chunked ingestion progression, `done/nextFromBlock` semantics |
 | `stability-index.test.ts` | `handleStabilityIndex` | Summary, Detail (with components in history) |
 | `stress-signals.test.ts` | `handleStressSignals` | DEWS scores, threat bands, signal components |
 
@@ -222,6 +225,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `yield-helpers.test.ts` | `yield-helpers.ts` | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool` |
 | `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for RUB/UAH/ARS |
 | `dex-liquidity-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | `parsePoolSymbols`, `classifyPoolType`, `getQualityMultiplier` |
+| `sync-mint-burn.test.ts` | `sync-mint-burn.ts` | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior |
 
 ## Conventions
 
@@ -294,6 +298,14 @@ Current critical file set:
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live homepage and fails on the `Failed to load data` outage state.
+
+### Tier-3 Structural Refactor Targeted Suites
+
+These are the narrow suites used to lock behavior parity before and after the Tier-3 structural extractions:
+
+- `npm test -- src/lib/__tests__/stablecoin-detail-derive.test.ts` validates pure detail-page derivations independently of React rendering.
+- `npm test -- worker/src/lib/__tests__/mint-burn-pipeline.test.ts` validates shared cron/backfill ingestion helpers without endpoint orchestration noise.
+- `npm test -- worker/src/cron/__tests__/sync-mint-burn.test.ts worker/src/api/__tests__/backfill-mint-burn.test.ts` validates entrypoint-level progression semantics (`inserted/ignored`, burn counters, `done/nextFromBlock`, sync-state mode differences).
 
 ## Adding a New Test
 

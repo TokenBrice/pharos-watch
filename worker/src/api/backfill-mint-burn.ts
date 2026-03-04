@@ -6,17 +6,30 @@ import {
 } from "../lib/alchemy-logs";
 import type { AlchemyLogEntry } from "../lib/alchemy-logs";
 import { createBudget, budgetExhausted } from "../lib/evm-logs";
-import { batchExecute } from "../lib/db";
 import {
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
   type MintBurnEventDef,
 } from "../lib/mint-burn-contracts";
-import { classifyBridgeBurnRows, parseMintBurnLogs } from "../cron/sync-mint-burn";
 import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { requireAdmin } from "../lib/auth";
 import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
 import type { TopicFilter } from "../lib/evm-logs";
+import { classifyBridgeBurnRows } from "../lib/mint-burn-pipeline/classification";
+import { loadMintBurnPriceContext } from "../lib/mint-burn-pipeline/context";
+import { parseMintBurnLogs } from "../lib/mint-burn-pipeline/parse";
+import {
+  collectAffectedHours,
+  insertMintBurnRows,
+  recalcAffectedHours,
+  updateBurnClassifications,
+} from "../lib/mint-burn-pipeline/persistence";
+import {
+  mintBurnConfigKey,
+  readMintBurnSyncState,
+  upsertMintBurnSyncState,
+} from "../lib/mint-burn-pipeline/sync-state";
+import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const ETHEREUM_CHUNK_SIZE = 50_000;
@@ -25,7 +38,7 @@ const BACKFILL_BUDGET_LIMIT = 900;
 const DEFAULT_MAX_CHUNKS = 24;
 
 function configKey(config: MintBurnContractConfig): string {
-  return `${config.chain.chainId}-${config.contractAddress}`;
+  return mintBurnConfigKey(config);
 }
 
 async function readBodyJson(request?: Request): Promise<Record<string, unknown>> {
@@ -35,75 +48,6 @@ async function readBodyJson(request?: Request): Promise<Record<string, unknown>>
   } catch {
     return {};
   }
-}
-
-async function loadPriceContext(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<{
-  prices: Map<string, number>;
-  priceHistory: Map<string, { snapshotDate: number; price: number }[]>;
-}> {
-  const prices = new Map<string, number>();
-  const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
-
-  const current = await db
-    .prepare("SELECT asset_id, price FROM price_cache WHERE asset_id = ?")
-    .bind(stablecoinId)
-    .first<{ asset_id: string; price: number }>();
-  if (current) {
-    prices.set(current.asset_id, current.price);
-  }
-
-  const history = await db
-    .prepare(
-      `SELECT stablecoin_id, snapshot_date, price
-       FROM supply_history
-       WHERE stablecoin_id = ? AND price IS NOT NULL
-       ORDER BY snapshot_date ASC`,
-    )
-    .bind(stablecoinId)
-    .all<{ stablecoin_id: string; snapshot_date: number; price: number }>();
-
-  const series: { snapshotDate: number; price: number }[] = [];
-  for (const row of history.results ?? []) {
-    series.push({ snapshotDate: row.snapshot_date, price: row.price });
-  }
-  priceHistory.set(stablecoinId, series);
-
-  return { prices, priceHistory };
-}
-
-async function recalcAffectedHours(
-  db: D1Database,
-  affectedHours: Map<string, { stablecoinId: string; chainId: string; hourTs: number }>,
-): Promise<void> {
-  if (affectedHours.size === 0) return;
-
-  const aggStmt = db.prepare(
-    `INSERT OR REPLACE INTO mint_burn_hourly
-      (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-       mint_volume_usd, burn_volume_usd, net_flow_usd)
-     SELECT
-     stablecoin_id,
-      chain_id,
-      (timestamp / 3600) * 3600 AS hour_ts,
-      SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
-      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN 1 ELSE 0 END),
-      COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN -amount_usd ELSE 0 END), 0)
-     FROM mint_burn_events
-     WHERE stablecoin_id = ? AND chain_id = ?
-       AND timestamp >= ? AND timestamp < ?
-     GROUP BY stablecoin_id, chain_id, hour_ts`,
-  );
-
-  const stmts = [...affectedHours.values()].map((hour) =>
-    aggStmt.bind(hour.stablecoinId, hour.chainId, hour.hourTs, hour.hourTs + 3600),
-  );
-
-  await batchExecute(db, stmts);
 }
 
 export const handleBackfillMintBurn = withErrorHandler(
@@ -160,14 +104,11 @@ export const handleBackfillMintBurn = withErrorHandler(
       (typeof body.maxChunks === "number" ? Math.trunc(body.maxChunks) : null) ??
       parseIntParam(url.searchParams.get("maxChunks"), DEFAULT_MAX_CHUNKS, 1, 500);
 
-    const currentState = await db
-      .prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?")
-      .bind(configKey(config))
-      .first<{ last_block: number }>();
+    const currentLastBlock = await readMintBurnSyncState(db, configKey(config));
 
     const fromBlock = fromBlockParam >= 0
       ? fromBlockParam
-      : (currentState?.last_block ?? (config.startBlock - 1)) + 1;
+      : (currentLastBlock ?? (config.startBlock - 1)) + 1;
 
     const alchemyUrl = buildAlchemyUrl(config.chain.chainId, alchemyApiKey);
     if (!alchemyUrl) {
@@ -202,7 +143,7 @@ export const handleBackfillMintBurn = withErrorHandler(
 
     const chunkSize = Math.max(1, Math.min(chunkSizeParam, chunkMax));
 
-    const { prices, priceHistory } = await loadPriceContext(db, config.stablecoinId);
+    const { prices, priceHistory } = await loadMintBurnPriceContext(db, config.stablecoinId);
     const runTimestamp = Math.floor(Date.now() / 1000);
     const localTimestampCache = new Map<number, number>();
 
@@ -279,7 +220,7 @@ export const handleBackfillMintBurn = withErrorHandler(
         );
       }
 
-      const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+      const affectedHours = new Map<string, MintBurnAffectedHour>();
 
       for (const { eventDef, logs } of collectedLogs) {
         const parsed = parseMintBurnLogs(
@@ -306,79 +247,19 @@ export const handleBackfillMintBurn = withErrorHandler(
         bridgeBurns += burnCounts.bridgeBurns;
         reviewBurns += burnCounts.reviewBurns;
 
-        for (const row of parsed.rows) {
-          const hourTs = Math.floor(row.timestamp / 3600) * 3600;
-          const key = `${row.stablecoin_id}-${row.chain_id}-${hourTs}`;
-          affectedHours.set(key, {
-            stablecoinId: row.stablecoin_id,
-            chainId: row.chain_id,
-            hourTs,
-          });
-        }
+        collectAffectedHours(parsed.rows, affectedHours);
 
         if (parsed.rows.length > 0) {
-          const insertStmts = parsed.rows.map((row) =>
-            db.prepare(
-              `INSERT OR IGNORE INTO mint_burn_events
-               (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-                burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            ).bind(
-              row.id,
-              row.stablecoin_id,
-              row.symbol,
-              row.chain_id,
-              row.direction,
-              row.amount,
-              row.amount_usd,
-              row.price_used,
-              row.price_timestamp,
-              row.price_source,
-              row.burn_type,
-              row.burn_review_reason,
-              row.counterparty,
-              row.tx_hash,
-              row.block_number,
-              row.timestamp,
-              row.explorer_tx_url,
-            ),
-          );
-
-          const inserted = await batchExecute(db, insertStmts);
-          rowsInserted += inserted;
-          rowsIgnored += Math.max(0, parsed.rows.length - inserted);
-
-          const burnRows = parsed.rows.filter((row) => row.direction === "burn");
-          if (burnRows.length > 0) {
-            const updateBurnClassificationStmts = burnRows.map((row) =>
-              db.prepare(
-                `UPDATE mint_burn_events
-                 SET burn_type = ?, burn_review_reason = ?
-                 WHERE id = ?`,
-              ).bind(
-                row.burn_type,
-                row.burn_review_reason,
-                row.id,
-              ),
-            );
-            rowsReclassified += await batchExecute(db, updateBurnClassificationStmts);
-          }
+          const insertResult = await insertMintBurnRows(db, parsed.rows);
+          rowsInserted += insertResult.inserted;
+          rowsIgnored += insertResult.ignored;
+          rowsReclassified += await updateBurnClassifications(db, parsed.rows);
         }
       }
 
       await recalcAffectedHours(db, affectedHours);
 
-      await db
-        .prepare(
-          `INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)
-           ON CONFLICT(config_key) DO UPDATE SET
-             last_block = CASE
-               WHEN mint_burn_sync_state.last_block > excluded.last_block THEN mint_burn_sync_state.last_block
-               ELSE excluded.last_block
-             END`,
-        )
-        .bind(configKey(config), scanTo)
-        .run();
+      await upsertMintBurnSyncState(db, configKey(config), scanTo, "monotonic-max");
 
       cursor = scanTo + 1;
       chunksProcessed++;

@@ -360,38 +360,9 @@ export type BluechipRatingsMap = Record<string, BluechipRating>;
 
 // --- DEX Liquidity types ---
 
-export interface DexLiquidityPool {
-  project: string;        // "curve-dex", "uniswap-v3", "fluid-dex", etc.
-  chain: string;
-  tvlUsd: number;
-  symbol: string;         // "USDC-USDT", "DAI-USDC-USDT", etc.
-  volumeUsd1d: number;
-  poolType: string;       // "curve-stableswap", "uniswap-v3-5bp", "fluid-dex"
-  extra?: {
-    amplificationCoefficient?: number;
-    balanceRatio?: number;
-    feeTier?: number;
-    effectiveTvl?: number;
-    organicFraction?: number;
-    pairQuality?: number;
-    stressIndex?: number;
-    isMetaPool?: boolean;
-    maturityDays?: number;
-    registryId?: string;
-    balanceDetails?: {
-      symbol: string;
-      balancePct: number;
-      isTracked: boolean;
-    }[];
-  };
-}
-
-export interface DexPriceSource {
-  protocol: string;
-  chain: string;
-  price: number;
-  tvl: number;
-}
+// Tier 3 policy:
+// - If runtime schema and TS type are 1:1, export via z.infer.
+// - Keep hand-written interfaces only when they intentionally narrow/widen schema typing.
 
 export const DexLiquidityPoolSchema = z.object({
   project: z.string(),
@@ -418,6 +389,7 @@ export const DexLiquidityPoolSchema = z.object({
     })).optional(),
   }).optional(),
 });
+export type DexLiquidityPool = z.infer<typeof DexLiquidityPoolSchema>;
 
 export const DexPriceSourceSchema = z.object({
   protocol: z.string(),
@@ -425,45 +397,7 @@ export const DexPriceSourceSchema = z.object({
   price: z.number(),
   tvl: z.number(),
 });
-
-export interface DexLiquidityData {
-  totalTvlUsd: number;
-  totalVolume24hUsd: number;
-  totalVolume7dUsd: number;
-  poolCount: number;
-  pairCount: number;
-  chainCount: number;
-  protocolTvl: Record<string, number>;
-  chainTvl: Record<string, number>;
-  topPools: DexLiquidityPool[];
-  liquidityScore: number | null;
-  concentrationHhi: number | null;
-  depthStability: number | null;
-  tvlChange24h: number | null;
-  tvlChange7d: number | null;
-  updatedAt: number;
-  dexPriceUsd: number | null;
-  dexDeviationBps: number | null;
-  priceSourceCount: number | null;
-  priceSourceTvl: number | null;
-  priceSources: DexPriceSource[] | null;
-  // v2 fields
-  effectiveTvlUsd: number;
-  avgPoolStress: number | null;
-  weightedBalanceRatio: number | null;
-  organicFraction: number | null;
-  durabilityScore: number | null;
-  scoreComponents: {
-    tvlDepth: number;
-    volumeActivity: number;
-    poolQuality: number;
-    durability: number;
-    pairDiversity: number;
-    crossChain: number;
-  } | null;
-  lockedLiquidityPct?: number | null;
-  methodologyVersion: string;
-}
+export type DexPriceSource = z.infer<typeof DexPriceSourceSchema>;
 
 export const DexLiquidityDataSchema = z.object({
   totalTvlUsd: z.number(),
@@ -502,6 +436,7 @@ export const DexLiquidityDataSchema = z.object({
   lockedLiquidityPct: z.number().nullable().optional(),
   methodologyVersion: z.string(),
 });
+export type DexLiquidityData = z.infer<typeof DexLiquidityDataSchema>;
 
 export interface DexLiquidityHistoryPoint {
   tvl: number;
@@ -664,58 +599,12 @@ export const StabilityIndexResponseSchema = z.object({
   history: z.array(StabilityIndexHistoryPointSchema),
   methodology: StabilityIndexMethodologySchema,
 });
-
-export interface StabilityIndexComponents {
-  severity: number;
-  breadth: number;
-  stressBreadth?: number;
-  trend: number;
-}
-
-export interface StabilityContributor {
-  id: string;
-  symbol: string;
-  bps: number;
-  mcapUsd: number;
-  ageDays: number;
-  factor: number;
-}
-
-export interface StabilityIndexMethodology {
-  version: string;
-  versionLabel: string;
-  currentVersion: string;
-  currentVersionLabel: string;
-  changelogPath: string;
-  asOf: number;
-  isCurrent: boolean;
-}
-
-export interface StabilityIndexCurrent {
-  score: number;
-  band: string;
-  avg24h?: number;
-  avg24hBand?: string;
-  components: StabilityIndexComponents;
-  contributors?: StabilityContributor[];
-  totalMcapUsd?: number;
-  computedAt: number;
-  methodologyVersion: string;
-}
-
-export interface StabilityIndexHistoryPoint {
-  date: number;
-  score: number;
-  band: string;
-  components?: StabilityIndexComponents;
-  methodologyVersion: string;
-}
-
-export interface StabilityIndexResponse {
-  current: StabilityIndexCurrent | null;
-  history: StabilityIndexHistoryPoint[];
-  methodology: StabilityIndexMethodology;
-}
+export type StabilityIndexComponents = z.infer<typeof StabilityIndexComponentsSchema>;
+export type StabilityContributor = z.infer<typeof StabilityContributorSchema>;
+export type StabilityIndexMethodology = z.infer<typeof StabilityIndexMethodologySchema>;
+export type StabilityIndexCurrent = z.infer<typeof StabilityIndexCurrentSchema>;
+export type StabilityIndexHistoryPoint = z.infer<typeof StabilityIndexHistoryPointSchema>;
+export type StabilityIndexResponse = z.infer<typeof StabilityIndexResponseSchema>;
 
 // --- Status page types ---
 
@@ -826,16 +715,7 @@ export const DepegDewsMethodologySchema = z.object({
   asOf: z.number(),
   isCurrent: z.boolean(),
 });
-
-export interface DepegDewsMethodology {
-  version: string;
-  versionLabel: string;
-  currentVersion: string;
-  currentVersionLabel: string;
-  changelogPath: string;
-  asOf: number;
-  isCurrent: boolean;
-}
+export type DepegDewsMethodology = z.infer<typeof DepegDewsMethodologySchema>;
 
 export const PegSummaryCoinSchema = z.object({
   id: z.string(),
@@ -916,6 +796,7 @@ export interface YieldConfig {
   yieldType: YieldType;
 }
 
+// Keep manual interface: schema uses z.string() for yieldType but the app relies on YieldType unions.
 export interface AltYieldSource {
   sourceKey: string;
   yieldSource: string;
@@ -936,6 +817,7 @@ export const AltYieldSourceSchema = z.object({
   dataSource: z.string(),
 });
 
+// Keep manual interface: includes YieldType and ReportCardGrade narrow unions not represented by schema strings.
 export interface YieldRanking {
   id: string;
   symbol: string;
@@ -988,6 +870,7 @@ export const YieldRankingSchema = z.object({
   altSources: z.array(AltYieldSourceSchema).optional().default([]),
 });
 
+// Keep manual interface: downstream callers expect rankings typed via YieldRanking with narrow unions.
 export interface YieldRankingsResponse {
   rankings: YieldRanking[];
   riskFreeRate: number;
@@ -1128,6 +1011,7 @@ export const StressSignalEntrySchema = z.object({
   methodologyVersion: z.string(),
 });
 
+// Keep manual interface: SignalDetailSchema is passthrough and remains intentionally open-ended.
 export interface StressSignalEntry {
   score: number;
   band: string;
@@ -1143,6 +1027,7 @@ export const StressSignalsAllResponseSchema = z.object({
   methodology: DepegDewsMethodologySchema,
 });
 
+// Keep manual interface: preserves explicit StressSignalEntry mapping while schema allows passthrough signal keys.
 export interface StressSignalsAllResponse {
   signals: Record<string, StressSignalEntry>;
   updatedAt: number;
@@ -1165,6 +1050,7 @@ export const StressSignalDetailResponseSchema = z.object({
   methodology: DepegDewsMethodologySchema,
 });
 
+// Keep manual interface: retains explicit history entry shape for consumers while schema signal details are passthrough.
 export interface StressSignalDetailResponse {
   current: StressSignalEntry | null;
   history: {

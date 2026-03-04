@@ -185,6 +185,23 @@ Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-qua
 
 ---
 
+## Shared Ingestion Pipeline Boundaries
+
+Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a single ingestion pipeline under `worker/src/lib/mint-burn-pipeline/`.
+
+| Module | Responsibility |
+|--------|----------------|
+| `types.ts` | Shared ingestion row/context/counter types and sync-state mode union |
+| `parse.ts` | `parseMintBurnLogs()` and event-level price resolution (`supply-history` then `price_cache` fallback) |
+| `classification.ts` | Bridge-aware burn classification and transaction-context loading |
+| `context.ts` | Shared loaders for current prices and historical price series |
+| `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
+| `sync-state.ts` | Sync-state key helpers plus mode-specific upserts (`replace` for cron, `monotonic-max` for backfill) |
+
+Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
+
+---
+
 ## Scoring
 
 **File:** `worker/src/lib/mint-burn-scoring.ts`
@@ -373,8 +390,8 @@ Controlled ingestion backfill by explicit config/range/chunk.
 - Idempotency: `Idempotency-Key` supported via admin idempotency middleware
 - Parameters: `configKey`, `fromBlock`, `toBlock`, `chunkSize`, `maxChunks`
 - Behavior:
-  - Uses the same log parsing/insertion/hourly aggregation logic as cron ingestion.
-  - Advances `mint_burn_sync_state` up to completed chunk boundaries.
+  - Uses the same shared parse/classification/context/persistence helpers as cron ingestion.
+  - Advances `mint_burn_sync_state` with monotonic max semantics (never regresses on partial backfills).
   - Returns `done=false` with `nextFromBlock` when additional calls are needed.
 
 ---
@@ -451,6 +468,9 @@ An Alchemy outage does not block blacklist sync, and vice versa. Each circuit br
 
 **Files:**
 - `worker/src/lib/__tests__/mint-burn-scoring.test.ts` — FIS, gauge bands, composite gauge, flight-to-quality
+- `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` — shared parse/classification/persistence/sync-state behavior parity
+- `worker/src/cron/__tests__/sync-mint-burn.test.ts` — cron ingestion orchestration and degraded-mode handling
+- `worker/src/api/__tests__/backfill-mint-burn.test.ts` — admin backfill chunking, `done/nextFromBlock`, and sync-state progression
 - `worker/src/api/__tests__/mint-burn-flows.test.ts` — API response shape validation (aggregate vs per-coin)
 
 **Coverage:**
@@ -458,6 +478,8 @@ An Alchemy outage does not block blacklist sync, and vice versa. Each circuit br
 - Gauge bands: correct band for all score ranges
 - Composite gauge: mcap-weighted average, skips null, returns null when all null
 - Flight-to-quality: $100M activation, intensity formula, edge cases
+- Pipeline convergence: inserted-vs-ignored accounting, bridge/effective/review burn counters, affected-hour recomputation, sync-state mode semantics
+- Backfill chunking: `done=false` and `nextFromBlock` emitted when `maxChunks` stops before target range
 - API: aggregate vs per-coin response shapes against Zod schemas, 404 for unknown coin
 
 ---
@@ -477,10 +499,17 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | File | Role |
 |------|------|
 | `worker/src/cron/sync-mint-burn.ts` | Cron job: incremental event sync + hourly aggregation |
+| `worker/src/lib/mint-burn-pipeline/types.ts` | Shared ingestion types for cron/backfill |
+| `worker/src/lib/mint-burn-pipeline/parse.ts` | Shared log parsing and price resolution |
+| `worker/src/lib/mint-burn-pipeline/classification.ts` | Shared bridge-burn classification |
+| `worker/src/lib/mint-burn-pipeline/context.ts` | Shared current/historical price context loaders |
+| `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
+| `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
 | `worker/src/lib/mint-burn-contracts.ts` | Contract configs, event definitions, safe haven IDs |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: FIS, gauge, flight-to-quality |
 | `worker/src/api/mint-burn-flows.ts` | API handler: aggregate + per-coin flow data |
 | `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |
+| `worker/src/api/backfill-mint-burn.ts` | Admin endpoint: controlled event ingestion backfill |
 | `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |
 | `worker/migrations/0031a_mint_burn_v2.sql` | Database schema (3 tables) |
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
@@ -494,4 +523,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `src/components/flow-summary-card.tsx` | Summary card for detail pages |
 | `src/lib/types.ts` | TypeScript types + Zod schemas |
 | `worker/src/lib/__tests__/mint-burn-scoring.test.ts` | Scoring unit tests |
+| `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` | Shared ingestion pipeline tests |
+| `worker/src/cron/__tests__/sync-mint-burn.test.ts` | Cron ingestion tests |
+| `worker/src/api/__tests__/backfill-mint-burn.test.ts` | Backfill ingestion tests |
 | `worker/src/api/__tests__/mint-burn-flows.test.ts` | API contract tests |
