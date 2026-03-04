@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties } from "react";
-import { ArrowRight, Banknote, Printer } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -10,27 +9,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FlowMachineScene } from "@/components/flow-machine-scene";
 import { useMintBurnFlows, useMintBurnFlowsCoin } from "@/hooks/use-mint-burn-flows";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
-import { getSignedFlowIntensityDisplay, getSignedFlowIntensityMagnitude } from "@/lib/flow-intensity";
+import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
 import { getMintBurnSummaryTimeframe, getNetFlowForHours } from "@/lib/mint-burn-timeframes";
 import { GAUGE_BANDS } from "@/components/flow-gauge";
 import { cn } from "@/lib/utils";
 
 function getBandForScore(score: number): string {
-  if (score < 15) return "CRISIS";
-  if (score < 30) return "STRESS";
-  if (score < 45) return "CAUTIOUS";
-  if (score < 55) return "NEUTRAL";
-  if (score < 70) return "HEALTHY";
-  if (score < 85) return "CONFIDENT";
+  if (score < -70) return "CRISIS";
+  if (score < -40) return "STRESS";
+  if (score < -10) return "CAUTIOUS";
+  if (score < 10) return "NEUTRAL";
+  if (score < 40) return "HEALTHY";
+  if (score < 70) return "CONFIDENT";
   return "SURGE";
-}
-
-type CssVarStyle = CSSProperties & Record<`--${string}`, string | number>;
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 // ---------------------------------------------------------------------------
@@ -68,144 +62,6 @@ function SummarySkeleton() {
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-interface MiniPrinterSceneProps {
-  signedIntensityDisplay: number | null;
-  bandConfig: { label: string; hex: string; textClass: string; bgClass: string } | null;
-}
-
-function MiniPrinterScene({ signedIntensityDisplay, bandConfig }: MiniPrinterSceneProps) {
-  const intensityMagnitude = signedIntensityDisplay == null ? 50 : getSignedFlowIntensityMagnitude(signedIntensityDisplay);
-  const power = clamp(intensityMagnitude / 100, 0.08, 1);
-  const eased = Math.pow(power, 1.35);
-  const sheetCount = clamp(Math.round(4 + eased * 14), 4, 18);
-  const baseDuration = clamp(2.2 - eased * 1.4, 0.55, 2.2);
-  const rollerDuration = clamp(1.8 - eased * 1.2, 0.5, 1.8);
-  const crankDuration = clamp(2.5 - Math.pow(power, 1.7) * 1.8, 0.45, 2.5);
-  const spreadX = 42 + Math.round(eased * 78);
-  const riseY = 34 + Math.round(eased * 56);
-  const delayStep = clamp(0.16 - power * 0.08, 0.06, 0.16);
-  const accent = bandConfig?.hex ?? "#6b7280";
-  const spreadPattern = [-1, -0.75, -0.52, -0.3, -0.12, 0, 0.12, 0.3, 0.52, 0.75, 1];
-  const isNegativeIntensity = (signedIntensityDisplay ?? 0) < 0;
-
-  return (
-    <div className="relative h-[210px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-3">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <Printer className="h-3.5 w-3.5" />
-          Printer
-        </span>
-        <span className="font-mono tabular-nums">
-          {signedIntensityDisplay != null ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}%` : "CAL"}
-        </span>
-      </div>
-
-      <div className="relative mt-2 h-[160px]">
-        <div
-          className="pointer-events-none absolute left-1/2 top-3 h-12 w-24 -translate-x-1/2 rounded-t-xl border border-slate-600/70 bg-slate-700/70"
-          style={{ boxShadow: `0 0 16px ${accent}33` }}
-        />
-        <div className="pointer-events-none absolute left-1/2 top-12 h-20 w-48 -translate-x-1/2 rounded-2xl border border-slate-600/80 bg-slate-900/85" />
-        <div className="pointer-events-none absolute left-1/2 top-[84px] h-3 w-36 -translate-x-1/2 rounded border border-slate-700/80 bg-black/55" />
-
-        <div className="pointer-events-none absolute left-[calc(50%-66px)] top-[96px] h-4 w-9 rounded-full border border-slate-500/70 bg-slate-500/45 mini-printer-roller" style={{ animationDuration: `${rollerDuration.toFixed(2)}s` }} />
-        <div className="pointer-events-none absolute left-[calc(50%+32px)] top-[96px] h-4 w-9 rounded-full border border-slate-500/70 bg-slate-500/45 mini-printer-roller" style={{ animationDuration: `${(rollerDuration * 0.92).toFixed(2)}s` }} />
-
-        <div
-          className="pointer-events-none absolute left-[calc(50%+82px)] top-[89px] h-8 w-8 origin-[2px_50%] mini-printer-crank"
-          style={{ animationDuration: `${crankDuration.toFixed(2)}s` }}
-        >
-          <div className="absolute left-0 top-1/2 h-[3px] w-7 -translate-y-1/2 rounded bg-slate-300/85" />
-          <div className="absolute right-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-slate-500/80 bg-slate-200/90" />
-        </div>
-
-        <div className="pointer-events-none absolute left-1/2 top-[22px] h-10 w-16 -translate-x-1/2 rounded border border-slate-500/70 bg-gradient-to-b from-slate-300/70 to-slate-200/25" />
-
-        {Array.from({ length: sheetCount }).map((_, i) => {
-          const dx = Math.round(spreadPattern[i % spreadPattern.length] * spreadX);
-          const rot = -22 + (i % 7) * 7;
-          const style: CssVarStyle = {
-            left: "calc(50% + 12px)",
-            animationDuration: `${(baseDuration + (i % 5) * 0.08).toFixed(2)}s`,
-            animationDelay: `${(-i * delayStep).toFixed(2)}s`,
-            "--paper-dx": `${dx}px`,
-            "--paper-dy": `${riseY + (i % 6) * 7}px`,
-            "--paper-rot": `${rot}deg`,
-          };
-
-          return (
-            <div
-              key={i}
-              className={cn(
-                "pointer-events-none absolute top-[86px] flex h-4.5 w-8 -translate-x-1/2 items-center justify-center rounded-sm mini-paper-fly",
-                isNegativeIntensity
-                  ? "border border-red-500/45 bg-red-300/75 text-red-950"
-                  : "border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
-              )}
-              style={style}
-            >
-              <Banknote className="h-2.5 w-2.5" />
-            </div>
-          );
-        })}
-      </div>
-
-      <style jsx>{`
-        .mini-paper-fly {
-          animation-name: mini-paper-fly;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .mini-printer-roller {
-          animation-name: mini-roller-spin;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .mini-printer-crank {
-          animation-name: mini-crank-spin;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-
-        @keyframes mini-paper-fly {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, 0) scale(0.72) rotate(0deg);
-          }
-          10% {
-            opacity: 1;
-          }
-          64% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-            transform: translate(calc(-50% + var(--paper-dx)), calc(-1 * var(--paper-dy))) scale(1) rotate(var(--paper-rot));
-          }
-        }
-
-        @keyframes mini-roller-spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes mini-crank-spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
-    </div>
   );
 }
 
@@ -259,12 +115,16 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     : coin.netFlow7dUsd;
   const intensity = coin.flowIntensity;
   const signedIntensityDisplay = intensity != null
-    ? getSignedFlowIntensityDisplay(intensity)
+    ? getFlowIntensityDisplay(intensity)
     : null;
   const intensityMagnitude = signedIntensityDisplay != null
-    ? getSignedFlowIntensityMagnitude(signedIntensityDisplay)
+    ? getFlowIntensityMagnitude(signedIntensityDisplay)
     : 0;
   const isNegativeIntensity = (signedIntensityDisplay ?? 0) < 0;
+  const sceneMode = isNegativeIntensity ? "shredder" : "printer";
+  const sceneStatus = signedIntensityDisplay != null
+    ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}%`
+    : "NO DATA";
   const bandKey = intensity != null ? getBandForScore(intensity) : null;
   const bandConfig = bandKey ? GAUGE_BANDS[bandKey] : null;
 
@@ -278,9 +138,13 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
       <CardContent>
         <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="space-y-2">
-            <MiniPrinterScene
-              signedIntensityDisplay={signedIntensityDisplay}
-              bandConfig={bandConfig ?? null}
+            <FlowMachineScene
+              size="mini"
+              mode={sceneMode}
+              intensity={signedIntensityDisplay == null ? 0 : intensityMagnitude / 100}
+              statusText={sceneStatus}
+              title={sceneMode === "shredder" ? "Shredder" : "Printer"}
+              accentHex={bandConfig?.hex}
             />
             <Link
               href="/flows"
@@ -312,7 +176,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                     {bandConfig.label}
                   </span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Calibrating</span>
+                  <span className="text-xs text-muted-foreground">No data</span>
                 )}
               </div>
               <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">

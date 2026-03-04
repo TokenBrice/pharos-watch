@@ -28,12 +28,14 @@ export function FlowGaugeMini({ score, band }: FlowGaugeMiniProps) {
   const config = GAUGE_BANDS[band];
   const dotClass = config?.bgClass ?? "bg-muted";
   const textClass = config?.textClass ?? "text-muted-foreground";
+  const roundedScore = Math.round(score);
+  const displayScore = roundedScore > 0 ? `+${roundedScore}` : `${roundedScore}`;
 
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className={`h-2 w-2 rounded-full ${dotClass}`} />
       <span className={`font-mono text-sm font-bold tabular-nums ${textClass}`}>
-        {Math.round(score)}
+        {displayScore}
       </span>
     </span>
   );

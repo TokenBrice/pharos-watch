@@ -31,8 +31,8 @@ describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
 
   it("aggregate response DOES have a coins array", async () => {
     const aggregateResponse = {
-      gauge: { score: 50, band: "NEUTRAL", flightToQuality: false, flightIntensity: 0, trackedCoins: 4, trackedMcapUsd: 1e11 },
-      coins: [{ stablecoinId: "1", symbol: "USDT", flowIntensity: 50, netFlow24hUsd: 100, mintVolume24hUsd: 200, burnVolume24hUsd: 100, mintCount24h: 5, burnCount24h: 3, netFlow7dUsd: 500, largestEvent24h: null }],
+      gauge: { score: 0, band: "NEUTRAL", intensitySemantics: "signed-v2", flightToQuality: false, flightIntensity: 0, trackedCoins: 4, trackedMcapUsd: 1e11 },
+      coins: [{ stablecoinId: "1", symbol: "USDT", flowIntensity: 0, netFlow24hUsd: 100, mintVolume24hUsd: 200, burnVolume24hUsd: 100, mintCount24h: 5, burnCount24h: 3, netFlow7dUsd: 500, largestEvent24h: null }],
       hourly: [],
       updatedAt: 1000,
     };
@@ -163,15 +163,16 @@ describe("handleMintBurnFlows contract tests", () => {
 
     expect(usdt).toBeDefined();
     expect(usdt?.flowIntensity).not.toBeNull();
-    expect(usdt?.flowIntensity ?? 0).toBe(50);
+    expect(usdt?.flowIntensity ?? 0).toBe(0);
   });
 
   it("serves cached aggregate fallback when live query fails", async () => {
     const now = Math.floor(Date.now() / 1000);
     const cachedBody = {
       gauge: {
-        score: 50,
+        score: 0,
         band: "NEUTRAL",
+        intensitySemantics: "signed-v2",
         flightToQuality: false,
         flightIntensity: 0,
         trackedCoins: 1,
@@ -194,7 +195,7 @@ describe("handleMintBurnFlows contract tests", () => {
           first: async <T>() => {
             if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
               const key = String(args[0] ?? "");
-              if (key.startsWith("mint-burn-flows:v1:aggregate:")) {
+              if (key.startsWith("mint-burn-flows:v2:aggregate:")) {
                 return {
                   value: JSON.stringify(cachedBody),
                   updated_at: now,

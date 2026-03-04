@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, type CSSProperties } from "react";
+import { useMemo } from "react";
 import {
-  Banknote,
   Flame,
-  Printer,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import { FlowMachineScene } from "@/components/flow-machine-scene";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
 import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -40,11 +39,9 @@ interface FlowSnapshot {
   topBurn: MintBurnCoinFlow | null;
   headline: string;
   brrText: string;
-  leverPct: number;
+  leverPct: number | null;
   mode: PrinterMode;
 }
-
-type CssVarStyle = CSSProperties & Record<`--${string}`, string | number>;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -61,21 +58,21 @@ function formatMaybeCurrency(value: number | null): string {
 
 function getHeadline(score: number | null, net24h: number, brrText: string): string {
   if (score === null) {
-    return "Money printer calibrating";
-  }
-  if (score >= 85) {
-    return `Money printer go ${brrText}`;
-  }
-  if (score >= 45 && score < 55) {
-    return "Money printer on standby";
-  }
-  if (score < 30 || (score < 45 && net24h < 0)) {
-    return "Money shredder go BRRR";
+    return "No flow score data";
   }
   if (score >= 70) {
     return `Money printer go ${brrText}`;
   }
-  if (score >= 55) {
+  if (score >= -10 && score < 10) {
+    return "Money printer on standby";
+  }
+  if (score < -40 || (score < -10 && net24h < 0)) {
+    return "Money shredder go BRRR";
+  }
+  if (score >= 40) {
+    return `Money printer go ${brrText}`;
+  }
+  if (score >= 10) {
     return "Money printer warming up";
   }
   return "Money printer sputtering";
@@ -84,14 +81,14 @@ function getHeadline(score: number | null, net24h: number, brrText: string): str
 function getPrinterMode(score: number | null, net24h: number): PrinterMode {
   if (score === null) {
     return {
-      label: "CALIBRATING",
+      label: "NO DATA",
       badgeClass: "bg-muted text-muted-foreground border-border/70",
       headlineClass: "text-muted-foreground",
       panelClass: "border-border/60 bg-background/35",
-      description: "Baseline still warming up. Signal confidence is limited.",
+      description: "Not enough history to compute a reliable flow-intensity score yet.",
     };
   }
-  if (score >= 85) {
+  if (score >= 70) {
     return {
       label: "MAX BRRRR",
       badgeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
@@ -100,7 +97,7 @@ function getPrinterMode(score: number | null, net24h: number): PrinterMode {
       description: "Issuance is extreme relative to baseline activity.",
     };
   }
-  if (score >= 70) {
+  if (score >= 40) {
     return {
       label: "PRINT SURGE",
       badgeClass: "bg-lime-500/20 text-lime-300 border-lime-500/40",
@@ -109,7 +106,7 @@ function getPrinterMode(score: number | null, net24h: number): PrinterMode {
       description: "Strong mint pressure. Demand for stable liquidity is elevated.",
     };
   }
-  if (score >= 55) {
+  if (score >= 10) {
     return {
       label: "PRINTING",
       badgeClass: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
@@ -118,7 +115,7 @@ function getPrinterMode(score: number | null, net24h: number): PrinterMode {
       description: "Net inflows are positive but not yet euphoric.",
     };
   }
-  if (score >= 45) {
+  if (score >= -10) {
     return {
       label: "NEUTRAL",
       badgeClass: "bg-zinc-500/20 text-zinc-300 border-zinc-500/40",
@@ -127,7 +124,7 @@ function getPrinterMode(score: number | null, net24h: number): PrinterMode {
       description: "Printer and shredder are roughly balanced.",
     };
   }
-  if (score >= 30) {
+  if (score >= -40) {
     return {
       label: "SHREDDING",
       badgeClass: "bg-amber-500/20 text-amber-300 border-amber-500/40",
@@ -191,8 +188,8 @@ function buildSnapshot(
     .sort((a, b) => a.netFlow24hUsd - b.netFlow24hUsd)[0] ?? null;
 
   const score = gauge?.score ?? null;
-  const leverPct = score === null ? 50 : clamp(score, 0, 100);
-  const rCount = score === null ? 4 : clamp(Math.round(leverPct / 7), 2, 14);
+  const leverPct = score === null ? null : clamp((score + 100) / 2, 0, 100);
+  const rCount = score === null ? 4 : clamp(Math.round((leverPct ?? 50) / 7), 2, 14);
   const brrText = `BR${"R".repeat(rCount)}`;
   const mode = getPrinterMode(score, net24h);
 
@@ -229,298 +226,22 @@ function LoadingState() {
   );
 }
 
-function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
-  const power = snapshot.score === null ? 0.28 : clamp(snapshot.leverPct / 100, 0.1, 1);
-  const easedPower = Math.pow(power, 1.45);
-  const surgeBoost = power > 0.72 ? Math.pow((power - 0.72) / 0.28, 1.15) : 0;
-  const stressFactor =
-    snapshot.score === null || snapshot.score >= 45
-      ? 0
-      : (45 - snapshot.score) / 45;
-  const isStressRegime = snapshot.score !== null && snapshot.score < 45;
-
-  const sheetCount = clamp(
-    Math.round(4 + easedPower * 9 + surgeBoost * 24 - stressFactor * 2),
-    3,
-    38,
-  );
-  const baseDuration = clamp(
-    2.35 - easedPower * 1.25 - surgeBoost * 0.48 + stressFactor * 0.24,
-    0.36,
-    2.45,
-  );
-  const rollerDuration = clamp(
-    1.85 - easedPower * 1.2 - surgeBoost * 0.34 + stressFactor * 0.2,
-    0.32,
-    1.95,
-  );
-  const crankDuration = clamp(2.8 - Math.pow(power, 1.9) * 2.3, 0.34, 2.8);
-  const crankKick = `${((1 - power) * 8.5).toFixed(2)}deg`;
-  const crankWobble = `${((1 - power) * 2.8).toFixed(2)}px`;
-  const isCrankChoppy = power < 0.58;
-
-  const glowOpacity = 0.2 + power * 0.55 + surgeBoost * 0.2;
-  const coneIntensity = Math.pow(power, 1.6);
-  const spreadX = 52 + Math.round(coneIntensity * 100 + surgeBoost * 32);
-  const riseBase = 26 + Math.round(coneIntensity * 58 + surgeBoost * 20);
-  const riseStep = 6 + Math.round(coneIntensity * 14);
-  const durationStep = clamp(0.22 - power * 0.1, 0.05, 0.22);
-  const delayStep = clamp(0.18 - power * 0.1, 0.04, 0.18);
-  const emissionOffsetX = 16;
-  const spreadPattern = power < 0.45
-    ? [-0.45, -0.28, -0.12, 0, 0.12, 0.28, 0.45]
-    : [-1, -0.82, -0.64, -0.46, -0.28, -0.1, 0, 0.1, 0.28, 0.46, 0.64, 0.82, 1];
-  const crankStyle: CssVarStyle = {
-    animationDuration: `${crankDuration.toFixed(2)}s`,
-    "--crank-kick": crankKick,
-    "--crank-wobble": crankWobble,
-  };
-
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-border/60 bg-background/40 p-4">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <Printer className="h-3.5 w-3.5" />
-          Printer Desk
-        </span>
-        <span className="font-mono tabular-nums">
-          {snapshot.score === null ? "CALIBRATING" : `Rate ${Math.round(power * 100)}%`}
-        </span>
-      </div>
-      <p className="mt-1 text-[11px] text-muted-foreground/85">
-        Tracking {snapshot.trackedCoins} stablecoins
-      </p>
-
-      <div className="relative mt-4 h-[178px] overflow-hidden">
-        <div
-          className="pointer-events-none absolute left-1/2 top-2 h-16 w-32 -translate-x-1/2 rounded-t-xl border border-slate-600/70 bg-slate-700/70"
-          style={{ boxShadow: `0 0 20px rgba(16,185,129,${glowOpacity * 0.28})` }}
-        />
-        <div className="pointer-events-none absolute left-1/2 top-14 h-24 w-56 -translate-x-1/2 rounded-2xl border border-slate-600/80 bg-slate-900/85 shadow-[inset_0_-14px_24px_rgba(0,0,0,0.35)]" />
-        <div className="pointer-events-none absolute left-1/2 top-[88px] h-3 w-44 -translate-x-1/2 rounded bg-black/55 border border-slate-700/80" />
-
-        <div className="pointer-events-none absolute left-[calc(50%-84px)] top-[104px] h-4 w-10 rounded-full border border-slate-500/70 bg-slate-500/45 printer-roller" style={{ animationDuration: `${rollerDuration.toFixed(2)}s` }} />
-        <div className="pointer-events-none absolute left-[calc(50%+44px)] top-[104px] h-4 w-10 rounded-full border border-slate-500/70 bg-slate-500/45 printer-roller" style={{ animationDuration: `${(rollerDuration * 0.92).toFixed(2)}s` }} />
-
-        <div
-          className="pointer-events-none absolute right-[calc(50%-102px)] top-[72px] h-4 w-4 rounded-full border border-emerald-300/45 bg-emerald-400/25 printer-light"
-          style={{ animationDuration: `${(1.8 - power * 1.0).toFixed(2)}s`, boxShadow: `0 0 12px rgba(52,211,153,${glowOpacity})` }}
-        />
-
-        <div className="pointer-events-none absolute left-[calc(50%+94px)] top-[103px] h-3 w-3 rounded-full border border-slate-500/80 bg-slate-300/60" />
-        <div
-          className={cn(
-            "pointer-events-none absolute left-[calc(50%+97px)] top-[89px] h-10 w-10 origin-[2px_50%]",
-            isCrankChoppy ? "printer-crank-stutter" : "printer-crank",
-          )}
-          style={crankStyle}
-        >
-          <div className="absolute left-0 top-1/2 h-[3px] w-9 -translate-y-1/2 rounded bg-slate-300/85" />
-          <div className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-500/80 bg-slate-200/90" />
-        </div>
-
-        <div className="pointer-events-none absolute left-1/2 top-[18px] h-14 w-24 -translate-x-1/2 rounded border border-slate-500/70 bg-gradient-to-b from-slate-300/70 to-slate-200/25" />
-
-        {Array.from({ length: sheetCount }).map((_, i) => {
-          const seed = Math.abs(Math.sin((i + 1) * 12.9898) * 43758.5453);
-          const chaos = seed - Math.floor(seed);
-          const dxJitter = Math.round((chaos - 0.5) * (6 + power * 28 + surgeBoost * 18));
-          const dyJitter = Math.round((chaos - 0.5) * (8 + power * 16));
-          const rot = -28 + (i % 8) * 8 + Math.round((chaos - 0.5) * (12 + surgeBoost * 14));
-          const dx = Math.round(spreadPattern[i % spreadPattern.length] * spreadX) + dxJitter;
-          const dy = riseBase + (i % 8) * riseStep + dyJitter;
-          const misfeed = isStressRegime && i % (snapshot.score !== null && snapshot.score < 30 ? 4 : 6) === 0;
-          const misfeedDrop = `${(22 + stressFactor * 56 + (i % 3) * 12).toFixed(0)}px`;
-          const misfeedDx = `${Math.round((chaos - 0.5) * 44)}px`;
-          const style: CssVarStyle = {
-            left: `calc(50% + ${emissionOffsetX}px)`,
-            animationDuration: `${(baseDuration + (i % 6) * durationStep).toFixed(2)}s`,
-            animationDelay: `${(-i * delayStep).toFixed(2)}s`,
-            "--paper-dx": `${dx}px`,
-            "--paper-dy": `${dy}px`,
-            "--paper-rot": `${rot}deg`,
-            "--misfeed-drop": misfeedDrop,
-            "--misfeed-dx": misfeedDx,
-            "--misfeed-rot": `${Math.round(rot * 0.45)}deg`,
-          };
-
-          return (
-            <div
-              key={i}
-              className={cn(
-                "pointer-events-none absolute top-[92px] flex h-5 w-9 -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
-                misfeed ? "paper-misfeed" : "paper-fly",
-              )}
-              style={style}
-            >
-              <Banknote className="h-3 w-3" />
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top minter</p>
-          <p className="mt-1 font-mono text-xs">
-            {snapshot.topMint ? (
-              <span className="text-emerald-400">
-                {snapshot.topMint.symbol} +{formatCurrency(snapshot.topMint.netFlow24hUsd)}
-              </span>
-            ) : (
-              <span className="text-muted-foreground">None in this window</span>
-            )}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top burner</p>
-          <p className="mt-1 font-mono text-xs">
-            {snapshot.topBurn ? (
-              <span className="text-red-400">
-                {snapshot.topBurn.symbol} {formatCurrency(snapshot.topBurn.netFlow24hUsd)}
-              </span>
-            ) : (
-              <span className="text-muted-foreground">None in this window</span>
-            )}
-          </p>
-        </div>
-      </div>
-
-      <style jsx>{`
-        .paper-fly {
-          animation-name: paper-fly;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .printer-roller {
-          animation-name: roller-spin;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .printer-light {
-          animation-name: status-blink;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-        }
-        .printer-crank {
-          animation-name: crank-spin;
-          animation-timing-function: linear;
-          animation-iteration-count: infinite;
-        }
-        .printer-crank-stutter {
-          animation-name: crank-stutter;
-          animation-timing-function: cubic-bezier(0.55, 0.02, 0.64, 0.96);
-          animation-iteration-count: infinite;
-        }
-        .paper-misfeed {
-          animation-name: paper-misfeed;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-        }
-
-        @keyframes paper-fly {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, 0) scale(0.7) rotate(0deg);
-          }
-          9% {
-            opacity: 1;
-          }
-          62% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 0;
-            transform:
-              translate(calc(-50% + var(--paper-dx)), calc(-1 * var(--paper-dy)))
-              scale(1.02)
-              rotate(var(--paper-rot));
-          }
-        }
-
-        @keyframes roller-spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes status-blink {
-          0%, 100% {
-            opacity: 0.45;
-          }
-          50% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes crank-spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes crank-stutter {
-          0% {
-            transform: translateY(0) rotate(0deg);
-          }
-          10% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(34deg + var(--crank-kick)));
-          }
-          16% {
-            transform: translateY(0) rotate(calc(22deg - var(--crank-kick)));
-          }
-          30% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(112deg + var(--crank-kick)));
-          }
-          36% {
-            transform: translateY(0) rotate(calc(98deg - var(--crank-kick)));
-          }
-          52% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(204deg + var(--crank-kick)));
-          }
-          58% {
-            transform: translateY(0) rotate(calc(188deg - var(--crank-kick)));
-          }
-          74% {
-            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(294deg + var(--crank-kick)));
-          }
-          80% {
-            transform: translateY(0) rotate(calc(280deg - var(--crank-kick)));
-          }
-          100% {
-            transform: translateY(0) rotate(360deg);
-          }
-        }
-
-        @keyframes paper-misfeed {
-          0% {
-            opacity: 0;
-            transform: translate(-50%, 0) scale(0.68) rotate(0deg);
-          }
-          14% {
-            opacity: 1;
-          }
-          46% {
-            opacity: 1;
-            transform: translate(calc(-50% + var(--misfeed-dx)), 16px) scale(0.86) rotate(var(--misfeed-rot));
-          }
-          100% {
-            opacity: 0;
-            transform: translate(calc(-50% + var(--misfeed-dx)), var(--misfeed-drop)) scale(0.8) rotate(var(--misfeed-rot));
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
 function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: MintBurnGauge | null }) {
+  const machineMode = snapshot.net24h < 0 ? "shredder" : "printer";
+  const ratePower = snapshot.score === null ? 0.28 : clamp((snapshot.leverPct ?? 0) / 100, 0.1, 1);
+  const totalFlow24h = snapshot.mint24h + snapshot.burn24h;
+  const burnDominance = totalFlow24h > 0 ? snapshot.burn24h / totalFlow24h : 0.5;
+  const burnPower = machineMode === "shredder" ? clamp((burnDominance - 0.5) / 0.5, 0.12, 1) : 0;
+  const sceneIntensity = machineMode === "shredder" ? burnPower : ratePower;
+  const sceneStatus = snapshot.score === null
+    ? "NO DATA"
+    : machineMode === "shredder"
+      ? `Burn ${Math.round(burnPower * 100)}%`
+      : `Rate ${Math.round(ratePower * 100)}%`;
+  const sceneStress = snapshot.score === null || snapshot.score >= -10
+    ? 0
+    : (-10 - snapshot.score) / 90;
+
   return (
     <article className="relative overflow-hidden rounded-2xl border bg-card p-4 sm:p-6">
       <div
@@ -602,22 +323,64 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
             <div className={cn("space-y-2 rounded-xl border p-3", snapshot.mode.panelClass)}>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Printer pressure lever</span>
-                <span className="font-mono">{snapshot.score === null ? "CALIBRATING" : `${Math.round(snapshot.score)} / 100`}</span>
+                <span className="font-mono">
+                  {snapshot.score === null
+                    ? "NO DATA"
+                    : `${getNetPrefix(snapshot.score)}${Math.round(snapshot.score)} / 100`}
+                </span>
               </div>
               <div className="relative h-3 rounded-full border border-border/60 bg-muted/25">
                 <div
                   className="h-full rounded-full"
                   style={{ background: "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #84cc16 65%, #10b981 100%)" }}
                 />
-                <div
-                  className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-[0_0_0_3px_rgba(15,23,42,0.45)] transition-all"
-                  style={{ left: `calc(${snapshot.leverPct}% - 10px)` }}
-                />
+                {snapshot.leverPct !== null && (
+                  <div
+                    className="absolute top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-background bg-foreground shadow-[0_0_0_3px_rgba(15,23,42,0.45)] transition-all"
+                    style={{ left: `calc(${snapshot.leverPct}% - 10px)` }}
+                  />
+                )}
               </div>
             </div>
           </div>
 
-          <PrinterScene snapshot={snapshot} />
+          <div className="space-y-3">
+            <FlowMachineScene
+              size="full"
+              mode={machineMode}
+              intensity={sceneIntensity}
+              statusText={sceneStatus}
+              title={machineMode === "shredder" ? "Shredder Desk" : "Printer Desk"}
+              subText={`Tracking ${snapshot.trackedCoins} stablecoins`}
+              stress={sceneStress}
+            />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top minter</p>
+                <p className="mt-1 font-mono text-xs">
+                  {snapshot.topMint ? (
+                    <span className="text-emerald-400">
+                      {snapshot.topMint.symbol} +{formatCurrency(snapshot.topMint.netFlow24hUsd)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">None in this window</span>
+                  )}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top burner</p>
+                <p className="mt-1 font-mono text-xs">
+                  {snapshot.topBurn ? (
+                    <span className="text-red-400">
+                      {snapshot.topBurn.symbol} {formatCurrency(snapshot.topBurn.netFlow24hUsd)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">None in this window</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </article>

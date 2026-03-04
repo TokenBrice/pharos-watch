@@ -112,7 +112,7 @@ interface EventRow {
 const DAY_SEC = 86400;
 const BASELINE_WINDOW_DAYS = 30;
 const FLOW_MAX_AGE_SEC = 300;
-const FLOW_CACHE_PREFIX = "mint-burn-flows:v1";
+const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
 
 function bucketDay(ts: number): number {
   return Math.floor(ts / DAY_SEC) * DAY_SEC;
@@ -506,6 +506,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       gauge: {
         score: gaugeScore,
         band: gaugeBand?.label ?? null,
+        intensitySemantics: "signed-v2",
         flightToQuality: ftq.active,
         flightIntensity: ftq.intensity,
         // Use deduped stablecoin count (configs can include multiple contracts/chains per coin).

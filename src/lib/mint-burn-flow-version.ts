@@ -1,5 +1,5 @@
 /** Canonical Mint/Burn Flow methodology version (no "v" prefix). */
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "4.1";
+export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "4.2";
 
 /** Display-ready Mint/Burn Flow methodology version (with "v" prefix). */
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = `v${MINT_BURN_FLOW_METHODOLOGY_VERSION}`;
@@ -27,6 +27,22 @@ export interface MintBurnFlowMethodologyChangelogEntry {
  *   mint/burn flows did not initially ship with explicit version tags.
  */
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG: readonly MintBurnFlowMethodologyChangelogEntry[] = [
+  {
+    version: "4.2",
+    title: "Signed zero-baseline flow-intensity semantics",
+    date: "2026-03-04",
+    effectiveAt: 1772614800,
+    summary:
+      "Flow Intensity Score and Bank Run Gauge moved from midpoint semantics to canonical signed outputs centered at zero baseline.",
+    methodologyImpact: [
+      "Flow Intensity Score now emits signed values via `clamp(-100, 100, z * 50)`",
+      "Gauge score now uses signed -100 to +100 output with neutral baseline at 0",
+      "Band thresholds were remapped around zero while retaining existing band labels",
+      "Frontend midpoint conversion shim was removed; UI now consumes canonical signed API values directly",
+    ],
+    commits: ["unreleased"],
+    reconstructed: true,
+  },
   {
     version: "4.1",
     title: "Reliability remediation and controlled backfill recovery",

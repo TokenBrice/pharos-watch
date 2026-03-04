@@ -54,10 +54,10 @@ const CY = 130;
 const R = 110;
 const SW = 14;
 
-/** Map a 0-100 score to an angle on the semicircle (180deg..0deg). */
+/** Map a signed score (-100..100) to an angle on the semicircle (180deg..0deg). */
 function scoreToAngle(score: number): number {
-  const clamped = Math.max(0, Math.min(100, score));
-  return 180 - (clamped / 100) * 180;
+  const clamped = Math.max(-100, Math.min(100, score));
+  return 180 - ((clamped + 100) / 200) * 180;
 }
 
 function toXY(angleDeg: number, r: number): [number, number] {
@@ -78,15 +78,15 @@ function arcPath(startDeg: number, endDeg: number, radius: number): string {
   return `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`;
 }
 
-// Arc segment boundaries (score 0..100 mapped to angle 180..0)
+// Arc segment boundaries (score -100..100 mapped to angle 180..0)
 const ARC_SEGMENTS = [
-  { min: 0, max: 15, band: "CRISIS" },
-  { min: 15, max: 30, band: "STRESS" },
-  { min: 30, max: 45, band: "CAUTIOUS" },
-  { min: 45, max: 55, band: "NEUTRAL" },
-  { min: 55, max: 70, band: "HEALTHY" },
-  { min: 70, max: 85, band: "CONFIDENT" },
-  { min: 85, max: 100, band: "SURGE" },
+  { min: -100, max: -70, band: "CRISIS" },
+  { min: -70, max: -40, band: "STRESS" },
+  { min: -40, max: -10, band: "CAUTIOUS" },
+  { min: -10, max: 10, band: "NEUTRAL" },
+  { min: 10, max: 40, band: "HEALTHY" },
+  { min: 40, max: 70, band: "CONFIDENT" },
+  { min: 70, max: 100, band: "SURGE" },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ function GaugeCalibrating({ trackedCoins }: { trackedCoins: number }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative w-full max-w-[300px] aspect-[300/170]">
-        <svg viewBox="0 0 300 170" className="w-full h-full" role="img" aria-label="Bank Run Gauge: Calibrating">
+        <svg viewBox="0 0 300 170" className="w-full h-full" role="img" aria-label="Bank Run Gauge: No data">
           {/* Gray arc */}
           <path
             d={arcPath(180, 0, R)}
@@ -136,8 +136,8 @@ function GaugeCalibrating({ trackedCoins }: { trackedCoins: number }) {
           <circle cx={CX} cy={CY} r={5} className="fill-muted/40" />
         </svg>
       </div>
-      <span className="text-lg font-bold text-muted-foreground animate-pulse">
-        Calibrating...
+      <span className="text-lg font-bold text-muted-foreground">
+        No data
       </span>
       <span className="text-xs text-muted-foreground">
         Tracking {trackedCoins} stablecoins
@@ -187,10 +187,10 @@ function GaugeActive({
             </filter>
           </defs>
 
-          {/* Colored arc segments */}
+            {/* Colored arc segments */}
           {ARC_SEGMENTS.map((seg) => {
-            const startAngle = 180 - (seg.min / 100) * 180;
-            const endAngle = 180 - (seg.max / 100) * 180;
+            const startAngle = scoreToAngle(seg.min);
+            const endAngle = scoreToAngle(seg.max);
             const segBand = GAUGE_BANDS[seg.band] ?? DEFAULT_BAND;
             return (
               <path
@@ -205,8 +205,8 @@ function GaugeActive({
           })}
 
           {/* Tick marks at segment boundaries */}
-          {[0, 15, 30, 45, 55, 70, 85, 100].map((tick) => {
-            const angle = 180 - (tick / 100) * 180;
+          {[-100, -70, -40, -10, 10, 40, 70, 100].map((tick) => {
+            const angle = scoreToAngle(tick);
             const [ox, oy] = toXY(angle, R + SW / 2 + 2);
             const [ix, iy] = toXY(angle, R - SW / 2 - 2);
             return (
@@ -250,7 +250,7 @@ function GaugeActive({
             fontWeight="800"
             fontFamily="var(--font-mono, monospace)"
           >
-            {Math.round(score)}
+            {score > 0 ? `+${Math.round(score)}` : Math.round(score)}
           </text>
 
           {/* Min / max labels */}
@@ -263,7 +263,7 @@ function GaugeActive({
             fontSize={9}
             fontFamily="var(--font-mono, monospace)"
           >
-            0
+            -100
           </text>
           <text
             x={CX + R + 4}

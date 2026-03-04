@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.1` (2026-03-01 -> 2026-03-04).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.2` (2026-03-01 -> 2026-03-04).
+
+---
+
+## v4.2 - Signed zero-baseline flow-intensity semantics (Mar 4, 2026)
+
+**Commit:** `unreleased`
+
+- Flow Intensity Score moved from midpoint `0-100` to signed `-100 to +100` semantics
+- Bank Run Gauge score moved to signed `-100 to +100` with neutral baseline at `0`
+- Band thresholds were remapped around zero while preserving `CRISIS` to `SURGE` labels
+- Frontend midpoint conversion shim was removed so UI consumes canonical signed API values directly
 
 ---
 

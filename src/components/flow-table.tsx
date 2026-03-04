@@ -17,7 +17,7 @@ import { useSort } from "@/hooks/use-sort";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
-import { getSignedFlowIntensityDisplay, getSignedFlowIntensityMagnitude } from "@/lib/flow-intensity";
+import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
 import type { MintBurnCoinFlow } from "@/lib/types";
 
@@ -69,8 +69,11 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           bVal = b.largestEvent24h?.amountUsd ?? 0;
           break;
         case "fis":
-          aVal = a.flowIntensity ?? -1;
-          bVal = b.flowIntensity ?? -1;
+          if (a.flowIntensity === null && b.flowIntensity === null) return 0;
+          if (a.flowIntensity === null) return 1;
+          if (b.flowIntensity === null) return -1;
+          aVal = a.flowIntensity;
+          bVal = b.flowIntensity;
           break;
         default:
           aVal = Math.abs(a.netFlow24hUsd);
@@ -210,10 +213,10 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
             const name = meta?.name ?? coin.symbol;
             const intensityDisplay = coin.flowIntensity != null
-              ? getSignedFlowIntensityDisplay(coin.flowIntensity)
+              ? getFlowIntensityDisplay(coin.flowIntensity)
               : null;
             const intensityMagnitude = intensityDisplay != null
-              ? getSignedFlowIntensityMagnitude(intensityDisplay)
+              ? getFlowIntensityMagnitude(intensityDisplay)
               : 0;
             const isNegativeIntensity = (intensityDisplay ?? 0) < 0;
 

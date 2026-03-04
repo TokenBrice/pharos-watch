@@ -12,7 +12,7 @@ function parseArgs(argv) {
   const args = { baseUrl: process.env.SMOKE_API_BASE ?? process.env.API_BASE_URL ?? "" };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--base-url") {
+    if (arg === "--base-url" || arg === "--base") {
       args.baseUrl = argv[i + 1] ?? "";
       i += 1;
     }
@@ -149,7 +149,15 @@ export const ENDPOINT_ASSERTIONS = {
     assert(body.coins.length > 0, "/api/mint-burn-flows returned empty coins[]");
     if (body.gauge.score !== null) {
       assert(isFiniteNumber(body.gauge.score), "/api/mint-burn-flows gauge.score is not finite");
-      assert(body.gauge.score >= 0 && body.gauge.score <= 100, "/api/mint-burn-flows gauge.score out of range");
+      assert(body.gauge.score >= -100 && body.gauge.score <= 100, "/api/mint-burn-flows gauge.score out of range");
+    }
+    for (const coin of body.coins) {
+      if (coin.flowIntensity === null) continue;
+      assert(isFiniteNumber(coin.flowIntensity), "/api/mint-burn-flows coin.flowIntensity is not finite");
+      assert(
+        coin.flowIntensity >= -100 && coin.flowIntensity <= 100,
+        "/api/mint-burn-flows coin.flowIntensity out of range",
+      );
     }
     return `${body.coins.length} tracked flow coins`;
   },

@@ -1013,9 +1013,13 @@ export interface YieldHistoryPoint {
 
 // --- Mint/Burn Flow types ---
 
+// Flow intensity uses signed semantics: -100 (max burn pressure) to +100 (max mint pressure).
+const SignedFlowIntensitySchema = z.number().min(-100).max(100);
+
 export const MintBurnGaugeSchema = z.object({
-  score: z.number().nullable(),
+  score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
+  intensitySemantics: z.enum(["midpoint-v1", "signed-v2"]).optional(),
   flightToQuality: z.boolean(),
   flightIntensity: z.number(),
   trackedCoins: z.number(),
@@ -1026,7 +1030,7 @@ export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 export const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
-  flowIntensity: z.number().nullable(),
+  flowIntensity: SignedFlowIntensitySchema.nullable(),
   netFlow24hUsd: z.number(),
   mintVolume24hUsd: z.number(),
   burnVolume24hUsd: z.number(),

@@ -96,7 +96,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: "https://pharos.watch/flows/",
-      lastModified: now,
+      lastModified: new Date(LAST_EDITED["/flows/"]!),
       changeFrequency: "daily",
       priority: 0.7,
     },

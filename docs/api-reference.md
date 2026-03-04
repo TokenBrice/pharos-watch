@@ -1001,7 +1001,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 ```json
 {
   "gauge": {
-    "score": 52.3,
+    "score": 2.3,
     "band": "NEUTRAL",
     "flightToQuality": false,
     "flightIntensity": 0,
@@ -1018,7 +1018,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `score` | `number \| null` | Market-cap-weighted composite FIS (0–100). `null` when insufficient data |
+| `score` | `number \| null` | Market-cap-weighted composite FIS (-100 to +100). `null` when insufficient data |
 | `band` | `string \| null` | Gauge band: `"CRISIS"`, `"STRESS"`, `"CAUTIOUS"`, `"NEUTRAL"`, `"HEALTHY"`, `"CONFIDENT"`, `"SURGE"` |
 | `flightToQuality` | `boolean` | Whether flight-to-quality conditions are active |
 | `flightIntensity` | `number` | Flight-to-quality intensity (0–100). 0 when not active |
@@ -1031,7 +1031,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 |-------|------|-------------|
 | `stablecoinId` | `string` | Pharos stablecoin ID |
 | `symbol` | `string` | Token symbol |
-| `flowIntensity` | `number \| null` | Flow Intensity Score (0–100). `null` if < 7 days of data |
+| `flowIntensity` | `number \| null` | Flow Intensity Score (-100 to +100). `null` if < 7 days of data |
 | `netFlow24hUsd` | `number` | Net flow over the requested window (USD, positive = net minting) |
 | `mintVolume24hUsd` | `number` | Total mint volume (USD) |
 | `burnVolume24hUsd` | `number` | Total burn volume (USD) |

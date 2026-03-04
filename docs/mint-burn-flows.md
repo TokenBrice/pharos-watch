@@ -6,7 +6,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.1`
+- **Current methodology version:** `v4.2`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
 
@@ -34,8 +34,8 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 | `ETH_BLOCK_TIME` | 12 sec | Approximate Ethereum block time (yields ~75-block safety margin) |
 | `DENOM_SCALE` | 0.3 | FIS denominator = 30% of baseline daily absolute flow |
 | `DENOM_FLOOR` | $1,000,000 | Minimum FIS denominator |
-| `Z_MULTIPLIER` | 25 | Z-score amplification in FIS formula |
-| `NEUTRAL` | 50 | Neutral Flow Intensity Score |
+| `Z_MULTIPLIER` | 50 | Z-score amplification in FIS formula |
+| `INTENSITY_RANGE` | -100 to +100 | Signed Flow Intensity Score output range |
 | `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
 | `CHAIN_SCAN_RANGE` | 50K (ETH/ARB/BASE/OPT), 10K (AVAX), 2K (Polygon) | Max block range per contract per cycle (per-chain Alchemy limits) |
@@ -220,26 +220,26 @@ Per-coin score measuring how unusual current flows are relative to the 30-day ba
 ```
 denominator = max(baselineDailyAbs * 0.3, $1M)
 z = (currentDailyNet - baselineDailyNet) / denominator
-intensity = clamp(0, 100, 50 + z * 25)
+intensity = clamp(-100, 100, z * 50)
 ```
 
 - **Input:** 24h net flow, 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
-- **Output:** 0–100 score, or `null` if fewer than 7 days of history.
-- Score of 50 = current flow matches baseline. Below 50 = net burns above baseline. Above 50 = net mints above baseline.
+- **Output:** -100 to +100 score, or `null` if fewer than 7 days of history.
+- Score of 0 = current flow matches baseline. Negative values = net burns above baseline. Positive values = net mints above baseline.
 
 ### Gauge Bands
 
 | Band | Range | Color | Meaning |
 |------|-------|-------|---------|
-| CRISIS | 0–15 | red | Massive redemption pressure |
-| STRESS | 15–30 | orange | Heavy redemptions |
-| CAUTIOUS | 30–45 | amber | Elevated burns |
-| NEUTRAL | 45–55 | gray | Balanced mint/burn |
-| HEALTHY | 55–70 | light-green | Net minting |
-| CONFIDENT | 70–85 | green | Strong demand |
-| SURGE | 85–100 | bright-green | Extreme minting demand |
+| CRISIS | -100 to -70 | red | Massive redemption pressure |
+| STRESS | -70 to -40 | orange | Heavy redemptions |
+| CAUTIOUS | -40 to -10 | amber | Elevated burns |
+| NEUTRAL | -10 to +10 | gray | Balanced mint/burn |
+| HEALTHY | +10 to +40 | light-green | Net minting |
+| CONFIDENT | +40 to +70 | green | Strong demand |
+| SURGE | +70 to +100 | bright-green | Extreme minting demand |
 
-Boundary convention: each band is `[min, max)`. The last band includes 100.
+Boundary convention: each band is `[min, max)`. The last band includes +100.
 
 ### Bank Run Gauge (Composite)
 

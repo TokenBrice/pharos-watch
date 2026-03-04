@@ -22,8 +22,7 @@ export interface FlowIntensityInput {
 
 const DENOM_SCALE = 0.3;
 const DENOM_FLOOR = 1_000_000; // $1 M minimum denominator
-const Z_MULTIPLIER = 25;
-const NEUTRAL = 50;
+const Z_MULTIPLIER = 50;
 const MIN_DATA_DAYS = 7;
 
 /**
@@ -32,7 +31,7 @@ const MIN_DATA_DAYS = 7;
  * Formula:
  *   denominator = max(baselineDailyAbs * 0.3, 1_000_000)
  *   z = (currentDailyNet − baselineDailyNet) / denominator
- *   intensity = clamp(0, 100, 50 + z * 25)
+ *   intensity = clamp(-100, 100, z * 50)
  *
  * Returns `null` when we have fewer than 7 days of data.
  */
@@ -46,8 +45,8 @@ export function computeFlowIntensity(
     DENOM_FLOOR
   );
   const z = (input.currentDailyNet - input.baselineDailyNet) / denominator;
-  const raw = NEUTRAL + z * Z_MULTIPLIER;
-  return Math.max(0, Math.min(100, raw));
+  const raw = z * Z_MULTIPLIER;
+  return Math.max(-100, Math.min(100, raw));
 }
 
 // ---------------------------------------------------------------------------
@@ -62,13 +61,13 @@ export interface GaugeBand {
 }
 
 export const GAUGE_BANDS: GaugeBand[] = [
-  { min: 0, max: 15, label: "CRISIS", color: "red" },
-  { min: 15, max: 30, label: "STRESS", color: "orange" },
-  { min: 30, max: 45, label: "CAUTIOUS", color: "amber" },
-  { min: 45, max: 55, label: "NEUTRAL", color: "gray" },
-  { min: 55, max: 70, label: "HEALTHY", color: "light-green" },
-  { min: 70, max: 85, label: "CONFIDENT", color: "green" },
-  { min: 85, max: 100, label: "SURGE", color: "bright-green" },
+  { min: -100, max: -70, label: "CRISIS", color: "red" },
+  { min: -70, max: -40, label: "STRESS", color: "orange" },
+  { min: -40, max: -10, label: "CAUTIOUS", color: "amber" },
+  { min: -10, max: 10, label: "NEUTRAL", color: "gray" },
+  { min: 10, max: 40, label: "HEALTHY", color: "light-green" },
+  { min: 40, max: 70, label: "CONFIDENT", color: "green" },
+  { min: 70, max: 100, label: "SURGE", color: "bright-green" },
 ];
 
 /**
@@ -83,7 +82,7 @@ export function getGaugeBand(
       return { label: band.label, color: band.color };
     }
   }
-  // Fallback — should never happen with 0-100 input
+  // Fallback — should never happen with -100..100 input
   return { label: "NEUTRAL", color: "gray" };
 }
 

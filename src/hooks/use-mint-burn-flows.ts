@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useApiQuery, CRON_20MIN } from "./use-api-query";
 import {
   MintBurnFlowsResponseSchema,
@@ -8,16 +9,59 @@ import {
   type MintBurnPerCoinResponse,
   type MintBurnEventsResponse,
 } from "@/lib/types";
+import {
+  normalizeToSignedFlowIntensity,
+  type FlowIntensitySemantics,
+} from "@/lib/flow-intensity";
+
+function resolveFlowSemantics(
+  response: MintBurnFlowsResponse,
+): FlowIntensitySemantics {
+  return response.gauge.intensitySemantics ?? "midpoint-v1";
+}
+
+function normalizeMintBurnFlowsResponse(
+  response: MintBurnFlowsResponse,
+): MintBurnFlowsResponse {
+  const semantics = resolveFlowSemantics(response);
+
+  return {
+    ...response,
+    gauge: {
+      ...response.gauge,
+      score:
+        response.gauge.score === null
+          ? null
+          : normalizeToSignedFlowIntensity(response.gauge.score, semantics),
+      intensitySemantics: "signed-v2",
+    },
+    coins: response.coins.map((coin) => ({
+      ...coin,
+      flowIntensity:
+        coin.flowIntensity === null
+          ? null
+          : normalizeToSignedFlowIntensity(coin.flowIntensity, semantics),
+    })),
+  };
+}
 
 /** Aggregate flows — returns gauge, coins[], hourly[]. No stablecoin filter. */
 export function useMintBurnFlows(hours = 24) {
   const qs = hours !== 24 ? `?hours=${hours}` : "";
-  return useApiQuery<MintBurnFlowsResponse>(
+  const query = useApiQuery<MintBurnFlowsResponse>(
     ["mint-burn-flows", "all", hours],
     `/api/mint-burn-flows${qs}`,
     CRON_20MIN,
     { schema: MintBurnFlowsResponseSchema },
   );
+  const normalizedData = useMemo(
+    () => (query.data ? normalizeMintBurnFlowsResponse(query.data) : undefined),
+    [query.data],
+  );
+  return {
+    ...query,
+    data: normalizedData,
+  };
 }
 
 /** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */

@@ -1021,7 +1021,7 @@ export default function MethodologyPage() {
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Primary score</p>
-              <p className="text-foreground">FIS (0-100)</p>
+              <p className="text-foreground">FIS (-100 to +100)</p>
             </div>
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Main outputs</p>
@@ -1046,9 +1046,9 @@ export default function MethodologyPage() {
               denominator=max(500M*0.3,1M)=150M; z=(-220M-(-40M))/150M=-1.2
             </p>
             <p className="font-mono">
-              FIS=clamp(0,100,50+z*25)=20
+              FIS=clamp(-100,100,z*50)=-60
             </p>
-            <p>Result: <span className="text-foreground">FIS 20 (STRESS band)</span>.</p>
+            <p>Result: <span className="text-foreground">FIS -60 (STRESS band)</span>.</p>
           </WorkedExample>
 
           <MethodologyDetails summary="Technical details: bucket pipeline, FIS formula, and threshold bands">
@@ -1076,7 +1076,7 @@ export default function MethodologyPage() {
             {/* FIS */}
             <div className="rounded-lg border p-3 text-center flex-1 flex flex-col justify-center">
               <p className="text-foreground font-medium">Flow Intensity Score</p>
-              <p className="text-xs text-muted-foreground mt-0.5">0 (max burn) · 50 (neutral) · 100 (max mint)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">-100 (max burn) · 0 (neutral) · +100 (max mint)</p>
             </div>
             <div className="flex items-center text-muted-foreground text-xl font-bold">&rarr;</div>
             {/* Outputs */}
@@ -1112,7 +1112,7 @@ export default function MethodologyPage() {
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="w-full rounded-lg border p-3 text-center">
               <p className="text-foreground font-medium">Flow Intensity Score</p>
-              <p className="text-xs text-muted-foreground mt-0.5">0 (max burn) · 50 (neutral) · 100 (max mint)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">-100 (max burn) · 0 (neutral) · +100 (max mint)</p>
             </div>
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="grid grid-cols-2 gap-2 w-full">
@@ -1132,18 +1132,18 @@ export default function MethodologyPage() {
             <h3 className="text-foreground font-medium">Flow Intensity Score (FIS)</h3>
             <p>
               Per-coin score measuring how far current mint/burn activity deviates from its historical baseline.
-              Ranges from 0 (extreme net burning) to 100 (extreme net minting), with 50 representing normal activity.
+              Ranges from -100 (extreme net burning) to +100 (extreme net minting), with 0 representing normal activity.
             </p>
             <p className="font-mono text-xs bg-muted rounded px-3 py-2">
               denominator = max(baselineDailyAbs &times; 0.3, $1M)<br />
               z = (currentDailyNet &minus; baselineDailyNet) / denominator<br />
-              FIS = clamp(0, 100, 50 + z &times; 25)
+              FIS = clamp(-100, 100, z &times; 50)
             </p>
             <ul className="list-disc list-inside space-y-1">
               <li><span className="text-foreground">Baseline period</span> &mdash; 30-day rolling average of daily net flows and absolute volumes</li>
               <li><span className="text-foreground">Minimum data</span> &mdash; requires 7 days of history; returns null otherwise</li>
               <li><span className="text-foreground">Floor</span> &mdash; denominator is floored at $1M to prevent noise in low-volume coins</li>
-              <li><span className="text-foreground">Interpretation</span> &mdash; FIS &lt; 30 = significant net burning, FIS &gt; 70 = significant net minting</li>
+              <li><span className="text-foreground">Interpretation</span> &mdash; FIS &lt; -40 = significant net burning, FIS &gt; 40 = significant net minting</li>
             </ul>
           </div>
 
@@ -1164,13 +1164,13 @@ export default function MethodologyPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr><td className="py-1.5 pr-4 text-foreground">CRISIS</td><td className="py-1.5 pr-4">0&ndash;15</td><td className="py-1.5">Severe coordinated burning across major coins</td></tr>
-                  <tr><td className="py-1.5 pr-4 text-foreground">STRESS</td><td className="py-1.5 pr-4">15&ndash;30</td><td className="py-1.5">Significant net outflows from the ecosystem</td></tr>
-                  <tr><td className="py-1.5 pr-4 text-foreground">CAUTIOUS</td><td className="py-1.5 pr-4">30&ndash;45</td><td className="py-1.5">Mild net burning, elevated caution</td></tr>
-                  <tr><td className="py-1.5 pr-4 text-foreground">NEUTRAL</td><td className="py-1.5 pr-4">45&ndash;55</td><td className="py-1.5">Normal activity, balanced mints and burns</td></tr>
-                  <tr><td className="py-1.5 pr-4 text-foreground">HEALTHY</td><td className="py-1.5 pr-4">55&ndash;70</td><td className="py-1.5">Moderate net inflows</td></tr>
-                  <tr><td className="py-1.5 pr-4 text-foreground">CONFIDENT</td><td className="py-1.5 pr-4">70&ndash;85</td><td className="py-1.5">Strong net minting, capital entering the ecosystem</td></tr>
-                  <tr><td className="py-1.5 pr-4 text-foreground">SURGE</td><td className="py-1.5 pr-4">85&ndash;100</td><td className="py-1.5">Exceptional minting activity across the market</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">CRISIS</td><td className="py-1.5 pr-4">&minus;100 to &minus;70</td><td className="py-1.5">Severe coordinated burning across major coins</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">STRESS</td><td className="py-1.5 pr-4">&minus;70 to &minus;40</td><td className="py-1.5">Significant net outflows from the ecosystem</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">CAUTIOUS</td><td className="py-1.5 pr-4">&minus;40 to &minus;10</td><td className="py-1.5">Mild net burning, elevated caution</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">NEUTRAL</td><td className="py-1.5 pr-4">&minus;10 to 10</td><td className="py-1.5">Normal activity, balanced mints and burns</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">HEALTHY</td><td className="py-1.5 pr-4">10 to 40</td><td className="py-1.5">Moderate net inflows</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">CONFIDENT</td><td className="py-1.5 pr-4">40 to 70</td><td className="py-1.5">Strong net minting, capital entering the ecosystem</td></tr>
+                  <tr><td className="py-1.5 pr-4 text-foreground">SURGE</td><td className="py-1.5 pr-4">70 to 100</td><td className="py-1.5">Exceptional minting activity across the market</td></tr>
                 </tbody>
               </table>
             </div>

@@ -1,18 +1,35 @@
-const FLOW_INTENSITY_NEUTRAL = 50;
-
-/**
- * Convert backend 0..100 Flow Intensity Score into a signed -100..100 scale
- * where 0 is neutral, negative values indicate net burn pressure.
- */
-export function toSignedFlowIntensity(intensity: number): number {
-  return (intensity - FLOW_INTENSITY_NEUTRAL) * 2;
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }
 
-export function getSignedFlowIntensityDisplay(intensity: number): number {
-  const rounded = Math.round(toSignedFlowIntensity(intensity));
+const FLOW_INTENSITY_LEGACY_NEUTRAL = 50;
+
+export type FlowIntensitySemantics = "midpoint-v1" | "signed-v2";
+
+/**
+ * Normalize signed flow intensity for display.
+ * Backend contract is canonical signed range [-100, 100].
+ */
+export function getFlowIntensityDisplay(intensity: number): number {
+  const rounded = Math.round(clamp(intensity, -100, 100));
   return rounded === 0 ? 0 : rounded;
 }
 
-export function getSignedFlowIntensityMagnitude(signedIntensity: number): number {
+export function getFlowIntensityMagnitude(signedIntensity: number): number {
   return Math.min(100, Math.abs(signedIntensity));
+}
+
+/**
+ * Compatibility normalizer:
+ * - `midpoint-v1`: converts 0..100 midpoint scale to signed -100..100.
+ * - `signed-v2`: keeps signed value unchanged.
+ */
+export function normalizeToSignedFlowIntensity(
+  intensity: number,
+  semantics: FlowIntensitySemantics,
+): number {
+  if (semantics === "midpoint-v1") {
+    return clamp((intensity - FLOW_INTENSITY_LEGACY_NEUTRAL) * 2, -100, 100);
+  }
+  return clamp(intensity, -100, 100);
 }

@@ -11,19 +11,31 @@ interface UseSortReturn<K extends string> {
 }
 
 export function useSort<K extends string>(defaultKey: K, defaultDir: "asc" | "desc"): UseSortReturn<K> {
-  const [sortKey, setSortKey] = useState<K>(defaultKey);
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">(defaultDir);
+  const [sortState, setSortState] = useState<{
+    key: K;
+    direction: "asc" | "desc";
+  }>({
+    key: defaultKey,
+    direction: defaultDir,
+  });
 
   const toggleSort = useCallback((key: K) => {
-    setSortKey((prev) => {
-      if (prev === key) {
-        setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
-      } else {
-        setSortDirection("desc");
+    setSortState((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === "asc" ? "desc" : "asc",
+        };
       }
-      return key;
+      return {
+        key,
+        direction: "desc",
+      };
     });
   }, []);
+
+  const sortKey = sortState.key;
+  const sortDirection = sortState.direction;
 
   const getAriaSortValue = useCallback(
     (columnKey: string): "ascending" | "descending" | "none" => {

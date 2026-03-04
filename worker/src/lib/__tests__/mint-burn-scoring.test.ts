@@ -18,42 +18,42 @@ describe("computeFlowIntensity", () => {
     ).toBeNull();
   });
 
-  it("returns exactly 50 when current equals baseline (neutral)", () => {
+  it("returns exactly 0 when current equals baseline (neutral)", () => {
     const result = computeFlowIntensity({
       currentDailyNet: 1e8,
       baselineDailyNet: 1e8,
       baselineDailyAbs: 5e8,
       dataAgeDays: 30,
     });
-    expect(result).toBe(50);
+    expect(result).toBe(0);
   });
 
   it("computes correct value for moderate net redemptions", () => {
     // denominator = max(2e8 * 0.3, 1e6) = 6e7
     // z = (-3e7 - 0) / 6e7 = -0.5
-    // intensity = 50 + (-0.5 * 25) = 37.5
+    // intensity = clamp(-100, 100, -0.5 * 50) = -25
     const result = computeFlowIntensity({
       currentDailyNet: -3e7,
       baselineDailyNet: 0,
       baselineDailyAbs: 2e8,
       dataAgeDays: 30,
     });
-    expect(result).toBeCloseTo(37.5, 1);
+    expect(result).toBeCloseTo(-25, 1);
   });
 
   it("computes correct value for moderate net minting", () => {
     // z = (6e7 - 0) / 6e7 = 1.0
-    // intensity = 50 + 1.0 * 25 = 75
+    // intensity = clamp(-100, 100, 1.0 * 50) = 50
     const result = computeFlowIntensity({
       currentDailyNet: 6e7,
       baselineDailyNet: 0,
       baselineDailyAbs: 2e8,
       dataAgeDays: 30,
     });
-    expect(result).toBeCloseTo(75, 1);
+    expect(result).toBeCloseTo(50, 1);
   });
 
-  it("clamps to 0 for extreme net redemptions", () => {
+  it("clamps to -100 for extreme net redemptions", () => {
     expect(
       computeFlowIntensity({
         currentDailyNet: -1e12,
@@ -61,7 +61,7 @@ describe("computeFlowIntensity", () => {
         baselineDailyAbs: 1e8,
         dataAgeDays: 30,
       })
-    ).toBe(0);
+    ).toBe(-100);
   });
 
   it("clamps to 100 for extreme net minting", () => {
@@ -78,14 +78,14 @@ describe("computeFlowIntensity", () => {
   it("uses floor of 1M for denominator when baseline abs flow is tiny", () => {
     // absBaseline = 100, denom = max(100 * 0.3, 1e6) = 1e6
     // z = (-2e6 - 0) / 1e6 = -2.0
-    // intensity = 50 + (-2 * 25) = 0
+    // intensity = clamp(-100, 100, -2 * 50) = -100
     const result = computeFlowIntensity({
       currentDailyNet: -2e6,
       baselineDailyNet: 0,
       baselineDailyAbs: 100,
       dataAgeDays: 30,
     });
-    expect(result).toBeCloseTo(0, 1);
+    expect(result).toBeCloseTo(-100, 1);
   });
 
   it("accounts for non-zero baseline in z-score", () => {
@@ -96,11 +96,11 @@ describe("computeFlowIntensity", () => {
         baselineDailyAbs: 3e8,
         dataAgeDays: 30,
       })
-    ).toBe(50);
+    ).toBe(0);
 
     // current = -1e7 (slight redemptions vs normal $50M minting)
     // z = (-1e7 - 5e7) / 9e7 = -6e7 / 9e7 = -0.667
-    // intensity = 50 + (-0.667 * 25) = 50 - 16.67 = 33.33
+    // intensity = clamp(-100, 100, -0.667 * 50) = -33.33
     expect(
       computeFlowIntensity({
         currentDailyNet: -1e7,
@@ -108,18 +108,18 @@ describe("computeFlowIntensity", () => {
         baselineDailyAbs: 3e8,
         dataAgeDays: 30,
       })
-    ).toBeCloseTo(33.33, 0);
+    ).toBeCloseTo(-33.33, 0);
   });
 });
 
 describe("getGaugeBand", () => {
-  it("returns CRISIS for 0-15", () => {
-    expect(getGaugeBand(10)).toEqual({ label: "CRISIS", color: "red" });
+  it("returns CRISIS for -100 to -70", () => {
+    expect(getGaugeBand(-80)).toEqual({ label: "CRISIS", color: "red" });
   });
-  it("returns NEUTRAL for 45-55", () => {
-    expect(getGaugeBand(50)).toEqual({ label: "NEUTRAL", color: "gray" });
+  it("returns NEUTRAL for -10 to 10", () => {
+    expect(getGaugeBand(0)).toEqual({ label: "NEUTRAL", color: "gray" });
   });
-  it("returns SURGE for 85-100", () => {
+  it("returns SURGE for 70-100", () => {
     expect(getGaugeBand(95)).toEqual({ label: "SURGE", color: "bright-green" });
   });
 });
