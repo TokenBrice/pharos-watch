@@ -49,6 +49,7 @@ const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a
 // Phase 2 readiness — USDT Tron uses these instead of Transfer
 const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
 const USDT_REDEEM_TOPIC = "0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7eb4fd2deb9a44";
+const CCIP_ETHEREUM_ROUTER = "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d";
 const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
 const CCIP_SEND_SELECTOR = "0x96f4e9f9";
 
@@ -72,6 +73,24 @@ function transferMintBurn(): MintBurnEventDef[] {
       filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED }, // to = zero
     },
   ];
+}
+
+function ccipBridgeDetection(
+  knownBridgePoolAddresses: string[],
+): MintBurnBridgeDetectionConfig {
+  return {
+    protocol: "ccip",
+    knownBridgePoolAddresses,
+    knownBridgeRouterAddresses: [
+      CCIP_ETHEREUM_ROUTER,
+    ],
+    bridgeSignalTopics: [
+      CCIP_SEND_REQUESTED_TOPIC,
+    ],
+    bridgeSignalSelectors: [
+      CCIP_SEND_SELECTOR,
+    ],
+  };
 }
 
 // --- reUSD (Re Protocol) event topic hashes ---
@@ -114,6 +133,9 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
     events: transferMintBurn(),
+    bridgeDetection: ccipBridgeDetection([
+      "0x03d19033ada17750d5bc2d8e325337d0748f9fef",
+    ]),
   },
   {
     chain: ETHEREUM, stablecoinId: "119", symbol: "FDUSD",
@@ -195,21 +217,9 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     decimals: 18, dustThreshold: 10_000, startBlock: 18_451_518,
     tier: "extended",
     events: transferMintBurn(),
-    bridgeDetection: {
-      protocol: "ccip",
-      knownBridgePoolAddresses: [
-        "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
-      ],
-      knownBridgeRouterAddresses: [
-        "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-      ],
-      bridgeSignalTopics: [
-        CCIP_SEND_REQUESTED_TOPIC,
-      ],
-      bridgeSignalSelectors: [
-        CCIP_SEND_SELECTOR,
-      ],
-    },
+    bridgeDetection: ccipBridgeDetection([
+      "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
+    ]),
   },
   {
     chain: ETHEREUM, stablecoinId: "50", symbol: "EURC",
@@ -221,14 +231,14 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
   {
     chain: ETHEREUM, stablecoinId: "gold-paxg", symbol: "PAXG",
     contractAddress: "0x45804880de22913dafe09f4980848ece6ecbaf78",
-    decimals: 18, dustThreshold: 10_000, startBlock: 8_426_430,
+    decimals: 18, dustThreshold: 10, startBlock: 8_426_430,
     tier: "extended",
     events: transferMintBurn(),
   },
   {
     chain: ETHEREUM, stablecoinId: "gold-xaut", symbol: "XAUT",
     contractAddress: "0x68749665ff8d2d112fa859aa293f07a622782f38",
-    decimals: 6, dustThreshold: 10_000, startBlock: 13_524_498,
+    decimals: 6, dustThreshold: 10, startBlock: 13_524_498,
     tier: "extended",
     events: transferMintBurn(),
   },
@@ -245,6 +255,9 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     decimals: 18, dustThreshold: 10_000, startBlock: 21_720_503,
     tier: "extended",
     events: transferMintBurn(),
+    bridgeDetection: ccipBridgeDetection([
+      "0x36a72ed0096b414521c45e3ddc9ed657d1d9c141",
+    ]),
   },
 
   // --- Top-50 supported expansion (Ethereum only) ---
@@ -366,6 +379,9 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
     events: transferMintBurn(),
+    bridgeDetection: ccipBridgeDetection([
+      "0x81b72171642fab457aa815c0b8412a22b63a6af8",
+    ]),
   },
   {
     chain: ETHEREUM, stablecoinId: "332", symbol: "pmUSD",
@@ -403,6 +419,9 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
     events: transferMintBurn(),
+    bridgeDetection: ccipBridgeDetection([
+      "0x500d4882938020e939a5666c1b4200873da7efd3",
+    ]),
   },
   {
     chain: ETHEREUM, stablecoinId: "254", symbol: "EURCV",

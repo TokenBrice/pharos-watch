@@ -95,15 +95,15 @@ describe("mint-burn-contracts Ethereum-only scope", () => {
 
 describe("mint-burn-contracts Ethereum expansion coverage", () => {
   const expectedConfigs = [
-    { stablecoinId: "168", symbol: "fxUSD", address: "0x085780639cc2cacd35e474e71f4d000e2405d8f6", decimals: 18, startBlock: 19_287_523 },
-    { stablecoinId: "110", symbol: "crvUSD", address: "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", decimals: 18, startBlock: 17_257_952 },
-    { stablecoinId: "205", symbol: "AUSD", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6, startBlock: 20_257_620 },
-    { stablecoinId: "226", symbol: "ZCHF", address: "0xb58e61c3098d85632df34eecfb899a1ed80921cb", decimals: 18, startBlock: 18_451_518 },
-    { stablecoinId: "50", symbol: "EURC", address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", decimals: 6, startBlock: 14_807_227 },
-    { stablecoinId: "gold-paxg", symbol: "PAXG", address: "0x45804880de22913dafe09f4980848ece6ecbaf78", decimals: 18, startBlock: 8_426_430 },
-    { stablecoinId: "gold-xaut", symbol: "XAUT", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6, startBlock: 13_524_498 },
-    { stablecoinId: "286", symbol: "USDG", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6, startBlock: 20_915_336 },
-    { stablecoinId: "262", symbol: "USD1", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18, startBlock: 21_720_503 },
+    { stablecoinId: "168", symbol: "fxUSD", address: "0x085780639cc2cacd35e474e71f4d000e2405d8f6", decimals: 18, dustThreshold: 10_000, startBlock: 19_287_523 },
+    { stablecoinId: "110", symbol: "crvUSD", address: "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e", decimals: 18, dustThreshold: 10_000, startBlock: 17_257_952 },
+    { stablecoinId: "205", symbol: "AUSD", address: "0x00000000efe302beaa2b3e6e1b18d08d69a9012a", decimals: 6, dustThreshold: 10_000, startBlock: 20_257_620 },
+    { stablecoinId: "226", symbol: "ZCHF", address: "0xb58e61c3098d85632df34eecfb899a1ed80921cb", decimals: 18, dustThreshold: 10_000, startBlock: 18_451_518 },
+    { stablecoinId: "50", symbol: "EURC", address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", decimals: 6, dustThreshold: 10_000, startBlock: 14_807_227 },
+    { stablecoinId: "gold-paxg", symbol: "PAXG", address: "0x45804880de22913dafe09f4980848ece6ecbaf78", decimals: 18, dustThreshold: 10, startBlock: 8_426_430 },
+    { stablecoinId: "gold-xaut", symbol: "XAUT", address: "0x68749665ff8d2d112fa859aa293f07a622782f38", decimals: 6, dustThreshold: 10, startBlock: 13_524_498 },
+    { stablecoinId: "286", symbol: "USDG", address: "0xe343167631d89b6ffc58b88d6b7fb0228795491d", decimals: 6, dustThreshold: 10_000, startBlock: 20_915_336 },
+    { stablecoinId: "262", symbol: "USD1", address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", decimals: 18, dustThreshold: 10_000, startBlock: 21_720_503 },
   ];
 
   it("tracks all requested Ethereum-only coins via standard zero-address Transfer filters", () => {
@@ -118,6 +118,7 @@ describe("mint-burn-contracts Ethereum expansion coverage", () => {
       expect(cfg, `Missing config for ${expected.symbol}`).toBeDefined();
       expect(cfg!.symbol).toBe(expected.symbol);
       expect(cfg!.decimals).toBe(expected.decimals);
+      expect(cfg!.dustThreshold).toBe(expected.dustThreshold);
       expect(cfg!.startBlock).toBe(expected.startBlock);
       expect(cfg!.tier).toBe("extended");
       expect(cfg!.events).toEqual([

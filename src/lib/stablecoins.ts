@@ -900,7 +900,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     yieldBearing: true,
     yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "nav-appreciation" },
     dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
-    deploymentModel: "third-party-bridge",
+    deploymentModel: "canonical-bridge",
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
     links: [
