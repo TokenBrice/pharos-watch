@@ -8,6 +8,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FlowGauge } from "@/components/flow-gauge";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
+import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
 import {
@@ -171,6 +172,25 @@ function FlowsPageInner() {
         </div>
         <div className="mt-3">
           <FlowChart hourly={hourly} isLoading={isChartLoading} />
+        </div>
+      </section>
+
+      {/* Section 4: Experimental meme-style overviews */}
+      <section aria-labelledby="brrr-heading">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="brrr-heading" className="text-lg font-semibold tracking-tight">
+            Alternative Views: BRRRR Deck
+          </h2>
+          <span className="inline-flex rounded-full border border-border/70 bg-muted/30 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Experimental
+          </span>
+        </div>
+        <div className="mt-3">
+          <FlowBrrrOverview
+            gauge={gauge ?? null}
+            coins={coins}
+            isLoading={isSummaryLoading}
+          />
         </div>
       </section>
     </div>
