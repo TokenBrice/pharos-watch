@@ -156,8 +156,8 @@ function FastestMovers({
 
     const sorted = [...entries].sort((a, b) => b.pctChange - a.pctChange);
     return {
-      growers: sorted.slice(0, 3),
-      shrinkers: sorted.slice(-3).reverse().filter((e) => e.pctChange < 0),
+      growers: sorted.slice(0, 4),
+      shrinkers: sorted.slice(-4).reverse().filter((e) => e.pctChange < 0),
     };
   }, [data]);
 
