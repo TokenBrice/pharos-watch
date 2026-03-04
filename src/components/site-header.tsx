@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { useHealth } from "@/hooks/use-health";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import { TRACKED_IDS } from "@/lib/stablecoins";
 
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
@@ -19,6 +21,7 @@ interface SiteHeaderProps {
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();
   const { data: dexMap } = useDexLiquidity();
+  const { data: stablecoinsData } = useStablecoins();
 
   const blacklistEvents = health?.blacklist.totalEvents;
   const mintBurnEvents = health?.mintBurn?.totalEvents;
@@ -45,6 +48,18 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
     [totalPools, blacklistEvents, mintBurnEvents],
   );
 
+  const liveTrackedCount = useMemo(() => {
+    const assets = stablecoinsData?.peggedAssets;
+    if (!assets) return total;
+
+    const availableIds = new Set(assets.map((asset) => asset.id));
+    let count = 0;
+    for (const id of TRACKED_IDS) {
+      if (availableIds.has(id)) count++;
+    }
+    return count;
+  }, [stablecoinsData, total]);
+
   return (
     <div className="hidden lg:flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-card/70 px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
@@ -68,7 +83,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
 
       <div className="flex flex-wrap items-center justify-end gap-2 text-[11px]">
         <span className="inline-flex items-center rounded-full border border-border/60 bg-background/70 px-2.5 py-1 font-mono tabular-nums text-muted-foreground">
-          {formatCount(total)} coins
+          {formatCount(liveTrackedCount)} coins
         </span>
         <span className="inline-flex items-center rounded-full border border-border/60 bg-background/70 px-2.5 py-1 font-mono tabular-nums text-muted-foreground">
           {formatCount(pegCount)} pegs
