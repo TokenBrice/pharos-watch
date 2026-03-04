@@ -165,4 +165,61 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(usdt?.flowIntensity).not.toBeNull();
     expect(usdt?.flowIntensity ?? 0).toBe(50);
   });
+
+  it("serves cached aggregate fallback when live query fails", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const cachedBody = {
+      gauge: {
+        score: 50,
+        band: "NEUTRAL",
+        flightToQuality: false,
+        flightIntensity: 0,
+        trackedCoins: 1,
+        trackedMcapUsd: 0,
+      },
+      coins: [],
+      hourly: [],
+      updatedAt: now - 60,
+    };
+
+    const failingDb = {
+      prepare: (sql: string) => ({
+        bind: (...args: unknown[]) => ({
+          all: async <T>() => {
+            if (sql.includes("FROM mint_burn_hourly")) {
+              throw new Error("simulated d1 failure");
+            }
+            return { results: [] as T[], success: true, meta: {} };
+          },
+          first: async <T>() => {
+            if (sql.includes("SELECT value, updated_at FROM cache WHERE key = ?")) {
+              const key = String(args[0] ?? "");
+              if (key.startsWith("mint-burn-flows:v1:aggregate:")) {
+                return {
+                  value: JSON.stringify(cachedBody),
+                  updated_at: now,
+                } as T;
+              }
+            }
+            return null;
+          },
+          run: async () => ({ success: true, meta: {} }),
+        }),
+        all: async <T>() => {
+          if (sql.includes("FROM mint_burn_hourly")) {
+            throw new Error("simulated d1 failure");
+          }
+          return { results: [] as T[], success: true, meta: {} };
+        },
+        first: async () => null,
+        run: async () => ({ success: true, meta: {} }),
+      }),
+    } as unknown as D1Database;
+
+    const res = await handleMintBurnFlows(failingDb, new URL("https://x/api/mint-burn-flows?hours=720"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual(cachedBody);
+    expect(res.headers.get("Warning") ?? "").toContain("Served cached mint/burn flows due transient backend error");
+  });
 });

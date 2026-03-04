@@ -49,6 +49,7 @@ const GLOBAL_BUDGET_LIMIT = 200;
 const CHAIN_QUOTA_MIN = 12;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
+const SQL_IN_CHUNK_SIZE = 90;
 
 type SyncMintBurnStatus = "ok" | "degraded" | "error";
 
@@ -141,6 +142,15 @@ function rotateArray<T>(values: T[], start: number): T[] {
   if (values.length === 0) return [];
   const idx = ((start % values.length) + values.length) % values.length;
   return [...values.slice(idx), ...values.slice(0, idx)];
+}
+
+function chunkArray<T>(values: T[], chunkSize: number): T[][] {
+  if (values.length === 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize));
+  }
+  return chunks;
 }
 
 function buildPerChainQuotas(configs: MintBurnContractConfig[], globalBudgetLimit: number): Map<number, number> {
@@ -393,17 +403,20 @@ export async function syncMintBurn(
   const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
   const prices = new Map<string, number>();
   if (stablecoinIds.length > 0) {
-    const priceRows = await db
-      .prepare(
-        "SELECT asset_id, price FROM price_cache WHERE asset_id IN (" +
-        stablecoinIds.map(() => "?").join(",") +
-        ")",
-      )
-      .bind(...stablecoinIds)
-      .all<{ asset_id: string; price: number }>();
+    const idChunks = chunkArray(stablecoinIds, SQL_IN_CHUNK_SIZE);
+    for (const idChunk of idChunks) {
+      const priceRows = await db
+        .prepare(
+          "SELECT asset_id, price FROM price_cache WHERE asset_id IN (" +
+          idChunk.map(() => "?").join(",") +
+          ")",
+        )
+        .bind(...idChunk)
+        .all<{ asset_id: string; price: number }>();
 
-    for (const row of priceRows.results ?? []) {
-      prices.set(row.asset_id, row.price);
+      for (const row of priceRows.results ?? []) {
+        prices.set(row.asset_id, row.price);
+      }
     }
   }
 
@@ -412,19 +425,22 @@ export async function syncMintBurn(
   // Load daily historical price snapshots for event-time valuation.
   const priceHistory = new Map<string, { snapshotDate: number; price: number }[]>();
   if (stablecoinIds.length > 0) {
-    const priceHistoryRows = await db
-      .prepare(
-        "SELECT stablecoin_id, snapshot_date, price FROM supply_history WHERE stablecoin_id IN (" +
-        stablecoinIds.map(() => "?").join(",") +
-        ") AND price IS NOT NULL ORDER BY stablecoin_id, snapshot_date ASC",
-      )
-      .bind(...stablecoinIds)
-      .all<{ stablecoin_id: string; snapshot_date: number; price: number }>();
+    const idChunks = chunkArray(stablecoinIds, SQL_IN_CHUNK_SIZE);
+    for (const idChunk of idChunks) {
+      const priceHistoryRows = await db
+        .prepare(
+          "SELECT stablecoin_id, snapshot_date, price FROM supply_history WHERE stablecoin_id IN (" +
+          idChunk.map(() => "?").join(",") +
+          ") AND price IS NOT NULL ORDER BY stablecoin_id, snapshot_date ASC",
+        )
+        .bind(...idChunk)
+        .all<{ stablecoin_id: string; snapshot_date: number; price: number }>();
 
-    for (const row of priceHistoryRows.results ?? []) {
-      const series = priceHistory.get(row.stablecoin_id) ?? [];
-      series.push({ snapshotDate: row.snapshot_date, price: row.price });
-      priceHistory.set(row.stablecoin_id, series);
+      for (const row of priceHistoryRows.results ?? []) {
+        const series = priceHistory.get(row.stablecoin_id) ?? [];
+        series.push({ snapshotDate: row.snapshot_date, price: row.price });
+        priceHistory.set(row.stablecoin_id, series);
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import { getCache } from "../lib/db";
+import { getCache, setCache } from "../lib/db";
 import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
@@ -111,9 +111,31 @@ interface EventRow {
 
 const DAY_SEC = 86400;
 const BASELINE_WINDOW_DAYS = 30;
+const FLOW_MAX_AGE_SEC = 300;
+const FLOW_CACHE_PREFIX = "mint-burn-flows:v1";
 
 function bucketDay(ts: number): number {
   return Math.floor(ts / DAY_SEC) * DAY_SEC;
+}
+
+function aggregateFlowCacheKey(hours: number): string {
+  return `${FLOW_CACHE_PREFIX}:aggregate:${hours}`;
+}
+
+function perCoinFlowCacheKey(stablecoinId: string, hours: number): string {
+  return `${FLOW_CACHE_PREFIX}:coin:${stablecoinId}:${hours}`;
+}
+
+function cachedFlowFallbackResponse(cached: { value: string; updatedAt: number }): Response {
+  const headers = addFreshnessHeaders({
+    "Content-Type": "application/json",
+    "Cache-Control": CACHE_PROFILES.standard,
+  }, cached.updatedAt, FLOW_MAX_AGE_SEC);
+  const fallbackWarning = "199 - \"Served cached mint/burn flows due transient backend error\"";
+  headers.Warning = headers.Warning
+    ? `${headers.Warning}, ${fallbackWarning}`
+    : fallbackWarning;
+  return new Response(cached.value, { headers });
 }
 
 /**
@@ -200,303 +222,313 @@ export const handleMintBurnFlows = withErrorHandler(
 // ---------------------------------------------------------------------------
 
 async function handleAggregate(db: D1Database, hours: number): Promise<Response> {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const windowStart = nowSec - hours * 3600;
-  const window7d  = nowSec - 7  * 24 * 3600;
-  const window30d = nowSec - 30 * 24 * 3600;
-  const window90d = nowSec - 90 * 24 * 3600;
-  const nowDayTs = bucketDay(nowSec);
-  const baselineWindowStart = nowDayTs - (BASELINE_WINDOW_DAYS - 1) * DAY_SEC;
+  const cacheKey = aggregateFlowCacheKey(hours);
+  try {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const windowStart = nowSec - hours * 3600;
+    const window7d  = nowSec - 7  * 24 * 3600;
+    const window30d = nowSec - 30 * 24 * 3600;
+    const window90d = nowSec - 90 * 24 * 3600;
+    const nowDayTs = bucketDay(nowSec);
+    const baselineWindowStart = nowDayTs - (BASELINE_WINDOW_DAYS - 1) * DAY_SEC;
 
-  // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
-  const gradeClassification = await getGradeBasedClassification(db);
+    // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
+    const gradeClassification = await getGradeBasedClassification(db);
 
-  // Load stablecoins cache for mcap lookup
-  const stablecoinsCached = await getCache(db, "stablecoins");
-  const mcapById = new Map<string, number>();
-  if (stablecoinsCached) {
-    try {
-      const { peggedAssets } = JSON.parse(stablecoinsCached.value) as {
-        peggedAssets: StablecoinData[];
+    // Load stablecoins cache for mcap lookup
+    const stablecoinsCached = await getCache(db, "stablecoins");
+    const mcapById = new Map<string, number>();
+    if (stablecoinsCached) {
+      try {
+        const { peggedAssets } = JSON.parse(stablecoinsCached.value) as {
+          peggedAssets: StablecoinData[];
+        };
+        for (const asset of peggedAssets) {
+          if (TRACKED_IDS.has(asset.id)) {
+            mcapById.set(asset.id, sumPegBuckets(asset.circulating));
+          }
+        }
+      } catch {
+        // Proceed without mcap data — gauge will be null
+      }
+    }
+    // Parallel queries: hourly data for window, 7d/30d/90d net sums, daily baseline rows,
+    // first-seen timestamps (history age), and largest events.
+    const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineDailyResult, firstSeenResult, largestEventsResult] = await Promise.all([
+      db
+        .prepare(
+          `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                  mint_volume_usd, burn_volume_usd, net_flow_usd
+           FROM mint_burn_hourly
+           WHERE hour_ts >= ?
+           ORDER BY hour_ts ASC`,
+        )
+        .bind(windowStart)
+        .all<HourlyRow>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id,
+                  SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE hour_ts >= ?
+           GROUP BY stablecoin_id`,
+        )
+        .bind(window7d)
+        .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id,
+                  SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE hour_ts >= ?
+           GROUP BY stablecoin_id`,
+        )
+        .bind(window30d)
+        .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id,
+                  SUM(net_flow_usd) as net_flow_usd
+           FROM mint_burn_hourly
+           WHERE hour_ts >= ?
+           GROUP BY stablecoin_id`,
+        )
+        .bind(window90d)
+        .all<{ stablecoin_id: string; net_flow_usd: number }>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id,
+                  (hour_ts / 86400) * 86400 as day_ts,
+                  SUM(net_flow_usd) as daily_net,
+                  SUM(mint_volume_usd + burn_volume_usd) as daily_abs
+           FROM mint_burn_hourly
+           WHERE hour_ts >= ?
+           GROUP BY stablecoin_id, day_ts`,
+        )
+        .bind(baselineWindowStart)
+        .all<DailyBaselineRow>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
+           FROM mint_burn_hourly
+           GROUP BY stablecoin_id`,
+        )
+        .all<FirstSeenRow>(),
+      db
+        .prepare(
+          `SELECT e.*
+           FROM mint_burn_events e
+           INNER JOIN (
+             SELECT stablecoin_id, MAX(COALESCE(amount_usd, amount)) as max_val
+             FROM mint_burn_events
+             WHERE timestamp >= ?
+             GROUP BY stablecoin_id
+           ) m ON e.stablecoin_id = m.stablecoin_id
+              AND COALESCE(e.amount_usd, e.amount) = m.max_val
+              AND e.timestamp >= ?
+           GROUP BY e.stablecoin_id
+           HAVING e.timestamp = MAX(e.timestamp)`,
+        )
+        .bind(windowStart, windowStart)
+        .all<EventRow>(),
+    ]);
+
+    const hourlyRows = hourlyResult.results ?? [];
+    const net7dMap  = new Map((hourly7dResult.results  ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
+    const net30dMap = new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
+    const net90dMap = new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
+    const baselineMap = buildBaselineMap(
+      nowSec,
+      baselineDailyResult.results ?? [],
+      firstSeenResult.results ?? [],
+    );
+    const largestEventMap = new Map(
+      (largestEventsResult.results ?? []).map((r) => [r.stablecoin_id, r]),
+    );
+
+    // Aggregate per-coin summaries from hourly rows
+    const coinAgg = new Map<
+      string,
+      {
+        mintVolume: number;
+        burnVolume: number;
+        mintCount: number;
+        burnCount: number;
+        netFlow: number;
+      }
+    >();
+    for (const row of hourlyRows) {
+      const agg = coinAgg.get(row.stablecoin_id) ?? {
+        mintVolume: 0,
+        burnVolume: 0,
+        mintCount: 0,
+        burnCount: 0,
+        netFlow: 0,
       };
-      for (const asset of peggedAssets) {
-        if (TRACKED_IDS.has(asset.id)) {
-          mcapById.set(asset.id, sumPegBuckets(asset.circulating));
+      agg.mintVolume += row.mint_volume_usd;
+      agg.burnVolume += row.burn_volume_usd;
+      agg.mintCount += row.mint_count;
+      agg.burnCount += row.burn_count;
+      agg.netFlow += row.net_flow_usd;
+      coinAgg.set(row.stablecoin_id, agg);
+    }
+
+    // Compute FIS and build coin responses
+    const coins: Array<{
+      stablecoinId: string;
+      symbol: string;
+      flowIntensity: number | null;
+      netFlow24hUsd: number;
+      mintVolume24hUsd: number;
+      burnVolume24hUsd: number;
+      mintCount24h: number;
+      burnCount24h: number;
+      netFlow7dUsd: number;
+      netFlow30dUsd: number;
+      netFlow90dUsd: number;
+      largestEvent24h: {
+        direction: string;
+        amountUsd: number;
+        txHash: string;
+        timestamp: number;
+      } | null;
+    }> = [];
+
+    const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
+    let safeNet24h = 0;
+    let riskyNet24h = 0;
+    let trackedMcapUsd = 0;
+
+    if (!gradeClassification) {
+      console.warn("Report card cache stale/missing, falling back to hardcoded SAFE_HAVEN_IDS");
+    }
+
+    const seenCoinIds = new Set<string>();
+    for (const config of MINT_BURN_CONFIGS) {
+      const id = config.stablecoinId;
+      if (seenCoinIds.has(id)) continue;
+      seenCoinIds.add(id);
+      const agg = coinAgg.get(id);
+      const baseline = baselineMap.get(id);
+      const mcap = mcapById.get(id) ?? 0;
+      trackedMcapUsd += mcap;
+
+      const netFlow24h = agg?.netFlow ?? 0;
+      const has24hActivity = (agg?.mintCount ?? 0) > 0
+        || (agg?.burnCount ?? 0) > 0
+        || (agg?.mintVolume ?? 0) > 0
+        || (agg?.burnVolume ?? 0) > 0;
+      const currentNetForIntensity = !has24hActivity && baseline
+        ? baseline.avgNet
+        : netFlow24h;
+      const intensity = baseline
+        ? computeFlowIntensity({
+            currentDailyNet: currentNetForIntensity,
+            baselineDailyNet: baseline.avgNet,
+            baselineDailyAbs: baseline.avgAbs,
+            dataAgeDays: baseline.dataDays,
+          })
+        : null;
+
+      gaugeInputs.push({ intensity, mcap });
+
+      if (gradeClassification) {
+        // Grade-based: safe (>=65), risky (<50), neutral (50-64) ignored
+        if (gradeClassification.safeIds.has(id)) {
+          safeNet24h += netFlow24h;
+        } else if (gradeClassification.riskyIds.has(id)) {
+          riskyNet24h += netFlow24h;
+        }
+        // Neutral coins don't contribute to FTQ signal
+      } else {
+        // Fallback: hardcoded safe-haven set, everything else is risky
+        if (SAFE_HAVEN_IDS.has(id)) {
+          safeNet24h += netFlow24h;
+        } else {
+          riskyNet24h += netFlow24h;
         }
       }
-    } catch {
-      // Proceed without mcap data — gauge will be null
+
+      const largest = largestEventMap.get(id);
+      coins.push({
+        stablecoinId: id,
+        symbol: config.symbol,
+        flowIntensity: intensity,
+        netFlow24hUsd: netFlow24h,
+        mintVolume24hUsd: agg?.mintVolume ?? 0,
+        burnVolume24hUsd: agg?.burnVolume ?? 0,
+        mintCount24h: agg?.mintCount ?? 0,
+        burnCount24h: agg?.burnCount ?? 0,
+        netFlow7dUsd:  net7dMap.get(id)  ?? 0,
+        netFlow30dUsd: net30dMap.get(id) ?? 0,
+        netFlow90dUsd: net90dMap.get(id) ?? 0,
+        largestEvent24h: largest
+          ? {
+              direction: largest.direction,
+              amountUsd: largest.amount_usd ?? largest.amount,
+              txHash: largest.tx_hash,
+              timestamp: largest.timestamp,
+            }
+          : null,
+      });
     }
-  }
 
-  // Parallel queries: hourly data for window, 7d/30d/90d net sums, daily baseline rows,
-  // first-seen timestamps (history age), and largest events.
-  const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineDailyResult, firstSeenResult, largestEventsResult] = await Promise.all([
-    db
-      .prepare(
-        `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                mint_volume_usd, burn_volume_usd, net_flow_usd
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         ORDER BY hour_ts ASC`,
-      )
-      .bind(windowStart)
-      .all<HourlyRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
-      )
-      .bind(window7d)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
-      )
-      .bind(window30d)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id,
-                SUM(net_flow_usd) as net_flow_usd
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id`,
-      )
-      .bind(window90d)
-      .all<{ stablecoin_id: string; net_flow_usd: number }>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id,
-                (hour_ts / 86400) * 86400 as day_ts,
-                SUM(net_flow_usd) as daily_net,
-                SUM(mint_volume_usd + burn_volume_usd) as daily_abs
-         FROM mint_burn_hourly
-         WHERE hour_ts >= ?
-         GROUP BY stablecoin_id, day_ts`,
-      )
-      .bind(baselineWindowStart)
-      .all<DailyBaselineRow>(),
-    db
-      .prepare(
-        `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
-         FROM mint_burn_hourly
-         GROUP BY stablecoin_id`,
-      )
-      .all<FirstSeenRow>(),
-    db
-      .prepare(
-        `SELECT e.*
-         FROM mint_burn_events e
-         INNER JOIN (
-           SELECT stablecoin_id, MAX(COALESCE(amount_usd, amount)) as max_val
-           FROM mint_burn_events
-           WHERE timestamp >= ?
-           GROUP BY stablecoin_id
-         ) m ON e.stablecoin_id = m.stablecoin_id
-            AND COALESCE(e.amount_usd, e.amount) = m.max_val
-            AND e.timestamp >= ?
-         GROUP BY e.stablecoin_id
-         HAVING e.timestamp = MAX(e.timestamp)`,
-      )
-      .bind(windowStart, windowStart)
-      .all<EventRow>(),
-  ]);
+    // Gauge score
+    const gaugeScore = computeGaugeScore(gaugeInputs);
+    const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
 
-  const hourlyRows = hourlyResult.results ?? [];
-  const net7dMap  = new Map((hourly7dResult.results  ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-  const net30dMap = new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-  const net90dMap = new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-  const baselineMap = buildBaselineMap(
-    nowSec,
-    baselineDailyResult.results ?? [],
-    firstSeenResult.results ?? [],
-  );
-  const largestEventMap = new Map(
-    (largestEventsResult.results ?? []).map((r) => [r.stablecoin_id, r]),
-  );
+    // Flight-to-quality
+    const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
 
-  // Aggregate per-coin summaries from hourly rows
-  const coinAgg = new Map<
-    string,
-    {
-      mintVolume: number;
-      burnVolume: number;
-      mintCount: number;
-      burnCount: number;
-      netFlow: number;
+    // Hourly timeseries (aggregate across all coins)
+    const hourlyMap = new Map<number, { net: number; mint: number; burn: number }>();
+    for (const row of hourlyRows) {
+      const entry = hourlyMap.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
+      entry.net += row.net_flow_usd;
+      entry.mint += row.mint_volume_usd;
+      entry.burn += row.burn_volume_usd;
+      hourlyMap.set(row.hour_ts, entry);
     }
-  >();
-  for (const row of hourlyRows) {
-    const agg = coinAgg.get(row.stablecoin_id) ?? {
-      mintVolume: 0,
-      burnVolume: 0,
-      mintCount: 0,
-      burnCount: 0,
-      netFlow: 0,
+    const hourly = [...hourlyMap.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([ts, v]) => ({
+        hourTs: ts,
+        netFlowUsd: v.net,
+        mintVolumeUsd: v.mint,
+        burnVolumeUsd: v.burn,
+      }));
+
+    const updatedAt = hourlyRows.length > 0
+      ? hourlyRows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
+      : nowSec;
+
+    const body = {
+      gauge: {
+        score: gaugeScore,
+        band: gaugeBand?.label ?? null,
+        flightToQuality: ftq.active,
+        flightIntensity: ftq.intensity,
+        // Use deduped stablecoin count (configs can include multiple contracts/chains per coin).
+        trackedCoins: coins.length,
+        trackedMcapUsd,
+      },
+      coins,
+      hourly,
+      updatedAt,
     };
-    agg.mintVolume += row.mint_volume_usd;
-    agg.burnVolume += row.burn_volume_usd;
-    agg.mintCount += row.mint_count;
-    agg.burnCount += row.burn_count;
-    agg.netFlow += row.net_flow_usd;
-    coinAgg.set(row.stablecoin_id, agg);
-  }
 
-  // Compute FIS and build coin responses
-  const coins: Array<{
-    stablecoinId: string;
-    symbol: string;
-    flowIntensity: number | null;
-    netFlow24hUsd: number;
-    mintVolume24hUsd: number;
-    burnVolume24hUsd: number;
-    mintCount24h: number;
-    burnCount24h: number;
-    netFlow7dUsd: number;
-    netFlow30dUsd: number;
-    netFlow90dUsd: number;
-    largestEvent24h: {
-      direction: string;
-      amountUsd: number;
-      txHash: string;
-      timestamp: number;
-    } | null;
-  }> = [];
-
-  const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
-  let safeNet24h = 0;
-  let riskyNet24h = 0;
-  let trackedMcapUsd = 0;
-
-  if (!gradeClassification) {
-    console.warn("Report card cache stale/missing, falling back to hardcoded SAFE_HAVEN_IDS");
-  }
-
-  const seenCoinIds = new Set<string>();
-  for (const config of MINT_BURN_CONFIGS) {
-    const id = config.stablecoinId;
-    if (seenCoinIds.has(id)) continue;
-    seenCoinIds.add(id);
-    const agg = coinAgg.get(id);
-    const baseline = baselineMap.get(id);
-    const mcap = mcapById.get(id) ?? 0;
-    trackedMcapUsd += mcap;
-
-    const netFlow24h = agg?.netFlow ?? 0;
-    const has24hActivity = (agg?.mintCount ?? 0) > 0
-      || (agg?.burnCount ?? 0) > 0
-      || (agg?.mintVolume ?? 0) > 0
-      || (agg?.burnVolume ?? 0) > 0;
-    const currentNetForIntensity = !has24hActivity && baseline
-      ? baseline.avgNet
-      : netFlow24h;
-    const intensity = baseline
-      ? computeFlowIntensity({
-          currentDailyNet: currentNetForIntensity,
-          baselineDailyNet: baseline.avgNet,
-          baselineDailyAbs: baseline.avgAbs,
-          dataAgeDays: baseline.dataDays,
-        })
-      : null;
-
-    gaugeInputs.push({ intensity, mcap });
-
-    if (gradeClassification) {
-      // Grade-based: safe (>=65), risky (<50), neutral (50-64) ignored
-      if (gradeClassification.safeIds.has(id)) {
-        safeNet24h += netFlow24h;
-      } else if (gradeClassification.riskyIds.has(id)) {
-        riskyNet24h += netFlow24h;
-      }
-      // Neutral coins don't contribute to FTQ signal
-    } else {
-      // Fallback: hardcoded safe-haven set, everything else is risky
-      if (SAFE_HAVEN_IDS.has(id)) {
-        safeNet24h += netFlow24h;
-      } else {
-        riskyNet24h += netFlow24h;
-      }
+    await setCache(db, cacheKey, JSON.stringify(body));
+    return jsonResponse(body, addFreshnessHeaders({
+      "Cache-Control": CACHE_PROFILES.standard,
+    }, updatedAt, FLOW_MAX_AGE_SEC));
+  } catch (err) {
+    const cached = await getCache(db, cacheKey);
+    if (cached) {
+      console.error(`[mint-burn-flows] aggregate live query failed, serving fallback cache (${cacheKey})`, err);
+      return cachedFlowFallbackResponse(cached);
     }
-
-    const largest = largestEventMap.get(id);
-    coins.push({
-      stablecoinId: id,
-      symbol: config.symbol,
-      flowIntensity: intensity,
-      netFlow24hUsd: netFlow24h,
-      mintVolume24hUsd: agg?.mintVolume ?? 0,
-      burnVolume24hUsd: agg?.burnVolume ?? 0,
-      mintCount24h: agg?.mintCount ?? 0,
-      burnCount24h: agg?.burnCount ?? 0,
-      netFlow7dUsd:  net7dMap.get(id)  ?? 0,
-      netFlow30dUsd: net30dMap.get(id) ?? 0,
-      netFlow90dUsd: net90dMap.get(id) ?? 0,
-      largestEvent24h: largest
-        ? {
-            direction: largest.direction,
-            amountUsd: largest.amount_usd ?? largest.amount,
-            txHash: largest.tx_hash,
-            timestamp: largest.timestamp,
-          }
-        : null,
-    });
+    throw err;
   }
-
-  // Gauge score
-  const gaugeScore = computeGaugeScore(gaugeInputs);
-  const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
-
-  // Flight-to-quality
-  const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
-
-  // Hourly timeseries (aggregate across all coins)
-  const hourlyMap = new Map<number, { net: number; mint: number; burn: number }>();
-  for (const row of hourlyRows) {
-    const entry = hourlyMap.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
-    entry.net += row.net_flow_usd;
-    entry.mint += row.mint_volume_usd;
-    entry.burn += row.burn_volume_usd;
-    hourlyMap.set(row.hour_ts, entry);
-  }
-  const hourly = [...hourlyMap.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([ts, v]) => ({
-      hourTs: ts,
-      netFlowUsd: v.net,
-      mintVolumeUsd: v.mint,
-      burnVolumeUsd: v.burn,
-    }));
-
-  const updatedAt = hourlyRows.length > 0
-    ? hourlyRows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
-    : nowSec;
-
-  const body = {
-    gauge: {
-      score: gaugeScore,
-      band: gaugeBand?.label ?? null,
-      flightToQuality: ftq.active,
-      flightIntensity: ftq.intensity,
-      // Use deduped stablecoin count (configs can include multiple contracts/chains per coin).
-      trackedCoins: coins.length,
-      trackedMcapUsd,
-    },
-    coins,
-    hourly,
-    updatedAt,
-  };
-
-  return jsonResponse(body, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, updatedAt, 300));
 }
 
 // ---------------------------------------------------------------------------
@@ -513,98 +545,109 @@ async function handlePerCoin(
     return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  const windowStart = nowSec - hours * 3600;
+  const cacheKey = perCoinFlowCacheKey(stablecoinId, hours);
+  try {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const windowStart = nowSec - hours * 3600;
 
-  const hourlyResult = await db
-    .prepare(
-      `SELECT chain_id, hour_ts, mint_count, burn_count,
-              mint_volume_usd, burn_volume_usd, net_flow_usd
-       FROM mint_burn_hourly
-       WHERE stablecoin_id = ? AND hour_ts >= ?
-       ORDER BY hour_ts ASC`,
-    )
-    .bind(stablecoinId, windowStart)
-    .all<HourlyRow>();
+    const hourlyResult = await db
+      .prepare(
+        `SELECT chain_id, hour_ts, mint_count, burn_count,
+                mint_volume_usd, burn_volume_usd, net_flow_usd
+         FROM mint_burn_hourly
+         WHERE stablecoin_id = ? AND hour_ts >= ?
+         ORDER BY hour_ts ASC`,
+      )
+      .bind(stablecoinId, windowStart)
+      .all<HourlyRow>();
 
-  const rows = hourlyResult.results ?? [];
+    const rows = hourlyResult.results ?? [];
 
-  // Per-chain breakdown
-  const chainMap = new Map<
-    string,
-    { mintVolume: number; burnVolume: number; mintCount: number; burnCount: number; netFlow: number }
-  >();
-  // Hourly timeseries (aggregate across chains)
-  const hourlyAgg = new Map<number, { net: number; mint: number; burn: number }>();
+    // Per-chain breakdown
+    const chainMap = new Map<
+      string,
+      { mintVolume: number; burnVolume: number; mintCount: number; burnCount: number; netFlow: number }
+    >();
+    // Hourly timeseries (aggregate across chains)
+    const hourlyAgg = new Map<number, { net: number; mint: number; burn: number }>();
 
-  for (const row of rows) {
-    // Chain breakdown
-    const chain = chainMap.get(row.chain_id) ?? {
-      mintVolume: 0, burnVolume: 0, mintCount: 0, burnCount: 0, netFlow: 0,
-    };
-    chain.mintVolume += row.mint_volume_usd;
-    chain.burnVolume += row.burn_volume_usd;
-    chain.mintCount += row.mint_count;
-    chain.burnCount += row.burn_count;
-    chain.netFlow += row.net_flow_usd;
-    chainMap.set(row.chain_id, chain);
+    for (const row of rows) {
+      // Chain breakdown
+      const chain = chainMap.get(row.chain_id) ?? {
+        mintVolume: 0, burnVolume: 0, mintCount: 0, burnCount: 0, netFlow: 0,
+      };
+      chain.mintVolume += row.mint_volume_usd;
+      chain.burnVolume += row.burn_volume_usd;
+      chain.mintCount += row.mint_count;
+      chain.burnCount += row.burn_count;
+      chain.netFlow += row.net_flow_usd;
+      chainMap.set(row.chain_id, chain);
 
-    // Hourly aggregate
-    const entry = hourlyAgg.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
-    entry.net += row.net_flow_usd;
-    entry.mint += row.mint_volume_usd;
-    entry.burn += row.burn_volume_usd;
-    hourlyAgg.set(row.hour_ts, entry);
-  }
+      // Hourly aggregate
+      const entry = hourlyAgg.get(row.hour_ts) ?? { net: 0, mint: 0, burn: 0 };
+      entry.net += row.net_flow_usd;
+      entry.mint += row.mint_volume_usd;
+      entry.burn += row.burn_volume_usd;
+      hourlyAgg.set(row.hour_ts, entry);
+    }
 
-  const chains = [...chainMap.entries()].map(([chainId, v]) => ({
-    chainId,
-    mintVolumeUsd: v.mintVolume,
-    burnVolumeUsd: v.burnVolume,
-    mintCount: v.mintCount,
-    burnCount: v.burnCount,
-    netFlowUsd: v.netFlow,
-  }));
-
-  const hourly = [...hourlyAgg.entries()]
-    .sort(([a], [b]) => a - b)
-    .map(([ts, v]) => ({
-      hourTs: ts,
-      netFlowUsd: v.net,
-      mintVolumeUsd: v.mint,
-      burnVolumeUsd: v.burn,
+    const chains = [...chainMap.entries()].map(([chainId, v]) => ({
+      chainId,
+      mintVolumeUsd: v.mintVolume,
+      burnVolumeUsd: v.burnVolume,
+      mintCount: v.mintCount,
+      burnCount: v.burnCount,
+      netFlowUsd: v.netFlow,
     }));
 
-  // Totals
-  let totalMint = 0;
-  let totalBurn = 0;
-  let totalMintCount = 0;
-  let totalBurnCount = 0;
-  for (const c of chainMap.values()) {
-    totalMint += c.mintVolume;
-    totalBurn += c.burnVolume;
-    totalMintCount += c.mintCount;
-    totalBurnCount += c.burnCount;
+    const hourly = [...hourlyAgg.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([ts, v]) => ({
+        hourTs: ts,
+        netFlowUsd: v.net,
+        mintVolumeUsd: v.mint,
+        burnVolumeUsd: v.burn,
+      }));
+
+    // Totals
+    let totalMint = 0;
+    let totalBurn = 0;
+    let totalMintCount = 0;
+    let totalBurnCount = 0;
+    for (const c of chainMap.values()) {
+      totalMint += c.mintVolume;
+      totalBurn += c.burnVolume;
+      totalMintCount += c.mintCount;
+      totalBurnCount += c.burnCount;
+    }
+
+    const updatedAt = rows.length > 0
+      ? rows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
+      : nowSec;
+
+    const body = {
+      stablecoinId,
+      symbol: config.symbol,
+      mintVolumeUsd: totalMint,
+      burnVolumeUsd: totalBurn,
+      netFlowUsd: totalMint - totalBurn,
+      mintCount: totalMintCount,
+      burnCount: totalBurnCount,
+      chains,
+      hourly,
+      updatedAt,
+    };
+
+    await setCache(db, cacheKey, JSON.stringify(body));
+    return jsonResponse(body, addFreshnessHeaders({
+      "Cache-Control": CACHE_PROFILES.standard,
+    }, updatedAt, FLOW_MAX_AGE_SEC));
+  } catch (err) {
+    const cached = await getCache(db, cacheKey);
+    if (cached) {
+      console.error(`[mint-burn-flows] per-coin live query failed, serving fallback cache (${cacheKey})`, err);
+      return cachedFlowFallbackResponse(cached);
+    }
+    throw err;
   }
-
-  const updatedAt = rows.length > 0
-    ? rows.reduce((m, r) => Math.max(m, r.hour_ts), -Infinity)
-    : nowSec;
-
-  const body = {
-    stablecoinId,
-    symbol: config.symbol,
-    mintVolumeUsd: totalMint,
-    burnVolumeUsd: totalBurn,
-    netFlowUsd: totalMint - totalBurn,
-    mintCount: totalMintCount,
-    burnCount: totalBurnCount,
-    chains,
-    hourly,
-    updatedAt,
-  };
-
-  return jsonResponse(body, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.standard,
-  }, updatedAt, 300));
 }
