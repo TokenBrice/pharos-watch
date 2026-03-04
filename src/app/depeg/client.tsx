@@ -120,7 +120,7 @@ export function DepegClient() {
   if (isPegLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
           <Skeleton className="h-[500px] rounded-xl" />
           <div className="flex flex-col gap-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -150,7 +150,7 @@ export function DepegClient() {
       />
 
       {/* DEWS radar + stat boxes — 2-column on desktop */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 xl:items-stretch">
         <SectionErrorBoundary name="dews">
           <DEWSSummary logos={logos} />
         </SectionErrorBoundary>
