@@ -92,7 +92,7 @@ src/                              # Next.js frontend (static export)
 │   ├── stability-index/          # Pharos Stability Index (ecosystem health)
 │   │   ├── page.tsx
 │   │   └── client.tsx
-│   ├── stablecoin/[id]/          # Detail page: price chart, supply chart, chains
+│   ├── stablecoin/[id]/          # Detail page orchestration: section composition + modal state
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
@@ -121,6 +121,15 @@ src/                              # Next.js frontend (static export)
 │   └── robots.ts                 # robots.txt
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives (do not edit manually)
+│   ├── stablecoin-detail/        # Stablecoin detail section components (extracted from page client)
+│   │   ├── hero-card.tsx
+│   │   ├── overview-section.tsx
+│   │   ├── chart-section.tsx
+│   │   ├── info-section.tsx
+│   │   ├── flows-section.tsx
+│   │   ├── liquidity-section.tsx
+│   │   ├── depeg-history-section.tsx
+│   │   └── notices-and-summary-section.tsx
 │   ├── header.tsx                # Top nav bar
 │   ├── sidebar.tsx               # Sidebar navigation menu
 │   ├── footer.tsx                # Site footer with data attribution
@@ -241,6 +250,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
+│   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring + derived view model
 │   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 10 data hooks)
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
@@ -275,6 +285,7 @@ src/                              # Next.js frontend (static export)
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
+    ├── stablecoin-detail-derive.ts # Pure stablecoin detail derivations (supply/deviation/90d reference/border classes)
     ├── psi-colors.ts             # PSI condition band color mapping
     ├── psi-eligible.ts           # PSI eligibility logic (which coins qualify for index)
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()
@@ -375,6 +386,13 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
         ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)
         ├── mint-burn-scoring.ts  # Flow Intensity Score (FIS), Bank Run Gauge, flight-to-quality detection
+        ├── mint-burn-pipeline/   # Shared ingestion helpers used by cron + admin backfill paths
+        │   ├── types.ts          # Shared row/context/counter + sync-state mode types
+        │   ├── parse.ts          # parseMintBurnLogs() + event price resolution
+        │   ├── classification.ts # Bridge-aware burn classification + tx-context loader
+        │   ├── context.ts        # Shared current + historical price context loading
+        │   ├── persistence.ts    # Event insert, burn update, affected-hour recompute helpers
+        │   └── sync-state.ts     # Sync-state read/init/upsert helpers (replace vs monotonic-max)
         ├── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
         ├── dexscreener.ts        # DexScreener API client (token price + pool search)
         ├── resolve-market-cap.ts # Multi-source market cap resolution (DL → CG → CMC → DexScreener)

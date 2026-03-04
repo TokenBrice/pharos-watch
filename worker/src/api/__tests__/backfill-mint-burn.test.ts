@@ -120,4 +120,40 @@ describe("handleBackfillMintBurn", () => {
     expect(body.bridgeBurns).toBe(0);
     expect(body.reviewBurns).toBe(0);
   });
+
+  it("returns nextFromBlock when maxChunks stops before toBlock", async () => {
+    const request = new Request("https://x/api/backfill-mint-burn", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Key": "secret",
+      },
+      body: JSON.stringify({
+        configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        fromBlock: 100,
+        toBlock: 280,
+        chunkSize: 50,
+        maxChunks: 2,
+      }),
+    });
+
+    const response = await handleBackfillMintBurn(
+      makeDb(),
+      new URL("https://x/api/backfill-mint-burn"),
+      "secret",
+      request,
+      "alchemy-key",
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      done: boolean;
+      nextFromBlock: number | null;
+      chunksProcessed: number;
+    };
+
+    expect(body.done).toBe(false);
+    expect(body.chunksProcessed).toBe(2);
+    expect(body.nextFromBlock).toBe(200);
+  });
 });
