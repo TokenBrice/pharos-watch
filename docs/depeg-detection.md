@@ -81,6 +81,8 @@ Detection runs as part of the `*/15 * * * *` sync cycle. After `syncStablecoins(
 
 Both calls are in `worker/src/cron/sync-stablecoins.ts`. Errors from either are captured in the sync metadata as `depegErrors` array but do not fail the parent cron.
 
+The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps for both `/api/peg-summary` and `/api/report-cards`.
+
 ## Stage 1 -- Detection
 
 ### Initialization

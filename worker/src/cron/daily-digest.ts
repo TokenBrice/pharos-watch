@@ -1,27 +1,16 @@
-import type { StablecoinData, DexLiquidityData, PegSummaryCoin } from "../../../src/lib/types";
+import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
-import { TRACKED_IDS, TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_IDS } from "../../../src/lib/stablecoins";
 import { formatCurrency } from "../../../src/lib/format";
-import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
-import {
-  scorePegStability,
-  scoreLiquidity,
-  scoreResilience,
-  scoreDecentralization,
-  scoreDependencyRisk,
-  computeOverallGrade,
-  scoreToGrade,
-  isBlacklistable,
-} from "../../../src/lib/report-cards";
-import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
-import { getCache, getFirstSeenDates } from "../lib/db";
+import { scoreToGrade } from "../../../src/lib/report-cards";
 import type { CronResult } from "../lib/db";
-import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
 import { getConditionBand } from "../lib/stability-index";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -238,36 +227,39 @@ export async function generateDailyDigest(
   // --- Collect data ---
 
   // 1. Total mcap + 7d delta from stablecoins cache
-  const stablecoinsCache = await getCache(db, "stablecoins");
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
+    console.warn(`[daily-digest] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
+  }
+  const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as StablecoinData[];
+  const trackedStablecoinAssets = stablecoinAssets.filter((coin) => TRACKED_IDS.has(coin.id));
+  const mcapById = new Map<string, number>();
+  for (const coin of stablecoinAssets) {
+    mcapById.set(coin.id, getCirculatingRaw(coin));
+  }
+
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
   let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
   let biggestAbsChange = 0;
 
-  if (stablecoinsCache) {
-    const parsed = JSON.parse(stablecoinsCache.value) as {
-      peggedAssets: StablecoinData[];
-    };
-    const tracked = parsed.peggedAssets.filter((c) => TRACKED_IDS.has(c.id));
+  for (const coin of trackedStablecoinAssets) {
+    const mcap = getCirculatingRaw(coin);
+    const prevWeek = getPrevWeekRaw(coin);
+    totalMcapUsd += mcap;
+    totalPrevWeek += prevWeek;
 
-    for (const coin of tracked) {
-      const mcap = getCirculatingRaw(coin);
-      const prevWeek = getPrevWeekRaw(coin);
-      totalMcapUsd += mcap;
-      totalPrevWeek += prevWeek;
-
-      if (mcap > 1_000_000) {
-        const absChange = Math.abs(mcap - prevWeek);
-        if (absChange > biggestAbsChange) {
-          biggestAbsChange = absChange;
-          biggestSupplyChange = {
-            id: coin.id,
-            symbol: coin.symbol,
-            name: coin.name,
-            changeUsd: mcap - prevWeek,
-            currentMcap: mcap,
-          };
-        }
+    if (mcap > 1_000_000) {
+      const absChange = Math.abs(mcap - prevWeek);
+      if (absChange > biggestAbsChange) {
+        biggestAbsChange = absChange;
+        biggestSupplyChange = {
+          id: coin.id,
+          symbol: coin.symbol,
+          name: coin.name,
+          changeUsd: mcap - prevWeek,
+          currentMcap: mcap,
+        };
       }
     }
   }
@@ -282,15 +274,6 @@ export async function generateDailyDigest(
       .all<{ stablecoin_id: string; symbol: string; peak_deviation_bps: number }>();
     const rows = activeDepegs.results ?? [];
     activeDepegCount = rows.length;
-
-    // Cross-reference with mcap from stablecoins cache to rank by impact
-    const mcapById = new Map<string, number>();
-    if (stablecoinsCache) {
-      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-      for (const coin of parsed.peggedAssets) {
-        mcapById.set(coin.id, getCirculatingRaw(coin));
-      }
-    }
 
     const withImpact = rows.map((r) => {
       const mcapUsd = mcapById.get(r.stablecoin_id) ?? 0;
@@ -386,15 +369,11 @@ export async function generateDailyDigest(
   try {
     // Get top 10 coins by mcap
     const top10: { id: string; symbol: string; mcap: number }[] = [];
-    if (stablecoinsCache) {
-      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-      const tracked = parsed.peggedAssets
-        .filter((c) => TRACKED_IDS.has(c.id))
-        .map((c) => ({ id: c.id, symbol: c.symbol, mcap: getCirculatingRaw(c) }))
-        .sort((a, b) => b.mcap - a.mcap)
-        .slice(0, 10);
-      top10.push(...tracked);
-    }
+    const tracked = trackedStablecoinAssets
+      .map((coin) => ({ id: coin.id, symbol: coin.symbol, mcap: getCirculatingRaw(coin) }))
+      .sort((a, b) => b.mcap - a.mcap)
+      .slice(0, 10);
+    top10.push(...tracked);
 
     if (top10.length > 0) {
       const yesterday = todayTs - SECONDS.ONE_DAY;
@@ -458,137 +437,11 @@ export async function generateDailyDigest(
     for (const d of topDepegs) mentionedSymbols.add(d.symbol);
     if (biggestSupplyChange) mentionedSymbols.add(biggestSupplyChange.symbol);
     if (supplyVelocity) for (const v of supplyVelocity) mentionedSymbols.add(v.coin);
-
-    // Load peg + liquidity data needed for scoring
-    let peggedAssets: StablecoinData[] = [];
-    if (stablecoinsCache) {
-      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-      peggedAssets = parsed.peggedAssets;
-    }
-    const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-
-    // Load depeg events (4-year window) + dex liquidity + first-seen dates
-    const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * SECONDS.ONE_DAY);
-    const [eventsResult, dexLiqResult, firstSeenMap] = await Promise.all([
-      db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
-        .bind(fourYearsAgoSec)
-        .all<DepegRow>(),
-      db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
-        .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; pool_count: number; chain_count: number }>(),
-      getFirstSeenDates(db),
-    ]);
-
-    const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
-    const eventsByCoin = new Map<string, typeof allEvents>();
-    for (const e of allEvents) {
-      const list = eventsByCoin.get(e.stablecoinId) ?? [];
-      list.push(e);
-      eventsByCoin.set(e.stablecoinId, list);
-    }
-
-    const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
-    for (const row of dexLiqResult.results ?? []) {
-      dexLiqMap[row.stablecoin_id] = {
-        liquidityScore: row.liquidity_score,
-        concentrationHhi: row.concentration_hhi,
-        poolCount: row.pool_count,
-        chainCount: row.chain_count,
-      };
-    }
-
-    // Compute grades for all tracked coins
-    type GradeInfo = { id: string; symbol: string; grade: string; score: number; pegScore: number | null; liqScore: number | null };
-    const allGrades: GradeInfo[] = [];
-    const overallScores = new Map<string, number>();
-
-    const blacklistableIds: ReadonlySet<string> = new Set(
-      TRACKED_STABLECOINS
-        .filter(m => isBlacklistable(m) === true)
-        .map(m => m.id)
-    );
-    const methodologyVersion = getDepegDewsMethodologyVersionAt(nowSec);
-
-    // Phase 1: non-dependent coins
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.navToken) continue;
-      if (meta.flags.governance === "centralized-dependent") continue;
-
-      const asset = priceById.get(meta.id);
-      const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
-      const scoreResult = computePegScore(events, trackingStart, nowSec);
-
-      const pegData: PegSummaryCoin = {
-        id: meta.id, symbol: meta.symbol, name: meta.name,
-        pegType: asset?.pegType ?? "", pegCurrency: meta.flags.pegCurrency,
-        governance: meta.flags.governance,
-        currentDeviationBps: null, pegScore: scoreResult.pegScore,
-        pegPct: scoreResult.pegPct, severityScore: scoreResult.severityScore,
-        spreadPenalty: scoreResult.spreadPenalty, eventCount: scoreResult.eventCount,
-        worstDeviationBps: scoreResult.worstDeviationBps,
-        activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
-        trackingSpanDays: scoreResult.trackingSpanDays,
-        methodologyVersion,
-      };
-
-      const canBl = isBlacklistable(meta, blacklistableIds);
-      const dims = {
-        pegStability: scorePegStability(pegData, meta),
-        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
-        resilience: scoreResilience(meta, canBl),
-        decentralization: scoreDecentralization(meta.flags.governance, meta),
-        dependencyRisk: scoreDependencyRisk(meta, overallScores),
-      };
-      const overall = computeOverallGrade(dims, { navToken: !!meta.flags.navToken });
-      if (overall.score !== null) overallScores.set(meta.id, overall.score);
-      allGrades.push({
-        id: meta.id, symbol: meta.symbol,
-        grade: overall.grade, score: overall.score ?? 0,
-        pegScore: scoreResult.pegScore,
-        liqScore: dexLiqMap[meta.id]?.liquidityScore ?? null,
-      });
-    }
-
-    // Phase 2: dependent coins
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.navToken) continue;
-      if (meta.flags.governance !== "centralized-dependent") continue;
-
-      const asset = priceById.get(meta.id);
-      const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
-      const scoreResult = computePegScore(events, trackingStart, nowSec);
-
-      const pegData: PegSummaryCoin = {
-        id: meta.id, symbol: meta.symbol, name: meta.name,
-        pegType: asset?.pegType ?? "", pegCurrency: meta.flags.pegCurrency,
-        governance: meta.flags.governance,
-        currentDeviationBps: null, pegScore: scoreResult.pegScore,
-        pegPct: scoreResult.pegPct, severityScore: scoreResult.severityScore,
-        spreadPenalty: scoreResult.spreadPenalty, eventCount: scoreResult.eventCount,
-        worstDeviationBps: scoreResult.worstDeviationBps,
-        activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
-        trackingSpanDays: scoreResult.trackingSpanDays,
-        methodologyVersion,
-      };
-
-      const canBl = isBlacklistable(meta, blacklistableIds);
-      const dims = {
-        pegStability: scorePegStability(pegData, meta),
-        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
-        resilience: scoreResilience(meta, canBl),
-        decentralization: scoreDecentralization(meta.flags.governance, meta),
-        dependencyRisk: scoreDependencyRisk(meta, overallScores),
-      };
-      const overall = computeOverallGrade(dims, { navToken: false });
-      if (overall.score !== null) overallScores.set(meta.id, overall.score);
-      allGrades.push({
-        id: meta.id, symbol: meta.symbol,
-        grade: overall.grade, score: overall.score ?? 0,
-        pegScore: scoreResult.pegScore,
-        liqScore: dexLiqMap[meta.id]?.liquidityScore ?? null,
-      });
-    }
+    const safetySnapshot = await computeSafetyScoresSnapshot(db, {
+      includeNavTokens: false,
+      outputMode: "full-grades",
+    });
+    const allGrades = safetySnapshot.grades;
 
     // Distribution stats
     const scores = allGrades.map((g) => g.score).sort((a, b) => a - b);
@@ -632,14 +485,6 @@ export async function generateDailyDigest(
       )
       .bind(cutoff48h)
       .all<{ symbol: string; peak_deviation_bps: number; started_at: number; ended_at: number; stablecoin_id: string }>();
-
-    const mcapById = new Map<string, number>();
-    if (stablecoinsCache) {
-      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-      for (const coin of parsed.peggedAssets) {
-        mcapById.set(coin.id, getCirculatingRaw(coin));
-      }
-    }
 
     const candidates = (resolvedRows.results ?? [])
       .map((r) => ({

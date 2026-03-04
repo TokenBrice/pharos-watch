@@ -248,9 +248,9 @@ src/                              # Next.js frontend (static export)
 │   ├── use-daily-digest.ts       # GET /api/daily-digest
 │   ├── use-digest-archive.ts    # GET /api/digest-archive
 │   ├── use-digest-snapshot.ts    # GET /api/digest-snapshot (per-date context)
-│   ├── use-endpoint-probes.ts    # Parallel endpoint health probes (status page)
-│   ├── use-health.ts             # GET /api/health (auto-refresh 60s)
-│   ├── use-status.ts             # GET /api/status (admin key auth, manual refresh)
+│   ├── use-endpoint-probes.ts    # Parallel endpoint probes (status page), shared polling helper + admin-header handling
+│   ├── use-health.ts             # GET /api/health using shared polling policy helper
+│   ├── use-status.ts             # GET /api/status (admin key auth) using shared polling policy helper
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
@@ -307,7 +307,9 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
     ├── cron/
-    │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator, delegates to enrich-prices + detect-depegs)
+    │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
+    │   ├── sync-stablecoins/
+    │   │   └── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 6-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
@@ -380,6 +382,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
         ├── alerts.ts             # Alert sending (ntfy push notifications on cron failures)
+        ├── stablecoins-cache.ts  # Shared strict/lenient loader for canonical stablecoins cache payload
+        ├── safety-scores.ts      # Shared safety score snapshot helper (yield + digest consumers)
+        ├── peg-analytics.ts      # Shared peg analytics snapshot helper (peg-summary + report-cards consumers)
+        ├── mint-burn-health-config.ts # Shared mint/burn stale thresholds + major symbol defaults
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)
         ├── binary-search.ts      # Generic binarySearchNearest<T>() for sorted array lookups
         ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)

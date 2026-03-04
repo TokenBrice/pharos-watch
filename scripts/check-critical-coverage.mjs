@@ -19,7 +19,17 @@ const CRITICAL_FILES = [
   "worker/src/api/dex-liquidity.ts",
   "worker/src/api/stress-signals.ts",
   "worker/src/api/mint-burn-flows.ts",
+  "worker/src/lib/alerts.ts",
+  "worker/src/api/stablecoin-detail.ts",
+  "worker/src/cron/dex-liquidity/orchestrator.ts",
 ];
+
+// Explicit per-file minimums for critical reliability paths.
+const CRITICAL_THRESHOLDS = {
+  "worker/src/lib/alerts.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_ALERTS ?? "80"),
+  "worker/src/api/stablecoin-detail.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL ?? "30"),
+  "worker/src/cron/dex-liquidity/orchestrator.ts": Number.parseFloat(process.env.CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR ?? "55"),
+};
 
 function normalizePath(p) {
   return p.replaceAll("\\", "/");
@@ -127,6 +137,11 @@ if (baseline) {
   console.log(`[coverage] Baseline file not found at ${BASELINE_PATH}; ratchet checks skipped.`);
 }
 
+function thresholdForFile(file) {
+  const override = CRITICAL_THRESHOLDS[file];
+  return Number.isFinite(override) ? override : THRESHOLD;
+}
+
 for (const file of CRITICAL_FILES) {
   const cov = findCoverageFor(file, parsed);
   if (!cov) {
@@ -135,12 +150,13 @@ for (const file of CRITICAL_FILES) {
     continue;
   }
 
+  const threshold = thresholdForFile(file);
   const line = `${cov.pct.toFixed(1)}% (${cov.lh}/${cov.lf})`;
-  if (cov.pct < THRESHOLD) {
+  if (cov.pct < threshold) {
     failed = true;
-    console.error(`[coverage] FAIL ${file}: ${line}`);
+    console.error(`[coverage] FAIL ${file}: ${line} < ${threshold.toFixed(1)}%`);
   } else {
-    console.log(`[coverage] PASS ${file}: ${line}`);
+    console.log(`[coverage] PASS ${file}: ${line} (threshold ${threshold.toFixed(1)}%)`);
   }
 }
 

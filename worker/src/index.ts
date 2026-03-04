@@ -23,6 +23,11 @@ import { initCoinGecko } from "./lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "./lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "./lib/constants";
 import { runIdempotentAdminAction } from "./lib/idempotency";
+import {
+  MINT_BURN_MAJOR_SYMBOLS,
+  MINT_BURN_STALE_WARN_SEC,
+  MINT_BURN_STALE_CRIT_SEC,
+} from "./lib/mint-burn-health-config";
 import { isMutatingAdminPath, isCacheBypassPath } from "../../src/lib/api-endpoints";
 
 interface Env {
@@ -96,9 +101,6 @@ function parsePositiveInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-const DEFAULT_MINT_BURN_MAJOR_SYMBOLS = ["USDT", "USDC", "DAI", "USDS", "GHO", "FRXUSD", "BOLD", "reUSD"];
-const DEFAULT_MINT_BURN_STALE_WARN_SEC = 6 * 3600;
-const DEFAULT_MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
 const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
 
 const worker = {
@@ -281,8 +283,8 @@ const worker = {
     const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
     const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
     const mintBurnMajorSymbols = parseCsvEnv(env.MINT_BURN_MAJOR_SYMBOLS);
-    const mintBurnWarnSec = parsePositiveInt(env.MINT_BURN_STALE_WARN_SEC, DEFAULT_MINT_BURN_STALE_WARN_SEC);
-    const mintBurnCritSec = parsePositiveInt(env.MINT_BURN_STALE_CRIT_SEC, DEFAULT_MINT_BURN_STALE_CRIT_SEC);
+    const mintBurnWarnSec = parsePositiveInt(env.MINT_BURN_STALE_WARN_SEC, MINT_BURN_STALE_WARN_SEC);
+    const mintBurnCritSec = parsePositiveInt(env.MINT_BURN_STALE_CRIT_SEC, MINT_BURN_STALE_CRIT_SEC);
     const mintBurnAlertCooldownSec = parsePositiveInt(
       env.MINT_BURN_ALERT_COOLDOWN_SEC,
       DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC,
@@ -433,7 +435,7 @@ const worker = {
           ));
           ctx.waitUntil(mintBurnJob.then(async () => {
             try {
-              const symbols = mintBurnMajorSymbols.length > 0 ? mintBurnMajorSymbols : DEFAULT_MINT_BURN_MAJOR_SYMBOLS;
+              const symbols = mintBurnMajorSymbols.length > 0 ? mintBurnMajorSymbols : [...MINT_BURN_MAJOR_SYMBOLS];
               if (symbols.length === 0) return;
               const now = Math.floor(Date.now() / 1000);
               const rows = await db

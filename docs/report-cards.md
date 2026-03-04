@@ -250,6 +250,8 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
 
+Implementation note: report cards and peg summary now share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed once with identical logic in both endpoints.
+
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
 - **`RawDimensionInputs`**: Raw scoring inputs per card (`pegScore`, `activeDepeg`, `liquidityScore`, `concentrationHhi`, `bluechipGrade`, `canBeBlacklisted`, `chainTier`, `deploymentModel`, `collateralQuality`, `custodyModel`, `governanceTier`, `governanceQuality`, `dependencies`, `navToken`, etc.) — enables client-side stress test recomputation.

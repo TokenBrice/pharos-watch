@@ -280,19 +280,19 @@ CREATE TABLE yield_history (
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
 4. Read cached risk-free rate from D1
-5. Compute safety scores inline (full report-card dimensions — same logic as `daily-digest.ts`)
+5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`
 6. Resolve APY for each coin (Tier 1 → 2 → 3, potentially multiple sources per coin)
 7. Determine `is_best` per coin: source with highest `currentApy` wins
-8. Load 30-day APY history from `yield_history`, compute trailing averages and PYS
+8. Batch preload `yield_history` datasets (7d previous exchange rates, previous TVL rows, and 30d APY history), group in memory, then compute trailing averages and PYS without per-coin query loops
 9. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write
 10. Batch upsert `yield_data` (all sources) + insert `yield_history` point (best source only)
 11. Purge stale `is_best = 0` rows not written in this run
 12. Prune `yield_history` older than 365 days
-13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, cache rankings JSON
+13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, cache rankings JSON (with safe `warning_signals` JSON parsing on read paths)
 
-**Inline safety scores:** The report-cards API handler doesn't cache results, so the cron computes all five dimensions (peg stability, liquidity, resilience, decentralization, dependency risk) and overall grade for each yield-bearing coin itself. Uses a two-phase approach: independent coins first, then CeFi-dependent coins.
+**Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 
-**Tier 1 query dedup:** The cron caches previous exchange rates in a `Map<string, number | null>` during APY resolution and reuses them when writing `exchange_rate_prev`, avoiding a duplicate DB query per Tier 1 coin.
+**Batch query policy:** No per-coin query loops are used for the three high-volume `yield_history` reads (previous exchange rate, previous TVL, 30d APY history); these are loaded in batch and indexed by stablecoin ID in-memory.
 
 ### `fetch-tbill-rate`
 

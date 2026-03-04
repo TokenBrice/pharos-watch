@@ -38,6 +38,8 @@ One D1 database (`pharos-db`). All persistent state lives here.
 | **Concurrency model** | Single-threaded per DB | Single-threaded per DB |
 
 > **Key constraint**: D1 is single-threaded — it processes one query at a time per database. Batch large mutations (e.g. bulk inserts) in chunks of ≤1,000 rows to stay within execution limits. The 10 GB storage cap is absolute and cannot be raised.
+>
+> `sync-yield-data` follows this by batching high-volume `yield_history` reads (previous exchange rates, previous TVL rows, 30d APY history) and grouping rows in-memory instead of issuing per-coin queries.
 
 ---
 

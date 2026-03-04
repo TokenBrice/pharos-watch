@@ -4,9 +4,30 @@ import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, CACHE_PROFILES, USER_AG
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
+import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 
 const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
+const DETAIL_UPSTREAM_TIMEOUT_MS = 12_000;
+const DETAIL_UPSTREAM_MAX_RETRIES = 2;
+
+function logUpstreamFailure(
+  source: string,
+  stablecoinId: string,
+  status: number | "no-response",
+): void {
+  console.warn(`[detail] upstream failure source=${source} stablecoin=${stablecoinId} status=${status}`);
+}
+
+function logUpstreamException(
+  source: string,
+  stablecoinId: string,
+  err: unknown,
+): void {
+  console.error(
+    `[detail] upstream exception source=${source} stablecoin=${stablecoinId} error=${String(err).slice(0, 300)}`,
+  );
+}
 
 /** Fallback: build tokens array from D1 supply_history when external APIs have no data. */
 async function fetchSupplyHistoryFallback(
@@ -43,6 +64,7 @@ function findNearestPrice(
 }
 
 async function fetchCommodityDetail(config: {
+  stablecoinId: string;
   geckoId: string;
   protocolSlug: string;
   pegType: string;
@@ -50,16 +72,24 @@ async function fetchCommodityDetail(config: {
   const twoYearsAgo = Math.floor(Date.now() / 1000) - 2 * 365 * 86400;
 
   const [priceRes, protocolRes] = await Promise.all([
-    fetch(
-      `${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${twoYearsAgo}&span=730`
+    fetchWithRetry(
+      `${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=${twoYearsAgo}&span=730`,
+      undefined,
+      DETAIL_UPSTREAM_MAX_RETRIES,
+      { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
     ),
     config.protocolSlug
-      ? fetch(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`)
+      ? fetchWithRetry(
+          `${DEFILLAMA_API}/protocol/${config.protocolSlug}`,
+          undefined,
+          DETAIL_UPSTREAM_MAX_RETRIES,
+          { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
+        )
       : Promise.resolve(null),
   ]);
 
   let prices: { timestamp: number; price: number }[] = [];
-  if (priceRes.ok) {
+  if (priceRes?.ok) {
     const priceData = (await priceRes.json()) as {
       coins: Record<
         string,
@@ -68,14 +98,18 @@ async function fetchCommodityDetail(config: {
     };
     prices =
       priceData.coins?.[`coingecko:${config.geckoId}`]?.prices ?? [];
+  } else {
+    logUpstreamFailure("defillama-coins-chart", config.stablecoinId, priceRes?.status ?? "no-response");
   }
 
   let tvlHistory: { date: number; totalLiquidityUSD: number }[] = [];
-  if (protocolRes && protocolRes.ok) {
+  if (protocolRes?.ok) {
     const protocolData = (await protocolRes.json()) as {
       tvl?: { date: number; totalLiquidityUSD: number }[];
     };
     tvlHistory = protocolData.tvl ?? [];
+  } else if (config.protocolSlug) {
+    logUpstreamFailure("defillama-protocol-detail", config.stablecoinId, protocolRes?.status ?? "no-response");
   }
 
   // Merge TVL history with price data to produce chart-compatible tokens array.
@@ -105,18 +139,23 @@ async function fetchCommodityDetail(config: {
   // detect frozen/corrupt usd_market_cap values via supply×price divergence.
   if (tokens.length === 0) {
     const [cgRes, coinRes] = await Promise.all([
-      fetch(
+      fetchWithRetry(
         cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+        DETAIL_UPSTREAM_MAX_RETRIES,
+        { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
       ),
-      fetch(
+      fetchWithRetry(
         cgUrl(`/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+        DETAIL_UPSTREAM_MAX_RETRIES,
+        { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
       ),
     ]);
 
-    if (!cgRes.ok) {
-      coinRes.body?.cancel();
+    if (!cgRes?.ok) {
+      logUpstreamFailure("coingecko-market-chart", config.stablecoinId, cgRes?.status ?? "no-response");
+      coinRes?.body?.cancel();
     } else {
       const cgData = (await cgRes.json()) as {
         market_caps: [number, number][];
@@ -124,13 +163,14 @@ async function fetchCommodityDetail(config: {
       };
 
       let circulatingSupply: number | undefined;
-      if (coinRes.ok) {
+      if (coinRes?.ok) {
         const coinData = (await coinRes.json()) as {
           market_data?: { circulating_supply?: number };
         };
         circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
       } else {
-        coinRes.body?.cancel();
+        logUpstreamFailure("coingecko-coin-detail", config.stablecoinId, coinRes?.status ?? "no-response");
+        coinRes?.body?.cancel();
       }
 
       const priceMap = new Map<string, number>();
@@ -183,6 +223,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
   const isCommodity = meta && (meta.flags.pegCurrency === "GOLD" || meta.flags.pegCurrency === "SILVER") && meta.geckoId;
   if (isCommodity) {
     const commodityConfig = {
+      stablecoinId: id,
       geckoId: meta.geckoId!,
       protocolSlug: meta.protocolSlug ?? "",
       pegType: `pegged${meta.flags.pegCurrency}`,
@@ -206,7 +247,8 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
           "Cache-Control": `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`,
         },
       });
-    } catch {
+    } catch (err) {
+      logUpstreamException("commodity-detail", id, err);
       if (cached) {
         return new Response(cached.value, {
           headers: {
@@ -227,11 +269,13 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     try {
       let tokens: Record<string, unknown>[] = [];
 
-      const cgRes = await fetch(
+      const cgRes = await fetchWithRetry(
         cgUrl(`/coins/${geckoId}/market_chart?vs_currency=usd&days=max`),
-        { headers: cgHeaders({ "User-Agent": USER_AGENT }) }
+        { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+        DETAIL_UPSTREAM_MAX_RETRIES,
+        { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
       );
-      if (cgRes.ok) {
+      if (cgRes?.ok) {
         const cgData = (await cgRes.json()) as {
           market_caps: [number, number][];
           prices?: [number, number][];
@@ -257,6 +301,8 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
               totalCirculating: { [pegType]: price > 0 ? mcap / price : 0 },
             };
           });
+      } else {
+        logUpstreamFailure("coingecko-market-chart", id, cgRes?.status ?? "no-response");
       }
 
       // Fallback to D1 supply_history if CoinGecko returned no data
@@ -272,7 +318,8 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
           "Cache-Control": `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`,
         },
       });
-    } catch {
+    } catch (err) {
+      logUpstreamException("coingecko-detail", id, err);
       if (cached) {
         return new Response(cached.value, {
           headers: {
@@ -286,9 +333,83 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
   }
 
   // Regular stablecoins: fetch from DefiLlama stablecoin API
-  const res = await fetch(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(id)}`);
-  if (!res.ok) {
-    // If we have stale cache, return it rather than error
+  try {
+    const res = await fetchWithRetry(
+      `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(id)}`,
+      undefined,
+      DETAIL_UPSTREAM_MAX_RETRIES,
+      { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },
+    );
+    if (!res?.ok) {
+      logUpstreamFailure("defillama-stablecoin-detail", id, res?.status ?? "no-response");
+      // If we have stale cache, return it rather than error
+      if (cached) {
+        return new Response(cached.value, {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": CACHE_PROFILES.realtime,
+          },
+        });
+      }
+      return errorResponse(502, `Failed to fetch stablecoin ${id}`);
+    }
+
+    let body = await res.text();
+
+    // Validate JSON structure before caching — skip cache on parse failure
+    try {
+      const parsed = JSON.parse(body);
+
+      // Convert non-USD circulating values from native currency to USD.
+      // DefiLlama stores non-USD values (BRL, RUB, JPY, etc.) in native units,
+      // not USD — multiply by token price to get actual USD market cap.
+      const isNonUSD = meta &&
+        meta.flags.pegCurrency !== "USD" &&
+        meta.flags.pegCurrency !== "GOLD" &&
+        meta.flags.pegCurrency !== "SILVER";
+      if (isNonUSD && typeof parsed.price === "number" && parsed.price > 0 && Array.isArray(parsed.tokens)) {
+        const price = parsed.price;
+        for (const entry of parsed.tokens) {
+          if (entry.totalCirculatingUSD) {
+            for (const key of Object.keys(entry.totalCirculatingUSD)) {
+              if (key !== "peggedUSD") {
+                entry.totalCirculatingUSD[key] *= price;
+              }
+            }
+          }
+          if (entry.circulating) {
+            for (const key of Object.keys(entry.circulating)) {
+              if (key !== "peggedUSD") {
+                entry.circulating[key] *= price;
+              }
+            }
+          }
+        }
+        body = JSON.stringify(parsed);
+      }
+
+      ctx.waitUntil(setCache(db, cacheKey, body));
+    } catch (err) {
+      logUpstreamException("defillama-stablecoin-detail-parse", id, err);
+      if (cached) {
+        return new Response(cached.value, {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": CACHE_PROFILES.realtime,
+          },
+        });
+      }
+      return errorResponse(502, `Invalid upstream data for stablecoin ${id}`);
+    }
+
+    return new Response(body, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`,
+      },
+    });
+  } catch (err) {
+    logUpstreamException("defillama-stablecoin-detail", id, err);
     if (cached) {
       return new Response(cached.value, {
         headers: {
@@ -299,59 +420,4 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     }
     return errorResponse(502, `Failed to fetch stablecoin ${id}`);
   }
-
-  let body = await res.text();
-
-  // Validate JSON structure before caching — skip cache on parse failure
-  try {
-    const parsed = JSON.parse(body);
-
-    // Convert non-USD circulating values from native currency to USD.
-    // DefiLlama stores non-USD values (BRL, RUB, JPY, etc.) in native units,
-    // not USD — multiply by token price to get actual USD market cap.
-    const isNonUSD = meta &&
-      meta.flags.pegCurrency !== "USD" &&
-      meta.flags.pegCurrency !== "GOLD" &&
-      meta.flags.pegCurrency !== "SILVER";
-    if (isNonUSD && typeof parsed.price === "number" && parsed.price > 0 && Array.isArray(parsed.tokens)) {
-      const price = parsed.price;
-      for (const entry of parsed.tokens) {
-        if (entry.totalCirculatingUSD) {
-          for (const key of Object.keys(entry.totalCirculatingUSD)) {
-            if (key !== "peggedUSD") {
-              entry.totalCirculatingUSD[key] *= price;
-            }
-          }
-        }
-        if (entry.circulating) {
-          for (const key of Object.keys(entry.circulating)) {
-            if (key !== "peggedUSD") {
-              entry.circulating[key] *= price;
-            }
-          }
-        }
-      }
-      body = JSON.stringify(parsed);
-    }
-
-    ctx.waitUntil(setCache(db, cacheKey, body));
-  } catch {
-    console.warn(`[detail] Invalid JSON response for ${id}, skipping cache write`);
-    if (cached) {
-      return new Response(cached.value, {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": CACHE_PROFILES.realtime,
-        },
-      });
-    }
-    return errorResponse(502, `Invalid upstream data for stablecoin ${id}`);
-  }
-
-  return new Response(body, {
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": `public, s-maxage=${CACHE_TTL_SECONDS}, max-age=10`,
-    },
-  });
 });

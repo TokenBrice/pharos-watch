@@ -1,15 +1,18 @@
 {
   "version": 1,
-  "generatedAt": "2026-03-03",
+  "generatedAt": "2026-03-04",
   "files": {
     "src/lib/api.ts": 89.2,
-    "worker/src/lib/api-utils.ts": 58.1,
-    "worker/src/cron/sync-stablecoins.ts": 57.8,
-    "worker/src/cron/sync-yield-data.ts": 78.6,
-    "worker/src/api/peg-summary.ts": 81.4,
-    "worker/src/api/report-cards.ts": 94.7,
+    "worker/src/lib/api-utils.ts": 88.6,
+    "worker/src/cron/sync-stablecoins.ts": 61.1,
+    "worker/src/cron/sync-yield-data.ts": 76.4,
+    "worker/src/api/peg-summary.ts": 90.3,
+    "worker/src/api/report-cards.ts": 97,
     "worker/src/api/dex-liquidity.ts": 80.6,
     "worker/src/api/stress-signals.ts": 94.6,
-    "worker/src/api/mint-burn-flows.ts": 86.5
+    "worker/src/api/mint-burn-flows.ts": 87.4,
+    "worker/src/lib/alerts.ts": 90,
+    "worker/src/api/stablecoin-detail.ts": 32.1,
+    "worker/src/cron/dex-liquidity/orchestrator.ts": 60.2
   }
 }

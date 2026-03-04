@@ -2,6 +2,13 @@
 
 On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, computes per-coin Flow Intensity Scores, a market-cap-weighted Bank Run Gauge, and flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
 
+Operational freshness configuration is shared via `worker/src/lib/mint-burn-health-config.ts`:
+- major-symbol baseline (`USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`)
+- warning threshold (`6h`)
+- critical threshold (`24h`)
+
+The scheduler (`worker/src/index.ts`) applies env overrides on top of these defaults; `/api/health` uses the same default baseline for status evaluation.
+
 ---
 
 ## Methodology Versioning

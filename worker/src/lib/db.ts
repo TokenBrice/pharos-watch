@@ -102,37 +102,6 @@ export async function savePriceCache(db: D1Database, entries: { id: string; pric
   await batchExecute(db, stmts);
 }
 
-export interface OnchainSupplyRow {
-  stablecoin_id: string;
-  chain: string;
-  supply: number;
-  updated_at: number;
-}
-
-/** Read all on-chain supply rows fresher than maxAgeSec */
-export async function getOnchainSupply(db: D1Database, maxAgeSec: number): Promise<OnchainSupplyRow[]> {
-  const cutoff = Math.floor(Date.now() / 1000) - maxAgeSec;
-  const result = await db
-    .prepare("SELECT stablecoin_id, chain, supply, updated_at FROM onchain_supply WHERE updated_at > ?")
-    .bind(cutoff)
-    .all<OnchainSupplyRow>();
-  return result.results ?? [];
-}
-
-/** Upsert on-chain supply for a stablecoin on a specific chain */
-export async function upsertOnchainSupply(
-  db: D1Database,
-  rows: { stablecoinId: string; chain: string; supply: number }[]
-): Promise<void> {
-  if (rows.length === 0) return;
-  const now = Math.floor(Date.now() / 1000);
-  const stmts = rows.map((r) =>
-    db.prepare("INSERT OR REPLACE INTO onchain_supply (stablecoin_id, chain, supply, updated_at) VALUES (?, ?, ?, ?)")
-      .bind(r.stablecoinId, r.chain, r.supply, now)
-  );
-  await batchExecute(db, stmts);
-}
-
 // --- Coin first-seen dates (for peg score tracking window) ---
 
 /** Earliest supply_history snapshot per coin — used so young coins aren't scored over a phantom 4-year window. */

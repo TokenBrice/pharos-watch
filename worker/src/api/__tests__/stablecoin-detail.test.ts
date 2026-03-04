@@ -137,6 +137,27 @@ describe("handleStablecoinDetail", () => {
     expect(body.tokens).toHaveLength(1);
   });
 
+  it("returns stale cache on upstream timeout when cache exists", async () => {
+    const cachedValue = makeDLDetailBody();
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: cachedValue, updated_at: now - 800 },
+      },
+    ]);
+
+    fetchSpy.mockRejectedValue(new Error("network timeout"));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "1", ctx);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { tokens: unknown[] };
+    expect(body.tokens).toHaveLength(1);
+  });
+
   it("calls ctx.waitUntil to cache the response", async () => {
     const dlBody = makeDLDetailBody();
     const db = mockD1([{ match: "cache", rows: [] }]);
@@ -147,6 +168,43 @@ describe("handleStablecoinDetail", () => {
     await handleStablecoinDetail(db, "1", ctx);
 
     expect(ctx.waitUntil).toHaveBeenCalled();
+  });
+
+  it("returns 502 for commodity branch upstream parse failure without stale cache", async () => {
+    const db = mockD1([{ match: "cache", rows: [] }]);
+    fetchSpy
+      .mockResolvedValueOnce(new Response("{", { status: 200 })) // DL coins chart invalid JSON
+      .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "gold-xaut", ctx);
+
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: "Failed to fetch commodity token data" });
+  });
+
+  it("logs parse failure context and returns stale cache when detail JSON is invalid", async () => {
+    const cachedValue = makeDLDetailBody();
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "cache",
+        rows: [],
+        first: { value: cachedValue, updated_at: now - 1200 },
+      },
+    ]);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    fetchSpy.mockResolvedValueOnce(new Response("{invalid-json", { status: 200 }));
+
+    const ctx = makeCtx();
+    const res = await handleStablecoinDetail(db, "1", ctx);
+
+    expect(res.status).toBe(200);
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("source=defillama-stablecoin-detail-parse"),
+    );
+    errorSpy.mockRestore();
   });
 
   it("handles supply_history fallback for cg- prefixed coins", async () => {

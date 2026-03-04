@@ -1,4 +1,3 @@
-import { getCache } from "../lib/db";
 import { withErrorHandler, buildCacheStatuses, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import {
@@ -11,6 +10,7 @@ import {
   STATUS_SYSTEM_FRESHNESS_SEC,
   type StatusLevel,
 } from "../lib/status-reliability";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse } from "../../../src/lib/types";
 
 // --- Config ---
@@ -512,22 +512,19 @@ export const handleStatus = withErrorHandler(
 // --- Data quality queries ---
 
 async function getDataQuality(db: D1Database, now: number): Promise<DataQuality> {
-  // Missing prices: parse stablecoins cache
-  let totalStablecoins = 0;
-  let missingPrices = 0;
-  try {
-    const cached = await getCache(db, "stablecoins");
-    if (cached) {
-      const data = JSON.parse(cached.value);
-      const assets = Array.isArray(data) ? data : data?.peggedAssets ?? [];
-      totalStablecoins = assets.length;
-      missingPrices = assets.filter(
-        (a: { price?: number | null }) => a.price == null || a.price === 0
-      ).length;
-    }
-  } catch (e) {
-    console.error("[status] Failed to parse stablecoins cache:", e);
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
+    console.warn(`[status] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
   }
+  const stablecoinAssets =
+    stablecoinsCacheResult.payload.peggedAssets as Array<{ id: string; price?: number; circulating?: Record<string, number> }>;
+  const stablecoinAssetMap = new Map(stablecoinAssets.map((asset) => [asset.id, asset]));
+
+  // Missing prices: parse stablecoins cache
+  const totalStablecoins = stablecoinAssets.length;
+  const missingPrices = stablecoinAssets.filter(
+    (asset: { price?: number | null }) => asset.price == null || asset.price === 0,
+  ).length;
 
   // Blacklist gaps
   let blacklistTotal = 0;
@@ -631,24 +628,16 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
         .all<{ stablecoin_id: string; total_supply: number }>();
 
       if (onchainRows.results && onchainRows.results.length > 0) {
-        const cached = await getCache(db, "stablecoins");
-        if (cached) {
-          const data = JSON.parse(cached.value);
-          const assets: Array<{ id: string; price?: number; circulating?: Record<string, number> }> =
-            Array.isArray(data) ? data : data?.peggedAssets ?? [];
-          const assetMap = new Map(assets.map((a) => [a.id, a]));
-
-          for (const row of onchainRows.results) {
-            const asset = assetMap.get(row.stablecoin_id);
-            if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
-            // DefiLlama circulating values are in USD.
-            const llamaValues = Object.values(asset.circulating);
-            const llamaTotal = llamaValues.reduce((s, v) => s + (v ?? 0), 0);
-            const llamaSupply = llamaTotal / asset.price;
-            if (llamaSupply > 0) {
-              const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
-              if (divergence > 0.05) onchainSupplyDivergences++;
-            }
+        for (const row of onchainRows.results) {
+          const asset = stablecoinAssetMap.get(row.stablecoin_id);
+          if (!asset?.price || asset.price <= 0 || !asset.circulating) continue;
+          // DefiLlama circulating values are in USD.
+          const llamaValues = Object.values(asset.circulating);
+          const llamaTotal = llamaValues.reduce((sum, value) => sum + (value ?? 0), 0);
+          const llamaSupply = llamaTotal / asset.price;
+          if (llamaSupply > 0) {
+            const divergence = Math.abs(row.total_supply - llamaSupply) / llamaSupply;
+            if (divergence > 0.05) onchainSupplyDivergences++;
           }
         }
       }

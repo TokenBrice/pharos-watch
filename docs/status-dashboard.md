@@ -66,6 +66,8 @@ Source: `worker/src/api/status.ts`
 - Last run status is `degraded` (warning-only fallback mode), or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window
 
+For `sync-dex-liquidity`, `degraded` now explicitly captures non-fatal upstream degradation (critical source-family failures or near-guard coverage drops), with machine-readable metadata (`failedSources`, `fallbackMode`, `sourceCoverage`).
+
 ### Availability status
 
 Computed from cache staleness + cron error state:
@@ -100,6 +102,11 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
   - `onchainStaleRatio >= 0.1`
   - `onchainDivergenceRatio >= 0.1`
 - else `healthy`
+
+Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-config.ts`:
+- major symbols: `USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`
+- warning threshold: `6h`
+- critical threshold: `24h`
 
 ### Overall status
 
@@ -183,8 +190,8 @@ Mutating admin paths are protected by method guardrails:
 | File | Role |
 |------|------|
 | `src/app/status/client.tsx` | Status UI (banner, cron cards, cache table, probe grid, circuit table, action dialog) |
-| `src/hooks/use-status.ts` | 60s polling for `/api/status` with admin key auth |
-| `src/hooks/use-endpoint-probes.ts` | 60s endpoint probe loop + group definitions |
+| `src/hooks/use-status.ts` | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth |
+| `src/hooks/use-endpoint-probes.ts` | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions |
 | `src/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |
 | `worker/src/api/status.ts` | Raw status synthesis + effective state response |
 | `worker/src/api/status-history.ts` | Machine-readable status timeline/history endpoint |

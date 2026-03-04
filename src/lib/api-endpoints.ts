@@ -9,12 +9,13 @@ interface EndpointStatusPageActionConfig {
   path?: string;
 }
 
-interface EndpointDefinition {
+export interface EndpointDefinition {
   path: string;
   methods: readonly EndpointMethod[];
   adminRequired: boolean;
   mutatingAdmin: boolean;
   cacheBypass: boolean;
+  routerHandled?: boolean;
   probeGroup?: EndpointProbeGroup;
   probePath?: string;
   statusPageAction?: EndpointStatusPageActionConfig;
@@ -28,7 +29,7 @@ export interface StatusPageAction {
   method: EndpointMethod;
 }
 
-const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
+export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   // Public endpoints probed by the status dashboard.
   {
     path: "/api/stablecoins",
@@ -226,6 +227,7 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
+    routerHandled: false,
     probeGroup: "manual",
     statusPageAction: {
       label: "Trigger Digest",
@@ -239,6 +241,7 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
+    routerHandled: false,
     probeGroup: "manual",
     statusPageAction: {
       label: "Reset Blacklist Sync",
@@ -253,6 +256,7 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: false,
+    routerHandled: false,
     probeGroup: "admin",
     statusPageAction: {
       label: "Debug Sync State",
