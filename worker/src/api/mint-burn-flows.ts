@@ -405,7 +405,8 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       band: gaugeBand?.label ?? null,
       flightToQuality: ftq.active,
       flightIntensity: ftq.intensity,
-      trackedCoins: MINT_BURN_CONFIGS.length,
+      // Use deduped stablecoin count (configs can include multiple contracts/chains per coin).
+      trackedCoins: coins.length,
       trackedMcapUsd,
     },
     coins,

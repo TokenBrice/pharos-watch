@@ -9,8 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { useMintBurnFlows, useMintBurnFlowsCoin } from "@/hooks/use-mint-burn-flows";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
+import { getMintBurnSummaryTimeframe, getNetFlowForHours } from "@/lib/mint-burn-timeframes";
 import { GAUGE_BANDS } from "@/components/flow-gauge";
 
 function getBandForScore(score: number): string {
@@ -62,17 +63,55 @@ function SummarySkeleton() {
 // ---------------------------------------------------------------------------
 
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
+  const timeframe = getMintBurnSummaryTimeframe(stablecoinId);
+  const needsCustomShortWindow = timeframe.shortHours !== 24;
+  const needsCustomLongWindow = timeframe.longHours !== 7 * 24;
+  const shouldFetchLongWindow = needsCustomLongWindow && timeframe.longHours !== timeframe.shortHours;
+
   // Use aggregate endpoint (no stablecoin param) — per-coin endpoint returns a
   // different response shape without the `coins` array.
   const { data, isLoading } = useMintBurnFlows();
+  const { data: shortWindowData, isLoading: isShortWindowLoading } = useMintBurnFlowsCoin(
+    stablecoinId,
+    timeframe.shortHours,
+    { enabled: needsCustomShortWindow },
+  );
+  const { data: longWindowData, isLoading: isLongWindowLoading } = useMintBurnFlowsCoin(
+    stablecoinId,
+    timeframe.longHours,
+    { enabled: shouldFetchLongWindow },
+  );
 
-  if (isLoading) return <SummarySkeleton />;
+  if (
+    isLoading
+    || (needsCustomShortWindow && isShortWindowLoading)
+    || (shouldFetchLongWindow && isLongWindowLoading)
+  ) {
+    return <SummarySkeleton />;
+  }
 
   // Return nothing if there's no data for this coin
   if (!data?.coins) return null;
 
   const coin = data.coins.find((c) => c.stablecoinId === stablecoinId);
   if (!coin) return null;
+
+  const shortNetFlow = needsCustomShortWindow
+    ? (shortWindowData?.netFlowUsd ?? getNetFlowForHours(coin, timeframe.shortHours) ?? Number.NaN)
+    : coin.netFlow24hUsd;
+  const longNetFlow = needsCustomLongWindow
+    ? (
+      shouldFetchLongWindow
+        ? (longWindowData?.netFlowUsd ?? getNetFlowForHours(coin, timeframe.longHours) ?? Number.NaN)
+        : shortNetFlow
+    )
+    : coin.netFlow7dUsd;
+  const shortMintVolume = needsCustomShortWindow
+    ? (shortWindowData?.mintVolumeUsd ?? Number.NaN)
+    : coin.mintVolume24hUsd;
+  const shortBurnVolume = needsCustomShortWindow
+    ? (shortWindowData?.burnVolumeUsd ?? Number.NaN)
+    : coin.burnVolume24hUsd;
 
   const intensity = coin.flowIntensity;
   const bandKey = intensity != null ? getBandForScore(intensity) : null;
@@ -117,15 +156,15 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         {/* Net flows */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-0.5">
-            <p className="text-xs text-muted-foreground">Net 24h</p>
-            <p className={`font-mono tabular-nums text-sm font-semibold ${getNetColor(coin.netFlow24hUsd)}`}>
-              {getNetPrefix(coin.netFlow24hUsd)}{formatCurrency(coin.netFlow24hUsd)}
+            <p className="text-xs text-muted-foreground">Net {timeframe.shortLabel}</p>
+            <p className={`font-mono tabular-nums text-sm font-semibold ${getNetColor(shortNetFlow)}`}>
+              {getNetPrefix(shortNetFlow)}{formatCurrency(shortNetFlow)}
             </p>
           </div>
           <div className="space-y-0.5">
-            <p className="text-xs text-muted-foreground">Net 7d</p>
-            <p className={`font-mono tabular-nums text-sm font-semibold ${getNetColor(coin.netFlow7dUsd)}`}>
-              {getNetPrefix(coin.netFlow7dUsd)}{formatCurrency(coin.netFlow7dUsd)}
+            <p className="text-xs text-muted-foreground">Net {timeframe.longLabel}</p>
+            <p className={`font-mono tabular-nums text-sm font-semibold ${getNetColor(longNetFlow)}`}>
+              {getNetPrefix(longNetFlow)}{formatCurrency(longNetFlow)}
             </p>
           </div>
         </div>
@@ -133,15 +172,15 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         {/* Mint / Burn volume breakdown */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-0.5">
-            <p className="text-xs text-muted-foreground">Minted 24h</p>
+            <p className="text-xs text-muted-foreground">Minted {timeframe.shortLabel}</p>
             <p className="font-mono tabular-nums text-sm text-emerald-500">
-              {formatCurrency(coin.mintVolume24hUsd)}
+              {formatCurrency(shortMintVolume)}
             </p>
           </div>
           <div className="space-y-0.5">
-            <p className="text-xs text-muted-foreground">Burned 24h</p>
+            <p className="text-xs text-muted-foreground">Burned {timeframe.shortLabel}</p>
             <p className="font-mono tabular-nums text-sm text-red-500">
-              {formatCurrency(coin.burnVolume24hUsd)}
+              {formatCurrency(shortBurnVolume)}
             </p>
           </div>
         </div>

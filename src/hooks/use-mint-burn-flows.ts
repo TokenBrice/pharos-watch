@@ -21,14 +21,18 @@ export function useMintBurnFlows(hours = 24) {
 }
 
 /** Per-coin flows — returns flat object with chains[], hourly[]. Requires stablecoinId. */
-export function useMintBurnFlowsCoin(stablecoinId: string, hours = 24) {
+export function useMintBurnFlowsCoin(
+  stablecoinId: string,
+  hours = 24,
+  opts?: { enabled?: boolean },
+) {
   const params = new URLSearchParams({ stablecoin: stablecoinId });
   if (hours !== 24) params.set("hours", hours.toString());
   return useApiQuery<MintBurnPerCoinResponse>(
     ["mint-burn-flows", stablecoinId, hours],
     `/api/mint-burn-flows?${params}`,
     CRON_20MIN,
-    { enabled: !!stablecoinId, schema: MintBurnPerCoinResponseSchema },
+    { enabled: !!stablecoinId && (opts?.enabled ?? true), schema: MintBurnPerCoinResponseSchema },
   );
 }
 
