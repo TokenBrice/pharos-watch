@@ -28,7 +28,7 @@ describe("api endpoint registry", () => {
       "/api/stability-index",
       "/api/report-cards",
       "/api/mint-burn-flows",
-      "/api/mint-burn-events",
+      "/api/mint-burn-events?stablecoin=1",
       "/api/stress-signals",
     ]);
 

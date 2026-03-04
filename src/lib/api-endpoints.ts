@@ -193,6 +193,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
+    probePath: "/api/mint-burn-events?stablecoin=1",
   },
   {
     path: "/api/stress-signals",

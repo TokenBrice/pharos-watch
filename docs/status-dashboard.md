@@ -162,6 +162,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Probe timeout: 5s per endpoint
 - Parallel probing with `Promise.all`
 - Admin probe paths include `X-Admin-Key`
+- Parameterized routes probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=1`) to avoid expected `400` validation responses.
 - Returned result shape: `{ path, status, latencyMs, error? }`
 
 Manual actions are rendered from `getStatusPageActions()` and executed only on user confirmation.
