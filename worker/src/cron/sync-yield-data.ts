@@ -1,7 +1,7 @@
 // worker/src/cron/sync-yield-data.ts
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, setCache, batchExecute, getFirstSeenDates } from "../lib/db";
+import { getCache, setCache, batchExecute } from "../lib/db";
 import {
   USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
   PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE, MIN_SAFETY_SCORE_FOR_YIELD,
@@ -19,16 +19,10 @@ import {
   LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS,
   AUTO_LENDING_POOL_MAP, AUTO_LENDING_SAFETY_BYPASS_IDS,
 } from "./yield-config";
-import {
-  computeOverallGrade, isBlacklistable, scoreDecentralization, scoreDependencyRisk,
-  scoreLiquidity, scorePegStability, scoreResilience,
-} from "../../../src/lib/report-cards";
-import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
-import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
-import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
-import { YieldRankingsResponseSchema, type AltYieldSource, type StablecoinData, type PegSummaryCoin, type DexLiquidityData } from "../../../src/lib/types";
+import { YieldRankingsResponseSchema, type AltYieldSource } from "../../../src/lib/types";
 import type { CronResult } from "../lib/db";
 import { validatePayloadWithSchema } from "../lib/api-utils";
+import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
 
@@ -128,6 +122,7 @@ async function getPriceDerivedApy(
 
 export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
+  const sevenDaysAgoSec = startSec - 7 * 86400;
   const yieldCoins = TRACKED_STABLECOINS.filter((m) => m.flags.yieldBearing);
 
   if (yieldCoins.length === 0) {
@@ -175,7 +170,11 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
   // 4. Compute safety scores inline (report-cards API does NOT cache results)
   //    Follows the same two-phase approach as daily-digest.ts
-  const safetyScores = await computeSafetyScores(db);
+  const safetySnapshot = await computeSafetyScoresSnapshot(db, {
+    includeNavTokens: true,
+    outputMode: "map",
+  });
+  const safetyScores = safetySnapshot.scores;
 
   // Cache safety scores for other consumers (flow API, digest, etc.)
   const scoresObj: Record<string, { score: number; grade: string }> = {};
@@ -190,6 +189,34 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   // 5. Resolve yield for each coin
   const resolved: { id: string; symbol: string; yield: ResolvedYield | null }[] = [];
   const tier1PrevRates = new Map<string, number | null>();
+  const tier1CandidateIds = yieldCoins
+    .map((meta) => meta.id)
+    .filter((id) =>
+      ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id) &&
+      onChainRates.has(id),
+    );
+  const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
+  if (tier1CandidateIds.length > 0) {
+    const placeholders = tier1CandidateIds.map(() => "?").join(",");
+    const rows = await db.prepare(
+      `SELECT stablecoin_id, exchange_rate, recorded_at
+       FROM yield_history
+       WHERE stablecoin_id IN (${placeholders}) AND recorded_at <= ?
+       ORDER BY stablecoin_id ASC, recorded_at DESC`,
+    ).bind(...tier1CandidateIds, sevenDaysAgoSec).all<{
+      stablecoin_id: string;
+      exchange_rate: number | null;
+      recorded_at: number;
+    }>();
+    for (const row of rows.results ?? []) {
+      if (!tier1PrevRateRows.has(row.stablecoin_id)) {
+        tier1PrevRateRows.set(row.stablecoin_id, {
+          exchangeRate: row.exchange_rate,
+          recordedAt: row.recorded_at,
+        });
+      }
+    }
+  }
 
   for (const meta of yieldCoins) {
     const id = meta.id;
@@ -200,15 +227,12 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     const rateConfig = ON_CHAIN_RATE_CONFIGS.find((c) => c.stablecoinId === id);
     if (rateConfig && onChainRates.has(id)) {
       const { rate } = onChainRates.get(id)!;
-      // Need previous rate from yield_history
-      const prevRow = await db.prepare(
-        "SELECT exchange_rate, recorded_at FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? ORDER BY recorded_at DESC LIMIT 1"
-      ).bind(id, startSec - 7 * 86400).first<{ exchange_rate: number | null; recorded_at: number }>();
-      tier1PrevRates.set(id, prevRow?.exchange_rate ?? null);
+      const prevRow = tier1PrevRateRows.get(id);
+      tier1PrevRates.set(id, prevRow?.exchangeRate ?? null);
 
-      if (prevRow?.exchange_rate && prevRow.exchange_rate > 0) {
-        const actualDays = (startSec - prevRow.recorded_at) / 86400;
-        const apy = computeApyFromRate(rate, prevRow.exchange_rate, actualDays);
+      if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
+        const actualDays = (startSec - prevRow.recordedAt) / 86400;
+        const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
         // Populate sourcePool from YIELD_POOL_MAP so source_key is a stable UUID.
         const nativePoolId = YIELD_POOL_MAP[id] ?? null;
         resolved.push({
@@ -402,14 +426,48 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       : (resolvedApys[resolvedApys.length / 2 - 1] + resolvedApys[resolvedApys.length / 2]) / 2
     : 0;
 
-  // Pre-fetch previous TVLs (at least 7 days ago) for warning signal detection
+  const resolvedIds = [...new Set(
+    resolved
+      .filter((entry) => entry.yield != null)
+      .map((entry) => entry.id),
+  )];
+  const historyById = new Map<string, Array<{ apy: number; recorded_at: number; source_tvl_usd: number | null }>>();
   const prevTvlMap = new Map<string, number | null>();
-  for (const { id, yield: y } of resolved) {
-    if (!y) continue;
-    const prevTvlRow = await db.prepare(
-      "SELECT source_tvl_usd FROM yield_history WHERE stablecoin_id = ? AND recorded_at <= ? AND source_tvl_usd IS NOT NULL ORDER BY recorded_at DESC LIMIT 1"
-    ).bind(id, startSec - 7 * 86400).first<{ source_tvl_usd: number | null }>();
-    prevTvlMap.set(id, prevTvlRow?.source_tvl_usd ?? null);
+  if (resolvedIds.length > 0) {
+    const placeholders = resolvedIds.map(() => "?").join(",");
+    const [historyRows, prevTvlRows] = await Promise.all([
+      db.prepare(
+        `SELECT stablecoin_id, apy, recorded_at, source_tvl_usd
+         FROM yield_history
+         WHERE stablecoin_id IN (${placeholders}) AND recorded_at >= ?
+         ORDER BY stablecoin_id ASC, recorded_at ASC`,
+      ).bind(...resolvedIds, startSec - 30 * 86400).all<{
+        stablecoin_id: string;
+        apy: number;
+        recorded_at: number;
+        source_tvl_usd: number | null;
+      }>(),
+      db.prepare(
+        `SELECT stablecoin_id, source_tvl_usd, recorded_at
+         FROM yield_history
+         WHERE stablecoin_id IN (${placeholders}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
+         ORDER BY stablecoin_id ASC, recorded_at DESC`,
+      ).bind(...resolvedIds, sevenDaysAgoSec).all<{
+        stablecoin_id: string;
+        source_tvl_usd: number | null;
+        recorded_at: number;
+      }>(),
+    ]);
+    for (const row of historyRows.results ?? []) {
+      const list = historyById.get(row.stablecoin_id) ?? [];
+      list.push({ apy: row.apy, recorded_at: row.recorded_at, source_tvl_usd: row.source_tvl_usd });
+      historyById.set(row.stablecoin_id, list);
+    }
+    for (const row of prevTvlRows.results ?? []) {
+      if (!prevTvlMap.has(row.stablecoin_id)) {
+        prevTvlMap.set(row.stablecoin_id, row.source_tvl_usd ?? null);
+      }
+    }
   }
 
   for (const { id, symbol, yield: y } of resolved) {
@@ -429,17 +487,13 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     const isBest = bestSourceKeyByCoin.get(id) === y.sourceKey ? 1 : 0;
 
     // Load historical APY samples for trailing averages
-    const histRows = await db.prepare(
-      "SELECT apy, recorded_at, source_tvl_usd FROM yield_history WHERE stablecoin_id = ? AND recorded_at >= ? ORDER BY recorded_at ASC"
-    ).bind(id, startSec - 30 * 86400).all<{ apy: number; recorded_at: number; source_tvl_usd: number | null }>();
-
-    const samples = (histRows.results ?? []).map((r) => r.apy);
+    const histRows = historyById.get(id) ?? [];
+    const samples = histRows.map((row) => row.apy);
     samples.push(y.currentApy);
 
-    const sevenDaysAgo = startSec - 7 * 86400;
-    const apy7dSamples = (histRows.results ?? [])
-      .filter((r) => r.recorded_at >= sevenDaysAgo)
-      .map((r) => r.apy);
+    const apy7dSamples = histRows
+      .filter((row) => row.recorded_at >= sevenDaysAgoSec)
+      .map((row) => row.apy);
     apy7dSamples.push(y.currentApy);
     const apy7d = apy7dSamples.reduce((s, v) => s + v, 0) / apy7dSamples.length;
     const apy30d = samples.reduce((s, v) => s + v, 0) / samples.length;
@@ -580,145 +634,6 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
 // -- Helpers -----------------------------------------------------------------
 
-/**
- * Compute safety scores inline -- report-cards API handler does NOT cache results,
- * so we must compute them ourselves (same approach as daily-digest.ts lines 426-558).
- */
-interface SafetyResult { score: number; grade: string }
-async function computeSafetyScores(db: D1Database): Promise<Map<string, SafetyResult>> {
-  const scores = new Map<string, SafetyResult>();
-
-  try {
-    // Load stablecoins cache (for price data / peg types)
-    const stablecoinsCache = await getCache(db, "stablecoins");
-    let peggedAssets: StablecoinData[] = [];
-    if (stablecoinsCache) {
-      const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-      peggedAssets = parsed.peggedAssets;
-    }
-    const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-
-    // Load depeg events (4-year window) + dex liquidity + first-seen dates
-    const nowSec = Math.floor(Date.now() / 1000);
-    const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
-    const [eventsResult, dexLiqResult, firstSeenMap] = await Promise.all([
-      db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
-        .bind(fourYearsAgoSec)
-        .all<DepegRow>(),
-      db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
-        .all<{ stablecoin_id: string; liquidity_score: number | null; concentration_hhi: number | null; pool_count: number; chain_count: number }>(),
-      getFirstSeenDates(db),
-    ]);
-
-    // Build depeg event lookup using rowToDepegEvent for proper typing
-    const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
-    const eventsByCoin = new Map<string, typeof allEvents>();
-    for (const e of allEvents) {
-      const list = eventsByCoin.get(e.stablecoinId) ?? [];
-      list.push(e);
-      eventsByCoin.set(e.stablecoinId, list);
-    }
-
-    // Build dex liquidity lookup
-    const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
-    for (const row of dexLiqResult.results ?? []) {
-      dexLiqMap[row.stablecoin_id] = {
-        liquidityScore: row.liquidity_score,
-        concentrationHhi: row.concentration_hhi,
-        poolCount: row.pool_count,
-        chainCount: row.chain_count,
-      };
-    }
-
-    const overallScores = new Map<string, number>();
-
-    const blacklistableIds: ReadonlySet<string> = new Set(
-      TRACKED_STABLECOINS
-        .filter(m => isBlacklistable(m) === true)
-        .map(m => m.id)
-    );
-    const methodologyVersion = getDepegDewsMethodologyVersionAt(nowSec);
-
-    // Phase 1: non-dependent coins
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.governance === "centralized-dependent") continue;
-
-      const asset = priceById.get(meta.id);
-      const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
-      const scoreResult = computePegScore(events, trackingStart, nowSec);
-
-      const pegData: PegSummaryCoin = {
-        id: meta.id, symbol: meta.symbol, name: meta.name,
-        pegType: asset?.pegType ?? "", pegCurrency: meta.flags.pegCurrency,
-        governance: meta.flags.governance,
-        currentDeviationBps: null, pegScore: scoreResult.pegScore,
-        pegPct: scoreResult.pegPct, severityScore: scoreResult.severityScore,
-        spreadPenalty: scoreResult.spreadPenalty, eventCount: scoreResult.eventCount,
-        worstDeviationBps: scoreResult.worstDeviationBps,
-        activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
-        trackingSpanDays: scoreResult.trackingSpanDays,
-        methodologyVersion,
-      };
-
-      const canBl = isBlacklistable(meta, blacklistableIds);
-      const dims = {
-        pegStability: scorePegStability(pegData, meta),
-        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
-        resilience: scoreResilience(meta, canBl),
-        decentralization: scoreDecentralization(meta.flags.governance, meta),
-        dependencyRisk: scoreDependencyRisk(meta, overallScores),
-      };
-      const overall = computeOverallGrade(dims, { navToken: !!meta.flags.navToken });
-      if (overall.score !== null) {
-        overallScores.set(meta.id, overall.score);
-        scores.set(meta.id, { score: overall.score, grade: overall.grade });
-      }
-    }
-
-    // Phase 2: dependent coins (need parent scores computed first)
-    for (const meta of TRACKED_STABLECOINS) {
-      if (meta.flags.governance !== "centralized-dependent") continue;
-
-      const asset = priceById.get(meta.id);
-      const events = eventsByCoin.get(meta.id) ?? [];
-      const trackingStart = coinTrackingStart(events, fourYearsAgoSec, firstSeenMap.get(meta.id));
-      const scoreResult = computePegScore(events, trackingStart, nowSec);
-
-      const pegData: PegSummaryCoin = {
-        id: meta.id, symbol: meta.symbol, name: meta.name,
-        pegType: asset?.pegType ?? "", pegCurrency: meta.flags.pegCurrency,
-        governance: meta.flags.governance,
-        currentDeviationBps: null, pegScore: scoreResult.pegScore,
-        pegPct: scoreResult.pegPct, severityScore: scoreResult.severityScore,
-        spreadPenalty: scoreResult.spreadPenalty, eventCount: scoreResult.eventCount,
-        worstDeviationBps: scoreResult.worstDeviationBps,
-        activeDepeg: scoreResult.activeDepeg, lastEventAt: scoreResult.lastEventAt,
-        trackingSpanDays: scoreResult.trackingSpanDays,
-        methodologyVersion,
-      };
-
-      const canBl = isBlacklistable(meta, blacklistableIds);
-      const dims = {
-        pegStability: scorePegStability(pegData, meta),
-        liquidity: scoreLiquidity(dexLiqMap[meta.id]),
-        resilience: scoreResilience(meta, canBl),
-        decentralization: scoreDecentralization(meta.flags.governance, meta),
-        dependencyRisk: scoreDependencyRisk(meta, overallScores),
-      };
-      const overall = computeOverallGrade(dims, { navToken: !!meta.flags.navToken });
-      if (overall.score !== null) {
-        overallScores.set(meta.id, overall.score);
-        scores.set(meta.id, { score: overall.score, grade: overall.grade });
-      }
-    }
-  } catch (err) {
-    console.warn("[yield] Safety score computation failed, using fallbacks:", err);
-  }
-
-  return scores;
-}
-
 function rowToRanking(row: Record<string, unknown>) {
   return {
     id: row.stablecoin_id,
@@ -742,7 +657,18 @@ function rowToRanking(row: Record<string, unknown>) {
     apyVariance30d: row.apy_variance_30d,
     apyMin30d: row.apy_min_30d,
     apyMax30d: row.apy_max_30d,
-    warningSignals: row.warning_signals ? JSON.parse(row.warning_signals as string) : [],
+    warningSignals: parseWarningSignals(row.warning_signals),
     altSources: [] as AltYieldSource[],
   };
+}
+
+function parseWarningSignals(raw: unknown): string[] {
+  if (typeof raw !== "string" || raw.trim() === "") return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((value): value is string => typeof value === "string");
+  } catch {
+    return [];
+  }
 }

@@ -14,6 +14,9 @@ const CRITICAL_FILES = [
   "worker/src/api/dex-liquidity.ts",
   "worker/src/api/stress-signals.ts",
   "worker/src/api/mint-burn-flows.ts",
+  "worker/src/lib/alerts.ts",
+  "worker/src/api/stablecoin-detail.ts",
+  "worker/src/cron/dex-liquidity/orchestrator.ts",
 ];
 
 function parseLcov(content) {

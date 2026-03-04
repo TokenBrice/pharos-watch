@@ -176,11 +176,13 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 |------|----------------|
 | `src/components/__tests__/dews-summary.test.ts` | DEWS radar tap/click interaction resolver logic |
 | `src/hooks/__tests__/use-url-filters.test.ts` | URL param state helpers and encoding rules |
+| `src/hooks/__tests__/query-polling-policy.test.ts` | Shared polling policy wiring (`staleTime`, `refetchInterval`, `retry`) for status-page hooks |
 
 ### Worker Library Tests (`worker/src/lib/__tests__/`)
 
 | File | Module Under Test | What It Covers |
 |------|-------------------|----------------|
+| `alerts.test.ts` | `worker/src/lib/alerts.ts` | Webhook transport semantics, non-2xx failure handling, return-value contract |
 | `api-utils.test.ts` | `worker/src/lib/api-utils.ts` | `parseIntParam`, `parseStablecoinHistoryQuery`, `jsonResponse`, `errorResponse`, `withErrorHandler`, `createCacheHandler` |
 | `mint-burn-scoring.test.ts` | `worker/src/lib/mint-burn-scoring.ts` | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand` |
 | `evm-logs.test.ts` | `worker/src/lib/evm-logs.ts` | `buildTopicParams`, `decodeAddress`, `decodeUint256`, `createBudget`, `budgetExhausted`, `createRateLimiter`, `fetchEvmLogsForTopics` |
@@ -188,6 +190,9 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `dews.test.ts` | `worker/src/lib/dews.ts` | `computeDEWS` — DEWS scoring, sub-signal computation, threat band assignment |
 | `circuit-breaker.test.ts` | `worker/src/lib/circuit-breaker.ts` | Circuit state machine: closed/open/half-open transitions, probe intervals, alerts |
 | `stability-index.test.ts` | `worker/src/lib/stability-index.ts` | PSI computation and component scoring |
+| `safety-scores.test.ts` | `worker/src/lib/safety-scores.ts` | Shared safety score snapshot helper parity modes (`map` vs `full-grades`) |
+| `peg-analytics.test.ts` | `worker/src/lib/peg-analytics.ts` | Shared peg analytics derivation (`eventsByCoin`, `pegDataById`) |
+| `stablecoins-cache.test.ts` | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient cache loading, malformed payloads, legacy array compatibility |
 | `cron-leases.test.ts` | `worker/src/lib/db.ts` | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease` |
 | `mint-burn-pipeline.test.ts` | `worker/src/lib/mint-burn-pipeline/*` | Shared ingestion helpers: inserted/ignored accounting, burn counters, affected-hour aggregation, sync-state upsert modes |
 
@@ -206,6 +211,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `dex-liquidity.test.ts` | `handleDexLiquidity` | 200 with liquidity map, empty map, v2 fields, X-Data-Age |
 | `peg-summary.test.ts` | `handlePegSummary` | 503 cache miss, 200 with coins + summary, X-Data-Age |
 | `report-cards.test.ts` | `handleReportCards` | 503 cache miss, 200 with cards/methodology/dependencyGraph |
+| `stablecoin-detail.test.ts` | `handleStablecoinDetail` | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics |
 | `daily-digest.test.ts` | `handleDailyDigest` | 200 with null digest, 200 with digest text, X-Data-Age |
 | `digest-archive.test.ts` | `handleDigestArchive` | 200 empty, 200 with digests, PSI/mcap from input_data, null input_data |
 | `digest-snapshot.test.ts` | `handleDigestSnapshot` | 400 missing/invalid date, 404 no digest, 200 with snapshot |
@@ -219,11 +225,15 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 | File | Cron Under Test | What It Covers |
 |------|-----------------|----------------|
+| `sync-stablecoins.test.ts` | `sync-stablecoins.ts` | Main/fallback validation guards, stale detection, depeg handoff, cache-write invariants |
+| `sync-stablecoins-stages.test.ts` | `sync-stablecoins/stages.ts` | Extracted pure stage helpers (structural filtering, chain normalization, staleness summary) |
 | `detect-depegs.test.ts` | `detect-depegs.ts` | Stable prices, depeg open/close/update, direction change, NAV skip, supply threshold, DEX cross-validation, duplicate merge |
+| `sync-dex-liquidity.test.ts` | `dex-liquidity/orchestrator.ts` | Catastrophic throw path, degraded status propagation, success path |
 | `enrich-prices.test.ts` | `enrich-prices.ts` | `isReasonablePrice` for all peg types (USD, EUR, JPY, IDR, GOLD, SILVER, etc.), FX-rate-aware bounds, `hasMissingPrice` edge cases |
 | `snapshot-supply.test.ts` | `snapshot-supply.ts` | Cache missing, stale cache (>1200s), valid insert for tracked assets, zero supply skip |
 | `yield-helpers.test.ts` | `yield-helpers.ts` | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool` |
 | `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for RUB/UAH/ARS |
+| `sync-yield-data.test.ts` | `sync-yield-data.ts` | Yield ranking sync, validation guard, fallback behavior and ranking parity |
 | `dex-liquidity-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | `parsePoolSymbols`, `classifyPoolType`, `getQualityMultiplier` |
 | `sync-mint-burn.test.ts` | `sync-mint-burn.ts` | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior |
 
@@ -241,8 +251,8 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 - **DOM-rendered React components** — no jsdom/happy-dom environment is configured. Full render tests would require adding one to `vitest.config.ts`.
 - **API/worker handlers (full integration)** — the D1 mock tests response shape, not SQL correctness. Full end-to-end worker testing would need a real D1 instance.
-- **TanStack Query hooks** — these are thin wrappers around fetch calls; testing them requires mocking the API layer.
-- **Complex cron orchestrators** — crons like `sync-dex-liquidity` have deep dependency chains. Test the pure helper functions they call, not the orchestrator itself. Integration-style tests mock `fetch` and D1 at the boundaries.
+- **React-rendering behavior inside hooks/components** — prefer pure derivation tests and mocked query tests unless there is high-value UI coupling.
+- **Full external-service integration for cron orchestrators** — orchestration tests should mock `fetch`/D1 boundaries and assert status/metadata contracts, not live upstream behavior.
 
 ### Degraded-mode testing convention
 
@@ -273,7 +283,7 @@ Run `npm test -- --coverage` to generate a detailed report. The V8 provider gene
 
 In addition to the global 55% line threshold, CI enforces a critical-path gate via `npm run coverage:critical`:
 
-- Runs coverage for the critical suites only (contract + invariant tests)
+- Runs coverage for critical suites only (contract + invariant + targeted reliability suites for alerts/detail/dex orchestrator)
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
 - For touched critical files, also enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
@@ -290,6 +300,9 @@ Current critical file set:
 - `worker/src/api/dex-liquidity.ts`
 - `worker/src/api/stress-signals.ts`
 - `worker/src/api/mint-burn-flows.ts`
+- `worker/src/lib/alerts.ts` *(explicit threshold: 80% lines)*
+- `worker/src/api/stablecoin-detail.ts` *(explicit threshold: 30% lines)*
+- `worker/src/cron/dex-liquidity/orchestrator.ts` *(explicit threshold: 55% lines)*
 
 ### Critical Test Suites
 

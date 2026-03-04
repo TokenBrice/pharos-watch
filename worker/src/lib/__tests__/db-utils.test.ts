@@ -5,12 +5,10 @@ import {
   getCache,
   getFirstSeenDates,
   getLastBlock,
-  getOnchainSupply,
   getPriceCache,
   savePriceCache,
   setCache,
   setCacheIfNewer,
-  upsertOnchainSupply,
 } from "../db";
 
 type CacheRow = { value: string; updated_at: number };
@@ -19,7 +17,6 @@ function makeDb(opts?: {
   cache?: Map<string, CacheRow>;
   lastBlocks?: Map<string, number>;
   priceRows?: Array<{ asset_id: string; price: number; updated_at: number }>;
-  onchainRows?: Array<{ stablecoin_id: string; chain: string; supply: number; updated_at: number }>;
   firstSeenRows?: Array<{ stablecoin_id: string; first_seen: number }>;
   setCacheIfNewerChanges?: number;
 }) {
@@ -51,9 +48,6 @@ function makeDb(opts?: {
       const allForSql = async <T>() => {
         if (sql.includes("SELECT asset_id, price, updated_at FROM price_cache")) {
           return { results: (opts?.priceRows ?? []) as T[], success: true, meta: {} };
-        }
-        if (sql.includes("SELECT stablecoin_id, chain, supply, updated_at FROM onchain_supply")) {
-          return { results: (opts?.onchainRows ?? []) as T[], success: true, meta: {} };
         }
         if (sql.includes("SELECT stablecoin_id, MIN(snapshot_date) as first_seen FROM supply_history")) {
           return { results: (opts?.firstSeenRows ?? []) as T[], success: true, meta: {} };
@@ -188,38 +182,25 @@ describe("db utility helpers", () => {
     expect(batchCalls).toHaveLength(0);
   });
 
-  it("batches price-cache and onchain-supply upserts and supports empty onchain fast-path", async () => {
+  it("batches price-cache upserts", async () => {
     const { db, batchCalls } = makeDb();
 
     await savePriceCache(db, [
       { id: "1", price: 1.0 },
       { id: "2", price: 0.9 },
     ]);
-    await upsertOnchainSupply(db, []);
-    await upsertOnchainSupply(db, [
-      { stablecoinId: "1", chain: "ethereum", supply: 1000 },
-    ]);
 
-    expect(batchCalls).toHaveLength(2);
+    expect(batchCalls).toHaveLength(1);
     expect(batchCalls[0]).toHaveLength(2);
-    expect(batchCalls[1]).toHaveLength(1);
   });
 
-  it("returns mapped onchain supply rows and first-seen date map", async () => {
+  it("returns first-seen date map", async () => {
     const { db } = makeDb({
-      onchainRows: [
-        { stablecoin_id: "1", chain: "ethereum", supply: 100, updated_at: 1700000000 },
-      ],
       firstSeenRows: [
         { stablecoin_id: "1", first_seen: 1690000000 },
         { stablecoin_id: "2", first_seen: 1680000000 },
       ],
     });
-
-    const onchain = await getOnchainSupply(db, 3600);
-    expect(onchain).toEqual([
-      { stablecoin_id: "1", chain: "ethereum", supply: 100, updated_at: 1700000000 },
-    ]);
 
     const firstSeen = await getFirstSeenDates(db);
     expect(firstSeen.get("1")).toBe(1690000000);

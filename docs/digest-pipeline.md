@@ -45,6 +45,8 @@ The cron assembles a `DigestInputData` object from 8 sources before calling the 
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
 | Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
 
+Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
+
 ### LLM call
 
 - **Model:** `claude-sonnet-4-6` via `https://api.anthropic.com/v1/messages`

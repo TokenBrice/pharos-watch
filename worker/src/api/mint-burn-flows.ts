@@ -8,6 +8,7 @@ import {
   detectFlightToQuality,
   getGaugeBand,
 } from "../lib/mint-burn-scoring";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
 
@@ -237,20 +238,14 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const gradeClassification = await getGradeBasedClassification(db);
 
     // Load stablecoins cache for mcap lookup
-    const stablecoinsCached = await getCache(db, "stablecoins");
     const mcapById = new Map<string, number>();
-    if (stablecoinsCached) {
-      try {
-        const { peggedAssets } = JSON.parse(stablecoinsCached.value) as {
-          peggedAssets: StablecoinData[];
-        };
-        for (const asset of peggedAssets) {
-          if (TRACKED_IDS.has(asset.id)) {
-            mcapById.set(asset.id, sumPegBuckets(asset.circulating));
-          }
-        }
-      } catch {
-        // Proceed without mcap data — gauge will be null
+    const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+    if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
+      console.warn(`[mint-burn-flows] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
+    }
+    for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
+      if (TRACKED_IDS.has(asset.id)) {
+        mcapById.set(asset.id, sumPegBuckets(asset.circulating));
       }
     }
     // Parallel queries: hourly data for window, 7d/30d/90d net sums, daily baseline rows,

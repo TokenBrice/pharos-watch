@@ -1,14 +1,10 @@
-import { getCache, getFirstSeenDates } from "../lib/db";
-import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
+import { getCache } from "../lib/db";
 import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
-import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { sumPegBuckets } from "../../../src/lib/supply";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { deriveDependencies } from "../../../src/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "../../../src/lib/dead-stablecoins";
-import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
+import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -27,7 +23,6 @@ import {
 import type {
   StablecoinData,
   StablecoinMeta,
-  DepegEvent,
   DexLiquidityData,
   BluechipRating,
   ReportCard,
@@ -96,78 +91,14 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     try { bluechipMap = JSON.parse(bluechipCached.value); } catch { /* fall back to empty */ }
   }
 
-  // 2. Load depeg events (4-year window) and first-seen dates
-  const fourYearsAgoSec = Math.floor(Date.now() / 1000) - Math.ceil(4 * 365.25 * 86400);
-
-  const [eventsResult, firstSeenMap] = await Promise.all([
-    db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
-      .bind(fourYearsAgoSec)
-      .all<DepegRow>(),
-    getFirstSeenDates(db),
-  ]);
-
-  const allEvents = (eventsResult.results ?? []).map(rowToDepegEvent);
-
-  // Group events by stablecoin ID
-  const eventsByCoins = new Map<string, DepegEvent[]>();
-  for (const e of allEvents) {
-    const list = eventsByCoins.get(e.stablecoinId) ?? [];
-    list.push(e);
-    eventsByCoins.set(e.stablecoinId, list);
-  }
-
-  // 3. Build lookup maps (priceById is used for peg summary below)
-  const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
-  const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-  const { rates: pegRates } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
-  const now = Math.floor(Date.now() / 1000);
-  const fourYearsAgo = now - 4 * 365.25 * 86400;
-  const methodologyVersion = getDepegDewsMethodologyVersionAt(stablecoinsCached.updatedAt);
-
-  // 4. Compute peg summary data per coin (same logic as peg-summary)
-  const pegDataById = new Map<string, PegSummaryCoin>();
-  for (const meta of TRACKED_STABLECOINS) {
-    if (meta.flags.navToken) continue;
-
-    const asset = priceById.get(meta.id);
-    const events = eventsByCoins.get(meta.id) ?? [];
-
-    // Current deviation
-    let currentBps: number | null = null;
-    if (asset?.price != null && typeof asset.price === "number" && !isNaN(asset.price)) {
-      const supply = asset.circulating ? sumPegBuckets(asset.circulating) : 0;
-      if (supply >= 1_000_000) {
-        const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
-        if (pegRef > 0) {
-          currentBps = Math.round(((asset.price / pegRef) - 1) * 10000);
-        }
-      }
-    }
-
-    // Peg score
-    const trackingStart = coinTrackingStart(events, fourYearsAgo, firstSeenMap.get(meta.id));
-    const scoreResult = computePegScore(events, trackingStart, now);
-
-    pegDataById.set(meta.id, {
-      id: meta.id,
-      symbol: meta.symbol,
-      name: meta.name,
-      pegType: asset?.pegType ?? "",
-      pegCurrency: meta.flags.pegCurrency,
-      governance: meta.flags.governance,
-      currentDeviationBps: currentBps,
-      pegScore: scoreResult.pegScore,
-      pegPct: scoreResult.pegPct,
-      severityScore: scoreResult.severityScore,
-      spreadPenalty: scoreResult.spreadPenalty,
-      eventCount: scoreResult.eventCount,
-      worstDeviationBps: scoreResult.worstDeviationBps,
-      activeDepeg: scoreResult.activeDepeg,
-      lastEventAt: scoreResult.lastEventAt,
-      trackingSpanDays: scoreResult.trackingSpanDays,
-      methodologyVersion,
-    });
-  }
+  // 2. Compute shared peg analytics snapshot
+  const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
+    peggedAssets,
+    fxFallbackRates,
+    methodologyAsOf: stablecoinsCached.updatedAt,
+    includeNavTokens: false,
+  });
+  const pegDataById = pegAnalytics.pegDataById;
 
   // Build first-order blacklistable index once. Uses isBlacklistable without
   // the index arg → only explicit overrides + centralized governance, no recursion.
@@ -177,7 +108,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
       .map(m => m.id)
   );
 
-  // 5. Score all coins in dependency order (upstream first)
+  // 3. Score all coins in dependency order (upstream first)
   const sortedMetas = topologicalOrder([...TRACKED_STABLECOINS]);
   const overallScores = new Map<string, number>();
   const liveCards: ReportCard[] = [];
@@ -190,7 +121,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     }
   }
 
-  // 6. Add cemetery coins as permanent F
+  // 4. Add cemetery coins as permanent F
   const defunctCards: ReportCard[] = DEAD_STABLECOINS.map((dead) => {
     const id = dead.llamaId ?? `dead-${dead.symbol.toLowerCase()}`;
     const nrDim = { grade: "F" as const, score: 0, detail: "Defunct stablecoin" };
@@ -225,7 +156,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     };
   });
 
-  // 7. Combine and sort by overall score descending (NR at bottom)
+  // 5. Combine and sort by overall score descending (NR at bottom)
   const allCards = [...liveCards, ...defunctCards];
   allCards.sort((a, b) => {
     // NR (null score) goes to bottom
@@ -235,7 +166,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     return b.overallScore - a.overallScore;
   });
 
-  // 8. Build dependency graph edge list
+  // 6. Build dependency graph edge list
   const edges: { from: string; to: string }[] = [];
   for (const meta of TRACKED_STABLECOINS) {
     for (const dep of deriveDependencies(meta)) {
@@ -243,7 +174,7 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     }
   }
 
-  // 9. Return ReportCardsResponse
+  // 7. Return ReportCardsResponse
   const response: ReportCardsResponse = {
     cards: allCards,
     methodology: {

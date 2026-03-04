@@ -4,6 +4,7 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { API_BASE } from "@/lib/api";
 import { getProbePaths } from "@/lib/api-endpoints";
 import type { EndpointProbeResult } from "@/lib/types";
+import { CRON_1MIN, createPollingQueryOptions } from "./use-api-query";
 
 /** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
@@ -60,13 +61,10 @@ async function probeEndpoint(
 export function useEndpointProbes(
   adminKey: string,
 ): UseQueryResult<EndpointProbeResult[], Error> {
-  return useQuery<EndpointProbeResult[], Error>({
-    queryKey: ["endpoint-probes", adminKey],
-    queryFn: () =>
-      Promise.all(ALL_ENDPOINTS.map((p) => probeEndpoint(p, adminKey))),
-    enabled: !!adminKey,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-    retry: 0,
-  });
+  return useQuery<EndpointProbeResult[], Error>(createPollingQueryOptions(
+    ["endpoint-probes", adminKey],
+    () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminKey))),
+    CRON_1MIN,
+    { enabled: !!adminKey, retry: 0 },
+  ));
 }

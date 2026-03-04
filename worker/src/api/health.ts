@@ -1,5 +1,10 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
+import {
+  MINT_BURN_MAJOR_SYMBOLS,
+  MINT_BURN_STALE_WARN_SEC,
+  MINT_BURN_STALE_CRIT_SEC,
+} from "../lib/mint-burn-health-config";
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
@@ -16,9 +21,6 @@ interface HealthResponse {
   };
   circuits: Record<string, CircuitRecord>;
 }
-
-const MINT_BURN_MAJOR_SYMBOLS = ["USDT", "USDC", "DAI", "USDS", "GHO", "FRXUSD", "BOLD", "reUSD"];
-const MINT_BURN_MAJOR_STALE_SEC = 6 * 3600;
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -82,11 +84,15 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
       }
 
       const staleMajorSymbols: string[] = [];
+      let criticalStaleCount = 0;
       for (const symbol of MINT_BURN_MAJOR_SYMBOLS) {
         const latest = latestBySymbol.get(symbol);
         const ageSec = latest == null ? Number.POSITIVE_INFINITY : now - latest;
-        if (ageSec >= MINT_BURN_MAJOR_STALE_SEC) {
+        if (ageSec >= MINT_BURN_STALE_WARN_SEC) {
           staleMajorSymbols.push(symbol);
+          if (ageSec >= MINT_BURN_STALE_CRIT_SEC) {
+            criticalStaleCount++;
+          }
         }
       }
 
@@ -99,6 +105,10 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         majorStaleCount: staleMajorSymbols.length,
         staleMajorSymbols,
       };
+
+      if (criticalStaleCount > 0 && worstRatioMut < 2.1) {
+        worstRatioMut = 2.1; // stale
+      }
     }
   } catch (err) {
     console.error("[health] Failed to query mint/burn counts:", err);

@@ -4,6 +4,13 @@
 
 `syncDexLiquidity()` in `worker/src/cron/dex-liquidity/orchestrator.ts` runs every 30 minutes (on the `10,40 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 6 components:
 
+Cron result status semantics:
+- `ok`: all required source families succeeded and coverage is within normal range.
+- `degraded`: one or more critical non-fatal source families failed (for example token-batch or pool-crawl paths), or coverage falls near the guardrail band.
+- throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
+
+Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
+
 | Component | Weight | Source | How Computed |
 |-----------|--------|--------|-------------|
 | **TVL Depth** | 30% | DeFiLlama Yields | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |

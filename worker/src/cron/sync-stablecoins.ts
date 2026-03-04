@@ -7,6 +7,13 @@ import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
+import {
+  applyTrackedAssetOverrides,
+  detectPriceStaleness,
+  fillMissingSupplyHistory,
+  filterStructurallyValidAssets,
+  normalizeChainCirculating,
+} from "./sync-stablecoins/stages";
 
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -617,10 +624,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   }
 
   // Structural validation: ensure assets have required fields
-  const validAssets = llamaData.peggedAssets.filter(
-    (a) => a.id != null && typeof a.name === "string" && typeof a.symbol === "string" && a.circulating != null
-  );
-  const droppedMalformedAssets = rawAssetCount - validAssets.length;
+  const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(llamaData.peggedAssets);
   if (validAssets.length < MIN_VALID_ASSET_COUNT) {
     console.error(`[sync-stablecoins] Only ${validAssets.length} valid assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`);
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
@@ -642,50 +646,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Normalize chainCirculating: DL returns peg-bucket objects ({peggedUSD: N})
   // for current/prev values — flatten to plain numbers so the frontend schema
   // and components can consume them directly.
-  const CC_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
-  for (const asset of llamaData.peggedAssets) {
-    const cc = asset.chainCirculating as Record<string, Record<string, unknown>> | undefined;
-    if (!cc || typeof cc !== "object") continue;
-    for (const chain of Object.keys(cc)) {
-      const entry = cc[chain];
-      if (!entry || typeof entry !== "object") continue;
-      for (const key of CC_KEYS) {
-        const val = entry[key];
-        if (val && typeof val === "object") {
-          entry[key] = Object.values(val as Record<string, number>)
-            .reduce((s: number, v: number) => s + (Number.isFinite(v) ? v : 0), 0);
-        }
-      }
-    }
-  }
+  normalizeChainCirculating(llamaData.peggedAssets);
 
   if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...silverTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
   }
 
-  // Always prefer our curated geckoId/cmcSlug over DefiLlama's — DL can have
-  // stale or wrong IDs (e.g. BOLD: DL returns "liquity-bold" which is Legacy BOLD,
-  // a different token; ours is "liquity-bold-2", the real Liquity v2 BOLD).
-  // Patch known missing contract addresses for Pass 1 resolution.
-  const ADDRESS_OVERRIDES: Record<string, string> = {
-    "213": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b", // M by M0 — no address in DL stablecoins API
-    "67": "arbitrum:0xBEA0005B8599265D41256905A9B3073D397812E4", // BEAN — no address in DL stablecoins API
-  };
-  for (const asset of llamaData.peggedAssets) {
-    const meta = TRACKED_META_BY_ID.get(String(asset.id));
-    if (meta?.geckoId) {
-      asset.geckoId = meta.geckoId;
-    }
-    if (meta?.cmcSlug) {
-      asset.cmcSlug = meta.cmcSlug;
-    }
-    if (meta?.flags?.navToken) {
-      asset.navToken = true;
-    }
-    if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
-      asset.address = ADDRESS_OVERRIDES[asset.id];
-    }
-  }
+  // Always prefer curated metadata over DefiLlama fields; includes known address patches.
+  applyTrackedAssetOverrides(llamaData.peggedAssets);
 
   // Load FX rates early for dynamic price bounds in isReasonablePrice
   let fxRates: Record<string, number> | undefined;
@@ -802,66 +770,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
 
   // --- Fill missing circulatingPrev* from supply_history snapshots ---
   try {
-    const nowMs = Date.now();
-    const utcMidnight = (daysAgo: number) => {
-      const d = new Date(nowMs);
-      d.setUTCDate(d.getUTCDate() - daysAgo);
-      return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000);
-    };
-    const date1d = utcMidnight(1);
-    const date7d = utcMidnight(7);
-    const date30d = utcMidnight(30);
-
-    const histRows = await db
-      .prepare(
-        "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE snapshot_date IN (?, ?, ?)"
-      )
-      .bind(date1d, date7d, date30d)
-      .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
-
-    if ((histRows.results ?? []).length > 0) {
-      const histMap = new Map<string, { day?: number; week?: number; month?: number }>();
-      for (const row of histRows.results ?? []) {
-        const entry = histMap.get(row.stablecoin_id) ?? {};
-        if (row.snapshot_date === date1d) entry.day = row.circulating_usd;
-        else if (row.snapshot_date === date7d) entry.week = row.circulating_usd;
-        else if (row.snapshot_date === date30d) entry.month = row.circulating_usd;
-        histMap.set(row.stablecoin_id, entry);
-      }
-
-      let fillCount = 0;
-      for (const asset of llamaData.peggedAssets) {
-        const hist = histMap.get(String(asset.id));
-        if (!hist) continue;
-
-        const circ = asset.circulating as Record<string, number> | undefined;
-        if (!circ) continue;
-        const pegKey = Object.keys(circ)[0];
-        if (!pegKey) continue;
-        const currentVal = circ[pegKey] ?? 0;
-
-        // Guard: skip historical values that diverge >30% from current circulating.
-        // Catches bad data (e.g. TVL-based backfill for tokens where TVL ≠ mcap).
-        const isReasonable = (v: number) =>
-          currentVal > 0 && Math.abs(v - currentVal) / currentVal <= 0.30;
-
-        if (asset.circulatingPrevDay == null && hist.day != null && isReasonable(hist.day)) {
-          asset.circulatingPrevDay = { [pegKey]: hist.day };
-          fillCount++;
-        }
-        if (asset.circulatingPrevWeek == null && hist.week != null && isReasonable(hist.week)) {
-          asset.circulatingPrevWeek = { [pegKey]: hist.week };
-          fillCount++;
-        }
-        if (asset.circulatingPrevMonth == null && hist.month != null && isReasonable(hist.month)) {
-          asset.circulatingPrevMonth = { [pegKey]: hist.month };
-          fillCount++;
-        }
-      }
-
-      if (fillCount > 0) {
-        console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
-      }
+    const fillCount = await fillMissingSupplyHistory(db, llamaData.peggedAssets);
+    if (fillCount > 0) {
+      console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
     }
   } catch (err) {
     console.warn("[sync-stablecoins] supply_history fallback failed:", err);
@@ -870,33 +781,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // --- Staleness detection: compare prices against previous cache ---
   let stalenessWarning = false;
   try {
-    const prevCache = await getCache(db, "stablecoins");
-    if (prevCache) {
-      const prevData = JSON.parse(prevCache.value) as { peggedAssets?: PeggedAsset[] };
-      if (prevData.peggedAssets) {
-        const prevPrices = new Map(
-          prevData.peggedAssets
-            .filter((a) => a.price != null && typeof a.price === "number" && a.price > 0)
-            .map((a) => [a.id, a.price as number])
-        );
-        let identical = 0;
-        let compared = 0;
-        for (const asset of llamaData.peggedAssets) {
-          const prevPrice = prevPrices.get(asset.id);
-          if (prevPrice == null || asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
-          compared++;
-          if (Math.abs(asset.price - prevPrice) / prevPrice < 0.0001) {
-            identical++;
-          }
-        }
-        if (compared >= 50 && identical / compared > 0.95) {
-          stalenessWarning = true;
-          console.warn(
-            `[sync-stablecoins] STALENESS WARNING: ${identical}/${compared} prices ` +
-            `(${(identical / compared * 100).toFixed(1)}%) are identical to previous cache — possible upstream stale data`
-          );
-        }
-      }
+    const staleness = await detectPriceStaleness(db, llamaData.peggedAssets);
+    if (staleness?.stale) {
+      stalenessWarning = true;
+      console.warn(
+        `[sync-stablecoins] STALENESS WARNING: ${staleness.identical}/${staleness.compared} prices ` +
+        `(${(staleness.identical / staleness.compared * 100).toFixed(1)}%) are identical to previous cache — possible upstream stale data`,
+      );
     }
   } catch (e) {
     console.warn("[sync-stablecoins] Staleness check failed:", e);

@@ -33,6 +33,9 @@ export async function syncDexLiquidity(
   const syncStartSec = Math.floor(Date.now() / 1000);
   initOnchainAvailability(cgApiKey ?? undefined);
   const useCg = isOnchainAvailable();
+  const failedSources: string[] = [];
+  const criticalSourceFailures: string[] = [];
+  const fallbackSignals: string[] = [];
   console.log(`[dex-liquidity] Starting sync`);
   console.log(`[dex-liquidity] Pool discovery source: ${useCg ? "CoinGecko onchain" : "GeckoTerminal fallback"}`);
   throwIfAborted(signal);
@@ -44,6 +47,14 @@ export async function syncDexLiquidity(
   }
   if (!dataSources.dlYieldsAvailable) {
     console.log("[dex-liquidity] DL yields unavailable — CG/GT pool crawl will be the only pool source");
+    failedSources.push("defillama-yields");
+    criticalSourceFailures.push("defillama-yields");
+    fallbackSignals.push("dl-yields-unavailable");
+  }
+  if (!dataSources.dlProtocolsAvailable) {
+    failedSources.push("defillama-protocols");
+    criticalSourceFailures.push("defillama-protocols");
+    fallbackSignals.push("dl-protocols-unavailable");
   }
 
   // 2. Build symbol/address lookup maps
@@ -72,6 +83,7 @@ export async function syncDexLiquidity(
   } catch (err) {
     rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
+    failedSources.push("aerodrome-subgraph");
   }
 
   // 4c. Build known pool address set from existing sources (for GT dedup)
@@ -89,6 +101,10 @@ export async function syncDexLiquidity(
   } catch (err) {
     rethrowIfAborted(err, signal);
     console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} token batch failed (non-fatal):`, err);
+    const source = useCg ? "coingecko-token-batch" : "geckoterminal-token-batch";
+    failedSources.push(source);
+    criticalSourceFailures.push(source);
+    fallbackSignals.push("token-batch-failed");
   }
 
   // 4e. Pool crawl for new pool discovery (CG or GT)
@@ -107,6 +123,10 @@ export async function syncDexLiquidity(
   } catch (err) {
     rethrowIfAborted(err, signal);
     console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} pool crawl failed (non-fatal):`, err);
+    const source = useCg ? "coingecko-pool-crawl" : "geckoterminal-pool-crawl";
+    failedSources.push(source);
+    criticalSourceFailures.push(source);
+    fallbackSignals.push("pool-crawl-failed");
   }
 
   // Merge all price observations into a single map
@@ -157,6 +177,7 @@ export async function syncDexLiquidity(
   } catch (err) {
     rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
+    failedSources.push("dexscreener-fallback");
   }
 
   // 5d. CoinGecko tickers fallback for orderbook DEXes (e.g. Kinesis Exchange for KAG/KAU)
@@ -171,6 +192,7 @@ export async function syncDexLiquidity(
   } catch (err) {
     rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
+    failedSources.push("coingecko-tickers-fallback");
   }
 
   // 6. Compute composite scores per stablecoin
@@ -182,6 +204,7 @@ export async function syncDexLiquidity(
     .catch(() => null);
   const previousCoverage = previousCoverageRow?.cnt ?? 0;
   const minExpectedCoverage = Math.max(1, Math.floor(previousCoverage * 0.6));
+  const nearCoverageGuard = previousCoverage >= 10 && currentCoverage < Math.floor(previousCoverage * 0.8);
   if (previousCoverage >= 10 && currentCoverage < minExpectedCoverage) {
     throw new Error(
       `[dex-liquidity] coverage guard tripped: current=${currentCoverage}, previous=${previousCoverage}, minExpected=${minExpectedCoverage}`,
@@ -199,7 +222,12 @@ export async function syncDexLiquidity(
   // 9. Compute and persist depth stability from 30-day history
   await computeDepthStability(db);
 
+  const degraded =
+    criticalSourceFailures.length > 0 ||
+    nearCoverageGuard;
+
   return {
+    status: degraded ? "degraded" : "ok",
     itemCount: scoreResults.size,
     metadata: JSON.stringify({
       rowsRead: dataSources.pools.length,
@@ -210,9 +238,15 @@ export async function syncDexLiquidity(
         dlProtocolsAvailable: dataSources.dlProtocolsAvailable,
         currentCoverage,
         previousCoverage,
+        minExpectedCoverage,
+        nearCoverageGuard,
         priceObservationCoins: priceObservations.size,
       },
-      fallbackMode: dataSources.dlYieldsAvailable ? null : (useCg ? "cg-crawl-primary" : "gt-crawl-primary"),
+      failedSources,
+      fallbackMode: [
+        dataSources.dlYieldsAvailable ? null : (useCg ? "cg-crawl-primary" : "gt-crawl-primary"),
+        ...fallbackSignals,
+      ].filter(Boolean),
       validationFailures: 0,
     }),
   };

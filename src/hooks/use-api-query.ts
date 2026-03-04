@@ -7,11 +7,34 @@ import type { ZodType } from "zod";
 import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
 
 /** Cron interval constants — staleTime = cron interval, refetchInterval = 2x. */
+export const CRON_1MIN = 60_000;
 export const CRON_15MIN = 15 * 60_000;
 export const CRON_20MIN = 20 * 60_000;
 export const CRON_30MIN = 30 * 60_000;
 export const CRON_1H = 60 * 60_000;
 export const CRON_24H = 24 * 60 * 60_000;
+const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
+
+export function createPollingQueryOptions<T>(
+  key: readonly unknown[],
+  queryFn: () => Promise<T>,
+  cronInterval: number,
+  opts?: {
+    enabled?: boolean;
+    retry?: number | boolean;
+    retryDelay?: (attempt: number) => number;
+  },
+) {
+  return {
+    queryKey: key,
+    queryFn,
+    staleTime: cronInterval,
+    refetchInterval: 2 * cronInterval,
+    retry: opts?.retry ?? 2,
+    retryDelay: opts?.retryDelay ?? DEFAULT_RETRY_DELAY,
+    enabled: opts?.enabled,
+  };
+}
 
 /**
  * Generic TanStack Query hook for API endpoints.
@@ -24,15 +47,12 @@ export function useApiQuery<T>(
   cronInterval: number,
   opts?: { enabled?: boolean; schema?: ZodType<T> }
 ): UseQueryResult<T, Error> {
-  return useQuery<T, Error>({
-    queryKey: key,
-    queryFn: () => apiFetch<T>(path, opts?.schema),
-    staleTime: cronInterval,
-    refetchInterval: 2 * cronInterval,
-    retry: 2,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
-    enabled: opts?.enabled,
-  });
+  return useQuery<T, Error>(createPollingQueryOptions(
+    key,
+    () => apiFetch<T>(path, opts?.schema),
+    cronInterval,
+    { enabled: opts?.enabled },
+  ));
 }
 
 /**
@@ -45,15 +65,12 @@ export function useApiQueryWithMeta<T>(
   cronInterval: number,
   opts?: { enabled?: boolean; schema?: ZodType<T> }
 ): UseQueryResult<{ data: T; meta: ApiMeta | null }, Error> {
-  return useQuery<{ data: T; meta: ApiMeta | null }, Error>({
-    queryKey: key,
-    queryFn: () => apiFetchWithMeta<T>(path, opts?.schema),
-    staleTime: cronInterval,
-    refetchInterval: 2 * cronInterval,
-    retry: 2,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000),
-    enabled: opts?.enabled,
-  });
+  return useQuery<{ data: T; meta: ApiMeta | null }, Error>(createPollingQueryOptions(
+    key,
+    () => apiFetchWithMeta<T>(path, opts?.schema),
+    cronInterval,
+    { enabled: opts?.enabled },
+  ));
 }
 
 /**
