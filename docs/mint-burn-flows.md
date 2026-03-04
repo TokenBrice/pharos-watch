@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **56 contract configs** across **49 symbols** (48 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **86 contract configs** across **77 symbols** (78 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -103,6 +103,36 @@ Current scope: **56 contract configs** across **49 symbols** (48 standard ERC-20
 | MNEE | 284 | 18 | Extended | Transfer |
 | TBILL | 257 | 6 | Extended | Transfer |
 | FPI | 66 | 18 | Extended | Transfer |
+| USDO | 241 | 18 | Extended | Transfer |
+| EURCV | 254 | 18 | Extended | Transfer |
+| AEUR | 147 | 18 | Extended | Transfer |
+| USDQ | 275 | 6 | Extended | Transfer |
+| REUSD | 256 | 18 | Extended | Transfer |
+| EURI | 325 | 18 | Extended | Transfer |
+| GUSD | 19 | 2 | Extended | Transfer |
+| USDP | 11 | 18 | Extended | Transfer |
+| USDX | 263 | 18 | Extended | Transfer |
+| XUSD | 290 | 6 | Extended | Transfer |
+| MUSD | 313 | 6 | Extended | Transfer |
+| YUSD | 255 | 18 | Extended | Transfer |
+| SUSD | 22 | 18 | Extended | Transfer |
+| LUSD | 8 | 18 | Extended | Transfer |
+| MIM | 10 | 18 | Extended | Transfer |
+| USDCV | 307 | 18 | Extended | Transfer |
+| ZeUSD | 225 | 6 | Extended | Transfer |
+| EURE | 101 | 18 | Extended | Transfer |
+| USN | 230 | 18 | Extended | Transfer |
+| GYD | 185 | 18 | Extended | Transfer |
+| EUSD | 106 | 18 | Extended | Transfer |
+| EURA | 55 | 18 | Extended | Transfer |
+| meUSD | 303 | 18 | Extended | Transfer |
+| EURS | 51 | 2 | Extended | Transfer |
+| MSUSD | 326 | 18 | Extended | Transfer |
+| NUSD | 346 | 18 | Extended | Transfer |
+| USAT | 343 | 6 | Extended | Transfer |
+| ALUSD | 20 | 18 | Extended | Transfer |
+| FIDD | 348 | 18 | Extended | Transfer |
+| MSUSD | 297 | 18 | Extended | Transfer |
 | reUSD | 339 | 6/18 | Risky | Deposited + InstantRedemptionProcessed (8 configs across Ethereum/Arbitrum/Base/Avalanche) |
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.

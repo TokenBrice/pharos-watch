@@ -157,3 +157,71 @@ describe("mint-burn-contracts top-50 Ethereum additions", () => {
     }
   });
 });
+
+describe("mint-burn-contracts top-100 Ethereum additions", () => {
+  const top100EthereumAdditions = [
+    { stablecoinId: "241", symbol: "USDO", address: "0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe", decimals: 18 },
+    { stablecoinId: "254", symbol: "EURCV", address: "0x5f7827fdeb7c20b443265fc2f40845b715385ff2", decimals: 18 },
+    { stablecoinId: "147", symbol: "AEUR", address: "0xa40640458fbc27b6eefedea1e9c9e17d4cee7a21", decimals: 18 },
+    { stablecoinId: "275", symbol: "USDQ", address: "0xc83e27f270cce0a3a3a29521173a83f402c1768b", decimals: 6 },
+    { stablecoinId: "256", symbol: "REUSD", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 },
+    { stablecoinId: "325", symbol: "EURI", address: "0x9d1a7a3191102e9f900faa10540837ba84dcbae7", decimals: 18 },
+    { stablecoinId: "19", symbol: "GUSD", address: "0x056fd409e1d7a124bd7017459dfea2f387b6d5cd", decimals: 2 },
+    { stablecoinId: "11", symbol: "USDP", address: "0x8e870d67f660d95d5be530380d0ec0bd388289e1", decimals: 18 },
+    { stablecoinId: "263", symbol: "USDX", address: "0xf8750b54d86be7ae9e32b4a0c826811198d63313", decimals: 18 },
+    { stablecoinId: "290", symbol: "XUSD", address: "0xc08e7e23c235073c6807c2efe7021304cb7c2815", decimals: 6 },
+    { stablecoinId: "313", symbol: "MUSD", address: "0xaca92e438df0b2401ff60da7e4337b687a2435da", decimals: 6 },
+    { stablecoinId: "255", symbol: "YUSD", address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a", decimals: 18 },
+    { stablecoinId: "22", symbol: "SUSD", address: "0x57ab1ec28d129707052df4df418d58a2d46d5f51", decimals: 18 },
+    { stablecoinId: "8", symbol: "LUSD", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 },
+    { stablecoinId: "10", symbol: "MIM", address: "0x99d8a9c45b2eca8864373a26d1459e3dff1e17f3", decimals: 18 },
+    { stablecoinId: "307", symbol: "USDCV", address: "0x5422374b27757da72d5265cc745ea906e0446634", decimals: 18 },
+    { stablecoinId: "225", symbol: "ZeUSD", address: "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761", decimals: 6 },
+    { stablecoinId: "101", symbol: "EURE", address: "0x39b8b6385416f4ca36a20319f70d28621895279d", decimals: 18 },
+    { stablecoinId: "230", symbol: "USN", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
+    { stablecoinId: "185", symbol: "GYD", address: "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a", decimals: 18 },
+    { stablecoinId: "106", symbol: "EUSD", address: "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f", decimals: 18 },
+    { stablecoinId: "55", symbol: "EURA", address: "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8", decimals: 18 },
+    { stablecoinId: "303", symbol: "meUSD", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
+    { stablecoinId: "51", symbol: "EURS", address: "0xdb25f211ab05b1c97d595516f45794528a807ad8", decimals: 2 },
+    { stablecoinId: "326", symbol: "MSUSD", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
+    { stablecoinId: "346", symbol: "NUSD", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
+    { stablecoinId: "343", symbol: "USAT", address: "0x07041776f5007aca2a54844f50503a18a72a8b68", decimals: 6 },
+    { stablecoinId: "20", symbol: "ALUSD", address: "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9", decimals: 18 },
+    { stablecoinId: "348", symbol: "FIDD", address: "0x7c135549504245b5eae64fc0e99fa5ebabb8e35d", decimals: 18 },
+    { stablecoinId: "297", symbol: "MSUSD", address: "0x4ba01f22827018b4772cd326c7627fb4956a7c00", decimals: 18 },
+  ];
+
+  it("tracks newly added top-100 Ethereum contracts via standard zero-address Transfer filters", () => {
+    for (const expected of top100EthereumAdditions) {
+      const cfg = MINT_BURN_CONFIGS.find(
+        (c) =>
+          c.chain.chainId === "ethereum" &&
+          c.stablecoinId === expected.stablecoinId &&
+          c.contractAddress === expected.address,
+      );
+
+      expect(cfg, `Missing config for ${expected.symbol}`).toBeDefined();
+      expect(cfg!.symbol).toBe(expected.symbol);
+      expect(cfg!.decimals).toBe(expected.decimals);
+      expect(cfg!.startBlock).toBe(21_900_000);
+      expect(cfg!.tier).toBe("extended");
+      expect(cfg!.events).toEqual([
+        {
+          signature: "Transfer(address,address,uint256)",
+          topicHash: TRANSFER_TOPIC,
+          direction: "mint",
+          amountEncoding: "transfer-value",
+          filterTopic: { index: 1, value: ZERO_ADDRESS_PADDED },
+        },
+        {
+          signature: "Transfer(address,address,uint256)",
+          topicHash: TRANSFER_TOPIC,
+          direction: "burn",
+          amountEncoding: "transfer-value",
+          filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED },
+        },
+      ]);
+    }
+  });
+});
