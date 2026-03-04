@@ -1,9 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "../../../../src/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "../../../../src/lib/strict-contract-paths";
 import { route } from "../../router";
 import worker from "../../index";
 import { mockD1 } from "./helpers/mock-d1";
+
+vi.stubGlobal("fetch", vi.fn(async () => (
+  new Response(JSON.stringify({
+    tokens: [],
+    prices: [],
+    market_caps: [],
+    tvl: [],
+  }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  })
+)));
 
 const db = mockD1();
 const ctx = {
@@ -24,6 +36,7 @@ describe("router contract: strict frontend paths are routable", () => {
 
       const response = await result!;
       expect(response.status, `unexpected 404 for ${path}`).not.toBe(404);
+      expect(response.status, `unexpected 500 for ${path}`).not.toBe(500);
     }
   });
 
@@ -36,24 +49,44 @@ describe("router contract: strict frontend paths are routable", () => {
     for (const endpoint of ENDPOINT_DEFINITIONS) {
       const path = endpoint.probePath ?? endpoint.path;
       for (const method of endpoint.methods) {
+        const request = new Request(`https://api.pharos.watch${path}`, { method });
+        const allowAuditDryRunGet =
+          endpoint.path === "/api/audit-depeg-history" &&
+          method === "GET" &&
+          path.includes("dry-run=true");
+
         if (endpoint.routerHandled === false) {
           const response = await worker.fetch(
-            new Request(`https://api.pharos.watch${path}`, { method }),
+            request,
             env as never,
             ctx,
           );
-          expect(response.status, `unexpected 404 for worker-handled ${method} ${path}`).not.toBe(404);
-          continue;
-        }
+          if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
+            expect(response.status).toBe(405);
+          } else if (endpoint.adminRequired) {
+            expect(response.status).toBe(401);
+          } else {
+            expect([200, 400, 502, 503]).toContain(response.status);
+          }
+        } else {
+          const response = await route(
+            new URL(`https://api.pharos.watch${path}`),
+            db,
+            ctx,
+            request,
+            env.ADMIN_KEY,
+            null,
+          );
+          expect(response, `expected route for ${method} ${path}`).not.toBeNull();
 
-        const response = await route(
-          new URL(`https://api.pharos.watch${path}`),
-          db,
-          ctx,
-          new Request(`https://api.pharos.watch${path}`, { method }),
-        );
-        expect(response, `expected route for ${method} ${path}`).not.toBeNull();
-        expect(response!.status, `unexpected 404 for ${method} ${path}`).not.toBe(404);
+          if (method === "GET" && endpoint.mutatingAdmin && !allowAuditDryRunGet) {
+            expect(response!.status).toBe(405);
+          } else if (endpoint.adminRequired) {
+            expect(response!.status).toBe(401);
+          } else {
+            expect([200, 400, 502, 503]).toContain(response!.status);
+          }
+        }
       }
     }
   });

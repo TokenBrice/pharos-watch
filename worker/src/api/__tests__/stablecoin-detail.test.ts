@@ -1,9 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { TRACKED_META_BY_ID } from "../../../../src/lib/stablecoins";
 
 // Stub external fetches before importing the handler
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
+
+// Keep detail tests deterministic and fast: we validate handler behavior,
+// not fetch-retry backoff timing.
+vi.mock("../../lib/fetch-retry", () => ({
+  fetchWithRetry: vi.fn(async (
+    url: string,
+    init?: RequestInit,
+    _maxRetries?: number,
+    options?: { passthrough404?: boolean },
+  ) => {
+    try {
+      const res = await fetch(url, init);
+      if (res.ok) return res;
+      if (res.status === 404 && options?.passthrough404) return res;
+      await res.body?.cancel();
+      return null;
+    } catch {
+      return null;
+    }
+  }),
+}));
 
 const { handleStablecoinDetail } = await import("../stablecoin-detail");
 
@@ -49,6 +71,7 @@ describe("handleStablecoinDetail", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/json");
+    expect(res.headers.get("Cache-Control")).toMatch(/s-maxage/);
 
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body).toHaveProperty("tokens");
@@ -76,30 +99,6 @@ describe("handleStablecoinDetail", () => {
 
     const body = (await res.json()) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
-  });
-
-  it("includes Cache-Control header on success", async () => {
-    const dlBody = makeDLDetailBody();
-    const db = mockD1([{ match: "cache", rows: [] }]);
-
-    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
-
-    const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
-
-    expect(res.headers.get("Cache-Control")).toMatch(/s-maxage/);
-  });
-
-  it("returns Content-Type application/json", async () => {
-    const dlBody = makeDLDetailBody();
-    const db = mockD1([{ match: "cache", rows: [] }]);
-
-    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
-
-    const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
-
-    expect(res.headers.get("Content-Type")).toBe("application/json");
   });
 
   it("returns 502 when upstream fails and no cache exists", async () => {
@@ -208,6 +207,9 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("handles supply_history fallback for cg- prefixed coins", async () => {
+    const cgId = Array.from(TRACKED_META_BY_ID.keys()).find((id) => id.startsWith("cg-"));
+    expect(cgId).toBeTruthy();
+
     // cg- prefixed coin with no CoinGecko data returns fallback from D1
     const db = mockD1([
       { match: "cache", rows: [] },
@@ -225,10 +227,14 @@ describe("handleStablecoinDetail", () => {
     );
 
     const ctx = makeCtx();
-    // Note: cg- prefixed IDs require a matching entry in TRACKED_META_BY_ID.
-    // If the ID doesn't exist in the map, it falls through to the regular DL path.
-    // We test the regular path here — the cg- path is an integration concern.
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, cgId!, ctx);
     expect(res.status).toBe(200);
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/market_chart?vs_currency=usd&days=max"),
+      expect.anything(),
+    );
+
+    const body = (await res.json()) as { tokens: unknown[] };
+    expect(body.tokens).toHaveLength(1);
   });
 });

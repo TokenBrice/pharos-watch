@@ -71,6 +71,7 @@ export default defineConfig({
 - `src/components/__tests__/` — component-level pure/helper logic tests
 - `src/hooks/__tests__/` — hook utility/state tests
 - `src/__tests__/` — frontend component/integration tests
+- `worker/src/__tests__/` — worker entrypoint tests (`fetch` request policy + `scheduled` cron dispatch wiring)
 - `worker/src/lib/__tests__/` — worker library tests (scoring, parsing)
 - `worker/src/api/__tests__/` — API handler contract tests
 - `worker/src/cron/__tests__/` — cron job tests (with degraded-mode scenarios)
@@ -201,6 +202,10 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | File | Handler | Modes Tested |
 |------|---------|--------------|
 | `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts`, unknown paths return null, mutating admin GET guards hold (with audit dry-run exception) |
+| `backfill-depegs.test.ts` | `handleBackfillDepegs` | Auth guard, unknown stablecoin 404, out-of-range batch no-op |
+| `backfill-supply-history.test.ts` | `handleBackfillSupplyHistory` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, USD insertion path |
+| `backfill-cg-prices.test.ts` | `handleBackfillCgPrices` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, NULL-price fill |
+| `backfill-stability-index.test.ts` | `handleBackfillStabilityIndex` | Auth guard, no-events 404, rebuild success shape |
 | `blacklist.test.ts` | `handleBlacklist` | 200 with events, empty results, 400 invalid params, camelCase mapping, X-Data-Age |
 | `depeg-events.test.ts` | `handleDepegEvents` | 200 with events, empty results, 400 invalid params, camelCase mapping |
 | `supply-history.test.ts` | `handleSupplyHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
@@ -220,6 +225,13 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `backfill-mint-burn.test.ts` | `handleBackfillMintBurn` | Auth/validation, chunked ingestion progression, `done/nextFromBlock` semantics |
 | `stability-index.test.ts` | `handleStabilityIndex` | Summary, Detail (with components in history) |
 | `stress-signals.test.ts` | `handleStressSignals` | DEWS scores, threat bands, signal components |
+
+### Worker Entrypoint Tests (`worker/src/__tests__/`)
+
+| File | Module Under Test | What It Covers |
+|------|-------------------|----------------|
+| `index.fetch.test.ts` | `worker.fetch` | CORS preflight, method guards, edge-cache hit/miss behavior, cache-bypass paths |
+| `index.scheduled.test.ts` | `worker.scheduled` | Cron fan-out wiring and chained dependencies (`stablecoins -> snapshot/PSI/DEWS`, `dex -> yield`) |
 
 ### Cron Tests (`worker/src/cron/__tests__/`)
 
