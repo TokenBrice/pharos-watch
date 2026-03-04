@@ -1272,6 +1272,8 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 ```json
 {
   "timestamp": 1771856453,
+  "availabilityStatus": "healthy",
+  "dataQualityStatus": "healthy",
   "overallStatus": "healthy",
   "caches": { ... },
   "crons": {
@@ -1286,13 +1288,29 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
     "totalStablecoins": 142,
     "missingPrices": 3,
     "blacklistMissingAmounts": 0,
+    "blacklistRecentMissingAmounts": 0,
+    "blacklistRecentWindowSec": 86400,
+    "blacklistMissingRatio": 0,
     "blacklistTotal": 13422,
     "onchainSupplyDivergences": 0,
+    "onchainDivergenceRatio": 0,
+    "onchainSupplyMonitoring": "active",
+    "onchainSupplyLatestAt": 1771856300,
+    "onchainSupplyTrackedCoins": 96,
     "activeDepegs": 12,
-    "staleOnchainSupply": 0
+    "staleOnchainSupply": 0,
+    "onchainStaleRatio": 0
+  },
+  "summary": {
+    "unhealthyCrons": 0,
+    "degradedCrons": 1,
+    "cronErrors": 0,
+    "worstCacheRatio": 1.03
   }
 }
 ```
+
+`crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 
 ### `POST /api/backfill-depegs`
 

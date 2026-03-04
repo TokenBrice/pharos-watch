@@ -31,7 +31,7 @@ type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "net30d" | "net90d" 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
   const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
-    useSort<SortKey>("net30d", "desc");
+    useSort<SortKey>("fis", "desc");
   const { data: logos } = useLogos();
   const prefetch = usePrefetchStablecoin();
 

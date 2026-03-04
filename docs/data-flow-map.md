@@ -18,7 +18,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Mint/Burn flow tracker | Alchemy logs (Ethereum) | `worker/src/cron/sync-mint-burn.ts` | `mint_burn_events`, `mint_burn_hourly`, `mint_burn_sync_state` | `GET /api/mint-burn-flows`, `GET /api/mint-burn-events` | `useMintBurnFlows`, `useMintBurnFlowsCoin`, `useMintBurnEvents` | Flows page, coin overlays |
 | Stability Index (PSI) | Stablecoin cache + depeg/liquidity context | `worker/src/cron/stability-index.ts`, daily `worker/src/cron/snapshot-psi.ts` | `stability_index_samples`, `stability_index` | `GET /api/stability-index` | `useStabilityIndex`, `useStabilityIndexDetail` | Stability Index pages, digest snapshot |
 | DEWS stress signals | Stablecoins + liquidity + blacklist + mint/burn + yield + PSI inputs | `worker/src/cron/compute-dews.ts` | `stress_signals`, `stress_signal_history` | `GET /api/stress-signals` | `useStressSignals`, `useStressSignalDetail` | Depeg tracker risk panels |
-| Yield intelligence | DefiLlama pools, risk-free rate cache | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/fetch-tbill-rate.ts` | `yield_data`, `yield_history`, cache `yield-rankings`, cache `risk_free_rate` | `GET /api/yield-rankings`, `GET /api/yield-history` | `useYieldRankings`, `useYieldHistory` | Yield page, detail card |
+| Yield intelligence | DefiLlama pools, risk-free rate cache | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/fetch-tbill-rate.ts` | `yield_data`, `yield_history`, cache `yield-rankings`, cache `risk_free_rate` | `GET /api/yield-rankings`, `GET /api/yield-history` | `useYieldRankings` | Yield page |
 | Daily digest | Anthropic Claude + PSI snapshot context | `worker/src/cron/daily-digest.ts` | `daily_digest` + static build sync to `data/digests.json` | `GET /api/daily-digest`, `GET /api/digest-archive`, `GET /api/digest-snapshot` | `useDailyDigest`, `useDigestArchive`, `useDigestSnapshot` | Digest page + archive |
 | Report cards + dependency graph | Peg summary + liquidity + bluechip + stablecoin metadata/dependencies | `worker/src/api/report-cards.ts` compute on read | cache-driven upstream + in-memory compute | `GET /api/report-cards` | `useReportCards` | Safety Scores, Portfolio, Dependency Map |
 
@@ -43,4 +43,4 @@ Defined centrally in `src/hooks/use-api-query.ts`.
 ## Notes
 
 - Cache passthrough endpoints include freshness metadata via `_meta` and/or `X-Data-Age`.
-- Admin/backfill endpoints bypass edge cache (`worker/src/index.ts` `skipCache` list).
+- Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `src/lib/api-endpoints.ts`.

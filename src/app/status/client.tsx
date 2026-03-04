@@ -29,15 +29,28 @@ const STATUS_CONFIG = {
   stale: { label: "Stale", bg: "bg-red-500/15", text: "text-red-700 dark:text-red-400", border: "border-red-500/30" },
 } as const;
 
-function StatusBanner({ status, timestamp }: { status: "healthy" | "degraded" | "stale"; timestamp: number }) {
+function StatusBanner({
+  status,
+  timestamp,
+  availabilityStatus,
+  dataQualityStatus,
+}: {
+  status: "healthy" | "degraded" | "stale";
+  timestamp: number;
+  availabilityStatus: "healthy" | "degraded" | "stale";
+  dataQualityStatus: "healthy" | "degraded" | "stale";
+}) {
   const config = STATUS_CONFIG[status];
   const time = new Date(timestamp * 1000).toLocaleString();
   return (
     <div className={`rounded-lg border p-4 ${config.bg} ${config.border}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className={`h-3 w-3 rounded-full ${status === "healthy" ? "bg-green-500" : status === "degraded" ? "bg-amber-500" : "bg-red-500"}`} />
           <span className={`text-lg font-semibold ${config.text}`}>{config.label}</span>
+          <span className="text-xs text-muted-foreground">
+            availability: {availabilityStatus} • data quality: {dataQualityStatus}
+          </span>
         </div>
         <span className="text-sm text-muted-foreground">Checked: {time}</span>
       </div>
@@ -74,7 +87,19 @@ function CronCard({ job, cron, nowSeconds }: {
   };
   nowSeconds: number;
 }) {
-  const borderColor = cron.healthy ? "border-green-500/30" : "border-red-500/30";
+  const latestStatus = cron.lastRun?.status;
+  const borderColor = !cron.healthy
+    ? "border-red-500/30"
+    : latestStatus === "degraded"
+      ? "border-amber-500/30"
+      : "border-green-500/30";
+
+  const badgeClassByStatus: Record<string, string> = {
+    ok: "bg-green-500/15 text-green-700 dark:text-green-400",
+    degraded: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+    skipped_locked: "bg-muted text-muted-foreground",
+    error: "bg-red-500/15 text-red-700 dark:text-red-400",
+  };
 
   return (
     <Card className={`border-2 ${borderColor}`}>
@@ -88,7 +113,7 @@ function CronCard({ job, cron, nowSeconds }: {
         {cron.lastRun ? (
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-sm">
-              <Badge variant={cron.lastRun.status === "ok" ? "secondary" : "destructive"} className="text-xs">
+              <Badge className={`text-xs ${badgeClassByStatus[cron.lastRun.status] ?? "bg-red-500/15 text-red-700 dark:text-red-400"}`}>
                 {cron.lastRun.status}
               </Badge>
               <span className="text-muted-foreground">{formatAge(nowSeconds - cron.lastRun.startedAt)} ago</span>
@@ -112,9 +137,18 @@ function CronCard({ job, cron, nowSeconds }: {
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground mr-1">History:</span>
           {cron.recentRuns.map((run, i) => (
+            // Degraded runs are warnings, not hard failures.
             <div
               key={i}
-              className={`h-2.5 w-2.5 rounded-full ${run.status === "ok" ? "bg-green-500" : "bg-red-500"}`}
+              className={`h-2.5 w-2.5 rounded-full ${
+                run.status === "ok"
+                  ? "bg-green-500"
+                  : run.status === "degraded"
+                    ? "bg-amber-500"
+                    : run.status === "skipped_locked"
+                      ? "bg-zinc-500"
+                      : "bg-red-500"
+              }`}
               title={`${run.status} — ${new Date(run.startedAt * 1000).toLocaleString()} (${formatDuration(run.durationMs)})`}
             />
           ))}
@@ -132,13 +166,18 @@ function DataQualityCards({ dq }: {
     totalStablecoins: number;
     missingPrices: number;
     blacklistMissingAmounts: number;
+    blacklistRecentMissingAmounts: number;
+    blacklistRecentWindowSec: number;
+    blacklistMissingRatio: number;
     blacklistTotal: number;
     onchainSupplyDivergences: number;
+    onchainDivergenceRatio: number;
     onchainSupplyMonitoring: "active" | "unavailable";
     onchainSupplyLatestAt: number | null;
     onchainSupplyTrackedCoins: number;
     activeDepegs: number;
     staleOnchainSupply: number;
+    onchainStaleRatio: number;
   };
 }) {
   type Severity = "green" | "amber" | "red" | "neutral";
@@ -157,8 +196,12 @@ function DataQualityCards({ dq }: {
     {
       label: "Blacklist Gaps",
       value: dq.blacklistMissingAmounts,
-      detail: `/ ${dq.blacklistTotal.toLocaleString()} events`,
-      severity: dq.blacklistMissingAmounts > 50 ? "red" : dq.blacklistMissingAmounts > 0 ? "amber" : "green",
+      detail: `${dq.blacklistRecentMissingAmounts} in last ${Math.round(dq.blacklistRecentWindowSec / 3600)}h`,
+      severity: dq.blacklistMissingRatio >= 0.02
+        ? "red"
+        : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= 0.005
+          ? "amber"
+          : "green",
     },
     {
       label: "On-chain Divergences",
@@ -166,7 +209,7 @@ function DataQualityCards({ dq }: {
       detail: onchainUnavailable ? "monitor unavailable" : "coins >5% off",
       severity: onchainUnavailable
         ? "neutral"
-        : dq.onchainSupplyDivergences > 3 ? "red" : dq.onchainSupplyDivergences > 0 ? "amber" : "green",
+        : dq.onchainDivergenceRatio >= 0.25 ? "red" : dq.onchainDivergenceRatio >= 0.1 ? "amber" : "green",
     },
     {
       label: "Active Depegs",
@@ -180,7 +223,7 @@ function DataQualityCards({ dq }: {
       detail: onchainStalenessDetail,
       severity: onchainUnavailable
         ? "neutral"
-        : dq.staleOnchainSupply > 5 ? "red" : dq.staleOnchainSupply > 0 ? "amber" : "green",
+        : dq.onchainStaleRatio >= 0.25 ? "red" : dq.onchainStaleRatio >= 0.1 ? "amber" : "green",
     },
   ];
 
@@ -648,7 +691,12 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         </div>
       </div>
 
-      <StatusBanner status={data.overallStatus} timestamp={data.timestamp} />
+      <StatusBanner
+        status={data.overallStatus}
+        timestamp={data.timestamp}
+        availabilityStatus={data.availabilityStatus}
+        dataQualityStatus={data.dataQualityStatus}
+      />
 
       {/* New sections */}
       <section>

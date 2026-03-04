@@ -634,13 +634,18 @@ export interface DataQuality {
   totalStablecoins: number;
   missingPrices: number;
   blacklistMissingAmounts: number;
+  blacklistRecentMissingAmounts: number;
+  blacklistRecentWindowSec: number;
+  blacklistMissingRatio: number;
   blacklistTotal: number;
   onchainSupplyDivergences: number;
+  onchainDivergenceRatio: number;
   onchainSupplyMonitoring: "active" | "unavailable";
   onchainSupplyLatestAt: number | null;
   onchainSupplyTrackedCoins: number;
   activeDepegs: number;
   staleOnchainSupply: number;
+  onchainStaleRatio: number;
 }
 
 export interface StatusResponse {
@@ -653,6 +658,7 @@ export interface StatusResponse {
   dataQuality: DataQuality;
   summary: {
     unhealthyCrons: number;
+    degradedCrons: number;
     cronErrors: number;
     worstCacheRatio: number;
   };

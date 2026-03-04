@@ -23,6 +23,13 @@ const CRON_INTERVALS: Record<string, number> = {
   "compute-dews": 900,
 };
 
+const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
+const BLACKLIST_MISSING_RATIO_DEGRADED = 0.005; // 0.5%
+const BLACKLIST_MISSING_RATIO_STALE = 0.02; // 2%
+const BLACKLIST_MISSING_RECENT_STALE = 25;
+const ONCHAIN_RATIO_DEGRADED = 0.1; // 10% of tracked coins
+const ONCHAIN_RATIO_STALE = 0.25; // 25% of tracked coins
+
 // --- Handler ---
 
 export const handleStatus = withErrorHandler(
@@ -80,20 +87,28 @@ export const handleStatus = withErrorHandler(
     const crons: Record<string, CronStatus> = {};
     let anyCronError = false;
     let unhealthyCrons = 0;
+    let degradedCronRuns = 0;
     let cronErrorCount = 0;
     for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
       const runs = cronByJob.get(job) ?? [];
       const lastRun = runs.length > 0 ? runs[0] : null;
       const isFresh = lastRun != null && now - lastRun.startedAt <= interval * 2;
       const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
+      const availabilityUnhealthy =
+        !isFresh ||
+        lastRun == null ||
+        lastRun.status === "error" ||
+        (lastRun.status === "skipped_locked" && !hasFreshOk);
       const healthy =
         isFresh &&
         (
           lastRun!.status === "ok" ||
+          lastRun!.status === "degraded" ||
           (lastRun!.status === "skipped_locked" && hasFreshOk)
         );
 
-      if (!healthy) unhealthyCrons++;
+      if (availabilityUnhealthy) unhealthyCrons++;
+      if (lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
       if (lastRun?.status === "error") {
         anyCronError = true;
         cronErrorCount++;
@@ -120,18 +135,30 @@ export const handleStatus = withErrorHandler(
 
     const missingPriceRatio =
       dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
+    const blacklistMissingRatio = dataQuality.blacklistMissingRatio;
+    const blacklistRecentMissing = dataQuality.blacklistRecentMissingAmounts;
     const hasActiveOnchainMonitor = dataQuality.onchainSupplyMonitoring === "active";
+    const trackedOnchainCoins = hasActiveOnchainMonitor ? dataQuality.onchainSupplyTrackedCoins : 0;
     const staleOnchainSupply = hasActiveOnchainMonitor ? dataQuality.staleOnchainSupply : 0;
     const onchainSupplyDivergences = hasActiveOnchainMonitor ? dataQuality.onchainSupplyDivergences : 0;
+    const staleOnchainRatio =
+      trackedOnchainCoins > 0 ? staleOnchainSupply / trackedOnchainCoins : 0;
+    const onchainDivergenceRatio =
+      trackedOnchainCoins > 0 ? onchainSupplyDivergences / trackedOnchainCoins : 0;
     const dataQualityStatus: StatusResponse["dataQualityStatus"] =
       missingPriceRatio > 0.4 ||
-      staleOnchainSupply >= 5 ||
-      onchainSupplyDivergences >= 10
+      blacklistMissingRatio >= BLACKLIST_MISSING_RATIO_STALE ||
+      blacklistRecentMissing >= BLACKLIST_MISSING_RECENT_STALE ||
+      staleOnchainSupply >= 10 ||
+      onchainSupplyDivergences >= 25 ||
+      staleOnchainRatio >= ONCHAIN_RATIO_STALE ||
+      onchainDivergenceRatio >= ONCHAIN_RATIO_STALE
         ? "stale"
         : missingPriceRatio > 0.15 ||
-            dataQuality.blacklistMissingAmounts > 0 ||
-            staleOnchainSupply > 0 ||
-            onchainSupplyDivergences > 0
+            blacklistRecentMissing > 0 ||
+            blacklistMissingRatio >= BLACKLIST_MISSING_RATIO_DEGRADED ||
+            staleOnchainRatio >= ONCHAIN_RATIO_DEGRADED ||
+            onchainDivergenceRatio >= ONCHAIN_RATIO_DEGRADED
           ? "degraded"
           : "healthy";
 
@@ -155,6 +182,7 @@ export const handleStatus = withErrorHandler(
       dataQuality,
       summary: {
         unhealthyCrons,
+        degradedCrons: degradedCronRuns,
         cronErrors: cronErrorCount,
         worstCacheRatio,
       },
@@ -187,6 +215,7 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
   // Blacklist gaps
   let blacklistTotal = 0;
   let blacklistMissingAmounts = 0;
+  let blacklistRecentMissingAmounts = 0;
   try {
     const bl = await db
       .prepare(
@@ -199,13 +228,24 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
                THEN 1
                ELSE 0
              END
-           ) as missing
+           ) as missing,
+           SUM(
+             CASE
+               WHEN amount IS NULL
+                 AND NOT (chain_id = 'tron' AND event_type IN ('blacklist', 'unblacklist'))
+                 AND timestamp >= ?
+               THEN 1
+               ELSE 0
+             END
+           ) as missing_recent
          FROM blacklist_events`
       )
-      .first<{ total: number; missing: number }>();
+      .bind(now - BLACKLIST_RECENT_WINDOW_SEC)
+      .first<{ total: number; missing: number; missing_recent: number }>();
     if (bl) {
       blacklistTotal = bl.total;
-      blacklistMissingAmounts = bl.missing;
+      blacklistMissingAmounts = bl.missing ?? 0;
+      blacklistRecentMissingAmounts = bl.missing_recent ?? 0;
     }
   } catch (e) {
     console.error("[status] Failed to query blacklist gaps:", e);
@@ -304,6 +344,9 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
     totalStablecoins,
     missingPrices,
     blacklistMissingAmounts,
+    blacklistRecentMissingAmounts,
+    blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
+    blacklistMissingRatio: blacklistTotal > 0 ? blacklistMissingAmounts / blacklistTotal : 0,
     blacklistTotal,
     onchainSupplyDivergences,
     onchainSupplyMonitoring,
@@ -311,5 +354,13 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
     onchainSupplyTrackedCoins,
     activeDepegs,
     staleOnchainSupply,
+    onchainStaleRatio:
+      onchainSupplyMonitoring === "active" && onchainSupplyTrackedCoins > 0
+        ? staleOnchainSupply / onchainSupplyTrackedCoins
+        : 0,
+    onchainDivergenceRatio:
+      onchainSupplyMonitoring === "active" && onchainSupplyTrackedCoins > 0
+        ? onchainSupplyDivergences / onchainSupplyTrackedCoins
+        : 0,
   };
 }

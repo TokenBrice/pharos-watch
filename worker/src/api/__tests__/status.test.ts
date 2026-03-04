@@ -209,6 +209,70 @@ describe("handleStatus", () => {
     expect(body.crons["sync-stablecoins"]?.healthy).toBe(true);
   });
 
+  it("treats fresh degraded cron runs as warning-only (not availability unhealthy)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const jobs = [
+      "sync-stablecoins",
+      "sync-stablecoin-charts",
+      "sync-blacklist",
+      "sync-mint-burn",
+      "sync-dex-liquidity",
+      "sync-usds-status",
+      "sync-bluechip",
+      "sync-fx-rates",
+      "daily-digest",
+      "snapshot-supply",
+      "stability-index",
+      "snapshot-psi",
+      "sync-yield-data",
+      "fetch-tbill-rate",
+      "compute-dews",
+    ];
+    const cronRows = jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30));
+    const db = mockD1([
+      {
+        match: "cache WHERE key IN",
+        rows: [
+          makeCacheRow("stablecoins"),
+          makeCacheRow("stablecoin-charts"),
+          makeCacheRow("usds-status"),
+          makeCacheRow("fx-rates"),
+          makeCacheRow("bluechip-ratings"),
+        ],
+      },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: cronRows },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+    ]);
+
+    const request = new Request("https://x/api/status", {
+      headers: { "X-Admin-Key": "secret-key" },
+    });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      availabilityStatus: string;
+      summary: { unhealthyCrons: number; degradedCrons: number };
+      crons: Record<string, { healthy: boolean }>;
+    };
+
+    expect(body.crons["fetch-tbill-rate"]?.healthy).toBe(true);
+    expect(body.summary.unhealthyCrons).toBe(0);
+    expect(body.summary.degradedCrons).toBe(1);
+    expect(body.availabilityStatus).toBe("healthy");
+  });
+
   it("marks on-chain monitor unavailable instead of forcing stale data quality", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
@@ -247,6 +311,41 @@ describe("handleStatus", () => {
     expect(body.dataQuality.onchainSupplyMonitoring).toBe("unavailable");
     expect(body.dataQuality.staleOnchainSupply).toBe(0);
     expect(body.dataQuality.onchainSupplyDivergences).toBe(0);
+    expect(body.dataQualityStatus).toBe("healthy");
+  });
+
+  it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "stress_signals", rows: [], first: { age: 60 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+      {
+        match: "cache",
+        rows: [],
+        first: { value: stablecoinsCache, updated_at: now - 60 },
+      },
+      { match: "blacklist_events", rows: [], first: { total: 20000, missing: 40, missing_recent: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+    ]);
+
+    const request = new Request("https://x/api/status", {
+      headers: { "X-Admin-Key": "secret-key" },
+    });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      dataQualityStatus: string;
+      dataQuality: { blacklistMissingRatio: number; blacklistRecentMissingAmounts: number };
+    };
+
+    expect(body.dataQuality.blacklistMissingRatio).toBeCloseTo(0.002, 6);
+    expect(body.dataQuality.blacklistRecentMissingAmounts).toBe(0);
     expect(body.dataQualityStatus).toBe("healthy");
   });
 

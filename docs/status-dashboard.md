@@ -61,6 +61,7 @@ Source: `worker/src/api/status.ts`
 
 - Last run exists within `2 * expectedIntervalSec`
 - Last run status is `ok`, or
+- Last run status is `degraded` (warning-only fallback mode), or
 - Last run status is `skipped_locked` **and** there is a fresh `ok` run in the same freshness window
 
 ### Availability status
@@ -76,19 +77,26 @@ Computed from cache staleness + cron error state:
   - `unhealthyCrons > 0`
 - else `healthy`
 
+`degraded` cron runs are counted separately in `summary.degradedCrons` and shown in cron cards, but do not by themselves mark availability degraded.
+
 ### Data quality status
 
 Computed from missing prices + blacklist gaps + on-chain supply monitor:
 
 - `stale` if any of:
   - `missingPriceRatio > 0.4`
-  - `staleOnchainSupply >= 5`
-  - `onchainSupplyDivergences >= 10`
+  - `blacklistMissingRatio >= 0.02` (2%)
+  - `blacklistRecentMissingAmounts >= 25` (last 24h)
+  - `staleOnchainSupply >= 10`
+  - `onchainSupplyDivergences >= 25`
+  - `onchainStaleRatio >= 0.25`
+  - `onchainDivergenceRatio >= 0.25`
 - `degraded` if any of:
   - `missingPriceRatio > 0.15`
-  - `blacklistMissingAmounts > 0`
-  - `staleOnchainSupply > 0`
-  - `onchainSupplyDivergences > 0`
+  - `blacklistRecentMissingAmounts > 0` (last 24h)
+  - `blacklistMissingRatio >= 0.005` (0.5%)
+  - `onchainStaleRatio >= 0.1`
+  - `onchainDivergenceRatio >= 0.1`
 - else `healthy`
 
 ### Overall status
@@ -135,4 +143,3 @@ Mutating admin paths are protected by method guardrails:
 | `worker/src/api/status.ts` | Core status synthesis logic (cache/cron/data-quality) |
 | `worker/src/api/health.ts` | Public health endpoint for cache/circuit observability |
 | `worker/src/index.ts` | Inline admin action handlers and mutating-method enforcement |
-
