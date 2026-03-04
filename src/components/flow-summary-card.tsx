@@ -114,6 +114,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
     : coin.burnVolume24hUsd;
 
   const intensity = coin.flowIntensity;
+  const intensityDisplay = intensity != null ? Math.round(intensity) : null;
   const bandKey = intensity != null ? getBandForScore(intensity) : null;
   const bandConfig = bandKey ? GAUGE_BANDS[bandKey] : null;
 
@@ -148,7 +149,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
               )}
             </div>
             <span className="font-mono tabular-nums text-sm font-semibold w-8 text-right">
-              {intensity != null ? intensity : "\u2014"}
+              {intensityDisplay != null ? intensityDisplay : "\u2014"}
             </span>
           </div>
         </div>
