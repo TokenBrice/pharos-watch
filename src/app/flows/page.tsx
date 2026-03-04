@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { FlowGauge } from "@/components/flow-gauge";
 import { FlowChart } from "@/components/flow-chart";
 import { FlowTable } from "@/components/flow-table";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
@@ -117,21 +116,13 @@ function FlowsPageInner() {
         ]}
       />
 
-      {/* Section 1: Bank Run Gauge (hero) */}
-      <section aria-labelledby="gauge-heading">
-        <h2 id="gauge-heading" className="sr-only">
-          Bank Run Gauge
-        </h2>
-        <div className="rounded-xl border bg-card p-6">
-          <FlowGauge
-            score={gauge?.score ?? null}
-            band={gauge?.band ?? null}
-            flightToQuality={gauge?.flightToQuality ?? false}
-            flightIntensity={gauge?.flightIntensity ?? 0}
-            trackedCoins={gauge?.trackedCoins ?? 0}
-            isLoading={isSummaryLoading}
-          />
-        </div>
+      {/* Section 1: Experimental meme-style overview */}
+      <section aria-label="BRRRR overview">
+        <FlowBrrrOverview
+          gauge={gauge ?? null}
+          coins={coins}
+          isLoading={isSummaryLoading}
+        />
       </section>
 
       {/* Section 2: Per-coin flow table */}
@@ -175,24 +166,6 @@ function FlowsPageInner() {
         </div>
       </section>
 
-      {/* Section 4: Experimental meme-style overviews */}
-      <section aria-labelledby="brrr-heading">
-        <div className="flex items-center justify-between gap-3">
-          <h2 id="brrr-heading" className="text-lg font-semibold tracking-tight">
-            Alternative Views: BRRRR Deck
-          </h2>
-          <span className="inline-flex rounded-full border border-border/70 bg-muted/30 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Experimental
-          </span>
-        </div>
-        <div className="mt-3">
-          <FlowBrrrOverview
-            gauge={gauge ?? null}
-            coins={coins}
-            isLoading={isSummaryLoading}
-          />
-        </div>
-      </section>
     </div>
   );
 }

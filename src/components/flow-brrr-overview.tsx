@@ -370,9 +370,6 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
 
       <div className="relative space-y-5">
         <header className="flex flex-wrap items-center gap-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Iteration 1 - Desk Cut
-          </p>
           <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold", snapshot.mode.badgeClass)}>
             {snapshot.mode.label}
           </span>
