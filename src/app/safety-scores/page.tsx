@@ -4,7 +4,10 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
-import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
+import {
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+  SAFETY_SCORE_VERSION_LABEL,
+} from "@/lib/safety-score-version";
 
 const ReportCardsClient = dynamic(
   () => import("./client").then((m) => ({ default: m.ReportCardsClient })),
@@ -42,6 +45,12 @@ export default function ReportCardsPage() {
           <span className="text-foreground">Safety Scores</span>
         </nav>
         <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Safety Scores <FeatureStatusBadge status="mature" version={SAFETY_SCORE_VERSION_LABEL} /></h1>
+        <p className="text-xs text-muted-foreground">
+          Methodology {SAFETY_SCORE_VERSION_LABEL}.{" "}
+          <Link href={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Version history &rarr;
+          </Link>
+        </p>
         <p className="text-sm text-muted-foreground">
           Safety grades and contagion simulation for every tracked stablecoin.
         </p>

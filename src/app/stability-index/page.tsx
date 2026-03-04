@@ -4,7 +4,10 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
-import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
+import {
+  PSI_METHODOLOGY_CHANGELOG_PATH,
+  PSI_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/stability-index-version";
 
 const StabilityIndexClient = dynamic(
   () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),
@@ -42,6 +45,12 @@ export default function StabilityIndexPage() {
           Pharos Stability Index
           <FeatureStatusBadge status="mature" version={PSI_METHODOLOGY_VERSION_LABEL} />
         </h1>
+        <p className="text-xs text-muted-foreground">
+          Methodology {PSI_METHODOLOGY_VERSION_LABEL}.{" "}
+          <Link href={PSI_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Version history &rarr;
+          </Link>
+        </p>
         <p className="text-sm text-muted-foreground">
           Historical stablecoin market health scores, component breakdowns, and condition band analysis.
         </p>
