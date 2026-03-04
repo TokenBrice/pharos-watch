@@ -9,12 +9,13 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
-import type { MintBurnCoinFlow, MintBurnGauge } from "@/lib/types";
+import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface FlowBrrrOverviewProps {
   gauge: MintBurnGauge | null;
   coins: MintBurnCoinFlow[];
+  weeklyHourly?: MintBurnHourlyBucket[];
   isLoading?: boolean;
 }
 
@@ -30,6 +31,9 @@ interface FlowSnapshot {
   mint24h: number;
   burn24h: number;
   net24h: number;
+  mint7d: number | null;
+  burn7d: number | null;
+  net7d: number;
   score: number | null;
   trackedCoins: number;
   topMint: MintBurnCoinFlow | null;
@@ -48,6 +52,11 @@ function clamp(value: number, min: number, max: number): number {
 
 function formatSignedCurrency(value: number): string {
   return `${getNetPrefix(value)}${formatCurrency(value)}`;
+}
+
+function formatMaybeCurrency(value: number | null): string {
+  if (value === null) return "\u2014";
+  return formatCurrency(value);
 }
 
 function getHeadline(score: number | null, net24h: number, brrText: string): string {
@@ -145,15 +154,32 @@ function getPrinterMode(score: number | null, net24h: number): PrinterMode {
   };
 }
 
-function buildSnapshot(gauge: MintBurnGauge | null, coins: MintBurnCoinFlow[]): FlowSnapshot {
+function buildSnapshot(
+  gauge: MintBurnGauge | null,
+  coins: MintBurnCoinFlow[],
+  weeklyHourly?: MintBurnHourlyBucket[],
+): FlowSnapshot {
   let mint24h = 0;
   let burn24h = 0;
   let net24h = 0;
+  let net7d = 0;
 
   for (const coin of coins) {
     mint24h += coin.mintVolume24hUsd;
     burn24h += coin.burnVolume24hUsd;
     net24h += coin.netFlow24hUsd;
+    net7d += coin.netFlow7dUsd;
+  }
+
+  let mint7d: number | null = null;
+  let burn7d: number | null = null;
+  if (weeklyHourly && weeklyHourly.length > 0) {
+    mint7d = 0;
+    burn7d = 0;
+    for (const bucket of weeklyHourly) {
+      mint7d += bucket.mintVolumeUsd;
+      burn7d += bucket.burnVolumeUsd;
+    }
   }
 
   const topMint = [...coins]
@@ -174,6 +200,9 @@ function buildSnapshot(gauge: MintBurnGauge | null, coins: MintBurnCoinFlow[]): 
     mint24h,
     burn24h,
     net24h,
+    mint7d,
+    burn7d,
+    net7d,
     score,
     trackedCoins: gauge?.trackedCoins ?? coins.length,
     topMint,
@@ -546,6 +575,30 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
               </div>
             </div>
 
+            <div className="hidden lg:grid gap-2 sm:grid-cols-3">
+              <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Minted 7d</p>
+                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-400">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  {formatMaybeCurrency(snapshot.mint7d)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Burned 7d</p>
+                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-400">
+                  <TrendingDown className="h-3.5 w-3.5" />
+                  {formatMaybeCurrency(snapshot.burn7d)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net 7d</p>
+                <p className={cn("mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold", getNetColor(snapshot.net7d))}>
+                  <Flame className="h-3.5 w-3.5" />
+                  {formatSignedCurrency(snapshot.net7d)}
+                </p>
+              </div>
+            </div>
+
             <div className={cn("space-y-2 rounded-xl border p-3", snapshot.mode.panelClass)}>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Printer pressure lever</span>
@@ -571,8 +624,11 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
   );
 }
 
-export function FlowBrrrOverview({ gauge, coins, isLoading }: FlowBrrrOverviewProps) {
-  const snapshot = useMemo(() => buildSnapshot(gauge, coins), [gauge, coins]);
+export function FlowBrrrOverview({ gauge, coins, weeklyHourly, isLoading }: FlowBrrrOverviewProps) {
+  const snapshot = useMemo(
+    () => buildSnapshot(gauge, coins, weeklyHourly),
+    [gauge, coins, weeklyHourly],
+  );
 
   if (isLoading) {
     return <LoadingState />;

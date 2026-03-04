@@ -37,10 +37,16 @@ function FlowsPageInner() {
     dataUpdatedAt: chartUpdatedAt,
     refetch: refetchChart,
   } = useMintBurnFlows(hours);
+  const {
+    data: weeklyData,
+    isLoading: isWeeklyLoading,
+    refetch: refetchWeekly,
+  } = useMintBurnFlows(168);
 
   const gauge = summaryData?.gauge;
   const coins = summaryData?.coins ?? [];
   const hourly = chartData?.hourly ?? [];
+  const weeklyHourly = (hours === 168 ? chartData?.hourly : weeklyData?.hourly) ?? [];
   const error = summaryError ?? chartError;
   const hasData = !!summaryData || !!chartData;
 
@@ -92,6 +98,7 @@ function FlowsPageInner() {
         hasData={hasData}
         onRetry={() => {
           void refetchSummary();
+          void refetchWeekly();
           if (hours !== 24) {
             void refetchChart();
           }
@@ -121,7 +128,8 @@ function FlowsPageInner() {
         <FlowBrrrOverview
           gauge={gauge ?? null}
           coins={coins}
-          isLoading={isSummaryLoading}
+          weeklyHourly={weeklyHourly}
+          isLoading={isSummaryLoading || (hours !== 168 && isWeeklyLoading)}
         />
       </section>
 
