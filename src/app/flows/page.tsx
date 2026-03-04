@@ -61,7 +61,7 @@ function FlowsPageInner() {
         <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
           Mint/Burn Flows
           <FeatureStatusBadge
-            status="testing-in-prod"
+            status="experimental"
             version={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
           />
         </h1>

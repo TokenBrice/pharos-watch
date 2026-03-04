@@ -78,7 +78,7 @@ export default function YieldPage() {
           <span>/</span>
           <span className="text-foreground">Yield Intelligence</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Yield Intelligence <FeatureStatusBadge status="testing-in-prod" version={YIELD_METHODOLOGY_VERSION_LABEL} /></h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Yield Intelligence <FeatureStatusBadge status="experimental" version={YIELD_METHODOLOGY_VERSION_LABEL} /></h1>
         <p className="text-xs text-muted-foreground">
           Methodology {YIELD_METHODOLOGY_VERSION_LABEL}.{" "}
           <Link href={YIELD_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
