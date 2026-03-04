@@ -22,6 +22,7 @@ import {
   AERODROME_SUBGRAPHS, AERODROME_PAIR_QUERY,
 } from "./constants";
 import { normalizeProtocol, getActiveChainMap, getActiveChainReverse } from "./pool-helpers";
+import { isPlausibleDexObservationPrice } from "./price-sanity";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -257,6 +258,7 @@ export async function buildCurveLookups(
             }
             if (!resolvedIds) continue;
             for (const id of resolvedIds) {
+              if (!isPlausibleDexObservationPrice(id, coin.usdPrice)) continue;
               const obs = priceObservations.get(id) ?? [];
               obs.push({
                 price: coin.usdPrice,
@@ -391,10 +393,8 @@ export async function fetchUniV3Data(
           if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
           if (!resolvedIds) continue;
 
-          // Basic sanity check: USD-pegged stablecoins should be near $1
-          if (usdPrice < 0.5 || usdPrice > 2.0) continue;
-
           for (const id of resolvedIds) {
+            if (!isPlausibleDexObservationPrice(id, usdPrice)) continue;
             const obs = uniV3PriceObs.get(id) ?? [];
             obs.push({ price: usdPrice, tvl, chain, protocol: "uniswap-v3" });
             uniV3PriceObs.set(id, obs);
@@ -501,7 +501,6 @@ export async function fetchAerodromeData(
           { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
         ];
         for (const { symbol, address, usdPrice } of tokens) {
-          if (usdPrice < 0.5 || usdPrice > 2.0) continue; // sanity for USD pegs
           let resolvedIds: string[] | undefined;
           const addrId = addressToId.get(address.toLowerCase());
           if (addrId) resolvedIds = [addrId];
@@ -509,6 +508,7 @@ export async function fetchAerodromeData(
           if (!resolvedIds) continue;
 
           for (const id of resolvedIds) {
+            if (!isPlausibleDexObservationPrice(id, usdPrice)) continue;
             const obs = priceObs.get(id) ?? [];
             obs.push({ price: usdPrice, tvl: reserveUSD, chain, protocol: "aerodrome" });
             priceObs.set(id, obs);
@@ -644,7 +644,7 @@ export async function fetchGtTokenBatch(
           const price = parseFloat(a.price_usd ?? "");
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
           if (!price || price <= 0 || isNaN(price)) continue;
-          if (price < 0.5 || price > 2.0) continue; // USD peg sanity
+          if (!isPlausibleDexObservationPrice(stablecoinId, price)) continue;
           if (!tvl || tvl < 50_000) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];
@@ -696,7 +696,7 @@ export async function fetchCgTokenBatchPrices(
           const price = parseFloat(a.price_usd ?? "");
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
           if (!price || price <= 0 || isNaN(price)) continue;
-          if (price < 0.5 || price > 2.0) continue; // USD peg sanity
+          if (!isPlausibleDexObservationPrice(stablecoinId, price)) continue;
           if (!tvl || tvl < 50_000) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];

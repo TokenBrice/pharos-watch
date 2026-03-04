@@ -18,6 +18,7 @@ import {
   computePoolPairQuality, computePoolStress, initMetrics,
 } from "./pool-helpers";
 import { buildChainAddresses } from "./fetch-primary";
+import { isPlausibleDexObservationPrice } from "./price-sanity";
 
 /** Crawl CG onchain pools for all tracked stablecoins.
  *  No time budget needed — CG paid API is ~8x faster than GT free. */
@@ -83,7 +84,7 @@ export async function fetchCgPools(
         const price = parseFloat(priceStr ?? "");
 
         // Price observation (from ALL non-Curve pools, even known ones)
-        if (price >= 0.5 && price <= 2.0 && tvl >= 50_000) {
+        if (isPlausibleDexObservationPrice(stablecoinId, price) && tvl >= 50_000) {
           const obs = priceObs.get(stablecoinId) ?? [];
           obs.push({ price, tvl, chain: ourChain, protocol: dexId });
           priceObs.set(stablecoinId, obs);
@@ -368,7 +369,7 @@ export async function fetchGtPools(
           const price = parseFloat(priceStr ?? "");
 
           // Price observation (from ALL non-Curve pools, even known ones)
-          if (price >= 0.5 && price <= 2.0 && tvl >= 50_000) {
+          if (isPlausibleDexObservationPrice(stablecoinId, price) && tvl >= 50_000) {
             const obs = priceObs.get(stablecoinId) ?? [];
             obs.push({ price, tvl, chain: ourChain, protocol: dexId });
             priceObs.set(stablecoinId, obs);

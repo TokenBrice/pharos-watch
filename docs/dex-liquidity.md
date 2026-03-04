@@ -141,9 +141,9 @@ The frontend reads `__global__` for overview stats (total DEX TVL, 24h volume, p
 | Source | Chains | Method | Filter |
 |--------|--------|--------|--------|
 | **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin | TVL >= $50K, balance ratio >= 0.3 |
-| **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. |
-| **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3 |
-| **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K (prices), >= $1K (pool discovery) |
+| **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc., peg-aware price sanity (`isReasonablePrice`) |
+| **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity |
+| **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K (prices), >= $1K (pool discovery), peg-aware price sanity |
 
 **Price extraction pipeline:**
 1. Collect price observations from all four sources during data fetching phase

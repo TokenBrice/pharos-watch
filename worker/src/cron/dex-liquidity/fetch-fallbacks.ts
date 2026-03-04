@@ -11,6 +11,7 @@ import {
   CG_TICKERS_RATE_MS,
   ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS,
 } from "./constants";
+import { isPlausibleDexObservationPrice } from "./price-sanity";
 
 /** DexScreener fallback: fetch pools for tracked stablecoins with 0 pools in the main pipeline. */
 export async function fetchDsFallbackPools(
@@ -114,7 +115,7 @@ export async function fetchDsFallbackPools(
         poolsFound++;
 
         // Price observation
-        if (price >= 0.5 && price <= 2.0 && tvl >= 10_000) {
+        if (isPlausibleDexObservationPrice(meta.id, price) && tvl >= 10_000) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({ price, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
           priceObs.set(meta.id, obs);
@@ -211,7 +212,7 @@ export async function fetchCgTickersFallback(
         const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
 
         // Price observation (only if price is plausible — skip if near 0)
-        if (exch.price > 0) {
+        if (isPlausibleDexObservationPrice(meta.id, exch.price)) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({
             price: exch.price,
