@@ -19,7 +19,8 @@
 | `GET /api/digest-archive` | All daily digests, newest-first |
 | `GET /api/digest-snapshot` | Contextual data snapshot for a specific digest date (`?date=YYYY-MM-DD`) for SSG builds |
 | `GET /api/health` | Worker health check (includes circuit breaker states) |
-| `GET /api/status` | Admin status dashboard (cron runs, cache freshness, data quality). Requires `X-Admin-Key` header |
+| `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Requires `X-Admin-Key` header |
+| `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
@@ -301,7 +302,7 @@ src/                              # Next.js frontend (static export)
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (48 total)
+├── migrations/                   # D1 SQL migrations (49 total)
 └── src/
     ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
     ├── router.ts                 # Route matching for API endpoints
@@ -336,7 +337,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
     │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
-    │   └── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
+    │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
+    │   └── status-self-check.ts  # Status reliability cron: probes, hysteresis persistence, discrepancy alerts
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
@@ -354,6 +356,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── dex-liquidity-history.ts # GET /api/dex-liquidity-history
     │   ├── health.ts             # GET /api/health
     │   ├── status.ts             # GET /api/status (admin)
+    │   ├── status-history.ts     # GET /api/status-history (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
     │   ├── report-cards.ts       # GET /api/report-cards
     │   ├── backfill-depegs.ts    # POST /api/backfill-depegs (admin)
@@ -389,6 +392,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── twitter.ts            # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
+        ├── status-reliability.ts # Status hysteresis, transitions, probe/discrepancy persistence
         ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)
         ├── mint-burn-scoring.ts  # Flow Intensity Score (FIS), Bank Run Gauge, flight-to-quality detection
         ├── mint-burn-pipeline/   # Shared ingestion helpers used by cron + admin backfill paths

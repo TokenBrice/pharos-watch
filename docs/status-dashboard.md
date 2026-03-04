@@ -1,17 +1,19 @@
 # Status Dashboard
 
-Operational reference for `/status`: admin auth flow, backend status computation, endpoint probing, and inline admin actions.
+Operational reference for `/status`: admin auth flow, backend status computation, hysteresis state machine, discrepancy detection, endpoint probing, and inline admin actions.
 
 ---
 
 ## Scope
 
-The status dashboard combines four independent signals:
+The status dashboard combines six signals:
 
 1. Cache freshness (`/api/status` -> `caches`)
 2. Cron health (`/api/status` -> `crons`)
 3. Data quality (`/api/status` -> `dataQuality`)
-4. Live endpoint probing (`useEndpointProbes`)
+4. Status state machine (`/api/status` -> `state`, `timeline`)
+5. Synthetic status probes (`/api/status` -> `probe`, `discrepancy`)
+6. Live endpoint probing (`useEndpointProbes`)
 
 This page is **admin-only in practice** because all status/probe calls require `X-Admin-Key` for admin paths.
 
@@ -101,7 +103,48 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
 
 ### Overall status
 
-`overallStatus` is the worse of `availabilityStatus` and `dataQualityStatus` (`healthy < degraded < stale`).
+`rawOverallStatus` is the worse of `availabilityStatus` and `dataQualityStatus` (`healthy < degraded < stale`).
+
+`overallStatus` is the **effective** status after hysteresis state-machine reconciliation:
+
+- `healthy -> degraded`: requires 2 consecutive raw degraded checks
+- `healthy -> stale`: immediate on raw stale
+- `degraded -> stale`: requires 2 consecutive raw stale checks
+- `degraded -> healthy`: requires 3 consecutive raw healthy checks (+ dwell)
+- `stale -> degraded`: requires 2 consecutive raw degraded checks (+ stale dwell)
+- `stale -> healthy`: requires 3 consecutive raw healthy checks (+ stale dwell)
+
+Additional response fields:
+
+- `confidence`: normalized status confidence (0.1–1.0)
+- `causes`: structured trigger list (`availability`, `dataQuality`, `overall`)
+- `state`: state-machine counters and thresholds
+- `staleness`: freshness of status-system evaluations
+- `probe`: latest synthetic probe aggregate
+- `discrepancy`: divergence between effective status and synthetic probe status
+- `timeline`: recent status transitions
+
+### Synthetic self-check
+
+`status-self-check` runs on `*/15 * * * *` and:
+
+1. Probes critical public/admin read endpoints.
+2. Persists probe aggregate to `status_probe_runs`.
+3. Reconciles raw status into persisted effective state.
+4. Tracks divergence streak in `status_discrepancy_state`.
+5. Sends alert on sustained divergence.
+
+### History endpoint (`GET /api/status-history`)
+
+Admin machine-readable timeline endpoint for internal tooling and incident audits.
+
+Response includes:
+
+1. persisted state snapshot
+2. status-system staleness
+3. latest probe aggregate
+4. discrepancy summary
+5. transition list (`limit` query param, max 200)
 
 ---
 
@@ -125,6 +168,9 @@ These are handled directly in `worker/src/index.ts` and surfaced on the status p
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
 - `GET /api/debug-sync-state`
+- `POST /api/backfill-mint-burn-prices`
+- `POST /api/backfill-mint-burn`
+- `GET /api/backfill-dews`
 
 Mutating admin paths are protected by method guardrails:
 
@@ -140,6 +186,9 @@ Mutating admin paths are protected by method guardrails:
 | `src/hooks/use-status.ts` | 60s polling for `/api/status` with admin key auth |
 | `src/hooks/use-endpoint-probes.ts` | 60s endpoint probe loop + group definitions |
 | `src/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |
-| `worker/src/api/status.ts` | Core status synthesis logic (cache/cron/data-quality) |
+| `worker/src/api/status.ts` | Raw status synthesis + effective state response |
+| `worker/src/api/status-history.ts` | Machine-readable status timeline/history endpoint |
 | `worker/src/api/health.ts` | Public health endpoint for cache/circuit observability |
+| `worker/src/lib/status-reliability.ts` | Hysteresis, transitions, probes, discrepancy helpers |
+| `worker/src/cron/status-self-check.ts` | Synthetic probe + divergence alert cron |
 | `worker/src/index.ts` | Inline admin action handlers and mutating-method enforcement |

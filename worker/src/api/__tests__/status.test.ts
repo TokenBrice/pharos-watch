@@ -230,6 +230,7 @@ describe("handleStatus", () => {
       "sync-yield-data",
       "fetch-tbill-rate",
       "compute-dews",
+      "status-self-check",
     ];
     const cronRows = jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30));
     const db = mockD1([

@@ -21,12 +21,13 @@ This map links each major Pharos data domain from upstream source to frontend co
 | Yield intelligence | DefiLlama pools, risk-free rate cache | `worker/src/cron/sync-yield-data.ts`, `worker/src/cron/fetch-tbill-rate.ts` | `yield_data`, `yield_history`, cache `yield-rankings`, cache `risk_free_rate` | `GET /api/yield-rankings`, `GET /api/yield-history` | `useYieldRankings` | Yield page |
 | Daily digest | Anthropic Claude + PSI snapshot context | `worker/src/cron/daily-digest.ts` | `daily_digest` + static build sync to `data/digests.json` | `GET /api/daily-digest`, `GET /api/digest-archive`, `GET /api/digest-snapshot` | `useDailyDigest`, `useDigestArchive`, `useDigestSnapshot` | Digest page + archive |
 | Report cards + dependency graph | Peg summary + liquidity + bluechip + stablecoin metadata/dependencies | `worker/src/api/report-cards.ts` compute on read | cache-driven upstream + in-memory compute | `GET /api/report-cards` | `useReportCards` | Safety Scores, Portfolio, Dependency Map |
+| Status reliability | Internal synthetic probes + status synthesis | `worker/src/cron/status-self-check.ts`, `worker/src/api/status.ts` | `status_state`, `status_transitions`, `status_probe_runs`, `status_discrepancy_state` | `GET /api/status`, `GET /api/status-history` | `useStatus`, `useEndpointProbes`, `useHealth` | `/status` admin dashboard |
 
 ## Scheduling Backbone
 
 Cron schedules are defined in `worker/src/index.ts`:
 
-- `*/15 * * * *`: stablecoins, charts, FX, PSI compute, DEWS compute
+- `*/15 * * * *`: stablecoins, charts, FX, PSI compute, DEWS compute, status self-check
 - `3,23,43 * * * *`: blacklist sync, mint/burn sync
 - `10,40 * * * *`: DEX liquidity sync, then yield sync
 - `0 8 * * *`: supply snapshot, T-bill rate, PSI daily snapshot, USDS status, bluechip sync, then daily digest

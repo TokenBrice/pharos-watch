@@ -22,6 +22,8 @@ const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
 const GOLD_METAS = TRACKED_STABLECOINS.filter((s) => s.flags.pegCurrency === "GOLD");
 const SILVER_METAS = TRACKED_STABLECOINS.filter((s) => s.flags.pegCurrency === "SILVER");
 const FIAT_CG_METAS = TRACKED_STABLECOINS.filter((s) => s.id.startsWith("cg-"));
+const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
+const VALIDATION_ISSUES_MAX_CHARS = 400;
 
 function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;
@@ -75,6 +77,39 @@ function normalizeStablecoinsPayload(payload: StablecoinsPayload): StablecoinsPa
       };
     }),
   };
+}
+
+function summarizeValidationIssues(issues: string): string {
+  if (issues.length <= VALIDATION_ISSUES_MAX_CHARS) return issues;
+  return `${issues.slice(0, VALIDATION_ISSUES_MAX_CHARS)}...`;
+}
+
+async function getStablecoinsCacheAgeSec(db: D1Database): Promise<number | null> {
+  const stablecoinsCache = await getCache(db, "stablecoins");
+  if (!stablecoinsCache) return null;
+  return Math.max(0, Math.floor(Date.now() / 1000) - stablecoinsCache.updatedAt);
+}
+
+async function writeInvalidStablecoinsDiagnostic(
+  db: D1Database,
+  syncStartSec: number,
+  context: "main" | "fallback",
+  payload: StablecoinsPayload,
+  validationIssues: string,
+  stablecoinsCacheAgeSec: number | null,
+): Promise<void> {
+  await setCacheIfNewer(
+    db,
+    INVALID_STABLECOINS_CACHE_KEY,
+    JSON.stringify({
+      context,
+      detectedAt: syncStartSec,
+      stablecoinsCacheAgeSec,
+      validationIssues: summarizeValidationIssues(validationIssues),
+      payload,
+    }),
+    syncStartSec,
+  );
 }
 
 function hydrateGeckoIdAliases(assets: PeggedAsset[]): void {
@@ -480,22 +515,34 @@ async function fallbackToCgSupply(
     "sync-stablecoins:stablecoins:fallback",
   );
   if (!validation.ok) {
-    console.error("[sync-stablecoins] Schema validation failed in CG fallback; writing guarded normalized payload:", validation.issues);
+    const issueSummary = summarizeValidationIssues(validation.issues);
+    const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
+    console.error("[sync-stablecoins] Schema validation failed in CG fallback; blocking stablecoins cache write:", issueSummary);
     await sendAlert(
       "Stablecoins schema validation warning",
-      `CG fallback payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
+      `context=fallback; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
     );
-    await setCacheIfNewer(db, "stablecoins", JSON.stringify(normalizedPayload), syncStartSec);
+    await writeInvalidStablecoinsDiagnostic(
+      db,
+      syncStartSec,
+      "fallback",
+      normalizedPayload,
+      validation.issues,
+      stablecoinsCacheAgeSec,
+    );
     return {
+      status: "degraded",
       itemCount: assets.length,
       metadata: JSON.stringify({
         rowsRead: assets.length,
-        rowsWritten: assets.length,
+        rowsWritten: 0,
         rowsDropped: 0,
         sourceCoverage: { defillama: false, coingeckoFallbackAssets: assets.length },
         fallbackMode: "coingecko-supply-fallback",
         validationFailures: 1,
-        cacheWriteMode: "schema-validation-fallback",
+        validationContext: "fallback",
+        stablecoinsCacheAgeSec,
+        cacheWriteMode: "blocked-invalid-payload",
       }),
     };
   }
@@ -867,23 +914,35 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     "sync-stablecoins:stablecoins",
   );
   if (!validation.ok) {
-    console.error("[sync-stablecoins] Schema validation failed; writing guarded normalized payload:", validation.issues);
+    const issueSummary = summarizeValidationIssues(validation.issues);
+    const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
+    console.error("[sync-stablecoins] Schema validation failed; blocking stablecoins cache write:", issueSummary);
     await recordOutcome(db, CIRCUIT_SOURCE.DL_STABLECOINS, false);
     await sendAlert(
       "Stablecoins schema validation warning",
-      `Payload failed schema validation; writing guarded fallback. issues=${validation.issues.slice(0, 400)}`,
+      `context=main; blocked stablecoins cache write; issues=${issueSummary}; stablecoinsCacheAgeSec=${stablecoinsCacheAgeSec ?? "missing"}`,
     );
-    await setCacheIfNewer(db, "stablecoins", JSON.stringify(normalizedPayload), syncStartSec);
+    await writeInvalidStablecoinsDiagnostic(
+      db,
+      syncStartSec,
+      "main",
+      normalizedPayload,
+      validation.issues,
+      stablecoinsCacheAgeSec,
+    );
     return {
+      status: "degraded",
       itemCount: llamaData.peggedAssets.length,
       metadata: JSON.stringify({
         rowsRead: rawAssetCount,
-        rowsWritten: llamaData.peggedAssets.length,
+        rowsWritten: 0,
         rowsDropped: droppedMalformedAssets,
         sourceCoverage: { defillama: true },
-        fallbackMode: "schema-validation-fallback",
+        fallbackMode: null,
         validationFailures: 1,
-        cacheWriteMode: "schema-validation-fallback",
+        validationContext: "main",
+        stablecoinsCacheAgeSec,
+        cacheWriteMode: "blocked-invalid-payload",
       }),
     };
   }

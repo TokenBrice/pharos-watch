@@ -1274,7 +1274,47 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
   "timestamp": 1771856453,
   "availabilityStatus": "healthy",
   "dataQualityStatus": "healthy",
+  "rawOverallStatus": "degraded",
   "overallStatus": "healthy",
+  "confidence": 0.94,
+  "causes": {
+    "availability": [{ "code": "degraded_cron_warning", "severity": "info" }],
+    "dataQuality": [],
+    "overall": [{ "code": "degraded_cron_warning", "severity": "info" }]
+  },
+  "state": {
+    "currentStatus": "healthy",
+    "rawStatus": "degraded",
+    "lastEvaluatedAt": 1771856453,
+    "lastChangedAt": 1771856200,
+    "consecutiveRaw": { "healthy": 3, "degraded": 0, "stale": 0 }
+  },
+  "staleness": { "ageSeconds": 0, "maxAgeSec": 1800, "isStale": false },
+  "probe": {
+    "timestamp": 1771856440,
+    "status": "healthy",
+    "sampleCount": 22,
+    "passCount": 22,
+    "failCount": 0,
+    "p95LatencyMs": 301
+  },
+  "discrepancy": {
+    "hasDivergence": false,
+    "severityDelta": 0,
+    "consecutiveDivergent": 0
+  },
+  "timeline": [
+    {
+      "id": 411,
+      "from": "degraded",
+      "to": "healthy",
+      "rawStatus": "healthy",
+      "transitionType": "recover",
+      "reason": "raw-healthy-recovery-threshold",
+      "confidence": 0.94,
+      "at": 1771856200
+    }
+  ],
   "caches": { ... },
   "crons": {
     "sync-stablecoins": {
@@ -1311,6 +1351,22 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 ```
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
+
+`overallStatus` is the effective (hysteresis-smoothed) status. `rawOverallStatus` is the immediate worst-of availability/data-quality signal.
+
+### `GET /api/status-history`
+
+Machine-readable status timeline endpoint for tooling and incident analysis.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | `integer` | `50` | Number of transitions to return (1–200) |
+
+**Response shape:** `StatusHistoryResponse` (defined in `src/lib/types.ts`)
 
 ### `POST /api/backfill-depegs`
 

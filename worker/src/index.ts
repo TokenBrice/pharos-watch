@@ -16,6 +16,7 @@ import { snapshotPsiDaily } from "./cron/snapshot-psi";
 import { syncYieldData } from "./cron/sync-yield-data";
 import { fetchTbillRate } from "./cron/fetch-tbill-rate";
 import { computeAndStoreDEWS } from "./cron/compute-dews";
+import { runStatusSelfCheck } from "./cron/status-self-check";
 import { initChainRpcs } from "./lib/chain-rpcs";
 import { initAlerts, sendAlert } from "./lib/alerts";
 import { initCoinGecko } from "./lib/coingecko";
@@ -375,6 +376,8 @@ const worker = {
         ctx.waitUntil(stablecoinsSync.then(() =>
           runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(db, signal))
         ));
+        // Status system self-check: persists hysteresis state and probes critical endpoints.
+        ctx.waitUntil(runLeasedCron("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, signal)));
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         ctx.waitUntil((async () => {
           try {

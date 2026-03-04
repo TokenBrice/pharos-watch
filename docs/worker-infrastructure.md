@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 15 cron jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 16 cron jobs across 4 trigger slots.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -144,6 +144,7 @@ crons = [
 | `sync-fx-rates` | `syncFxRates()` | `worker/src/cron/sync-fx-rates.ts` | `docs/data-pipeline.md`, `docs/classification.md` |
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
+| `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/index.ts` | This doc (below) |
 
 **Dependencies:** Stability index waits for `syncStablecoins()` to complete (`stablecoinsSync.then(...)`).
@@ -264,7 +265,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 
 ```typescript
 export function initAlerts(url: string | undefined): void
-export async function sendAlert(title: string, message: string): Promise<void>
+export async function sendAlert(title: string, message: string): Promise<boolean>
 ```
 
 Auto-detects webhook format from URL:
@@ -274,7 +275,7 @@ Auto-detects webhook format from URL:
 | `discord.com/api/webhooks` | Discord embed (red, `[Pharos] {title}`, timestamp) |
 | Anything else | Slack markdown (`*[Pharos] {title}*\n{message}`) |
 
-Non-blocking — errors are logged but never propagated.
+`sendAlert()` returns `true` only when the webhook responds with `2xx`. Non-2xx responses and fetch errors are logged with status/context, and failures never propagate to caller control flow.
 
 ---
 
@@ -297,6 +298,7 @@ CREATE TABLE IF NOT EXISTS cache (
 | Cache Key | Writer | Data |
 |-----------|--------|------|
 | `stablecoins` | `syncStablecoins` | Full DefiLlama pegged assets payload |
+| `stablecoins:invalid-last` | `syncStablecoins` | Last schema-invalid stablecoins payload (diagnostic only, never served to clients) |
 | `stablecoin-charts` | `syncStablecoinCharts` | Downsampled chart points |
 | `fx-rates` | `syncFxRates` | FX rates (EUR, GBP, etc.) |
 | `usds-status` | `syncUsdsStatus` | Freeze capability + implementation address |
@@ -484,7 +486,7 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 
 ### GET /api/status
 
-Returns recent `cron_runs` rows for operational monitoring. Tracks 15 cron jobs via the `CRON_INTERVALS` map:
+Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 16 cron jobs via the `CRON_INTERVALS` map:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -503,8 +505,13 @@ Returns recent `cron_runs` rows for operational monitoring. Tracks 15 cron jobs 
 | `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
+| `status-self-check` | 900s (15min) | `*/15 * * * *` |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago.
+
+### GET /api/status-history
+
+Admin timeline feed for machine consumers. Returns persisted status state, status-system staleness, latest synthetic probe aggregate, discrepancy summary, and recent status transitions.
 
 ---
 
@@ -544,4 +551,6 @@ A job is marked "unhealthy" if its last run had `status='error'` or if the last 
 | `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation |
 | `worker/src/cron/sync-usds-status.ts` | USDS freeze monitor: ERC-1967 proxy inspection |
 | `worker/src/cron/sync-bluechip.ts` | Bluechip ratings: batch fetch from bluechip.org |
+| `worker/src/cron/status-self-check.ts` | Status reliability self-check: synthetic probes, hysteresis persistence, discrepancy alerting |
+| `worker/src/lib/status-reliability.ts` | Status state machine + transition/probe/discrepancy persistence helpers |
 | `worker/migrations/0001_initial.sql` | `cache`, `blacklist_events`, `blacklist_sync_state` tables |

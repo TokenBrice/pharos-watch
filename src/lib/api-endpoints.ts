@@ -145,6 +145,23 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    path: "/api/yield-rankings",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    path: "/api/yield-history",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+    probePath: "/api/yield-history?stablecoin=1",
+  },
+  {
     path: "/api/stability-index",
     methods: ["GET"],
     adminRequired: false,
@@ -160,6 +177,30 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     probeGroup: "public",
   },
+  {
+    path: "/api/mint-burn-flows",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    path: "/api/mint-burn-events",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
+    path: "/api/stress-signals",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
 
   // Admin status/probe endpoints.
   {
@@ -169,6 +210,15 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: true,
     probeGroup: "admin",
+  },
+  {
+    path: "/api/status-history",
+    methods: ["GET"],
+    adminRequired: true,
+    mutatingAdmin: false,
+    cacheBypass: true,
+    probeGroup: "admin",
+    probePath: "/api/status-history?limit=10",
   },
   {
     path: "/api/trigger-digest",
@@ -268,6 +318,12 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Backfill Mint/Burn Prices",
+      confirm: "Backfill mint/burn USD prices for NULL events?",
+      method: "POST",
+    },
   },
   {
     path: "/api/backfill-mint-burn",
@@ -275,6 +331,12 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: true,
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Backfill Mint/Burn",
+      confirm: "Run mint/burn backfill job?",
+      method: "POST",
+    },
   },
   {
     path: "/api/audit-depeg-history",
@@ -297,6 +359,12 @@ const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: false,
     cacheBypass: true,
+    probeGroup: "manual",
+    statusPageAction: {
+      label: "Backfill DEWS",
+      confirm: "Run DEWS historical backfill validation?",
+      method: "GET",
+    },
   },
 ] as const;
 

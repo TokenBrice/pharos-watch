@@ -23,12 +23,18 @@ describe("api endpoint registry", () => {
       "/api/supply-history?stablecoin=1",
       "/api/daily-digest",
       "/api/digest-archive",
+      "/api/yield-rankings",
+      "/api/yield-history?stablecoin=1",
       "/api/stability-index",
       "/api/report-cards",
+      "/api/mint-burn-flows",
+      "/api/mint-burn-events",
+      "/api/stress-signals",
     ]);
 
     expect(getProbePaths("admin")).toEqual([
       "/api/status",
+      "/api/status-history?limit=10",
       "/api/debug-sync-state",
     ]);
 
@@ -39,7 +45,10 @@ describe("api endpoint registry", () => {
       "/api/backfill-supply-history",
       "/api/backfill-cg-prices",
       "/api/backfill-stability-index",
+      "/api/backfill-mint-burn-prices",
+      "/api/backfill-mint-burn",
       "/api/audit-depeg-history?dry-run=true",
+      "/api/backfill-dews",
     ]);
   });
 
@@ -110,9 +119,30 @@ describe("api endpoint registry", () => {
         method: "POST",
       },
       {
+        label: "Backfill Mint/Burn Prices",
+        path: "/api/backfill-mint-burn-prices",
+        confirm: "Backfill mint/burn USD prices for NULL events?",
+        destructive: false,
+        method: "POST",
+      },
+      {
+        label: "Backfill Mint/Burn",
+        path: "/api/backfill-mint-burn",
+        confirm: "Run mint/burn backfill job?",
+        destructive: false,
+        method: "POST",
+      },
+      {
         label: "Audit Depegs",
         path: "/api/audit-depeg-history?dry-run=true",
         confirm: "Run depeg history audit (dry-run)?",
+        destructive: false,
+        method: "GET",
+      },
+      {
+        label: "Backfill DEWS",
+        path: "/api/backfill-dews",
+        confirm: "Run DEWS historical backfill validation?",
         destructive: false,
         method: "GET",
       },

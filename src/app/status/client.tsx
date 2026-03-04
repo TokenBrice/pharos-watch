@@ -6,7 +6,7 @@ import { useHealth } from "@/hooks/use-health";
 import { useEndpointProbes, ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import { API_BASE } from "@/lib/api";
 import { getStatusPageActions, type StatusPageAction } from "@/lib/api-endpoints";
-import type { EndpointProbeResult, CircuitRecord } from "@/lib/types";
+import type { EndpointProbeResult, CircuitRecord, StatusTransition } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,11 +34,15 @@ function StatusBanner({
   timestamp,
   availabilityStatus,
   dataQualityStatus,
+  rawStatus,
+  confidence,
 }: {
   status: "healthy" | "degraded" | "stale";
   timestamp: number;
   availabilityStatus: "healthy" | "degraded" | "stale";
   dataQualityStatus: "healthy" | "degraded" | "stale";
+  rawStatus: "healthy" | "degraded" | "stale";
+  confidence: number;
 }) {
   const config = STATUS_CONFIG[status];
   const time = new Date(timestamp * 1000).toLocaleString();
@@ -49,7 +53,7 @@ function StatusBanner({
           <div className={`h-3 w-3 rounded-full ${status === "healthy" ? "bg-green-500" : status === "degraded" ? "bg-amber-500" : "bg-red-500"}`} />
           <span className={`text-lg font-semibold ${config.text}`}>{config.label}</span>
           <span className="text-xs text-muted-foreground">
-            availability: {availabilityStatus} • data quality: {dataQualityStatus}
+            raw: {rawStatus} • confidence: {(confidence * 100).toFixed(1)}% • availability: {availabilityStatus} • data quality: {dataQualityStatus}
           </span>
         </div>
         <span className="text-sm text-muted-foreground">Checked: {time}</span>
@@ -282,6 +286,143 @@ function CacheFreshnessTable({ caches }: { caches: Record<string, { ageSeconds: 
                 <td className="py-2">
                   <div className={`h-2.5 w-2.5 rounded-full ${cache.healthy ? "bg-green-500" : "bg-red-500"}`} />
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SystemDiagnostics({
+  state,
+  staleness,
+  probe,
+  discrepancy,
+  nowSeconds,
+}: {
+  state: {
+    currentStatus: "healthy" | "degraded" | "stale";
+    rawStatus: "healthy" | "degraded" | "stale";
+    lastEvaluatedAt: number;
+    lastChangedAt: number;
+  };
+  staleness: { ageSeconds: number; maxAgeSec: number; isStale: boolean };
+  probe: {
+    timestamp: number | null;
+    status: "healthy" | "degraded" | "stale" | "unknown";
+    sampleCount: number;
+    passCount: number;
+    failCount: number;
+    p95LatencyMs: number | null;
+  };
+  discrepancy: {
+    hasDivergence: boolean;
+    severityDelta: number;
+    details: string | null;
+    probeAgeSeconds: number | null;
+    consecutiveDivergent: number;
+  };
+  nowSeconds: number;
+}) {
+  const evalAge = Math.max(0, nowSeconds - state.lastEvaluatedAt);
+  const changedAge = Math.max(0, nowSeconds - state.lastChangedAt);
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card>
+        <CardContent className="pt-4">
+          <div className="text-xs text-muted-foreground">State Machine</div>
+          <div className="text-sm font-mono">{state.currentStatus} (raw: {state.rawStatus})</div>
+          <div className="text-xs text-muted-foreground">evaluated {formatAge(evalAge)} ago</div>
+          <div className="text-xs text-muted-foreground">changed {formatAge(changedAge)} ago</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="pt-4">
+          <div className="text-xs text-muted-foreground">Status Freshness</div>
+          <div className={`text-sm font-mono ${staleness.isStale ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+            {staleness.isStale ? "stale" : "fresh"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            age {formatAge(staleness.ageSeconds)} / max {formatAge(staleness.maxAgeSec)}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="pt-4">
+          <div className="text-xs text-muted-foreground">Synthetic Probe</div>
+          <div className="text-sm font-mono">
+            {probe.status} ({probe.passCount}/{probe.sampleCount})
+          </div>
+          <div className="text-xs text-muted-foreground">
+            p95 {probe.p95LatencyMs != null ? `${probe.p95LatencyMs}ms` : "N/A"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {probe.timestamp ? `${formatAge(Math.max(0, nowSeconds - probe.timestamp))} ago` : "no probe yet"}
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="pt-4">
+          <div className="text-xs text-muted-foreground">Divergence</div>
+          <div className={`text-sm font-mono ${discrepancy.hasDivergence ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"}`}>
+            {discrepancy.hasDivergence ? "detected" : "none"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            streak: {discrepancy.consecutiveDivergent}
+          </div>
+          {discrepancy.details && (
+            <div className="text-xs text-muted-foreground">{discrepancy.details}</div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function TransitionTimeline({ transitions }: { transitions: StatusTransition[] }) {
+  if (!transitions || transitions.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Incident Timeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">No status transitions recorded yet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Incident Timeline</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="pb-2 font-medium">Time</th>
+              <th className="pb-2 font-medium">Transition</th>
+              <th className="pb-2 font-medium">Raw</th>
+              <th className="pb-2 font-medium">Reason</th>
+              <th className="pb-2 font-medium">Confidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transitions.map((transition) => (
+              <tr key={transition.id} className="border-b last:border-0">
+                <td className="py-2 text-xs text-muted-foreground">
+                  {new Date(transition.at * 1000).toLocaleString()}
+                </td>
+                <td className="py-2 font-mono text-xs">
+                  {(transition.from ?? "init")} → {transition.to}
+                </td>
+                <td className="py-2 font-mono text-xs">{transition.rawStatus}</td>
+                <td className="py-2 text-xs text-muted-foreground">{transition.reason}</td>
+                <td className="py-2 font-mono text-xs">{(transition.confidence * 100).toFixed(1)}%</td>
               </tr>
             ))}
           </tbody>
@@ -650,8 +791,16 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
   const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminKey);
   const { data: healthData, refetch: refetchHealth, dataUpdatedAt: healthUpdatedAt } = useHealth();
   const { data: probes, isLoading: probesLoading, refetch: refetchProbes, dataUpdatedAt: probesUpdatedAt } = useEndpointProbes(adminKey);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   const lastUpdated = Math.max(statusUpdatedAt ?? 0, healthUpdatedAt ?? 0, probesUpdatedAt ?? 0);
+  const clientDataAgeSec = Math.max(0, Math.floor((nowMs - lastUpdated) / 1000));
+  const clientDataStale = lastUpdated > 0 && clientDataAgeSec > 120;
+
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 5000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleRefresh = useCallback(() => {
     refetchStatus();
@@ -696,7 +845,26 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
         timestamp={data.timestamp}
         availabilityStatus={data.availabilityStatus}
         dataQualityStatus={data.dataQualityStatus}
+        rawStatus={data.rawOverallStatus}
+        confidence={data.confidence}
       />
+
+      {clientDataStale && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+          Status page data is stale on the client ({clientDataAgeSec}s since last refresh). Signals may be outdated.
+        </div>
+      )}
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Status Diagnostics</h2>
+        <SystemDiagnostics
+          state={data.state}
+          staleness={data.staleness}
+          probe={data.probe}
+          discrepancy={data.discrepancy}
+          nowSeconds={data.timestamp}
+        />
+      </section>
 
       {/* New sections */}
       <section>
@@ -727,6 +895,11 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       <section>
         <h2 className="mb-3 text-xl font-semibold">Data Quality</h2>
         <DataQualityCards dq={data.dataQuality} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Incident Timeline</h2>
+        <TransitionTimeline transitions={data.timeline} />
       </section>
 
       <CacheFreshnessTable caches={data.caches} />

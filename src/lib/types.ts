@@ -630,6 +630,75 @@ export interface CronStatus {
   healthy: boolean;
 }
 
+export interface StatusCause {
+  code: string;
+  layer: "availability" | "data-quality" | "system";
+  severity: "info" | "warning" | "critical";
+  message: string;
+  metric?: string;
+  value?: number;
+  threshold?: number;
+}
+
+export interface StatusStateInfo {
+  scope: "global";
+  currentStatus: "healthy" | "degraded" | "stale";
+  rawStatus: "healthy" | "degraded" | "stale";
+  lastEvaluatedAt: number;
+  lastChangedAt: number;
+  minDwellSec: number;
+  staleMinDwellSec: number;
+  consecutiveRaw: {
+    healthy: number;
+    degraded: number;
+    stale: number;
+  };
+  thresholds: {
+    escalateToDegraded: number;
+    escalateToStale: number;
+    recoverToDegraded: number;
+    recoverToHealthy: number;
+  };
+}
+
+export interface StatusStaleness {
+  ageSeconds: number;
+  maxAgeSec: number;
+  isStale: boolean;
+}
+
+export interface StatusProbeSummary {
+  timestamp: number | null;
+  status: "healthy" | "degraded" | "stale" | "unknown";
+  sampleCount: number;
+  passCount: number;
+  failCount: number;
+  p95LatencyMs: number | null;
+}
+
+export interface StatusDiscrepancy {
+  hasDivergence: boolean;
+  severityDelta: number;
+  statusSeverity: number;
+  probeSeverity: number;
+  details: string | null;
+  probeAgeSeconds: number | null;
+  consecutiveDivergent: number;
+}
+
+export interface StatusTransition {
+  id: number;
+  scope: "global";
+  from: "healthy" | "degraded" | "stale" | null;
+  to: "healthy" | "degraded" | "stale";
+  rawStatus: "healthy" | "degraded" | "stale";
+  transitionType: "degrade" | "recover" | "init";
+  reason: string;
+  confidence: number;
+  causes: StatusCause[];
+  at: number;
+}
+
 export interface DataQuality {
   totalStablecoins: number;
   missingPrices: number;
@@ -652,7 +721,19 @@ export interface StatusResponse {
   timestamp: number;
   availabilityStatus: "healthy" | "degraded" | "stale";
   dataQualityStatus: "healthy" | "degraded" | "stale";
+  rawOverallStatus: "healthy" | "degraded" | "stale";
   overallStatus: "healthy" | "degraded" | "stale";
+  confidence: number;
+  causes: {
+    availability: StatusCause[];
+    dataQuality: StatusCause[];
+    overall: StatusCause[];
+  };
+  state: StatusStateInfo;
+  staleness: StatusStaleness;
+  probe: StatusProbeSummary;
+  discrepancy: StatusDiscrepancy;
+  timeline: StatusTransition[];
   caches: Record<string, CacheStatus>;
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
@@ -662,6 +743,15 @@ export interface StatusResponse {
     cronErrors: number;
     worstCacheRatio: number;
   };
+}
+
+export interface StatusHistoryResponse {
+  timestamp: number;
+  state: StatusStateInfo | null;
+  staleness: StatusStaleness | null;
+  probe: StatusProbeSummary;
+  discrepancy: StatusDiscrepancy;
+  transitions: StatusTransition[];
 }
 
 // --- Health endpoint types ---

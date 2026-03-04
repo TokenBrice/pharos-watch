@@ -5,8 +5,17 @@ import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 // --- Module-level mocks ---
 
 // Stub the stablecoins list to avoid importing the full registry
-vi.mock("../../../../src/lib/stablecoins", () => ({
-  TRACKED_STABLECOINS: [
+vi.mock("../../../../src/lib/stablecoins", () => {
+  const fallbackTrackedTokens = Array.from({ length: 60 }, (_, i) => ({
+    id: `cg-fb-${i}`,
+    name: `Fallback Coin ${i}`,
+    symbol: `FC${i}`,
+    geckoId: `fallback-coin-${i}`,
+    flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
+  }));
+
+  return {
+    TRACKED_STABLECOINS: [
     {
       id: "1",
       name: "Tether",
@@ -21,12 +30,14 @@ vi.mock("../../../../src/lib/stablecoins", () => ({
       geckoId: "usd-coin",
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
-  ],
-  TRACKED_META_BY_ID: new Map([
-    ["1", { geckoId: "tether", cmcSlug: undefined }],
-    ["2", { geckoId: "usd-coin", cmcSlug: undefined }],
-  ]),
-}));
+      ...fallbackTrackedTokens,
+    ],
+    TRACKED_META_BY_ID: new Map([
+      ["1", { geckoId: "tether", cmcSlug: undefined }],
+      ["2", { geckoId: "usd-coin", cmcSlug: undefined }],
+    ]),
+  };
+});
 
 // Stub enrich-prices to avoid complex 4-pass pipeline
 vi.mock("../enrich-prices", () => ({
@@ -74,7 +85,7 @@ vi.mock("../../lib/coingecko", () => ({
 
 // Stub alerts
 vi.mock("../../lib/alerts", () => ({
-  sendAlert: vi.fn(async () => {}),
+  sendAlert: vi.fn(async () => true),
 }));
 
 import { syncStablecoins } from "../sync-stablecoins";
@@ -115,6 +126,26 @@ function makeDb() {
     { match: "price_cache", rows: [] },
     { match: "circuit", rows: [] },
   ]);
+}
+
+function trackCacheWrites(db: D1Database): Array<{ key: string; value: string }> {
+  const writes: Array<{ key: string; value: string }> = [];
+  const origPrepare = db.prepare.bind(db);
+  db.prepare = vi.fn((sql: string) => {
+    const stmt = origPrepare(sql);
+    if (!sql.includes("INSERT INTO cache")) return stmt;
+    return {
+      ...stmt,
+      bind: (...args: unknown[]) => {
+        writes.push({
+          key: String(args[0] ?? ""),
+          value: String(args[1] ?? ""),
+        });
+        return stmt.bind(...args);
+      },
+    };
+  }) as typeof db.prepare;
+  return writes;
 }
 
 describe("syncStablecoins", () => {
@@ -296,12 +327,7 @@ describe("syncStablecoins", () => {
 
   it("writes guarded fallback payload when final stablecoins payload fails schema validation", async () => {
     const db = makeDb();
-    const prepareSpy = vi.fn();
-    const origPrepare = db.prepare.bind(db);
-    db.prepare = vi.fn((sql: string) => {
-      prepareSpy(sql);
-      return origPrepare(sql);
-    }) as typeof db.prepare;
+    const cacheWrites = trackCacheWrites(db);
 
     const dlData = makeDlResponse(60);
     vi.spyOn(apiUtils, "validatePayloadWithSchema").mockReturnValueOnce({
@@ -318,15 +344,50 @@ describe("syncStablecoins", () => {
     const result = await syncStablecoins(db);
 
     expect(result.itemCount).toBe(60);
-    expect(result.metadata).toContain("schema-validation-fallback");
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.validationFailures).toBe(1);
+    expect(metadata.cacheWriteMode).toBe("blocked-invalid-payload");
     expect(sendAlert).toHaveBeenCalledWith(
       "Stablecoins schema validation warning",
       expect.stringContaining("forced-test-validation-failure"),
     );
-    const cacheWrites = prepareSpy.mock.calls.filter(
-      (args) => (args[0] as string).includes("INSERT INTO cache")
+    const cacheKeys = cacheWrites.map((write) => write.key);
+    expect(cacheKeys).toContain("stablecoins:invalid-last");
+    expect(cacheKeys).not.toContain("stablecoins");
+  });
+
+  it("writes diagnostic cache and returns degraded when fallback payload fails schema validation", async () => {
+    const db = makeDb();
+    const cacheWrites = trackCacheWrites(db);
+    const cgData: Record<string, { usd: number; usd_market_cap: number }> = {};
+    for (let i = 0; i < 60; i++) {
+      cgData[`fallback-coin-${i}`] = { usd: 1, usd_market_cap: 1_000_000 + i };
+    }
+
+    vi.spyOn(apiUtils, "validatePayloadWithSchema").mockReturnValueOnce({
+      ok: false,
+      issues: "forced-fallback-validation-failure",
+    });
+
+    mockFetch([
+      { match: "api.coingecko.com", body: cgData },
+      { match: "stablecoins.llama.fi", body: { error: "down" }, status: 500 },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.validationFailures).toBe(1);
+    expect(metadata.validationContext).toBe("fallback");
+    expect(sendAlert).toHaveBeenCalledWith(
+      "Stablecoins schema validation warning",
+      expect.stringContaining("context=fallback"),
     );
-    expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
+    const cacheKeys = cacheWrites.map((write) => write.key);
+    expect(cacheKeys).toContain("stablecoins:invalid-last");
+    expect(cacheKeys).not.toContain("stablecoins");
   });
 
   it("records DL success outcome when fetch succeeds", async () => {

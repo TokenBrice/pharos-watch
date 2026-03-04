@@ -13,6 +13,7 @@ import { handleDexLiquidity } from "./api/dex-liquidity";
 import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
 import { handleSupplyHistory } from "./api/supply-history";
 import { handleStatus } from "./api/status";
+import { handleStatusHistory } from "./api/status-history";
 import { handleDailyDigest } from "./api/daily-digest";
 import { handleDigestArchive } from "./api/digest-archive";
 import { handleDigestSnapshot } from "./api/digest-snapshot";
@@ -120,6 +121,10 @@ export function route(
 
   if (path === "/api/status") {
     return handleStatus(db, adminKey, request);
+  }
+
+  if (path === "/api/status-history") {
+    return handleStatusHistory(db, adminKey, request);
   }
 
   if (path === "/api/daily-digest") {
