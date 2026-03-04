@@ -18,6 +18,7 @@ const LAST_EDITED: Record<string, string> = {
   "/methodology/liquidity-score-changelog/": "2026-03-03",
   "/methodology/stability-index-changelog/": "2026-03-03",
   "/methodology/mint-burn-flow-changelog/": "2026-03-04",
+  "/methodology/yield-changelog/": "2026-03-04",
   "/depeg/": "2026-03-02",
   "/yield/": "2026-03-02",
   "/flows/": "2026-03-04",
@@ -144,6 +145,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: "https://pharos.watch/methodology/mint-burn-flow-changelog/",
       lastModified: new Date(LAST_EDITED["/methodology/mint-burn-flow-changelog/"]!),
+      changeFrequency: "monthly",
+      priority: 0.4,
+    },
+    {
+      url: "https://pharos.watch/methodology/yield-changelog/",
+      lastModified: new Date(LAST_EDITED["/methodology/yield-changelog/"]!),
       changeFrequency: "monthly",
       priority: 0.4,
     },

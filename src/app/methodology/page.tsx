@@ -19,6 +19,10 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/mint-burn-flow-version";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/yield-methodology-version";
 
 const METHODOLOGY_SECTIONS = [
   { id: "stability-index-methodology", label: "Stability Index" },
@@ -1196,8 +1200,19 @@ export default function MethodologyPage() {
 
       {/* Yield Intelligence */}
       <Card id="yield-intelligence-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-violet-500">
-        <CardHeader>
-          <CardTitle as="h2">Yield Intelligence</CardTitle>
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Yield Intelligence</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-violet-500">
+              {YIELD_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href={YIELD_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-violet-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when APY source resolution, PYS scoring logic, or eligibility rules for discovered yield sources change.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>

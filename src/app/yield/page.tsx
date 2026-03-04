@@ -5,6 +5,10 @@ import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import {
+  YIELD_METHODOLOGY_CHANGELOG_PATH,
+  YIELD_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/yield-methodology-version";
 
 const YieldClient = dynamic(
   () => import("./client").then((m) => ({ default: m.YieldClient })),
@@ -74,7 +78,13 @@ export default function YieldPage() {
           <span>/</span>
           <span className="text-foreground">Yield Intelligence</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Yield Intelligence <FeatureStatusBadge status="testing-in-prod" /></h1>
+        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Yield Intelligence <FeatureStatusBadge status="testing-in-prod" version={YIELD_METHODOLOGY_VERSION_LABEL} /></h1>
+        <p className="text-xs text-muted-foreground">
+          Methodology {YIELD_METHODOLOGY_VERSION_LABEL}.{" "}
+          <Link href={YIELD_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
+            Version history &rarr;
+          </Link>
+        </p>
         <p className="text-sm text-muted-foreground">
           Risk-adjusted yield rankings for {yieldBearingCount} yield-bearing stablecoins.
           Compare APY, safety grades, and the Pharos Yield Score (PYS).
