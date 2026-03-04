@@ -15,6 +15,10 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/depeg-dews-version";
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@/lib/liquidity-score-version";
+import {
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
+  MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
+} from "@/lib/mint-burn-flow-version";
 
 const METHODOLOGY_SECTIONS = [
   { id: "stability-index-methodology", label: "Stability Index" },
@@ -986,8 +990,19 @@ export default function MethodologyPage() {
 
       {/* Mint/Burn Flow Scoring */}
       <Card id="mint-burn-flow-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-orange-500">
-        <CardHeader>
-          <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
+        <CardHeader className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
+            <span className="inline-flex items-center rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-orange-500">
+              {MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
+            </span>
+            <Link href={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-orange-500 transition-colors">
+              Version history &rarr;
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change.
+          </p>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <p>

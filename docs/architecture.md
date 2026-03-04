@@ -79,7 +79,8 @@ src/                              # Next.js frontend (static export)
 │   │   ├── depeg-changelog/page.tsx    # Depeg/DEWS methodology changelog
 │   │   ├── liquidity-score-changelog/page.tsx # Liquidity score changelog
 │   │   ├── stability-index-changelog/page.tsx # PSI methodology changelog
-│   │   └── blacklist-tracker-changelog/page.tsx # Blacklist tracker changelog
+│   │   ├── blacklist-tracker-changelog/page.tsx # Blacklist tracker changelog
+│   │   └── mint-burn-flow-changelog/page.tsx # Mint/Burn flow changelog
 │   ├── portfolio/                # Portfolio stress testing & upstream exposure
 │   │   ├── page.tsx
 │   │   └── client.tsx

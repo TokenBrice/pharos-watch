@@ -4,6 +4,14 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ---
 
+## Methodology Versioning
+
+- **Current methodology version:** `v4.1`
+- **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
+- **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
+
+---
+
 ## Cron Schedule
 
 - **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
