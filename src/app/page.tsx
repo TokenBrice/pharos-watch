@@ -18,7 +18,7 @@ export default function HomePage() {
   const itemListCount = itemListElements.length;
 
   return (
-    <div className="space-y-3 sm:space-y-5">
+    <div className="space-y-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -32,8 +32,10 @@ export default function HomePage() {
           }),
         }}
       />
-      <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
-      <KpiBar />
+      <div className="space-y-4">
+        <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
+        <KpiBar />
+      </div>
       <HomepageClient />
     </div>
   );

@@ -129,7 +129,7 @@ export function FeatureHighlights() {
           <Link
             key={f.href}
             href={f.href}
-            className={`group rounded-xl border border-border/50 border-l-[3px] ${f.borderClass} p-4 flex flex-col gap-1.5 transition-colors hover:bg-muted/40`}
+            className={`pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-1.5 border-l-[3px] ${f.borderClass} p-4`}
           >
             <span className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
               <f.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -138,7 +138,7 @@ export function FeatureHighlights() {
             <span className="text-xs text-muted-foreground leading-relaxed">
               {f.description}
             </span>
-            <span className="mt-auto pt-1 text-xs text-muted-foreground/70 group-hover:text-foreground transition-colors">
+            <span className="mt-auto pt-1 text-xs text-muted-foreground/70 transition-colors group-hover:text-foreground group-focus-visible:text-foreground">
               {f.linkLabel} &rarr;
             </span>
           </Link>

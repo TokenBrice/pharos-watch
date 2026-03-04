@@ -41,7 +41,7 @@ export function FilterBar({
           {hasFilters && (
             <button
               onClick={clearAll}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+              className="pharos-focus-ring rounded text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               Clear all
             </button>
@@ -59,7 +59,7 @@ export function FilterBar({
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="pharos-focus-ring absolute right-1 top-1/2 -translate-y-1/2 rounded p-2 text-muted-foreground transition-colors hover:text-foreground"
               aria-label="Clear search"
             >
               <X className="h-3.5 w-3.5" />

@@ -358,7 +358,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border overflow-hidden">
+      <div className="pharos-card-shell overflow-hidden">
         <div className="bg-muted/50 h-10" />
         {Array.from({ length: 10 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
@@ -378,8 +378,8 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   }
 
   return (
-    <div className="rounded-xl border animate-in fade-in duration-300">
-      <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-b bg-muted/30">
+    <div className="pharos-card-shell animate-in fade-in duration-300 overflow-hidden">
+      <div className="flex items-center justify-end gap-2 border-b bg-muted/25 px-3 py-1.5">
         <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
         <ColumnVisibilityDropdown
           visibleColumns={visibleColumns}
@@ -562,7 +562,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                     <TableCell>
                       <Link
                         href={`/stablecoin/${coin.id}`}
-                        className="flex items-center gap-2 font-medium hover:underline"
+                        className="pharos-focus-ring flex items-center gap-2 rounded-sm font-medium hover:underline"
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => prefetch(coin.id)}
                       >
@@ -702,7 +702,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   <TableCell className="w-8 p-1 text-center">
                     <button
                       onClick={(e) => { e.stopPropagation(); setFeedbackCoin({ id: coin.id, name: coin.name }); }}
-                      className="opacity-0 group-hover:opacity-100 rounded p-1 text-muted-foreground hover:text-foreground transition-all"
+                      className="pharos-focus-ring rounded p-1 text-muted-foreground opacity-0 transition-all hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
                       aria-label={`Report data issue for ${coin.name}`}
                       title="Report data issue"
                     >
@@ -722,7 +722,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {(searchQuery || activeFilters.length > 0) && (
                     <p className="mt-2 text-sm">
                       {searchQuery && onClearSearch && (
-                        <button onClick={onClearSearch} className="text-primary hover:underline cursor-pointer text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 rounded">
+                        <button onClick={onClearSearch} className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline">
                           Clear search
                         </button>
                       )}
@@ -730,7 +730,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                         <span className="mx-1.5">or</span>
                       )}
                       {activeFilters.length > 0 && onClearFilters && (
-                        <button onClick={onClearFilters} className="text-primary hover:underline cursor-pointer text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 rounded">
+                        <button onClick={onClearFilters} className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline">
                           Clear filters
                         </button>
                       )}

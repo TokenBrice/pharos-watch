@@ -111,11 +111,34 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
   }
   /* Theme-aware card elevation shadows */
   [data-slot="card"] {
     box-shadow: var(--card-shadow);
     transition: box-shadow 0.15s ease;
+  }
+}
+
+@layer components {
+  .pharos-kicker {
+    @apply text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
+  }
+
+  .pharos-focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .pharos-card-shell {
+    @apply rounded-xl border border-border/70 bg-card/70;
+  }
+
+  .pharos-interactive-card {
+    @apply transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out;
+  }
+
+  .pharos-interactive-card:hover {
+    @apply border-foreground/20 bg-muted/20;
   }
 }
 

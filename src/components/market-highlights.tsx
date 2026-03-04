@@ -17,6 +17,9 @@ interface MarketHighlightsProps {
   pegRates?: Record<string, number>;
 }
 
+const HIGHLIGHT_CARD_CLASS = "pharos-card-shell pharos-interactive-card border-l-[3px]";
+const ROW_LINK_CLASS = "pharos-focus-ring group -mx-1 flex min-h-11 items-center justify-between gap-2 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/40";
+
 // --- Biggest Depegs ---
 
 function BiggestDepegs({
@@ -67,9 +70,9 @@ function BiggestDepegs({
   }, [data, pegRates]);
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-red-500 hover:border-foreground/20 transition-colors">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="flex items-center justify-between text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+    <Card className={`${HIGHLIGHT_CARD_CLASS} border-l-red-500`}>
+      <CardHeader className="pb-1.5">
+        <CardTitle as="h2" className="pharos-kicker flex items-center justify-between">
           Current Biggest Depegs
         </CardTitle>
       </CardHeader>
@@ -82,7 +85,7 @@ function BiggestDepegs({
             <Link
               key={d.id}
               href={`/stablecoin/${d.id}`}
-              className="flex items-center justify-between gap-2 group py-1.5 min-h-11"
+              className={ROW_LINK_CLASS}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 <StablecoinLogo
@@ -90,7 +93,7 @@ function BiggestDepegs({
                   name={d.name}
                   size={18}
                 />
-                <span className="text-sm font-medium truncate group-hover:underline">
+                <span className="truncate text-sm font-medium group-hover:underline group-focus-visible:underline">
                   {d.symbol}
                 </span>
                 <span className="text-xs text-muted-foreground font-mono sm:hidden">
@@ -159,9 +162,9 @@ function FastestMovers({
   }, [data]);
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-emerald-500 hover:border-foreground/20 transition-colors">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+    <Card className={`${HIGHLIGHT_CARD_CLASS} border-l-emerald-500`}>
+      <CardHeader className="pb-1.5">
+        <CardTitle as="h2" className="pharos-kicker">
           Fastest Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span>
         </CardTitle>
       </CardHeader>
@@ -175,7 +178,7 @@ function FastestMovers({
               <Link
                 key={g.id}
                 href={`/stablecoin/${g.id}`}
-                className="flex items-center justify-between gap-1 group py-1.5 min-h-11"
+                className={`${ROW_LINK_CLASS} gap-1`}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <StablecoinLogo
@@ -183,7 +186,7 @@ function FastestMovers({
                     name={g.name}
                     size={18}
                   />
-                  <span className="text-sm font-medium truncate group-hover:underline">
+                  <span className="truncate text-sm font-medium group-hover:underline group-focus-visible:underline">
                     {g.symbol}
                   </span>
                 </div>
@@ -203,7 +206,7 @@ function FastestMovers({
               <Link
                 key={s.id}
                 href={`/stablecoin/${s.id}`}
-                className="flex items-center justify-between gap-1 group py-1.5 min-h-11"
+                className={`${ROW_LINK_CLASS} gap-1`}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
                   <StablecoinLogo
@@ -211,7 +214,7 @@ function FastestMovers({
                     name={s.name}
                     size={18}
                   />
-                  <span className="text-sm font-medium truncate group-hover:underline">
+                  <span className="truncate text-sm font-medium group-hover:underline group-focus-visible:underline">
                     {s.symbol}
                   </span>
                 </div>
@@ -234,8 +237,8 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
     return (
       <div className="grid gap-5 lg:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
-          <Card key={i} className="rounded-xl">
-            <CardHeader className="pb-2">
+          <Card key={i} className="pharos-card-shell">
+            <CardHeader className="pb-1.5">
               <Skeleton className="h-3 w-28" />
             </CardHeader>
             <CardContent className="space-y-3">

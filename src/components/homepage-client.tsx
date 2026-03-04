@@ -112,7 +112,7 @@ export function HomepageClient() {
       <SectionErrorBoundary name="table">
         <section>
           <div className="space-y-2 mb-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="pharos-kicker">
               Browse By Peg
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -123,7 +123,7 @@ export function HomepageClient() {
                   <Link
                     key={peg}
                     href={`/stablecoins/${slug}/`}
-                    className="inline-flex items-center rounded-full border px-3 py-1.5 sm:py-1 min-h-11 sm:min-h-0 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                    className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-0 sm:py-1"
                   >
                     {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
                   </Link>

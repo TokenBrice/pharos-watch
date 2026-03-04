@@ -16,6 +16,7 @@ import { THREAT_BAND_COLORS, type ThreatBand } from "@/lib/classification";
 
 type TrendDirection = "up" | "down" | "flat";
 type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
+const KPI_CHIP_BASE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]";
 
 function trendDirection(value: number): TrendDirection {
   if (value === 0) return "flat";
@@ -45,7 +46,7 @@ function TrendChip({
   const Icon = direction === "up" ? ArrowUpRight : direction === "down" ? ArrowDownRight : Minus;
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${toneClasses}`}>
+    <span className={`${KPI_CHIP_BASE} font-medium ${toneClasses}`}>
       <Icon className="size-3" aria-hidden />
       <span>{label}</span>
       <span className="font-mono tabular-nums">{value}</span>
@@ -66,12 +67,12 @@ function InfoChip({
     ? "border-green-500/25 bg-green-500/10 text-green-500"
     : tone === "negative"
       ? "border-red-500/25 bg-red-500/10 text-red-500"
-      : tone === "warning"
-        ? "border-orange-500/25 bg-orange-500/10 text-orange-500"
+    : tone === "warning"
+        ? "border-amber-500/25 bg-amber-500/10 text-amber-500"
         : "border-border bg-muted/40 text-muted-foreground";
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${toneClasses}`}>
+    <span className={`${KPI_CHIP_BASE} ${toneClasses}`}>
       <span>{label}</span>
       <span className="font-mono tabular-nums">{value}</span>
     </span>
@@ -81,7 +82,7 @@ function InfoChip({
 function DewsBandChip({ band, count }: { band: ElevatedThreatBand; count: number }) {
   const label = band === "DANGER" ? "CRITICAL" : band;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${THREAT_BAND_COLORS[band]}`}>
+    <span className={`${KPI_CHIP_BASE} font-semibold ${THREAT_BAND_COLORS[band]}`}>
       <span>{label}</span>
       <span className="font-mono tabular-nums">{count}</span>
     </span>
@@ -100,8 +101,8 @@ function KpiCell({
   valueClassName?: string;
 }) {
   return (
-    <div className="px-4 py-3 flex min-h-[102px] flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="flex min-h-[108px] flex-col gap-1.5 px-4 py-3">
+      <span className="pharos-kicker">
         {label}
       </span>
       <span className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
@@ -116,7 +117,7 @@ function KpiCell({
 
 function KpiSkeleton() {
   return (
-    <div className="px-4 py-3 flex min-h-[102px] flex-col gap-1.5">
+    <div className="flex min-h-[108px] flex-col gap-1.5 px-4 py-3">
       <Skeleton className="h-3.5 w-20" />
       <Skeleton className="h-7 w-24" />
       <div className="mt-auto flex items-center gap-1.5">
@@ -140,8 +141,8 @@ function KpiMiniTile({
   valueClassName?: string;
 }) {
   return (
-    <div className="rounded-lg border border-border/60 bg-background/60 px-3 py-2.5 min-h-[100px]">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+    <div className="pharos-card-shell min-h-[100px] px-3 py-2.5">
+      <p className="pharos-kicker tracking-[0.08em]">{label}</p>
       <p className={`mt-1 text-lg font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>{value}</p>
       {metaPrimary && (
         <div className="mt-1 text-[11px] font-mono leading-snug">{metaPrimary}</div>
@@ -257,15 +258,15 @@ export function KpiBar() {
 
   if (isLoading) {
     return (
-      <Card className="p-0 overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border/50 px-4 py-2.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Market Snapshot</p>
+      <Card className="pharos-card-shell overflow-hidden p-0">
+        <div className="flex items-center justify-between border-b border-border/50 bg-muted/20 px-4 py-3">
+          <p className="pharos-kicker">Market Snapshot</p>
           <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
         </div>
-        <div className="sm:hidden px-3 py-2.5">
+        <div className="px-3 py-3 sm:hidden">
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-border/60 bg-background/60 px-3 py-2.5 min-h-[92px]">
+              <div key={i} className="pharos-card-shell min-h-[92px] px-3 py-2.5">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="mt-2 h-6 w-16" />
                 <Skeleton className="mt-2 h-3 w-24" />
@@ -301,13 +302,13 @@ export function KpiBar() {
     : false;
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border/50 px-4 py-2.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Market Snapshot</p>
+    <Card className="pharos-card-shell overflow-hidden p-0">
+      <div className="flex items-center justify-between border-b border-border/50 bg-muted/20 px-4 py-3">
+        <p className="pharos-kicker">Market Snapshot</p>
         <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
       </div>
 
-      <div className="sm:hidden px-3 py-2.5">
+      <div className="px-3 py-3 sm:hidden">
         <div className="grid grid-cols-2 gap-2">
           <KpiMiniTile
             label="PSI"
@@ -352,13 +353,13 @@ export function KpiBar() {
                   {dewsBandCounts.warning > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className="text-orange-500">Warning {dewsBandCounts.warning}</span>
+                      <span className="text-amber-500">Warning {dewsBandCounts.warning}</span>
                     </>
                   )}
                   {dewsBandCounts.alert > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className="text-yellow-500">Alert {dewsBandCounts.alert}</span>
+                      <span className="text-amber-500">Alert {dewsBandCounts.alert}</span>
                     </>
                   )}
                   {allDewsCalm && (
@@ -419,7 +420,7 @@ export function KpiBar() {
           value={`${coinsAtPeg} / ${totalTracked}`}
           sublabel={
             <>
-              <span className="text-[11px] font-semibold text-muted-foreground">DEWS:</span>
+              <span className="pharos-kicker">DEWS:</span>
               {dewsBandCounts && dewsBandCounts.danger > 0 && <DewsBandChip band="DANGER" count={dewsBandCounts.danger} />}
               {dewsBandCounts && dewsBandCounts.warning > 0 && <DewsBandChip band="WARNING" count={dewsBandCounts.warning} />}
               {dewsBandCounts && dewsBandCounts.alert > 0 && <DewsBandChip band="ALERT" count={dewsBandCounts.alert} />}

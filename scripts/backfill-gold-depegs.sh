@@ -32,6 +32,7 @@ echo "---"
 for id in "${GOLD_COINS[@]}"; do
   echo -n "[$id] ... "
   response=$(curl -sf \
+    -X POST \
     -H "X-Admin-Key: $ADMIN_KEY" \
     "$WORKER_URL/api/backfill-depegs?stablecoin=$id")
   echo "$response" | python3 -c "
