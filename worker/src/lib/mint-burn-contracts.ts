@@ -76,7 +76,8 @@ const AVALANCHE = chainConfig("avalanche");
 
 // --- Re Protocol vault config builder ---
 // Generates deposit + instant-redemption config pairs across multiple chains.
-// Deposit event amount = collateral (USDC/USDT, 6 dec); redeem = sharesBurned (18 dec).
+// Deposit event amount is emitted in 18-dec token units (e.g. DAI/FRAX/USR);
+// redeem event amount = sharesBurned (18 dec).
 
 interface ReProtocolChainEntry {
   chain: ChainConfig;
@@ -95,7 +96,7 @@ function reProtocolVaultConfigs(
     {
       chain, stablecoinId, symbol,
       contractAddress: depositAddress,
-      decimals: 6, dustThreshold: 10_000, startBlock: depositStartBlock,
+      decimals: 18, dustThreshold: 10_000, startBlock: depositStartBlock,
       events: [{
         signature: "Deposited(address,address,uint256)",
         topicHash: REUSD_DEPOSITED_TOPIC,
