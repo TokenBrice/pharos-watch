@@ -248,7 +248,7 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
   };
 
   return (
-    <div className="relative min-h-[280px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-4">
+    <div className="relative overflow-hidden rounded-xl border border-border/60 bg-background/40 p-4">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <Printer className="h-3.5 w-3.5" />
@@ -262,7 +262,7 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
         Tracking {snapshot.trackedCoins} stablecoins
       </p>
 
-      <div className="relative mt-4 h-[178px]">
+      <div className="relative mt-4 h-[178px] overflow-hidden">
         <div
           className="pointer-events-none absolute left-1/2 top-2 h-16 w-32 -translate-x-1/2 rounded-t-xl border border-slate-600/70 bg-slate-700/70"
           style={{ boxShadow: `0 0 20px rgba(16,185,129,${glowOpacity * 0.28})` }}
@@ -330,7 +330,7 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
         })}
       </div>
 
-      <div className="absolute inset-x-4 bottom-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top minter</p>
           <p className="mt-1 font-mono text-xs">
