@@ -5,6 +5,15 @@ import { chainConfig } from "./blacklist-contracts";
 
 export type MintBurnDirection = "mint" | "burn";
 export type MintBurnTier = "critical" | "extended";
+export type MintBurnType = "effective_burn" | "bridge_burn" | "review_required";
+
+export interface MintBurnBridgeDetectionConfig {
+  protocol: "ccip";
+  knownBridgePoolAddresses: string[];
+  knownBridgeRouterAddresses: string[];
+  bridgeSignalTopics: string[];
+  bridgeSignalSelectors: string[];
+}
 
 export interface MintBurnEventDef {
   signature: string;
@@ -29,6 +38,7 @@ export interface MintBurnContractConfig {
   events: MintBurnEventDef[];
   enabled?: boolean;
   tier?: MintBurnTier;
+  bridgeDetection?: MintBurnBridgeDetectionConfig;
 }
 
 // --- Constants ---
@@ -39,6 +49,8 @@ const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a
 // Phase 2 readiness — USDT Tron uses these instead of Transfer
 const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
 const USDT_REDEEM_TOPIC = "0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7eb4fd2deb9a44";
+const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
+const CCIP_SEND_SELECTOR = "0x96f4e9f9";
 
 
 // --- Helpers ---
@@ -72,57 +84,7 @@ const REUSD_INSTANT_REDEEM_TOPIC = "0xa58dba63852b106a5b3bbc558fa3fbcfe606497cbc
 
 // --- Ethereum configs ---
 
-const ETHEREUM  = chainConfig("ethereum");
-const ARBITRUM  = chainConfig("arbitrum");
-const BASE      = chainConfig("base");
-const AVALANCHE = chainConfig("avalanche");
-
-// --- Re Protocol vault config builder ---
-// Generates deposit + instant-redemption config pairs across multiple chains.
-// Deposit event amount is emitted in 18-dec token units (e.g. DAI/FRAX/USR);
-// redeem event amount = sharesBurned (18 dec).
-
-interface ReProtocolChainEntry {
-  chain: ChainConfig;
-  depositAddress: string;
-  depositStartBlock: number;
-  redeemAddress: string;
-  redeemStartBlock: number;
-}
-
-function reProtocolVaultConfigs(
-  stablecoinId: string,
-  symbol: string,
-  chains: ReProtocolChainEntry[],
-): MintBurnContractConfig[] {
-  return chains.flatMap(({ chain, depositAddress, depositStartBlock, redeemAddress, redeemStartBlock }) => [
-    {
-      chain, stablecoinId, symbol,
-      contractAddress: depositAddress,
-      decimals: 18, dustThreshold: 10_000, startBlock: depositStartBlock,
-      tier: "extended",
-      events: [{
-        signature: "Deposited(address,address,uint256)",
-        topicHash: REUSD_DEPOSITED_TOPIC,
-        direction: "mint" as const,
-        amountEncoding: "nth-data-uint256" as const,
-        dataSlot: 2, // data = [user(32B), token(32B), amount(32B)]
-      }],
-    },
-    {
-      chain, stablecoinId, symbol,
-      contractAddress: redeemAddress,
-      decimals: 18, dustThreshold: 10_000, startBlock: redeemStartBlock,
-      tier: "extended",
-      events: [{
-        signature: "InstantRedemptionProcessed(address,uint256,uint256)",
-        topicHash: REUSD_INSTANT_REDEEM_TOPIC,
-        direction: "burn" as const,
-        amountEncoding: "first-data-uint256" as const, // data[0] = sharesBurned
-      }],
-    },
-  ]);
-}
+const ETHEREUM = chainConfig("ethereum");
 
 export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
   // --- Safe havens ---
@@ -233,6 +195,21 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     decimals: 18, dustThreshold: 10_000, startBlock: 18_451_518,
     tier: "extended",
     events: transferMintBurn(),
+    bridgeDetection: {
+      protocol: "ccip",
+      knownBridgePoolAddresses: [
+        "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
+      ],
+      knownBridgeRouterAddresses: [
+        "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
+      ],
+      bridgeSignalTopics: [
+        CCIP_SEND_REQUESTED_TOPIC,
+      ],
+      bridgeSignalSelectors: [
+        CCIP_SEND_SELECTOR,
+      ],
+    },
   },
   {
     chain: ETHEREUM, stablecoinId: "50", symbol: "EURC",
@@ -356,13 +333,6 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     events: transferMintBurn(),
   },
   {
-    chain: ETHEREUM, stablecoinId: "220", symbol: "USDA",
-    contractAddress: "0x8a60e489004ca22d775c5f2c657598278d17d9c2",
-    decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
     chain: ETHEREUM, stablecoinId: "6", symbol: "FRAX",
     contractAddress: "0x853d955acef822db058eb8505911ed77f175b99e",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
@@ -379,13 +349,6 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
   {
     chain: ETHEREUM, stablecoinId: "298", symbol: "IUSD",
     contractAddress: "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
-    decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
-    chain: ETHEREUM, stablecoinId: "218", symbol: "satUSD",
-    contractAddress: "0x1958853a8be062dc4f401750eb233f5850f0d0d2",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
     events: transferMintBurn(),
@@ -429,13 +392,6 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     chain: ETHEREUM, stablecoinId: "257", symbol: "TBILL",
     contractAddress: "0xdd50c053c096cb04a3e3362e2b622529ec5f2e8a",
     decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
-    chain: ETHEREUM, stablecoinId: "66", symbol: "FPI",
-    contractAddress: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e",
-    decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
     events: transferMintBurn(),
   },
@@ -598,13 +554,6 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
 
   // --- Top-150 supported expansion (Ethereum only) ---
   {
-    chain: ETHEREUM, stablecoinId: "266", symbol: "pUSD",
-    contractAddress: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f",
-    decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
     chain: ETHEREUM, stablecoinId: "234", symbol: "WUSD",
     contractAddress: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
@@ -668,20 +617,6 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     events: transferMintBurn(),
   },
   {
-    chain: ETHEREUM, stablecoinId: "289", symbol: "XSGD",
-    contractAddress: "0x70e8de73ce538da2beed35d14187f6959a8eca96",
-    decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
-    chain: ETHEREUM, stablecoinId: "122", symbol: "GYEN",
-    contractAddress: "0xc08512927d12348f6620a698105e1baac6ecd911",
-    decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
     chain: ETHEREUM, stablecoinId: "165", symbol: "AUDD",
     contractAddress: "0x4cce605ed955295432958d8951d0b176c10720d5",
     decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
@@ -703,13 +638,6 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     events: transferMintBurn(),
   },
   {
-    chain: ETHEREUM, stablecoinId: "158", symbol: "VEUR",
-    contractAddress: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
-    decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
     chain: ETHEREUM, stablecoinId: "239", symbol: "EURR",
     contractAddress: "0x50753cfaf86c094925bf976f218d043f8791e408",
     decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
@@ -724,22 +652,8 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     events: transferMintBurn(),
   },
   {
-    chain: ETHEREUM, stablecoinId: "319", symbol: "EURAU",
-    contractAddress: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
-    decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
     chain: ETHEREUM, stablecoinId: "cg-deuro", symbol: "DEURO",
     contractAddress: "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
-    decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
-    tier: "extended",
-    events: transferMintBurn(),
-  },
-  {
-    chain: ETHEREUM, stablecoinId: "157", symbol: "VCHF",
-    contractAddress: "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
     tier: "extended",
     events: transferMintBurn(),
@@ -780,13 +694,32 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     events: transferMintBurn(),
   },
 
-  // --- reUSD (Re Protocol, ID 339) — deposit + instant-redemption across 4 chains ---
-  ...reProtocolVaultConfigs("339", "reUSD", [
-    { chain: ETHEREUM,  depositAddress: "0x4691c475be804fa85f91c2d6d0adf03114de3093", depositStartBlock: 21_675_000,  redeemAddress: "0x8aeb9453ef22cb38abc7a3af9c208f65c1bfe31e", redeemStartBlock: 23_479_000  },
-    { chain: ARBITRUM,  depositAddress: "0x802edbb1ec20548a4388abc337e4011718eb0291", depositStartBlock: 305_400_000, redeemAddress: "0xfd4016ea13ca8acc04a11a99702df076a4d3b852", redeemStartBlock: 382_974_000 },
-    { chain: BASE,      depositAddress: "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea", depositStartBlock: 24_000_000,  redeemAddress: "0x9ab62aebabe738ab233c447eedce88d1d0a61fe3", redeemStartBlock: 24_000_000  },
-    { chain: AVALANCHE, depositAddress: "0xb22a8533e6cd81598f82514a42f0b3161745fbe1", depositStartBlock: 55_000_000,  redeemAddress: "0xe13292f97e38da0c64398de5e0bfc95180de9d23", redeemStartBlock: 55_000_000  },
-  ]),
+  // --- reUSD (Re Protocol, ID 339) — Ethereum only ---
+  {
+    chain: ETHEREUM, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+    decimals: 18, dustThreshold: 10_000, startBlock: 21_675_000,
+    tier: "extended",
+    events: [{
+      signature: "Deposited(address,address,uint256)",
+      topicHash: REUSD_DEPOSITED_TOPIC,
+      direction: "mint",
+      amountEncoding: "nth-data-uint256",
+      dataSlot: 2, // data = [user(32B), token(32B), amount(32B)]
+    }],
+  },
+  {
+    chain: ETHEREUM, stablecoinId: "339", symbol: "reUSD",
+    contractAddress: "0x8aeb9453ef22cb38abc7a3af9c208f65c1bfe31e",
+    decimals: 18, dustThreshold: 10_000, startBlock: 23_479_000,
+    tier: "extended",
+    events: [{
+      signature: "InstantRedemptionProcessed(address,uint256,uint256)",
+      topicHash: REUSD_INSTANT_REDEEM_TOPIC,
+      direction: "burn",
+      amountEncoding: "first-data-uint256", // data[0] = sharesBurned
+    }],
+  },
 ];
 
 /**

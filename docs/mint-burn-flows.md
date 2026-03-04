@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **99 contract configs** across **90 symbols** (91 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **90 contract configs** across **81 symbols** (82 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -86,18 +86,15 @@ Current scope: **99 contract configs** across **90 symbols** (91 standard ERC-20
 | TUSD | 7 | 18 | Extended | Transfer |
 | CUSD | 296 | 18 | Extended | Transfer |
 | USR | 197 | 18 | Extended | Transfer |
-| USDA | 220 | 18 | Extended | Transfer |
 | FRAX | 6 | 18 | Extended | Transfer |
 | DOLA | 15 | 18 | Extended | Transfer |
 | IUSD | 298 | 18 | Extended | Transfer |
-| satUSD | 218 | 18 | Extended | Transfer |
 | GUSD | 306 | 6 | Extended | Transfer |
 | avUSD | 271 | 18 | Extended | Transfer |
 | pmUSD | 332 | 18 | Extended | Transfer |
 | USDz | 202 | 18 | Extended | Transfer |
 | MNEE | 284 | 18 | Extended | Transfer |
 | TBILL | 257 | 6 | Extended | Transfer |
-| FPI | 66 | 18 | Extended | Transfer |
 | USDO | 241 | 18 | Extended | Transfer |
 | EURCV | 254 | 18 | Extended | Transfer |
 | REUSD | 256 | 18 | Extended | Transfer |
@@ -120,7 +117,6 @@ Current scope: **99 contract configs** across **90 symbols** (91 standard ERC-20
 | ALUSD | 20 | 18 | Extended | Transfer |
 | FIDD | 348 | 18 | Extended | Transfer |
 | MSUSD | 297 | 18 | Extended | Transfer |
-| pUSD | 266 | 6 | Extended | Transfer |
 | WUSD | 234 | 18 | Extended | Transfer |
 | SBC | 324 | 18 | Extended | Transfer |
 | OUSD | 23 | 18 | Extended | Transfer |
@@ -130,17 +126,12 @@ Current scope: **99 contract configs** across **90 symbols** (91 standard ERC-20
 | OUSG | cg-ousg | 18 | Extended | Transfer |
 | mTBILL | cg-mtbill | 18 | Extended | Transfer |
 | wsrUSD | cg-wrapped-savings-rusd | 18 | Extended | Transfer |
-| XSGD | 289 | 6 | Extended | Transfer |
-| GYEN | 122 | 6 | Extended | Transfer |
 | AUDD | 165 | 6 | Extended | Transfer |
 | JPYC | cg-jpyc | 18 | Extended | Transfer |
 | XAUm | gold-xaum | 18 | Extended | Transfer |
-| VEUR | 158 | 18 | Extended | Transfer |
 | EURR | 239 | 6 | Extended | Transfer |
 | EUROP | 247 | 6 | Extended | Transfer |
-| EURAU | 319 | 6 | Extended | Transfer |
 | DEURO | cg-deuro | 18 | Extended | Transfer |
-| VCHF | 157 | 18 | Extended | Transfer |
 | tGBP | 317 | 18 | Extended | Transfer |
 | syrupUSDC | cg-syrupusdc | 6 | Extended | Transfer |
 | syrupUSDT | cg-syrupusdt | 6 | Extended | Transfer |
