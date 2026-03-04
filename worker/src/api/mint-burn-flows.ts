@@ -425,12 +425,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         || (agg?.burnCount ?? 0) > 0
         || (agg?.mintVolume ?? 0) > 0
         || (agg?.burnVolume ?? 0) > 0;
-      const currentNetForIntensity = !has24hActivity && baseline
-        ? baseline.avgNet
-        : netFlow24h;
-      const intensity = baseline
+      const intensity = has24hActivity && baseline
         ? computeFlowIntensity({
-            currentDailyNet: currentNetForIntensity,
+            currentDailyNet: netFlow24h,
             baselineDailyNet: baseline.avgNet,
             baselineDailyAbs: baseline.avgAbs,
             dataAgeDays: baseline.dataDays,

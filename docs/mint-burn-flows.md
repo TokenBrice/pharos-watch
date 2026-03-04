@@ -217,7 +217,7 @@ intensity = clamp(-100, 100, z * 50)
 ```
 
 - **Input:** 24h net flow, 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
-- **Output:** -100 to +100 score, or `null` if fewer than 7 days of history.
+- **Output:** -100 to +100 score, or `null` (NR) if fewer than 7 days of history or if the coin has no 24h mint/burn activity.
 - Score of 0 = current flow matches baseline. Negative values = net burns above baseline. Positive values = net mints above baseline.
 
 ### Gauge Bands
@@ -242,7 +242,7 @@ Market-cap-weighted average of individual FIS scores:
 gauge_score = Σ(intensity_i * mcap_i) / Σ(mcap_i)
 ```
 
-- Skips coins with `null` intensity (insufficient data).
+- Skips coins with `null` intensity (insufficient data or NR no-activity window).
 - Returns `null` only when ALL tracked coins lack valid intensity.
 - Market cap sourced from `stablecoins` cache (DefiLlama data).
 
@@ -444,6 +444,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 |-----------|----------|
 | Price unavailable at sync time | `amount_usd` stored as NULL; backfillable via admin endpoint |
 | Fewer than 7 days of flow history | FIS returns `null`; coin excluded from gauge weighting |
+| No 24h mint/burn activity in a sparse window | FIS returns `null` (NR) for that window; coin excluded from gauge weighting |
 | All coins have null FIS | Gauge score returns `null`; frontend shows "Calibrating" state |
 | Alchemy API error for a config | `apiErrors` incremented; sync state NOT advanced (retried next cycle) |
 | Incomplete timestamp resolution | `configError = true`; sync state not advanced, retried next cycle |

@@ -1,5 +1,5 @@
 /** Canonical Mint/Burn Flow methodology version (no "v" prefix). */
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "4.2";
+export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "4.3";
 
 /** Display-ready Mint/Burn Flow methodology version (with "v" prefix). */
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = `v${MINT_BURN_FLOW_METHODOLOGY_VERSION}`;
@@ -27,6 +27,22 @@ export interface MintBurnFlowMethodologyChangelogEntry {
  *   mint/burn flows did not initially ship with explicit version tags.
  */
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG: readonly MintBurnFlowMethodologyChangelogEntry[] = [
+  {
+    version: "4.3",
+    title: "NR gating for no-activity flow windows",
+    date: "2026-03-04",
+    effectiveAt: 1772655490,
+    summary:
+      "Coins with no mint/burn activity in the active 24h window now publish NR flow intensity and are excluded from gauge weighting.",
+    methodologyImpact: [
+      "Removed synthetic neutral intensity fallback for sparse no-activity windows",
+      "No-activity windows now return `flowIntensity = null` (NR) instead of `0`",
+      "Bank Run Gauge now excludes those NR windows from the market-cap-weighted composite",
+      "Frontend flow-intensity UI now displays NR explicitly for null values",
+    ],
+    commits: ["unreleased"],
+    reconstructed: true,
+  },
   {
     version: "4.2",
     title: "Signed zero-baseline flow-intensity semantics",

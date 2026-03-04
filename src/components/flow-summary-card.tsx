@@ -124,7 +124,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const sceneMode = isNegativeIntensity ? "shredder" : "printer";
   const sceneStatus = signedIntensityDisplay != null
     ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}%`
-    : "NO DATA";
+    : "NR";
   const bandKey = intensity != null ? getBandForScore(intensity) : null;
   const bandConfig = bandKey ? GAUGE_BANDS[bandKey] : null;
 
@@ -161,7 +161,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                 <div>
                   <p className="text-xs text-muted-foreground">Flow Intensity</p>
                   <p className={cn("font-mono text-2xl font-black leading-none", getNetColor(signedIntensityDisplay ?? 0))}>
-                    {signedIntensityDisplay != null ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}` : "\u2014"}
+                    {signedIntensityDisplay != null ? `${getNetPrefix(signedIntensityDisplay)}${signedIntensityDisplay}` : "NR"}
                   </p>
                 </div>
                 {intensity != null && bandConfig ? (
@@ -176,7 +176,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                     {bandConfig.label}
                   </span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">No data</span>
+                  <span className="font-mono text-xs text-muted-foreground">NR</span>
                 )}
               </div>
               <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">

@@ -266,7 +266,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       </span>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground">&mdash;</span>
+                    <span className="font-mono text-xs text-muted-foreground">NR</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
