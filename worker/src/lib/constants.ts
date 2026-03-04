@@ -14,6 +14,13 @@ export function getDepegThresholdBps(pegType: string | undefined): number {
 /** Maximum age (in seconds) for a DEX price observation to be considered fresh */
 export const DEX_FRESHNESS_SEC = 1200;
 
+/**
+ * UI-facing peg-summary DEX price check freshness window.
+ * Dex liquidity sync runs every 30 minutes, so this allows one missed slot
+ * before hiding the DEX cross-check column data.
+ */
+export const DEX_PRICE_CHECK_FRESHNESS_SEC = 3600;
+
 /** D1 batch statement limit per db.batch() call */
 export const D1_BATCH_SIZE = 100;
 

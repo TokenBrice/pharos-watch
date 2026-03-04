@@ -1,5 +1,5 @@
 import { getCache, getFirstSeenDates } from "../lib/db";
-import { DEX_FRESHNESS_SEC } from "../lib/constants";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
 import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
@@ -126,7 +126,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     const supply = asset?.circulating
       ? sumPegBuckets(asset.circulating)
       : 0;
-    if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC) {
+    if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_PRICE_CHECK_FRESHNESS_SEC) {
       const pegRef = asset?.price != null && typeof asset.price === "number"
         ? getPegReference(asset.pegType, pegRates, meta.commodityOunces)
         : 0;

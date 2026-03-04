@@ -354,7 +354,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `lastEventAt` | `number \| null` | Unix seconds of most recent depeg event |
 | `trackingSpanDays` | `number` | Days of history used for score computation |
 | `methodologyVersion` | `string` | Methodology version attributed to this coin snapshot |
-| `dexPriceCheck` | `DexPriceCheck \| null` | Optional cross-validation against DEX price |
+| `dexPriceCheck` | `DexPriceCheck \| null` | Optional cross-validation against DEX price (shown when coin supply ≥ $1M and DEX price data is ≤ 60 minutes old) |
 
 **`DexPriceCheck`**
 

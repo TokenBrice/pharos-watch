@@ -19,6 +19,35 @@ function makePegSummaryDb(assets: ReturnType<typeof makeAsset>[] = []) {
   ]);
 }
 
+function makePegSummaryDbWithDexPrice(
+  assets: ReturnType<typeof makeAsset>[],
+  updatedAt: number,
+) {
+  const cacheValue = JSON.stringify({ peggedAssets: assets });
+  return mockD1([
+    {
+      match: "cache",
+      rows: [{ key: "stablecoins", value: cacheValue, updated_at: nowSec }],
+      first: { key: "stablecoins", value: cacheValue, updated_at: nowSec },
+    },
+    { match: "depeg_events", rows: [] },
+    {
+      match: "dex_prices",
+      rows: [
+        {
+          stablecoin_id: "1",
+          dex_price_usd: 1.0002,
+          deviation_from_primary_bps: 2,
+          source_pool_count: 4,
+          source_total_tvl: 10_000_000,
+          updated_at: updatedAt,
+        },
+      ],
+    },
+    { match: "supply_history", rows: [] },
+  ]);
+}
+
 describe("handlePegSummary", () => {
   it("returns 503 when stablecoins cache is missing", async () => {
     const db = mockD1();
@@ -55,5 +84,27 @@ describe("handlePegSummary", () => {
     const db = makePegSummaryDb([asset]);
     const res = await handlePegSummary(db);
     expect(res.headers.has("X-Data-Age")).toBe(true);
+  });
+
+  it("keeps dexPriceCheck for data fresh enough for UI display", async () => {
+    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
+    };
+    const coin = body.coins.find((c) => c.id === "1");
+    expect(coin?.dexPriceCheck).toBeTruthy();
+  });
+
+  it("hides dexPriceCheck when data is too stale for UI display", async () => {
+    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 7200);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
+    };
+    const coin = body.coins.find((c) => c.id === "1");
+    expect(coin?.dexPriceCheck).toBeUndefined();
   });
 });
