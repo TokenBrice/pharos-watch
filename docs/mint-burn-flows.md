@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **27 contract configs** across **20 symbols** (19 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **56 contract configs** across **49 symbols** (48 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -74,6 +74,35 @@ Current scope: **27 contract configs** across **20 symbols** (19 standard ERC-20
 | XAUT | gold-xaut | 6 | Extended | Transfer |
 | USDG | 286 | 6 | Extended | Transfer |
 | USD1 | 262 | 18 | Extended | Transfer |
+| USDf | 246 | 18 | Extended | Transfer |
+| USYC | 237 | 6 | Extended | Transfer |
+| RLUSD | 250 | 18 | Extended | Transfer |
+| USDY | 129 | 18 | Extended | Transfer |
+| BUIDL | 173 | 6 | Extended | Transfer |
+| USDD | 14 | 18 | Extended | Transfer |
+| USDTB | 221 | 18 | Extended | Transfer |
+| M | 213 | 6 | Extended | Transfer |
+| U | 336 | 18 | Extended | Transfer |
+| USDai | 309 | 18 | Extended | Transfer |
+| USD0 | 195 | 18 | Extended | Transfer |
+| A7A5 | 258 | 6 | Extended | Transfer |
+| TUSD | 7 | 18 | Extended | Transfer |
+| CUSD | 296 | 18 | Extended | Transfer |
+| USR | 197 | 18 | Extended | Transfer |
+| USDA | 220 | 18 | Extended | Transfer |
+| FRAX | 6 | 18 | Extended | Transfer |
+| DOLA | 15 | 18 | Extended | Transfer |
+| IUSD | 298 | 18 | Extended | Transfer |
+| satUSD | 218 | 18 | Extended | Transfer |
+| BRZ | 249 | 18 | Extended | Transfer |
+| GUSD | 306 | 6 | Extended | Transfer |
+| rwaUSDi | 340 | 6 | Extended | Transfer |
+| avUSD | 271 | 18 | Extended | Transfer |
+| pmUSD | 332 | 18 | Extended | Transfer |
+| USDz | 202 | 18 | Extended | Transfer |
+| MNEE | 284 | 18 | Extended | Transfer |
+| TBILL | 257 | 6 | Extended | Transfer |
+| FPI | 66 | 18 | Extended | Transfer |
 | reUSD | 339 | 6/18 | Risky | Deposited + InstantRedemptionProcessed (8 configs across Ethereum/Arbitrum/Base/Avalanche) |
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
