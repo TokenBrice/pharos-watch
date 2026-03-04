@@ -1,9 +1,7 @@
 import dynamic from "next/dynamic";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeaturePageShell } from "@/components/feature-page-shell";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 const DependencyMapClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
@@ -13,38 +11,25 @@ const DependencyMapClient = dynamic(
 const description =
   "Interactive graph of collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Dependency Map: Stablecoin Collateral Graph",
   description,
-  alternates: { canonical: "/dependency-map/" },
-  openGraph: {
-    title: "Dependency Map: Stablecoin Collateral Graph",
-    description,
-    url: "/dependency-map/",
-    images: [{ url: "https://pharos.watch/og-dependency-map.png", width: 1200, height: 628 }],
-  },
-  twitter: {
-    images: [{ url: "https://pharos.watch/og-dependency-map.png", width: 1200, height: 628 }],
-  },
-};
+  canonical: "/dependency-map/",
+  ogImage: "https://pharos.watch/og-dependency-map.png",
+});
 
 export default function DependencyMapPage() {
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name="Dependency Map" path="/dependency-map/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Dependency Map</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Dependency Map <FeatureStatusBadge status="experimental" /></h1>
-        <p className="text-sm text-muted-foreground">
-          Collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap;
-          lines show how one stablecoin relies on another as collateral. Drag nodes to explore.
-        </p>
-      </div>
+    <FeaturePageShell
+      breadcrumbName="Dependency Map"
+      path="/dependency-map/"
+      title="Dependency Map"
+      statusBadge={{ status: "experimental" }}
+      leadParagraphs={[
+        "Collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show how one stablecoin relies on another as collateral. Drag nodes to explore.",
+      ]}
+    >
       <DependencyMapClient />
-    </div>
+    </FeaturePageShell>
   );
 }

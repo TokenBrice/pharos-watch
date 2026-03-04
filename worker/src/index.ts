@@ -22,6 +22,7 @@ import { initCoinGecko } from "./lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "./lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "./lib/constants";
 import { runIdempotentAdminAction } from "./lib/idempotency";
+import { isMutatingAdminPath, isCacheBypassPath } from "../../src/lib/api-endpoints";
 
 interface Env {
   DB: D1Database;
@@ -112,18 +113,7 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    const mutatingAdminPaths = new Set([
-      "/api/trigger-digest",
-      "/api/reset-blacklist-sync",
-      "/api/backfill-depegs",
-      "/api/backfill-supply-history",
-      "/api/backfill-cg-prices",
-      "/api/backfill-stability-index",
-      "/api/backfill-mint-burn-prices",
-      "/api/backfill-mint-burn",
-      "/api/audit-depeg-history",
-    ]);
-    const isMutatingAdminPath = mutatingAdminPaths.has(url.pathname);
+    const mutatingAdminPath = isMutatingAdminPath(url.pathname);
     const allowAuditDryRunGet =
       url.pathname === "/api/audit-depeg-history" && url.searchParams.get("dry-run") === "true";
 
@@ -142,7 +132,7 @@ const worker = {
       );
     }
 
-    if (request.method === "GET" && isMutatingAdminPath && !allowAuditDryRunGet) {
+    if (request.method === "GET" && mutatingAdminPath && !allowAuditDryRunGet) {
       return addCorsHeaders(
         new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
           status: 405,
@@ -152,7 +142,7 @@ const worker = {
       );
     }
 
-    if (request.method === "POST" && !isMutatingAdminPath) {
+    if (request.method === "POST" && !mutatingAdminPath) {
       return addCorsHeaders(
         new Response(JSON.stringify({ error: "Method not allowed" }), {
           status: 405,
@@ -249,16 +239,7 @@ const worker = {
 
     const skipCache =
       request.method !== "GET" ||
-      url.pathname === "/api/health" ||
-      url.pathname === "/api/status" ||
-      url.pathname === "/api/backfill-depegs" ||
-      url.pathname === "/api/backfill-supply-history" ||
-      url.pathname === "/api/backfill-cg-prices" ||
-      url.pathname === "/api/audit-depeg-history" ||
-      url.pathname === "/api/backfill-stability-index" ||
-      url.pathname === "/api/backfill-mint-burn-prices" ||
-      url.pathname === "/api/backfill-mint-burn" ||
-      url.pathname === "/api/backfill-dews";
+      isCacheBypassPath(url.pathname);
 
     // Check edge cache first
     const cache = caches.default;

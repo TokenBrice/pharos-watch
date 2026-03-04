@@ -31,12 +31,14 @@ describe("handleDexLiquidityHistory", () => {
     const db = mockD1([]);
     const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history"));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
   });
 
   it("returns 400 for invalid stablecoin ID", async () => {
     const db = mockD1([]);
     const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=../etc"));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid stablecoin ID" });
   });
 
   it("maps snake_case columns to camelCase", async () => {

@@ -157,6 +157,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `reserve-templates.test.ts` | `src/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
 | `reserve-coinid-validation.test.ts` | `src/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
+| `api-endpoints.test.ts` | `src/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags |
 | `strict-path-drift.test.ts` | `src/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage |
 
 ### Frontend Component Tests (`src/__tests__/`)
@@ -169,7 +170,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 | File | Module Under Test | What It Covers |
 |------|-------------------|----------------|
-| `api-utils.test.ts` | `worker/src/lib/api-utils.ts` | `parseIntParam`, `jsonResponse`, `errorResponse`, `withErrorHandler`, `createCacheHandler` |
+| `api-utils.test.ts` | `worker/src/lib/api-utils.ts` | `parseIntParam`, `parseStablecoinHistoryQuery`, `jsonResponse`, `errorResponse`, `withErrorHandler`, `createCacheHandler` |
 | `mint-burn-scoring.test.ts` | `worker/src/lib/mint-burn-scoring.ts` | `computeFlowIntensity`, `computeGaugeScore`, `detectFlightToQuality`, `getGaugeBand` |
 | `evm-logs.test.ts` | `worker/src/lib/evm-logs.ts` | `buildTopicParams`, `decodeAddress`, `decodeUint256`, `createBudget`, `budgetExhausted`, `createRateLimiter`, `fetchEvmLogsForTopics` |
 | `resolve-market-cap.test.ts` | `worker/src/lib/resolve-market-cap.ts` | `resolveMarketCap` — CG vs computed mcap agreement, frozen data detection |
@@ -182,7 +183,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 | File | Handler | Modes Tested |
 |------|---------|--------------|
-| `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts` and avoid accidental 404s |
+| `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts`, unknown paths return null, mutating admin GET guards hold (with audit dry-run exception) |
 | `blacklist.test.ts` | `handleBlacklist` | 200 with events, empty results, 400 invalid params, camelCase mapping, X-Data-Age |
 | `depeg-events.test.ts` | `handleDepegEvents` | 200 with events, empty results, 400 invalid params, camelCase mapping |
 | `supply-history.test.ts` | `handleSupplyHistory` | 200 with history, empty, 400 missing/invalid stablecoin |

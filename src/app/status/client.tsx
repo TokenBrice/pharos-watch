@@ -5,6 +5,7 @@ import { useStatus } from "@/hooks/use-status";
 import { useHealth } from "@/hooks/use-health";
 import { useEndpointProbes, ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import { API_BASE } from "@/lib/api";
+import { getStatusPageActions, type StatusPageAction } from "@/lib/api-endpoints";
 import type { EndpointProbeResult, CircuitRecord } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -274,7 +275,7 @@ function RefreshCountdown({ onRefresh }: { onRefresh: () => void }) {
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
   { key: "public", label: "Public" },
   { key: "admin", label: "Admin" },
-  { key: "inlineAdmin", label: "Inline Admin" },
+  { key: "manual", label: "Manual Actions" },
 ];
 
 function EndpointHealthGrid({ probes, isLoading }: { probes: EndpointProbeResult[] | undefined; isLoading: boolean }) {
@@ -304,7 +305,7 @@ function EndpointHealthGrid({ probes, isLoading }: { probes: EndpointProbeResult
       <CardContent className="space-y-4">
         {GROUP_LABELS.map(({ key, label }) => {
           const paths = [...ENDPOINT_GROUPS[key]];
-          const isInline = key === "inlineAdmin";
+          const isInline = key === "manual";
 
           // Sort probed endpoints: errors first, then by path
           if (!isInline) {
@@ -442,26 +443,9 @@ function CircuitBreakerTable({ circuits }: { circuits: Record<string, CircuitRec
 
 // --- Admin Actions ---
 
-interface AdminAction {
-  label: string;
-  path: string;
-  confirm: string;
-  destructive: boolean;
-  method: "GET" | "POST";
-}
+const ADMIN_ACTIONS: StatusPageAction[] = getStatusPageActions();
 
-const ADMIN_ACTIONS: AdminAction[] = [
-  { label: "Trigger Digest", path: "/api/trigger-digest", confirm: "Trigger daily digest? Bypasses 1h dedup window.", destructive: false, method: "POST" },
-  { label: "Reset Blacklist Sync", path: "/api/reset-blacklist-sync", confirm: "Reset blacklist sync? Rolls back EVM 50k blocks, Tron 7 days.", destructive: true, method: "POST" },
-  { label: "Debug Sync State", path: "/api/debug-sync-state", confirm: "Fetch sync state debug dump?", destructive: false, method: "GET" },
-  { label: "Backfill Depegs", path: "/api/backfill-depegs", confirm: "Run depeg backfill? This may take several minutes.", destructive: false, method: "POST" },
-  { label: "Backfill Supply", path: "/api/backfill-supply-history", confirm: "Backfill supply history snapshots?", destructive: false, method: "POST" },
-  { label: "Backfill CG Prices", path: "/api/backfill-cg-prices", confirm: "Backfill CoinGecko prices?", destructive: false, method: "POST" },
-  { label: "Backfill PSI", path: "/api/backfill-stability-index", confirm: "Backfill stability index history?", destructive: false, method: "POST" },
-  { label: "Audit Depegs", path: "/api/audit-depeg-history?dry-run=true", confirm: "Run depeg history audit (dry-run)?", destructive: false, method: "GET" },
-];
-
-function AdminActionButton({ action, adminKey }: { action: AdminAction; adminKey: string }) {
+function AdminActionButton({ action, adminKey }: { action: StatusPageAction; adminKey: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);

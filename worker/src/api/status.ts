@@ -1,52 +1,7 @@
 import { getCache } from "../lib/db";
-import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, buildCacheStatuses, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
-
-// --- Types ---
-
-interface CronRun {
-  startedAt: number;
-  durationMs: number;
-  status: string;
-  error?: string;
-  itemCount?: number;
-  metadata?: Record<string, unknown>;
-}
-
-interface CronStatus {
-  lastRun: CronRun | null;
-  recentRuns: CronRun[];
-  expectedIntervalSec: number;
-  healthy: boolean;
-}
-
-interface DataQuality {
-  totalStablecoins: number;
-  missingPrices: number;
-  blacklistMissingAmounts: number;
-  blacklistTotal: number;
-  onchainSupplyDivergences: number;
-  onchainSupplyMonitoring: "active" | "unavailable";
-  onchainSupplyLatestAt: number | null;
-  onchainSupplyTrackedCoins: number;
-  activeDepegs: number;
-  staleOnchainSupply: number;
-}
-
-interface StatusResponse {
-  timestamp: number;
-  availabilityStatus: "healthy" | "degraded" | "stale";
-  dataQualityStatus: "healthy" | "degraded" | "stale";
-  overallStatus: "healthy" | "degraded" | "stale";
-  caches: Record<string, CacheStatus>;
-  crons: Record<string, CronStatus>;
-  dataQuality: DataQuality;
-  summary: {
-    unhealthyCrons: number;
-    cronErrors: number;
-    worstCacheRatio: number;
-  };
-}
+import type { CronRun, CronStatus, DataQuality, StatusResponse } from "../../../src/lib/types";
 
 // --- Config ---
 

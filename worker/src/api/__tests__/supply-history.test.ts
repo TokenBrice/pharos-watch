@@ -29,12 +29,14 @@ describe("handleSupplyHistory", () => {
     const db = mockD1([]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history"));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
   });
 
   it("returns 400 for invalid stablecoin ID", async () => {
     const db = mockD1([]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=<script>"));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid stablecoin ID" });
   });
 
   it("maps snake_case columns to camelCase", async () => {

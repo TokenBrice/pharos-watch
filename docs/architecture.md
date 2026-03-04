@@ -207,6 +207,10 @@ src/                              # Next.js frontend (static export)
 │   ├── feedback-button.tsx        # Feedback FAB button (bottom-right)
 │   ├── feedback-modal.tsx        # Feedback submission modal (bug, data-correction, feature-request)
 │   ├── page-error.tsx            # Shared error boundary component
+│   ├── create-page-error.tsx     # Factory for route-level error.tsx wrappers
+│   ├── feature-page-shell.tsx    # Shared page header/breadcrumb/status shell for feature routes
+│   ├── methodology-changelog-page.tsx # Shared renderer for methodology changelog pages
+│   ├── methodology-version-card.tsx # Shared changelog version card
 │   ├── stale-data-banner.tsx     # Stale data warning banner
 │   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
 │   ├── sortable-table-head.tsx   # Shared sortable table header
@@ -248,10 +252,10 @@ src/                              # Next.js frontend (static export)
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
-│   ├── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
-│   └── use-yield-history.ts      # GET /api/yield-history (per-coin yield history)
+│   └── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
+    ├── api-endpoints.ts          # Shared API endpoint registry (worker method/cache rules + status probes/actions)
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, ReserveSlice (with coinId/depType), RawDimensionInputs, CacheStatus (shared with worker)
@@ -267,6 +271,7 @@ src/                              # Next.js frontend (static export)
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
+    ├── page-metadata.ts          # Shared metadata builder for feature routes
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
     ├── peg-landing.ts            # Peg currency landing page data helpers
     ├── report-cards.ts           # Report card scoring: 5 dimensions, grade thresholds, weights, computeStressedGrades()

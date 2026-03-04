@@ -1,10 +1,8 @@
 import dynamic from "next/dynamic";
-import type { Metadata } from "next";
-import Link from "next/link";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeaturePageShell } from "@/components/feature-page-shell";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 const CompareClient = dynamic(
   () => import("./client").then((m) => ({ default: m.CompareClient })),
@@ -13,47 +11,23 @@ const CompareClient = dynamic(
 
 const compareDescription = `Side-by-side comparison of stablecoin stats, supply history, and peg stability for ${TRACKED_STABLECOINS.length} tracked stablecoins.`;
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Compare Stablecoins: Side-by-Side Analysis",
   description: compareDescription,
-  alternates: {
-    canonical: "/compare/",
-  },
-  openGraph: {
-    title: "Compare Stablecoins: Side-by-Side Analysis",
-    description: compareDescription,
-    url: "/compare/",
-    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 628 }],
-  },
-  twitter: {
-    images: [{ url: "https://pharos.watch/og-compare.png", width: 1200, height: 628 }],
-  },
-};
+  canonical: "/compare/",
+  ogImage: "https://pharos.watch/og-compare.png",
+});
 
 export default function ComparePage() {
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name="Compare" path="/compare/" />
-      <div className="space-y-2">
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground"
-        >
-          <Link
-            href="/"
-            className="hover:text-foreground transition-colors"
-          >
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">Compare</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Compare Stablecoins <FeatureStatusBadge status="mature" /></h1>
-        <p className="text-sm text-muted-foreground">
-          Select up to 5 stablecoins to compare side-by-side.
-        </p>
-      </div>
+    <FeaturePageShell
+      breadcrumbName="Compare"
+      path="/compare/"
+      title="Compare Stablecoins"
+      statusBadge={{ status: "mature" }}
+      leadParagraphs={["Select up to 5 stablecoins to compare side-by-side."]}
+    >
       <CompareClient />
-    </div>
+    </FeaturePageShell>
   );
 }

@@ -419,7 +419,6 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 | Hook | File | Endpoint | Stale Time |
 |------|------|----------|------------|
 | `useYieldRankings` | `src/hooks/use-yield-rankings.ts` | `/api/yield-rankings` | `CRON_30MIN` (30 min) |
-| `useYieldHistory` | `src/hooks/use-yield-history.ts` | `/api/yield-history` | `CRON_1H` (1 hour) |
 
 ---
 
@@ -480,7 +479,6 @@ Covers all pure functions in `yield-helpers.ts`:
 | `src/lib/types.ts` | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `src/lib/classification.ts` | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES` |
 | `src/hooks/use-yield-rankings.ts` | TanStack Query hook for rankings |
-| `src/hooks/use-yield-history.ts` | TanStack Query hook for history |
 | `src/app/yield/page.tsx` | SSG page wrapper with metadata |
 | `src/app/yield/client.tsx` | Interactive page: stats, scatter, leaderboard |
 | `src/components/yield-leaderboard.tsx` | Sortable rankings table with `+N` alt-source pill badge |

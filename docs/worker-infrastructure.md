@@ -58,9 +58,11 @@ This pattern exists because Cloudflare Workers don't have persistent module stat
 | Method | Handling |
 |--------|----------|
 | `OPTIONS` | Returns 204 with CORS headers (preflight) |
-| `POST` | Only `/api/feedback` — all other paths return 405 |
-| `GET` | All API routes — dispatched to router or inline admin handlers |
+| `POST` | `/api/feedback` and mutating admin endpoints from `src/lib/api-endpoints.ts` |
+| `GET` | All read routes + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
 | Other | Returns 405 `{ error: "Method not allowed" }` |
+
+Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `src/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
 
 ### CORS Headers
 
@@ -70,7 +72,7 @@ Applied to every response via `addCorsHeaders()`:
 |--------|-------|
 | `Access-Control-Allow-Origin` | `CORS_ORIGIN` env var (static: `https://pharos.watch`) |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
-| `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key` |
+| `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key, Idempotency-Key` |
 | `Access-Control-Max-Age` | `86400` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |
@@ -81,11 +83,9 @@ Applied to every response via `addCorsHeaders()`:
 
 The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET responses:
 
-1. **Skip list** — these endpoints bypass cache entirely:
-   - `/api/health`, `/api/status`
-   - `/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`
-   - `/api/audit-depeg-history`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`
-   - `/api/backfill-dews`
+1. **Cache bypass rules**:
+   - All non-GET requests bypass edge cache.
+   - GET paths marked `cacheBypass: true` in `src/lib/api-endpoints.ts` bypass edge cache (health, status, admin/backfill endpoints, and other non-cacheable paths).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -113,8 +113,8 @@ Three admin endpoints are handled directly in `index.ts` (not via the router):
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `GET /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
-| `GET /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
+| `POST /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
+| `POST /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
 | `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
 
 ---
