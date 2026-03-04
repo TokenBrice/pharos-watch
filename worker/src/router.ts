@@ -26,6 +26,7 @@ import { handleYieldHistory } from "./api/yield-history";
 import { handleMintBurnFlows } from "./api/mint-burn-flows";
 import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
+import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { runIdempotentAdminAction } from "./lib/idempotency";
@@ -38,6 +39,7 @@ export function route(
   ctx: ExecutionContext,
   request?: Request,
   adminKey?: string,
+  alchemyApiKey?: string | null,
 ): Promise<Response> | null {
   const path = url.pathname;
   const mutatingAdminPaths = new Set([
@@ -46,6 +48,7 @@ export function route(
     "/api/backfill-cg-prices",
     "/api/backfill-stability-index",
     "/api/backfill-mint-burn-prices",
+    "/api/backfill-mint-burn",
     "/api/audit-depeg-history",
   ]);
 
@@ -199,6 +202,15 @@ export function route(
       "backfill-mint-burn-prices",
       request,
       () => handleBackfillMintBurnPrices(db, url, adminKey, request),
+    );
+  }
+
+  if (path === "/api/backfill-mint-burn") {
+    return runIdempotentAdminAction(
+      db,
+      "backfill-mint-burn",
+      request,
+      () => handleBackfillMintBurn(db, url, adminKey, request, alchemyApiKey ?? null),
     );
   }
 

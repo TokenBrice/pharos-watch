@@ -1,5 +1,5 @@
 import { route } from "./router";
-import { logCronRun, getCache, runCronWithLease, type CronResult } from "./lib/db";
+import { logCronRun, getCache, setCache, runCronWithLease, type CronResult } from "./lib/db";
 import { syncStablecoins } from "./cron/sync-stablecoins";
 import { syncStablecoinCharts } from "./cron/sync-stablecoin-charts";
 import { syncBlacklist } from "./cron/sync-blacklist";
@@ -46,6 +46,12 @@ interface Env {
   TWITTER_ACCESS_TOKEN_SECRET?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  MINT_BURN_DISABLED_IDS?: string;
+  MINT_BURN_DISABLED_SYMBOLS?: string;
+  MINT_BURN_MAJOR_SYMBOLS?: string;
+  MINT_BURN_STALE_WARN_SEC?: string;
+  MINT_BURN_STALE_CRIT_SEC?: string;
+  MINT_BURN_ALERT_COOLDOWN_SEC?: string;
 }
 
 function corsHeaders(origin: string): Record<string, string> {
@@ -74,6 +80,25 @@ function addCorsHeaders(response: Response, origin: string): Response {
   });
 }
 
+function parseCsvEnv(value: string | undefined): string[] {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+function parsePositiveInt(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const DEFAULT_MINT_BURN_MAJOR_SYMBOLS = ["USDT", "USDC", "DAI", "USDS", "GHO", "FRXUSD", "BOLD", "reUSD"];
+const DEFAULT_MINT_BURN_STALE_WARN_SEC = 6 * 3600;
+const DEFAULT_MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
+const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     initCoinGecko(env.COINGECKO_API_KEY);
@@ -95,6 +120,7 @@ const worker = {
       "/api/backfill-cg-prices",
       "/api/backfill-stability-index",
       "/api/backfill-mint-burn-prices",
+      "/api/backfill-mint-burn",
       "/api/audit-depeg-history",
     ]);
     const isMutatingAdminPath = mutatingAdminPaths.has(url.pathname);
@@ -231,6 +257,7 @@ const worker = {
       url.pathname === "/api/audit-depeg-history" ||
       url.pathname === "/api/backfill-stability-index" ||
       url.pathname === "/api/backfill-mint-burn-prices" ||
+      url.pathname === "/api/backfill-mint-burn" ||
       url.pathname === "/api/backfill-dews";
 
     // Check edge cache first
@@ -243,7 +270,7 @@ const worker = {
       }
     }
 
-    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY);
+    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY, env.ALCHEMY_API_KEY ?? null);
 
     if (!response) {
       return addCorsHeaders(
@@ -269,6 +296,15 @@ const worker = {
     initCoinGecko(env.COINGECKO_API_KEY);
     const db = env.DB;
     const cron = event.cron;
+    const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
+    const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
+    const mintBurnMajorSymbols = parseCsvEnv(env.MINT_BURN_MAJOR_SYMBOLS);
+    const mintBurnWarnSec = parsePositiveInt(env.MINT_BURN_STALE_WARN_SEC, DEFAULT_MINT_BURN_STALE_WARN_SEC);
+    const mintBurnCritSec = parsePositiveInt(env.MINT_BURN_STALE_CRIT_SEC, DEFAULT_MINT_BURN_STALE_CRIT_SEC);
+    const mintBurnAlertCooldownSec = parsePositiveInt(
+      env.MINT_BURN_ALERT_COOLDOWN_SEC,
+      DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC,
+    );
     const normalizeCronMetadata = (result: CronResult): string | undefined => {
       const parsed: Record<string, unknown> = {};
       if (result.metadata) {
@@ -396,15 +432,74 @@ const worker = {
         const alchemyAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ALCHEMY);
         if (alchemyAllowed) {
           const mintBurnJob = runLeasedCron("sync-mint-burn", (signal) =>
-            syncMintBurn(db, env.ALCHEMY_API_KEY ?? null, signal)
+            syncMintBurn(db, env.ALCHEMY_API_KEY ?? null, {
+              signal,
+              disabledConfigIds: mintBurnDisabledIds,
+              disabledSymbols: mintBurnDisabledSymbols,
+            })
           );
           ctx.waitUntil(mintBurnJob);
           ctx.waitUntil(mintBurnJob.then(
-            () => recordOutcome(db, CIRCUIT_SOURCE.ALCHEMY, true),
+            (result) => recordOutcome(
+              db,
+              CIRCUIT_SOURCE.ALCHEMY,
+              (result?.status ?? "ok") === "ok",
+            ),
             () => recordOutcome(db, CIRCUIT_SOURCE.ALCHEMY, false),
           ));
+          ctx.waitUntil(mintBurnJob.then(async () => {
+            try {
+              const symbols = mintBurnMajorSymbols.length > 0 ? mintBurnMajorSymbols : DEFAULT_MINT_BURN_MAJOR_SYMBOLS;
+              if (symbols.length === 0) return;
+              const now = Math.floor(Date.now() / 1000);
+              const rows = await db
+                .prepare(
+                  `SELECT symbol, MAX(timestamp) as latest_ts
+                   FROM mint_burn_events
+                   WHERE symbol IN (${symbols.map(() => "?").join(",")})
+                   GROUP BY symbol`,
+                )
+                .bind(...symbols)
+                .all<{ symbol: string; latest_ts: number | null }>();
+
+              const latestBySymbol = new Map<string, number>();
+              for (const row of rows.results ?? []) {
+                if (row.latest_ts != null) latestBySymbol.set(row.symbol, row.latest_ts);
+              }
+
+              const warn: string[] = [];
+              const crit: string[] = [];
+              for (const symbol of symbols) {
+                const latest = latestBySymbol.get(symbol);
+                const ageSec = latest == null ? Number.POSITIVE_INFINITY : now - latest;
+                if (ageSec >= mintBurnCritSec) {
+                  crit.push(`${symbol}:${latest == null ? "missing" : Math.round(ageSec / 3600) + "h"}`);
+                } else if (ageSec >= mintBurnWarnSec) {
+                  warn.push(`${symbol}:${Math.round(ageSec / 3600)}h`);
+                }
+              }
+
+              const emitAlert = async (severity: "warn" | "crit", details: string[]): Promise<void> => {
+                if (details.length === 0) return;
+                const cacheKey = `alert:mint-burn-stale:${severity}`;
+                const prior = await getCache(db, cacheKey);
+                if (prior && now - prior.updatedAt < mintBurnAlertCooldownSec) return;
+                const threshold = severity === "crit" ? mintBurnCritSec : mintBurnWarnSec;
+                await sendAlert(
+                  `Mint/burn staleness (${severity.toUpperCase()})`,
+                  `Threshold=${Math.round(threshold / 3600)}h, symbols=${details.join(", ")}`,
+                );
+                await setCache(db, cacheKey, JSON.stringify({ symbols: details, at: now }));
+              };
+
+              await emitAlert("warn", warn);
+              await emitAlert("crit", crit);
+            } catch {
+              // Non-blocking alert path.
+            }
+          }));
         } else {
-          console.warn("[cron] Alchemy circuit open — skipping mint/burn sync");
+          console.warn("[cron] Alchemy circuit open - skipping mint/burn sync");
         }
         break;
       }

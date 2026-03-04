@@ -16,7 +16,14 @@ describe("handleHealth", () => {
       timestamp: number;
       caches: Record<string, unknown>;
       blacklist: { totalEvents: number; missingAmounts: number };
-      mintBurn: { totalEvents: number };
+      mintBurn: {
+        totalEvents: number;
+        latestEventTs: number | null;
+        latestHourlyTs: number | null;
+        freshnessAgeSec: number | null;
+        majorStaleCount: number;
+        staleMajorSymbols: string[];
+      };
       circuits: Record<string, unknown>;
     };
     expect(body).toHaveProperty("status");
@@ -26,6 +33,11 @@ describe("handleHealth", () => {
     expect(body).toHaveProperty("mintBurn");
     expect(body).toHaveProperty("circuits");
     expect(body.mintBurn.totalEvents).toBe(1234);
+    expect(body.mintBurn).toHaveProperty("latestEventTs");
+    expect(body.mintBurn).toHaveProperty("latestHourlyTs");
+    expect(body.mintBurn).toHaveProperty("freshnessAgeSec");
+    expect(body.mintBurn).toHaveProperty("majorStaleCount");
+    expect(body.mintBurn).toHaveProperty("staleMajorSymbols");
     expect(["healthy", "degraded", "stale"]).toContain(body.status);
   });
 

@@ -192,7 +192,7 @@ describe("syncYieldData", () => {
     // Reset mocks to factory defaults
     vi.mocked(getCache).mockReset().mockResolvedValue(null);
     vi.mocked(setCache).mockReset().mockResolvedValue(undefined);
-    vi.mocked(batchExecute).mockReset().mockResolvedValue(undefined);
+    vi.mocked(batchExecute).mockReset().mockResolvedValue(0);
     vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
     vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
   });

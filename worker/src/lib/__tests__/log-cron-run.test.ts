@@ -121,7 +121,7 @@ describe("logCronRun", () => {
 
     await expect(
       logCronRun(dbWithPruneFallback, "test-job", async () => ({ itemCount: 1 }))
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ itemCount: 1 });
 
     expect(safetyValvePruneCalled).toBe(true);
   });
@@ -159,7 +159,7 @@ describe("logCronRun", () => {
 
     await expect(
       logCronRun(dbWithDoublePruneFailure, "test-job", async () => ({ itemCount: 1 }))
-    ).resolves.toBeUndefined();
+    ).resolves.toMatchObject({ itemCount: 1 });
 
     expect(errorSpy).toHaveBeenCalledWith(
       "[db] Failed to prune old cron runs:",

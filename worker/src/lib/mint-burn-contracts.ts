@@ -4,6 +4,7 @@ import { chainConfig } from "./blacklist-contracts";
 // --- Types ---
 
 export type MintBurnDirection = "mint" | "burn";
+export type MintBurnTier = "critical" | "extended";
 
 export interface MintBurnEventDef {
   signature: string;
@@ -26,6 +27,8 @@ export interface MintBurnContractConfig {
   dustThreshold: number;
   startBlock: number;
   events: MintBurnEventDef[];
+  enabled?: boolean;
+  tier?: MintBurnTier;
 }
 
 // --- Constants ---
@@ -97,6 +100,7 @@ function reProtocolVaultConfigs(
       chain, stablecoinId, symbol,
       contractAddress: depositAddress,
       decimals: 18, dustThreshold: 10_000, startBlock: depositStartBlock,
+      tier: "extended",
       events: [{
         signature: "Deposited(address,address,uint256)",
         topicHash: REUSD_DEPOSITED_TOPIC,
@@ -109,6 +113,7 @@ function reProtocolVaultConfigs(
       chain, stablecoinId, symbol,
       contractAddress: redeemAddress,
       decimals: 18, dustThreshold: 10_000, startBlock: redeemStartBlock,
+      tier: "extended",
       events: [{
         signature: "InstantRedemptionProcessed(address,uint256,uint256)",
         topicHash: REUSD_INSTANT_REDEEM_TOPIC,
@@ -152,12 +157,14 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     chain: ETHEREUM, stablecoinId: "119", symbol: "FDUSD",
     contractAddress: "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
+    tier: "extended",
     events: transferMintBurn(),
   },
   {
     chain: ETHEREUM, stablecoinId: "120", symbol: "PYUSD",
     contractAddress: "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
     decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000,
+    tier: "extended",
     events: transferMintBurn(),
   },
 
@@ -178,6 +185,7 @@ export const MINT_BURN_CONFIGS: MintBurnContractConfig[] = [
     chain: ETHEREUM, stablecoinId: "146", symbol: "USDe",
     contractAddress: "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
     decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000,
+    tier: "extended",
     events: transferMintBurn(),
   },
   {

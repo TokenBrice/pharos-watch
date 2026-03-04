@@ -105,7 +105,7 @@ describe("syncBlacklist", () => {
     // Reset mocks to defaults
     vi.mocked(getLastBlock).mockResolvedValue(0);
     vi.mocked(setLastBlock).mockResolvedValue(undefined);
-    vi.mocked(batchExecute).mockResolvedValue(undefined);
+    vi.mocked(batchExecute).mockResolvedValue(0);
     vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
   });

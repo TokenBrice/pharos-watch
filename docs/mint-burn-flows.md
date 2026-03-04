@@ -12,7 +12,8 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** `worker/src/index.ts` (line 231)
-- **Returns:** `{ itemCount, metadata: JSON { contractsProcessed, contractsSkipped, apiErrors } }`
+- **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows)
+- **Operator runbook:** `docs/runbooks/mint-burn-ingestion.md`
 
 ---
 
@@ -31,7 +32,8 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
 | `CHAIN_SCAN_RANGE` | 50K (ETH/ARB/BASE/OPT), 10K (AVAX), 2K (Polygon) | Max block range per contract per cycle (per-chain Alchemy limits) |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block; includes multi-chain reUSD vault configs |
-| Subrequest budget | 200 per cron run | Alchemy API call budget |
+| Subrequest budget | 200 per cron run | Global Alchemy API call budget (with per-chain quotas) |
+| Config tier policy | `critical` / `extended` | Under budget pressure, extended configs can be deferred deterministically |
 
 ---
 
@@ -81,19 +83,21 @@ Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-qua
 ## Sync Algorithm
 
 1. **Load sync state** — batch query `mint_burn_sync_state` for all configured contract keys. Falls back to `startBlock - 1` for new configs.
-2. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
-3. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
-4. **For each contract config:**
+2. **Apply runtime policy** — filter disabled configs (`MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`), rotate start index from persisted run-state, and assign per-chain budget quotas.
+3. **Get chain head** — Alchemy `eth_blockNumber` call per chain (cached per chain ID).
+4. **Load price cache** — query `price_cache` for all tracked stablecoin IDs (used for USD conversion).
+5. **For each contract config:**
    - Skip if `fromBlock > chainHead` or subrequest budget exhausted.
-   - For each event definition, call Alchemy `eth_getLogs` with compound topic filters.
-   - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs.
+   - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive block-range splitting on provider/range failures.
+   - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
    - Parse logs: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price).
    - Filter out dust events (amount < `dustThreshold`).
-   - Batch `INSERT OR IGNORE` into `mint_burn_events`.
+   - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`.
    - Update `mint_burn_sync_state.last_block`:
      - If events found: advance to `maxBlockSeen`.
      - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
-5. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`.
+6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`.
+7. **Escalate degraded runs** — emit `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`.
 
 **Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
 
@@ -280,6 +284,18 @@ Backfills `amount_usd` for events that were synced without price data. Requires 
 3. Deletes and re-aggregates all `mint_burn_hourly` rows for affected coins.
 
 Returns: `{ totalUpdated, coins: [{ id, updated }] }`
+
+### POST /api/backfill-mint-burn (admin)
+
+Controlled ingestion backfill by explicit config/range/chunk.
+
+- Auth: `X-Admin-Key`
+- Idempotency: `Idempotency-Key` supported via admin idempotency middleware
+- Parameters: `configKey`, `fromBlock`, `toBlock`, `chunkSize`, `maxChunks`
+- Behavior:
+  - Uses the same log parsing/insertion/hourly aggregation logic as cron ingestion.
+  - Advances `mint_burn_sync_state` up to completed chunk boundaries.
+  - Returns `done=false` with `nextFromBlock` when additional calls are needed.
 
 ---
 

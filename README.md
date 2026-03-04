@@ -167,12 +167,14 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 - **Atomic backfill** — depeg event backfills use transactional batch operations to prevent data loss on worker crashes
 - **Retry logic** — all external API fetches use exponential backoff with configurable 404 handling
 - **Circuit breakers** — per-source circuit breakers (3-strike open, 30-min probe) prevent hammering downed APIs; dual-primary price validation cross-checks DefiLlama and CoinGecko within 50 bps; CoinGecko supply fallback activates when DefiLlama is unavailable
+- **Mint/burn reliability controls** — rotating config scheduling, per-chain request quotas, adaptive `eth_getLogs` range splitting, timestamp caching, degraded-run escalation, and admin-controlled chunked backfill (`/api/backfill-mint-burn`)
 
 ## Deployment
 
 Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`:
 
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
+For mint/burn ingestion diagnostics and recovery, see `docs/runbooks/mint-burn-ingestion.md`.
 
 1. **Validate gate:** `npm run lint` → `npm test` → `npm run test:critical-contracts` → `npm run test:invariants` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`

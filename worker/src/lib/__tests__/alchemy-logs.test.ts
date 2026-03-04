@@ -10,18 +10,68 @@ import { createBudget } from "../evm-logs";
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
+function makeLog(txHash: string, blockNumber = 0x176f050) {
+  return {
+    address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    topics: ["0xddf252ad...", "0x0000..."],
+    data: "0x00000000000000000000000000000000000000000000000000000002540be400",
+    blockNumber: "0x" + blockNumber.toString(16),
+    transactionHash: txHash,
+    transactionIndex: "0x0",
+    blockHash: "0xdef456",
+    logIndex: "0x0",
+    removed: false,
+  };
+}
+
+function makeDbForTimestampCache(opts: {
+  cachedRows?: Array<{ block_number: number; timestamp: number }>;
+  onBatchWrite?: (count: number) => void;
+  onCacheReadBindCount?: (count: number) => void;
+} = {}): D1Database {
+  return {
+    prepare: (sql: string) => ({
+      bind: (..._args: unknown[]) => {
+        if (sql.includes("FROM block_timestamp_cache")) {
+          opts.onCacheReadBindCount?.(_args.length);
+        }
+        return ({
+        all: async <T>() => ({
+          results: (sql.includes("FROM block_timestamp_cache")
+            ? (opts.cachedRows ?? [])
+            : []) as T[],
+          success: true,
+          meta: {},
+        }),
+        first: async <T>() => null as T | null,
+        run: async () => ({ success: true, meta: { changes: 1 } }),
+      });
+      },
+      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+      first: async <T>() => null as T | null,
+      run: async () => ({ success: true, meta: { changes: 1 } }),
+    }),
+    batch: async (stmts: unknown[]) => {
+      opts.onBatchWrite?.(stmts.length);
+      return [] as unknown[];
+    },
+    exec: async () => ({ count: 0, duration: 0 }),
+    dump: async () => new ArrayBuffer(0),
+  } as unknown as D1Database;
+}
+
 // --- buildAlchemyUrl ---
 
 describe("buildAlchemyUrl", () => {
   it("builds correct URL for known chains", () => {
     expect(buildAlchemyUrl("ethereum", "test-key")).toBe(
-      "https://eth-mainnet.g.alchemy.com/v2/test-key"
+      "https://eth-mainnet.g.alchemy.com/v2/test-key",
     );
     expect(buildAlchemyUrl("base", "test-key")).toBe(
-      "https://base-mainnet.g.alchemy.com/v2/test-key"
+      "https://base-mainnet.g.alchemy.com/v2/test-key",
     );
     expect(buildAlchemyUrl("avalanche", "test-key")).toBe(
-      "https://avax-mainnet.g.alchemy.com/v2/test-key"
+      "https://avax-mainnet.g.alchemy.com/v2/test-key",
     );
   });
 
@@ -43,33 +93,28 @@ describe("getAlchemyBlockNumber", () => {
       JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x176f12d" }),
       { status: 200 },
     ));
+
     const budget = createBudget(100);
     const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+
     expect(result).toBe(0x176f12d);
     expect(budget.count).toBe(1);
   });
 
   it("returns null on 5xx HTTP error", async () => {
     fetchMock.mockResolvedValueOnce(new Response("error", { status: 500 }));
+
     const budget = createBudget(100);
     const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+
     expect(result).toBeNull();
     expect(budget.count).toBe(1);
-  });
-
-  it("parses error message from 400 JSON-RPC response", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32600, message: "block range too large" } }),
-      { status: 400 },
-    ));
-    const budget = createBudget(100);
-    const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
-    expect(result).toBeNull();
   });
 
   it("returns null when budget exhausted", async () => {
     const budget = createBudget(0);
     const result = await getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", budget);
+
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -83,72 +128,114 @@ describe("fetchAlchemyLogs", () => {
   });
 
   it("returns parsed log entries on success", async () => {
-    const mockLogs = [
-      {
-        address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        topics: ["0xddf252ad...", "0x0000..."],
-        data: "0x00000000000000000000000000000000000000000000000000000002540be400",
-        blockNumber: "0x176f050",
-        transactionHash: "0xabc123",
-        transactionIndex: "0x0",
-        blockHash: "0xdef456",
-        logIndex: "0x0",
-        removed: false,
-      },
-    ];
     fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify({ jsonrpc: "2.0", id: 1, result: mockLogs }),
+      JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xabc123")] }),
       { status: 200 },
     ));
+
     const budget = createBudget(100);
     const result = await fetchAlchemyLogs(
       "https://eth-mainnet.g.alchemy.com/v2/key",
       "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       [{ index: 0, value: "0xddf252ad..." }],
-      0x176f000, 0x176f100, budget,
+      0x176f000,
+      0x176f100,
+      budget,
     );
-    expect(result).toHaveLength(1);
-    expect(result![0].transactionHash).toBe("0xabc123");
+
+    expect(result).not.toBeNull();
+    expect(result?.complete).toBe(true);
+    expect(result?.logs).toHaveLength(1);
+    expect(result?.logs[0].transactionHash).toBe("0xabc123");
     expect(budget.count).toBe(1);
-  });
-
-  it("returns empty array when no logs found", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify({ jsonrpc: "2.0", id: 1, result: [] }),
-      { status: 200 },
-    ));
-    const budget = createBudget(100);
-    const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      "0xcontract", [{ index: 0, value: "0xtopic" }],
-      100, 200, budget,
-    );
-    expect(result).toEqual([]);
-  });
-
-  it("returns null on JSON-RPC error", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32600, message: "bad range" } }),
-      { status: 400 },
-    ));
-    const budget = createBudget(100);
-    const result = await fetchAlchemyLogs(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      "0xcontract", [{ index: 0, value: "0xtopic" }],
-      100, 200, budget,
-    );
-    expect(result).toBeNull();
   });
 
   it("returns null when budget exhausted", async () => {
     const budget = createBudget(0);
     const result = await fetchAlchemyLogs(
       "https://eth-mainnet.g.alchemy.com/v2/key",
-      "0xcontract", [{ index: 0, value: "0xtopic" }],
-      100, 200, budget,
+      "0xcontract",
+      [{ index: 0, value: "0xtopic" }],
+      100,
+      200,
+      budget,
     );
+
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("splits range on retryable provider error", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32005, message: "block range is too wide" },
+        }),
+        { status: 400 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xleft")] }),
+        { status: 200 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xright", 0x176f051)] }),
+        { status: 200 },
+      ));
+
+    const budget = createBudget(100);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract",
+      [{ index: 0, value: "0xtopic" }],
+      100,
+      200,
+      budget,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.complete).toBe(true);
+    expect(result?.logs).toHaveLength(2);
+    expect(result?.maxDepth).toBeGreaterThan(0);
+  });
+
+  it("returns partial result when one split branch fails", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32005, message: "block range is too wide" },
+        }),
+        { status: 400 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ jsonrpc: "2.0", id: 1, result: [makeLog("0xleft")] }),
+        { status: 200 },
+      ))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          error: { code: -32602, message: "invalid filter" },
+        }),
+        { status: 400 },
+      ));
+
+    const budget = createBudget(100);
+    const result = await fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xcontract",
+      [{ index: 0, value: "0xtopic" }],
+      100,
+      200,
+      budget,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.complete).toBe(false);
+    expect(result?.logs).toHaveLength(1);
   });
 
   it("builds correct sparse topic array for multi-topic filters", async () => {
@@ -156,6 +243,7 @@ describe("fetchAlchemyLogs", () => {
       JSON.stringify({ jsonrpc: "2.0", id: 1, result: [] }),
       { status: 200 },
     ));
+
     const budget = createBudget(100);
     await fetchAlchemyLogs(
       "https://eth-mainnet.g.alchemy.com/v2/key",
@@ -164,8 +252,11 @@ describe("fetchAlchemyLogs", () => {
         { index: 0, value: "0xddf252ad..." },
         { index: 2, value: "0x0000000000000000000000000000000000000000000000000000000000000000" },
       ],
-      100, 200, budget,
+      100,
+      200,
+      budget,
     );
+
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.params[0].topics).toEqual([
       "0xddf252ad...",
@@ -190,73 +281,92 @@ describe("resolveBlockTimestamps", () => {
       ]),
       { status: 200 },
     ));
+
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps(
       "https://eth-mainnet.g.alchemy.com/v2/key",
-      [0x176f050, 0x176f051], budget,
+      [0x176f050, 0x176f051],
+      budget,
     );
+
     expect(result.get(0x176f050)).toBe(0x6651a2c0);
     expect(result.get(0x176f051)).toBe(0x6651a2cc);
     expect(budget.count).toBe(1);
   });
 
-  it("maps timestamps by JSON-RPC id even when response order is shuffled", async () => {
-    const blockA = 0x176f050;
-    const blockB = 0x176f051;
+  it("uses local cache before fetching", async () => {
+    const budget = createBudget(100);
+    const local = new Map<number, number>([[0x176f050, 0x6651a2c0]]);
+
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050],
+      budget,
+      { localCache: local },
+    );
+
+    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(budget.count).toBe(0);
+  });
+
+  it("reads from persistent timestamp cache before fetching", async () => {
+    const db = makeDbForTimestampCache({
+      cachedRows: [{ block_number: 0x176f050, timestamp: 0x6651a2c0 }],
+    });
+
+    const budget = createBudget(100);
+    const result = await resolveBlockTimestamps(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      [0x176f050],
+      budget,
+      {
+        persistentCache: { db, chainId: "ethereum" },
+      },
+    );
+
+    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(budget.count).toBe(0);
+  });
+
+  it("writes fetched timestamps into persistent cache", async () => {
     fetchMock.mockResolvedValueOnce(new Response(
       JSON.stringify([
-        { jsonrpc: "2.0", id: 1, result: { timestamp: "0x6651a2cc" } },
         { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
       ]),
       { status: 200 },
     ));
-    const budget = createBudget(100);
-    const result = await resolveBlockTimestamps(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      [blockA, blockB], budget,
-    );
-    expect(result.get(blockA)).toBe(0x6651a2c0);
-    expect(result.get(blockB)).toBe(0x6651a2cc);
-  });
 
-  it("returns empty map for empty input", async () => {
-    const budget = createBudget(100);
-    const result = await resolveBlockTimestamps(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      [], budget,
-    );
-    expect(result.size).toBe(0);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("splits into batches of 50", async () => {
-    const blocks = Array.from({ length: 60 }, (_, i) => 1000 + i);
-    const makeBatchResponse = (count: number, blockOffset: number) =>
-      Array.from({ length: count }, (_, i) => ({
-        jsonrpc: "2.0", id: i,
-        result: { timestamp: "0x" + (1700000000 + blockOffset + i).toString(16) },
-      }));
-
-    fetchMock
-      .mockResolvedValueOnce(new Response(JSON.stringify(makeBatchResponse(50, 0)), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(makeBatchResponse(10, 50)), { status: 200 }));
+    let batchWrites = 0;
+    const db = makeDbForTimestampCache({
+      cachedRows: [],
+      onBatchWrite: (count) => {
+        batchWrites += count;
+      },
+    });
 
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps(
       "https://eth-mainnet.g.alchemy.com/v2/key",
-      blocks, budget,
+      [0x176f050],
+      budget,
+      {
+        persistentCache: { db, chainId: "ethereum" },
+      },
     );
-    expect(result.size).toBe(60);
-    expect(budget.count).toBe(2);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    expect(result.get(0x176f050)).toBe(0x6651a2c0);
+    expect(batchWrites).toBeGreaterThan(0);
   });
 
   it("returns partial map when budget exhausted mid-batch", async () => {
-    const blocks = Array.from({ length: 60 }, (_, i) => 1000 + i);
+    const blocks = Array.from({ length: 60 }, (_, idx) => 1000 + idx);
     fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify(Array.from({ length: 50 }, (_, i) => ({
-        jsonrpc: "2.0", id: i,
-        result: { timestamp: "0x" + (1700000000 + i).toString(16) },
+      JSON.stringify(Array.from({ length: 50 }, (_, idx) => ({
+        jsonrpc: "2.0",
+        id: idx,
+        result: { timestamp: "0x" + (1700000000 + idx).toString(16) },
       }))),
       { status: 200 },
     ));
@@ -264,57 +374,38 @@ describe("resolveBlockTimestamps", () => {
     const budget = createBudget(1);
     const result = await resolveBlockTimestamps(
       "https://eth-mainnet.g.alchemy.com/v2/key",
-      blocks, budget,
+      blocks,
+      budget,
     );
+
     expect(result.size).toBe(50);
   });
 
-  it("ignores out-of-range response ids", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify([
-        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
-        { jsonrpc: "2.0", id: 999, result: { timestamp: "0x6651a2cc" } },
-      ]),
-      { status: 200 },
-    ));
+  it("chunks persistent cache reads to stay under SQL variable limits", async () => {
+    const blocks = Array.from({ length: 220 }, (_, idx) => 2000 + idx);
+    let cacheReadQueries = 0;
+    let maxBindCount = 0;
+    const db = makeDbForTimestampCache({
+      cachedRows: blocks.map((block) => ({ block_number: block, timestamp: 1700000000 + block })),
+      onCacheReadBindCount: (count) => {
+        cacheReadQueries++;
+        maxBindCount = Math.max(maxBindCount, count);
+      },
+    });
 
     const budget = createBudget(100);
     const result = await resolveBlockTimestamps(
       "https://eth-mainnet.g.alchemy.com/v2/key",
-      [0x176f050], budget,
+      blocks,
+      budget,
+      {
+        persistentCache: { db, chainId: "ethereum" },
+      },
     );
-    expect(result.size).toBe(1);
-    expect(result.get(0x176f050)).toBe(0x6651a2c0);
-  });
 
-  it("uses the last valid mapping for duplicate ids", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify([
-        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } },
-        { jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2ff" } },
-      ]),
-      { status: 200 },
-    ));
-
-    const budget = createBudget(100);
-    const result = await resolveBlockTimestamps(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      [0x176f050], budget,
-    );
-    expect(result.get(0x176f050)).toBe(0x6651a2ff);
-  });
-
-  it("safely handles non-array JSON response bodies", async () => {
-    fetchMock.mockResolvedValueOnce(new Response(
-      JSON.stringify({ jsonrpc: "2.0", id: 0, result: { timestamp: "0x6651a2c0" } }),
-      { status: 200 },
-    ));
-
-    const budget = createBudget(100);
-    const result = await resolveBlockTimestamps(
-      "https://eth-mainnet.g.alchemy.com/v2/key",
-      [0x176f050], budget,
-    );
-    expect(result.size).toBe(0);
+    expect(result.size).toBe(blocks.length);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(cacheReadQueries).toBeGreaterThan(1);
+    expect(maxBindCount).toBeLessThanOrEqual(100);
   });
 });

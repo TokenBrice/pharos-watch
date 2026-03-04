@@ -3,10 +3,19 @@ import { SECONDS } from "./time-constants";
 import { sendAlert } from "./alerts";
 
 /** Execute D1 prepared statements in chunks to stay within the batch limit */
-export async function batchExecute(db: D1Database, stmts: D1PreparedStatement[], chunkSize = D1_BATCH_SIZE): Promise<void> {
+export async function batchExecute(
+  db: D1Database,
+  stmts: D1PreparedStatement[],
+  chunkSize = D1_BATCH_SIZE,
+): Promise<number> {
+  let changes = 0;
   for (let i = 0; i < stmts.length; i += chunkSize) {
-    await db.batch(stmts.slice(i, i + chunkSize));
+    const result = await db.batch(stmts.slice(i, i + chunkSize));
+    for (const row of result) {
+      changes += Number(row?.meta?.changes ?? 0);
+    }
   }
+  return changes;
 }
 
 /** Build WHERE, LIMIT, and OFFSET clauses for paginated SQL queries */
@@ -143,7 +152,7 @@ export async function getFirstSeenDates(db: D1Database): Promise<Map<string, num
 export interface CronResult {
   itemCount?: number;
   metadata?: string;
-  status?: "ok" | "skipped_locked";
+  status?: "ok" | "degraded" | "error" | "skipped_locked";
 }
 
 // --- Cron lease primitives ---
@@ -338,12 +347,13 @@ export async function logCronRun(
   db: D1Database,
   job: string,
   fn: (signal: AbortSignal) => Promise<CronResult | void>
-): Promise<void> {
+): Promise<CronResult | void> {
   const startMs = Date.now();
   const startSec = Math.floor(startMs / 1000);
   const timeoutMs = CRON_TIMEOUT_MS[job] ?? DEFAULT_CRON_TIMEOUT_MS;
   const ac = new AbortController();
   const timeoutError = new CronTimeoutError(job, timeoutMs);
+  let resolvedResult: CronResult | void;
   let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<never>((_resolve, reject) => {
     timeoutHandle = setTimeout(() => {
@@ -353,7 +363,7 @@ export async function logCronRun(
   });
 
   try {
-    const result = await Promise.race([
+    resolvedResult = await Promise.race([
       fn(ac.signal),
       timeoutPromise,
     ]);
@@ -365,9 +375,9 @@ export async function logCronRun(
         job,
         startSec,
         Date.now() - startMs,
-        result?.status ?? "ok",
-        result?.itemCount ?? null,
-        result?.metadata ?? null
+        resolvedResult?.status ?? "ok",
+        resolvedResult?.itemCount ?? null,
+        resolvedResult?.metadata ?? null
       )
       .run();
   } catch (e) {
@@ -404,4 +414,5 @@ export async function logCronRun(
       console.error("[db] Safety valve prune also failed:", e2);
     }
   }
+  return resolvedResult;
 }
