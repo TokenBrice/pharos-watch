@@ -907,7 +907,7 @@ Pre-computed yield rankings from cache, written by the `sync-yield-data` cron. I
 | Field | Type | Description |
 |-------|------|-------------|
 | `rankings` | `YieldRanking[]` | All ranked stablecoins, sorted by Pharos Yield Score descending |
-| `riskFreeRate` | `number` | Current US Treasury T-bill rate (%) used as the risk-free benchmark |
+| `riskFreeRate` | `number` | Current 3-month Treasury yield proxy (%) from FRED `DGS3MO`, used as the risk-free benchmark |
 | `scalingFactor` | `number` | Scaling factor applied in yield score computation |
 | `updatedAt` | `number` | Unix seconds when the rankings were last computed |
 

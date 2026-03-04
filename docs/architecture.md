@@ -317,7 +317,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
-    │   ├── fetch-tbill-rate.ts   # US Treasury T-bill rate fetcher (Fiscal Data API)
+    │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
     │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
     │   └── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
     ├── api/

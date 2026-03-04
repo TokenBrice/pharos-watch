@@ -170,21 +170,17 @@ Returns 0 when `apy30d <= 0`.
 
 ## Risk-Free Rate (T-Bill)
 
-Fetched daily by the `fetch-tbill-rate` cron from the US Treasury Fiscal Data API (free, no key).
+Fetched daily by the `fetch-tbill-rate` cron from FRED's 3-month Treasury yield series (`DGS3MO`).
 
 **Source URL:**
 
 ```
-https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/avg_interest_rates
-  ?filter=security_desc:eq:Treasury Bills
-  &sort=-record_date
-  &page[size]=1
-  &fields=record_date,avg_interest_rate_amt
+https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 ```
 
 **Stored as:** `cache` table, key `"risk_free_rate"`.
 
-**Fallback:** `RISK_FREE_RATE_FALLBACK = 4.25%` — written when the API is unreachable, circuit-broken, or returns invalid data (NaN, negative, or > 20%).
+**Fallback:** `RISK_FREE_RATE_FALLBACK = 4.25%` — written when FRED is unreachable, circuit-broken, or returns invalid data.
 
 **Usage:** The 30-min yield sync reads the cached rate. The scatter plot renders it as a dashed reference line, and `excessYield` is computed against it.
 
@@ -303,7 +299,7 @@ CREATE TABLE yield_history (
 **Schedule:** `0 8 * * *` (daily, Trigger 4)
 **File:** `worker/src/cron/fetch-tbill-rate.ts`
 
-Fetches the latest T-bill rate from the US Treasury API. Validates the rate (must be 0–20%), stores in cache. Falls back to `RISK_FREE_RATE_FALLBACK` on any failure.
+Fetches the latest T-bill proxy rate from FRED (`DGS3MO`). Validates the rate (must be 0–20%), stores in cache. Falls back to `RISK_FREE_RATE_FALLBACK` on any failure.
 
 ---
 
@@ -434,11 +430,11 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 | Constant | Value | Purpose |
 |----------|-------|---------|
 | `RISK_FREE_RATE_FALLBACK` | 4.25 | Fallback T-bill rate (%) |
-| `TREASURY_FISCAL_DATA_URL` | `https://api.fiscaldata.treasury.gov/...` | Treasury API endpoint |
+| `FRED_TBILL_CSV_URL` | `https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO` | FRED daily 3-month Treasury yield series |
 | `PYS_SCALING_FACTOR` | 5 | PYS distribution tuning parameter |
 | `DEFAULT_SAFETY_SCORE` | 40 | Safety score for unrated coins (most NAV tokens) |
 | `CIRCUIT_SOURCE.DL_YIELDS` | `"defillama-yields"` | Circuit breaker key for DL Yields API |
-| `CIRCUIT_SOURCE.TREASURY_RATES` | `"treasury-rates"` | Circuit breaker key for Treasury API |
+| `CIRCUIT_SOURCE.TREASURY_RATES` | `"treasury-rates"` | Circuit breaker key for risk-free rate fetch |
 
 ---
 

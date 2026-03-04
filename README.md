@@ -54,7 +54,7 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [frankfurter.app](https://frankfurter.app/) | ECB FX rates for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN | 15 min |
 | [fawazahmed0/exchange-api](https://github.com/fawazahmed0/exchange-api) | Live RUB, UAH, ARS rates (ECB doesn't publish these currencies) | 15 min |
 | [gold-api.com](https://gold-api.com/) | Gold and silver spot prices for commodity-pegged stablecoin peg validation | 15 min |
-| [U.S. Treasury Fiscal Data](https://fiscaldata.treasury.gov/) | T-bill rate for yield benchmarking (risk-free rate, PYS `excessYield`) | Daily |
+| [FRED (St. Louis Fed)](https://fred.stlouisfed.org/series/DGS3MO) | 3-month Treasury yield for yield benchmarking (risk-free rate, PYS `excessYield`) | Daily |
 | [Bluechip](https://bluechip.org/) | Independent stablecoin safety ratings (SMIDGE framework) | Daily |
 | [Anthropic](https://anthropic.com/) | AI-generated daily market digest | Daily |
 
