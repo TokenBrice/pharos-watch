@@ -391,9 +391,16 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     trackedMcapUsd += mcap;
 
     const netFlow24h = agg?.netFlow ?? 0;
+    const has24hActivity = (agg?.mintCount ?? 0) > 0
+      || (agg?.burnCount ?? 0) > 0
+      || (agg?.mintVolume ?? 0) > 0
+      || (agg?.burnVolume ?? 0) > 0;
+    const currentNetForIntensity = !has24hActivity && baseline
+      ? baseline.avgNet
+      : netFlow24h;
     const intensity = baseline
       ? computeFlowIntensity({
-          currentDailyNet: netFlow24h,
+          currentDailyNet: currentNetForIntensity,
           baselineDailyNet: baseline.avgNet,
           baselineDailyAbs: baseline.avgAbs,
           dataAgeDays: baseline.dataDays,

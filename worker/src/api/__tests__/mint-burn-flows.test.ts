@@ -122,7 +122,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("error");
   });
 
-  it("computes flow intensity for sparse-event coins after 7+ tracked days", async () => {
+  it("returns neutral flow intensity for sparse coins with no 24h activity after 7+ tracked days", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
@@ -163,7 +163,6 @@ describe("handleMintBurnFlows contract tests", () => {
 
     expect(usdt).toBeDefined();
     expect(usdt?.flowIntensity).not.toBeNull();
-    expect(usdt?.flowIntensity ?? 0).toBeGreaterThan(40);
-    expect(usdt?.flowIntensity ?? 0).toBeLessThan(50);
+    expect(usdt?.flowIntensity ?? 0).toBe(50);
   });
 });
