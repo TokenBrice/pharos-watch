@@ -36,10 +36,10 @@ Endpoints backed by the cron cache include these additional headers:
 
 | Profile | `Cache-Control` | Used by |
 |---------|----------------|---------|
-| realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary |
-| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings |
+| realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary, mint-burn-events |
+| standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
-| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history |
+| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, digest-snapshot |
 | no-store | `no-store` | health, status |
 
 ---
@@ -1401,7 +1401,7 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 | `min-supply` | `number` | `0` | Minimum supply (USD) to include in audit |
 | `symbol` | `string` | — | Filter by symbol (case-insensitive) |
 
-### `GET /api/trigger-digest`
+### `POST /api/trigger-digest`
 
 Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Handled directly in `index.ts` (not via the router).
 
@@ -1418,7 +1418,7 @@ Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Han
 
 Returns `500` with `{ "ok": false, "error": "..." }` on failure.
 
-### `GET /api/reset-blacklist-sync`
+### `POST /api/reset-blacklist-sync`
 
 Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Handled directly in `index.ts` (not via the router).
 

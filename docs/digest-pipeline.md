@@ -82,14 +82,14 @@ The full `input_data` JSON is stored verbatim so detail pages can reconstruct th
 
 ## API Endpoints
 
-All endpoints are public with standard cache headers (5-min edge, 60-sec browser). See `docs/api-reference.md` for full response shapes.
+Read endpoints are public with standard/slow cache headers (5-min or 60-min edge, depending on route). The manual trigger endpoint is admin-only. See `docs/api-reference.md` for full response shapes.
 
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/daily-digest` | Latest digest only |
 | `GET /api/digest-archive` | All digests, newest first (up to 365) |
 | `GET /api/digest-snapshot?date=YYYY-MM-DD` | Input data + depeg/blacklist context for a specific date — used by SSG detail pages |
-| `GET /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires `X-Admin-Key` header |
+| `POST /api/trigger-digest` *(admin)* | Force-regenerate digest and post to all distribution channels; requires `X-Admin-Key` header |
 
 ---
 
@@ -241,7 +241,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
-| `worker/src/index.ts` | Cron scheduling, `GET /api/trigger-digest` admin handler, `Env` interface |
+| `worker/src/index.ts` | Cron scheduling, `POST /api/trigger-digest` admin handler, `Env` interface |
 | `worker/migrations/0018_daily_digest.sql` | Initial `daily_digest` table |
 | `worker/migrations/0021_digest_title.sql` | Added `digest_title` column |
 | `worker/migrations/0027_digest_extended.sql` | Added `digest_extended` column |

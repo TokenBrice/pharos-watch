@@ -338,7 +338,7 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 
 ## Admin Endpoints
 
-### GET /api/reset-blacklist-sync
+### POST /api/reset-blacklist-sync
 
 Requires `X-Admin-Key` header. Rolls back sync state:
 

@@ -33,8 +33,8 @@
 | `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (requires `X-Admin-Key`) |
 | `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; requires `X-Admin-Key`) |
-| `GET /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
-| `GET /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
 | `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
 | `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `index.ts`, not router |

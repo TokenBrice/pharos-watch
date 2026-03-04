@@ -84,4 +84,5 @@ Read these when working on related code:
 - **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 15 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
