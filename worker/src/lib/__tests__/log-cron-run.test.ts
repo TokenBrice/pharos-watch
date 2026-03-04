@@ -32,7 +32,7 @@ describe("logCronRun", () => {
   });
 
   it("provides AbortSignal for jobs with custom timeouts", async () => {
-    // sync-dex-liquidity has a 10-min override; verify signal is still passed
+    // sync-dex-liquidity has a custom override; verify signal is still passed
     let signalRef: AbortSignal | undefined;
     await logCronRun(db, "sync-dex-liquidity", async (signal) => {
       signalRef = signal;

@@ -75,6 +75,8 @@ vi.mock("../../lib/mint-burn-contracts", () => ({
 vi.mock("../../lib/alchemy-logs", () => ({
   buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/test-key"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
+  getAlchemyTransactionByHash: vi.fn(async () => ({ hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" })),
+  getAlchemyTransactionReceipt: vi.fn(async () => ({ transactionHash: "0xtx", to: "0xrouter", logs: [] })),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, calls: 1, maxDepth: 0 })),
   resolveBlockTimestamps: vi.fn(async () => new Map()),
 }));
@@ -96,7 +98,14 @@ vi.mock("../../lib/db", async (importOriginal) => {
 
 import { syncMintBurn } from "../sync-mint-burn";
 import { batchExecute } from "../../lib/db";
-import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
+import {
+  fetchAlchemyLogs,
+  getAlchemyBlockNumber,
+  getAlchemyTransactionByHash,
+  getAlchemyTransactionReceipt,
+  resolveBlockTimestamps,
+} from "../../lib/alchemy-logs";
+import { createBudget } from "../../lib/evm-logs";
 
 function makeDb(opts: {
   runState?: { nextIndex: number; degradedStreak: number } | null;
@@ -140,7 +149,10 @@ describe("syncMintBurn", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-04T12:00:00Z"));
+    vi.mocked(createBudget).mockReset().mockImplementation((limit = 200) => ({ count: 0, limit }));
     vi.mocked(getAlchemyBlockNumber).mockReset().mockResolvedValue(22_000_000);
+    vi.mocked(getAlchemyTransactionByHash).mockReset().mockResolvedValue({ hash: "0xtx", to: "0xrouter", input: "0x96f4e9f9" });
+    vi.mocked(getAlchemyTransactionReceipt).mockReset().mockResolvedValue({ transactionHash: "0xtx", to: "0xrouter", logs: [] });
     vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue({ logs: [], complete: true, calls: 1, maxDepth: 0 });
     vi.mocked(resolveBlockTimestamps).mockReset().mockResolvedValue(new Map());
     vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
@@ -238,6 +250,21 @@ describe("syncMintBurn", () => {
     const result = await syncMintBurn(db, "alchemy-key");
 
     expect(result.status).toBe("degraded");
+  });
+
+  it("keeps status ok when only extended configs are deferred", async () => {
+    const db = makeDb({ runState: { nextIndex: 0, degradedStreak: 2 } });
+    vi.mocked(createBudget).mockImplementation(() => ({ count: 190, limit: 200 }));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("ok");
+    expect(meta.contractsDeferredExtended).toBeGreaterThan(0);
+    expect(meta.criticalCoverage.contractsEnabled).toBe(1);
+    expect(meta.criticalCoverage.contractsSatisfied).toBe(1);
+    expect(meta.criticalCoverage.ratio).toBe(1);
+    expect(meta.degradedSignal).toBe(false);
   });
 
   it("rejects when ALCHEMY_API_KEY is missing", async () => {

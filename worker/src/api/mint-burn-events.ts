@@ -9,10 +9,11 @@ import {
 } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
-import { CHAIN_META } from "../../../src/lib/chains";
 
-const VALID_CHAIN_IDS = new Set(Object.keys(CHAIN_META));
+const ETHEREUM_CHAIN_ID = "ethereum";
+const VALID_CHAIN_IDS = new Set([ETHEREUM_CHAIN_ID]);
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
+const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
 
 interface EventRow {
   id: string;
@@ -22,6 +23,8 @@ interface EventRow {
   direction: string;
   amount: number;
   amount_usd: number | null;
+  burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;
+  burn_review_reason: string | null;
   counterparty: string | null;
   tx_hash: string;
   block_number: number;
@@ -53,6 +56,10 @@ export const handleMintBurnEvents = withErrorHandler(
     if (chain && !VALID_CHAIN_IDS.has(chain)) {
       return errorResponse(400, "Invalid chain parameter");
     }
+    const burnType = params.get("burnType");
+    if (burnType && !VALID_BURN_TYPES.has(burnType)) {
+      return errorResponse(400, "Invalid burnType parameter");
+    }
     const minAmountRaw = params.get("minAmount");
     const minAmount = minAmountRaw !== null ? parseFloat(minAmountRaw) : null;
 
@@ -60,8 +67,8 @@ export const handleMintBurnEvents = withErrorHandler(
     const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
 
     // Build WHERE conditions
-    const conditions: string[] = ["stablecoin_id = ?"];
-    const filterBindings: (string | number)[] = [stablecoin];
+    const conditions: string[] = ["stablecoin_id = ?", "chain_id = ?"];
+    const filterBindings: (string | number)[] = [stablecoin, ETHEREUM_CHAIN_ID];
 
     if (direction) {
       conditions.push("direction = ?");
@@ -70,6 +77,10 @@ export const handleMintBurnEvents = withErrorHandler(
     if (chain) {
       conditions.push("chain_id = ?");
       filterBindings.push(chain);
+    }
+    if (burnType) {
+      conditions.push("burn_type = ?");
+      filterBindings.push(burnType);
     }
     if (minAmount !== null && !isNaN(minAmount) && minAmount > 0) {
       conditions.push("COALESCE(amount_usd, amount) >= ?");
@@ -100,6 +111,8 @@ export const handleMintBurnEvents = withErrorHandler(
       direction: row.direction as "mint" | "burn",
       amount: row.amount,
       amountUsd: row.amount_usd,
+      burnType: row.burn_type,
+      burnReviewReason: row.burn_review_reason,
       counterparty: row.counterparty,
       txHash: row.tx_hash,
       blockNumber: row.block_number,

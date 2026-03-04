@@ -2966,38 +2966,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USDC liquidity buffer", pct: 3, risk: "very-low", coinId: "2" },
     ],
   }),
-  usd("cg-uscc", "Superstate USCC", "USCC", "rwa-backed", "centralized", {
-    geckoId: "superstate-uscc",
-    yieldBearing: true, rwa: true, navToken: true,
-    yieldConfig: { yieldSource: "Superstate crypto carry fund", yieldType: "nav-appreciation" },
-    collateral: "Crypto cash-and-carry (basis) trades across Bitcoin, Ether, Solana (including staking), and XRP spot positions with offsetting short futures/forwards on CME and OTC counterparties (e.g. FalconX); uninvested capital and collateral reserves held in USD, USDC, and/or Superstate USTB; custodied at Anchorage Digital Bank N.A.",
-    pegMechanism: "NAV-accreting fund share token (not pegged to $1); token price launched at $10/share and appreciates as carry yield accrues; subscription and redemption at daily NAV in USDC or USD; NAV calculated by NAV Fund Services at 17:00 ET on NYSE business days",
-    proofOfReserves: { type: "independent-audit", url: "https://superstate.com/assets/uscc", provider: "Ernst & Young LLP (annual audit); weekly holdings and daily NAV published publicly at superstate.com/assets/uscc" },
-    links: [
-      { label: "Website", url: "https://superstate.com/assets/uscc" },
-      { label: "Twitter", url: "https://x.com/superstatefunds" },
-      { label: "Docs", url: "https://docs.superstate.com/superstate-funds/uscc" },
-    ],
-    jurisdiction: { country: "United States", regulator: "SEC", license: "Reg D Rule 506(c); Section 3(c)(7) exemption; restricted to U.S. Qualified Purchasers" },
-    contracts: [
-      { chain: "ethereum", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6 },
-      { chain: "plume", address: "0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf", decimals: 6 },
-    ],
-    collateralQuality: "exotic",
-    custodyModel: "institutional",
-    governanceQuality: "regulated-entity",
-    deploymentModel: "native-multichain",
-    reserves: [
-      // Source: Superstate USCC public holdings page, 2026-03-03. Allocation changes dynamically.
-      { name: "USD collateral", pct: 20, risk: "very-low" },
-      { name: "USDC collateral", pct: 7, risk: "very-low", coinId: "2" },
-      { name: "Superstate USTB (tokenized T-bills)", pct: 22, risk: "low", coinId: "cg-ustb" },
-      { name: "Staked SOL (basis trade, long spot + short futures)", pct: 20, risk: "medium" },
-      { name: "XRP spot custody (basis trade, long spot + short futures)", pct: 15, risk: "medium" },
-      { name: "EtherFi wrapped eETH (basis trade)", pct: 12, risk: "medium" },
-      { name: "BTC and ETH positions (basis trades)", pct: 4, risk: "medium" },
-    ],
-  }),
   usd("cg-mtbill", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
     geckoId: "midas-mtbill",
     yieldBearing: true, rwa: true, navToken: true,

@@ -82,10 +82,16 @@ export function useMintBurnFlowsCoin(
 
 export function useMintBurnEvents(
   stablecoinId: string,
-  opts?: { direction?: string; limit?: number; offset?: number }
+  opts?: {
+    direction?: string;
+    burnType?: "effective_burn" | "bridge_burn" | "review_required";
+    limit?: number;
+    offset?: number;
+  }
 ) {
   const params = new URLSearchParams({ stablecoin: stablecoinId });
   if (opts?.direction) params.set("direction", opts.direction);
+  if (opts?.burnType) params.set("burnType", opts.burnType);
   if (opts?.limit) params.set("limit", opts.limit.toString());
   if (opts?.offset) params.set("offset", opts.offset.toString());
 

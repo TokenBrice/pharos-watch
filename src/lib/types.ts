@@ -1094,6 +1094,8 @@ export interface MintBurnEvent {
   symbol: string;
   chainId: string;
   direction: "mint" | "burn";
+  burnType: "effective_burn" | "bridge_burn" | "review_required" | null;
+  burnReviewReason: string | null;
   amount: number;
   amountUsd: number | null;
   priceUsed?: number | null;

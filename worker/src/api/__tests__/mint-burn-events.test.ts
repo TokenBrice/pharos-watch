@@ -32,6 +32,8 @@ describe("handleMintBurnEvents", () => {
     expect(event).toHaveProperty("priceUsed");
     expect(event).toHaveProperty("priceTimestamp");
     expect(event).toHaveProperty("priceSource");
+    expect(event).toHaveProperty("burnType");
+    expect(event).toHaveProperty("burnReviewReason");
     expect(event).toHaveProperty("txHash");
     expect(event).toHaveProperty("blockNumber");
     expect(event).toHaveProperty("explorerTxUrl");
@@ -53,6 +55,18 @@ describe("handleMintBurnEvents", () => {
   it("rejects invalid direction with 400", async () => {
     const db = mockD1([]);
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1&direction=delete"));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects non-ethereum chain filter with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1&chain=base"));
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects invalid burnType with 400", async () => {
+    const db = mockD1([]);
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1&burnType=foo"));
     expect(res.status).toBe(400);
   });
 

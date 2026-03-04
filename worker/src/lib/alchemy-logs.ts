@@ -16,6 +16,18 @@ export interface AlchemyLogEntry {
   removed: boolean;
 }
 
+export interface AlchemyTransactionEntry {
+  hash: string;
+  to: string | null;
+  input: string;
+}
+
+export interface AlchemyTransactionReceipt {
+  transactionHash: string;
+  to: string | null;
+  logs: AlchemyLogEntry[];
+}
+
 interface JsonRpcResponse<T> {
   jsonrpc: string;
   id: number;
@@ -149,6 +161,48 @@ export async function getAlchemyBlockNumber(
     const rpc = await jsonRpcCall<string>(alchemyUrl, "eth_blockNumber", [], signal);
     if (!rpc.result || !rpc.result.startsWith("0x")) return null;
     return parseInt(rpc.result, 16);
+  } catch {
+    return null;
+  }
+}
+
+export async function getAlchemyTransactionByHash(
+  alchemyUrl: string,
+  txHash: string,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<AlchemyTransactionEntry | null> {
+  if (budgetExhausted(budget)) return null;
+  budget.count++;
+  try {
+    const rpc = await jsonRpcCall<AlchemyTransactionEntry>(
+      alchemyUrl,
+      "eth_getTransactionByHash",
+      [txHash],
+      signal,
+    );
+    return rpc.result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getAlchemyTransactionReceipt(
+  alchemyUrl: string,
+  txHash: string,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<AlchemyTransactionReceipt | null> {
+  if (budgetExhausted(budget)) return null;
+  budget.count++;
+  try {
+    const rpc = await jsonRpcCall<AlchemyTransactionReceipt>(
+      alchemyUrl,
+      "eth_getTransactionReceipt",
+      [txHash],
+      signal,
+    );
+    return rpc.result ?? null;
   } catch {
     return null;
   }

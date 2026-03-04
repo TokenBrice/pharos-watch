@@ -331,7 +331,7 @@ export async function runCronWithLease<T>(
 // --- Per-job cron timeout configuration ---
 
 const CRON_TIMEOUT_MS: Record<string, number> = {
-  "sync-dex-liquidity": 10 * 60_000,
+  "sync-dex-liquidity": 15 * 60_000,
   "sync-blacklist":      8 * 60_000,
   "sync-mint-burn":      8 * 60_000,
   "daily-digest":        8 * 60_000,

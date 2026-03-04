@@ -113,6 +113,7 @@ const DAY_SEC = 86400;
 const BASELINE_WINDOW_DAYS = 30;
 const FLOW_MAX_AGE_SEC = 300;
 const FLOW_CACHE_PREFIX = "mint-burn-flows:v2";
+const ETHEREUM_CHAIN_ID = "ethereum";
 
 function bucketDay(ts: number): number {
   return Math.floor(ts / DAY_SEC) * DAY_SEC;
@@ -257,43 +258,43 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineDailyResult, firstSeenResult, largestEventsResult] = await Promise.all([
       db
         .prepare(
-          `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
-                  mint_volume_usd, burn_volume_usd, net_flow_usd
-           FROM mint_burn_hourly
-           WHERE hour_ts >= ?
-           ORDER BY hour_ts ASC`,
+           `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+                   mint_volume_usd, burn_volume_usd, net_flow_usd
+            FROM mint_burn_hourly
+           WHERE chain_id = ? AND hour_ts >= ?
+            ORDER BY hour_ts ASC`,
         )
-        .bind(windowStart)
+        .bind(ETHEREUM_CHAIN_ID, windowStart)
         .all<HourlyRow>(),
       db
         .prepare(
           `SELECT stablecoin_id,
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly
-           WHERE hour_ts >= ?
+           WHERE chain_id = ? AND hour_ts >= ?
            GROUP BY stablecoin_id`,
         )
-        .bind(window7d)
+        .bind(ETHEREUM_CHAIN_ID, window7d)
         .all<{ stablecoin_id: string; net_flow_usd: number }>(),
       db
         .prepare(
           `SELECT stablecoin_id,
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly
-           WHERE hour_ts >= ?
+           WHERE chain_id = ? AND hour_ts >= ?
            GROUP BY stablecoin_id`,
         )
-        .bind(window30d)
+        .bind(ETHEREUM_CHAIN_ID, window30d)
         .all<{ stablecoin_id: string; net_flow_usd: number }>(),
       db
         .prepare(
           `SELECT stablecoin_id,
                   SUM(net_flow_usd) as net_flow_usd
            FROM mint_burn_hourly
-           WHERE hour_ts >= ?
+           WHERE chain_id = ? AND hour_ts >= ?
            GROUP BY stablecoin_id`,
         )
-        .bind(window90d)
+        .bind(ETHEREUM_CHAIN_ID, window90d)
         .all<{ stablecoin_id: string; net_flow_usd: number }>(),
       db
         .prepare(
@@ -302,17 +303,19 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
                   SUM(net_flow_usd) as daily_net,
                   SUM(mint_volume_usd + burn_volume_usd) as daily_abs
            FROM mint_burn_hourly
-           WHERE hour_ts >= ?
+           WHERE chain_id = ? AND hour_ts >= ?
            GROUP BY stablecoin_id, day_ts`,
         )
-        .bind(baselineWindowStart)
+        .bind(ETHEREUM_CHAIN_ID, baselineWindowStart)
         .all<DailyBaselineRow>(),
       db
         .prepare(
           `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
            FROM mint_burn_hourly
+           WHERE chain_id = ?
            GROUP BY stablecoin_id`,
         )
+        .bind(ETHEREUM_CHAIN_ID)
         .all<FirstSeenRow>(),
       db
         .prepare(
@@ -321,15 +324,19 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
            INNER JOIN (
              SELECT stablecoin_id, MAX(COALESCE(amount_usd, amount)) as max_val
              FROM mint_burn_events
-             WHERE timestamp >= ?
+             WHERE chain_id = ?
+               AND timestamp >= ?
+               AND (direction = 'mint' OR burn_type = 'effective_burn')
              GROUP BY stablecoin_id
            ) m ON e.stablecoin_id = m.stablecoin_id
               AND COALESCE(e.amount_usd, e.amount) = m.max_val
+              AND e.chain_id = ?
               AND e.timestamp >= ?
+              AND (e.direction = 'mint' OR e.burn_type = 'effective_burn')
            GROUP BY e.stablecoin_id
            HAVING e.timestamp = MAX(e.timestamp)`,
         )
-        .bind(windowStart, windowStart)
+        .bind(ETHEREUM_CHAIN_ID, windowStart, ETHEREUM_CHAIN_ID, windowStart)
         .all<EventRow>(),
     ]);
 
@@ -556,10 +563,10 @@ async function handlePerCoin(
         `SELECT chain_id, hour_ts, mint_count, burn_count,
                 mint_volume_usd, burn_volume_usd, net_flow_usd
          FROM mint_burn_hourly
-         WHERE stablecoin_id = ? AND hour_ts >= ?
+         WHERE chain_id = ? AND stablecoin_id = ? AND hour_ts >= ?
          ORDER BY hour_ts ASC`,
       )
-      .bind(stablecoinId, windowStart)
+      .bind(ETHEREUM_CHAIN_ID, stablecoinId, windowStart)
       .all<HourlyRow>();
 
     const rows = hourlyResult.results ?? [];

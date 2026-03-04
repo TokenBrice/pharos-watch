@@ -84,20 +84,25 @@ export function makeMintBurnRow(overrides: Partial<{
   id: string; stablecoin_id: string; symbol: string; chain_id: string;
   direction: string; amount: number; amount_usd: number;
   price_used: number | null; price_timestamp: number | null; price_source: string | null;
+  burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;
+  burn_review_reason: string | null;
   counterparty: string; tx_hash: string; block_number: number;
   timestamp: number; explorer_tx_url: string;
 }> = {}) {
+  const direction = overrides.direction ?? "mint";
   return {
     id: overrides.id ?? "mb-1",
     stablecoin_id: overrides.stablecoin_id ?? "1",
     symbol: overrides.symbol ?? "USDT",
     chain_id: overrides.chain_id ?? "ethereum",
-    direction: overrides.direction ?? "mint",
+    direction,
     amount: overrides.amount ?? 1_000_000,
     amount_usd: overrides.amount_usd ?? 1_000_000,
     price_used: overrides.price_used ?? 1.0,
     price_timestamp: overrides.price_timestamp ?? Math.floor(Date.now() / 1000) - 3600,
     price_source: overrides.price_source ?? "supply-history-daily",
+    burn_type: overrides.burn_type ?? (direction === "burn" ? "effective_burn" : null),
+    burn_review_reason: overrides.burn_review_reason ?? null,
     counterparty: overrides.counterparty ?? "0x000...000",
     tx_hash: overrides.tx_hash ?? "0xtx1",
     block_number: overrides.block_number ?? 19000000,
