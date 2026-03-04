@@ -1141,7 +1141,8 @@ export default function MethodologyPage() {
             </p>
             <ul className="list-disc list-inside space-y-1">
               <li><span className="text-foreground">Baseline period</span> &mdash; 30-day rolling average of daily net flows and absolute volumes</li>
-              <li><span className="text-foreground">Minimum data</span> &mdash; requires 7 days of history; returns null otherwise</li>
+              <li><span className="text-foreground">Minimum data</span> &mdash; requires 7 days of history; returns null (NR) otherwise</li>
+              <li><span className="text-foreground">Activity gate</span> &mdash; windows with no 24h mint/burn activity are marked NR and excluded from gauge weighting</li>
               <li><span className="text-foreground">Floor</span> &mdash; denominator is floored at $1M to prevent noise in low-volume coins</li>
               <li><span className="text-foreground">Interpretation</span> &mdash; FIS &lt; -40 = significant net burning, FIS &gt; 40 = significant net minting</li>
             </ul>
@@ -1175,7 +1176,7 @@ export default function MethodologyPage() {
               </table>
             </div>
             <p>
-              Returns null only when all tracked coins lack sufficient data (fewer than 7 days of history).
+              Returns null only when all tracked coins are NR (for example, insufficient history or no 24h mint/burn activity).
               Coins with null FIS are skipped from the market-cap-weighted composite.
             </p>
           </div>

@@ -122,7 +122,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("error");
   });
 
-  it("returns neutral flow intensity for sparse coins with no 24h activity after 7+ tracked days", async () => {
+  it("returns NR flow intensity for sparse coins with no 24h activity after 7+ tracked days", async () => {
     const now = Math.floor(Date.now() / 1000);
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
@@ -162,8 +162,76 @@ describe("handleMintBurnFlows contract tests", () => {
     const usdt = body.coins.find((coin) => coin.stablecoinId === "1");
 
     expect(usdt).toBeDefined();
-    expect(usdt?.flowIntensity).not.toBeNull();
-    expect(usdt?.flowIntensity ?? 0).toBe(0);
+    expect(usdt?.flowIntensity).toBeNull();
+    expect(body.gauge.score).toBeNull();
+  });
+
+  it("excludes NR no-activity coins from gauge weighting", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const mixedCache = JSON.stringify({
+      peggedAssets: [
+        { id: "1", circulating: { peggedUSD: 100_000_000_000 } },
+        { id: "2", circulating: { peggedUSD: 50_000_000_000 } },
+      ],
+    });
+
+    const mixedDb = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "2",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 7,
+            burn_count: 2,
+            mint_volume_usd: 70_000_000,
+            burn_volume_usd: 10_000_000,
+            net_flow_usd: 60_000_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [
+          { stablecoin_id: "1", net_flow_usd: 0 },
+          { stablecoin_id: "2", net_flow_usd: 60_000_000 },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [
+          { stablecoin_id: "1", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 },
+          { stablecoin_id: "2", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 200_000_000 },
+        ],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [
+          { stablecoin_id: "1", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "2", first_hour_ts: tenDaysAgoHour },
+        ],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: mixedCache, updated_at: now }],
+        first: { key: "stablecoins", value: mixedCache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(mixedDb, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const noActivityCoin = body.coins.find((coin) => coin.stablecoinId === "1");
+    const activeCoin = body.coins.find((coin) => coin.stablecoinId === "2");
+
+    expect(noActivityCoin?.flowIntensity).toBeNull();
+    expect(activeCoin?.flowIntensity).toBe(100);
+    expect(body.gauge.score).toBe(100);
   });
 
   it("serves cached aggregate fallback when live query fails", async () => {
