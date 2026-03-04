@@ -82,6 +82,18 @@ interface HourlyRow {
   net_flow_usd: number;
 }
 
+interface DailyBaselineRow {
+  stablecoin_id: string;
+  day_ts: number;
+  daily_net: number;
+  daily_abs: number;
+}
+
+interface FirstSeenRow {
+  stablecoin_id: string;
+  first_hour_ts: number;
+}
+
 interface EventRow {
   id: string;
   stablecoin_id: string;
@@ -95,6 +107,71 @@ interface EventRow {
   block_number: number;
   timestamp: number;
   explorer_tx_url: string;
+}
+
+const DAY_SEC = 86400;
+const BASELINE_WINDOW_DAYS = 30;
+
+function bucketDay(ts: number): number {
+  return Math.floor(ts / DAY_SEC) * DAY_SEC;
+}
+
+/**
+ * Build per-coin baseline inputs for FIS.
+ *
+ * Uses calendar-day windows and treats missing days as zero flow. This avoids
+ * sparse-event coins being misclassified as "insufficient history" even when
+ * they've been tracked for weeks.
+ */
+function buildBaselineMap(
+  nowSec: number,
+  dailyRows: DailyBaselineRow[],
+  firstSeenRows: FirstSeenRow[],
+): Map<string, { avgNet: number; avgAbs: number; dataDays: number }> {
+  const nowDayTs = bucketDay(nowSec);
+  const byCoinDay = new Map<string, Map<number, { net: number; abs: number }>>();
+
+  for (const row of dailyRows) {
+    if (!Number.isFinite(row.day_ts)) continue;
+    const dayTs = bucketDay(row.day_ts);
+    const perDay = byCoinDay.get(row.stablecoin_id) ?? new Map<number, { net: number; abs: number }>();
+    const prev = perDay.get(dayTs) ?? { net: 0, abs: 0 };
+    prev.net += row.daily_net;
+    prev.abs += row.daily_abs;
+    perDay.set(dayTs, prev);
+    byCoinDay.set(row.stablecoin_id, perDay);
+  }
+
+  const baselineMap = new Map<string, { avgNet: number; avgAbs: number; dataDays: number }>();
+  for (const row of firstSeenRows) {
+    if (!Number.isFinite(row.first_hour_ts)) continue;
+    const firstDayTs = bucketDay(row.first_hour_ts);
+    if (firstDayTs > nowDayTs) continue;
+
+    const trackedDays = Math.floor((nowDayTs - firstDayTs) / DAY_SEC) + 1;
+    const dataDays = Math.max(0, Math.min(BASELINE_WINDOW_DAYS, trackedDays));
+    if (dataDays === 0) continue;
+
+    const startDayTs = nowDayTs - (dataDays - 1) * DAY_SEC;
+    const perDay = byCoinDay.get(row.stablecoin_id);
+    let sumNet = 0;
+    let sumAbs = 0;
+
+    for (let dayTs = startDayTs; dayTs <= nowDayTs; dayTs += DAY_SEC) {
+      const bucket = perDay?.get(dayTs);
+      if (!bucket) continue;
+      sumNet += bucket.net;
+      sumAbs += bucket.abs;
+    }
+
+    baselineMap.set(row.stablecoin_id, {
+      avgNet: sumNet / dataDays,
+      avgAbs: sumAbs / dataDays,
+      dataDays,
+    });
+  }
+
+  return baselineMap;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +205,8 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   const window7d  = nowSec - 7  * 24 * 3600;
   const window30d = nowSec - 30 * 24 * 3600;
   const window90d = nowSec - 90 * 24 * 3600;
-  const baselineStart = window30d;
+  const nowDayTs = bucketDay(nowSec);
+  const baselineWindowStart = nowDayTs - (BASELINE_WINDOW_DAYS - 1) * DAY_SEC;
 
   // Load grade-based classification (falls back to hardcoded SAFE_HAVEN_IDS if unavailable)
   const gradeClassification = await getGradeBasedClassification(db);
@@ -151,8 +229,9 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     }
   }
 
-  // Parallel queries: hourly data for window, 7d/30d/90d net sums, 30d baseline, largest events
-  const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineResult, largestEventsResult] = await Promise.all([
+  // Parallel queries: hourly data for window, 7d/30d/90d net sums, daily baseline rows,
+  // first-seen timestamps (history age), and largest events.
+  const [hourlyResult, hourly7dResult, hourly30dResult, hourly90dResult, baselineDailyResult, firstSeenResult, largestEventsResult] = await Promise.all([
     db
       .prepare(
         `SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
@@ -196,27 +275,22 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
     db
       .prepare(
         `SELECT stablecoin_id,
-                AVG(daily_net) as avg_daily_net,
-                AVG(daily_abs) as avg_daily_abs,
-                COUNT(DISTINCT day_ts) as data_days
-         FROM (
-           SELECT stablecoin_id,
-                  (hour_ts / 86400) * 86400 as day_ts,
-                  SUM(net_flow_usd) as daily_net,
-                  SUM(mint_volume_usd + burn_volume_usd) as daily_abs
-           FROM mint_burn_hourly
-           WHERE hour_ts >= ?
-           GROUP BY stablecoin_id, day_ts
-         )
+                (hour_ts / 86400) * 86400 as day_ts,
+                SUM(net_flow_usd) as daily_net,
+                SUM(mint_volume_usd + burn_volume_usd) as daily_abs
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id, day_ts`,
+      )
+      .bind(baselineWindowStart)
+      .all<DailyBaselineRow>(),
+    db
+      .prepare(
+        `SELECT stablecoin_id, MIN(hour_ts) as first_hour_ts
+         FROM mint_burn_hourly
          GROUP BY stablecoin_id`,
       )
-      .bind(baselineStart)
-      .all<{
-        stablecoin_id: string;
-        avg_daily_net: number;
-        avg_daily_abs: number;
-        data_days: number;
-      }>(),
+      .all<FirstSeenRow>(),
     db
       .prepare(
         `SELECT e.*
@@ -240,11 +314,10 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
   const net7dMap  = new Map((hourly7dResult.results  ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
   const net30dMap = new Map((hourly30dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
   const net90dMap = new Map((hourly90dResult.results ?? []).map((r) => [r.stablecoin_id, r.net_flow_usd]));
-  const baselineMap = new Map(
-    (baselineResult.results ?? []).map((r) => [
-      r.stablecoin_id,
-      { avgNet: r.avg_daily_net, avgAbs: r.avg_daily_abs, dataDays: r.data_days },
-    ]),
+  const baselineMap = buildBaselineMap(
+    nowSec,
+    baselineDailyResult.results ?? [],
+    firstSeenResult.results ?? [],
   );
   const largestEventMap = new Map(
     (largestEventsResult.results ?? []).map((r) => [r.stablecoin_id, r]),

@@ -121,4 +121,49 @@ describe("handleMintBurnFlows contract tests", () => {
     const body = await res.json();
     expect(body).toHaveProperty("error");
   });
+
+  it("computes flow intensity for sparse-event coins after 7+ tracked days", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
+    const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
+    const sparseCache = JSON.stringify({
+      peggedAssets: [{ id: "1", circulating: { peggedUSD: 100000000000 } }],
+    });
+
+    const sparseDb = mockD1([
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: [{ stablecoin_id: "1", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 }],
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "1", first_hour_ts: tenDaysAgoHour }],
+      },
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [{ stablecoin_id: "1", net_flow_usd: 1_000_000 }],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: sparseCache, updated_at: now }],
+        first: { key: "stablecoins", value: sparseCache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(sparseDb, new URL("https://x/api/mint-burn-flows"));
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const usdt = body.coins.find((coin) => coin.stablecoinId === "1");
+
+    expect(usdt).toBeDefined();
+    expect(usdt?.flowIntensity).not.toBeNull();
+    expect(usdt?.flowIntensity ?? 0).toBeGreaterThan(40);
+    expect(usdt?.flowIntensity ?? 0).toBeLessThan(50);
+  });
 });
