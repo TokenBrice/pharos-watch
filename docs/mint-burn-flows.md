@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **114 contract configs** across **105 symbols** (106 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **99 contract configs** across **90 symbols** (91 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -83,7 +83,6 @@ Current scope: **114 contract configs** across **105 symbols** (106 standard ERC
 | USDTB | 221 | 18 | Extended | Transfer |
 | M | 213 | 6 | Extended | Transfer |
 | USD0 | 195 | 18 | Extended | Transfer |
-| A7A5 | 258 | 6 | Extended | Transfer |
 | TUSD | 7 | 18 | Extended | Transfer |
 | CUSD | 296 | 18 | Extended | Transfer |
 | USR | 197 | 18 | Extended | Transfer |
@@ -93,7 +92,6 @@ Current scope: **114 contract configs** across **105 symbols** (106 standard ERC
 | IUSD | 298 | 18 | Extended | Transfer |
 | satUSD | 218 | 18 | Extended | Transfer |
 | GUSD | 306 | 6 | Extended | Transfer |
-| rwaUSDi | 340 | 6 | Extended | Transfer |
 | avUSD | 271 | 18 | Extended | Transfer |
 | pmUSD | 332 | 18 | Extended | Transfer |
 | USDz | 202 | 18 | Extended | Transfer |
@@ -102,21 +100,16 @@ Current scope: **114 contract configs** across **105 symbols** (106 standard ERC
 | FPI | 66 | 18 | Extended | Transfer |
 | USDO | 241 | 18 | Extended | Transfer |
 | EURCV | 254 | 18 | Extended | Transfer |
-| AEUR | 147 | 18 | Extended | Transfer |
-| USDQ | 275 | 6 | Extended | Transfer |
 | REUSD | 256 | 18 | Extended | Transfer |
 | EURI | 325 | 18 | Extended | Transfer |
 | GUSD | 19 | 2 | Extended | Transfer |
 | USDP | 11 | 18 | Extended | Transfer |
-| USDX | 263 | 18 | Extended | Transfer |
 | XUSD | 290 | 6 | Extended | Transfer |
 | MUSD | 313 | 6 | Extended | Transfer |
 | YUSD | 255 | 18 | Extended | Transfer |
 | SUSD | 22 | 18 | Extended | Transfer |
 | LUSD | 8 | 18 | Extended | Transfer |
-| MIM | 10 | 18 | Extended | Transfer |
 | USDCV | 307 | 18 | Extended | Transfer |
-| ZeUSD | 225 | 6 | Extended | Transfer |
 | EURE | 101 | 18 | Extended | Transfer |
 | USN | 230 | 18 | Extended | Transfer |
 | EUSD | 106 | 18 | Extended | Transfer |
@@ -124,7 +117,6 @@ Current scope: **114 contract configs** across **105 symbols** (106 standard ERC
 | meUSD | 303 | 18 | Extended | Transfer |
 | MSUSD | 326 | 18 | Extended | Transfer |
 | NUSD | 346 | 18 | Extended | Transfer |
-| USAT | 343 | 6 | Extended | Transfer |
 | ALUSD | 20 | 18 | Extended | Transfer |
 | FIDD | 348 | 18 | Extended | Transfer |
 | MSUSD | 297 | 18 | Extended | Transfer |
@@ -132,13 +124,10 @@ Current scope: **114 contract configs** across **105 symbols** (106 standard ERC
 | WUSD | 234 | 18 | Extended | Transfer |
 | SBC | 324 | 18 | Extended | Transfer |
 | OUSD | 23 | 18 | Extended | Transfer |
-| USBD | 253 | 18 | Extended | Transfer |
 | USP | 331 | 18 | Extended | Transfer |
 | USDR | 240 | 6 | Extended | Transfer |
-| USDU | 304 | 18 | Extended | Transfer |
 | USTB | cg-ustb | 6 | Extended | Transfer |
 | OUSG | cg-ousg | 18 | Extended | Transfer |
-| USCC | cg-uscc | 6 | Extended | Transfer |
 | mTBILL | cg-mtbill | 18 | Extended | Transfer |
 | wsrUSD | cg-wrapped-savings-rusd | 18 | Extended | Transfer |
 | XSGD | 289 | 6 | Extended | Transfer |
@@ -149,14 +138,10 @@ Current scope: **114 contract configs** across **105 symbols** (106 standard ERC
 | VEUR | 158 | 18 | Extended | Transfer |
 | EURR | 239 | 6 | Extended | Transfer |
 | EUROP | 247 | 6 | Extended | Transfer |
-| EURQ | cg-eurq | 6 | Extended | Transfer |
 | EURAU | 319 | 6 | Extended | Transfer |
 | DEURO | cg-deuro | 18 | Extended | Transfer |
 | VCHF | 157 | 18 | Extended | Transfer |
 | tGBP | 317 | 18 | Extended | Transfer |
-| ZARP | cg-zarp | 18 | Extended | Transfer |
-| CADC | 145 | 18 | Extended | Transfer |
-| PHT | 299 | 18 | Extended | Transfer |
 | syrupUSDC | cg-syrupusdc | 6 | Extended | Transfer |
 | syrupUSDT | cg-syrupusdt | 6 | Extended | Transfer |
 | AID | 353 | 18 | Extended | Transfer |
