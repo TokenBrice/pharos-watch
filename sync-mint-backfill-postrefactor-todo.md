@@ -86,41 +86,72 @@ Batches executed:
 
 - `mint_burn_events` currently contains only `chain_id='ethereum'`.
 
-## Affected tokens and remaining full-backfill scope
+## Affected tokens and full-backfill status
 
 Current bridge-aware token coverage in code (`bridgeDetection` configs):
 
 - ZCHF (`stablecoin_id=226`) only
 
-Current production ZCHF burn classification counts:
+## Full historical backfill execution (completed 2026-03-04)
 
+Run configuration:
+
+- Config key: `ethereum-0xb58e61c3098d85632df34eecfb899a1ed80921cb`
+- Start block: `23040667`
+- Chunk size: `50,000`
+- Max chunks/call: `24`
+
+Execution summary:
+
+1. Call #1
+- Request from block: `23040667`
+- Response range: `23040667 -> 24585607`
+- `chunksProcessed=24`, `done=false`, `nextFromBlock=24240667`
+- `rowsParsed=345`, `rowsIgnored=345`, `rowsDropped=514`
+- `bridgeBurns=136`, `effectiveBurns=39`, `reviewBurns=0`
+- `rowsReclassified=175`
+
+2. Call #2
+- Request from block: `24240667`
+- Response range: `24240667 -> 24585610`
+- `chunksProcessed=7`, `done=true`, `nextFromBlock=null`
+- `rowsParsed=241`, `rowsIgnored=241`, `rowsDropped=577`
+- `bridgeBurns=90`, `effectiveBurns=11`, `reviewBurns=0`
+- `rowsReclassified=101`
+
+Totals across full run:
+
+- `rowsParsed=586`
+- `rowsIgnored=586`
+- `rowsDropped=1091`
+- `rowsReclassified=276`
+
+## Post-full-backfill results
+
+1. Monotonic classification progression confirmed
+- Known CCIP pool rows before full run: `bridge=5`, `effective=221`, `review=0`
+- After call #1 snapshot: `bridge=141`, `effective=85`, `review=0`
+- After call #2 snapshot (final): `bridge=226`, `effective=0`, `review=0`
+
+2. Final ZCHF burn classification totals
 - `total_burns=366`
-- `bridge_burns=5`
-- `effective_burns=361`
+- `bridge_burns=226`
+- `effective_burns=140`
 - `review_required=0`
 
-Known CCIP pool burn rows (counterparty `0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79`):
+3. End-of-run validation
+- Duplicate check (`id`) for ZCHF rows: `0` duplicates.
+- `burnType` filtered API totals align with DB:
+  - `bridge_burn=226`
+  - `effective_burn=140`
+  - `review_required=0`
+- High-activity-hour comparison (top baseline hours):
+  - Hour `1764334800` changed as expected:
+    - `burn_count: 3 -> 2`
+    - `burn_volume_usd: 1197140.02159 -> 1172260.531706` (`-24879.489884`)
+    - `net_flow_usd: 17325.397475 -> 42204.887359` (`+24879.489884`)
+  - Other sampled top hours remained unchanged.
 
-- Block span currently present in DB: `23040667 -> 24576551`
-- Rows with this counterparty: `226`
-- Reclassified as `bridge_burn`: `5`
-- Remaining as `effective_burn` (pending full reprocessing): `221`
+## Optional detector expansion backlog
 
-## Full historical backfill follow-up plan (next session)
-
-1. Run full ZCHF backfill from `23040667` to latest chain head in bounded chunks.
-- Suggested chunk: `50,000` blocks
-- Suggested maxChunks per call: `24` (existing endpoint default)
-
-2. After each chunk, verify:
-- `bridge_burn` count monotonically increases for known CCIP pool rows.
-- `effective_burn` for known CCIP pool rows decreases accordingly.
-- `review_required` remains low; if it rises, inspect new router/topic patterns.
-
-3. End-of-run validation:
-- Compare `mint_burn_hourly` before/after for ZCHF high-activity hours.
-- Confirm no duplicate rows (`COUNT(*) - COUNT(DISTINCT id) = 0`).
-- Confirm `burnType` filtered API outputs align with DB counts.
-
-4. Optional detector expansion backlog:
-- If full backfill surfaces `review_required` rows, add new CCIP router/topic signatures and rerun targeted windows.
+- If future scans surface `review_required` rows, add new CCIP router/topic signatures and rerun targeted windows.
