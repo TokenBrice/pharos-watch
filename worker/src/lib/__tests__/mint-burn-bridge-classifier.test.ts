@@ -3,17 +3,36 @@ import {
   classifyBridgeAwareBurnRows,
   type MintBurnBridgeClassifiableRow,
 } from "../mint-burn-bridge-classifier";
-import type { MintBurnBridgeDetectionConfig } from "../mint-burn-contracts";
+import {
+  MINT_BURN_CONFIGS,
+  type MintBurnBridgeDetectionConfig,
+  type MintBurnContractConfig,
+} from "../mint-burn-contracts";
 
-const CCIP_SEND_REQUESTED_TOPIC = "0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd";
-
-const BRIDGE_CONFIG: MintBurnBridgeDetectionConfig = {
-  protocol: "ccip",
-  knownBridgePoolAddresses: ["0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79"],
-  knownBridgeRouterAddresses: ["0x80226fc0ee2b096224eeac085bb9a8cba1146f7d"],
-  bridgeSignalTopics: [CCIP_SEND_REQUESTED_TOPIC],
-  bridgeSignalSelectors: ["0x96f4e9f9"],
+type CoinCase = {
+  stablecoinId: string;
+  symbol: string;
+  detection: MintBurnBridgeDetectionConfig;
 };
+
+const CCIP_CASE_IDS = ["2", "241", "262", "271", "226"] as const;
+
+function loadCoinCase(stablecoinId: string): CoinCase {
+  const config = MINT_BURN_CONFIGS.find(
+    (entry): entry is MintBurnContractConfig =>
+      entry.chain.chainId === "ethereum" && entry.stablecoinId === stablecoinId,
+  );
+  if (!config || !config.bridgeDetection) {
+    throw new Error(`Missing CCIP bridgeDetection config for stablecoin ${stablecoinId}`);
+  }
+  return {
+    stablecoinId: config.stablecoinId,
+    symbol: config.symbol,
+    detection: config.bridgeDetection,
+  };
+}
+
+const COIN_CASES = CCIP_CASE_IDS.map((stablecoinId) => loadCoinCase(stablecoinId));
 
 function makeBurnRow(overrides?: Partial<MintBurnBridgeClassifiableRow>): MintBurnBridgeClassifiableRow {
   return {
@@ -26,89 +45,91 @@ function makeBurnRow(overrides?: Partial<MintBurnBridgeClassifiableRow>): MintBu
   };
 }
 
+function signalContext(detection: MintBurnBridgeDetectionConfig) {
+  return {
+    to: detection.knownBridgeRouterAddresses[0],
+    inputSelector: detection.bridgeSignalSelectors[0],
+    logTopics: [detection.bridgeSignalTopics[0]],
+  };
+}
+
 describe("classifyBridgeAwareBurnRows", () => {
-  it("keeps genuine burns as effective_burn", () => {
+  it("defaults to effective_burn when detection is disabled", () => {
     const row = makeBurnRow({ tx_hash: "0xgenuine" });
-    const contexts = new Map([
-      ["0xgenuine", { to: "0x1111111111111111111111111111111111111111", inputSelector: "0xdeadbeef", logTopics: [] }],
-    ]);
-
-    classifyBridgeAwareBurnRows([row], BRIDGE_CONFIG, contexts);
-
+    classifyBridgeAwareBurnRows([row], undefined, new Map());
     expect(row.burn_type).toBe("effective_burn");
     expect(row.burn_review_reason).toBeNull();
   });
 
-  it("classifies CCIP bridge burns as bridge_burn", () => {
-    const row = makeBurnRow({
-      tx_hash: "0xbridge",
-      counterparty: "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
+  for (const coin of COIN_CASES) {
+    it(`[${coin.symbol}] classifies known pool + bridge signal as bridge_burn`, () => {
+      const row = makeBurnRow({
+        tx_hash: `0xbridge-${coin.stablecoinId}`,
+        counterparty: coin.detection.knownBridgePoolAddresses[0],
+      });
+      const contexts = new Map([[row.tx_hash, signalContext(coin.detection)]]);
+
+      classifyBridgeAwareBurnRows([row], coin.detection, contexts);
+
+      expect(row.burn_type).toBe("bridge_burn");
+      expect(row.burn_review_reason).toBeNull();
     });
-    const contexts = new Map([
-      [
-        "0xbridge",
-        {
-          to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-          inputSelector: "0x96f4e9f9",
-          logTopics: [CCIP_SEND_REQUESTED_TOPIC],
-        },
-      ],
-    ]);
 
-    classifyBridgeAwareBurnRows([row], BRIDGE_CONFIG, contexts);
+    it(`[${coin.symbol}] keeps standard burns as effective_burn`, () => {
+      const row = makeBurnRow({
+        tx_hash: `0xeffective-${coin.stablecoinId}`,
+        counterparty: "0x1234000000000000000000000000000000000000",
+      });
+      const contexts = new Map([
+        [
+          row.tx_hash,
+          {
+            to: "0x1111111111111111111111111111111111111111",
+            inputSelector: "0xdeadbeef",
+            logTopics: [],
+          },
+        ],
+      ]);
 
-    expect(row.burn_type).toBe("bridge_burn");
-    expect(row.burn_review_reason).toBeNull();
-  });
+      classifyBridgeAwareBurnRows([row], coin.detection, contexts);
 
-  it("handles mixed transactions without downgrading genuine burns", () => {
-    const bridgeRow = makeBurnRow({
-      id: "row-bridge",
-      tx_hash: "0xmixed",
-      counterparty: "0x9359cd75549dae00cdd8d22297bc9b13fbbe4b79",
+      expect(row.burn_type).toBe("effective_burn");
+      expect(row.burn_review_reason).toBeNull();
     });
-    const genuineRow = makeBurnRow({
-      id: "row-genuine",
-      tx_hash: "0xmixed",
-      counterparty: "0x1234000000000000000000000000000000000000",
+
+    it(`[${coin.symbol}] flags known pool without signal as review_required`, () => {
+      const row = makeBurnRow({
+        tx_hash: `0xmissing-signal-${coin.stablecoinId}`,
+        counterparty: coin.detection.knownBridgePoolAddresses[0],
+      });
+      const contexts = new Map([
+        [
+          row.tx_hash,
+          {
+            to: "0x1111111111111111111111111111111111111111",
+            inputSelector: "0xdeadbeef",
+            logTopics: [],
+          },
+        ],
+      ]);
+
+      classifyBridgeAwareBurnRows([row], coin.detection, contexts);
+
+      expect(row.burn_type).toBe("review_required");
+      expect(row.burn_review_reason).toBe("known-bridge-pool-without-bridge-signal");
     });
-    const contexts = new Map([
-      [
-        "0xmixed",
-        {
-          to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-          inputSelector: "0x96f4e9f9",
-          logTopics: [CCIP_SEND_REQUESTED_TOPIC],
-        },
-      ],
-    ]);
 
-    classifyBridgeAwareBurnRows([bridgeRow, genuineRow], BRIDGE_CONFIG, contexts);
+    it(`[${coin.symbol}] flags bridge signal with unknown pool as review_required`, () => {
+      const row = makeBurnRow({
+        tx_hash: `0xunknown-pool-${coin.stablecoinId}`,
+        counterparty: "0x9999000000000000000000000000000000000000",
+      });
+      const contexts = new Map([[row.tx_hash, signalContext(coin.detection)]]);
 
-    expect(bridgeRow.burn_type).toBe("bridge_burn");
-    expect(genuineRow.burn_type).toBe("effective_burn");
-    expect(genuineRow.burn_review_reason).toBeNull();
-  });
+      classifyBridgeAwareBurnRows([row], coin.detection, contexts);
 
-  it("flags unknown bridge-pool burns for review", () => {
-    const row = makeBurnRow({
-      tx_hash: "0xunknown-bridge",
-      counterparty: "0x9999000000000000000000000000000000000000",
+      expect(row.burn_type).toBe("review_required");
+      expect(row.burn_review_reason).toBe("bridge-signal-with-unknown-pool");
     });
-    const contexts = new Map([
-      [
-        "0xunknown-bridge",
-        {
-          to: "0x80226fc0ee2b096224eeac085bb9a8cba1146f7d",
-          inputSelector: "0x96f4e9f9",
-          logTopics: [CCIP_SEND_REQUESTED_TOPIC],
-        },
-      ],
-    ]);
-
-    classifyBridgeAwareBurnRows([row], BRIDGE_CONFIG, contexts);
-
-    expect(row.burn_type).toBe("review_required");
-    expect(row.burn_review_reason).toBe("bridge-signal-with-unknown-pool");
-  });
+  }
 });

@@ -107,8 +107,17 @@ describe("handleBackfillMintBurn", () => {
     );
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { done: boolean; chunksProcessed: number };
+    const body = (await response.json()) as {
+      done: boolean;
+      chunksProcessed: number;
+      effectiveBurns: number;
+      bridgeBurns: number;
+      reviewBurns: number;
+    };
     expect(body.done).toBe(true);
     expect(body.chunksProcessed).toBe(0);
+    expect(body.effectiveBurns).toBe(0);
+    expect(body.bridgeBurns).toBe(0);
+    expect(body.reviewBurns).toBe(0);
   });
 });

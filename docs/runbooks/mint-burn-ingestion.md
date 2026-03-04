@@ -8,6 +8,29 @@ Operational runbook for `sync-mint-burn` reliability controls, diagnostics, and 
 - Worker module: `worker/src/cron/sync-mint-burn.ts`
 - Backfill endpoint: `POST /api/backfill-mint-burn`
 
+## CCIP Bridge-Burn Coverage (Ethereum)
+
+CCIP bridge-burn processing is enabled for Ethereum Burn/Mint pool tokens only:
+
+- `2` (`USDC`) — pool `0x03d19033ada17750d5bc2d8e325337d0748f9fef`
+- `241` (`USDO`) — pool `0x500d4882938020e939a5666c1b4200873da7efd3`
+- `262` (`USD1`) — pool `0x36a72ed0096b414521c45e3ddc9ed657d1d9c141`
+- `271` (`avUSD`) — pool `0x81b72171642fab457aa815c0b8412a22b63a6af8`
+- Baseline pre-existing config: `226` (`ZCHF`)
+
+CCIP signal constants in use:
+
+- Router: `0x80226fc0ee2b096224eeac085bb9a8cba1146f7d`
+- Topic: `0xd0c3c799bf9e2639de44391e7f524d229b2b55f5b1ea94b2bf7da42f7243dddd` (`SendRequested`)
+- Selector: `0x96f4e9f9` (`ccipSend`)
+
+Excluded from bridge-burn processing:
+
+- Any token not listed in Chainlink CCIP directory mainnet token pages.
+- Any token listed as `Lock/Release` on Ethereum in `https://docs.chain.link/ccip/directory/mainnet`.
+
+Only Ethereum `Burn/Mint` pool-type tokens are eligible for this classifier path.
+
 ## Runtime Controls
 
 Environment variables:

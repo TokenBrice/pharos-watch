@@ -70,6 +70,24 @@ describe("handleMintBurnEvents", () => {
     expect(res.status).toBe(400);
   });
 
+  it("accepts valid bridge_burn filter", async () => {
+    const bridgeRow = makeMintBurnRow({
+      direction: "burn",
+      burn_type: "bridge_burn",
+    });
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "mint_burn_events", rows: [bridgeRow] },
+    ]);
+    const res = await handleMintBurnEvents(
+      db,
+      new URL("https://x/api/mint-burn-events?stablecoin=1&burnType=bridge_burn"),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { events: Array<{ burnType: string | null }> };
+    expect(body.events[0]?.burnType).toBe("bridge_burn");
+  });
+
   it("includes X-Data-Age header", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
