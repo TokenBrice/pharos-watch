@@ -23,12 +23,26 @@ const TIME_RANGES = [
 
 function FlowsPageInner() {
   const [hours, setHours] = useState(720);
-  const { data, isLoading, error, dataUpdatedAt, refetch } =
-    useMintBurnFlows(hours);
+  const {
+    data: summaryData,
+    isLoading: isSummaryLoading,
+    error: summaryError,
+    dataUpdatedAt: summaryUpdatedAt,
+    refetch: refetchSummary,
+  } = useMintBurnFlows(24);
+  const {
+    data: chartData,
+    isLoading: isChartLoading,
+    error: chartError,
+    dataUpdatedAt: chartUpdatedAt,
+    refetch: refetchChart,
+  } = useMintBurnFlows(hours);
 
-  const gauge = data?.gauge;
-  const coins = data?.coins ?? [];
-  const hourly = data?.hourly ?? [];
+  const gauge = summaryData?.gauge;
+  const coins = summaryData?.coins ?? [];
+  const hourly = chartData?.hourly ?? [];
+  const error = summaryError ?? chartError;
+  const hasData = !!summaryData || !!chartData;
 
   return (
     <div className="space-y-6">
@@ -75,14 +89,30 @@ function FlowsPageInner() {
       {/* Error / stale banner */}
       <QueryErrorNotice
         error={error}
-        hasData={!!data}
+        hasData={hasData}
         onRetry={() => {
-          void refetch();
+          void refetchSummary();
+          if (hours !== 24) {
+            void refetchChart();
+          }
         }}
       />
       <StaleDataBanner
         queries={[
-          { preset: "mintBurnFlows", dataUpdatedAt, error, hasData: !!data },
+          {
+            preset: "mintBurnFlows",
+            dataUpdatedAt: summaryUpdatedAt,
+            error: summaryError,
+            hasData: !!summaryData,
+          },
+          ...(hours !== 24
+            ? [{
+              label: "Mint/Burn Flows (Chart)",
+              dataUpdatedAt: chartUpdatedAt,
+              error: chartError,
+              hasData: !!chartData,
+            }]
+            : []),
         ]}
       />
 
@@ -98,7 +128,7 @@ function FlowsPageInner() {
             flightToQuality={gauge?.flightToQuality ?? false}
             flightIntensity={gauge?.flightIntensity ?? 0}
             trackedCoins={gauge?.trackedCoins ?? 0}
-            isLoading={isLoading}
+            isLoading={isSummaryLoading}
           />
         </div>
       </section>
@@ -109,7 +139,7 @@ function FlowsPageInner() {
           Per-Coin Flows
         </h2>
         <div className="mt-3">
-          <FlowTable coins={coins} isLoading={isLoading} />
+          <FlowTable coins={coins} isLoading={isSummaryLoading} />
         </div>
       </section>
 
@@ -140,7 +170,7 @@ function FlowsPageInner() {
           </ToggleGroup>
         </div>
         <div className="mt-3">
-          <FlowChart hourly={hourly} isLoading={isLoading} />
+          <FlowChart hourly={hourly} isLoading={isChartLoading} />
         </div>
       </section>
     </div>
