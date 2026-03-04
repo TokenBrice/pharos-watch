@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **121 contract configs** across **112 symbols** (113 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **114 contract configs** across **105 symbols** (106 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -82,8 +82,6 @@ Current scope: **121 contract configs** across **112 symbols** (113 standard ERC
 | USDD | 14 | 18 | Extended | Transfer |
 | USDTB | 221 | 18 | Extended | Transfer |
 | M | 213 | 6 | Extended | Transfer |
-| U | 336 | 18 | Extended | Transfer |
-| USDai | 309 | 18 | Extended | Transfer |
 | USD0 | 195 | 18 | Extended | Transfer |
 | A7A5 | 258 | 6 | Extended | Transfer |
 | TUSD | 7 | 18 | Extended | Transfer |
@@ -94,7 +92,6 @@ Current scope: **121 contract configs** across **112 symbols** (113 standard ERC
 | DOLA | 15 | 18 | Extended | Transfer |
 | IUSD | 298 | 18 | Extended | Transfer |
 | satUSD | 218 | 18 | Extended | Transfer |
-| BRZ | 249 | 18 | Extended | Transfer |
 | GUSD | 306 | 6 | Extended | Transfer |
 | rwaUSDi | 340 | 6 | Extended | Transfer |
 | avUSD | 271 | 18 | Extended | Transfer |
@@ -122,11 +119,9 @@ Current scope: **121 contract configs** across **112 symbols** (113 standard ERC
 | ZeUSD | 225 | 6 | Extended | Transfer |
 | EURE | 101 | 18 | Extended | Transfer |
 | USN | 230 | 18 | Extended | Transfer |
-| GYD | 185 | 18 | Extended | Transfer |
 | EUSD | 106 | 18 | Extended | Transfer |
 | EURA | 55 | 18 | Extended | Transfer |
 | meUSD | 303 | 18 | Extended | Transfer |
-| EURS | 51 | 2 | Extended | Transfer |
 | MSUSD | 326 | 18 | Extended | Transfer |
 | NUSD | 346 | 18 | Extended | Transfer |
 | USAT | 343 | 6 | Extended | Transfer |
@@ -151,8 +146,6 @@ Current scope: **121 contract configs** across **112 symbols** (113 standard ERC
 | AUDD | 165 | 6 | Extended | Transfer |
 | JPYC | cg-jpyc | 18 | Extended | Transfer |
 | XAUm | gold-xaum | 18 | Extended | Transfer |
-| DGLD | gold-dgld | 18 | Extended | Transfer |
-| KAG | silver-kag | 9 | Extended | Transfer |
 | VEUR | 158 | 18 | Extended | Transfer |
 | EURR | 239 | 6 | Extended | Transfer |
 | EUROP | 247 | 6 | Extended | Transfer |

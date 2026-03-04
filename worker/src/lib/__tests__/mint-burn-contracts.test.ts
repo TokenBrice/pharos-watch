@@ -5,6 +5,7 @@ import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 const REUSD_DEPOSITED_TOPIC = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const REMOVED_STABLECOIN_IDS = ["336", "309", "249", "185", "51", "gold-dgld", "silver-kag"] as const;
 
 describe("mint-burn-contracts reUSD config", () => {
   it("uses 18 decimals for reUSD Deposited mint events", () => {
@@ -41,6 +42,15 @@ describe("mint-burn-contracts reUSD config", () => {
       "0000000000000000000000000000000000000000000000008ac7230489e80000";
 
     expect(decodeUint256AtSlot(data, 2, cfg!.decimals)).toBe(10);
+  });
+});
+
+describe("mint-burn-contracts removals", () => {
+  it("does not track explicitly removed no-signal tokens", () => {
+    const trackedIds = new Set(MINT_BURN_CONFIGS.map((c) => c.stablecoinId));
+    for (const removedId of REMOVED_STABLECOIN_IDS) {
+      expect(trackedIds.has(removedId)).toBe(false);
+    }
   });
 });
 
@@ -101,8 +111,6 @@ describe("mint-burn-contracts top-50 Ethereum additions", () => {
     { stablecoinId: "14", symbol: "USDD", address: "0x4f8e5de400de08b164e7421b3ee387f461becd1a", decimals: 18 },
     { stablecoinId: "221", symbol: "USDTB", address: "0xc139190f447e929f090edeb554d95abb8b18ac1c", decimals: 18 },
     { stablecoinId: "213", symbol: "M", address: "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b", decimals: 6 },
-    { stablecoinId: "336", symbol: "U", address: "0xce24439f2d9c6a2289f741120fe202248b666666", decimals: 18 },
-    { stablecoinId: "309", symbol: "USDai", address: "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef", decimals: 18 },
     { stablecoinId: "195", symbol: "USD0", address: "0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5", decimals: 18 },
     { stablecoinId: "258", symbol: "A7A5", address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", decimals: 6 },
     { stablecoinId: "7", symbol: "TUSD", address: "0x0000000000085d4780b73119b644ae5ecd22b376", decimals: 18 },
@@ -113,7 +121,6 @@ describe("mint-burn-contracts top-50 Ethereum additions", () => {
     { stablecoinId: "15", symbol: "DOLA", address: "0x865377367054516e17014ccded1e7d814edc9ce4", decimals: 18 },
     { stablecoinId: "298", symbol: "IUSD", address: "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c", decimals: 18 },
     { stablecoinId: "218", symbol: "satUSD", address: "0x1958853a8be062dc4f401750eb233f5850f0d0d2", decimals: 18 },
-    { stablecoinId: "249", symbol: "BRZ", address: "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839", decimals: 18 },
     { stablecoinId: "306", symbol: "GUSD", address: "0xaf6186b3521b60e27396b5d23b48abc34bf585c5", decimals: 6 },
     { stablecoinId: "340", symbol: "rwaUSDi", address: "0xa39986f96b80d04e8d7aeaaf47175f47c23fd0f4", decimals: 6 },
     { stablecoinId: "271", symbol: "avUSD", address: "0xf4c13d631450de6b12a19829e37c8e2826891dc4", decimals: 18 },
@@ -179,11 +186,9 @@ describe("mint-burn-contracts top-100 Ethereum additions", () => {
     { stablecoinId: "225", symbol: "ZeUSD", address: "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761", decimals: 6 },
     { stablecoinId: "101", symbol: "EURE", address: "0x39b8b6385416f4ca36a20319f70d28621895279d", decimals: 18 },
     { stablecoinId: "230", symbol: "USN", address: "0xda67b4284609d2d48e5d10cfac411572727dc1ed", decimals: 18 },
-    { stablecoinId: "185", symbol: "GYD", address: "0xe07f9d810a48ab5c3c914ba3ca53af14e4491e8a", decimals: 18 },
     { stablecoinId: "106", symbol: "EUSD", address: "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f", decimals: 18 },
     { stablecoinId: "55", symbol: "EURA", address: "0x1a7e4e63778b4f12a199c062f3efdd288afcbce8", decimals: 18 },
     { stablecoinId: "303", symbol: "meUSD", address: "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186", decimals: 18 },
-    { stablecoinId: "51", symbol: "EURS", address: "0xdb25f211ab05b1c97d595516f45794528a807ad8", decimals: 2 },
     { stablecoinId: "326", symbol: "MSUSD", address: "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa", decimals: 18 },
     { stablecoinId: "346", symbol: "NUSD", address: "0xe556aba6fe6036275ec1f87eda296be72c811bce", decimals: 18 },
     { stablecoinId: "343", symbol: "USAT", address: "0x07041776f5007aca2a54844f50503a18a72a8b68", decimals: 6 },
@@ -246,8 +251,6 @@ describe("mint-burn-contracts top-150 Ethereum additions", () => {
     { stablecoinId: "165", symbol: "AUDD", address: "0x4cce605ed955295432958d8951d0b176c10720d5", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "cg-jpyc", symbol: "JPYC", address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "gold-xaum", symbol: "XAUm", address: "0x2103e845c5e135493bb6c2a4f0b8651956ea8682", decimals: 18, dustThreshold: 10 },
-    { stablecoinId: "gold-dgld", symbol: "DGLD", address: "0xa9299c296d7830a99414d1e5546f5171fa01e9c8", decimals: 18, dustThreshold: 10 },
-    { stablecoinId: "silver-kag", symbol: "KAG", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9, dustThreshold: 10_000 },
     { stablecoinId: "158", symbol: "VEUR", address: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3", decimals: 18, dustThreshold: 10_000 },
     { stablecoinId: "239", symbol: "EURR", address: "0x50753cfaf86c094925bf976f218d043f8791e408", decimals: 6, dustThreshold: 10_000 },
     { stablecoinId: "247", symbol: "EUROP", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6, dustThreshold: 10_000 },
