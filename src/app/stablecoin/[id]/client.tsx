@@ -45,8 +45,8 @@ const DETAIL_SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "chart", label: "Chart" },
   { id: "info", label: "Info" },
-  { id: "liquidity", label: "Liquidity" },
   { id: "flows", label: "Flows" },
+  { id: "liquidity", label: "Liquidity" },
   { id: "history", label: "Depeg History" },
 ];
 
@@ -476,14 +476,24 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         <KeyInfoCard meta={coin} />
       </section>
 
+      {hasFlows && (
+        <section id="flows">
+          <FlowSummaryCard stablecoinId={id} />
+        </section>
+      )}
+
       <section id="liquidity">
         <DexLiquidityCard stablecoinId={id} />
       </section>
 
       {hasFlows && (
-        <section id="flows">
-          <FlowSummaryCard stablecoinId={id} />
-          <FlowEventFeed stablecoinId={id} limit={10} />
+        <section id="flow-history">
+          <Card className="p-4">
+            <div className="mb-3">
+              <h2 className="text-lg font-semibold tracking-tight">Mint &amp; Burn Flow History</h2>
+            </div>
+            <FlowEventFeed stablecoinId={id} limit={10} />
+          </Card>
         </section>
       )}
 
