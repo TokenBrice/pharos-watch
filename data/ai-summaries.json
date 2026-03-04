@@ -364,11 +364,6 @@
     "text": "StandX's DUSD takes the Ethena playbook -- spot long, perps short, pocket the spread -- and runs it through centralized custodians and its own perpetual futures DEX. The team's Binance Futures and Goldman Sachs pedigree explains the institutional architecture: off-chain collateral management with exchange-provided leverage and strict margin controls. Any delta-neutral stablecoin is ultimately a bet that funding rates remain favorable more often than not.",
     "updatedAt": "2026-02-22"
   },
-  "253": {
-    "title": "Bitcoin's Borrowing Layer",
-    "text": "BIMA's USBD lets Bitcoin holders access liquidity without selling their bags, using wrapped BTC derivatives as collateral in overcollateralized vaults with a 160-225% minimum ratio. The Liquity-style TroveManager architecture is battle-tested, though applying it to BTC derivatives rather than ETH introduces additional bridge and wrapper risk. The fundamental tension remains: the people most likely to hold BTC are often the least likely to lever it.",
-    "updatedAt": "2026-02-22"
-  },
   "254": {
     "title": "SocGen's Blockchain Experiment",
     "text": "EUR CoinVertible is issued by SG-FORGE, the digital asset arm of French banking giant Société Générale. It's a fully regulated, MiCA-compliant euro stablecoin from a systemically important bank — which is either the future of tokenized money or a corporate innovation lab's pet project. Either way, when a bank with over a trillion euros in assets issues a stablecoin, the industry takes notes.",

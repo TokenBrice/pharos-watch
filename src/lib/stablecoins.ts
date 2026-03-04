@@ -2849,27 +2849,6 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)", pct: 100, risk: "medium" },
     ],
   }),
-  usd("253", "Bima USBD", "USBD", "crypto-backed", "centralized-dependent", {
-    geckoId: "usbd",
-    deploymentModel: "native-multichain",
-    tags: ["Liquity v1 fork"],
-    collateral: "Overcollateralized Bitcoin LSTs/LRTs via CDP vaults at 150% MCR (160% CCR triggers recovery mode)",
-    pegMechanism: "Overcollateralized CDP (Liquity-style TroveManager) with automated liquidation",
-    links: [
-      { label: "Website", url: "https://bima.money/" },
-      { label: "Twitter", url: "https://x.com/BimaBTC" },
-      { label: "Docs", url: "https://docs.bima.money/" },
-    ],
-    contracts: [
-      { chain: "ethereum", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18 },
-      { chain: "bsc", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18 },
-      { chain: "hemi", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18 },
-    ],
-    collateralQuality: "alt-lst-bridged-or-mixed",
-    reserves: [
-      { name: "Bitcoin LSTs/LRTs (Lorenzo, Lombard, pStake, Bedrock, etc.)", pct: 100, risk: "high" },
-    ],
-  }),
   usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
     yieldBearing: true, navToken: true,
     yieldConfig: { yieldSource: "PikuDAO lending vault", yieldType: "lending-vault" },
