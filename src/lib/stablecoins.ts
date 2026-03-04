@@ -549,7 +549,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
       { name: "USDT (PSM vaults)", pct: 16, risk: "low", coinId: "1" },
       { name: "TRX", pct: 7, risk: "high" },
-      { name: "sTRX / USDT (direct vaults)", pct: 2, risk: "high" },
+      { name: "USDT (direct vaults)", pct: 1, risk: "high", coinId: "1" },
+      { name: "sTRX (direct vaults)", pct: 1, risk: "high" },
     ],
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
@@ -647,7 +648,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: The Defiant Feb 19 2026 (DefiLlama breakdown), USD.AI Dec 18 2025 PYUSD integration. Confidence: Medium
       { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 56, risk: "low", coinId: "213" },
-      { name: "PYUSD (PayPal USD)", pct: 43, risk: "medium" },
+      { name: "PYUSD (PayPal USD)", pct: 43, risk: "medium", coinId: "120" },
       { name: "GPU-collateralized loans (NVIDIA hardware)", pct: 1, risk: "high" },
     ],
   }),
@@ -2134,7 +2135,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)", pct: 70, risk: "low", coinId: "237" },
-      { name: "Other tokenized RWAs (USD0++, Wrapped M)", pct: 30, risk: "medium" },
+      { name: "USD0++ (Usual)", pct: 15, risk: "medium", coinId: "195" },
+      { name: "Wrapped M (M0 tokenized T-bills)", pct: 15, risk: "medium", coinId: "213" },
     ],
   }),
   eur("101", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
@@ -2981,7 +2983,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Ondo Finance docs + Arbitrum STEP application. Migrated from SHV ETF to BUIDL in March 2024.
       { name: "BlackRock BUIDL (U.S. T-bills, cash, repos)", pct: 85, risk: "low", coinId: "173" },
-      { name: "BlackRock FedFund (TFDXX) and USDC liquidity", pct: 15, risk: "very-low" },
+      { name: "BlackRock FedFund (TFDXX)", pct: 12, risk: "very-low" },
+      { name: "USDC liquidity buffer", pct: 3, risk: "very-low", coinId: "2" },
     ],
   }),
   usd("cg-uscc", "Superstate USCC", "USCC", "rwa-backed", "centralized", {
@@ -3007,7 +3010,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     deploymentModel: "native-multichain",
     reserves: [
       // Source: Superstate USCC public holdings page, 2026-03-03. Allocation changes dynamically.
-      { name: "USD collateral and USDC", pct: 27, risk: "very-low" },
+      { name: "USD collateral", pct: 20, risk: "very-low" },
+      { name: "USDC collateral", pct: 7, risk: "very-low", coinId: "2" },
       { name: "Superstate USTB (tokenized T-bills)", pct: 22, risk: "low", coinId: "cg-ustb" },
       { name: "Staked SOL (basis trade, long spot + short futures)", pct: 20, risk: "medium" },
       { name: "XRP spot custody (basis trade, long spot + short futures)", pct: 15, risk: "medium" },
@@ -3465,7 +3469,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       { name: "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)", pct: 40, risk: "medium" },
       { name: "WETH (wrapped Ether)", pct: 25, risk: "medium" },
-      { name: "USDC / DAI (stablecoins)", pct: 15, risk: "low" },
+      { name: "USDC (stablecoins)", pct: 7.5, risk: "low", coinId: "2" },
+      { name: "DAI (stablecoins)", pct: 7.5, risk: "low", coinId: "5" },
       { name: "XAUT (tokenized gold)", pct: 10, risk: "medium" },
       { name: "UNI / ZCHF (governance / other)", pct: 10, risk: "very-high" },
     ],
@@ -3667,7 +3672,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       // Snapshot: 2026-02-28. Allocation rebalances dynamically across 50+ pools.
       { name: "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)", pct: 39, risk: "medium", coinId: "2", depType: "wrapper" },
       { name: "Auto Finance (autoUSD, baseUSD)", pct: 21, risk: "high" },
-      { name: "Aave markets (sGHO, RLUSD)", pct: 9, risk: "medium" },
+      { name: "Aave markets (sGHO)", pct: 4.5, risk: "medium", coinId: "118" },
+      { name: "Aave markets (RLUSD)", pct: 4.5, risk: "medium", coinId: "250" },
       { name: "InfiniFi liUSD (1-week lock)", pct: 8, risk: "high" },
       { name: "Liquid USDC buffer (undeployed)", pct: 7, risk: "low", coinId: "2", depType: "wrapper" },
       { name: "Avantis avUSDC (perpetuals collateral)", pct: 6, risk: "high", coinId: "2", depType: "wrapper" },

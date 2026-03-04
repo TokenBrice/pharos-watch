@@ -11,7 +11,7 @@ const DependencyMapClient = dynamic(
 );
 
 const description =
-  "Interactive graph of collateral dependencies between the top 50 stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
+  "Interactive graph of collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap; lines show collateral links.";
 
 export const metadata: Metadata = {
   title: "Dependency Map: Stablecoin Collateral Graph",
@@ -40,8 +40,8 @@ export default function DependencyMapPage() {
         </nav>
         <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Dependency Map <FeatureStatusBadge status="experimental" /></h1>
         <p className="text-sm text-muted-foreground">
-          Collateral dependencies between the top 50 stablecoins by market cap. Node size reflects market cap;
-          lines show how one stablecoin relies on another as collateral. Drag nodes to explore. Click to view details.
+          Collateral dependencies between up to 50 dependency-linked stablecoins by market cap. Node size reflects market cap;
+          lines show how one stablecoin relies on another as collateral. Drag nodes to explore.
         </p>
       </div>
       <DependencyMapClient />
