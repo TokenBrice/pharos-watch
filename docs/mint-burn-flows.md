@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **86 contract configs** across **77 symbols** (78 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **121 contract configs** across **112 symbols** (113 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -133,6 +133,41 @@ Current scope: **86 contract configs** across **77 symbols** (78 standard ERC-20
 | ALUSD | 20 | 18 | Extended | Transfer |
 | FIDD | 348 | 18 | Extended | Transfer |
 | MSUSD | 297 | 18 | Extended | Transfer |
+| pUSD | 266 | 6 | Extended | Transfer |
+| WUSD | 234 | 18 | Extended | Transfer |
+| SBC | 324 | 18 | Extended | Transfer |
+| OUSD | 23 | 18 | Extended | Transfer |
+| USBD | 253 | 18 | Extended | Transfer |
+| USP | 331 | 18 | Extended | Transfer |
+| USDR | 240 | 6 | Extended | Transfer |
+| USDU | 304 | 18 | Extended | Transfer |
+| USTB | cg-ustb | 6 | Extended | Transfer |
+| OUSG | cg-ousg | 18 | Extended | Transfer |
+| USCC | cg-uscc | 6 | Extended | Transfer |
+| mTBILL | cg-mtbill | 18 | Extended | Transfer |
+| wsrUSD | cg-wrapped-savings-rusd | 18 | Extended | Transfer |
+| XSGD | 289 | 6 | Extended | Transfer |
+| GYEN | 122 | 6 | Extended | Transfer |
+| AUDD | 165 | 6 | Extended | Transfer |
+| JPYC | cg-jpyc | 18 | Extended | Transfer |
+| XAUm | gold-xaum | 18 | Extended | Transfer |
+| DGLD | gold-dgld | 18 | Extended | Transfer |
+| KAG | silver-kag | 9 | Extended | Transfer |
+| VEUR | 158 | 18 | Extended | Transfer |
+| EURR | 239 | 6 | Extended | Transfer |
+| EUROP | 247 | 6 | Extended | Transfer |
+| EURQ | cg-eurq | 6 | Extended | Transfer |
+| EURAU | 319 | 6 | Extended | Transfer |
+| DEURO | cg-deuro | 18 | Extended | Transfer |
+| VCHF | 157 | 18 | Extended | Transfer |
+| tGBP | 317 | 18 | Extended | Transfer |
+| ZARP | cg-zarp | 18 | Extended | Transfer |
+| CADC | 145 | 18 | Extended | Transfer |
+| PHT | 299 | 18 | Extended | Transfer |
+| syrupUSDC | cg-syrupusdc | 6 | Extended | Transfer |
+| syrupUSDT | cg-syrupusdt | 6 | Extended | Transfer |
+| AID | 353 | 18 | Extended | Transfer |
+| apxUSD | 354 | 18 | Extended | Transfer |
 | reUSD | 339 | 6/18 | Risky | Deposited + InstantRedemptionProcessed (8 configs across Ethereum/Arbitrum/Base/Avalanche) |
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.

@@ -1,5 +1,12 @@
 [
   {
+    "date": "2026-03-04",
+    "title": "BEDROCK Holds, KAG Sprints",
+    "text": "PSI 94.3, BEDROCK. KAG depegged 3 times on $314.86M and recovered each time inside an hour. USDC added $1.42B to $76.40B. USDT ran 4 blacklist freezes on Ethereum totaling $282.34K across 32 events in 24 hours.",
+    "extended": "PSI lands at 94.3 in BEDROCK for the second consecutive session, severity at 0.03, breadth at 3.93, trend positive by 0.75. The number is identical to yesterday, which is either a reassuring sign of structural anchor or the index politely refusing to have an opinion.\n\nThe sharpest story today is one that already resolved: KAG printed three separate depegs, 598 bps, 370 bps, and 337 bps in succession on a $314.86M float, recovering from each within an hour or less. Three misfires and three corrections on the same $315M instrument inside a single news cycle is not routine volatility, it is a coin testing its own reflexes. USDC, meanwhile, quietly added $1.42B this week to reach $76.40B, while USDT shed $38.16M yesterday after posting a positive weekly average, its supply running in two directions at once like a trader who forgot which way they were facing.\n\nThirty-two blacklist events in 24 hours affected $285.89K, with four USDT-on-Ethereum freezes accounting for $282.34K of that total. The amounts are small, the volume is not; 32 actions in a single day is a pace that suggests someone's compliance queue had a busy morning, even as the PSI sits at its most placid reading.",
+    "generatedAt": 1772611269
+  },
+  {
     "date": "2026-03-03",
     "title": "BEDROCK Slips, Quietly",
     "text": "PSI down 3.1 points to 91.9 in BEDROCK. USDC added $1.25B to $76.02B. KAU resolved 2036 bps on $408M in 8h. USDT ran 3 destroy events totaling $2.83M on Ethereum. NECT: F-rated, liquidity 16, still 146 bps off-peg.",

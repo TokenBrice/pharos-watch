@@ -225,3 +225,77 @@ describe("mint-burn-contracts top-100 Ethereum additions", () => {
     }
   });
 });
+
+describe("mint-burn-contracts top-150 Ethereum additions", () => {
+  const top150EthereumAdditions = [
+    { stablecoinId: "266", symbol: "pUSD", address: "0xdddd73f5df1f0dc31373357beac77545dc5a6f3f", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "234", symbol: "WUSD", address: "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "324", symbol: "SBC", address: "0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "23", symbol: "OUSD", address: "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "253", symbol: "USBD", address: "0x6bede1c6009a78c222d9bdb7974bb67847fdb68c", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "331", symbol: "USP", address: "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "240", symbol: "USDR", address: "0x7b43e3875440b44613dc3bc08e7763e6da63c8f8", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "304", symbol: "USDU", address: "0xdde3ec717f220fc6a29d6a4be73f91da5b718e55", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "cg-ustb", symbol: "USTB", address: "0x43415eb6ff9db7e26a15b704e7a3edce97d31c4e", decimals: 6, dustThreshold: 1_000 },
+    { stablecoinId: "cg-ousg", symbol: "OUSG", address: "0x1b19c19393e2d034d8ff31ff34c81252fcbbee92", decimals: 18, dustThreshold: 100 },
+    { stablecoinId: "cg-uscc", symbol: "USCC", address: "0x14d60e7fdc0d71d8611742720e4c50e7a974020c", decimals: 6, dustThreshold: 1_000 },
+    { stablecoinId: "cg-mtbill", symbol: "mTBILL", address: "0xdd629e5241cbc5919847783e6c96b2de4754e438", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "cg-wrapped-savings-rusd", symbol: "wsrUSD", address: "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "289", symbol: "XSGD", address: "0x70e8de73ce538da2beed35d14187f6959a8eca96", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "122", symbol: "GYEN", address: "0xc08512927d12348f6620a698105e1baac6ecd911", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "165", symbol: "AUDD", address: "0x4cce605ed955295432958d8951d0b176c10720d5", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "cg-jpyc", symbol: "JPYC", address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "gold-xaum", symbol: "XAUm", address: "0x2103e845c5e135493bb6c2a4f0b8651956ea8682", decimals: 18, dustThreshold: 10 },
+    { stablecoinId: "gold-dgld", symbol: "DGLD", address: "0xa9299c296d7830a99414d1e5546f5171fa01e9c8", decimals: 18, dustThreshold: 10 },
+    { stablecoinId: "silver-kag", symbol: "KAG", address: "0xf94d9b6dc4eacd89fe3235d9a3c2465fea405157", decimals: 9, dustThreshold: 10_000 },
+    { stablecoinId: "158", symbol: "VEUR", address: "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "239", symbol: "EURR", address: "0x50753cfaf86c094925bf976f218d043f8791e408", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "247", symbol: "EUROP", address: "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "cg-eurq", symbol: "EURQ", address: "0x8df723295214ea6f21026eeeb4382d475f146f9f", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "319", symbol: "EURAU", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "cg-deuro", symbol: "DEURO", address: "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "157", symbol: "VCHF", address: "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "317", symbol: "tGBP", address: "0x27f6c8289550fce67f6b50bed1f519966afe5287", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "cg-zarp", symbol: "ZARP", address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "145", symbol: "CADC", address: "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "299", symbol: "PHT", address: "0xbe370ad45d44eb45174c4ec60b88839fef32c077", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "cg-syrupusdc", symbol: "syrupUSDC", address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "cg-syrupusdt", symbol: "syrupUSDT", address: "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d", decimals: 6, dustThreshold: 10_000 },
+    { stablecoinId: "353", symbol: "AID", address: "0x18f52b3fb465118731d9e0d276d4eb3599d57596", decimals: 18, dustThreshold: 10_000 },
+    { stablecoinId: "354", symbol: "apxUSD", address: "0x98a878b1cd98131b271883b390f68d2c90674665", decimals: 18, dustThreshold: 10_000 },
+  ];
+
+  it("tracks newly added top-150 Ethereum contracts via standard zero-address Transfer filters", () => {
+    for (const expected of top150EthereumAdditions) {
+      const cfg = MINT_BURN_CONFIGS.find(
+        (c) =>
+          c.chain.chainId === "ethereum" &&
+          c.stablecoinId === expected.stablecoinId &&
+          c.contractAddress === expected.address,
+      );
+
+      expect(cfg, `Missing config for ${expected.symbol}`).toBeDefined();
+      expect(cfg!.symbol).toBe(expected.symbol);
+      expect(cfg!.decimals).toBe(expected.decimals);
+      expect(cfg!.dustThreshold).toBe(expected.dustThreshold);
+      expect(cfg!.startBlock).toBe(21_900_000);
+      expect(cfg!.tier).toBe("extended");
+      expect(cfg!.events).toEqual([
+        {
+          signature: "Transfer(address,address,uint256)",
+          topicHash: TRANSFER_TOPIC,
+          direction: "mint",
+          amountEncoding: "transfer-value",
+          filterTopic: { index: 1, value: ZERO_ADDRESS_PADDED },
+        },
+        {
+          signature: "Transfer(address,address,uint256)",
+          topicHash: TRANSFER_TOPIC,
+          direction: "burn",
+          amountEncoding: "transfer-value",
+          filterTopic: { index: 2, value: ZERO_ADDRESS_PADDED },
+        },
+      ]);
+    }
+  });
+});
