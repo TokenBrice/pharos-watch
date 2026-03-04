@@ -51,7 +51,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 ### Tracked Stablecoins
 
-Current scope: **18 contract configs** across **11 symbols** (10 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
+Current scope: **27 contract configs** across **20 symbols** (19 standard ERC-20 configs + 8 reUSD vault configs across 4 chains).
 
 | Symbol | ID | Decimals | Category | Events |
 |--------|----|----------|----------|--------|
@@ -65,6 +65,15 @@ Current scope: **18 contract configs** across **11 symbols** (10 standard ERC-20
 | USDS | 209 | 18 | Risky | Transfer |
 | FRXUSD | 235 | 18 | Risky | Transfer |
 | BOLD | 269 | 18 | Risky | Transfer |
+| fxUSD | 168 | 18 | Extended | Transfer |
+| crvUSD | 110 | 18 | Extended | Transfer |
+| AUSD | 205 | 6 | Extended | Transfer |
+| ZCHF | 226 | 18 | Extended | Transfer |
+| EURC | 50 | 6 | Extended | Transfer |
+| PAXG | gold-paxg | 18 | Extended | Transfer |
+| XAUT | gold-xaut | 6 | Extended | Transfer |
+| USDG | 286 | 6 | Extended | Transfer |
+| USD1 | 262 | 18 | Extended | Transfer |
 | reUSD | 339 | 6/18 | Risky | Deposited + InstantRedemptionProcessed (8 configs across Ethereum/Arbitrum/Base/Avalanche) |
 
 Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-quality detection when report card grades are unavailable or stale (>2h). The preferred approach is grade-based classification from report card scores.
