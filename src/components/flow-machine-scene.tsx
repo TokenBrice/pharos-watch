@@ -59,33 +59,31 @@ interface PrinterDims {
 interface ShredderDims {
   containerClass: string;
   areaClass: string;
-  hopperTop: number;
-  hopperW: number;
-  hopperH: number;
-  feedSlotTop: number;
-  feedSlotW: number;
-  feedSlotH: number;
-  bodyTop: number;
-  bodyW: number;
-  bodyH: number;
-  cutterTop: number;
-  cutterW: number;
-  cutterH: number;
-  cutterTeethTop: number;
-  cutterTeethW: number;
-  cutterTeethCount: number;
-  outputTop: number;
+  centerOffset: number;
+  billCenterOffset: number;
+  stripCenterOffset: number;
+  machineTop: number;
+  machineW: number;
+  machineH: number;
+  machineRadius: number;
+  slotY: number;
+  slotW: number;
+  slotH: number;
+  slotGuideY: number;
+  slotGuideW: number;
+  slotGuideH: number;
+  outputY: number;
   outputW: number;
   outputH: number;
-  lightTop: number;
-  lightLeftOffset: number;
-  lightSize: number;
+  indicatorY: number;
+  indicatorRight: number;
+  indicatorSize: number;
+  indicatorGap: number;
   billSpawnTop: number;
   billW: number;
   billH: number;
   billEmitOffset: number;
   billEnterDrop: number;
-  stripSpawnTop: number;
   stripW: number;
   stripH: number;
   stripDropBase: number;
@@ -173,73 +171,69 @@ const FULL_PRINTER_DIMS: PrinterDims = {
 const MINI_SHREDDER_DIMS: ShredderDims = {
   containerClass: "relative h-[210px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-3",
   areaClass: "relative mt-2 h-[160px]",
-  hopperTop: 8,
-  hopperW: 114,
-  hopperH: 40,
-  feedSlotTop: 36,
-  feedSlotW: 62,
-  feedSlotH: 6,
-  bodyTop: 46,
-  bodyW: 186,
-  bodyH: 96,
-  cutterTop: 80,
-  cutterW: 138,
-  cutterH: 18,
-  cutterTeethTop: 82,
-  cutterTeethW: 122,
-  cutterTeethCount: 11,
-  outputTop: 121,
-  outputW: 104,
+  centerOffset: 96,
+  billCenterOffset: 12,
+  stripCenterOffset: 12,
+  machineTop: 54,
+  machineW: 190,
+  machineH: 72,
+  machineRadius: 14,
+  slotY: 8,
+  slotW: 94,
+  slotH: 7,
+  slotGuideY: 19,
+  slotGuideW: 148,
+  slotGuideH: 5,
+  outputY: 49,
+  outputW: 114,
   outputH: 8,
-  lightTop: 70,
-  lightLeftOffset: 62,
-  lightSize: 12,
-  billSpawnTop: 18,
+  indicatorY: 28,
+  indicatorRight: 14,
+  indicatorSize: 6,
+  indicatorGap: 7,
+  billSpawnTop: 4,
   billW: 34,
   billH: 20,
   billEmitOffset: 0,
-  billEnterDrop: 54,
-  stripSpawnTop: 124,
-  stripW: 6,
+  billEnterDrop: 63,
+  stripW: 5,
   stripH: 18,
-  stripDropBase: 46,
-  stripSpread: 52,
+  stripDropBase: 42,
+  stripSpread: 24,
 };
 
 const FULL_SHREDDER_DIMS: ShredderDims = {
   containerClass: "relative overflow-hidden rounded-xl border border-border/60 bg-background/40 p-4",
   areaClass: "relative mt-4 h-[178px]",
-  hopperTop: 8,
-  hopperW: 132,
-  hopperH: 46,
-  feedSlotTop: 38,
-  feedSlotW: 74,
-  feedSlotH: 7,
-  bodyTop: 50,
-  bodyW: 214,
-  bodyH: 106,
-  cutterTop: 88,
-  cutterW: 162,
-  cutterH: 20,
-  cutterTeethTop: 90,
-  cutterTeethW: 146,
-  cutterTeethCount: 13,
-  outputTop: 138,
-  outputW: 126,
-  outputH: 9,
-  lightTop: 73,
-  lightLeftOffset: 86,
-  lightSize: 16,
-  billSpawnTop: 20,
+  centerOffset: 108,
+  billCenterOffset: 14,
+  stripCenterOffset: 14,
+  machineTop: 58,
+  machineW: 218,
+  machineH: 78,
+  machineRadius: 16,
+  slotY: 9,
+  slotW: 116,
+  slotH: 8,
+  slotGuideY: 21,
+  slotGuideW: 170,
+  slotGuideH: 5,
+  outputY: 54,
+  outputW: 132,
+  outputH: 8,
+  indicatorY: 30,
+  indicatorRight: 16,
+  indicatorSize: 7,
+  indicatorGap: 8,
+  billSpawnTop: 6,
   billW: 38,
   billH: 22,
   billEmitOffset: 0,
-  billEnterDrop: 60,
-  stripSpawnTop: 141,
-  stripW: 7,
+  billEnterDrop: 66,
+  stripW: 6,
   stripH: 20,
-  stripDropBase: 54,
-  stripSpread: 70,
+  stripDropBase: 50,
+  stripSpread: 30,
 };
 
 interface PrinterMachineProps {
@@ -584,14 +578,14 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
   const power = clamp(intensity, 0.08, 1);
 
   const billCount = clamp(
-    Math.round((isMini ? 4 : 6) + power * (isMini ? 12 : 20)),
+    Math.round((isMini ? 4 : 6) + power * (isMini ? 10 : 16)),
     isMini ? 4 : 6,
-    isMini ? 14 : 26,
+    isMini ? 12 : 22,
   );
   const stripCount = clamp(
-    Math.round((isMini ? 18 : 24) + power * (isMini ? 24 : 40)),
-    isMini ? 18 : 24,
-    isMini ? 42 : 64,
+    Math.round((isMini ? 14 : 18) + power * (isMini ? 18 : 24)),
+    isMini ? 14 : 18,
+    isMini ? 32 : 42,
   );
 
   const billDuration = clamp((isMini ? 2.0 : 1.85) - power * 0.95, 0.45, isMini ? 2.0 : 1.85);
@@ -600,31 +594,31 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
   const stripDelayStep = clamp((isMini ? 0.06 : 0.05) - power * 0.02, 0.015, isMini ? 0.06 : 0.05);
   const jitterDuration = clamp(0.9 - power * 0.35, 0.35, 0.9);
 
-  const billSpread = (isMini ? 20 : 28) + Math.round(power * (isMini ? 14 : 22));
-  const stripSpread = dims.stripSpread + Math.round(power * (isMini ? 20 : 26));
-  const stripDrop = dims.stripDropBase + Math.round(power * (isMini ? 28 : 34));
+  const billSpread = (isMini ? 6 : 8) + Math.round(power * (isMini ? 4 : 6));
+  const stripSpread = dims.stripSpread + Math.round(power * (isMini ? 10 : 14));
+  const stripDrop = dims.stripDropBase + Math.round(power * (isMini ? 24 : 30));
+  const stripMaskTop = dims.machineTop + dims.outputY + dims.outputH - 1;
+  const stripMaskHeight = stripDrop + dims.stripH + (isMini ? 14 : 18);
+  const billEntryDrop = dims.machineTop + dims.slotY - dims.billSpawnTop + 1;
+  const machineCenterX = calcOffset(dims.centerOffset);
+  const billCenterX = calcOffset(dims.billCenterOffset + dims.billEmitOffset);
+  const stripCenterX = calcOffset(dims.stripCenterOffset);
 
-  const billPattern = [-0.42, -0.3, -0.18, -0.08, 0, 0.08, 0.18, 0.3, 0.42];
+  const billPattern = [-0.2, -0.12, -0.06, 0, 0.06, 0.12, 0.2];
   const stripPattern = [
-    -1,
-    -0.88,
-    -0.76,
-    -0.64,
-    -0.52,
+    -0.72,
+    -0.56,
     -0.4,
-    -0.28,
-    -0.16,
-    -0.08,
+    -0.26,
+    -0.14,
+    -0.06,
     0,
-    0.08,
-    0.16,
-    0.28,
+    0.06,
+    0.14,
+    0.26,
     0.4,
-    0.52,
-    0.64,
-    0.76,
-    0.88,
-    1,
+    0.56,
+    0.72,
   ];
 
   return (
@@ -632,11 +626,11 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
       {Array.from({ length: billCount }).map((_, i) => {
         const seed = Math.abs(Math.sin((i + 1) * 17.113) * 43758.5453);
         const chaos = seed - Math.floor(seed);
-        const dx = Math.round(billPattern[i % billPattern.length] * billSpread) + Math.round((chaos - 0.5) * 8);
-        const drop = dims.billEnterDrop + (i % 3) * (isMini ? 4 : 5) + Math.round((chaos - 0.5) * 6);
-        const rot = -8 + (chaos - 0.5) * 20;
+        const dx = Math.round(billPattern[i % billPattern.length] * billSpread) + Math.round((chaos - 0.5) * 2);
+        const drop = billEntryDrop + (i % 3) * (isMini ? 1 : 2) + Math.round((chaos - 0.5) * 2);
+        const rot = -3 + (chaos - 0.5) * 8;
         const style: CssVarStyle = {
-          left: calcOffset(dims.billEmitOffset),
+          left: billCenterX,
           top: `${dims.billSpawnTop}px`,
           width: `${dims.billW}px`,
           height: `${dims.billH}px`,
@@ -656,85 +650,100 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
       })}
 
       <div
-        className="pointer-events-none absolute left-1/2 z-20 -translate-x-1/2 rounded-[14px] border border-zinc-500/70 bg-gradient-to-b from-zinc-500/80 to-zinc-700/90"
+        className="pointer-events-none absolute z-30 -translate-x-1/2 sh-machine-vibe"
         style={{
-          top: `${dims.hopperTop}px`,
-          width: `${dims.hopperW}px`,
-          height: `${dims.hopperH}px`,
-          clipPath: "polygon(12% 0%, 88% 0%, 100% 100%, 0% 100%)",
-          boxShadow: `0 0 16px rgba(248,113,113,${(0.2 + power * 0.35).toFixed(3)})`,
-        }}
-      />
-
-      <div
-        className="pointer-events-none absolute left-1/2 z-[25] -translate-x-1/2 rounded border border-zinc-900/80 bg-black/70"
-        style={{ top: `${dims.feedSlotTop}px`, width: `${dims.feedSlotW}px`, height: `${dims.feedSlotH}px` }}
-      />
-
-      <div
-        className="pointer-events-none absolute left-1/2 z-30 -translate-x-1/2 rounded-2xl border border-zinc-700/80 bg-zinc-900/95 sh-machine-vibe"
-        style={{
-          top: `${dims.bodyTop}px`,
-          width: `${dims.bodyW}px`,
-          height: `${dims.bodyH}px`,
+          left: machineCenterX,
+          top: `${dims.machineTop}px`,
+          width: `${dims.machineW}px`,
+          height: `${dims.machineH}px`,
           animationDuration: `${jitterDuration.toFixed(2)}s`,
         }}
-      />
-
-      <div
-        className="pointer-events-none absolute left-1/2 z-[35] -translate-x-1/2 rounded border border-red-700/80"
-        style={{
-          top: `${dims.cutterTop}px`,
-          width: `${dims.cutterW}px`,
-          height: `${dims.cutterH}px`,
-          background:
-            "repeating-linear-gradient(135deg, rgba(239,68,68,0.6) 0px, rgba(239,68,68,0.6) 8px, rgba(15,23,42,0.55) 8px, rgba(15,23,42,0.55) 14px)",
-        }}
-      />
-
-      <div
-        className="pointer-events-none absolute left-1/2 z-40 flex -translate-x-1/2 justify-between"
-        style={{ top: `${dims.cutterTeethTop}px`, width: `${dims.cutterTeethW}px`, paddingLeft: "6px", paddingRight: "6px" }}
       >
-        {Array.from({ length: dims.cutterTeethCount }).map((_, i) => (
-          <span key={`tooth-${i}`} className="h-2 w-2 rounded-b-sm bg-red-300/80" />
-        ))}
+        <div
+          className="absolute inset-0 border border-zinc-700/85 bg-gradient-to-b from-zinc-500/88 to-zinc-700/94"
+          style={{
+            borderRadius: `${dims.machineRadius}px`,
+            boxShadow: `0 0 18px rgba(248,113,113,${(0.12 + power * 0.24).toFixed(3)})`,
+          }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded-full bg-white/16"
+          style={{ top: "2px", width: `${Math.round(dims.machineW * 0.72)}px`, height: "4px" }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded border border-zinc-950/80 bg-black/72"
+          style={{ top: `${dims.slotY}px`, width: `${dims.slotW}px`, height: `${dims.slotH}px` }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded-sm bg-sky-200/40"
+          style={{ top: `${dims.slotGuideY}px`, width: `${dims.slotGuideW}px`, height: `${dims.slotGuideH}px` }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 rounded border border-zinc-950/80 bg-zinc-900/92"
+          style={{ top: `${dims.outputY}px`, width: `${dims.outputW}px`, height: `${dims.outputH}px` }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2"
+          style={{
+            top: `${dims.outputY + 1}px`,
+            width: `${dims.outputW - 12}px`,
+            height: "2px",
+            background:
+              "repeating-linear-gradient(90deg, rgba(15,23,42,0.95) 0px, rgba(15,23,42,0.95) 6px, rgba(248,113,113,0.52) 6px, rgba(248,113,113,0.52) 8px)",
+          }}
+        />
+        <div
+          className="absolute z-[2] flex items-center"
+          style={{
+            top: `${dims.indicatorY}px`,
+            right: `${dims.indicatorRight}px`,
+            gap: `${dims.indicatorGap}px`,
+          }}
+        >
+          {Array.from({ length: 3 }).map((_, i) => (
+            <span
+              key={`ind-${i}`}
+              className={cn(
+                "block rounded-full border",
+                i === 0 ? "border-red-300/60 bg-red-400/65 sh-light-blink" : "border-zinc-200/45 bg-zinc-100/70",
+              )}
+              style={{
+                width: `${dims.indicatorSize}px`,
+                height: `${dims.indicatorSize}px`,
+                animationDuration: `${(1.45 - power * 0.42).toFixed(2)}s`,
+              }}
+            />
+          ))}
+        </div>
       </div>
 
       <div
-        className="pointer-events-none absolute left-1/2 z-[45] -translate-x-1/2 rounded border border-red-700/90 bg-red-950/75"
-        style={{ top: `${dims.outputTop}px`, width: `${dims.outputW}px`, height: `${dims.outputH}px` }}
-      />
-
-      <div
-        className="pointer-events-none absolute z-[45] rounded-full border border-red-300/45 bg-red-400/25 sh-light-blink"
+        className="pointer-events-none absolute z-[35] -translate-x-1/2 overflow-hidden"
         style={{
-          top: `${dims.lightTop}px`,
-          left: calcOffset(dims.lightLeftOffset),
-          width: `${dims.lightSize}px`,
-          height: `${dims.lightSize}px`,
-          animationDuration: `${(1.35 - power * 0.42).toFixed(2)}s`,
-          boxShadow: `0 0 12px rgba(248,113,113,${(0.45 + power * 0.35).toFixed(3)})`,
+          left: stripCenterX,
+          top: `${stripMaskTop}px`,
+          width: `${dims.outputW}px`,
+          height: `${stripMaskHeight}px`,
         }}
-      />
-
-      {Array.from({ length: stripCount }).map((_, i) => {
-        const seed = Math.abs(Math.sin((i + 1) * 29.477) * 43758.5453);
-        const chaos = seed - Math.floor(seed);
-        const dx = Math.round(stripPattern[i % stripPattern.length] * stripSpread) + Math.round((chaos - 0.5) * 8);
-        const drop = stripDrop + (i % 4) * (isMini ? 6 : 7) + Math.round((chaos - 0.5) * 12);
-        const style: CssVarStyle = {
-          left: "50%",
-          top: `${dims.stripSpawnTop}px`,
-          width: `${dims.stripW}px`,
-          height: `${dims.stripH}px`,
-          animationDuration: `${(stripDuration + (i % 5) * 0.04).toFixed(2)}s`,
-          animationDelay: `${(-i * stripDelayStep).toFixed(2)}s`,
-          "--strip-dx": `${dx}px`,
-          "--strip-drop": `${drop}px`,
-        };
-        return <span key={`strip-${i}`} className="pointer-events-none absolute z-[15] rounded-sm border border-red-400/45 bg-red-300/80 sh-strip-fall" style={style} />;
-      })}
+      >
+        {Array.from({ length: stripCount }).map((_, i) => {
+          const seed = Math.abs(Math.sin((i + 1) * 29.477) * 43758.5453);
+          const chaos = seed - Math.floor(seed);
+          const dx = Math.round(stripPattern[i % stripPattern.length] * stripSpread) + Math.round((chaos - 0.5) * 4);
+          const drop = stripDrop + (i % 4) * (isMini ? 5 : 6) + Math.round((chaos - 0.5) * 10);
+          const style: CssVarStyle = {
+            left: "50%",
+            top: "0px",
+            width: `${dims.stripW}px`,
+            height: `${dims.stripH}px`,
+            animationDuration: `${(stripDuration + (i % 5) * 0.04).toFixed(2)}s`,
+            animationDelay: `${(-i * stripDelayStep).toFixed(2)}s`,
+            "--strip-dx": `${dx}px`,
+            "--strip-drop": `${drop}px`,
+          };
+          return <span key={`strip-${i}`} className="pointer-events-none absolute rounded-sm border border-red-400/45 bg-red-300/80 sh-strip-fall" style={style} />;
+        })}
+      </div>
 
       <style jsx>{`
         .sh-bill-feed {
@@ -795,7 +804,7 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
           }
           100% {
             opacity: 0;
-            transform: translate(calc(-50% + var(--strip-dx)), var(--strip-drop)) scaleX(0.92) scaleY(1.38);
+            transform: translate(calc(-50% + var(--strip-dx)), var(--strip-drop)) scaleX(0.9) scaleY(1.32);
           }
         }
 
