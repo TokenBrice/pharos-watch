@@ -161,18 +161,17 @@ export const handleBackfillStabilityIndex = withErrorHandler(
     await batchExecute(db, stmts);
 
     try {
-      await db.exec(`
-        BEGIN IMMEDIATE;
-        DELETE FROM stability_index;
-        INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
-        SELECT computed_at, score, band, components, input_snapshot, methodology_version
-        FROM stability_index_rebuild
-        ORDER BY computed_at;
-        COMMIT;
-      `);
-    } catch (err) {
-      await db.exec("ROLLBACK").catch(() => {});
-      throw err;
+      // D1 in Workers rejects manual SQL transaction statements.
+      // Use a single batch so DELETE + INSERT swap stays atomic.
+      await db.batch([
+        db.prepare("DELETE FROM stability_index"),
+        db.prepare(
+          `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+           SELECT computed_at, score, band, components, input_snapshot, methodology_version
+           FROM stability_index_rebuild
+           ORDER BY computed_at`
+        ),
+      ]);
     } finally {
       await db.exec("DROP TABLE IF EXISTS stability_index_rebuild").catch(() => {});
     }

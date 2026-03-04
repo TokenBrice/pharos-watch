@@ -189,25 +189,9 @@ export async function syncDexLiquidity(
   }
   throwIfAborted(signal);
 
-  // 7. Persist primary tables atomically so partial failures never leave split state.
-  let txOpen = false;
-  try {
-    await db.prepare("BEGIN IMMEDIATE").run();
-    txOpen = true;
-    await persistScores(db, metrics, scoreResults, globalAgg, syncStartSec);
-    await computeDexPrices(db, priceObservations, syncStartSec);
-    await db.prepare("COMMIT").run();
-    txOpen = false;
-  } catch (err) {
-    if (txOpen) {
-      try {
-        await db.prepare("ROLLBACK").run();
-      } catch (rollbackErr) {
-        console.error("[dex-liquidity] Failed to rollback transaction:", rollbackErr);
-      }
-    }
-    throw err;
-  }
+  // 7. Persist primary tables. D1 in Workers rejects manual SQL transaction statements.
+  await persistScores(db, metrics, scoreResults, globalAgg, syncStartSec);
+  await computeDexPrices(db, priceObservations, syncStartSec);
 
   // 8. Write daily historical snapshots
   await writeHistoricalSnapshots(db, scoreResults);
