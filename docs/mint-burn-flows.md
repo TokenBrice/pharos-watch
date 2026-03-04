@@ -29,7 +29,7 @@ On-chain mint and burn event tracker for stablecoins across multiple EVM chains 
 
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `dustThreshold` | 10,000 (token-native) | Events below this amount are discarded |
+| `dustThreshold` | 10,000 default (token-native); 10 for gold tokens | Events below this amount are discarded |
 | `INDEXING_SAFETY_SEC` | 900 (15 min) | Safety margin when advancing sync state to chain head |
 | `ETH_BLOCK_TIME` | 12 sec | Approximate Ethereum block time (yields ~75-block safety margin) |
 | `DENOM_SCALE` | 0.3 | FIS denominator = 30% of baseline daily absolute flow |
