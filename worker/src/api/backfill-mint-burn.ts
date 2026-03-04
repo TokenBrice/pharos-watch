@@ -12,29 +12,20 @@ import {
   type MintBurnContractConfig,
   type MintBurnEventDef,
 } from "../lib/mint-burn-contracts";
-import { parseMintBurnLogs } from "../cron/sync-mint-burn";
+import { classifyBridgeBurnRows, parseMintBurnLogs } from "../cron/sync-mint-burn";
+import type { MintBurnTxContext } from "../lib/mint-burn-bridge-classifier";
 import { requireAdmin } from "../lib/auth";
 import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
 import type { TopicFilter } from "../lib/evm-logs";
 
-const CHAIN_DEFAULT_CHUNK_SIZE: Record<number, number> = {
-  1: 50_000,
-  42161: 50_000,
-  8453: 50_000,
-  10: 50_000,
-  43114: 10_000,
-  137: 2_000,
-};
+const ETHEREUM_CHAIN_ID = "ethereum";
+const ETHEREUM_CHUNK_SIZE = 50_000;
 
 const BACKFILL_BUDGET_LIMIT = 900;
 const DEFAULT_MAX_CHUNKS = 24;
 
 function configKey(config: MintBurnContractConfig): string {
   return `${config.chain.chainId}-${config.contractAddress}`;
-}
-
-function maxChunkSizeForChain(evmChainId: number): number {
-  return CHAIN_DEFAULT_CHUNK_SIZE[evmChainId] ?? 10_000;
 }
 
 async function readBodyJson(request?: Request): Promise<Record<string, unknown>> {
@@ -94,14 +85,14 @@ async function recalcAffectedHours(
       (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
        mint_volume_usd, burn_volume_usd, net_flow_usd)
      SELECT
-      stablecoin_id,
+     stablecoin_id,
       chain_id,
       (timestamp / 3600) * 3600 AS hour_ts,
       SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
-      SUM(CASE WHEN direction = 'burn' THEN 1 ELSE 0 END),
+      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN 1 ELSE 0 END),
       COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'burn' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE -amount_usd END), 0)
+      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN amount_usd ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN -amount_usd ELSE 0 END), 0)
      FROM mint_burn_events
      WHERE stablecoin_id = ? AND chain_id = ?
        AND timestamp >= ? AND timestamp < ?
@@ -149,12 +140,11 @@ export const handleBackfillMintBurn = withErrorHandler(
       return errorResponse(404, "Unknown mint/burn configKey");
     }
 
-    if (config.chain.evmChainId == null) {
-      return errorResponse(400, "Selected config is not EVM-compatible");
+    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) {
+      return errorResponse(400, "Selected config is outside Ethereum-only mint/burn scope");
     }
 
-    const evmChainId = config.chain.evmChainId;
-    const chunkMax = maxChunkSizeForChain(evmChainId);
+    const chunkMax = ETHEREUM_CHUNK_SIZE;
     const defaultChunkSize = chunkMax;
 
     const fromBlockParam =
@@ -201,6 +191,10 @@ export const handleBackfillMintBurn = withErrorHandler(
         rowsInserted: 0,
         rowsIgnored: 0,
         rowsDropped: 0,
+        effectiveBurns: 0,
+        bridgeBurns: 0,
+        reviewBurns: 0,
+        rowsReclassified: 0,
         chunksProcessed: 0,
         budgetUsed: budget.count,
       });
@@ -218,6 +212,11 @@ export const handleBackfillMintBurn = withErrorHandler(
     let rowsInserted = 0;
     let rowsIgnored = 0;
     let rowsDropped = 0;
+    let effectiveBurns = 0;
+    let bridgeBurns = 0;
+    let reviewBurns = 0;
+    let rowsReclassified = 0;
+    const txContextCache = new Map<string, MintBurnTxContext | null>();
 
     while (cursor <= toBlock && chunksProcessed < maxChunks && !budgetExhausted(budget)) {
       const scanTo = Math.min(cursor + chunkSize - 1, toBlock);
@@ -296,6 +295,17 @@ export const handleBackfillMintBurn = withErrorHandler(
         rowsDropped += parsed.dropped;
         rowsParsed += parsed.rows.length;
 
+        const burnCounts = await classifyBridgeBurnRows(
+          parsed.rows,
+          config,
+          alchemyUrl,
+          budget,
+          txContextCache,
+        );
+        effectiveBurns += burnCounts.effectiveBurns;
+        bridgeBurns += burnCounts.bridgeBurns;
+        reviewBurns += burnCounts.reviewBurns;
+
         for (const row of parsed.rows) {
           const hourTs = Math.floor(row.timestamp / 3600) * 3600;
           const key = `${row.stablecoin_id}-${row.chain_id}-${hourTs}`;
@@ -311,8 +321,8 @@ export const handleBackfillMintBurn = withErrorHandler(
             db.prepare(
               `INSERT OR IGNORE INTO mint_burn_events
                (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-                counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             ).bind(
               row.id,
               row.stablecoin_id,
@@ -324,6 +334,8 @@ export const handleBackfillMintBurn = withErrorHandler(
               row.price_used,
               row.price_timestamp,
               row.price_source,
+              row.burn_type,
+              row.burn_review_reason,
               row.counterparty,
               row.tx_hash,
               row.block_number,
@@ -335,6 +347,22 @@ export const handleBackfillMintBurn = withErrorHandler(
           const inserted = await batchExecute(db, insertStmts);
           rowsInserted += inserted;
           rowsIgnored += Math.max(0, parsed.rows.length - inserted);
+
+          const burnRows = parsed.rows.filter((row) => row.direction === "burn");
+          if (burnRows.length > 0) {
+            const updateBurnClassificationStmts = burnRows.map((row) =>
+              db.prepare(
+                `UPDATE mint_burn_events
+                 SET burn_type = ?, burn_review_reason = ?
+                 WHERE id = ?`,
+              ).bind(
+                row.burn_type,
+                row.burn_review_reason,
+                row.id,
+              ),
+            );
+            rowsReclassified += await batchExecute(db, updateBurnClassificationStmts);
+          }
         }
       }
 
@@ -369,6 +397,10 @@ export const handleBackfillMintBurn = withErrorHandler(
       rowsInserted,
       rowsIgnored,
       rowsDropped,
+      effectiveBurns,
+      bridgeBurns,
+      reviewBurns,
+      rowsReclassified,
       budgetUsed: budget.count,
       budgetLimit: budget.limit,
     });

@@ -2,6 +2,8 @@ import type { AlchemyLogEntry } from "../lib/alchemy-logs";
 import {
   buildAlchemyUrl,
   getAlchemyBlockNumber,
+  getAlchemyTransactionByHash,
+  getAlchemyTransactionReceipt,
   fetchAlchemyLogs,
   resolveBlockTimestamps,
 } from "../lib/alchemy-logs";
@@ -16,37 +18,25 @@ import {
   MINT_BURN_CONFIGS,
   type MintBurnContractConfig,
   type MintBurnEventDef,
+  type MintBurnType,
   type MintBurnTier,
 } from "../lib/mint-burn-contracts";
+import {
+  classifyBridgeAwareBurnRows,
+  type MintBurnTxContext,
+} from "../lib/mint-burn-bridge-classifier";
 import { batchExecute } from "../lib/db";
 
 // Safety margin when advancing sync state to chain head (prevents permanent event loss
 // if block explorer indexing lags behind chain tip). 15 minutes in seconds.
 const INDEXING_SAFETY_SEC = 900;
 
-// Approximate block times (seconds) per EVM chain - used to compute safety margin in blocks.
-const EVM_BLOCK_TIME: Record<number, number> = {
-  1: 12,      // Ethereum
-  42161: 0.25, // Arbitrum
-  8453: 2,    // Base
-  10: 2,      // Optimism
-  43114: 2,   // Avalanche
-};
-
-// Maximum block range to scan per contract per cron cycle.
-// Respects Alchemy PAYG eth_getLogs block range limits per chain.
-const CHAIN_SCAN_RANGE: Record<number, number> = {
-  1: 50_000,
-  42161: 50_000,
-  8453: 50_000,
-  10: 50_000,
-  43114: 10_000,
-  137: 2_000,
-};
+const ETHEREUM_CHAIN_ID = "ethereum";
+const ETHEREUM_BLOCK_TIME_SEC = 12;
+const ETHEREUM_SCAN_RANGE = 50_000;
 
 const MINT_BURN_JOB = "sync-mint-burn";
 const GLOBAL_BUDGET_LIMIT = 200;
-const CHAIN_QUOTA_MIN = 12;
 const DEGRADE_CONSECUTIVE_THRESHOLD = 2;
 const ERROR_CONSECUTIVE_THRESHOLD = 3;
 const SQL_IN_CHUNK_SIZE = 90;
@@ -84,13 +74,12 @@ interface MintBurnRunStateRow {
   degradedStreak: number;
 }
 
-function getMaxScanRange(evmChainId: number): number {
-  return CHAIN_SCAN_RANGE[evmChainId] ?? 10_000;
+function getMaxScanRange(): number {
+  return ETHEREUM_SCAN_RANGE;
 }
 
-function evmSafetyMarginBlocks(evmChainId: number): number {
-  const blockTime = EVM_BLOCK_TIME[evmChainId] ?? 2;
-  return Math.ceil(INDEXING_SAFETY_SEC / blockTime);
+function evmSafetyMarginBlocks(): number {
+  return Math.ceil(INDEXING_SAFETY_SEC / ETHEREUM_BLOCK_TIME_SEC);
 }
 
 function configKey(config: MintBurnContractConfig): string {
@@ -153,49 +142,6 @@ function chunkArray<T>(values: T[], chunkSize: number): T[][] {
   return chunks;
 }
 
-function buildPerChainQuotas(configs: MintBurnContractConfig[], globalBudgetLimit: number): Map<number, number> {
-  const counts = new Map<number, number>();
-  for (const config of configs) {
-    const chain = config.chain.evmChainId;
-    if (chain == null) continue;
-    counts.set(chain, (counts.get(chain) ?? 0) + 1);
-  }
-
-  const totalConfigs = [...counts.values()].reduce((sum, value) => sum + value, 0);
-  const quotas = new Map<number, number>();
-
-  for (const [chain, count] of counts) {
-    const proportional = totalConfigs > 0
-      ? Math.floor((count / totalConfigs) * globalBudgetLimit)
-      : globalBudgetLimit;
-    quotas.set(chain, Math.max(CHAIN_QUOTA_MIN, proportional));
-  }
-
-  let sumQuotas = [...quotas.values()].reduce((sum, quota) => sum + quota, 0);
-
-  if (sumQuotas > globalBudgetLimit) {
-    let overflow = sumQuotas - globalBudgetLimit;
-    const sorted = [...quotas.entries()].sort((a, b) => b[1] - a[1]);
-    for (const [chain, quota] of sorted) {
-      if (overflow <= 0) break;
-      const reducible = quota - CHAIN_QUOTA_MIN;
-      if (reducible <= 0) continue;
-      const reduceBy = Math.min(reducible, overflow);
-      quotas.set(chain, quota - reduceBy);
-      overflow -= reduceBy;
-    }
-    sumQuotas = [...quotas.values()].reduce((sum, quota) => sum + quota, 0);
-  }
-
-  if (sumQuotas < globalBudgetLimit && quotas.size > 0) {
-    // Give spare budget to the largest chain cohort.
-    const [largestChain] = [...quotas.entries()].sort((a, b) => b[1] - a[1])[0];
-    quotas.set(largestChain, (quotas.get(largestChain) ?? 0) + (globalBudgetLimit - sumQuotas));
-  }
-
-  return quotas;
-}
-
 async function getMintBurnRunState(db: D1Database): Promise<MintBurnRunStateRow> {
   try {
     const row = await db
@@ -238,6 +184,85 @@ async function setMintBurnRunState(
   }
 }
 
+interface BurnClassificationCounters {
+  effectiveBurns: number;
+  bridgeBurns: number;
+  reviewBurns: number;
+}
+
+async function resolveTxContext(
+  alchemyUrl: string,
+  txHash: string,
+  budget: { count: number; limit: number },
+  txContextCache: Map<string, MintBurnTxContext | null>,
+  signal?: AbortSignal,
+): Promise<MintBurnTxContext | null> {
+  const cached = txContextCache.get(txHash);
+  if (cached !== undefined) return cached;
+
+  const [tx, receipt] = await Promise.all([
+    getAlchemyTransactionByHash(alchemyUrl, txHash, budget, signal),
+    getAlchemyTransactionReceipt(alchemyUrl, txHash, budget, signal),
+  ]);
+
+  if (!tx || !receipt) {
+    txContextCache.set(txHash, null);
+    return null;
+  }
+
+  const context: MintBurnTxContext = {
+    to: tx.to,
+    inputSelector: tx.input?.slice(0, 10) ?? null,
+    logTopics: receipt.logs.flatMap((log) => log.topics ?? []),
+  };
+  txContextCache.set(txHash, context);
+  return context;
+}
+
+export async function classifyBridgeBurnRows(
+  rows: MintBurnRow[],
+  config: MintBurnContractConfig,
+  alchemyUrl: string,
+  budget: { count: number; limit: number },
+  txContextCache: Map<string, MintBurnTxContext | null>,
+  signal?: AbortSignal,
+): Promise<BurnClassificationCounters> {
+  const burnRows = rows.filter((row) => row.direction === "burn");
+  if (burnRows.length === 0) {
+    return { effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0 };
+  }
+
+  const txHashes = [...new Set(burnRows.map((row) => row.tx_hash))];
+  const txContextByHash = new Map<string, MintBurnTxContext | null>();
+  for (const txHash of txHashes) {
+    const context = await resolveTxContext(
+      alchemyUrl,
+      txHash,
+      budget,
+      txContextCache,
+      signal,
+    );
+    txContextByHash.set(txHash, context);
+  }
+
+  classifyBridgeAwareBurnRows(rows, config.bridgeDetection, txContextByHash);
+
+  let effectiveBurns = 0;
+  let bridgeBurns = 0;
+  let reviewBurns = 0;
+  for (const row of burnRows) {
+    if (row.burn_type === "bridge_burn") {
+      bridgeBurns++;
+    } else if (row.burn_type === "review_required") {
+      reviewBurns++;
+    } else {
+      effectiveBurns++;
+    }
+  }
+
+  return { effectiveBurns, bridgeBurns, reviewBurns };
+}
+
 export async function syncMintBurn(
   db: D1Database,
   alchemyApiKey: string | null,
@@ -255,12 +280,13 @@ export async function syncMintBurn(
   throwIfAborted();
 
   const budget = createBudget(GLOBAL_BUDGET_LIMIT);
-  const chainBudgetUsage = new Map<number, number>();
 
   const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
   const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
 
-  const allTrackableConfigs = MINT_BURN_CONFIGS.filter((config) => config.chain.evmChainId !== null);
+  const allTrackableConfigs = MINT_BURN_CONFIGS.filter(
+    (config) => config.chain.chainId === ETHEREUM_CHAIN_ID,
+  );
   const enabledConfigs: MintBurnContractConfig[] = [];
   const disabledConfigReasons = new Map<string, string>();
 
@@ -309,7 +335,6 @@ export async function syncMintBurn(
       apiErrors: 0,
       fallbackMode: null,
       validationFailures: 0,
-      perChainBudget: {},
       configBreakdown: [],
       laggingConfigs: [],
       degradedSignal: false,
@@ -356,48 +381,17 @@ export async function syncMintBurn(
   });
   const lastBlocksAfterRun = new Map(lastBlocks);
 
-  const chainQuotas = buildPerChainQuotas(configs, budget.limit);
-  const chainHeadCache = new Map<number, number>();
-  const chainTimestampCaches = new Map<string, Map<number, number>>();
-
-  const accountChainBudget = <T>(evmChainId: number, before: number, value: T): T => {
-    const used = Math.max(0, budget.count - before);
-    if (used > 0) {
-      chainBudgetUsage.set(evmChainId, (chainBudgetUsage.get(evmChainId) ?? 0) + used);
-    }
-    return value;
-  };
-
-  async function getChainHead(config: MintBurnContractConfig): Promise<number | null> {
-    const evmChainId = config.chain.evmChainId;
-    if (evmChainId === null) return null;
-    const cached = chainHeadCache.get(evmChainId);
-    if (cached != null) return cached;
-
-    const url = buildAlchemyUrl(config.chain.chainId, apiKey);
-    if (!url) return null;
-
-    const before = budget.count;
-    const head = accountChainBudget(
-      evmChainId,
-      before,
-      await getAlchemyBlockNumber(url, budget, signal),
-    );
-
-    if (head != null) {
-      chainHeadCache.set(evmChainId, head);
-    }
-    return head;
+  const alchemyUrl = buildAlchemyUrl(ETHEREUM_CHAIN_ID, apiKey);
+  if (!alchemyUrl) {
+    throw new Error("Failed to build Ethereum Alchemy URL");
+  }
+  const chainHead = await getAlchemyBlockNumber(alchemyUrl, budget, signal);
+  if (chainHead === null) {
+    throw new Error("Failed to get Ethereum chain head");
   }
 
-  // Pre-fetch Ethereum chain head so an early failure is explicit.
-  const ethConfig = configs.find((config) => config.chain.evmChainId === 1);
-  if (ethConfig) {
-    const ethHead = await getChainHead(ethConfig);
-    if (ethHead === null) {
-      throw new Error("Failed to get Ethereum chain head");
-    }
-  }
+  const chainTimestampCache = new Map<number, number>();
+  const txContextCache = new Map<string, MintBurnTxContext | null>();
 
   // Load current prices for USD conversion.
   const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
@@ -451,9 +445,14 @@ export async function syncMintBurn(
   let rowsDropped = 0;
   let contractsProcessed = 0;
   let contractsSkipped = 0;
-  let contractsDeferredByQuota = 0;
   let contractsDeferredExtended = 0;
   let apiErrors = 0;
+  let effectiveBurns = 0;
+  let bridgeBurns = 0;
+  let reviewBurns = 0;
+  const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
+  let criticalContractsSatisfied = 0;
+  let criticalContractsUnsatisfied = 0;
 
   const configBreakdown: MintBurnConfigSummary[] = [];
   const allNewEvents: Array<{ stablecoinId: string; chainId: string; hourTs: number }> = [];
@@ -484,37 +483,28 @@ export async function syncMintBurn(
       errors: 0,
       failedEventDefs: [],
     };
-
-    const evmChainId = config.chain.evmChainId;
-    if (evmChainId === null) {
-      summary.skippedReason = "non-evm";
-      contractsSkipped++;
+    const finalizeSummary = (criticalOutcome: "satisfied" | "unsatisfied" | "n/a" = "n/a"): void => {
+      if (tier === "critical") {
+        if (criticalOutcome === "satisfied") {
+          criticalContractsSatisfied++;
+        } else if (criticalOutcome === "unsatisfied") {
+          criticalContractsUnsatisfied++;
+        }
+      }
       configBreakdown.push(summary);
+    };
+
+    if (config.chain.chainId !== ETHEREUM_CHAIN_ID) {
+      summary.skippedReason = "non-ethereum-config";
+      contractsSkipped++;
+      finalizeSummary("unsatisfied");
       continue;
     }
 
     if (budgetExhausted(budget)) {
       summary.skippedReason = "global-budget-exhausted";
       contractsSkipped++;
-      configBreakdown.push(summary);
-      continue;
-    }
-
-    const chainUsage = chainBudgetUsage.get(evmChainId) ?? 0;
-    const chainQuota = chainQuotas.get(evmChainId) ?? budget.limit;
-    const hasOtherChainCapacity = configs.slice(i + 1).some((next) => {
-      const nextChain = next.chain.evmChainId;
-      if (nextChain == null || nextChain === evmChainId) return false;
-      const nextUsage = chainBudgetUsage.get(nextChain) ?? 0;
-      const nextQuota = chainQuotas.get(nextChain) ?? budget.limit;
-      return nextUsage < nextQuota;
-    });
-
-    if (chainUsage >= chainQuota && hasOtherChainCapacity) {
-      summary.skippedReason = "chain-quota-deferred";
-      contractsDeferredByQuota++;
-      contractsSkipped++;
-      configBreakdown.push(summary);
+      finalizeSummary("unsatisfied");
       continue;
     }
 
@@ -527,17 +517,7 @@ export async function syncMintBurn(
       summary.skippedReason = "extended-deferred-under-pressure";
       contractsDeferredExtended++;
       contractsSkipped++;
-      configBreakdown.push(summary);
-      continue;
-    }
-
-    const chainHead = await getChainHead(config);
-    if (chainHead === null) {
-      summary.skippedReason = "chain-head-unavailable";
-      summary.errors++;
-      apiErrors++;
-      contractsSkipped++;
-      configBreakdown.push(summary);
+      finalizeSummary();
       continue;
     }
 
@@ -545,27 +525,17 @@ export async function syncMintBurn(
     if (fromBlock > chainHead) {
       summary.skippedReason = "up-to-date";
       contractsSkipped++;
-      configBreakdown.push(summary);
+      finalizeSummary("satisfied");
       continue;
     }
 
     summary.attempted = true;
     contractsProcessed++;
 
-    const maxRange = getMaxScanRange(evmChainId);
+    const maxRange = getMaxScanRange();
     const scanTo = Math.min(fromBlock + maxRange - 1, chainHead);
     summary.scanFrom = fromBlock;
     summary.scanTo = scanTo;
-
-    const url = buildAlchemyUrl(config.chain.chainId, apiKey);
-    if (!url) {
-      summary.skippedReason = "alchemy-url-missing";
-      summary.errors++;
-      summary.failedEventDefs = config.events.map(eventDefLabel);
-      apiErrors++;
-      configBreakdown.push(summary);
-      continue;
-    }
 
     const allConfigLogs: Array<{ eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }> = [];
     let successfulEventDefs = 0;
@@ -581,11 +551,14 @@ export async function syncMintBurn(
         topics.push({ index: eventDef.filterTopic.index, value: eventDef.filterTopic.value });
       }
 
-      const before = budget.count;
-      const fetched = accountChainBudget(
-        evmChainId,
-        before,
-        await fetchAlchemyLogs(url, config.contractAddress, topics, fromBlock, scanTo, budget, signal),
+      const fetched = await fetchAlchemyLogs(
+        alchemyUrl,
+        config.contractAddress,
+        topics,
+        fromBlock,
+        scanTo,
+        budget,
+        signal,
       );
 
       if (!fetched) {
@@ -614,25 +587,15 @@ export async function syncMintBurn(
     const uniqueBlocks = [
       ...new Set(allConfigLogs.flatMap(({ logs }) => logs.map((log) => parseInt(log.blockNumber, 16)))),
     ];
-    const chainTimestampCache =
-      chainTimestampCaches.get(config.chain.chainId) ??
-      new Map<number, number>();
-    chainTimestampCaches.set(config.chain.chainId, chainTimestampCache);
-
-    const beforeTimestamps = budget.count;
     const blockTimestamps = uniqueBlocks.length > 0
-      ? accountChainBudget(
-          evmChainId,
-          beforeTimestamps,
-          await resolveBlockTimestamps(url, uniqueBlocks, budget, {
-            signal,
-            localCache: chainTimestampCache,
-            persistentCache: {
-              db,
-              chainId: config.chain.chainId,
-            },
-          }),
-        )
+      ? await resolveBlockTimestamps(alchemyUrl, uniqueBlocks, budget, {
+          signal,
+          localCache: chainTimestampCache,
+          persistentCache: {
+            db,
+            chainId: config.chain.chainId,
+          },
+        })
       : new Map<number, number>();
 
     if (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length) {
@@ -663,6 +626,18 @@ export async function syncMintBurn(
       rowsParsed += parsed.rows.length;
       summary.rowsParsed += parsed.rows.length;
 
+      const burnCounts = await classifyBridgeBurnRows(
+        parsed.rows,
+        config,
+        alchemyUrl,
+        budget,
+        txContextCache,
+        signal,
+      );
+      effectiveBurns += burnCounts.effectiveBurns;
+      bridgeBurns += burnCounts.bridgeBurns;
+      reviewBurns += burnCounts.reviewBurns;
+
       for (const row of parsed.rows) {
         summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
         const hourTs = Math.floor(row.timestamp / 3600) * 3600;
@@ -678,8 +653,8 @@ export async function syncMintBurn(
           db.prepare(
             `INSERT OR IGNORE INTO mint_burn_events
              (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-              counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).bind(
             row.id,
             row.stablecoin_id,
@@ -691,6 +666,8 @@ export async function syncMintBurn(
             row.price_used,
             row.price_timestamp,
             row.price_source,
+            row.burn_type,
+            row.burn_review_reason,
             row.counterparty,
             row.tx_hash,
             row.block_number,
@@ -707,6 +684,22 @@ export async function syncMintBurn(
 
         summary.rowsInserted += inserted;
         summary.rowsIgnored += ignored;
+
+        const burnRows = parsed.rows.filter((row) => row.direction === "burn");
+        if (burnRows.length > 0) {
+          const updateBurnClassificationStmts = burnRows.map((row) =>
+            db.prepare(
+              `UPDATE mint_burn_events
+               SET burn_type = ?, burn_review_reason = ?
+               WHERE id = ?`,
+            ).bind(
+              row.burn_type,
+              row.burn_review_reason,
+              row.id,
+            ),
+          );
+          await batchExecute(db, updateBurnClassificationStmts);
+        }
       }
     }
 
@@ -722,7 +715,7 @@ export async function syncMintBurn(
       } else {
         // Full success and no events found: advance to end of scanned range,
         // preserving a safety margin near chain head.
-        const safetyBlocks = evmSafetyMarginBlocks(evmChainId);
+        const safetyBlocks = evmSafetyMarginBlocks();
         newLastBlock = Math.max(
           fromBlock - 1,
           Math.min(scanTo, chainHead - safetyBlocks),
@@ -747,7 +740,12 @@ export async function syncMintBurn(
       `scan ${fromBlock}-${scanTo}, advancedTo=${summary.advancedTo ?? "none"}`,
     );
 
-    configBreakdown.push(summary);
+    const fullEventCoverage = successfulEventDefs === config.events.length;
+    finalizeSummary(
+      fullEventCoverage && summary.errors === 0
+        ? "satisfied"
+        : "unsatisfied",
+    );
   }
 
   // Recalculate affected hourly buckets.
@@ -767,10 +765,10 @@ export async function syncMintBurn(
         chain_id,
         (timestamp / 3600) * 3600 AS hour_ts,
         SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
-        SUM(CASE WHEN direction = 'burn' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN 1 ELSE 0 END),
         COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN direction = 'burn' THEN amount_usd ELSE 0 END), 0),
-        COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE -amount_usd END), 0)
+        COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN amount_usd ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN -amount_usd ELSE 0 END), 0)
        FROM mint_burn_events
        WHERE stablecoin_id = ? AND chain_id = ?
          AND timestamp >= ? AND timestamp < ?
@@ -785,19 +783,15 @@ export async function syncMintBurn(
 
   const laggingConfigs = configs
     .map((config) => {
-      const evmChainId = config.chain.evmChainId;
-      if (evmChainId == null) return null;
-      const head = chainHeadCache.get(evmChainId);
-      if (head == null) return null;
       const key = configKey(config);
       const last = lastBlocksAfterRun.get(key) ?? (config.startBlock - 1);
-      const lagBlocks = Math.max(0, head - last);
+      const lagBlocks = Math.max(0, chainHead - last);
       return {
         key,
         symbol: config.symbol,
         chainId: config.chain.chainId,
         lagBlocks,
-        head,
+        head: chainHead,
         lastBlock: last,
       };
     })
@@ -806,18 +800,15 @@ export async function syncMintBurn(
     .slice(0, 6);
 
   const coverageRatio = enabledConfigs.length > 0 ? contractsProcessed / enabledConfigs.length : 1;
+  const criticalCoverageRatio =
+    criticalContractsEnabled > 0 ? criticalContractsSatisfied / criticalContractsEnabled : 1;
   const degradedSignal =
-    coverageRatio < 0.9 ||
-    apiErrors > 1 ||
-    contractsDeferredByQuota > 0;
+    criticalCoverageRatio < 1 ||
+    apiErrors > 1;
   const degradedStreak = degradedSignal ? runState.degradedStreak + 1 : 0;
 
   let status: SyncMintBurnStatus = "ok";
-  if (
-    coverageRatio < 0.5 ||
-    contractsProcessed === 0 ||
-    degradedStreak >= ERROR_CONSECUTIVE_THRESHOLD
-  ) {
+  if (degradedStreak >= ERROR_CONSECUTIVE_THRESHOLD) {
     status = "error";
   } else if (degradedStreak >= DEGRADE_CONSECUTIVE_THRESHOLD) {
     status = "degraded";
@@ -827,16 +818,6 @@ export async function syncMintBurn(
     ? (startIndex + 1) % enabledConfigs.length
     : 0;
   await setMintBurnRunState(db, nextConfigIndex, degradedStreak);
-
-  const perChainBudget = Object.fromEntries(
-    [...chainQuotas.entries()].map(([chain, quota]) => [
-      String(chain),
-      {
-        quota,
-        used: chainBudgetUsage.get(chain) ?? 0,
-      },
-    ]),
-  );
 
   const metadata = JSON.stringify({
     rowsRead,
@@ -855,12 +836,21 @@ export async function syncMintBurn(
     configsDisabled,
     contractsProcessed,
     contractsSkipped,
-    contractsDeferredByQuota,
     contractsDeferredExtended,
     apiErrors,
     validationFailures: apiErrors,
     fallbackMode: null,
-    perChainBudget,
+    burnClassification: {
+      effectiveBurns,
+      bridgeBurns,
+      reviewBurns,
+    },
+    criticalCoverage: {
+      contractsEnabled: criticalContractsEnabled,
+      contractsSatisfied: criticalContractsSatisfied,
+      contractsUnsatisfied: criticalContractsUnsatisfied,
+      ratio: criticalCoverageRatio,
+    },
     configBreakdown,
     laggingConfigs,
     coverageRatio,
@@ -884,12 +874,14 @@ export interface MintBurnRow {
   stablecoin_id: string;
   symbol: string;
   chain_id: string;
-  direction: string;
+  direction: "mint" | "burn";
   amount: number;
   amount_usd: number | null;
   price_used: number | null;
   price_timestamp: number | null;
   price_source: string | null;
+  burn_type: MintBurnType | null;
+  burn_review_reason: string | null;
   counterparty: string | null;
   tx_hash: string;
   block_number: number;
@@ -997,6 +989,8 @@ export function parseMintBurnLogs(
       price_used: eventPrice.price,
       price_timestamp: eventPrice.priceTimestamp,
       price_source: eventPrice.priceSource,
+      burn_type: direction === "burn" ? "effective_burn" : null,
+      burn_review_reason: null,
       counterparty,
       tx_hash: log.transactionHash,
       block_number: blockNum,
