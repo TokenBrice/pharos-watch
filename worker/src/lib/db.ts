@@ -192,6 +192,27 @@ function createLeaseOwner(job: string): string {
   return `${job}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function isRetriableD1OverloadError(err: unknown): boolean {
+  const msg = String(err);
+  return msg.includes("D1 DB is overloaded") || msg.includes("Requests queued for too long");
+}
+
+async function runWithOverloadRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isRetriableD1OverloadError(err) || attempt >= maxRetries) {
+        throw err;
+      }
+      const delayMs = 150 * (2 ** attempt);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      attempt++;
+    }
+  }
+}
+
 /** Acquire or take over an expired cron lease. Returns false when another active owner holds the lease. */
 export async function acquireCronLease(
   db: D1Database,
@@ -324,7 +345,12 @@ export async function runCronWithLease<T>(
     };
   } finally {
     clearInterval(timer);
-    await releaseCronLease(db, job, owner);
+    try {
+      await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
+    } catch (releaseErr) {
+      // Best-effort release: lease expiry still guarantees eventual progress.
+      console.error(`[cron-lease] Failed to release lease for ${job}:`, releaseErr);
+    }
   }
 }
 
@@ -367,27 +393,31 @@ export async function logCronRun(
       fn(ac.signal),
       timeoutPromise,
     ]);
-    await db
-      .prepare(
-        "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, ?, ?, ?, ?)"
-      )
-      .bind(
-        job,
-        startSec,
-        Date.now() - startMs,
-        resolvedResult?.status ?? "ok",
-        resolvedResult?.itemCount ?? null,
-        resolvedResult?.metadata ?? null
-      )
-      .run();
+    await runWithOverloadRetry(() =>
+      db
+        .prepare(
+          "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind(
+          job,
+          startSec,
+          Date.now() - startMs,
+          resolvedResult?.status ?? "ok",
+          resolvedResult?.itemCount ?? null,
+          resolvedResult?.metadata ?? null
+        )
+        .run()
+    );
   } catch (e) {
     try {
-      await db
-        .prepare(
-          "INSERT INTO cron_runs (job, started_at, duration_ms, status, error) VALUES (?, ?, ?, ?, ?)"
-        )
-        .bind(job, startSec, Date.now() - startMs, "error", String(e))
-        .run();
+      await runWithOverloadRetry(() =>
+        db
+          .prepare(
+            "INSERT INTO cron_runs (job, started_at, duration_ms, status, error) VALUES (?, ?, ?, ?, ?)"
+          )
+          .bind(job, startSec, Date.now() - startMs, "error", String(e))
+          .run()
+      );
     } catch (logErr) {
       console.error(`[db] Failed to log cron error for ${job}:`, logErr);
     }
