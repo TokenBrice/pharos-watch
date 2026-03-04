@@ -6,7 +6,7 @@ Date: 2026-03-04
 
 - D1 migration applied remotely: `0046_mint_burn_bridge_classification.sql`
 - Worker deployed: `stablecoin-api`
-- Current production version ID: `20ed4d7b-4fe1-4e73-82a2-f0c2bb66f4a5`
+- Current production version ID: `d8692b0e-1d93-48c7-b08d-67756a8eca1c`
 
 ## Post-deploy fix applied
 
