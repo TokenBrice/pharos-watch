@@ -85,6 +85,16 @@ function hydrateGeckoIdAliases(assets: PeggedAsset[]): void {
   }
 }
 
+function isReasonablePriceForAsset(
+  asset: PeggedAsset,
+  price: number,
+  fxRates?: Record<string, number>,
+): boolean {
+  const meta = TRACKED_META_BY_ID.get(String(asset.id));
+  const navToken = !!meta?.flags?.navToken || !!asset.navToken;
+  return isReasonablePrice(price, asset.pegType as string | undefined, fxRates, { navToken });
+}
+
 async function fetchSilverTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
   if (SILVER_METAS.length === 0) return [];
   try {
@@ -622,6 +632,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     if (meta?.cmcSlug) {
       asset.cmcSlug = meta.cmcSlug;
     }
+    if (meta?.flags?.navToken) {
+      asset.navToken = true;
+    }
     if (!asset.address && ADDRESS_OVERRIDES[asset.id]) {
       asset.address = ADDRESS_OVERRIDES[asset.id];
     }
@@ -649,7 +662,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Apply dual-primary results — these override the DL list endpoint prices
   for (const asset of llamaData.peggedAssets) {
     const dual = dualPriceResults.get(asset.id);
-    if (dual && isReasonablePrice(dual.price, asset.pegType as string | undefined, fxRates)) {
+    if (dual && isReasonablePriceForAsset(asset, dual.price, fxRates)) {
       asset.price = dual.price;
       asset.priceSource = dual.source;
       asset.priceConfidence = dual.confidence;
@@ -673,7 +686,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
       asset.price != null &&
       typeof asset.price === "number" &&
       asset.price !== 0 &&
-      !isReasonablePrice(asset.price, asset.pegType as string | undefined, fxRates)
+      !isReasonablePriceForAsset(asset, asset.price, fxRates)
     ) {
       console.warn(`[sync-stablecoins] Pre-rejected bad price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
       asset.price = 0; // hasMissingPrice() treats 0 as missing
@@ -698,7 +711,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Must run before savePriceCache so bad prices don't persist for 24h
   let rejectedCount = 0;
   for (const asset of llamaData.peggedAssets) {
-    if (asset.price != null && typeof asset.price === "number" && !isReasonablePrice(asset.price, asset.pegType as string | undefined, fxRates)) {
+    if (asset.price != null && typeof asset.price === "number" && !isReasonablePriceForAsset(asset, asset.price, fxRates)) {
       console.warn(`[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): $${asset.price}`);
       asset.price = null;
       rejectedCount++;
@@ -730,7 +743,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     let fallbackCount = 0;
     for (const asset of stillMissing) {
       const cached = priceCache.get(asset.id);
-      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePrice(cached.price, asset.pegType as string | undefined, fxRates)) {
+      if (cached && (now - cached.updatedAt) < PRICE_CACHE_TTL && isReasonablePriceForAsset(asset, cached.price, fxRates)) {
         asset.price = cached.price;
         fallbackCount++;
       }

@@ -18,6 +18,7 @@ export interface PeggedAsset {
   address?: string;
   geckoId?: string;
   cmcSlug?: string;
+  navToken?: boolean;
   price?: number | null;
   priceSource?: string;
   priceConfidence?: string | null;
@@ -57,8 +58,19 @@ export const PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
 };
 
 /** Guard against corrupted API prices that would break peg deviation calculations */
-export function isReasonablePrice(price: number, pegType: string | undefined, fxRates?: Record<string, number>): boolean {
-  if (!pegType) return price > 0 && price < 100_000;
+export function isReasonablePrice(
+  price: number,
+  pegType: string | undefined,
+  fxRates?: Record<string, number>,
+  opts?: { navToken?: boolean },
+): boolean {
+  if (!Number.isFinite(price) || price <= 0 || price >= 100_000) return false;
+
+  // NAV tokens (e.g. OUSG, USTB) are USD-denominated but not $1-pegged.
+  // They should bypass tight peg bounds while still rejecting absurd values.
+  if (opts?.navToken) return true;
+
+  if (!pegType) return true;
 
   // USD is the base currency — no FX rate, keep tight hardcoded bounds
   if (pegType.includes("USD")) {
@@ -249,8 +261,8 @@ export async function fetchDualPrimaryPrices(
         results.set(asset.id, { price: dl, source: "defillama+coingecko", confidence: "high", dlPrice: dl, cgPrice: cg });
         stats.high++;
       } else {
-        // Disagree — low confidence, use closer-to-peg if USD, else DL
-        const pegRef = asset.pegType?.includes("USD") ? 1.0 : null;
+        // Disagree — low confidence, use closer-to-peg if true USD peg, else DL
+        const pegRef = !asset.navToken && asset.pegType?.includes("USD") ? 1.0 : null;
         const chosen = pegRef != null ? (Math.abs(dl - pegRef) <= Math.abs(cg - pegRef) ? dl : cg) : dl;
         const chosenSource = chosen === dl ? "defillama" : "coingecko";
         results.set(asset.id, { price: chosen, source: chosenSource, confidence: "low", dlPrice: dl, cgPrice: cg });
@@ -522,7 +534,7 @@ export async function enrichMissingPrices(
               for (const m of cmcCandidates) {
                 const cmcEntry = bySlug.get(m.asset.cmcSlug!);
                 if (!cmcEntry) continue;
-                if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined, fxRates)) {
+                if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined, fxRates, { navToken: !!m.asset.navToken })) {
                   assets[m.index].price = cmcEntry.price;
                   passCmcCount++;
                 }
@@ -599,7 +611,7 @@ export async function enrichMissingPrices(
           continue;
         }
         // Sanity check: peg-type-aware range
-        if (isReasonablePrice(price, m.asset.pegType as string | undefined, fxRates)) {
+        if (isReasonablePrice(price, m.asset.pegType as string | undefined, fxRates, { navToken: !!m.asset.navToken })) {
           assets[m.index].price = price;
           pass4Count++;
         }

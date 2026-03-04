@@ -35,7 +35,7 @@ Do **not** multiply list endpoint values by price — that would double-convert 
 Before the enrichment pipeline runs, `fetchDualPrimaryPrices()` fetches prices from both the DefiLlama coins API and CoinGecko `/simple/price` **in parallel** for all assets with a valid `geckoId`. It cross-validates within 50 basis points:
 
 - **Both agree (≤50 bps)** → `priceConfidence: "high"`, use DL price
-- **Disagree (>50 bps)** → `priceConfidence: "low"`, use closer-to-peg value, log divergence
+- **Disagree (>50 bps)** → `priceConfidence: "low"`, use closer-to-peg value for true pegs (NAV tokens default to DL), log divergence
 - **One source down** → `priceConfidence: "single-source"`, use available
 - **Both down** → skip, falls through to enrichment pipeline
 
@@ -50,7 +50,7 @@ Each asset gets tagged with `priceConfidence` (high/single-source/low/fallback) 
 3. **Pass 2:** CoinGecko ID -> DefiLlama CoinGecko proxy
 4. **Pass 3:** CoinGecko ID -> CoinGecko direct API
 5. **Pass 3.5:** CoinMarketCap slug -> CMC quotes API (rate-limited to 1 call/hour via D1 cache timestamp)
-6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price bounds via `isReasonablePrice()`: e.g. $0.01–$1.19 for USD pegs, $100–$100K for gold, per-currency thresholds for other fiat pegs; capped at 10 searches per run)
+6. **Pass 4:** Symbol -> DexScreener search API (best-effort, filtered by >$50K liquidity, peg-type-aware price bounds via `isReasonablePrice()`: e.g. $0.01–$1.19 for true USD pegs, $100–$100K for gold, per-currency thresholds for other fiat pegs; NAV tokens bypass tight peg bounds and only require positive finite prices under $100K; capped at 10 searches per run)
 
 Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is also used in `syncDexLiquidity()` for DEX-implied price observations (separate from the search API used here for price enrichment).
 
@@ -61,7 +61,7 @@ Note: DexScreener's **batch token API** (`/tokens/v1/{chainId}/{addresses}`) is 
 The sync pipeline includes multiple layers of validation to prevent bad data from reaching users:
 
 1. **Structural validation**: DefiLlama response must contain `MIN_VALID_ASSET_COUNT` (50) assets with valid `id`, `name`, `symbol`, and `circulating` fields. Malformed objects are dropped before caching
-2. **Price validation ordering**: `isReasonablePrice()` rejects prices outside peg-type bounds **before** `savePriceCache()`, not after
+2. **Price validation ordering**: `isReasonablePrice()` rejects prices outside peg-type bounds **before** `savePriceCache()`, not after (`flags.navToken` assets are exempt from tight peg bounds and use broad positive-price sanity checks)
 3. **Concurrent cron guard**: `setCacheIfNewer()` uses a compare-and-swap pattern — a slow sync run can't overwrite a newer run's data. Uses `syncStartSec` as CAS guard. Applied to cache-writing crons such as stablecoins, stablecoin-charts, FX rates, bluechip ratings, and USDS status.
 4. **Detail JSON validation**: `stablecoin-detail.ts` parses response JSON before caching; skips cache on parse failure
 5. **fetchWithRetry**: Default 15s timeout prevents hanging Workers. Retries on 404 by default (configurable via `{ passthrough404: true }`, `{ timeoutMs: N }`)

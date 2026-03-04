@@ -64,6 +64,18 @@ describe("isReasonablePrice", () => {
     });
   });
 
+  describe("NAV token override", () => {
+    it("accepts high USD-denominated prices for NAV tokens", () => {
+      expect(isReasonablePrice(11.02, "peggedUSD", undefined, { navToken: true })).toBe(true);
+      expect(isReasonablePrice(113.4, "peggedUSD", undefined, { navToken: true })).toBe(true);
+    });
+
+    it("still rejects invalid NAV token prices", () => {
+      expect(isReasonablePrice(0, "peggedUSD", undefined, { navToken: true })).toBe(false);
+      expect(isReasonablePrice(100_000, "peggedUSD", undefined, { navToken: true })).toBe(false);
+    });
+  });
+
   // --- Non-USD pegs (hardcoded fallback) ---
 
   describe("EUR peg", () => {
@@ -483,6 +495,36 @@ describe("fetchDualPrimaryPrices", () => {
     expect(result.confidence).toBe("low");
     expect(stats.low).toBe(1);
     expect(stats.divergences.length).toBe(1);
+  });
+
+  it("does not force closer-to-$1 selection for NAV tokens during divergence", async () => {
+    const assets: PeggedAsset[] = [
+      { id: "1", name: "OUSG", symbol: "OUSG", geckoId: "ousg", pegType: "peggedUSD", navToken: true, circulating: {} },
+    ];
+
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (typeof url === "string" && url.includes("coins.llama.fi")) {
+        return new Response(JSON.stringify({
+          coins: { "coingecko:ousg": { price: 110 } },
+        }), { status: 200 });
+      }
+      if (typeof url === "string" && url.includes("coingecko.com")) {
+        return new Response(JSON.stringify({
+          ousg: { usd: 1.01 },
+        }), { status: 200 });
+      }
+      return new Response("Not found", { status: 404 });
+    }));
+
+    const db = makeTestDb();
+    const { results, stats } = await fetchDualPrimaryPrices(assets, db);
+
+    expect(results.size).toBe(1);
+    const result = results.get("1")!;
+    expect(result.confidence).toBe("low");
+    expect(result.source).toBe("defillama");
+    expect(result.price).toBe(110);
+    expect(stats.low).toBe(1);
   });
 
   it("returns single-source when only one API has data", async () => {
