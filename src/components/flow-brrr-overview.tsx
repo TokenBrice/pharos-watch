@@ -34,6 +34,7 @@ interface FlowSnapshot {
   trackedCoins: number;
   topMint: MintBurnCoinFlow | null;
   topBurn: MintBurnCoinFlow | null;
+  headline: string;
   brrText: string;
   leverPct: number;
   mode: PrinterMode;
@@ -45,6 +46,28 @@ function clamp(value: number, min: number, max: number): number {
 
 function formatSignedCurrency(value: number): string {
   return `${getNetPrefix(value)}${formatCurrency(value)}`;
+}
+
+function getHeadline(score: number | null, net24h: number, brrText: string): string {
+  if (score === null) {
+    return "Money printer calibrating";
+  }
+  if (score >= 85) {
+    return `Money printer go ${brrText}`;
+  }
+  if (score >= 45 && score < 55) {
+    return "Money printer on standby";
+  }
+  if (score < 30 || (score < 45 && net24h < 0)) {
+    return "Money shredder go BRRR";
+  }
+  if (score >= 70) {
+    return `Money printer go ${brrText}`;
+  }
+  if (score >= 55) {
+    return "Money printer warming up";
+  }
+  return "Money printer sputtering";
 }
 
 function getPrinterMode(score: number | null, net24h: number): PrinterMode {
@@ -142,6 +165,7 @@ function buildSnapshot(gauge: MintBurnGauge | null, coins: MintBurnCoinFlow[]): 
   const score = gauge?.score ?? null;
   const leverPct = score === null ? 50 : clamp(score, 0, 100);
   const rCount = score === null ? 4 : clamp(Math.round(leverPct / 7), 2, 14);
+  const brrText = `BR${"R".repeat(rCount)}`;
   const mode = getPrinterMode(score, net24h);
 
   return {
@@ -152,7 +176,8 @@ function buildSnapshot(gauge: MintBurnGauge | null, coins: MintBurnCoinFlow[]): 
     trackedCoins: gauge?.trackedCoins ?? coins.length,
     topMint,
     topBurn,
-    brrText: `BR${"R".repeat(rCount)}`,
+    headline: getHeadline(score, net24h, brrText),
+    brrText,
     leverPct,
     mode,
   };
@@ -175,19 +200,45 @@ function LoadingState() {
 
 function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
   const power = snapshot.score === null ? 0.28 : clamp(snapshot.leverPct / 100, 0.1, 1);
-  const surgeBoost = power > 0.7 ? (power - 0.7) / 0.3 : 0;
-  const sheetCount = clamp(Math.round(5 + power * 12 + surgeBoost * 18), 4, 35);
-  const baseDuration = clamp(2.2 - power * 1.4 - surgeBoost * 0.35, 0.42, 2.2);
-  const rollerDuration = clamp(1.6 - power * 1.0 - surgeBoost * 0.25, 0.34, 1.6);
-  const crankDuration = clamp(2.4 - power * 1.8 - surgeBoost * 0.45, 0.38, 2.4);
-  const glowOpacity = 0.2 + power * 0.55 + surgeBoost * 0.18;
-  const spreadX = 86 + Math.round(power * 42);
-  const riseBase = 42 + Math.round(power * 24);
-  const riseStep = 11 + Math.round(power * 5);
-  const durationStep = clamp(0.18 - power * 0.08, 0.06, 0.18);
-  const delayStep = clamp(0.16 - power * 0.09, 0.05, 0.16);
+  const easedPower = Math.pow(power, 1.45);
+  const surgeBoost = power > 0.72 ? Math.pow((power - 0.72) / 0.28, 1.15) : 0;
+  const stressFactor =
+    snapshot.score === null || snapshot.score >= 45
+      ? 0
+      : (45 - snapshot.score) / 45;
+  const isStressRegime = snapshot.score !== null && snapshot.score < 45;
+
+  const sheetCount = clamp(
+    Math.round(4 + easedPower * 9 + surgeBoost * 24 - stressFactor * 2),
+    3,
+    38,
+  );
+  const baseDuration = clamp(
+    2.35 - easedPower * 1.25 - surgeBoost * 0.48 + stressFactor * 0.24,
+    0.36,
+    2.45,
+  );
+  const rollerDuration = clamp(
+    1.85 - easedPower * 1.2 - surgeBoost * 0.34 + stressFactor * 0.2,
+    0.32,
+    1.95,
+  );
+  const crankDuration = clamp(2.8 - Math.pow(power, 1.9) * 2.3, 0.34, 2.8);
+  const crankKick = `${((1 - power) * 8.5).toFixed(2)}deg`;
+  const crankWobble = `${((1 - power) * 2.8).toFixed(2)}px`;
+  const isCrankChoppy = power < 0.58;
+
+  const glowOpacity = 0.2 + power * 0.55 + surgeBoost * 0.2;
+  const coneIntensity = Math.pow(power, 1.6);
+  const spreadX = 52 + Math.round(coneIntensity * 100 + surgeBoost * 32);
+  const riseBase = 26 + Math.round(coneIntensity * 58 + surgeBoost * 20);
+  const riseStep = 6 + Math.round(coneIntensity * 14);
+  const durationStep = clamp(0.22 - power * 0.1, 0.05, 0.22);
+  const delayStep = clamp(0.18 - power * 0.1, 0.04, 0.18);
   const emissionOffsetX = 16;
-  const spreadPattern = [-1, -0.82, -0.64, -0.46, -0.28, -0.1, 0, 0.1, 0.28, 0.46, 0.64, 0.82, 1];
+  const spreadPattern = power < 0.45
+    ? [-0.45, -0.28, -0.12, 0, 0.12, 0.28, 0.45]
+    : [-1, -0.82, -0.64, -0.46, -0.28, -0.1, 0, 0.1, 0.28, 0.46, 0.64, 0.82, 1];
 
   return (
     <div className="relative min-h-[280px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-4">
@@ -222,8 +273,15 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
 
         <div className="pointer-events-none absolute left-[calc(50%+94px)] top-[103px] h-3 w-3 rounded-full border border-slate-500/80 bg-slate-300/60" />
         <div
-          className="pointer-events-none absolute left-[calc(50%+97px)] top-[89px] h-10 w-10 origin-[2px_50%] printer-crank"
-          style={{ animationDuration: `${crankDuration.toFixed(2)}s` }}
+          className={cn(
+            "pointer-events-none absolute left-[calc(50%+97px)] top-[89px] h-10 w-10 origin-[2px_50%]",
+            isCrankChoppy ? "printer-crank-stutter" : "printer-crank",
+          )}
+          style={{
+            animationDuration: `${crankDuration.toFixed(2)}s`,
+            "--crank-kick": crankKick,
+            "--crank-wobble": crankWobble,
+          }}
         >
           <div className="absolute left-0 top-1/2 h-[3px] w-9 -translate-y-1/2 rounded bg-slate-300/85" />
           <div className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-500/80 bg-slate-200/90" />
@@ -232,9 +290,16 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
         <div className="pointer-events-none absolute left-1/2 top-[18px] h-14 w-24 -translate-x-1/2 rounded border border-slate-500/70 bg-gradient-to-b from-slate-300/70 to-slate-200/25" />
 
         {Array.from({ length: sheetCount }).map((_, i) => {
-          const dx = Math.round(spreadPattern[i % spreadPattern.length] * spreadX);
-          const dy = riseBase + (i % 8) * riseStep;
-          const rot = -28 + (i % 8) * 8;
+          const seed = Math.abs(Math.sin((i + 1) * 12.9898) * 43758.5453);
+          const chaos = seed - Math.floor(seed);
+          const dxJitter = Math.round((chaos - 0.5) * (6 + power * 28 + surgeBoost * 18));
+          const dyJitter = Math.round((chaos - 0.5) * (8 + power * 16));
+          const rot = -28 + (i % 8) * 8 + Math.round((chaos - 0.5) * (12 + surgeBoost * 14));
+          const dx = Math.round(spreadPattern[i % spreadPattern.length] * spreadX) + dxJitter;
+          const dy = riseBase + (i % 8) * riseStep + dyJitter;
+          const misfeed = isStressRegime && i % (snapshot.score !== null && snapshot.score < 30 ? 4 : 6) === 0;
+          const misfeedDrop = `${(22 + stressFactor * 56 + (i % 3) * 12).toFixed(0)}px`;
+          const misfeedDx = `${Math.round((chaos - 0.5) * 44)}px`;
           const style: CSSProperties = {
             left: `calc(50% + ${emissionOffsetX}px)`,
             animationDuration: `${(baseDuration + (i % 6) * durationStep).toFixed(2)}s`,
@@ -242,12 +307,18 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
             "--paper-dx": `${dx}px`,
             "--paper-dy": `${dy}px`,
             "--paper-rot": `${rot}deg`,
+            "--misfeed-drop": misfeedDrop,
+            "--misfeed-dx": misfeedDx,
+            "--misfeed-rot": `${Math.round(rot * 0.45)}deg`,
           };
 
           return (
             <div
               key={i}
-              className="pointer-events-none absolute top-[92px] flex h-5 w-9 -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950 paper-fly"
+              className={cn(
+                "pointer-events-none absolute top-[92px] flex h-5 w-9 -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
+                misfeed ? "paper-misfeed" : "paper-fly",
+              )}
               style={style}
             >
               <Banknote className="h-3 w-3" />
@@ -304,6 +375,16 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
           animation-timing-function: linear;
           animation-iteration-count: infinite;
         }
+        .printer-crank-stutter {
+          animation-name: crank-stutter;
+          animation-timing-function: cubic-bezier(0.55, 0.02, 0.64, 0.96);
+          animation-iteration-count: infinite;
+        }
+        .paper-misfeed {
+          animation-name: paper-misfeed;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
 
         @keyframes paper-fly {
           0% {
@@ -351,6 +432,57 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
             transform: rotate(360deg);
           }
         }
+
+        @keyframes crank-stutter {
+          0% {
+            transform: translateY(0) rotate(0deg);
+          }
+          10% {
+            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(34deg + var(--crank-kick)));
+          }
+          16% {
+            transform: translateY(0) rotate(calc(22deg - var(--crank-kick)));
+          }
+          30% {
+            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(112deg + var(--crank-kick)));
+          }
+          36% {
+            transform: translateY(0) rotate(calc(98deg - var(--crank-kick)));
+          }
+          52% {
+            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(204deg + var(--crank-kick)));
+          }
+          58% {
+            transform: translateY(0) rotate(calc(188deg - var(--crank-kick)));
+          }
+          74% {
+            transform: translateY(calc(var(--crank-wobble) * -1)) rotate(calc(294deg + var(--crank-kick)));
+          }
+          80% {
+            transform: translateY(0) rotate(calc(280deg - var(--crank-kick)));
+          }
+          100% {
+            transform: translateY(0) rotate(360deg);
+          }
+        }
+
+        @keyframes paper-misfeed {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, 0) scale(0.68) rotate(0deg);
+          }
+          14% {
+            opacity: 1;
+          }
+          46% {
+            opacity: 1;
+            transform: translate(calc(-50% + var(--misfeed-dx)), 16px) scale(0.86) rotate(var(--misfeed-rot));
+          }
+          100% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--misfeed-dx)), var(--misfeed-drop)) scale(0.8) rotate(var(--misfeed-rot));
+          }
+        }
       `}</style>
     </div>
   );
@@ -383,7 +515,7 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
         <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
           <div className="space-y-4">
             <h3 className={cn("text-3xl font-black tracking-tight sm:text-5xl", snapshot.mode.headlineClass)}>
-              Money printer go {snapshot.brrText}
+              {snapshot.headline}
             </h3>
             <p className="text-sm text-muted-foreground">{snapshot.mode.description}</p>
 
