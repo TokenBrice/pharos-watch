@@ -40,6 +40,8 @@ interface FlowSnapshot {
   mode: PrinterMode;
 }
 
+type CssVarStyle = CSSProperties & Record<`--${string}`, string | number>;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -239,6 +241,11 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
   const spreadPattern = power < 0.45
     ? [-0.45, -0.28, -0.12, 0, 0.12, 0.28, 0.45]
     : [-1, -0.82, -0.64, -0.46, -0.28, -0.1, 0, 0.1, 0.28, 0.46, 0.64, 0.82, 1];
+  const crankStyle: CssVarStyle = {
+    animationDuration: `${crankDuration.toFixed(2)}s`,
+    "--crank-kick": crankKick,
+    "--crank-wobble": crankWobble,
+  };
 
   return (
     <div className="relative min-h-[280px] overflow-hidden rounded-xl border border-border/60 bg-background/40 p-4">
@@ -277,11 +284,7 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
             "pointer-events-none absolute left-[calc(50%+97px)] top-[89px] h-10 w-10 origin-[2px_50%]",
             isCrankChoppy ? "printer-crank-stutter" : "printer-crank",
           )}
-          style={{
-            animationDuration: `${crankDuration.toFixed(2)}s`,
-            "--crank-kick": crankKick,
-            "--crank-wobble": crankWobble,
-          }}
+          style={crankStyle}
         >
           <div className="absolute left-0 top-1/2 h-[3px] w-9 -translate-y-1/2 rounded bg-slate-300/85" />
           <div className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-slate-500/80 bg-slate-200/90" />
@@ -300,7 +303,7 @@ function PrinterScene({ snapshot }: { snapshot: FlowSnapshot }) {
           const misfeed = isStressRegime && i % (snapshot.score !== null && snapshot.score < 30 ? 4 : 6) === 0;
           const misfeedDrop = `${(22 + stressFactor * 56 + (i % 3) * 12).toFixed(0)}px`;
           const misfeedDx = `${Math.round((chaos - 0.5) * 44)}px`;
-          const style: CSSProperties = {
+          const style: CssVarStyle = {
             left: `calc(50% + ${emissionOffsetX}px)`,
             animationDuration: `${(baseDuration + (i % 6) * durationStep).toFixed(2)}s`,
             animationDelay: `${(-i * delayStep).toFixed(2)}s`,
