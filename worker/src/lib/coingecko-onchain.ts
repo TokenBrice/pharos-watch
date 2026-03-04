@@ -8,6 +8,7 @@ import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
 import { CG_CHAIN_MAP, CG_CHAIN_REVERSE } from "./chain-registry";
 import { RATE_LIMITS } from "./rate-limits";
+import { sleepWithSignal } from "./abort";
 
 // Re-export for downstream consumers
 export { CG_CHAIN_MAP, CG_CHAIN_REVERSE };
@@ -73,9 +74,9 @@ export interface CgToken {
 // ---------------------------------------------------------------------------
 
 /** Rate-limit helper: wait between requests */
-export async function onchainRateLimit(requestCount: number): Promise<void> {
+export async function onchainRateLimit(requestCount: number, signal?: AbortSignal): Promise<void> {
   if (requestCount > 0) {
-    await new Promise((r) => setTimeout(r, RATE_LIMITS.COINGECKO_ONCHAIN_MS));
+    await sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
   }
 }
 

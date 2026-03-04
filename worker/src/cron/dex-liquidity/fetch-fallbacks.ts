@@ -4,6 +4,7 @@ import { USER_AGENT } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP } from "../../lib/dexscreener";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
+import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
 import { normalizeProtocol } from "./pool-helpers";
 import {
@@ -42,11 +43,12 @@ export async function fetchDsFallbackPools(
   for (const meta of TRACKED_STABLECOINS) {
     if (!zeroCoinIds.has(meta.id)) continue;
     if (!meta.contracts?.length) continue;
+    throwIfAborted(signal);
 
     for (const contract of meta.contracts) {
       if (!DS_CHAIN_MAP[contract.chain]) continue;
 
-      if (requests > 0) await dsRateLimit();
+      if (requests > 0) await dsRateLimit(signal);
       requests++;
 
       const pairs = await fetchDsTokenPools(contract.chain, contract.address, signal);
@@ -158,6 +160,7 @@ export async function fetchCgTickersFallback(
   console.log(`[dex-liquidity] CG tickers fallback: querying ${targetCoins.length} coins`);
 
   for (const meta of targetCoins) {
+    throwIfAborted(signal);
     try {
       const url = cgUrl(`/coins/${meta.geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`);
       const timeout = AbortSignal.timeout(10_000);
@@ -166,7 +169,7 @@ export async function fetchCgTickersFallback(
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
       if (!res?.ok) {
-        await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));
+        await sleepWithSignal(CG_TICKERS_RATE_MS, signal);
         continue;
       }
 
@@ -183,7 +186,7 @@ export async function fetchCgTickersFallback(
       });
 
       if (valid.length === 0) {
-        await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));
+        await sleepWithSignal(CG_TICKERS_RATE_MS, signal);
         continue;
       }
 
@@ -244,8 +247,9 @@ export async function fetchCgTickersFallback(
         );
       }
 
-      await new Promise((r) => setTimeout(r, CG_TICKERS_RATE_MS));
+      await sleepWithSignal(CG_TICKERS_RATE_MS, signal);
     } catch (err) {
+      if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] CG tickers fallback error for ${meta.symbol}:`, err);
     }
   }

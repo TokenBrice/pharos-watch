@@ -1,5 +1,6 @@
 import { initOnchainAvailability, isOnchainAvailable } from "../../lib/coingecko-onchain";
 import type { CronResult } from "../../lib/db";
+import { throwIfAborted } from "../../lib/abort";
 import type { CgNewPool, GtNewPool, DexPriceObs } from "./types";
 import { buildSymbolLookups } from "./pool-helpers";
 import {
@@ -13,16 +14,28 @@ import { processPoolMetrics } from "./process-pools";
 import { computeStablecoinScores, computeDepthStability, computeDexPrices } from "./scoring";
 import { persistScores, writeHistoricalSnapshots } from "./persistence";
 
+function rethrowIfAborted(err: unknown, signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    if (signal.reason instanceof Error) throw signal.reason;
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+  if (typeof err === "object" && err !== null && "name" in err && (err as { name?: string }).name === "AbortError") {
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+}
+
 export async function syncDexLiquidity(
   db: D1Database,
   graphApiKey: string | null,
   cgApiKey: string | null = null,
   signal?: AbortSignal,
 ): Promise<CronResult> {
+  const syncStartSec = Math.floor(Date.now() / 1000);
   initOnchainAvailability(cgApiKey ?? undefined);
   const useCg = isOnchainAvailable();
   console.log(`[dex-liquidity] Starting sync`);
   console.log(`[dex-liquidity] Pool discovery source: ${useCg ? "CoinGecko onchain" : "GeckoTerminal fallback"}`);
+  throwIfAborted(signal);
 
   // 1. Fetch all external data sources
   const dataSources = await fetchDataSources(graphApiKey, db, signal);
@@ -57,6 +70,7 @@ export async function syncDexLiquidity(
     aerodromePriceObs = aeroData.aerodromePriceObs;
     aerodromeIsStable = aeroData.aerodromeIsStable;
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
   }
 
@@ -73,6 +87,7 @@ export async function syncDexLiquidity(
       ? await fetchCgTokenBatchPrices(addressToId, signal)
       : await fetchGtTokenBatch(addressToId, signal);
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} token batch failed (non-fatal):`, err);
   }
 
@@ -90,6 +105,7 @@ export async function syncDexLiquidity(
       crawlPriceObs = gtResult.priceObs;
     }
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} pool crawl failed (non-fatal):`, err);
   }
 
@@ -139,6 +155,7 @@ export async function syncDexLiquidity(
       priceObservations.set(id, existing);
     }
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] DexScreener fallback failed (non-fatal):", err);
   }
 
@@ -152,24 +169,51 @@ export async function syncDexLiquidity(
       priceObservations.set(id, existing);
     }
   } catch (err) {
+    rethrowIfAborted(err, signal);
     console.warn("[dex-liquidity] CG tickers fallback failed (non-fatal):", err);
   }
 
   // 6. Compute composite scores per stablecoin
   const { scores: scoreResults, globalAgg } = await computeStablecoinScores(db, metrics, dataSources.protocolTvlCaps);
+  const currentCoverage = scoreResults.size;
+  const previousCoverageRow = await db
+    .prepare("SELECT COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__' AND liquidity_score IS NOT NULL")
+    .first<{ cnt: number }>()
+    .catch(() => null);
+  const previousCoverage = previousCoverageRow?.cnt ?? 0;
+  const minExpectedCoverage = Math.max(1, Math.floor(previousCoverage * 0.6));
+  if (previousCoverage >= 10 && currentCoverage < minExpectedCoverage) {
+    throw new Error(
+      `[dex-liquidity] coverage guard tripped: current=${currentCoverage}, previous=${previousCoverage}, minExpected=${minExpectedCoverage}`,
+    );
+  }
+  throwIfAborted(signal);
 
-  // 7. Persist scores to D1
-  const nowSec = Math.floor(Date.now() / 1000);
-  await persistScores(db, metrics, scoreResults, globalAgg, nowSec);
+  // 7. Persist primary tables atomically so partial failures never leave split state.
+  let txOpen = false;
+  try {
+    await db.prepare("BEGIN IMMEDIATE").run();
+    txOpen = true;
+    await persistScores(db, metrics, scoreResults, globalAgg, syncStartSec);
+    await computeDexPrices(db, priceObservations, syncStartSec);
+    await db.prepare("COMMIT").run();
+    txOpen = false;
+  } catch (err) {
+    if (txOpen) {
+      try {
+        await db.prepare("ROLLBACK").run();
+      } catch (rollbackErr) {
+        console.error("[dex-liquidity] Failed to rollback transaction:", rollbackErr);
+      }
+    }
+    throw err;
+  }
 
   // 8. Write daily historical snapshots
   await writeHistoricalSnapshots(db, scoreResults);
 
   // 9. Compute and persist depth stability from 30-day history
   await computeDepthStability(db);
-
-  // 10. Compute and persist DEX-implied prices from ALL observations
-  await computeDexPrices(db, priceObservations, nowSec);
 
   return {
     itemCount: scoreResults.size,
@@ -180,6 +224,8 @@ export async function syncDexLiquidity(
       sourceCoverage: {
         dlYieldsAvailable: dataSources.dlYieldsAvailable,
         dlProtocolsAvailable: dataSources.dlProtocolsAvailable,
+        currentCoverage,
+        previousCoverage,
         priceObservationCoins: priceObservations.size,
       },
       fallbackMode: dataSources.dlYieldsAvailable ? null : (useCg ? "cg-crawl-primary" : "gt-crawl-primary"),

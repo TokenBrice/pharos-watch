@@ -78,7 +78,10 @@ function WorkedExample({
   summary: string;
 }) {
   return (
-    <details className="rounded-lg border border-border/60 bg-background/80">
+    <details
+      data-methodology-worked-example="true"
+      className="rounded-lg border border-border/60 bg-background/80"
+    >
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">{summary}</summary>
       <div className="space-y-2 px-4 pb-4 text-xs text-muted-foreground leading-relaxed">{children}</div>
     </details>

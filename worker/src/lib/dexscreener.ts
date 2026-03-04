@@ -7,6 +7,7 @@ import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
 import { DS_CHAIN_MAP } from "./chain-registry";
 import { RATE_LIMITS } from "./rate-limits";
+import { sleepWithSignal } from "./abort";
 
 // Re-export for downstream consumers
 export { DS_CHAIN_MAP };
@@ -56,6 +57,6 @@ export async function fetchDsTokenPools(
 }
 
 /** Rate-limit sleep between DexScreener calls */
-export function dsRateLimit(): Promise<void> {
-  return new Promise((r) => setTimeout(r, RATE_LIMITS.DEXSCREENER_MS));
+export function dsRateLimit(signal?: AbortSignal): Promise<void> {
+  return sleepWithSignal(RATE_LIMITS.DEXSCREENER_MS, signal);
 }

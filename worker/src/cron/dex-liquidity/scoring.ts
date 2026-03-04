@@ -290,84 +290,90 @@ export async function computeDexPrices(
   priceObservations: Map<string, DexPriceObs[]>,
   nowSec: number,
 ): Promise<void> {
-  try {
-    if (priceObservations.size === 0) return;
+  if (priceObservations.size === 0) return;
 
-    // Load primary prices from stablecoins cache for comparison
-    const primaryPrices = new Map<string, number>();
-    const cached = await getCache(db, "stablecoins");
-    if (cached) {
-      try {
-        const { peggedAssets } = JSON.parse(cached.value) as { peggedAssets: { id: string; price?: number | null }[] };
-        for (const a of peggedAssets) {
-          if (a.price != null && typeof a.price === "number" && a.price > 0) {
-            primaryPrices.set(a.id, a.price);
-          }
-        }
-      } catch { /* ignore malformed cache */ }
-    }
-
-    const priceStmts: D1PreparedStatement[] = [];
-    for (const [id, observations] of priceObservations) {
-      if (observations.length === 0) continue;
-
-      // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
-      observations.sort((a, b) => a.price - b.price);
-      const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
-      const halfTvl = totalTvl / 2;
-      let cumTvl = 0;
-      let medianPrice = observations[0].price;
-      for (const obs of observations) {
-        cumTvl += obs.tvl;
-        if (cumTvl >= halfTvl) {
-          medianPrice = obs.price;
-          break;
+  // Load primary prices from stablecoins cache for comparison
+  const primaryPrices = new Map<string, number>();
+  const cached = await getCache(db, "stablecoins");
+  if (cached) {
+    try {
+      const { peggedAssets } = JSON.parse(cached.value) as { peggedAssets: { id: string; price?: number | null }[] };
+      for (const a of peggedAssets) {
+        if (a.price != null && typeof a.price === "number" && a.price > 0) {
+          primaryPrices.set(a.id, a.price);
         }
       }
+    } catch { /* ignore malformed cache */ }
+  }
 
-      // Compute deviation from primary price
-      const primaryPrice = primaryPrices.get(id);
-      let deviationBps: number | null = null;
-      if (primaryPrice != null && primaryPrice > 0) {
-        deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
+  const priceStmts: D1PreparedStatement[] = [];
+  for (const [id, observations] of priceObservations) {
+    if (observations.length === 0) continue;
+
+    // TVL-weighted median: sort by price, walk until cumulative TVL crosses 50%
+    observations.sort((a, b) => a.price - b.price);
+    const totalTvl = observations.reduce((s, o) => s + o.tvl, 0);
+    const halfTvl = totalTvl / 2;
+    let cumTvl = 0;
+    let medianPrice = observations[0].price;
+    for (const obs of observations) {
+      cumTvl += obs.tvl;
+      if (cumTvl >= halfTvl) {
+        medianPrice = obs.price;
+        break;
       }
-
-      // Top 5 sources by TVL for transparency (spread to avoid mutating price-sorted array)
-      const topSources = [...observations]
-        .sort((a, b) => b.tvl - a.tvl)
-        .slice(0, 5)
-        .map((o) => ({ protocol: o.protocol, chain: o.chain, price: o.price, tvl: o.tvl }));
-
-      const meta = TRACKED_STABLECOINS.find((s) => s.id === id);
-      const symbol = meta?.symbol ?? id;
-
-      priceStmts.push(
-        db
-          .prepare(
-            `INSERT OR REPLACE INTO dex_prices
-              (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
-               deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .bind(
-            id,
-            symbol,
-            Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
-            observations.length,
-            Math.round(totalTvl),
-            deviationBps,
-            primaryPrice ?? null,
-            JSON.stringify(topSources),
-            nowSec
-          )
-      );
     }
 
-    if (priceStmts.length > 0) {
-      await batchExecute(db, priceStmts);
-      console.log(`[dex-liquidity] Wrote ${priceStmts.length} DEX price observations to dex_prices`);
+    // Compute deviation from primary price
+    const primaryPrice = primaryPrices.get(id);
+    let deviationBps: number | null = null;
+    if (primaryPrice != null && primaryPrice > 0) {
+      deviationBps = Math.round(((medianPrice / primaryPrice) - 1) * 10000);
     }
-  } catch (err) {
-    console.warn("[dex-liquidity] DEX price extraction failed:", err);
+
+    // Top 5 sources by TVL for transparency (spread to avoid mutating price-sorted array)
+    const topSources = [...observations]
+      .sort((a, b) => b.tvl - a.tvl)
+      .slice(0, 5)
+      .map((o) => ({ protocol: o.protocol, chain: o.chain, price: o.price, tvl: o.tvl }));
+
+    const meta = TRACKED_STABLECOINS.find((s) => s.id === id);
+    const symbol = meta?.symbol ?? id;
+
+    priceStmts.push(
+      db
+        .prepare(
+          `INSERT INTO dex_prices
+            (stablecoin_id, symbol, dex_price_usd, source_pool_count, source_total_tvl,
+             deviation_from_primary_bps, primary_price_at_calc, price_sources_json, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(stablecoin_id) DO UPDATE SET
+            symbol = excluded.symbol,
+            dex_price_usd = excluded.dex_price_usd,
+            source_pool_count = excluded.source_pool_count,
+            source_total_tvl = excluded.source_total_tvl,
+            deviation_from_primary_bps = excluded.deviation_from_primary_bps,
+            primary_price_at_calc = excluded.primary_price_at_calc,
+            price_sources_json = excluded.price_sources_json,
+            updated_at = excluded.updated_at
+          WHERE dex_prices.updated_at <= excluded.updated_at`
+        )
+        .bind(
+          id,
+          symbol,
+          Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
+          observations.length,
+          Math.round(totalTvl),
+          deviationBps,
+          primaryPrice ?? null,
+          JSON.stringify(topSources),
+          nowSec
+        )
+    );
+  }
+
+  if (priceStmts.length > 0) {
+    await batchExecute(db, priceStmts);
+    console.log(`[dex-liquidity] Wrote ${priceStmts.length} DEX price observations to dex_prices`);
   }
 }

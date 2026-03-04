@@ -6,20 +6,14 @@ type MethodologyMode = "reader" | "analyst";
 
 const STORAGE_KEY = "pharos.methodology.mode";
 const DETAILS_SELECTOR = 'details[data-methodology-details="true"]';
-const PRIMARY_SELECTOR = 'details[data-methodology-primary="true"]';
+const WORKED_EXAMPLE_SELECTOR = 'details[data-methodology-worked-example="true"]';
+const MODE_CONTROLLED_SELECTOR = `${DETAILS_SELECTOR}, ${WORKED_EXAMPLE_SELECTOR}`;
 
 function applyMethodologyMode(mode: MethodologyMode) {
-  const details = document.querySelectorAll<HTMLDetailsElement>(DETAILS_SELECTOR);
+  const details = document.querySelectorAll<HTMLDetailsElement>(MODE_CONTROLLED_SELECTOR);
 
   for (const detail of details) {
     detail.open = mode === "analyst";
-  }
-
-  if (mode === "reader") {
-    const primary = document.querySelector<HTMLDetailsElement>(PRIMARY_SELECTOR);
-    if (primary) {
-      primary.open = true;
-    }
   }
 }
 
@@ -36,6 +30,7 @@ export function MethodologyModeToggle() {
   }, [mode]);
 
   const setAndApplyMode = useCallback((nextMode: MethodologyMode) => {
+    applyMethodologyMode(nextMode);
     setMode(nextMode);
     window.localStorage.setItem(STORAGE_KEY, nextMode);
   }, []);

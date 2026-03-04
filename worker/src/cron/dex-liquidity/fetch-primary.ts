@@ -9,6 +9,7 @@ import {
 import { GT_CHAIN_REVERSE } from "../../lib/chain-registry";
 import { RATE_LIMITS } from "../../lib/rate-limits";
 import { GT_API_BASE, USD_REFERENCE_SYMBOLS } from "../../lib/dex-constants";
+import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type {
   LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
   DataSources, CurveLookups, UniV3Lookups, AerodromeLookups,
@@ -41,15 +42,20 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
 
   // --- DL Yields (consume body to release connection) ---
   let pools: LlamaPool[] = [];
+  const fallbackDexProjects = new Set<string>();
   let dlYieldsAvailable = false;
 
   if (dlYieldsAllowed) {
     if (llamaRes?.ok) {
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
       const llamaData = (await llamaRes.json()) as { data: LlamaPool[] };
       if (llamaData.data && llamaData.data.length >= 1000) {
+        await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
         pools = llamaData.data;
         dlYieldsAvailable = true;
+        for (const pool of pools) {
+          if (!pool.project || pool.exposure === "single") continue;
+          fallbackDexProjects.add(pool.project);
+        }
         console.log(`[dex-liquidity] Got ${pools.length} pools from DeFiLlama yields`);
 
         // Cache minimal stablecoin pool data for yield sync (avoids redundant 13MB re-fetch)
@@ -67,6 +73,7 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           console.warn("[dex-liquidity] Failed to cache stablecoin pools for yield sync:", e);
         }
       } else {
+        await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
         console.warn(`[dex-liquidity] DeFiLlama returned only ${llamaData.data?.length ?? 0} pools — degraded mode`);
       }
     } else {
@@ -84,7 +91,6 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
 
   if (dlProtocolsAllowed) {
     if (protocolsRes?.ok) {
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, true);
       const protocols = (await protocolsRes.json()) as {
         slug: string;
         category?: string;
@@ -103,14 +109,26 @@ export async function fetchDataSources(graphApiKey: string | null, db: D1Databas
           protocolTvlCaps.set(norm, (protocolTvlCaps.get(norm) ?? 0) + p.tvl);
         }
       }
-      dlProtocolsAvailable = true;
-      console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`);
+      dlProtocolsAvailable = dexProjects.size > 0;
+      await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, dlProtocolsAvailable);
+      if (dlProtocolsAvailable) {
+        console.log(`[dex-liquidity] Indexed ${dexProjects.size} active DEX projects, ${protocolTvlCaps.size} with TVL caps`);
+      } else {
+        console.warn("[dex-liquidity] DeFiLlama protocols response had zero active DEX projects — degraded");
+      }
     } else {
       console.warn("[dex-liquidity] DeFiLlama protocols fetch failed — dead-protocol filtering degraded");
       await recordOutcome(db, CIRCUIT_SOURCE.DL_PROTOCOLS, false);
     }
   } else {
     console.warn("[dex-liquidity] DL protocols circuit open — dead-protocol filtering degraded");
+  }
+
+  if (dexProjects.size === 0 && fallbackDexProjects.size > 0) {
+    for (const project of fallbackDexProjects) dexProjects.add(project);
+    console.warn(
+      `[dex-liquidity] Using fallback DEX project set from yields (${dexProjects.size} projects) because protocol index is unavailable`,
+    );
   }
 
   // Now safe to start Curve batch — DL connections are released (max 4 concurrent)
@@ -386,6 +404,7 @@ export async function fetchUniV3Data(
       }
       console.log(`[dex-liquidity] Indexed ${subPools.length} Uni V3 pools from ${chain} subgraph (${priceObsCount} price obs)`);
     } catch (err) {
+      if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] Uni V3 subgraph error for ${chain}:`, err);
     }
   }
@@ -499,6 +518,7 @@ export async function fetchAerodromeData(
       }
       console.log(`[dex-liquidity] Indexed ${pairs.length} Aerodrome pairs from ${chain} subgraph (${obsCount} price obs)`);
     } catch (err) {
+      if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] Aerodrome subgraph error for ${chain}:`, err);
     }
   }
@@ -517,11 +537,12 @@ export function buildKnownPoolAddresses(
 ): Set<string> {
   const known = new Set<string>();
   let fingerprintCount = 0;
+  const enforceDexProjectFilter = dexProjects.size > 0;
 
   // DeFiLlama pools (all matched DEX pools)
   for (const pool of pools) {
     if (!pool.tvlUsd || pool.tvlUsd < 10_000) continue;
-    if (!dexProjects.has(pool.project)) continue;
+    if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue;
     if (pool.exposure === "single") continue;
     // UUID-based key (DL uses UUIDs, not on-chain addresses)
     const key = `${pool.chain.toLowerCase()}:${pool.pool.toLowerCase()}`;
@@ -589,6 +610,7 @@ export async function fetchGtTokenBatch(
   let requestCount = 0;
 
   for (const [gtChain, tokens] of chainAddresses) {
+    throwIfAborted(signal);
     const ourChain = GT_CHAIN_REVERSE[gtChain] ?? gtChain;
 
     // Batch into groups of 30 (GT limit for multi endpoint)
@@ -597,7 +619,7 @@ export async function fetchGtTokenBatch(
       const addresses = batch.map((t) => t.address).join(",");
 
       if (requestCount > 0) {
-        await new Promise((r) => setTimeout(r, RATE_LIMITS.GECKO_TERMINAL_MS));
+        await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
       }
       requestCount++;
 
@@ -630,6 +652,7 @@ export async function fetchGtTokenBatch(
           priceObs.set(stablecoinId, obs);
         }
       } catch (err) {
+        if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] GT token batch error for ${gtChain}:`, err);
       }
     }
@@ -650,6 +673,7 @@ export async function fetchCgTokenBatchPrices(
   let requestCount = 0;
 
   for (const [cgChain, tokens] of chainAddresses) {
+    throwIfAborted(signal);
     const ourChain = getActiveChainReverse()[cgChain] ?? cgChain;
 
     // Batch into groups of 30 (CG limit for multi endpoint)
@@ -657,7 +681,7 @@ export async function fetchCgTokenBatchPrices(
       const batch = tokens.slice(i, i + 30);
       const addresses = batch.map((t) => t.address);
 
-      await onchainRateLimit(requestCount);
+      await onchainRateLimit(requestCount, signal);
       requestCount++;
 
       try {
@@ -680,6 +704,7 @@ export async function fetchCgTokenBatchPrices(
           priceObs.set(stablecoinId, obs);
         }
       } catch (err) {
+        if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] CG token batch error for ${cgChain}:`, err);
       }
     }

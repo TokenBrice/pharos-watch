@@ -1,3 +1,5 @@
+import { sleepWithSignal, throwIfAborted } from "./abort";
+
 /**
  * Fetch with retry and exponential backoff.
  * Respects Retry-After header on 429 responses.
@@ -14,12 +16,14 @@ export async function fetchWithRetry(
 ): Promise<Response | null> {
   const passthrough404 = options?.passthrough404 ?? false;
   const timeoutMs = options?.timeoutMs ?? 15_000;
+  const signal = opts?.signal ?? undefined;
 
   for (let i = 0; i <= maxRetries; i++) {
+    throwIfAborted(signal);
     try {
       const perRequestTimeout = AbortSignal.timeout(timeoutMs);
-      const combinedSignal = opts?.signal
-        ? AbortSignal.any([opts.signal, perRequestTimeout])
+      const combinedSignal = signal
+        ? AbortSignal.any([signal, perRequestTimeout])
         : perRequestTimeout;
       const res = await fetch(url, {
         ...opts,
@@ -34,17 +38,20 @@ export async function fetchWithRetry(
         const waitMs = waitSec > 0 && waitSec <= 120 ? waitSec * 1000 : 5000;
         console.warn(`[fetch-retry] ${url} rate-limited (429), waiting ${waitMs}ms`);
         await res.body?.cancel();
-        await new Promise((r) => setTimeout(r, waitMs));
+        await sleepWithSignal(waitMs, signal);
         continue;
       }
 
       console.warn(`[fetch-retry] ${url} returned ${res.status} (attempt ${i + 1}/${maxRetries + 1})`);
       await res.body?.cancel();
     } catch (err) {
+      if (signal?.aborted) {
+        throw err instanceof Error ? err : new Error(String(err));
+      }
       console.warn(`[fetch-retry] ${url} failed (attempt ${i + 1}/${maxRetries + 1}):`, err);
     }
     if (i < maxRetries) {
-      await new Promise((r) => setTimeout(r, 1000 * 2 ** i));
+      await sleepWithSignal(1000 * 2 ** i, signal);
     }
   }
   return null;

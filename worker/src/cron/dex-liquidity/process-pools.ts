@@ -19,10 +19,14 @@ export function processPoolMetrics(
   aerodromeIsStable: Map<string, boolean>,
 ): Map<string, LiquidityMetrics> {
   const metrics = new Map<string, LiquidityMetrics>();
+  const enforceDexProjectFilter = dexProjects.size > 0;
+  if (!enforceDexProjectFilter) {
+    console.warn("[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run");
+  }
 
   for (const pool of pools) {
     if (!pool.tvlUsd || pool.tvlUsd < 10_000 || pool.tvlUsd > 1e12) continue; // Skip dust and corrupt values
-    if (!dexProjects.has(pool.project)) continue; // Only count DEX pools
+    if (enforceDexProjectFilter && !dexProjects.has(pool.project)) continue; // Only count DEX pools
     if (BLOCKED_DEX_IDS.has(pool.project)) continue; // Skip explicitly blocked dead DEXes
     // v2: skip lending pools (single-asset exposure, not DEX liquidity)
     if (pool.exposure === "single") continue;

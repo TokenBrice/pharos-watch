@@ -8,6 +8,7 @@ import {
 import { GT_CHAIN_REVERSE } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limits";
 import { GT_API_BASE, QUALITY_MULTIPLIERS, BLOCKED_DEX_IDS } from "../../lib/dex-constants";
+import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type {
   LiquidityMetrics, DexPriceObs, GtPool,
   GtCrawlResult, GtNewPool, CgNewPool,
@@ -42,7 +43,8 @@ export async function fetchCgPools(
   }
 
   for (const { cgChain, ourChain, address, stablecoinId } of allTokens) {
-    await onchainRateLimit(stats.requests);
+    throwIfAborted(signal);
+    await onchainRateLimit(stats.requests, signal);
     stats.requests++;
 
     try {
@@ -170,6 +172,7 @@ export async function fetchCgPools(
         stats.poolsNew++;
       }
     } catch (err) {
+      if (signal?.aborted) throw err;
       console.warn(`[dex-liquidity] CG pool crawl error for ${ourChain}:${address}:`, err);
     }
   }
@@ -301,6 +304,7 @@ export async function fetchGtPools(
   }
 
   for (const { gtChain, ourChain, address, stablecoinId } of allTokens) {
+    throwIfAborted(signal);
     // Time budget check — stop crawling to leave time for scoring + DB writes
     if (Date.now() - startMs > CRAWL_BUDGETS.GECKO_TERMINAL_MS) {
       console.log(
@@ -311,7 +315,7 @@ export async function fetchGtPools(
     }
 
     if (stats.requests > 0) {
-      await new Promise((r) => setTimeout(r, RATE_LIMITS.GECKO_TERMINAL_MS));
+      await sleepWithSignal(RATE_LIMITS.GECKO_TERMINAL_MS, signal);
     }
     stats.requests++;
 
@@ -426,6 +430,7 @@ export async function fetchGtPools(
           stats.poolsNew++;
         }
       } catch (err) {
+        if (signal?.aborted) throw err;
         console.warn(`[dex-liquidity] GT pool crawl error for ${ourChain}:${address}:`, err);
       }
   }
