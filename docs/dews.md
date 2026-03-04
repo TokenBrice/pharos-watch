@@ -224,50 +224,9 @@ Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) 
 
 ---
 
-## Telegram Alerts
+## Alerting
 
-When DEWS detects a coin **entering** the WARNING or DANGER band, a Telegram alert is posted to the Pharos channel.
+DEWS currently has no dedicated outbound alert transport. Signals are surfaced via:
 
-### Trigger conditions
-
-| Transition | Alert sent |
-|---|---|
-| CALM / WATCH / ALERT → WARNING | ⚠️ WARNING alert |
-| CALM / WATCH / ALERT / WARNING → DANGER | 🚨 DANGER alert |
-| No band change (sustained WARNING/DANGER) | none |
-| Downward movement | none |
-
-A coin that drops below the threshold and re-enters will fire again on re-entry. No cooldown table.
-
-### Message format
-
-    ⚠️ WARNING: USDC
-
-    USD Coin (RWA-Backed, Centralized) has entered the DEWS WARNING band.
-    Score: 62/100 — up from ALERT
-    Market cap: $43.2B | Price: $0.9987
-
-    Top stress signals:
-    • Pool Balance Drift: 68
-    • Liquidity Erosion: 54
-    • Supply Velocity: 42
-
-    View full analysis → https://pharos.watch/stablecoin/5
-
-Sent as Telegram HTML (parse_mode=HTML). Top signals: available signals with `value >= 30`, sorted descending, max 3. Human-readable labels from `SIGNAL_LABELS` in `telegram.ts`.
-
-### Cadence
-
-Alerts fire at most every 15 minutes (DEWS cron frequency). Since signals are smoothed, genuine threshold crossings typically build over multiple cycles.
-
-### Credentials
-
-Uses `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (same channel as the daily digest). If either is absent, alerts are skipped silently.
-
-### Implementation
-
-| File | Role |
-|---|---|
-| `worker/src/lib/telegram.ts` | `buildDewsAlertMessage`, `extractTopSignals`, `postDewsAlert` |
-| `worker/src/cron/compute-dews.ts` | Transition detection + alert dispatch (step 9b) |
-| `worker/src/index.ts` | Passes `telegramCreds` to `computeAndStoreDEWS` |
+- `GET /api/stress-signals`
+- Frontend components (`dews-badge`, `dews-detail`, `dews-summary`)

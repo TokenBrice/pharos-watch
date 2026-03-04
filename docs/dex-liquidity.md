@@ -20,7 +20,7 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed 
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100) |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (15 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins with no on-chain AMM presence, e.g. KAG/KAU on Kinesis Exchange).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (16 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins with no on-chain AMM presence, e.g. KAG/KAU on Kinesis Exchange).
 
 ### Quality Multipliers (v2)
 
@@ -61,7 +61,7 @@ When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko's `/onchai
 | Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
 |---------|--------------------------|--------------------------|
 | Rate limit | 30 req/min | ~240 req/min |
-| Chain coverage | 13 chains | 15 chains (adds tron, ink beyond GT's set) |
+| Chain coverage | 13 chains | 16 chains (adds tron, ink, rootstock beyond GT's set) |
 | Balance data | Not available (defaults to 1.0) | Approximated from token prices |
 | Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
 | Locked liquidity | Not available | `locked_liquidity_percentage` field |

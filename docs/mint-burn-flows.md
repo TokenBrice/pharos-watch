@@ -38,14 +38,14 @@ The scheduler (`worker/src/index.ts`) applies env overrides on top of these defa
 |----------|-------|---------|
 | `dustThreshold` | 10,000 default (token-native); 10 for gold tokens | Events below this amount are discarded |
 | `INDEXING_SAFETY_SEC` | 900 (15 min) | Safety margin when advancing sync state to chain head |
-| `ETH_BLOCK_TIME` | 12 sec | Approximate Ethereum block time (yields ~75-block safety margin) |
+| `ETHEREUM_BLOCK_TIME_SEC` | 12 sec | Approximate Ethereum block time (yields ~75-block safety margin) |
 | `DENOM_SCALE` | 0.3 | FIS denominator = 30% of baseline daily absolute flow |
 | `DENOM_FLOOR` | $1,000,000 | Minimum FIS denominator |
 | `Z_MULTIPLIER` | 50 | Z-score amplification in FIS formula |
-| `INTENSITY_RANGE` | -100 to +100 | Signed Flow Intensity Score output range |
+| Flow intensity clamp range | -100 to +100 | Signed Flow Intensity Score output range |
 | `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
-| `CHAIN_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
+| `ETHEREUM_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
 | Subrequest budget | 200 per cron run | Global Alchemy API call budget |
 | Config tier policy | `critical` / `extended` | Under budget pressure, extended configs can be deferred deterministically |

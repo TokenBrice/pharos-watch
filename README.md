@@ -43,7 +43,7 @@ All external API calls go through the Cloudflare Worker. The frontend never call
 | [DefiLlama Yields](https://yields.llama.fi/) | DEX pool TVL, volume, and composition for liquidity scoring | 30 min |
 | [Curve Finance API](https://api.curve.finance/) | Pool A-factors, per-token balances, implied prices | 30 min |
 | [The Graph](https://thegraph.com/) | Uniswap V3 (4 chains) + Aerodrome (Base) subgraphs for fee tiers and implied prices | 30 min |
-| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (15 chains), locked liquidity %, fee tiers, balance approximation | 30 min |
+| [CoinGecko Onchain](https://www.coingecko.com/en/api/onchain) | Primary DEX pool discovery (16 chains), locked liquidity %, fee tiers, balance approximation | 30 min |
 | [GeckoTerminal](https://www.geckoterminal.com/) | Fallback pool crawl for DEX liquidity when no CoinGecko API key is configured | 30 min |
 | [DexScreener](https://dexscreener.com/) | Batch token API for implied prices + search API for price fallback | 30 min |
 | [CoinGecko](https://www.coingecko.com/) | Gold/silver/fiat token supply (not in DefiLlama), fallback price enrichment | 15 min (as fallback) |
@@ -115,16 +115,16 @@ src/                              Frontend (Next.js static export)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (30 router handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
+│   ├── api/                      REST endpoints (31 static router handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (48 total)
+└── migrations/                   D1 SQL migrations (49 total)
 ```
 
 ## Infrastructure
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *    → sync stablecoins + charts + FX rates + depeg detection + stability index (PSI) + DEWS
+  ├── Cron: */15 * * * *    → sync stablecoins + chained snapshot-supply retry + charts + FX rates + depeg detection + stability index (PSI) + DEWS + status self-check
   ├── Cron: 3,23,43 * * * * → blacklist sync + mint/burn sync
   ├── Cron: 10,40 * * * *   → DEX liquidity sync + yield sync
   └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI) + T-bill rate

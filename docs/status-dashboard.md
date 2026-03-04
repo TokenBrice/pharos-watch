@@ -31,7 +31,7 @@ This page is **admin-only in practice** because all status/probe calls require `
 
 - `src/hooks/use-status.ts`
   - Calls `GET /api/status` with `X-Admin-Key`
-  - `staleTime: 60_000`, `refetchInterval: 60_000`, `retry: 0`
+  - `staleTime: 60_000`, `refetchInterval: 120_000`, `retry: 0`
 - `src/hooks/use-health.ts`
   - Calls `GET /api/health`
 - `src/hooks/use-endpoint-probes.ts`
@@ -171,13 +171,18 @@ Manual actions are rendered from `getStatusPageActions()` and executed only on u
 
 ## Inline Admin Actions
 
-These are handled directly in `worker/src/index.ts` and surfaced on the status page:
+Status-page manual actions include both inline `worker/src/index.ts` handlers and router-handled admin endpoints:
 
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
 - `GET /api/debug-sync-state`
+- `POST /api/backfill-depegs`
+- `POST /api/backfill-supply-history`
+- `POST /api/backfill-cg-prices`
+- `POST /api/backfill-stability-index`
 - `POST /api/backfill-mint-burn-prices`
 - `POST /api/backfill-mint-burn`
+- `GET /api/audit-depeg-history?dry-run=true`
 - `GET /api/backfill-dews`
 
 Mutating admin paths are protected by method guardrails:

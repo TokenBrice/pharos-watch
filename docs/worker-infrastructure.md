@@ -140,6 +140,7 @@ crons = [
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-stablecoins` | `syncStablecoins()` | `worker/src/cron/sync-stablecoins.ts` | `docs/data-pipeline.md`, `docs/depeg-detection.md` |
+| `snapshot-supply` *(retry path)* | `snapshotSupply()` (chained after `sync-stablecoins`) | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
 | `sync-stablecoin-charts` | `syncStablecoinCharts()` | `worker/src/cron/sync-stablecoin-charts.ts` | This doc (below) |
 | `sync-fx-rates` | `syncFxRates()` | `worker/src/cron/sync-fx-rates.ts` | `docs/data-pipeline.md`, `docs/classification.md` |
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
@@ -147,7 +148,7 @@ crons = [
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/index.ts` | This doc (below) |
 
-**Dependencies:** Stability index waits for `syncStablecoins()` to complete (`stablecoinsSync.then(...)`).
+**Dependencies:** `snapshot-supply` retry, stability index, and DEWS all wait for `syncStablecoins()` to complete (`stablecoinsSync.then(...)`).
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -227,7 +228,7 @@ Each cron job receives an `AbortSignal` from `logCronRun()` that fires after a c
 | Job | Timeout | Reason |
 |-----|---------|--------|
 | Default | 5 min | Standard jobs complete in <60s |
-| `sync-dex-liquidity` | 10 min | 150+ pool crawl |
+| `sync-dex-liquidity` | 15 min | 150+ pool crawl |
 | `sync-blacklist` | 8 min | Multi-chain scan + balance enrichment |
 | `sync-mint-burn` | 8 min | Multi-contract EVM log scan |
 | `daily-digest` | 8 min | LLM generation + distribution |

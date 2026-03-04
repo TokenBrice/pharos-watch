@@ -115,7 +115,6 @@ src/                              # Next.js frontend (static export)
 │   │   └── error.tsx
 │   ├── layout.tsx                # Root layout (header, footer, providers)
 │   ├── error.tsx                 # Root error boundary
-│   ├── loading.tsx               # Root loading skeleton
 │   ├── not-found.tsx             # 404 page
 │   ├── globals.css               # Global styles (Tailwind v4)
 │   ├── sitemap.ts                # Dynamic sitemap generation
@@ -381,7 +380,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
-        ├── alerts.ts             # Alert sending (ntfy push notifications on cron failures)
+        ├── alerts.ts             # Alert sending (Discord/Slack webhook notifications on cron failures)
         ├── stablecoins-cache.ts  # Shared strict/lenient loader for canonical stablecoins cache payload
         ├── safety-scores.ts      # Shared safety score snapshot helper (yield + digest consumers)
         ├── peg-analytics.ts      # Shared peg analytics snapshot helper (peg-summary + report-cards consumers)
@@ -394,7 +393,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── coingecko.ts          # CoinGecko API key initialization (shared across crons)
-        ├── coingecko-onchain.ts  # CoinGecko Onchain API client (15 chains, pool discovery, locked liquidity)
+        ├── coingecko-onchain.ts  # CoinGecko Onchain API client (16 chains, pool discovery, locked liquidity)
         ├── twitter.ts            # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()

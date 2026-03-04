@@ -27,7 +27,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 Cron schedules are defined in `worker/src/index.ts`:
 
-- `*/15 * * * *`: stablecoins, charts, FX, PSI compute, DEWS compute, status self-check
+- `*/15 * * * *`: stablecoins, chained snapshot-supply retry, charts, FX, PSI compute, DEWS compute, status self-check
 - `3,23,43 * * * *`: blacklist sync, mint/burn sync
 - `10,40 * * * *`: DEX liquidity sync, then yield sync
 - `0 8 * * *`: supply snapshot, T-bill rate, PSI daily snapshot, USDS status, bluechip sync, then daily digest

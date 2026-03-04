@@ -25,7 +25,7 @@ src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
 src/lib/         — Types, stablecoin list, formatters, classification, peg logic
 worker/src/cron/ — Data sync crons
-worker/src/api/  — REST API handlers (30 static router endpoints + dynamic stablecoin detail + 3 inline admin + POST feedback)
+worker/src/api/  — REST API handlers (31 static router endpoints + dynamic stablecoin detail + 3 inline admin + POST feedback)
 worker/src/lib/  — DB helpers, constants, shared utilities
 ```
 
@@ -65,7 +65,7 @@ All the codebase is documented. While working, make sure to update the correspon
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all endpoints (30 static router handlers + dynamic stablecoin detail + 3 inline admin + POST feedback), query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: all endpoints (31 static router handlers + dynamic stablecoin detail + 3 inline admin + POST feedback), query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
@@ -83,6 +83,6 @@ Read these when working on related code:
 - **`docs/yield-intelligence.md`** — Yield pipeline: three-tier APY resolution, PYS formula, T-bill rate, warning signals, DB schema, API endpoints, frontend
 - **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
-- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 15 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 16 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**

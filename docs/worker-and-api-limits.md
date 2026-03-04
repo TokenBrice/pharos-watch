@@ -57,7 +57,7 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 **Current usage pattern**: The CG onchain API is called during the 30-min DEX liquidity cron with 250 ms between requests (~240 req/min). The monthly quota depends on cron frequency — if all tokens are crawled each run, this can add up quickly.
 
-**Rate limit in code**: `CG_ONCHAIN_RATE_MS = 250` ms in `worker/src/lib/coingecko-onchain.ts`
+**Rate limit in code**: `RATE_LIMITS.COINGECKO_ONCHAIN_MS = 250` ms in `worker/src/lib/rate-limits.ts` (used by `worker/src/lib/coingecko-onchain.ts`)
 
 > **Key constraint**: 500,000 calls/month ÷ ~2,880 cron runs/month (every 15 min) = ~174 CG calls per cron run on average before hitting the monthly cap. The pool crawl can easily blow through this if not throttled.
 
@@ -74,7 +74,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
 **Rate limit in code**: `GECKO_TERMINAL_MS = 2000` ms (30 req/min) in `worker/src/lib/rate-limits.ts`, used by `worker/src/cron/dex-liquidity/fetch-crawlers.ts`
 
-**Crawl budget**: 15 min max wall-time within the 30-min cron window (`GT_CRAWL_BUDGET_MS`). Not all 252+ token-chain combos can be crawled per run at 30 req/min.
+**Crawl budget**: 15 min max wall-time within the 30-min cron window (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). Not all 252+ token-chain combos can be crawled per run at 30 req/min.
 
 ---
 
@@ -90,7 +90,7 @@ Third fallback for DEX pool data.
 | **Historical data** | 24 hours only |
 | **Paid tier** | None publicly available |
 
-**Rate limit in code**: `DS_RATE_LIMIT_MS = 1100` ms (~54 req/min, conservative) in `worker/src/lib/dexscreener.ts`
+**Rate limit in code**: `RATE_LIMITS.DEXSCREENER_MS = 1100` ms (~54 req/min, conservative) in `worker/src/lib/rate-limits.ts` (used by `worker/src/lib/dexscreener.ts`)
 
 ---
 
