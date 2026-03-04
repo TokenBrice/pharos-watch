@@ -1,9 +1,7 @@
 import dynamic from "next/dynamic";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeaturePageShell } from "@/components/feature-page-shell";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_VERSION_LABEL,
@@ -17,50 +15,52 @@ const ReportCardsClient = dynamic(
 const reportCardsDescription =
   "Transparent stablecoin safety grades and contagion simulation. Five dimensions combined into a single letter grade, plus simulate what happens when a major stablecoin fails.";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
-  alternates: {
-    canonical: "/safety-scores/",
-  },
-  openGraph: {
-    title: "Safety Scores: Stablecoin Safety Grades",
-    description: reportCardsDescription,
-    url: "/safety-scores/",
-    images: [{ url: "https://pharos.watch/og-safety-scores.png", width: 1200, height: 628 }],
-  },
-  twitter: {
-    images: [{ url: "https://pharos.watch/og-safety-scores.png", width: 1200, height: 628 }],
-  },
+  canonical: "/safety-scores/",
+  ogImage: "https://pharos.watch/og-safety-scores.png",
+});
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How are stablecoin safety grades calculated?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events), liquidity depth (DEX pool size, volume, and protocol diversity), resilience (collateral quality, custody model, and blacklist capability), decentralization (governance type and chain infrastructure), and dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a composite 0–100 score, then mapped to a letter grade from A+ to F.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What does the contagion simulation show?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
+      },
+    },
+  ],
 };
 
 export default function ReportCardsPage() {
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name="Safety Scores" path="/safety-scores/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Safety Scores</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Safety Scores <FeatureStatusBadge status="mature" version={SAFETY_SCORE_VERSION_LABEL} /></h1>
-        <p className="text-xs text-muted-foreground">
-          Methodology {SAFETY_SCORE_VERSION_LABEL}.{" "}
-          <Link href={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
-            Version history &rarr;
-          </Link>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Safety grades and contagion simulation for every tracked stablecoin.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability,
-          liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator
-          lets you model what happens to the broader market when a major stablecoin fails, revealing
-          hidden dependency chains and systemic risk.
-        </p>
-      </div>
+    <FeaturePageShell
+      breadcrumbName="Safety Scores"
+      path="/safety-scores/"
+      title="Safety Scores"
+      statusBadge={{ status: "mature", version: SAFETY_SCORE_VERSION_LABEL }}
+      methodology={{
+        version: SAFETY_SCORE_VERSION_LABEL,
+        changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+      }}
+      leadParagraphs={[
+        "Safety grades and contagion simulation for every tracked stablecoin.",
+        "Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability, liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator lets you model what happens to the broader market when a major stablecoin fails, revealing hidden dependency chains and systemic risk.",
+      ]}
+    >
       <ReportCardsClient />
 
       <section className="space-y-3">
@@ -91,31 +91,8 @@ export default function ReportCardsPage() {
       </section>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "How are stablecoin safety grades calculated?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Each stablecoin is scored across five dimensions: peg stability (historical deviation and depeg events), liquidity depth (DEX pool size, volume, and protocol diversity), resilience (collateral quality, custody model, and blacklist capability), decentralization (governance type and chain infrastructure), and dependency risk (exposure to upstream stablecoins). Dimension scores are weighted and combined into a composite 0–100 score, then mapped to a letter grade from A+ to F.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "What does the contagion simulation show?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "The contagion simulator models cascading failures in the stablecoin ecosystem. You select a stablecoin to \"fail\" and the simulation traces dependency chains: if stablecoin A uses stablecoin B as collateral, and B fails, A's grade degrades proportionally to its exposure. This reveals hidden systemic risk: which coins look safe in isolation but are fragile under stress.",
-                },
-              },
-            ],
-          }),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-    </div>
+    </FeaturePageShell>
   );
 }

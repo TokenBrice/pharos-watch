@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   errorResponse,
   parseIntParam,
+  parseStablecoinHistoryQuery,
   jsonResponse,
   validatePayloadWithSchema,
   buildCacheStatuses,
@@ -50,6 +51,50 @@ describe("parseIntParam", () => {
 
   it("returns default for empty string", () => {
     expect(parseIntParam("", 100, 1, 1000)).toBe(100);
+  });
+});
+
+describe("parseStablecoinHistoryQuery", () => {
+  it("returns 400 with stable message when stablecoin is missing", async () => {
+    const result = parseStablecoinHistoryQuery(
+      new URL("https://x/api/supply-history"),
+      { defaultDays: 365, minDays: 1, maxDays: 1825 },
+    );
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
+  });
+
+  it("returns 400 with stable message when stablecoin ID is invalid", async () => {
+    const result = parseStablecoinHistoryQuery(
+      new URL("https://x/api/supply-history?stablecoin=DROP TABLE"),
+      { defaultDays: 365, minDays: 1, maxDays: 1825 },
+    );
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid stablecoin ID" });
+  });
+
+  it("applies endpoint-specific default and bounds for days", () => {
+    const bounded = parseStablecoinHistoryQuery(
+      new URL("https://x/api/supply-history?stablecoin=1&days=9999"),
+      { defaultDays: 365, minDays: 1, maxDays: 1825 },
+    );
+    if (bounded instanceof Response) {
+      throw new Error("expected parsed query");
+    }
+    expect(bounded.days).toBe(1825);
+
+    const withDefault = parseStablecoinHistoryQuery(
+      new URL("https://x/api/yield-history?stablecoin=1&days=abc"),
+      { defaultDays: 90, minDays: 1, maxDays: 365 },
+    );
+    if (withDefault instanceof Response) {
+      throw new Error("expected parsed query");
+    }
+    expect(withDefault.days).toBe(90);
   });
 });
 

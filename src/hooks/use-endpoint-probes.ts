@@ -2,45 +2,18 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { API_BASE } from "@/lib/api";
+import { getProbePaths } from "@/lib/api-endpoints";
 import type { EndpointProbeResult } from "@/lib/types";
 
-/** Endpoint definitions grouped by type */
+/** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
-  public: [
-    "/api/stablecoins",
-    "/api/stablecoin/1",
-    "/api/stablecoin-charts",
-    "/api/peg-summary",
-    "/api/health",
-    "/api/blacklist",
-    "/api/depeg-events",
-    "/api/usds-status",
-    "/api/bluechip-ratings",
-    "/api/dex-liquidity",
-    "/api/dex-liquidity-history?stablecoin=1",
-    "/api/supply-history?stablecoin=1",
-    "/api/daily-digest",
-    "/api/digest-archive",
-    "/api/stability-index",
-    "/api/report-cards",
-  ],
-  admin: [
-    "/api/status",
-    "/api/debug-sync-state",
-  ],
-  inlineAdmin: [
-    "/api/trigger-digest",
-    "/api/reset-blacklist-sync",
-    "/api/backfill-depegs",
-    "/api/backfill-supply-history",
-    "/api/backfill-cg-prices",
-    "/api/backfill-stability-index",
-    "/api/audit-depeg-history?dry-run=true",
-  ],
+  public: getProbePaths("public"),
+  admin: getProbePaths("admin"),
+  manual: getProbePaths("manual"),
 } as const;
 
-/** Only public + admin endpoints are probed. inlineAdmin endpoints are
- *  manual actions and must NOT be auto-probed from the dashboard loop. */
+/** Only public + admin endpoints are probed. manual endpoints are
+ *  action paths and must NOT be auto-probed from the dashboard loop. */
 const ALL_ENDPOINTS = [
   ...ENDPOINT_GROUPS.public,
   ...ENDPOINT_GROUPS.admin,

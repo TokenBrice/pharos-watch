@@ -36,12 +36,14 @@ describe("handleYieldHistory", () => {
     const db = mockD1([]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history"));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
   });
 
   it("returns 400 for invalid stablecoin ID", async () => {
     const db = mockD1([]);
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=DROP TABLE"));
     expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "Invalid stablecoin ID" });
   });
 
   it("maps snake_case to camelCase", async () => {

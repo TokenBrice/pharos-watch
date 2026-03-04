@@ -24,4 +24,33 @@ describe("router contract: strict frontend paths are routable", () => {
     const result = route(new URL("https://api.pharos.watch/api/definitely-not-real"), db, ctx);
     expect(result).toBeNull();
   });
+
+  it("blocks GET on mutating admin routes except audit dry-run", async () => {
+    const blocked = await route(
+      new URL("https://api.pharos.watch/api/backfill-depegs"),
+      db,
+      ctx,
+      new Request("https://api.pharos.watch/api/backfill-depegs", { method: "GET" }),
+    );
+    expect(blocked).not.toBeNull();
+    expect(blocked!.status).toBe(405);
+
+    const blockedAudit = await route(
+      new URL("https://api.pharos.watch/api/audit-depeg-history"),
+      db,
+      ctx,
+      new Request("https://api.pharos.watch/api/audit-depeg-history", { method: "GET" }),
+    );
+    expect(blockedAudit).not.toBeNull();
+    expect(blockedAudit!.status).toBe(405);
+
+    const allowedDryRun = await route(
+      new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"),
+      db,
+      ctx,
+      new Request("https://api.pharos.watch/api/audit-depeg-history?dry-run=true", { method: "GET" }),
+    );
+    expect(allowedDryRun).not.toBeNull();
+    expect(allowedDryRun!.status).not.toBe(405);
+  });
 });

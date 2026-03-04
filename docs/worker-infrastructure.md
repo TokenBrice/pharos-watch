@@ -58,9 +58,11 @@ This pattern exists because Cloudflare Workers don't have persistent module stat
 | Method | Handling |
 |--------|----------|
 | `OPTIONS` | Returns 204 with CORS headers (preflight) |
-| `POST` | `/api/feedback` plus mutating admin routes (`/api/backfill-*`, `/api/audit-depeg-history`) |
-| `GET` | Read endpoints + inline admin endpoints; `/api/audit-depeg-history` GET is allowed only with `dry-run=true` |
+| `POST` | `/api/feedback` and mutating admin endpoints from `src/lib/api-endpoints.ts` |
+| `GET` | Read endpoints + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
 | Other | Returns 405 `{ error: "Method not allowed" }` |
+
+Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `src/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
 
 ### CORS Headers
 
@@ -81,11 +83,9 @@ Applied to every response via `addCorsHeaders()`:
 
 The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET responses:
 
-1. **Skip list** — these endpoints bypass cache entirely:
-   - `/api/health`, `/api/status`
-   - `/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`
-   - `/api/audit-depeg-history`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`, `/api/backfill-mint-burn`
-   - `/api/backfill-dews`
+1. **Cache bypass rules**:
+   - All non-GET requests bypass edge cache.
+   - GET paths marked `cacheBypass: true` in `src/lib/api-endpoints.ts` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 
@@ -113,8 +113,8 @@ Three admin endpoints are handled directly in `index.ts` (not via the router):
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
-| `GET /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
-| `GET /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
+| `POST /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
+| `POST /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
 | `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
 
 ---

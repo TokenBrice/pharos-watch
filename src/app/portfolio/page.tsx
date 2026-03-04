@@ -1,9 +1,7 @@
 import dynamic from "next/dynamic";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeaturePageShell } from "@/components/feature-page-shell";
+import { buildPageMetadata } from "@/lib/page-metadata";
 
 const PortfolioClient = dynamic(
   () => import("./client").then((m) => ({ default: m.PortfolioClient })),
@@ -13,37 +11,24 @@ const PortfolioClient = dynamic(
 const description =
   "Build your stablecoin portfolio, see your weighted safety grade, upstream collateral exposure, and simulate how a major stablecoin failure would affect your holdings.";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Portfolio: Personal Stablecoin Risk View",
   description,
-  alternates: { canonical: "/portfolio/" },
-  openGraph: {
-    title: "Portfolio: Personal Stablecoin Risk View",
-    description,
-    url: "/portfolio/",
-    images: [{ url: "https://pharos.watch/og-portfolio.png", width: 1200, height: 664 }],
-  },
-  twitter: {
-    images: [{ url: "https://pharos.watch/og-portfolio.png", width: 1200, height: 664 }],
-  },
-};
+  canonical: "/portfolio/",
+  ogImage: "https://pharos.watch/og-portfolio.png",
+  ogHeight: 664,
+});
 
 export default function PortfolioPage() {
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name="Portfolio" path="/portfolio/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Portfolio</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">Portfolio <FeatureStatusBadge status="experimental" /></h1>
-        <p className="text-sm text-muted-foreground">
-          Track your stablecoin holdings and assess your personal risk exposure.
-        </p>
-      </div>
+    <FeaturePageShell
+      breadcrumbName="Portfolio"
+      path="/portfolio/"
+      title="Portfolio"
+      statusBadge={{ status: "experimental" }}
+      leadParagraphs={["Track your stablecoin holdings and assess your personal risk exposure."]}
+    >
       <PortfolioClient />
-    </div>
+    </FeaturePageShell>
   );
 }

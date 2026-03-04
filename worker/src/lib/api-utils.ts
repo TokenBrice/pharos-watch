@@ -142,6 +142,46 @@ export function parseIntParam(
   return Number.isNaN(parsed) ? defaultVal : Math.min(max, Math.max(min, parsed));
 }
 
+export interface StablecoinHistoryQueryOptions {
+  defaultDays: number;
+  minDays: number;
+  maxDays: number;
+}
+
+export interface StablecoinHistoryQuery {
+  stablecoinId: string;
+  days: number;
+  cutoff: number;
+}
+
+/**
+ * Parse the common `stablecoin` + `days` query params used by history endpoints.
+ * Returns a Response on validation failure to preserve endpoint-specific error behavior.
+ */
+export function parseStablecoinHistoryQuery(
+  url: URL,
+  opts: StablecoinHistoryQueryOptions,
+): StablecoinHistoryQuery | Response {
+  const stablecoinId = url.searchParams.get("stablecoin");
+  if (!stablecoinId) {
+    return errorResponse(400, "Missing ?stablecoin= parameter");
+  }
+
+  if (!isValidStablecoinId(stablecoinId)) {
+    return errorResponse(400, "Invalid stablecoin ID");
+  }
+
+  const days = parseIntParam(
+    url.searchParams.get("days"),
+    opts.defaultDays,
+    opts.minDays,
+    opts.maxDays,
+  );
+  const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
+
+  return { stablecoinId, days, cutoff };
+}
+
 /** Build a JSON success response with optional extra headers. */
 export function jsonResponse(body: unknown, headers?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {

@@ -1,9 +1,7 @@
 import dynamic from "next/dynamic";
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeaturePageShell } from "@/components/feature-page-shell";
+import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
@@ -16,51 +14,52 @@ const StabilityIndexClient = dynamic(
 
 const description = "Historical Pharos Stability Index scores, component breakdowns, and condition band analysis for the stablecoin market.";
 
-export const metadata: Metadata = {
+export const metadata = buildPageMetadata({
   title: "Stability Index: Pharos Stablecoin Market Health",
   description,
-  alternates: { canonical: "/stability-index/" },
-  openGraph: {
-    title: "Stability Index: Pharos Stablecoin Market Health",
-    description,
-    url: "/stability-index/",
-    images: [{ url: "https://pharos.watch/og-stability-index.png", width: 1200, height: 628 }],
-  },
-  twitter: {
-    images: [{ url: "https://pharos.watch/og-stability-index.png", width: 1200, height: 628 }],
-  },
+  canonical: "/stability-index/",
+  ogImage: "https://pharos.watch/og-stability-index.png",
+});
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What is the Pharos Stability Index?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "The Pharos Stability Index (PSI) is a composite 0–100 score that measures stablecoin market health. It combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend. A higher score means calmer markets.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What do the condition bands mean?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74), FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Lower bands indicate broader and deeper market instability.",
+      },
+    },
+  ],
 };
 
 export default function StabilityIndexPage() {
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name="Stability Index" path="/stability-index/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Stability Index</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
-          Pharos Stability Index
-          <FeatureStatusBadge status="mature" version={PSI_METHODOLOGY_VERSION_LABEL} />
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          Methodology {PSI_METHODOLOGY_VERSION_LABEL}.{" "}
-          <Link href={PSI_METHODOLOGY_CHANGELOG_PATH} className="underline underline-offset-4 hover:text-foreground transition-colors">
-            Version history &rarr;
-          </Link>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Historical stablecoin market health scores, component breakdowns, and condition band analysis.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity,
-          depeg breadth, DEWS stress breadth, and 7-day market-cap trend into a single market health reading.
-          Scores fall into six condition bands, from BEDROCK (90+) to MELTDOWN (below 20), so you can gauge market
-          stress at a glance.
-        </p>
-      </div>
+    <FeaturePageShell
+      breadcrumbName="Stability Index"
+      path="/stability-index/"
+      title="Pharos Stability Index"
+      statusBadge={{ status: "mature", version: PSI_METHODOLOGY_VERSION_LABEL }}
+      methodology={{
+        version: PSI_METHODOLOGY_VERSION_LABEL,
+        changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
+      }}
+      leadParagraphs={[
+        "Historical stablecoin market health scores, component breakdowns, and condition band analysis.",
+        "The Pharos Stability Index (PSI) is a composite 0–100 score that combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend into a single market health reading. Scores fall into six condition bands, from BEDROCK (90+) to MELTDOWN (below 20), so you can gauge market stress at a glance.",
+      ]}
+    >
       <StabilityIndexClient />
 
       <section className="space-y-3">
@@ -89,31 +88,8 @@ export default function StabilityIndexPage() {
       </section>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "What is the Pharos Stability Index?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "The Pharos Stability Index (PSI) is a composite 0–100 score that measures stablecoin market health. It combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend. A higher score means calmer markets.",
-                },
-              },
-              {
-                "@type": "Question",
-                name: "What do the condition bands mean?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74), FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Lower bands indicate broader and deeper market instability.",
-                },
-              },
-            ],
-          }),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-    </div>
+    </FeaturePageShell>
   );
 }

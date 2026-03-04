@@ -1,4 +1,4 @@
-import { withErrorHandler, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, parseStablecoinHistoryQuery, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getLiquidityMethodologyVersionAt } from "../../../src/lib/liquidity-score-version";
 
@@ -14,17 +14,15 @@ export const handleDexLiquidityHistory = withErrorHandler("dex-liquidity-history
   db: D1Database,
   url: URL
 ): Promise<Response> => {
-  const stablecoinId = url.searchParams.get("stablecoin");
-  if (!stablecoinId) {
-    return errorResponse(400, "Missing ?stablecoin= parameter");
+  const parsed = parseStablecoinHistoryQuery(url, {
+    defaultDays: 90,
+    minDays: 1,
+    maxDays: 365,
+  });
+  if (parsed instanceof Response) {
+    return parsed;
   }
-  // Validate ID format to prevent edge cache pollution
-  if (!isValidStablecoinId(stablecoinId)) {
-    return errorResponse(400, "Invalid stablecoin ID");
-  }
-
-  const days = parseIntParam(url.searchParams.get("days"), 90, 1, 365);
-  const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
+  const { stablecoinId, cutoff } = parsed;
 
   let result: D1Result<LiquidityHistoryRow>;
   try {

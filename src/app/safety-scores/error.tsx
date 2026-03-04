@@ -1,13 +1,5 @@
 "use client";
 
-import { PageError } from "@/components/page-error";
+import { createPageError } from "@/components/create-page-error";
 
-export default function SafetyScoresError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  return <PageError title="Failed to load safety scores" error={error} reset={reset} />;
-}
+export default createPageError("Failed to load safety scores", "SafetyScoresError");

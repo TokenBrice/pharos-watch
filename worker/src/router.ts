@@ -30,6 +30,7 @@ import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { runIdempotentAdminAction } from "./lib/idempotency";
+import { isMutatingAdminPath } from "../../src/lib/api-endpoints";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -42,20 +43,11 @@ export function route(
   alchemyApiKey?: string | null,
 ): Promise<Response> | null {
   const path = url.pathname;
-  const mutatingAdminPaths = new Set([
-    "/api/backfill-depegs",
-    "/api/backfill-supply-history",
-    "/api/backfill-cg-prices",
-    "/api/backfill-stability-index",
-    "/api/backfill-mint-burn-prices",
-    "/api/backfill-mint-burn",
-    "/api/audit-depeg-history",
-  ]);
 
   const allowAuditDryRunGet =
     path === "/api/audit-depeg-history" && url.searchParams.get("dry-run") === "true";
 
-  if (request?.method === "GET" && mutatingAdminPaths.has(path) && !allowAuditDryRunGet) {
+  if (request?.method === "GET" && isMutatingAdminPath(path) && !allowAuditDryRunGet) {
     return Promise.resolve(
       new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
         status: 405,
