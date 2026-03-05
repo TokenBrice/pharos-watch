@@ -119,9 +119,9 @@ shared/                           Runtime-neutral shared boundary (`@shared/*`)
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (router-dispatched handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
+│   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (49 total)
+└── migrations/                   D1 SQL migrations (50 total)
 ```
 
 ## Infrastructure
@@ -143,7 +143,7 @@ Cloudflare D1 (SQLite database)
   ├── dex_liquidity_history → daily TVL/score snapshots for trend analysis
   ├── dex_prices           → DEX-implied prices from Curve, Uni V3, Aerodrome, DexScreener
   ├── onchain_supply       → per-stablecoin on-chain supply by chain (contract calls)
-  ├── supply_history       → daily on-chain supply snapshots (08:00 UTC)
+  ├── supply_history       → daily per-coin supply snapshots from cached stablecoins data (08:00 UTC + retry upserts)
   ├── stability_index      → daily ecosystem health scores (0–100) with trend band
   ├── stability_index_samples → high-frequency PSI samples (sub-daily granularity)
   ├── depeg_pending        → secondary confirmation queue for major stablecoin depegs
@@ -180,7 +180,7 @@ Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
 For mint/burn ingestion diagnostics and recovery, see `docs/runbooks/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run lint` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run lint` → `npm run check:worker-boundary` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE_URL` (or `API_BASE_URL` fallback)
 4. **Pages deploy:** `npm ci` → `npx tsx scripts/sync-digests.ts` → `npm run build` → `npm run seo:check` → `wrangler pages deploy out`

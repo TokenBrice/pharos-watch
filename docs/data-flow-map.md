@@ -25,7 +25,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 
 ## Scheduling Backbone
 
-Cron schedules are defined in `worker/src/index.ts`:
+Cron schedules are declared in `worker/wrangler.toml` and orchestrated by `worker/src/handlers/scheduled.ts`:
 
 - `*/15 * * * *`: stablecoins, chained snapshot-supply retry, charts, FX, PSI compute, DEWS compute, status self-check
 - `3,23,43 * * * *`: blacklist sync, mint/burn sync

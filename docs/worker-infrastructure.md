@@ -77,7 +77,7 @@ Three modules use a lazy-init pattern to receive API keys from the `Env` at runt
 | `initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY)` | `fetch` + `scheduled` | Builds chain RPC configs with Alchemy/dRPC primaries |
 | `initAlerts(env.ALERT_WEBHOOK_URL)` | `fetch` + `scheduled` | Configures webhook URL for error alerts |
 
-This pattern exists because Cloudflare Workers don't have persistent module state across invocations — `Env` bindings are only available inside handler functions.
+This pattern exists because `Env` bindings are only available inside handler functions (not at module initialization time). Worker isolates may be reused, but env-aware setup must still happen inside request/scheduled handlers.
 
 ---
 

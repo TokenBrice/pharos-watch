@@ -157,7 +157,7 @@ src/                              # Next.js frontend (static export)
 │   ├── peg-diversity-chart.tsx   # Non-USD peg supply stacked area chart
 │   ├── total-mcap-chart.tsx      # Full-width market cap area chart
 │   ├── market-highlights.tsx     # Biggest depegs + fastest movers
-│   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
+│   ├── daily-digest.tsx          # Daily digest card component
 │   ├── digest-archive-client.tsx # Digest archive list (client component)
 │   ├── digest-snapshot.tsx       # Digest snapshot context display
 │   ├── mcap-chart.tsx            # Market cap area chart (detail page)

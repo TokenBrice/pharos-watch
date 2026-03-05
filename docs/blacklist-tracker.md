@@ -350,7 +350,7 @@ Requires `X-Admin-Key` header. Rolls back sync state:
 
 Requires `X-Admin-Key` header. Returns all sync state rows.
 
-Both admin endpoints are defined inline in `worker/src/index.ts`.
+Both admin endpoints are routed in `worker/src/router.ts` and executed via `worker/src/handlers/http.ts`.
 
 ---
 
@@ -423,7 +423,8 @@ Both admin endpoints are defined inline in `worker/src/index.ts`.
 | `worker/src/lib/blacklist-contracts.ts` | Contract configs: addresses, chains, event signatures, decimals |
 | `worker/src/lib/evm-logs.ts` | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256` |
 | `worker/src/api/blacklist.ts` | `GET /api/blacklist` handler |
-| `worker/src/index.ts` | Cron scheduling, admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
+| `worker/src/router.ts` | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
+| `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration for `sync-blacklist` |
 | `worker/src/lib/db.ts` | `getLastBlock()`, `setLastBlock()`, `batchExecute()` |
 | `worker/migrations/0001_initial.sql` | `blacklist_events` + `blacklist_sync_state` tables |
 | `worker/migrations/0028_blacklist_indexes.sql` | `chain_name` + `event_type` indexes |

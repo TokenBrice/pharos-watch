@@ -1,6 +1,6 @@
 # Pharos API Reference
 
-The Pharos API is a read-only REST API served by a Cloudflare Worker backed by a D1 database. It powers the [pharos.watch](https://pharos.watch) stablecoin analytics dashboard.
+The Pharos API is a REST API served by a Cloudflare Worker backed by a D1 database. It powers the [pharos.watch](https://pharos.watch) stablecoin analytics dashboard, with public read endpoints plus authenticated/admin and feedback write endpoints.
 
 **Base URL:** `https://api.pharos.watch`
 
@@ -83,7 +83,7 @@ All error responses use `{ "error": "message" }` JSON format.
 
 ## Method Gating Policy
 
-HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` and enforced by `worker/src/router.ts` plus non-router path guards in `worker/src/handlers/http.ts`.
+HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` and enforced by `worker/src/router.ts` (`validateEndpointMethod`).
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
 - `POST` is accepted for mutating admin endpoints and `POST /api/feedback`.
@@ -1471,14 +1471,14 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
   "caches": { ... },
   "crons": {
     "sync-stablecoins": {
-      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 142 },
+      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 148 },
       "recentRuns": [...],
       "expectedIntervalSec": 900,
       "healthy": true
     }
   },
   "dataQuality": {
-    "totalStablecoins": 142,
+    "totalStablecoins": 148,
     "missingPrices": 3,
     "blacklistMissingAmounts": 0,
     "blacklistRecentMissingAmounts": 0,
@@ -1646,7 +1646,7 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 
 ### `POST /api/trigger-digest`
 
-Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Handled directly in `worker/src/handlers/http.ts` (not via the router).
+Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Routed through `worker/src/router.ts`.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1663,7 +1663,7 @@ Returns `500` with `{ "ok": false, "error": "..." }` on failure.
 
 ### `POST /api/reset-blacklist-sync`
 
-Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Handled directly in `worker/src/handlers/http.ts` (not via the router).
+Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Routed through `worker/src/router.ts`.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1679,7 +1679,7 @@ Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled 
 
 ### `GET /api/debug-sync-state`
 
-Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Handled directly in `worker/src/handlers/http.ts` (not via the router).
+Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Routed through `worker/src/router.ts`.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 

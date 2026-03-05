@@ -219,5 +219,5 @@ gh api graphql -f query='{ repository(owner: "TokenBrice", name: "stablecoin-das
 | `src/components/feedback-modal.tsx` | Feedback dialog (form + submission logic) |
 | `src/app/layout.tsx` | Mounts `<FeedbackButton />` globally |
 | `worker/src/api/feedback.ts` | Handler: validation, rate limiting, auto-verification, GitHub dispatch |
-| `worker/src/index.ts` | Routes `POST /api/feedback` to `handleFeedback()` |
+| `worker/src/router.ts` | Routes `POST /api/feedback` to `handleFeedback()` |
 | `worker/migrations/0029_feedback_rate_limit.sql` | D1 rate-limit table migration |

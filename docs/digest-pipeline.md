@@ -245,7 +245,9 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/src/api/daily-digest.ts` | `GET /api/daily-digest` handler |
 | `worker/src/api/digest-archive.ts` | `GET /api/digest-archive` handler |
 | `worker/src/api/digest-snapshot.ts` | `GET /api/digest-snapshot` handler |
-| `worker/src/index.ts` | Cron scheduling, `POST /api/trigger-digest` admin handler, `Env` interface |
+| `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration (daily digest runs after `snapshot-psi`) |
+| `worker/src/router.ts` | API route dispatch for `POST /api/trigger-digest` |
+| `worker/src/lib/env.ts` | `Env` interface used by fetch/scheduled handlers |
 | `worker/migrations/0018_daily_digest.sql` | Initial `daily_digest` table |
 | `worker/migrations/0021_digest_title.sql` | Added `digest_title` column |
 | `worker/migrations/0027_digest_extended.sql` | Added `digest_extended` column |

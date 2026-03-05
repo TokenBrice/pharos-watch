@@ -7,7 +7,7 @@ Operational freshness configuration is shared via `worker/src/lib/mint-burn-heal
 - warning threshold (`6h`)
 - critical threshold (`24h`)
 
-The scheduler (`worker/src/index.ts`) applies env overrides on top of these defaults, and `/api/health` uses the same resolved config for status evaluation.
+Scheduled/http handlers apply env overrides on top of these defaults (`worker/src/handlers/scheduled.ts`, `worker/src/handlers/http.ts`), and `/api/health` uses the same resolved config for status evaluation.
 
 ---
 
@@ -26,7 +26,7 @@ The scheduler (`worker/src/index.ts`) applies env overrides on top of these defa
 - **Function:** `syncMintBurn(db, alchemyApiKey)`
 - **Provider:** Alchemy JSON-RPC (PAYG plan)
 - **File:** `worker/src/cron/sync-mint-burn.ts`
-- **Registration:** `worker/src/index.ts`
+- **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows)
 - **Operator runbook:** `docs/runbooks/mint-burn-ingestion.md`
 

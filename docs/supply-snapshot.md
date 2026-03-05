@@ -8,10 +8,11 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
 
 ## Cron Schedule
 
-- **Schedule:** `0 8 * * *` (daily at 08:00 UTC)
+- **Primary schedule:** `0 8 * * *` (daily at 08:00 UTC)
+- **Retry path:** chained after each `*/15 * * * *` `sync-stablecoins` run (same-day upsert safeguard)
 - **Function:** `snapshotSupply(db: D1Database): Promise<CronResult>`
 - **File:** `worker/src/cron/snapshot-supply.ts`
-- **Registration:** `worker/src/index.ts`
+- **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
 
 ---
 
@@ -33,7 +34,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Sum circulating supply via `sumPegBuckets(asset.circulating)` --- already in USD
    - Skip if sum <= 0
    - Extract price (must be a number > 0, else `null`)
-   - Build `INSERT INTO` statement
+   - Build `INSERT OR REPLACE` statement
 7. Data quality check: warn if fewer than 80% of expected coins have valid data
 8. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
 9. Log item count and date
@@ -63,7 +64,7 @@ CREATE INDEX idx_supply_hist_date ON supply_history(snapshot_date DESC);
 | `circulating_usd` | REAL | Total market cap in USD |
 | `price` | REAL | USD price at snapshot time (may be `null`) |
 
-The primary key `(stablecoin_id, snapshot_date)` prevents duplicates. The cron uses plain `INSERT INTO`, so a second run on the same UTC day would hit a constraint violation (this is safe since the cron only runs once daily). The admin backfill endpoint uses `INSERT OR REPLACE` for idempotent re-runs.
+The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. The cron uses `INSERT OR REPLACE`, so re-runs on the same day are idempotent and refresh the row with the latest valid cached values.
 
 ### onchain_supply (migration 0013)
 
@@ -258,7 +259,7 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 4. `supplyMethod` configs are future-proofing, not actively used
 5. Tron `balanceOf` subtraction not yet supported (needs base58-to-hex conversion)
 6. Non-USD peg backfill requires historical prices (may fall back to current price)
-7. Daily cron uses `INSERT INTO` (single daily run); admin backfill uses `INSERT OR REPLACE` for idempotent re-runs
+7. Daily cron and admin backfill both use `INSERT OR REPLACE` for idempotent re-runs
 
 ---
 
@@ -266,7 +267,7 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 
 | File | Role |
 |------|------|
-| `worker/src/cron/snapshot-supply.ts` | Daily snapshot cron: reads cache, builds INSERT statements, batch executes |
+| `worker/src/cron/snapshot-supply.ts` | Snapshot cron: reads cache, builds `INSERT OR REPLACE` statements, batch executes |
 | `worker/src/api/supply-history.ts` | `GET /api/supply-history` handler |
 | `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
 | `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |
