@@ -176,6 +176,15 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probePath: "/api/yield-history?stablecoin=1",
   },
   {
+    path: "/api/safety-score-history",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+    probePath: "/api/safety-score-history?stablecoin=1",
+  },
+  {
     path: "/api/stability-index",
     methods: ["GET"],
     adminRequired: false,

@@ -506,6 +506,27 @@ export const DEX_GLOBAL_KEY = "__global__";
 
 export type ReportCardGrade = "A+" | "A" | "A-" | "B+" | "B" | "B-" | "C+" | "C" | "C-" | "D" | "F" | "NR";
 
+export interface SafetyScoreHistoryPoint {
+  date: number;
+  grade: ReportCardGrade;
+  score: number | null;
+  prevGrade: ReportCardGrade | null;
+  prevScore: number | null;
+  methodologyVersion: string;
+}
+
+export const SafetyScoreHistoryPointSchema = z.object({
+  date: z.number(),
+  grade: z.string(),
+  score: z.number().nullable(),
+  prevGrade: z.string().nullable(),
+  prevScore: z.number().nullable(),
+  methodologyVersion: z.string(),
+});
+
+export const SafetyScoreHistoryResponseSchema = z.array(SafetyScoreHistoryPointSchema);
+export type SafetyScoreHistoryResponse = SafetyScoreHistoryPoint[];
+
 export interface ReportCardDimension {
   grade: ReportCardGrade;
   score: number | null;   // 0-100, null if NR

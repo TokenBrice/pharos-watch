@@ -205,6 +205,7 @@ describe("handleStatus", () => {
       "sync-fx-rates",
       "daily-digest",
       "snapshot-supply",
+      "snapshot-safety-grade-history",
       "stability-index",
       "snapshot-psi",
       "sync-yield-data",

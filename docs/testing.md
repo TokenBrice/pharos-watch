@@ -199,8 +199,10 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 |------|----------------|
 | `src/components/__tests__/dews-summary.test.ts` | DEWS radar tap/click interaction resolver logic |
 | `src/components/__tests__/liquidity-table.test.ts` | Liquidity row comparator behavior and filter-driven pagination reset flow |
+| `src/components/__tests__/safety-score-history-section.test.tsx` | Safety Score detail timeline seed/transition labeling and conditional suppression when loading/error/empty |
 | `src/hooks/__tests__/use-url-filters.test.ts` | URL param state helpers and encoding rules |
 | `src/hooks/__tests__/query-polling-policy.test.ts` | Shared polling policy wiring (`staleTime`, `refetchInterval`, `retry`) for status-page hooks |
+| `src/hooks/__tests__/use-safety-score-history.test.ts` | Safety Score history hook query-key scoping, daily polling policy, and endpoint path wiring |
 | `src/hooks/__tests__/use-sort.test.ts` | Table sort state transitions and keyboard activation key gating |
 | `src/hooks/__tests__/use-sorted-table-rows.test.ts` | Pure table row sorting helper behavior and immutability |
 | `src/hooks/__tests__/use-table-pagination.test.ts` | Pagination derivation + persisted page reset semantics when row totals change |
@@ -218,6 +220,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `circuit-breaker.test.ts` | `worker/src/lib/circuit-breaker.ts` | Circuit state machine: closed/open/half-open transitions, probe intervals, alerts |
 | `stability-index.test.ts` | `worker/src/lib/stability-index.ts` | PSI computation and component scoring |
 | `safety-scores.test.ts` | `worker/src/lib/safety-scores.ts` | Shared safety score snapshot helper parity modes (`map` vs `full-grades`) |
+| `report-cards-snapshot.test.ts` | `worker/src/lib/report-cards-snapshot.ts` | Shared report-card snapshot parity with `/api/report-cards` and cache-unavailable behavior |
 | `peg-analytics.test.ts` | `worker/src/lib/peg-analytics.ts` | Shared peg analytics derivation (`eventsByCoin`, `pegDataById`) |
 | `stablecoins-cache.test.ts` | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient cache loading, malformed payloads, legacy array compatibility |
 | `cron-leases.test.ts` | `worker/src/lib/db.ts` | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease` |
@@ -238,6 +241,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `supply-history.test.ts` | `handleSupplyHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
 | `dex-liquidity-history.test.ts` | `handleDexLiquidityHistory` | 200 with history, empty, 400 missing/invalid stablecoin |
 | `yield-history.test.ts` | `handleYieldHistory` | 200 with history, empty, 400 missing/invalid stablecoin, camelCase |
+| `safety-score-history.test.ts` | `handleSafetyScoreHistory` | 200 with history/empty, 400 missing/invalid stablecoin, freshness headers |
 | `mint-burn-events.test.ts` | `handleMintBurnEvents` | 200 with events, 400 missing/invalid stablecoin, 400 invalid direction |
 | `cache-passthrough.test.ts` | stablecoins, charts, usds, bluechip, yield-rankings | 503 cache miss, 200 with _meta, X-Data-Age |
 | `dex-liquidity.test.ts` | `handleDexLiquidity` | 200 with liquidity map, empty map, v2 fields, X-Data-Age |
@@ -272,6 +276,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `sync-dex-liquidity.test.ts` | `dex-liquidity/orchestrator.ts` | Catastrophic throw path, degraded status propagation, success path |
 | `enrich-prices.test.ts` | `enrich-prices.ts` | `isReasonablePrice` for all peg types (USD, EUR, JPY, IDR, GOLD, SILVER, etc.), FX-rate-aware bounds, `hasMissingPrice` edge cases |
 | `snapshot-supply.test.ts` | `snapshot-supply.ts` | Cache missing, stale cache (>1200s), valid insert for tracked assets, zero supply skip |
+| `snapshot-safety-grade-history.test.ts` | `snapshot-safety-grade-history.ts` | Seed rows, grade-change inserts, unchanged-grade idempotent reruns |
 | `yield-helpers.test.ts` | `yield-helpers.ts` | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool` |
 | `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for RUB/UAH/ARS |
 | `sync-yield-data.test.ts` | `sync-yield-data.ts` | Yield ranking sync, validation guard, fallback behavior and ranking parity |
@@ -452,6 +457,7 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 - `DexLiquidityMapSchema`
 - `StabilityIndexResponseSchema`
 - `ReportCardsResponseSchema` (wired with a typed cast in `use-report-cards.ts`)
+- `SafetyScoreHistoryResponseSchema` (wired with a typed cast in `use-safety-score-history.ts`)
 - `MintBurnFlowsResponseSchema`
 - `MintBurnPerCoinResponseSchema`
 - `StressSignalsAllResponseSchema`

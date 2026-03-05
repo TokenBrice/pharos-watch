@@ -3,7 +3,7 @@
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { CRON_15MIN, CRON_1H } from "@/hooks/use-api-query";
+import { CRON_15MIN, CRON_1H, CRON_24H } from "@/hooks/use-api-query";
 
 const DEBOUNCE_MS = 100;
 
@@ -40,6 +40,15 @@ export function usePrefetchStablecoin() {
               `/api/dex-liquidity-history?stablecoin=${encodeURIComponent(coinId)}&days=90`
             ),
           staleTime: CRON_1H,
+        });
+
+        queryClient.prefetchQuery({
+          queryKey: ["safety-score-history", coinId, 3650],
+          queryFn: () =>
+            apiFetch(
+              `/api/safety-score-history?stablecoin=${encodeURIComponent(coinId)}&days=3650`
+            ),
+          staleTime: CRON_24H,
         });
       }, DEBOUNCE_MS);
     },

@@ -1,0 +1,177 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReportCard, ReportCardGrade } from "@shared/types";
+import { SAFETY_SCORE_VERSION } from "@shared/lib/safety-score-version";
+import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
+
+vi.mock("../../lib/report-cards-snapshot", () => ({
+  buildReportCardsSnapshot: vi.fn(),
+}));
+
+vi.mock("../../lib/db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/db")>();
+  return {
+    ...actual,
+    batchExecute: vi.fn(async (_db: D1Database, stmts: D1PreparedStatement[]) => stmts.length),
+  };
+});
+
+import { snapshotSafetyGradeHistory } from "../snapshot-safety-grade-history";
+import { batchExecute } from "../../lib/db";
+import { buildReportCardsSnapshot } from "../../lib/report-cards-snapshot";
+
+function makeCard(
+  id: string,
+  grade: ReportCardGrade,
+  score: number | null,
+  isDefunct = false,
+): ReportCard {
+  const dim = { grade, score, detail: "ok" };
+  return {
+    id,
+    name: `Coin ${id}`,
+    symbol: `C${id}`,
+    overallGrade: grade,
+    overallScore: score,
+    dimensions: {
+      pegStability: dim,
+      liquidity: dim,
+      resilience: dim,
+      decentralization: dim,
+      dependencyRisk: dim,
+    },
+    ratedDimensions: 5,
+    rawInputs: {
+      pegScore: null,
+      activeDepeg: false,
+      depegEventCount: 0,
+      lastEventAt: null,
+      liquidityScore: null,
+      concentrationHhi: null,
+      bluechipGrade: null,
+      canBeBlacklisted: false,
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+      collateralQuality: "native",
+      custodyModel: "onchain",
+      governanceTier: "centralized",
+      governanceQuality: "single-entity",
+      dependencies: [],
+      navToken: false,
+    },
+    isDefunct,
+  };
+}
+
+function mockSnapshot(cards: ReportCard[]) {
+  vi.mocked(buildReportCardsSnapshot).mockResolvedValue({
+    cards,
+    methodology: {
+      version: SAFETY_SCORE_VERSION,
+      weights: {
+        pegStability: 0,
+        liquidity: 0,
+        resilience: 0,
+        decentralization: 0,
+        dependencyRisk: 0,
+      },
+      pegMultiplierExponent: 0,
+      thresholds: [],
+    },
+    dependencyGraph: { edges: [] },
+    updatedAt: 1_777_770_000,
+  });
+}
+
+describe("snapshotSafetyGradeHistory", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-05T12:34:56Z"));
+    vi.mocked(batchExecute).mockReset().mockImplementation(async (_db, stmts) => stmts.length);
+    vi.mocked(buildReportCardsSnapshot).mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("seeds rows for live coins with no history", async () => {
+    mockSnapshot([
+      makeCard("1", "B", 72),
+      makeCard("2", "A", 84),
+      makeCard("dead-1", "F", 0, true),
+    ]);
+
+    const db = mockD1([
+      { match: "FROM safety_grade_history h", rows: [] },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result.itemCount).toBe(2);
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(batchExecute).mock.calls[0][1]).toHaveLength(2);
+
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.snapshotDay).toBe(Math.floor(Date.now() / 1000 / 86_400) * 86_400);
+    expect(metadata.methodologyVersion).toBe(SAFETY_SCORE_VERSION);
+    expect(metadata.seeded).toBe(2);
+    expect(metadata.changed).toBe(0);
+    expect(metadata.skipped).toBe(0);
+  });
+
+  it("inserts only transition rows when grades change", async () => {
+    mockSnapshot([
+      makeCard("1", "B", 72),
+      makeCard("2", "B+", 77),
+    ]);
+
+    const db = mockD1([
+      {
+        match: "FROM safety_grade_history h",
+        rows: [
+          { stablecoin_id: "1", grade: "B", score: 71, recorded_at: 1_777_680_000 },
+          { stablecoin_id: "2", grade: "A", score: 83, recorded_at: 1_777_680_000 },
+        ],
+      },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result.itemCount).toBe(1);
+    expect(batchExecute).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(batchExecute).mock.calls[0][1]).toHaveLength(1);
+
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.seeded).toBe(0);
+    expect(metadata.changed).toBe(1);
+    expect(metadata.skipped).toBe(1);
+  });
+
+  it("is idempotent when all live grades are unchanged", async () => {
+    mockSnapshot([
+      makeCard("1", "B", 72),
+      makeCard("2", "A", 84),
+    ]);
+
+    const db = mockD1([
+      {
+        match: "FROM safety_grade_history h",
+        rows: [
+          { stablecoin_id: "1", grade: "B", score: 72, recorded_at: 1_777_760_000 },
+          { stablecoin_id: "2", grade: "A", score: 84, recorded_at: 1_777_760_000 },
+        ],
+      },
+    ]);
+
+    const result = await snapshotSafetyGradeHistory(db);
+
+    expect(result.itemCount).toBe(0);
+    expect(batchExecute).not.toHaveBeenCalled();
+
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.seeded).toBe(0);
+    expect(metadata.changed).toBe(0);
+    expect(metadata.skipped).toBe(2);
+  });
+});

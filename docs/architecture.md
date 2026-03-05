@@ -23,6 +23,7 @@
 | `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
+| `GET /api/safety-score-history` | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`) |
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
 | `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin FIS, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
@@ -128,6 +129,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── flows-section.tsx
 │   │   ├── liquidity-section.tsx
 │   │   ├── depeg-history-section.tsx
+│   │   ├── safety-score-history-section.tsx
 │   │   └── notices-and-summary-section.tsx
 │   ├── header.tsx                # Top nav bar
 │   ├── sidebar.tsx               # Sidebar navigation menu
@@ -245,6 +247,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
+│   ├── use-safety-score-history.ts # GET /api/safety-score-history (per-coin grade transitions)
 │   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
@@ -294,7 +297,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (49 total)
+├── migrations/                   # D1 SQL migrations (50 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
@@ -309,6 +312,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
     │   ├── snapshot-supply.ts    # Per-coin supply snapshots → D1 (daily, 8AM UTC)
+    │   ├── snapshot-safety-grade-history.ts # Daily Safety Score grade transition snapshot → D1
     │   ├── sync-blacklist.ts     # Etherscan/TronGrid/dRPC → D1 (incremental)
     │   ├── sync-usds-status.ts   # USDS protocol status → D1 (daily, 8AM UTC)
     │   ├── sync-fx-rates.ts      # ECB + gold-api.com → D1 FX/commodity rates (15min, metals per-run)
@@ -361,6 +365,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── status-history.ts     # GET /api/status-history (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
     │   ├── report-cards.ts       # GET /api/report-cards
+    │   ├── safety-score-history.ts # GET /api/safety-score-history
     │   ├── backfill-depegs.ts    # POST /api/backfill-depegs (admin)
     │   ├── backfill-supply-history.ts # POST /api/backfill-supply-history (admin)
     │   ├── backfill-stability-index.ts # POST /api/backfill-stability-index (admin)
@@ -385,6 +390,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── alerts.ts             # Alert sending (Discord/Slack webhook notifications on cron failures)
         ├── stablecoins-cache.ts  # Shared strict/lenient loader for canonical stablecoins cache payload
         ├── safety-scores.ts      # Shared safety score snapshot helper (yield + digest consumers)
+        ├── report-cards-snapshot.ts # Shared report-card snapshot builder (API + safety-grade-history cron)
         ├── peg-analytics.ts      # Shared peg analytics snapshot helper (peg-summary + report-cards consumers)
         ├── mint-burn-health-config.ts # Shared mint/burn stale thresholds + major symbol defaults
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)

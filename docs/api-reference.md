@@ -39,7 +39,7 @@ Endpoints backed by the cron cache include these additional headers:
 | realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary, mint-burn-events |
 | standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
-| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, digest-snapshot |
+| slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot |
 | no-store | `no-store` | health, status |
 
 ---
@@ -914,6 +914,50 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 | `navToken` | `boolean` |
 
 **Dimensions:** `pegStability`, `liquidity`, `resilience`, `decentralization`, `dependencyRisk`
+
+---
+
+### `GET /api/safety-score-history`
+
+Per-coin Safety Score grade transition history (seed row + grade changes only). Rows are written by the daily `snapshot-safety-grade-history` cron and returned in ascending date order.
+
+**Cache:** slow
+
+**Required query parameter**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `stablecoin` | `string` | Pharos stablecoin ID (required) |
+
+**Optional query parameters**
+
+| Param | Type | Default | Bounds | Description |
+|-------|------|---------|--------|-------------|
+| `days` | `integer` | `365` | 1–3650 | Lookback window in days |
+
+**Response:** Array sorted by `date` ascending.
+
+```json
+[
+  {
+    "date": 1771977600,
+    "grade": "B+",
+    "score": 78,
+    "prevGrade": "B",
+    "prevScore": 74,
+    "methodologyVersion": "5.5"
+  }
+]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | `number` | UTC day bucket (Unix seconds) when the event was recorded |
+| `grade` | `string` | Current Safety Score letter grade at `date` |
+| `score` | `number \| null` | Current numeric score (0–100); `null` when grade is `NR` |
+| `prevGrade` | `string \| null` | Previous grade before this event; `null` for the seed row |
+| `prevScore` | `number \| null` | Previous score before this event; `null` for the seed row |
+| `methodologyVersion` | `string` | Safety Score methodology version used for this event row |
 
 ---
 

@@ -25,6 +25,7 @@ export const CRON_JOB_DEFINITIONS: readonly CronJobDefinition[] = [
   { job: "sync-dex-liquidity", intervalSec: 1800, schedule: CRON_SCHEDULES.halfHourlyOffset },
   { job: "sync-yield-data", intervalSec: 1800, schedule: CRON_SCHEDULES.halfHourlyOffset },
   { job: "snapshot-supply", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
+  { job: "snapshot-safety-grade-history", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "fetch-tbill-rate", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "snapshot-psi", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },
   { job: "sync-usds-status", intervalSec: 86400, schedule: CRON_SCHEDULES.daily0800Utc },

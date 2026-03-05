@@ -9,6 +9,7 @@ import { syncBluechip } from "../cron/sync-bluechip";
 import { syncFxRates } from "../cron/sync-fx-rates";
 import { syncDexLiquidity } from "../cron/dex-liquidity";
 import { snapshotSupply } from "../cron/snapshot-supply";
+import { snapshotSafetyGradeHistory } from "../cron/snapshot-safety-grade-history";
 import { generateDailyDigest } from "../cron/daily-digest";
 import { computeAndStoreStabilityIndex } from "../cron/stability-index";
 import { snapshotPsiDaily } from "../cron/snapshot-psi";
@@ -246,6 +247,7 @@ export async function handleScheduledEvent(
     }
     case CRON_SCHEDULES.daily0800Utc: {
       ctx.waitUntil(runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal)));
+      ctx.waitUntil(runLeasedCron("snapshot-safety-grade-history", (signal) => snapshotSafetyGradeHistory(db, signal)));
       ctx.waitUntil(runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
       const psiPromise = runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal));
       ctx.waitUntil(psiPromise);

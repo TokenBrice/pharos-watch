@@ -17,6 +17,7 @@ import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { InfoSection } from "@/components/stablecoin-detail/info-section";
 import { LiquiditySection } from "@/components/stablecoin-detail/liquidity-section";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
+import { SafetyScoreHistorySection } from "@/components/stablecoin-detail/safety-score-history-section";
 import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
@@ -121,6 +122,9 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
 
       <section id="report-card">
         {viewModel.reportCard && <ReportCardDetail card={viewModel.reportCard} />}
+        <div className="mt-4">
+          <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+        </div>
       </section>
 
       <NoticesAndSummarySection

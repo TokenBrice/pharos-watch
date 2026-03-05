@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 16 cron jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 17 cron jobs across 4 trigger slots.
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -104,7 +104,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 |---------|----------------------|---------|
 | Realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary, mint-burn-events |
 | Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
-| Slow | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, digest-snapshot |
+| Slow | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, digest-snapshot |
 
 ### Admin Auth
 
@@ -195,6 +195,7 @@ crons = [
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
+| `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
@@ -509,7 +510,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 16 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 17 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -526,6 +527,7 @@ Returns raw and effective status, recent `cron_runs`, data-quality metrics, stat
 | `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
+| `snapshot-safety-grade-history` | 86,400s (24h) | `0 8 * * *` |
 | `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
 | `status-self-check` | 900s (15min) | `*/15 * * * *` |
@@ -583,6 +585,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation |
 | `worker/src/cron/sync-usds-status.ts` | USDS freeze monitor: ERC-1967 proxy inspection |
 | `worker/src/cron/sync-bluechip.ts` | Bluechip ratings: batch fetch from bluechip.org |
+| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events) |
 | `worker/src/cron/status-self-check.ts` | Status reliability self-check: synthetic probes, hysteresis persistence, discrepancy alerting |
 | `worker/src/lib/status-reliability.ts` | Status state machine + transition/probe/discrepancy persistence helpers |
 | `worker/migrations/0001_initial.sql` | `cache`, `blacklist_events`, `blacklist_sync_state` tables |

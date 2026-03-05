@@ -24,6 +24,7 @@ import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { handleReportCards } from "./api/report-cards";
 import { handleYieldRankings } from "./api/yield-rankings";
 import { handleYieldHistory } from "./api/yield-history";
+import { handleSafetyScoreHistory } from "./api/safety-score-history";
 import { handleMintBurnFlows } from "./api/mint-burn-flows";
 import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
@@ -105,6 +106,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   ["/api/report-cards", ({ db }) => handleReportCards(db)],
   ["/api/yield-rankings", ({ db }) => handleYieldRankings(db)],
   ["/api/yield-history", ({ db, url }) => handleYieldHistory(db, url)],
+  ["/api/safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)],
   ["/api/mint-burn-flows", ({ db, url }) => handleMintBurnFlows(db, url)],
   ["/api/mint-burn-events", ({ db, url }) => handleMintBurnEvents(db, url)],
   ["/api/backfill-mint-burn-prices", ({ db, url, adminKey, request }) => runIdempotentAdminAction(

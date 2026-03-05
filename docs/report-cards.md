@@ -250,7 +250,11 @@ Lowered 5 points in v4.0 to compensate for structural deflation from removing pe
 
 Response includes `cards` (array of `ReportCard` with `rawInputs` for client-side recomputation), `dependencyGraph` (forward edges for dependency traversal), `methodology` (version, weights, `pegMultiplierExponent`, thresholds), and `updatedAt`. See `docs/api-reference.md` for full response shape.
 
-Implementation note: report cards and peg summary now share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed once with identical logic in both endpoints.
+`GET /api/safety-score-history` — per-coin Safety Score grade history timeline (`stablecoin` required, `days` optional). Backed by `safety_grade_history` event rows written daily by `snapshot-safety-grade-history`. Cache: slow (1-hour edge).
+
+Implementation notes:
+- Report cards and peg summary share peg-event derivation through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), so peg score/current deviation windows are computed once with identical logic in both endpoints.
+- Report-card API responses and the grade-history cron both use `worker/src/lib/report-cards-snapshot.ts` (`buildReportCardsSnapshot()`), preventing scoring drift between live API and persisted history.
 
 Key types:
 - **`DependencyWeight`**: `{ id: string; weight: number }` — upstream stablecoin ID + collateral fraction (0–1). Replaces the old `string[]` dependency format.
@@ -287,21 +291,27 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 - **Grid page**: `src/app/safety-scores/client.tsx` — filterable/sortable grid of grade cards with grade distribution bar, portfolio/stress panel integration, simulation mode
 - **Portfolio & stress panel**: `src/components/stress-test-panel.tsx` — collapsible panel with holdings editor, portfolio grade/radar/exposure, stress test controls + impact table
 - **Detail card**: `src/components/report-card.tsx` — full radar chart + dimension breakdown
+- **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
 - **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge)
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay)
-- **Hooks**: `src/hooks/use-report-cards.ts` (TanStack Query), `src/hooks/use-portfolio.ts` (portfolio state + localStorage + URL sync), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
+- **Hooks**: `src/hooks/use-report-cards.ts` (grade cards + methodology), `src/hooks/use-safety-score-history.ts` (per-coin grade history), `src/hooks/use-portfolio.ts` (portfolio state + localStorage + URL sync), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `shared/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
-| `worker/src/api/report-cards.ts` | API handler: data loading, topological sort computation, `rawInputs`, `dependencyGraph`, response |
+| `worker/src/lib/report-cards-snapshot.ts` | Shared report-card snapshot builder used by API + grade-history cron |
+| `worker/src/api/report-cards.ts` | API handler: serves shared snapshot response with freshness headers |
+| `worker/src/cron/snapshot-safety-grade-history.ts` | Daily grade-history event snapshot writer (`safety_grade_history`) |
+| `worker/src/api/safety-score-history.ts` | History endpoint for per-coin grade transitions |
 | `src/components/stress-test-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
 | `src/components/report-card.tsx` | Full detail card with radar |
+| `src/components/stablecoin-detail/safety-score-history-section.tsx` | Stablecoin detail grade-history timeline UI |
 | `src/components/report-card-mini.tsx` | Compact grid tile with simulation mode support |
 | `src/components/radar-chart.tsx` | Recharts radar visualization |
 | `src/app/safety-scores/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
 | `src/hooks/use-report-cards.ts` | TanStack Query hook |
+| `src/hooks/use-safety-score-history.ts` | TanStack Query hook for `/api/safety-score-history` |
 | `src/hooks/use-portfolio.ts` | Portfolio holdings state, localStorage persistence, URL sync, upstream exposure |
 | `src/hooks/use-stress-test.ts` | Stress test state, `computeStressedGrades` invocation, impact calculation |
