@@ -122,7 +122,15 @@ function useIsMobile(breakpoint = 640) {
 
 /* ─── ScoreChart (reusable, data passed in) ────────────────────── */
 
-export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score: number }[]; excludeEvents?: string[] }) {
+export function ScoreChart({
+  data,
+  excludeEvents,
+  showHeader = true,
+}: {
+  data: { ts: number; score: number }[];
+  excludeEvents?: string[];
+  showHeader?: boolean;
+}) {
   const chartRef = useRef<HTMLDivElement>(null);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");
@@ -165,19 +173,21 @@ export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score:
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <CardTitle as="h2" className="min-w-0">Pharos Stability Index History</CardTitle>
-        <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-          <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
-          <Button variant="ghost" size="icon-sm" className="shrink-0" onClick={handlePngExport} title="Save chart as PNG">
-            <Camera className="h-4 w-4" />
-          </Button>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
+      {showHeader && (
+        <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle as="h2" className="min-w-0">Pharos Stability Index History</CardTitle>
+          <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
+            <Button variant="ghost" size="icon-sm" className="shrink-0" onClick={handlePngExport} title="Save chart as PNG">
+              <Camera className="h-4 w-4" />
+            </Button>
+          </CardAction>
+        </CardHeader>
+      )}
+      <CardContent className={showHeader ? undefined : "px-4 pt-4 pb-2"}>
         {filteredData.length > 0 ? (
           <div ref={chartRef}>
-          <div className="flex flex-wrap gap-4 mb-4">
+          <div className={showHeader ? "mb-4 flex flex-wrap gap-4" : "mb-3 flex flex-wrap gap-4"}>
             {BAND_ZONES.map((zone) => (
               <div key={zone.label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
@@ -186,12 +196,15 @@ export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score:
             ))}
           </div>
           <div
-            className="psi-chart h-[250px] sm:h-[350px]"
+            className={showHeader ? "psi-chart h-[250px] sm:h-[350px]" : "psi-chart h-[250px] sm:h-[336px]"}
             role="figure"
             aria-label={`PSI score history chart showing ${filteredData.length} data points`}
           >
             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <AreaChart data={filteredData} margin={{ top: 30, right: 5, bottom: 20, left: 5 }}>
+              <AreaChart
+                data={filteredData}
+                margin={{ top: showHeader ? 30 : 26, right: 5, bottom: showHeader ? 20 : 8, left: 5 }}
+              >
                 <defs>
                   <linearGradient id="psiScoreGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
@@ -287,7 +300,7 @@ export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score:
           </div>
           </div>
         ) : (
-          <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
+          <div className={showHeader ? "flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground" : "flex h-[250px] sm:h-[336px] items-center justify-center text-muted-foreground"}>
             No score history available
           </div>
         )}
@@ -298,7 +311,13 @@ export function ScoreChart({ data, excludeEvents }: { data: { ts: number; score:
 
 /* ─── Self-contained wrapper (fetches its own data) ────────────── */
 
-export function PsiHistoryChart({ excludeEvents }: { excludeEvents?: string[] } = {}) {
+export function PsiHistoryChart({
+  excludeEvents,
+  showHeader = true,
+}: {
+  excludeEvents?: string[];
+  showHeader?: boolean;
+} = {}) {
   const { data, isLoading } = useStabilityIndexDetail();
   const history = data?.history;
   const current = data?.current;
@@ -325,5 +344,11 @@ export function PsiHistoryChart({ excludeEvents }: { excludeEvents?: string[] } 
     );
   }
 
-  return <ScoreChart data={chartData} excludeEvents={excludeEvents} />;
+  return (
+    <ScoreChart
+      data={chartData}
+      excludeEvents={excludeEvents}
+      showHeader={showHeader}
+    />
+  );
 }

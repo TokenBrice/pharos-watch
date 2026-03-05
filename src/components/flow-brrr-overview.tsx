@@ -16,6 +16,7 @@ interface FlowBrrrOverviewProps {
   coins: MintBurnCoinFlow[];
   weeklyHourly?: MintBurnHourlyBucket[];
   isLoading?: boolean;
+  className?: string;
 }
 
 interface PrinterMode {
@@ -243,7 +244,7 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
     : (-10 - snapshot.score) / 90;
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border bg-card p-4 sm:p-6">
+    <article className="relative h-full overflow-hidden rounded-2xl border bg-card p-4 sm:p-6">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 opacity-55"
@@ -387,7 +388,7 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
   );
 }
 
-export function FlowBrrrOverview({ gauge, coins, weeklyHourly, isLoading }: FlowBrrrOverviewProps) {
+export function FlowBrrrOverview({ gauge, coins, weeklyHourly, isLoading, className }: FlowBrrrOverviewProps) {
   const snapshot = useMemo(
     () => buildSnapshot(gauge, coins, weeklyHourly),
     [gauge, coins, weeklyHourly],
@@ -398,7 +399,7 @@ export function FlowBrrrOverview({ gauge, coins, weeklyHourly, isLoading }: Flow
   }
 
   return (
-    <div className="space-y-4">
+    <div className={cn("h-full space-y-4", className)}>
       <IterationOne snapshot={snapshot} gauge={gauge} />
     </div>
   );

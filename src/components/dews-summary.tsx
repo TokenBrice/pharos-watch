@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
+import { cn } from "@/lib/utils";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { THREAT_BAND_HEX } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
@@ -329,12 +330,14 @@ function DEWSRadar({
   highest,
   totalCount,
   onCoinClick,
+  compact = false,
 }: {
   elevated: ElevatedCoin[];
   calmDots: CalmDot[];
   highest: ThreatBand;
   totalCount: number;
   onCoinClick: (id: string) => void;
+  compact?: boolean;
 }) {
   const uid = useId();
   const wakeGradId = `dews-wake-${uid}`;
@@ -353,7 +356,7 @@ function DEWSRadar({
   const dur = sweepDuration(highest);
 
   return (
-    <svg viewBox="0 0 560 500" width="100%" style={{ maxHeight: 440 }}
+    <svg viewBox="0 0 560 500" width="100%" style={{ maxHeight: compact ? 400 : 440 }}
       aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}`}`}
       role="img">
       <defs>
@@ -439,9 +442,15 @@ function DEWSRadar({
 // DEWSLegend
 // ---------------------------------------------------------------------------
 
-function DEWSLegend({ updatedAtLabel }: { updatedAtLabel: string }) {
+function DEWSLegend({
+  updatedAtLabel,
+  compact = false,
+}: {
+  updatedAtLabel: string;
+  compact?: boolean;
+}) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-3 border-t">
+    <div className={`flex flex-wrap items-center gap-y-1 border-t ${compact ? "gap-x-3 pt-2" : "gap-x-4 pt-3"}`}>
       {[...RING_BANDS].reverse().map((band) => (
         <div key={band} className="flex items-center gap-1.5">
           <svg width={20} height={4} aria-hidden="true">
@@ -466,20 +475,24 @@ function DEWSLegend({ updatedAtLabel }: { updatedAtLabel: string }) {
 
 interface DEWSSummaryProps {
   logos?: Record<string, string>;
+  showHeader?: boolean;
+  className?: string;
 }
 
-export function DEWSSummary({ logos }: DEWSSummaryProps) {
+export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummaryProps) {
   const { data, isLoading } = useStressSignals();
   const router = useRouter();
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[440px] rounded-lg bg-muted animate-pulse" />
+      <Card className={className}>
+        {showHeader && (
+          <CardHeader>
+            <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
+          </CardHeader>
+        )}
+        <CardContent className={showHeader ? undefined : "p-4"}>
+          <div className={`${showHeader ? "h-[440px]" : "h-[400px]"} rounded-lg bg-muted animate-pulse`} />
         </CardContent>
       </Card>
     );
@@ -500,26 +513,29 @@ export function DEWSSummary({ logos }: DEWSSummaryProps) {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {elevated.length > 0
-              ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
-              : `All ${totalCount} coins calm`}
-          </span>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-0 pb-4">
+    <Card className={cn(className)}>
+      {showHeader && (
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle as="h2">DEWS: Depeg Early Warning System</CardTitle>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {elevated.length > 0
+                ? `${elevated.length} elevated · ${totalCount - elevated.length} calm`
+                : `All ${totalCount} coins calm`}
+            </span>
+          </div>
+        </CardHeader>
+      )}
+      <CardContent className={showHeader ? "space-y-0 pb-4" : "flex h-full flex-col space-y-0 p-3"}>
         <DEWSRadar
           elevated={elevated}
           calmDots={calmDots}
           highest={highest}
           totalCount={totalCount}
           onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
+          compact={!showHeader}
         />
-        <DEWSLegend updatedAtLabel={updatedAtLabel} />
+        <DEWSLegend updatedAtLabel={updatedAtLabel} compact={!showHeader} />
       </CardContent>
     </Card>
   );

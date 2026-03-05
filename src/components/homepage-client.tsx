@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useLogos } from "@/hooks/use-logos";
 import { usePegSummary } from "@/hooks/use-peg-summary";
@@ -15,6 +16,7 @@ import { TotalMcapChart } from "@/components/total-mcap-chart";
 import { PsiHistoryChart } from "@/components/psi-history-chart";
 import { DEWSSummary } from "@/components/dews-summary";
 import { HomepageFlowOverview } from "@/components/homepage-flow-overview";
+import { HomepageSafetyOverview } from "@/components/homepage-safety-overview";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -170,21 +172,66 @@ export function HomepageClient() {
         </section>
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary name="charts">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TotalMcapChart />
-          <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
-        </div>
-      </SectionErrorBoundary>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SectionErrorBoundary name="dews-radar">
-          <DEWSSummary logos={logos} />
+          <section className="flex h-full flex-col space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
+              <Link
+                href="/depeg/"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                View Depeg Tracker
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="flex-1">
+              <DEWSSummary logos={logos} showHeader={false} className="h-full" />
+            </div>
+          </section>
         </SectionErrorBoundary>
         <SectionErrorBoundary name="mint-burn-snapshot">
           <HomepageFlowOverview />
         </SectionErrorBoundary>
       </div>
+
+      <SectionErrorBoundary name="charts">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <section className="flex h-full flex-col space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xl font-semibold tracking-tight">Safety Scores Overview</h2>
+              <Link
+                href="/safety-scores/"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                View Safety Scores
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <HomepageSafetyOverview
+              cards={reportCardsData?.cards}
+              peggedAssets={data?.peggedAssets}
+              className="h-full"
+            />
+          </section>
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xl font-semibold tracking-tight">Pharos Stability Index History</h2>
+              <Link
+                href="/stability-index/"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                More Information on PSI
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <PsiHistoryChart
+              excludeEvents={["Tether DOJ Probe", "IRON Finance"]}
+              showHeader={false}
+            />
+          </section>
+        </div>
+      </SectionErrorBoundary>
 
       <FeatureHighlights />
 
@@ -193,6 +240,10 @@ export function HomepageClient() {
           <h2 className="text-xl font-semibold tracking-tight mb-4">Stablecoin Distribution</h2>
           <CategoryStats data={data?.peggedAssets} reportCards={reportCardMap} />
         </section>
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="marketcap">
+        <TotalMcapChart />
       </SectionErrorBoundary>
 
       <PegDiversityChart />
