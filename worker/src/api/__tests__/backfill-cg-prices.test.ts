@@ -1,17 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
 import { handleBackfillCgPrices } from "../backfill-cg-prices";
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, i) => byte === bv[i]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: vi.fn(async () => (
@@ -60,9 +51,9 @@ describe("handleBackfillCgPrices", () => {
   it("requires admin auth", async () => {
     const res = await handleBackfillCgPrices(
       makeDb(),
-      new URL("https://x/api/backfill-cg-prices"),
+      makeApiUrl("/api/backfill-cg-prices"),
       "secret",
-      new Request("https://x/api/backfill-cg-prices"),
+      makeApiRequest("/api/backfill-cg-prices"),
     );
     expect(res.status).toBe(401);
   });
@@ -70,11 +61,9 @@ describe("handleBackfillCgPrices", () => {
   it("returns 404 for unknown stablecoin", async () => {
     const res = await handleBackfillCgPrices(
       makeDb(),
-      new URL("https://x/api/backfill-cg-prices?stablecoin=missing"),
+      makeApiUrl("/api/backfill-cg-prices?stablecoin=missing"),
       "secret",
-      new Request("https://x/api/backfill-cg-prices?stablecoin=missing", {
-        headers: { "X-Admin-Key": "secret" },
-      }),
+      makeApiRequest("/api/backfill-cg-prices?stablecoin=missing", { adminKey: "secret" }),
     );
     expect(res.status).toBe(404);
     expect(await res.json()).toEqual({ error: "Stablecoin not found" });
@@ -83,11 +72,9 @@ describe("handleBackfillCgPrices", () => {
   it("returns no-op response for out-of-range batches", async () => {
     const res = await handleBackfillCgPrices(
       makeDb(),
-      new URL("https://x/api/backfill-cg-prices?batch=999999&batchSize=100"),
+      makeApiUrl("/api/backfill-cg-prices?batch=999999&batchSize=100"),
       "secret",
-      new Request("https://x/api/backfill-cg-prices?batch=999999&batchSize=100", {
-        headers: { "X-Admin-Key": "secret" },
-      }),
+      makeApiRequest("/api/backfill-cg-prices?batch=999999&batchSize=100", { adminKey: "secret" }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ message: "No coins in this batch" });
@@ -97,11 +84,9 @@ describe("handleBackfillCgPrices", () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
     const res = await handleBackfillCgPrices(
       makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }]),
-      new URL("https://x/api/backfill-cg-prices?stablecoin=1"),
+      makeApiUrl("/api/backfill-cg-prices?stablecoin=1"),
       "secret",
-      new Request("https://x/api/backfill-cg-prices?stablecoin=1", {
-        headers: { "X-Admin-Key": "secret" },
-      }),
+      makeApiRequest("/api/backfill-cg-prices?stablecoin=1", { adminKey: "secret" }),
     );
 
     expect(res.status).toBe(200);

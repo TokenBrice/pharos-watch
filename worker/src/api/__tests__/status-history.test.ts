@@ -1,17 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, i) => byte === bv[i]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 const { handleStatusHistory } = await import("../status-history");
 
@@ -75,9 +66,7 @@ describe("handleStatusHistory", () => {
       },
     ]);
 
-    const request = new Request("https://x/api/status-history?limit=5", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status-history?limit=5", { adminKey: "secret-key" });
     const res = await handleStatusHistory(db, "secret-key", request);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {

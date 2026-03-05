@@ -1,17 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
 import { handleBackfillMintBurnPrices } from "../backfill-mint-burn-prices";
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, i) => byte === bv[i]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 type QueryRecord = {
   kind: "all" | "first" | "run";
@@ -85,13 +76,11 @@ function makeBackfillDb() {
 describe("handleBackfillMintBurnPrices", () => {
   it("repairs rows missing valuation audit fields, not only NULL amount_usd rows", async () => {
     const { db, queries } = makeBackfillDb();
-    const request = new Request("https://x/api/backfill-mint-burn-prices", {
-      headers: { "X-Admin-Key": "secret" },
-    });
+    const request = makeApiRequest("/api/backfill-mint-burn-prices", { adminKey: "secret" });
 
     const response = await handleBackfillMintBurnPrices(
       db,
-      new URL("https://x/api/backfill-mint-burn-prices"),
+      makeApiUrl("/api/backfill-mint-burn-prices"),
       "secret",
       request,
     );
@@ -130,9 +119,9 @@ describe("handleBackfillMintBurnPrices", () => {
 
     const response = await handleBackfillMintBurnPrices(
       db,
-      new URL("https://x/api/backfill-mint-burn-prices"),
+      makeApiUrl("/api/backfill-mint-burn-prices"),
       "secret",
-      new Request("https://x/api/backfill-mint-burn-prices"),
+      makeApiRequest("/api/backfill-mint-burn-prices"),
     );
 
     expect(response.status).toBe(401);

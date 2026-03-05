@@ -1,17 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, idx) => byte === bv[idx]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 vi.mock("../../lib/stability-index", () => ({
   computeStabilityIndex: vi.fn(() => ({
@@ -96,7 +87,7 @@ describe("handleBackfillStabilityIndex", () => {
     const res = await handleBackfillStabilityIndex(
       makeDb(),
       "secret",
-      new Request("https://x/api/backfill-stability-index"),
+      makeApiRequest("/api/backfill-stability-index"),
     );
     expect(res.status).toBe(401);
   });
@@ -105,9 +96,7 @@ describe("handleBackfillStabilityIndex", () => {
     const res = await handleBackfillStabilityIndex(
       makeDb({ earliest: null }),
       "secret",
-      new Request("https://x/api/backfill-stability-index", {
-        headers: { "X-Admin-Key": "secret" },
-      }),
+      makeApiRequest("/api/backfill-stability-index", { adminKey: "secret" }),
     );
 
     expect(res.status).toBe(404);
@@ -140,10 +129,7 @@ describe("handleBackfillStabilityIndex", () => {
         ],
       }),
       "secret",
-      new Request("https://x/api/backfill-stability-index", {
-        method: "POST",
-        headers: { "X-Admin-Key": "secret" },
-      }),
+      makeApiRequest("/api/backfill-stability-index", { method: "POST", adminKey: "secret" }),
     );
 
     expect(res.status).toBe(200);

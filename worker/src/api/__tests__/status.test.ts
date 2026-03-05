@@ -1,18 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { makeApiRequest, stubCryptoForAuth } from "./helpers/auth";
 
-// Stub crypto.subtle for the auth module's timingSafeEqual
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, i) => byte === bv[i]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 const { handleStatus } = await import("../status");
 
@@ -50,9 +40,7 @@ describe("handleStatus", () => {
 
   it("returns 401 when wrong admin key is provided", async () => {
     const db = mockD1([]);
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "wrong-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "wrong-key" });
     const res = await handleStatus(db, "secret-key", request);
 
     expect(res.status).toBe(401);
@@ -102,9 +90,7 @@ describe("handleStatus", () => {
       { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
 
     expect(res.status).toBe(200);
@@ -138,9 +124,7 @@ describe("handleStatus", () => {
       { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -163,9 +147,7 @@ describe("handleStatus", () => {
       { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     const body = (await res.json()) as {
       crons: Record<string, { lastRun: unknown; healthy: boolean; expectedIntervalSec: number }>;
@@ -198,9 +180,7 @@ describe("handleStatus", () => {
       { match: "onchain_supply WHERE updated_at >", rows: [] },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     const body = (await res.json()) as {
       crons: Record<string, { healthy: boolean }>;
@@ -258,9 +238,7 @@ describe("handleStatus", () => {
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     const body = (await res.json()) as {
       availabilityStatus: string;
@@ -296,9 +274,7 @@ describe("handleStatus", () => {
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     const body = (await res.json()) as {
       dataQualityStatus: string;
@@ -336,9 +312,7 @@ describe("handleStatus", () => {
       { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
     ]);
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     const body = (await res.json()) as {
       dataQualityStatus: string;
@@ -378,9 +352,7 @@ describe("handleStatus", () => {
       return originalPrepare(sql);
     }) as typeof db.prepare;
 
-    const request = new Request("https://x/api/status", {
-      headers: { "X-Admin-Key": "secret-key" },
-    });
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus(db, "secret-key", request);
     expect(res.status).toBe(200);
 

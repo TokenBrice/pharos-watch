@@ -1,16 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, idx) => byte === bv[idx]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 vi.mock("../../lib/alchemy-logs", () => ({
   buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/test-key"),
@@ -54,9 +45,9 @@ describe("handleBackfillMintBurn", () => {
   it("requires admin auth", async () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
-      new URL("https://x/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+      makeApiUrl("/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
       "secret",
-      new Request("https://x/api/backfill-mint-burn"),
+      makeApiRequest("/api/backfill-mint-burn"),
       "alchemy-key",
     );
 
@@ -66,14 +57,12 @@ describe("handleBackfillMintBurn", () => {
   it("validates configKey", async () => {
     const response = await handleBackfillMintBurn(
       makeDb(),
-      new URL("https://x/api/backfill-mint-burn"),
+      makeApiUrl("/api/backfill-mint-burn"),
       "secret",
-      new Request("https://x/api/backfill-mint-burn", {
+      makeApiRequest("/api/backfill-mint-burn", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Admin-Key": "secret",
-        },
+        adminKey: "secret",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({}),
       }),
       "alchemy-key",
@@ -85,12 +74,10 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("returns done when requested range is empty", async () => {
-    const request = new Request("https://x/api/backfill-mint-burn", {
+    const request = makeApiRequest("/api/backfill-mint-burn", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Admin-Key": "secret",
-      },
+      adminKey: "secret",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         fromBlock: 100,
@@ -100,7 +87,7 @@ describe("handleBackfillMintBurn", () => {
 
     const response = await handleBackfillMintBurn(
       makeDb(),
-      new URL("https://x/api/backfill-mint-burn"),
+      makeApiUrl("/api/backfill-mint-burn"),
       "secret",
       request,
       "alchemy-key",
@@ -122,12 +109,10 @@ describe("handleBackfillMintBurn", () => {
   });
 
   it("returns nextFromBlock when maxChunks stops before toBlock", async () => {
-    const request = new Request("https://x/api/backfill-mint-burn", {
+    const request = makeApiRequest("/api/backfill-mint-burn", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Admin-Key": "secret",
-      },
+      adminKey: "secret",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         configKey: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
         fromBlock: 100,
@@ -139,7 +124,7 @@ describe("handleBackfillMintBurn", () => {
 
     const response = await handleBackfillMintBurn(
       makeDb(),
-      new URL("https://x/api/backfill-mint-burn"),
+      makeApiUrl("/api/backfill-mint-burn"),
       "secret",
       request,
       "alchemy-key",

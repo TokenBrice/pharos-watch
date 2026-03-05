@@ -141,6 +141,25 @@ import { makeBlacklistRow } from "./helpers/fixtures";
 const row = makeBlacklistRow({ stablecoin: "2", event_type: "freeze" });
 ```
 
+### Shared Auth Helpers (`worker/src/api/__tests__/helpers/auth.ts`)
+
+Use these helpers in worker API contract tests that exercise admin auth and URL/request plumbing.
+
+```ts
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
+
+stubCryptoForAuth();
+
+const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+const url = makeApiUrl("/api/status?limit=5");
+```
+
+- `stubCryptoForAuth()` — shared `crypto.subtle` stub for `requireAdmin`-based handlers.
+- `makeApiRequest(path, options)` — creates requests with optional `method`, `adminKey`, `headers`, and `body`.
+- `makeApiUrl(path)` — normalizes relative API paths into `https://x/...` URLs.
+
+Use these helpers instead of duplicating per-file `vi.stubGlobal("crypto", ...)` or repetitive request builders.
+
 ## Test File Inventory
 
 This inventory is representative, not exhaustive. For the full current list, run:

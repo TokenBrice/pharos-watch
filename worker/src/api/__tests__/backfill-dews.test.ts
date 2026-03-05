@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
 
 vi.mock("../../lib/dews", () => ({
   computeDEWS: vi.fn(() => ({
@@ -12,17 +13,7 @@ vi.mock("../../lib/dews", () => ({
 import { computeDEWS } from "../../lib/dews";
 import { handleBackfillDEWS } from "../backfill-dews";
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, i) => byte === bv[i]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 describe("handleBackfillDEWS", () => {
   it("reconstructs inputs from circulating_usd and liquidity history schema columns", async () => {
@@ -67,12 +58,10 @@ describe("handleBackfillDEWS", () => {
       },
     ]);
 
-    const request = new Request("https://x/api/backfill-dews", {
-      headers: { "X-Admin-Key": "secret" },
-    });
+    const request = makeApiRequest("/api/backfill-dews", { adminKey: "secret" });
     const response = await handleBackfillDEWS(
       db,
-      new URL("https://x/api/backfill-dews"),
+      makeApiUrl("/api/backfill-dews"),
       "secret",
       request,
     );

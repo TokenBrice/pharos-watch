@@ -1,22 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
+import { stubCryptoForAuth } from "./helpers/auth";
 import type { FeedbackEnv } from "../feedback";
 
 // Stub fetch and crypto.subtle before importing the handler
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
 vi.stubGlobal("fetch", fetchSpy);
 
-vi.stubGlobal("crypto", {
-  subtle: {
-    digest: async (_algo: string, data: ArrayBuffer) => data,
-    timingSafeEqual: (a: ArrayBuffer, b: ArrayBuffer) => {
-      const av = new Uint8Array(a);
-      const bv = new Uint8Array(b);
-      if (av.length !== bv.length) return false;
-      return av.every((byte, i) => byte === bv[i]);
-    },
-  },
-});
+stubCryptoForAuth();
 
 const { handleFeedback } = await import("../feedback");
 
