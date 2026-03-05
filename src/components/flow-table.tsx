@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
+import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
@@ -225,18 +226,10 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             const isNegativeIntensity = (intensityDisplay ?? 0) < 0;
 
             return (
-              <TableRow
+              <InteractiveTableRow
                 key={coin.stablecoinId}
-                className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                onClick={() => router.push(`/stablecoin/${coin.stablecoinId}`)}
-                onMouseEnter={() => prefetch(coin.stablecoinId)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    router.push(`/stablecoin/${coin.stablecoinId}`);
-                  }
-                }}
-                tabIndex={0}
+                onActivate={() => router.push(`/stablecoin/${coin.stablecoinId}`)}
+                onHover={() => prefetch(coin.stablecoinId)}
               >
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -308,7 +301,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     <span className="text-muted-foreground">&mdash;</span>
                   )}
                 </TableCell>
-              </TableRow>
+              </InteractiveTableRow>
             );
           })}
           {sorted.length === 0 && (

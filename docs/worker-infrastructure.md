@@ -8,7 +8,7 @@ Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CO
 
 ## Env Interface
 
-All bindings are defined in `worker/src/index.ts`. `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
+The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus `worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`. `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
 
 | Binding | Type | Required | Used by |
 |---------|------|----------|---------|
@@ -45,7 +45,7 @@ All bindings are defined in `worker/src/index.ts`. `DB` and `CORS_ORIGIN` are se
 
 ## Module Initialization
 
-Three modules use a lazy-init pattern to receive API keys from the `Env` at runtime. Called at the top of both `fetch` and `scheduled` handlers:
+Three modules use a lazy-init pattern to receive API keys from the `Env` at runtime. Called at the top of both runtime handler modules (`worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`):
 
 | Initializer | Called in | Purpose |
 |-------------|----------|---------|
@@ -114,9 +114,9 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 - Compares against `ADMIN_KEY` env var using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
 - Returns `null` if authorized, 401 Response if not
 
-### Inline Admin Endpoints
+### Non-Router Admin Endpoints
 
-Three admin endpoints are handled directly in `index.ts` (not via the router):
+Three admin endpoints are handled directly in `worker/src/handlers/http.ts` (not via `worker/src/router.ts`):
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
@@ -166,7 +166,7 @@ crons = [
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
-| *(inline)* | Stale-cache health alert | `worker/src/index.ts` | This doc (below) |
+| *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
 **Dependencies:** `snapshot-supply` retry, stability index, and DEWS all wait for `syncStablecoins()` to complete (`stablecoinsSync.then(...)`).
 
@@ -376,7 +376,7 @@ Default behavior in `runCronWithLease`:
 
 ### Lease Integration Status
 
-Lease primitives are now wired into scheduled cron execution in `worker/src/index.ts` for all cron jobs.
+Lease primitives are now wired into scheduled cron execution in `worker/src/handlers/scheduled.ts` for all cron jobs.
 When a lease cannot be acquired, the run is skipped (non-fatal) and recorded as `status='skipped_locked'` in `cron_runs`.
 
 ### Block Tracking (Blacklist)
@@ -559,7 +559,10 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 
 | File | Role |
 |------|------|
-| `worker/src/index.ts` | Entry point: Env interface, CORS, edge cache, method routing, admin endpoints, scheduled handler |
+| `worker/src/index.ts` | Thin worker entry: delegates `fetch`/`scheduled` to handler modules |
+| `worker/src/handlers/http.ts` | HTTP request pipeline: CORS, method gating, edge cache, non-router admin routes, router dispatch |
+| `worker/src/handlers/scheduled.ts` | Cron scheduler pipeline: trigger-slot orchestration, `logCronRun`, lease wrappers, staleness alert |
+| `worker/src/lib/env.ts` | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides |
 | `worker/wrangler.toml` | Deployment config: custom domain, cron triggers, D1 binding, vars |
 | `worker/src/lib/db.ts` | Database helpers: `logCronRun`, `batchExecute`, cache CRUD, block tracking, price cache, cron lease primitives |
 | `worker/src/lib/auth.ts` | Admin auth: timing-safe `X-Admin-Key` comparison |

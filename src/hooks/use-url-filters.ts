@@ -81,5 +81,14 @@ export function useUrlFilters() {
     [searchParams, writeParams],
   );
 
-  return { searchParams, getParam, setParam, setParams };
+  const replaceParams = useCallback(
+    (updater: (params: URLSearchParams) => void) => {
+      const params = new URLSearchParams(searchParams.toString());
+      updater(params);
+      writeParams(params);
+    },
+    [searchParams, writeParams],
+  );
+
+  return { searchParams, getParam, setParam, setParams, replaceParams };
 }

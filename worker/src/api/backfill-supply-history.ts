@@ -3,7 +3,7 @@ import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../l
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { requireAdmin } from "../lib/auth";
+import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
@@ -178,22 +178,21 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     adminSecret?: string,
     request?: Request,
   ): Promise<Response> => {
-    const authError = await requireAdmin(request, adminSecret);
-    if (authError) return authError;
+    return withAdmin(request, adminSecret, async () => {
 
-    const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
+      const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
 
-    const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
-      defaultBatchSize: DEFAULT_BATCH_SIZE,
-    });
-    if ("response" in selection) {
-      return selection.response;
-    }
-    const coins = selection.coins;
+      const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
+        defaultBatchSize: DEFAULT_BATCH_SIZE,
+      });
+      if ("response" in selection) {
+        return selection.response;
+      }
+      const coins = selection.coins;
 
-    if (coins.length === 0) {
-      return noCoinsInBatchResponse();
-    }
+      if (coins.length === 0) {
+        return noCoinsInBatchResponse();
+      }
 
     let totalRows = 0;
     const errors: string[] = [];
@@ -346,11 +345,12 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       }
     }
 
-    return jsonResponse({
-      coinsProcessed: coins.length,
-      rowsInserted: totalRows,
-      skipped: skipped.length > 0 ? skipped : undefined,
-      errors: errors.length > 0 ? errors : undefined,
+      return jsonResponse({
+        coinsProcessed: coins.length,
+        rowsInserted: totalRows,
+        skipped: skipped.length > 0 ? skipped : undefined,
+        errors: errors.length > 0 ? errors : undefined,
+      });
     });
-  },
+  }
 );

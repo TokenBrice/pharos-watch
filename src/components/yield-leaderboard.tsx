@@ -13,9 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
+import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
-import { useTablePagination } from "@/hooks/use-table-pagination";
+import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
+import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency } from "@/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
@@ -118,13 +119,13 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
     []
   );
 
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
-    useSortedTableRows<YieldRanking, SortKey>(
-      rankings,
-      { defaultKey: "pys", defaultDirection: "desc" },
-      compareRows
-    );
   const {
+    sortKey,
+    sortDirection,
+    toggleSort,
+    getAriaSortValue,
+    handleSortKeyDown,
+    sortedRows: sorted,
     effectivePage,
     totalPages,
     paginatedRows: paginated,
@@ -134,7 +135,15 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useTablePagination(sorted, { pageSize: PAGE_SIZE });
+  } = useSortedPaginatedTable<YieldRanking, SortKey>(
+    rankings,
+    {
+      defaultKey: "pys",
+      defaultDirection: "desc",
+      compareRows,
+      pageSize: PAGE_SIZE,
+    },
+  );
   const prefetch = usePrefetchStablecoin();
 
   return (
@@ -209,13 +218,10 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
             const grade = row.safetyGrade;
             const safetyScore = row.safetyScore;
             return (
-              <TableRow
+              <InteractiveTableRow
                 key={row.id}
-                className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                onClick={() => onRowClick(row.id)}
-                onMouseEnter={() => prefetch(row.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row.id); } }}
-                tabIndex={0}
+                onActivate={() => onRowClick(row.id)}
+                onHover={() => prefetch(row.id)}
               >
                 <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
                   {pageStartIndex + index + 1}
@@ -295,7 +301,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                     ? `${row.apyMin30d.toFixed(1)}% – ${row.apyMax30d.toFixed(1)}%`
                     : "--"}
                 </TableCell>
-              </TableRow>
+              </InteractiveTableRow>
             );
           })}
           {sorted.length === 0 && (

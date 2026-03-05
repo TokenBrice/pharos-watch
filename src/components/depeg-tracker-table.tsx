@@ -13,9 +13,10 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
 import { DEWSBadge } from "@/components/dews-badge";
+import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
-import { useTablePagination } from "@/hooks/use-table-pagination";
+import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
+import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@/lib/classification";
@@ -105,13 +106,12 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
     []
   );
 
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
-    useSortedTableRows<DepegTrackerRow, SortKey>(
-      rows,
-      { defaultKey: "__attention", defaultDirection: "desc" },
-      compareRows
-    );
   const {
+    sortKey,
+    sortDirection,
+    toggleSort,
+    getAriaSortValue,
+    handleSortKeyDown,
     effectivePage,
     totalPages,
     paginatedRows: paginated,
@@ -121,7 +121,15 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useTablePagination(sorted, { pageSize: PAGE_SIZE });
+  } = useSortedPaginatedTable<DepegTrackerRow, SortKey>(
+    rows,
+    {
+      defaultKey: "__attention",
+      defaultDirection: "desc",
+      compareRows,
+      pageSize: PAGE_SIZE,
+    },
+  );
   const prefetch = usePrefetchStablecoin();
 
   return (
@@ -222,13 +230,11 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
             const rank = pageStartIndex + i + 1;
 
             return (
-              <TableRow
+              <InteractiveTableRow
                 key={coin.id}
-                className={`cursor-pointer hover:bg-muted/50 transition-colors ${accent}`}
-                onClick={() => onRowClick(coin.id)}
-                onMouseEnter={() => prefetch(coin.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(coin.id); } }}
-                tabIndex={0}
+                className={`hover:bg-muted/50 transition-colors ${accent}`}
+                onActivate={() => onRowClick(coin.id)}
+                onHover={() => prefetch(coin.id)}
                 role="link"
               >
                 <TableCell className="text-right font-mono tabular-nums text-muted-foreground text-sm">
@@ -298,7 +304,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 <TableCell className="text-right font-mono tabular-nums text-sm hidden xl:table-cell">
                   {formatTrackingSpan(coin.trackingSpanDays)}
                 </TableCell>
-              </TableRow>
+              </InteractiveTableRow>
             );
           })}
           {paginated.length === 0 && (

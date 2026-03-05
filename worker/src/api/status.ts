@@ -1,5 +1,5 @@
 import { withErrorHandler, buildCacheStatuses, jsonResponse } from "../lib/api-utils";
-import { requireAdmin } from "../lib/auth";
+import { withAdmin } from "../lib/auth";
 import {
   buildDiscrepancy,
   getDiscrepancyStreak,
@@ -450,55 +450,54 @@ async function computeRawStatus(
 export const handleStatus = withErrorHandler(
   "status",
   async (db: D1Database, adminKey?: string, request?: Request): Promise<Response> => {
-    const authError = await requireAdmin(request, adminKey);
-    if (authError) return authError;
+    return withAdmin(request, adminKey, async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const raw = await computeRawStatus(db, now);
 
-    const now = Math.floor(Date.now() / 1000);
-    const raw = await computeRawStatus(db, now);
+      let { state, staleness } = await getStatusStateSnapshot(db, now);
 
-    let { state, staleness } = await getStatusStateSnapshot(db, now);
+      // Bootstrap or refresh stale state on-demand in case the self-check cron is delayed.
+      if (!state || staleness?.isStale) {
+        const seeded = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
+        state = seeded.state;
+        staleness = {
+          ageSeconds: 0,
+          maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
+          isStale: false,
+        };
+      }
 
-    // Bootstrap or refresh stale state on-demand in case the self-check cron is delayed.
-    if (!state || staleness?.isStale) {
-      const seeded = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
-      state = seeded.state;
-      staleness = {
-        ageSeconds: 0,
-        maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
-        isStale: false,
+      const effectiveOverallStatus = state?.currentStatus ?? raw.rawOverallStatus;
+      const probe = await getLatestStatusProbe(db);
+      const discrepancyStreak = await getDiscrepancyStreak(db);
+      const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
+      const timeline = await listRecentStatusTransitions(db, 40);
+
+      const body: StatusResponse = {
+        timestamp: now,
+        availabilityStatus: raw.availabilityStatus,
+        dataQualityStatus: raw.dataQualityStatus,
+        rawOverallStatus: raw.rawOverallStatus,
+        overallStatus: effectiveOverallStatus,
+        confidence: raw.confidence,
+        causes: raw.causes,
+        state: state ?? fallbackState(raw.rawOverallStatus, now),
+        staleness: staleness ?? {
+          ageSeconds: 0,
+          maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
+          isStale: false,
+        },
+        probe,
+        discrepancy,
+        timeline,
+        caches: raw.caches,
+        crons: raw.crons,
+        dataQuality: raw.dataQuality,
+        summary: raw.summary,
       };
-    }
 
-    const effectiveOverallStatus = state?.currentStatus ?? raw.rawOverallStatus;
-    const probe = await getLatestStatusProbe(db);
-    const discrepancyStreak = await getDiscrepancyStreak(db);
-    const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
-    const timeline = await listRecentStatusTransitions(db, 40);
-
-    const body: StatusResponse = {
-      timestamp: now,
-      availabilityStatus: raw.availabilityStatus,
-      dataQualityStatus: raw.dataQualityStatus,
-      rawOverallStatus: raw.rawOverallStatus,
-      overallStatus: effectiveOverallStatus,
-      confidence: raw.confidence,
-      causes: raw.causes,
-      state: state ?? fallbackState(raw.rawOverallStatus, now),
-      staleness: staleness ?? {
-        ageSeconds: 0,
-        maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
-        isStale: false,
-      },
-      probe,
-      discrepancy,
-      timeline,
-      caches: raw.caches,
-      crons: raw.crons,
-      dataQuality: raw.dataQuality,
-      summary: raw.summary,
-    };
-
-    return jsonResponse(body, { "Cache-Control": "no-store" });
+      return jsonResponse(body, { "Cache-Control": "no-store" });
+    });
   }
 );
 

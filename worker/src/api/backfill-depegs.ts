@@ -4,7 +4,7 @@ import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../.
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
-import { requireAdmin } from "../lib/auth";
+import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -227,21 +227,20 @@ interface CoinDetail {
 }
 
 export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
-  const authError = await requireAdmin(request, adminSecret);
-  if (authError) return authError;
+  return withAdmin(request, adminSecret, async () => {
 
-  const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
-    defaultBatchSize: BATCH_SIZE,
-    allowBatchSizeOverride: false,
-  });
-  if ("response" in selection) {
-    return selection.response;
-  }
-  const coins = selection.coins;
+    const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
+      defaultBatchSize: BATCH_SIZE,
+      allowBatchSizeOverride: false,
+    });
+    if ("response" in selection) {
+      return selection.response;
+    }
+    const coins = selection.coins;
 
-  if (coins.length === 0) {
-    return noCoinsInBatchResponse();
-  }
+    if (coins.length === 0) {
+      return noCoinsInBatchResponse();
+    }
 
   // Get peg rates from cached stablecoin data
   let pegRates: Record<string, number> = { peggedUSD: 1 };
@@ -394,15 +393,16 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     }
   }
 
-  return jsonResponse({
-    coinsProcessed: coins.length,
-    eventsCreated: totalEvents,
-    skipped: skipped.length > 0 ? skipped : undefined,
-    errors: errors.length > 0 ? errors : undefined,
-    commodities: needsCommodities ? {
-      goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
-      silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
-    } : undefined,
+    return jsonResponse({
+      coinsProcessed: coins.length,
+      eventsCreated: totalEvents,
+      skipped: skipped.length > 0 ? skipped : undefined,
+      errors: errors.length > 0 ? errors : undefined,
+      commodities: needsCommodities ? {
+        goldDataPoints: commoditySeries["GOLD"]?.length ?? 0,
+        silverDataPoints: commoditySeries["SILVER"]?.length ?? 0,
+      } : undefined,
+    });
   });
 });
 

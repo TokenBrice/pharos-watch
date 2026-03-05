@@ -13,10 +13,11 @@ import {
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
+import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { BalanceBar } from "@/components/balance-bar";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
-import { useTablePagination } from "@/hooks/use-table-pagination";
+import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
+import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency } from "@/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
@@ -103,13 +104,13 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
     []
   );
 
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
-    useSortedTableRows<LiquidityRow, SortKey>(
-      rows,
-      { defaultKey: "score", defaultDirection: "desc" },
-      compareRows
-    );
   const {
+    sortKey,
+    sortDirection,
+    toggleSort,
+    getAriaSortValue,
+    handleSortKeyDown,
+    sortedRows: sorted,
     effectivePage,
     totalPages,
     paginatedRows: paginated,
@@ -119,7 +120,16 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useTablePagination(sorted, { pageSize: PAGE_SIZE, resetPageOnTotalChange: true });
+  } = useSortedPaginatedTable<LiquidityRow, SortKey>(
+    rows,
+    {
+      defaultKey: "score",
+      defaultDirection: "desc",
+      compareRows,
+      pageSize: PAGE_SIZE,
+      resetPageOnTotalChange: true,
+    },
+  );
   const prefetch = usePrefetchStablecoin();
 
   return (
@@ -259,13 +269,10 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
             const topProtocol = Object.entries(liq.protocolTvl).sort((a, b) => b[1] - a[1])[0];
 
             return (
-              <TableRow
+              <InteractiveTableRow
                 key={row.meta.id}
-                className="cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-                onClick={() => onRowClick(row.meta.id)}
-                onMouseEnter={() => prefetch(row.meta.id)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onRowClick(row.meta.id); } }}
-                tabIndex={0}
+                onActivate={() => onRowClick(row.meta.id)}
+                onHover={() => prefetch(row.meta.id)}
               >
                 <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
                   {pageStartIndex + index + 1}
@@ -329,7 +336,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                     <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
-              </TableRow>
+              </InteractiveTableRow>
             );
           })}
           {sorted.length === 0 && (

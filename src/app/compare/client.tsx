@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
@@ -41,6 +41,7 @@ import type { ReportCard } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
@@ -126,31 +127,7 @@ const COMPARISON_PRESETS = [
 
 export function CompareClient() {
   const { data: logos } = useLogos();
-  const [search, setSearch] = useState("");
-
-  const syncSearchFromLocation = useCallback(() => {
-    if (typeof window === "undefined") return;
-    setSearch(window.location.search);
-  }, []);
-
-  useEffect(() => {
-    syncSearchFromLocation();
-    window.addEventListener("popstate", syncSearchFromLocation);
-    return () => window.removeEventListener("popstate", syncSearchFromLocation);
-  }, [syncSearchFromLocation]);
-
-  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-
-  const replaceSearchParams = useCallback((params: URLSearchParams) => {
-    if (typeof window === "undefined") return;
-    const qs = params.toString();
-    const nextSearch = qs ? `?${qs}` : "";
-    const nextUrl = `${window.location.pathname}${nextSearch}`;
-    if (window.location.search !== nextSearch) {
-      window.history.replaceState(null, "", nextUrl);
-    }
-    setSearch(nextSearch);
-  }, []);
+  const { searchParams, replaceParams } = useUrlFilters();
 
   // Derive selected IDs from URL (single source of truth).
   // Accepts both numeric IDs (new format) and lowercase symbols (legacy/presets).
@@ -173,27 +150,30 @@ export function CompareClient() {
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {
       trackEvent("time_range_changed", { page: "compare", range: newRange });
-      const params = new URLSearchParams(searchParams.toString());
-      if (newRange === "all") {
-        params.delete("range");
-      } else {
-        params.set("range", newRange);
-      }
-      replaceSearchParams(params);
+      replaceParams((params) => {
+        if (newRange === "all") {
+          params.delete("range");
+        } else {
+          params.set("range", newRange);
+        }
+      });
     },
-    [searchParams, replaceSearchParams],
+    [replaceParams],
   );
 
   // Write selected IDs to URL (using numeric IDs to avoid duplicate-symbol collisions)
   const setSelectedIds = useCallback(
     (updater: (prev: string[]) => string[]) => {
       const next = updater(selectedIds);
-      const params = new URLSearchParams();
-      if (next.length > 0) params.set("coins", next.join(","));
-      if (range !== "all") params.set("range", range);
-      replaceSearchParams(params);
+      replaceParams((params) => {
+        if (next.length > 0) params.set("coins", next.join(","));
+        else params.delete("coins");
+
+        if (range !== "all") params.set("range", range);
+        else params.delete("range");
+      });
     },
-    [selectedIds, range, replaceSearchParams],
+    [selectedIds, range, replaceParams],
   );
 
   const coinOptions = useMemo<CoinOption[]>(
@@ -626,9 +606,10 @@ export function CompareClient() {
                   trackEvent("comparison_preset_selected", {
                     preset: preset.title,
                   });
-                  const params = new URLSearchParams();
-                  params.set("coins", preset.coins.join(","));
-                  replaceSearchParams(params);
+                  replaceParams((params) => {
+                    params.set("coins", preset.coins.join(","));
+                    params.delete("range");
+                  });
                 };
                 return (
                 <Card

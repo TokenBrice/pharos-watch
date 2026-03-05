@@ -2,15 +2,16 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
+export {
+  CRON_1MIN,
+  CRON_15MIN,
+  CRON_20MIN,
+  CRON_30MIN,
+  CRON_1H,
+  CRON_24H,
+} from "@/lib/cron-intervals";
 import type { ZodType } from "zod";
 
-/** Cron interval constants — staleTime = cron interval, refetchInterval = 2x. */
-export const CRON_1MIN = 60_000;
-export const CRON_15MIN = 15 * 60_000;
-export const CRON_20MIN = 20 * 60_000;
-export const CRON_30MIN = 30 * 60_000;
-export const CRON_1H = 60 * 60_000;
-export const CRON_24H = 24 * 60 * 60_000;
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 
 export function createPollingQueryOptions<T>(

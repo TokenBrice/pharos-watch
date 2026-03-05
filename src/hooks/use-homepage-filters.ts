@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useMemo } from "react";
 import type { FilterTag } from "@/lib/types";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
 interface FilterGroup {
   label: string;
@@ -23,16 +24,15 @@ export const FILTER_GROUPS: FilterGroup[] = [
   },
 ];
 
-function parseHomepageSearch(search: string): {
+function parseHomepageParams(searchParams: URLSearchParams): {
   groupSelections: Record<string, FilterTag | "">;
   searchQuery: string;
 } {
-  const params = new URLSearchParams(search);
   const selections: Record<string, FilterTag | ""> = {};
 
   for (const group of FILTER_GROUPS) {
     const key = group.label.toLowerCase();
-    const raw = params.get(key);
+    const raw = searchParams.get(key);
     if (!raw) continue;
     if (group.options.includes(raw as FilterTag)) {
       selections[group.label] = raw as FilterTag;
@@ -41,65 +41,32 @@ function parseHomepageSearch(search: string): {
 
   return {
     groupSelections: selections,
-    searchQuery: params.get("q") ?? "",
+    searchQuery: searchParams.get("q") ?? "",
   };
 }
 
-function getInitialHomepageFilters() {
-  if (typeof window === "undefined") {
-    return { groupSelections: {} as Record<string, FilterTag | "">, searchQuery: "" };
-  }
-  return parseHomepageSearch(window.location.search);
-}
-
 export function useHomepageFilters() {
-  const [groupSelections, setGroupSelections] = useState<Record<string, FilterTag | "">>(
-    () => getInitialHomepageFilters().groupSelections,
+  const { searchParams, setParams } = useUrlFilters();
+
+  const { groupSelections, searchQuery } = useMemo(
+    () => parseHomepageParams(searchParams),
+    [searchParams],
   );
-  const [searchQuery, setSearchQuery] = useState(
-    () => getInitialHomepageFilters().searchQuery,
-  );
-
-  const syncFromLocation = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const parsed = parseHomepageSearch(window.location.search);
-    setGroupSelections(parsed.groupSelections);
-    setSearchQuery(parsed.searchQuery);
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener("popstate", syncFromLocation);
-    return () => window.removeEventListener("popstate", syncFromLocation);
-  }, [syncFromLocation]);
-
-  // Sync state changes to URL
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams();
-    for (const [groupLabel, value] of Object.entries(groupSelections)) {
-      if (value) {
-        params.set(groupLabel.toLowerCase(), value);
-      }
-    }
-    if (searchQuery) {
-      params.set("q", searchQuery);
-    }
-
-    const qs = params.toString();
-    const nextSearch = qs ? `?${qs}` : "";
-    if (window.location.search === nextSearch) return;
-    window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}`);
-  }, [groupSelections, searchQuery]);
 
   const handleGroupChange = useCallback((groupLabel: string, value: string) => {
-    setGroupSelections((prev) => ({
-      ...prev,
-      [groupLabel]: value as FilterTag | "",
-    }));
-  }, []);
+    setParams({ [groupLabel.toLowerCase()]: value });
+  }, [setParams]);
 
-  const clearAll = useCallback(() => setGroupSelections({}), []);
+  const setSearchQuery = useCallback((value: string) => {
+    setParams({ q: value });
+  }, [setParams]);
+
+  const clearAll = useCallback(() => {
+    const updates = Object.fromEntries(
+      FILTER_GROUPS.map((group) => [group.label.toLowerCase(), "all"] as const),
+    );
+    setParams(updates);
+  }, [setParams]);
 
   // Collect active filters (one per group that has a selection)
   const activeFilters: FilterTag[] = Object.values(groupSelections).filter(

@@ -20,3 +20,14 @@ export async function requireAdmin(request: Request | undefined, adminKey: strin
   }
   return null;
 }
+
+/** Executes the handler only when admin auth passes, otherwise returns 401 response. */
+export async function withAdmin(
+  request: Request | undefined,
+  adminKey: string | undefined,
+  handler: () => Promise<Response>,
+): Promise<Response> {
+  const authError = await requireAdmin(request, adminKey);
+  if (authError) return authError;
+  return handler();
+}

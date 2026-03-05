@@ -64,7 +64,7 @@ All error responses use `{ "error": "message" }` JSON format.
 
 ## Method Gating Policy
 
-HTTP method allowance is defined centrally in `src/lib/api-endpoints.ts` and enforced by both `worker/src/index.ts` and `worker/src/router.ts`.
+HTTP method allowance is defined centrally in `src/lib/api-endpoints.ts` and enforced by `worker/src/router.ts` plus non-router path guards in `worker/src/handlers/http.ts`.
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
 - `POST` is accepted for mutating admin endpoints and `POST /api/feedback`.
@@ -1507,7 +1507,7 @@ Audits existing depeg events against CoinGecko historical price data to detect f
 
 ### `POST /api/trigger-digest`
 
-Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Handled directly in `index.ts` (not via the router).
+Force-regenerates the daily digest, bypassing the normal 1-hour dedup check. Handled directly in `worker/src/handlers/http.ts` (not via the router).
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1524,7 +1524,7 @@ Returns `500` with `{ "ok": false, "error": "..." }` on failure.
 
 ### `POST /api/reset-blacklist-sync`
 
-Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Handled directly in `index.ts` (not via the router).
+Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled back by 50,000 blocks; Tron is rolled back by 7 days. Handled directly in `worker/src/handlers/http.ts` (not via the router).
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1540,7 +1540,7 @@ Rolls back blacklist sync state to re-scan missed events. EVM chains are rolled 
 
 ### `GET /api/debug-sync-state`
 
-Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Handled directly in `index.ts` (not via the router).
+Returns current blacklist sync state for all configured chains. Useful for diagnosing sync issues. Handled directly in `worker/src/handlers/http.ts` (not via the router).
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 

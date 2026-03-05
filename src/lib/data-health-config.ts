@@ -1,12 +1,9 @@
+import { CRON_15MIN, CRON_20MIN, CRON_30MIN, CRON_24H } from "@/lib/cron-intervals";
+
 export interface DataHealthPreset {
   label: string;
   staleTime: number;
 }
-
-const CRON_15MIN = 15 * 60_000;
-const CRON_20MIN = 20 * 60_000;
-const CRON_30MIN = 30 * 60_000;
-const CRON_24H = 24 * 60 * 60_000;
 
 export const DATA_HEALTH_PRESETS = {
   stablecoins: { label: "Prices", staleTime: CRON_15MIN },

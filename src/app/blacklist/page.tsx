@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback } from "react";
 import { Search } from "lucide-react";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -11,9 +11,10 @@ import { BlacklistStats } from "@/components/blacklist-stats";
 import { BlacklistChart } from "@/components/blacklist-chart";
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
+import { TablePagination } from "@/components/table-pagination";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -33,19 +34,6 @@ type FilterState = {
   page: number;
   searchQuery: string;
 };
-
-const DEFAULT_FILTERS: FilterState = {
-  stablecoinFilter: "all",
-  chainFilter: "all",
-  eventTypeFilter: "all",
-  page: 1,
-  searchQuery: "",
-};
-
-function getInitialFilters(): FilterState {
-  if (typeof window === "undefined") return DEFAULT_FILTERS;
-  return parseFilters(window.location.search);
-}
 
 function parseFilters(search: string): FilterState {
   const params = new URLSearchParams(search);
@@ -70,92 +58,66 @@ function parseFilters(search: string): FilterState {
   };
 }
 
-function buildQueryString(filters: FilterState): string {
-  const params = new URLSearchParams();
-  if (filters.stablecoinFilter !== "all") params.set("stablecoin", filters.stablecoinFilter);
-  if (filters.chainFilter !== "all") params.set("chain", filters.chainFilter);
-  if (filters.eventTypeFilter !== "all") params.set("event", filters.eventTypeFilter);
-  if (filters.page > 1) params.set("page", String(filters.page));
-  const query = filters.searchQuery.trim();
-  if (query) params.set("q", query);
-  return params.toString();
-}
-
 function BlacklistPageInner() {
   const { data, isLoading, error, dataUpdatedAt, refetch } = useBlacklistEvents();
   const events = data?.events;
-
-  const [stablecoinFilter, setStablecoinFilter] = useState<BlacklistStablecoin | "all">(
-    () => getInitialFilters().stablecoinFilter,
-  );
-  const [chainFilter, setChainFilter] = useState<string>(
-    () => getInitialFilters().chainFilter,
-  );
-  const [eventTypeFilter, setEventTypeFilter] = useState<BlacklistEventType | "all">(
-    () => getInitialFilters().eventTypeFilter,
-  );
-  const [page, setPage] = useState<number>(() => getInitialFilters().page);
-  const [searchQuery, setSearchQuery] = useState<string>(
-    () => getInitialFilters().searchQuery,
+  const { searchParams, replaceParams } = useUrlFilters();
+  const parsedFilters = useMemo(
+    () => parseFilters(searchParams.toString()),
+    [searchParams],
   );
 
-  const syncFiltersFromLocation = useCallback(() => {
-    if (typeof window === "undefined") return;
-    const parsed = parseFilters(window.location.search);
-    setStablecoinFilter(parsed.stablecoinFilter);
-    setChainFilter(parsed.chainFilter);
-    setEventTypeFilter(parsed.eventTypeFilter);
-    setPage(parsed.page);
-    setSearchQuery(parsed.searchQuery);
-  }, []);
+  const {
+    stablecoinFilter,
+    chainFilter,
+    eventTypeFilter,
+    page,
+    searchQuery,
+  } = parsedFilters;
 
-  useEffect(() => {
-    window.addEventListener("popstate", syncFiltersFromLocation);
-    return () => window.removeEventListener("popstate", syncFiltersFromLocation);
-  }, [syncFiltersFromLocation]);
-
-  const replaceUrl = useCallback((updates: Partial<FilterState>) => {
-    if (typeof window === "undefined") return;
+  const updateFilters = useCallback((updates: Partial<FilterState>) => {
     const next: FilterState = {
-      stablecoinFilter,
-      chainFilter,
-      eventTypeFilter,
-      page,
-      searchQuery,
+      ...parsedFilters,
       ...updates,
     };
-    const qs = buildQueryString(next);
-    const nextUrl = `${window.location.pathname}${qs ? `?${qs}` : ""}`;
-    window.history.replaceState(null, "", nextUrl);
-  }, [stablecoinFilter, chainFilter, eventTypeFilter, page, searchQuery]);
+    replaceParams((params) => {
+      if (next.stablecoinFilter !== "all") params.set("stablecoin", next.stablecoinFilter);
+      else params.delete("stablecoin");
+
+      if (next.chainFilter !== "all") params.set("chain", next.chainFilter);
+      else params.delete("chain");
+
+      if (next.eventTypeFilter !== "all") params.set("event", next.eventTypeFilter);
+      else params.delete("event");
+
+      if (next.page > 1) params.set("page", String(next.page));
+      else params.delete("page");
+
+      const query = next.searchQuery.trim();
+      if (query) params.set("q", query);
+      else params.delete("q");
+    });
+  }, [parsedFilters, replaceParams]);
 
   const handleStablecoinChange = useCallback((v: BlacklistStablecoin | "all") => {
     trackEvent("filter_applied", { page: "blacklist", filter_type: "stablecoin", filter_value: v });
-    setStablecoinFilter(v);
-    setPage(1);
-    replaceUrl({ stablecoinFilter: v, page: 1 });
-  }, [replaceUrl]);
+    updateFilters({ stablecoinFilter: v, page: 1 });
+  }, [updateFilters]);
 
   const handleChainChange = useCallback((v: string) => {
     trackEvent("filter_applied", { page: "blacklist", filter_type: "chain", filter_value: v });
-    setChainFilter(v);
-    setPage(1);
-    replaceUrl({ chainFilter: v, page: 1 });
-  }, [replaceUrl]);
+    updateFilters({ chainFilter: v, page: 1 });
+  }, [updateFilters]);
 
   const handleEventTypeChange = useCallback((v: BlacklistEventType | "all") => {
     trackEvent("filter_applied", { page: "blacklist", filter_type: "event_type", filter_value: v });
-    setEventTypeFilter(v);
-    setPage(1);
-    replaceUrl({ eventTypeFilter: v, page: 1 });
-  }, [replaceUrl]);
+    updateFilters({ eventTypeFilter: v, page: 1 });
+  }, [updateFilters]);
 
   const handleSearchChange = useCallback((v: string) => {
     trackSearch("blacklist", v.length);
-    setSearchQuery(v);
-    setPage(1);
-    replaceUrl({ searchQuery: v, page: 1 });
-  }, [replaceUrl]);
+    updateFilters({ searchQuery: v, page: 1 });
+  }, [updateFilters]);
 
   const filtered = useMemo(() => {
     if (!events) return [];
@@ -170,6 +132,8 @@ function BlacklistPageInner() {
   }, [events, stablecoinFilter, chainFilter, eventTypeFilter, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const rangeStart = filtered.length === 0 ? 0 : Math.min((page - 1) * PAGE_SIZE + 1, filtered.length);
+  const rangeEnd = Math.min(page * PAGE_SIZE, filtered.length);
 
   return (
     <FeaturePageShell
@@ -234,39 +198,22 @@ function BlacklistPageInner() {
       />
 
       {filtered.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Showing <span className="font-mono">{Math.min((page - 1) * PAGE_SIZE + 1, filtered.length)}</span>&ndash;<span className="font-mono">{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-mono">{filtered.length}</span> events
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="min-h-11 sm:min-h-8"
-              onClick={() => {
-                const nextPage = Math.max(1, page - 1);
-                setPage(nextPage);
-                replaceUrl({ page: nextPage });
-              }}
-              disabled={page <= 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="min-h-11 sm:min-h-8"
-              onClick={() => {
-                const nextPage = Math.min(totalPages, page + 1);
-                setPage(nextPage);
-                replaceUrl({ page: nextPage });
-              }}
-              disabled={page >= totalPages}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          page={page - 1}
+          totalPages={totalPages}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={filtered.length}
+          onPrevious={() => {
+            const nextPage = Math.max(1, page - 1);
+            updateFilters({ page: nextPage });
+          }}
+          onNext={() => {
+            const nextPage = Math.min(totalPages, page + 1);
+            updateFilters({ page: nextPage });
+          }}
+          noun="events"
+        />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">

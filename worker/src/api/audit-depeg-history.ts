@@ -1,5 +1,5 @@
 import { withErrorHandler, parseIntParam } from "../lib/api-utils";
-import { requireAdmin } from "../lib/auth";
+import { withAdmin } from "../lib/auth";
 import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -41,27 +41,26 @@ interface AuditResult {
 export const handleAuditDepegHistory = withErrorHandler(
   "audit-depeg-history",
   async (db: D1Database, url: URL, adminKey?: string, request?: Request): Promise<Response> => {
-    const authError = await requireAdmin(request, adminKey);
-    if (authError) return authError;
+    return withAdmin(request, adminKey, async () => {
 
-    // Pagination: ?limit=N&offset=M — Analyst plan (500 req/min) supports large batches
-    const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000);
-    const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, 100_000);
-    // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
-    const deleteIds = url.searchParams.get("delete");
-    // Dry run: preview deletions without touching the DB
-    const dryRun = url.searchParams.get("dry-run") === "true";
-    const method = request?.method ?? "GET";
-    if (method === "GET" && !dryRun) {
-      return new Response(
-        JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
-        { status: 405, headers: { "Content-Type": "application/json", "Allow": "POST" } },
-      );
-    }
-    // Optional supply filter: ?min-supply=N (default 0 = audit everything with a geckoId)
-    const minSupply = parseIntParam(url.searchParams.get("min-supply"), 0, 0, Number.MAX_SAFE_INTEGER);
-    // Optional symbol filter: ?symbol=USDC (case-insensitive)
-    const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
+      // Pagination: ?limit=N&offset=M — Analyst plan (500 req/min) supports large batches
+      const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000);
+      const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, 100_000);
+      // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
+      const deleteIds = url.searchParams.get("delete");
+      // Dry run: preview deletions without touching the DB
+      const dryRun = url.searchParams.get("dry-run") === "true";
+      const method = request?.method ?? "GET";
+      if (method === "GET" && !dryRun) {
+        return new Response(
+          JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
+          { status: 405, headers: { "Content-Type": "application/json", "Allow": "POST" } },
+        );
+      }
+      // Optional supply filter: ?min-supply=N (default 0 = audit everything with a geckoId)
+      const minSupply = parseIntParam(url.searchParams.get("min-supply"), 0, 0, Number.MAX_SAFE_INTEGER);
+      // Optional symbol filter: ?symbol=USDC (case-insensitive)
+      const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
 
     const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
 
@@ -297,8 +296,9 @@ export const handleAuditDepegHistory = withErrorHandler(
       result.daysRecomputed = await recomputeStabilityDays(db, affectedDays);
     }
 
-    return new Response(JSON.stringify(result, null, 2), {
-      headers: { "Content-Type": "application/json" },
+      return new Response(JSON.stringify(result, null, 2), {
+        headers: { "Content-Type": "application/json" },
+      });
     });
   }
 );

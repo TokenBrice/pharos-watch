@@ -34,11 +34,11 @@
 | `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (requires `X-Admin-Key`) |
 | `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; requires `X-Admin-Key`) |
-| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `index.ts`, not router |
-| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `worker/src/handlers/http.ts` (non-router path) |
+| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `worker/src/handlers/http.ts` (non-router path) |
 | `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
-| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `index.ts`, not router |
+| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `worker/src/handlers/http.ts` (non-router path) |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
 
 ## Full File Tree
@@ -145,20 +145,15 @@ src/                              # Next.js frontend (static export)
 │   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
 │   ├── kpi-bar.tsx               # Homepage KPI bar (total supply, dominance, etc.)
 │   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
-│   ├── peg-type-chart.tsx        # "Alternative Peg Dominance" card
 │   ├── peg-diversity-chart.tsx   # Non-USD peg supply stacked area chart
 │   ├── total-mcap-chart.tsx      # Full-width market cap area chart
-│   ├── chain-overview.tsx        # Horizontal bar chart (homepage)
 │   ├── market-highlights.tsx     # Biggest depegs + fastest movers
-│   ├── market-pulse.tsx          # AI daily digest display
 │   ├── daily-digest.tsx          # Daily digest card component (exports formatDateline)
 │   ├── digest-archive-client.tsx # Digest archive list (client component)
-│   ├── digest-archive-summary.tsx # Digest archive summary stats
 │   ├── digest-snapshot.tsx       # Digest snapshot context display
 │   ├── mcap-chart.tsx            # Market cap area chart (detail page)
 │   ├── key-info-card.tsx         # Key info card: peg mechanism, issuer, collateral (detail page)
 │   ├── ai-summary.tsx            # AI-generated editorial summary (detail page)
-│   ├── contract-addresses.tsx    # Contract address display (detail page)
 │   ├── peg-gauge.tsx             # Peg score gauge visualization
 │   ├── peg-heatmap.tsx           # Real-time peg deviation heatmap
 │   ├── depeg-feed.tsx            # Depeg event list
@@ -170,41 +165,32 @@ src/                              # Next.js frontend (static export)
 │   ├── blacklist-chart.tsx       # Blacklist event chart
 │   ├── blacklist-stats.tsx       # Blacklist summary stats
 │   ├── blacklist-filters.tsx     # Blacklist page filters
-│   ├── blacklist-summary.tsx     # Homepage blacklist summary card
 │   ├── eurc-blacklist-card.tsx   # EURC-specific blacklist card
 │   ├── stablecoin-cemetery.tsx   # Cemetery obituary list
 │   ├── cemetery-client.tsx       # Cemetery interactive client wrapper
 │   ├── cemetery-tombstones.tsx   # Cemetery tombstone cards
-│   ├── cemetery-timeline.tsx     # Horizontal timeline with logos
 │   ├── cemetery-charts.tsx       # Cemetery statistics charts
-│   ├── cemetery-summary.tsx      # Homepage cemetery summary card
 │   ├── stablecoin-logo.tsx       # Logo component with fallback
 │   ├── coin-notice.tsx           # Coin-specific warning/info notices (detail page)
 │   ├── feature-highlights.tsx    # Homepage feature highlight cards
 │   ├── section-error-boundary.tsx # Section-level error boundary wrapper
 │   ├── site-header.tsx           # Site header with nav and search
-│   ├── bluechip-rating-card.tsx  # Bluechip safety rating card (detail page)
-│   ├── bluechip-box.tsx          # Bluechip rating box (homepage)
 │   ├── bluechip-header-badge.tsx # Bluechip grade badge in header
 │   ├── dex-liquidity-card.tsx    # DEX liquidity card with trend chart (detail page)
-│   ├── liquidity-box.tsx         # Liquidity box (homepage)
 │   ├── liquidity-stats.tsx       # Liquidity page summary stat cards + protocol/chain breakdown bars
 │   ├── liquidity-table.tsx       # Liquidity page sortable leaderboard table with pagination
-│   ├── liquidity-summary.tsx     # Liquidity homepage summary card
 │   ├── usds-status-card.tsx      # USDS protocol status card
 │   ├── coin-selector.tsx         # Coin selector dropdown (compare page)
 │   ├── comparison-chart.tsx      # Multi-series comparison line chart
 │   ├── comparison-table.tsx      # Side-by-side comparison table
 │   ├── report-card.tsx           # Report card component with grade, dimension scores, radar chart
 │   ├── report-card-mini.tsx      # Compact report card display for compare page (+ simulation mode)
-│   ├── report-cards-summary.tsx  # Report cards page summary stats
 │   ├── grade-badge.tsx           # Grade letter badge component
 │   ├── radar-chart.tsx           # Radar chart for report card dimensions (single + compare overlay)
 │   ├── stress-test-panel.tsx     # Stress test panel (coin failure simulation)
 │   ├── reserve-treemap.tsx       # Reserve composition treemap visualization
 │   ├── contagion-graph.tsx       # Dependency contagion force-directed graph
 │   ├── stability-index.tsx       # Stability index visualizations (sparklines, lighthouse icon)
-│   ├── stability-index-summary.tsx # PSI summary stats for homepage
 │   ├── psi-history-chart.tsx     # PSI historical score chart
 │   ├── chart-skeleton.tsx        # Loading skeleton for charts
 │   ├── severity-icon.tsx         # Severity level icon
@@ -220,6 +206,7 @@ src/                              # Next.js frontend (static export)
 │   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
 │   ├── faq-section.tsx           # Shared FAQ renderer (accordion UI + optional FAQPage JSON-LD script)
 │   ├── sortable-table-head.tsx   # Shared sortable table header
+│   ├── interactive-table-row.tsx # Shared clickable/keyboard-accessible table row wrapper
 │   ├── table-pagination.tsx      # Shared pagination component
 │   ├── balance-bar.tsx           # Balance ratio visualization bar
 │   ├── sort-icon.tsx             # Shared sort direction arrow icon
@@ -248,12 +235,13 @@ src/                              # Next.js frontend (static export)
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
 │   ├── use-sorted-table-rows.ts  # Shared table sorting scaffold (useSort wiring + sorted row memo)
 │   ├── use-table-pagination.ts   # Shared table pagination scaffold (effective page, ranges, prev/next handlers)
+│   ├── use-sorted-paginated-table.ts # Shared table scaffold combining sorting + pagination state
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
 │   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring + derived view model
 │   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 10 data hooks)
-│   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams)
+│   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
 │   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
@@ -278,6 +266,7 @@ src/                              # Next.js frontend (static export)
     ├── csv-export.ts             # CSV export helpers
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
+    ├── cron-intervals.ts         # Shared cron interval constants for frontend polling policy + health config
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── page-metadata.ts          # Shared metadata builder for feature routes
     ├── faq.ts                    # FAQ item type + FAQPage JSON-LD builder
@@ -301,8 +290,11 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
 ├── migrations/                   # D1 SQL migrations (49 total)
 └── src/
-    ├── index.ts                  # Entry: fetch + scheduled handlers, CORS, inline admin/feedback handlers (consumes shared endpoint method policy)
-    ├── router.ts                 # Router-dispatched API handlers (consumes shared endpoint method policy)
+    ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
+    ├── handlers/
+    │   ├── http.ts               # HTTP flow: CORS, edge cache, non-router endpoints, router dispatch
+    │   └── scheduled.ts          # Cron flow: trigger-slot orchestration + lease-aware scheduling
+    ├── router.ts                 # Router-dispatched API handlers (method gating + path dispatch from endpoint contract)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
@@ -376,13 +368,14 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
-    │   └── feedback.ts          # POST /api/feedback (public, handled in index.ts not router)
+    │   └── feedback.ts          # POST /api/feedback (public, handled in handlers/http.ts not router)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
+        ├── env.ts                # Worker Env typing + CSV env parsing helper for disable/override lists
         ├── alerts.ts             # Alert sending (Discord/Slack webhook notifications on cron failures)
         ├── stablecoins-cache.ts  # Shared strict/lenient loader for canonical stablecoins cache payload
         ├── safety-scores.ts      # Shared safety score snapshot helper (yield + digest consumers)

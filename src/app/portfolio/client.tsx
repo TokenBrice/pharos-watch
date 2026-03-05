@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useCallback, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +20,7 @@ import { AlertTriangle, Share2, Trash2, Wallet, X } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
@@ -216,12 +216,10 @@ export function PortfolioClient() {
     : portfolio.upstreamExposureGrouped;
 
   // URL sync: keep query string in sync with portfolio holdings
-  const router = useRouter();
+  const { setParam } = useUrlFilters();
 
   useEffect(() => {
     if (!portfolio.initialized) return;
-
-    const params = new URLSearchParams();
 
     // Encode portfolio holdings as ?p=symbol:amount,...
     const encoded = portfolio.holdings
@@ -231,12 +229,8 @@ export function PortfolioClient() {
       })
       .filter(Boolean)
       .join(",");
-    if (encoded) params.set("p", encoded);
-
-    const qs = params.toString();
-    const newPath = qs ? `/portfolio/?${qs}` : "/portfolio/";
-    router.replace(newPath, { scroll: false });
-  }, [portfolio.holdings, portfolio.initialized, router]);
+    setParam("p", encoded);
+  }, [portfolio.holdings, portfolio.initialized, setParam]);
 
   // Build synthetic ReportCard for the portfolio radar chart
   const portfolioRadarCard = useMemo((): ReportCard | null => {

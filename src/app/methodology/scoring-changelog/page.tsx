@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
+import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
+import {
+  SAFETY_SCORE_VERSION_LABEL,
+  SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
+} from "@/lib/safety-score-version";
+import { buildMethodologyChangelogMetadata } from "../changelog-page-utils";
 import {
   Card,
   CardContent,
@@ -10,18 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export const metadata: Metadata = {
+const PAGE_PATH = SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH;
+
+export const metadata = buildMethodologyChangelogMetadata({
   title: "Safety Scores Changelog — Version History",
   description:
     `Full version history of the Pharos safety scoring methodology, from v1.0 through ${SAFETY_SCORE_VERSION_LABEL}. Every weight change, new dimension, and structural decision documented.`,
-  alternates: { canonical: "/methodology/scoring-changelog/" },
-  openGraph: {
-    title: "Safety Scores Changelog — Version History",
-    description:
-      `Full version history of the Pharos safety scoring methodology, from v1.0 through ${SAFETY_SCORE_VERSION_LABEL}.`,
-    url: "/methodology/scoring-changelog/",
-  },
-};
+  path: PAGE_PATH,
+});
 
 /* ── tiny helpers ────────────────────────────────────────────────── */
 
@@ -31,6 +28,10 @@ function Pill({ children }: { children: React.ReactNode }) {
       {children}
     </span>
   );
+}
+
+function scoringAnchorId(version: string) {
+  return `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 }
 
 function VersionCard({
@@ -46,7 +47,7 @@ function VersionCard({
   accent: string;
   children: React.ReactNode;
 }) {
-  const anchorId = `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+  const anchorId = scoringAnchorId(version);
 
   return (
     <Card id={anchorId} className={`scroll-mt-28 rounded-xl border-l-[3px] ${accent}`}>
@@ -128,54 +129,25 @@ export default function ScoringChangelogPage() {
     "v2.0",
     "v1.0",
   ].map((version) => ({
-    id: `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`,
+    id: scoringAnchorId(version),
     label: version,
   }));
 
   return (
-    <div className="space-y-8">
-      <BreadcrumbJsonLd
-        name="Scoring Changelog"
-        path="/methodology/scoring-changelog/"
-      />
-
-      {/* Breadcrumb + heading */}
-      <div className="space-y-2">
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground"
-        >
-          <Link
-            href="/"
-            className="hover:text-foreground transition-colors"
-          >
-            Dashboard
-          </Link>
-          <span>/</span>
-          <Link
-            href="/methodology"
-            className="hover:text-foreground transition-colors"
-          >
-            Methodology
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">Scoring Changelog</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">
-          Safety Scores Changelog
-        </h1>
-        <p className="text-sm text-muted-foreground">
+    <MethodologyChangelogPage
+      breadcrumbName="Scoring Changelog"
+      path={PAGE_PATH}
+      title="Safety Scores Changelog"
+      lead={
+        <>
           Full version history of the grading methodology &mdash; every weight
           change, new dimension, and structural decision from v1.0 to {SAFETY_SCORE_VERSION_LABEL}.
-        </p>
-      </div>
-
-      <LongformScrollspyNav
-        sections={sections}
-        railLabel="Jump to Version"
-        navAriaLabel="Safety score changelog version navigation"
-      />
-
+        </>
+      }
+      sections={sections}
+      railLabel="Jump to Version"
+      navAriaLabel="Safety score changelog version navigation"
+    >
       {/* ──────────── v5.5 ──────────── */}
       <VersionCard
         version={SAFETY_SCORE_VERSION_LABEL}
@@ -879,6 +851,6 @@ export default function ScoringChangelogPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </MethodologyChangelogPage>
   );
 }

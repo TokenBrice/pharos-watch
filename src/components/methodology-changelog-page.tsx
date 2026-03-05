@@ -11,8 +11,12 @@ interface MethodologyChangelogPageProps {
   path: string;
   title: string;
   lead: React.ReactNode;
-  accentClass: string;
-  entries: readonly MethodologyChangelogEntry[];
+  accentClass?: string;
+  entries?: readonly MethodologyChangelogEntry[];
+  sections?: readonly { id: string; label: string }[];
+  railLabel?: string;
+  navAriaLabel?: string;
+  children?: React.ReactNode;
 }
 
 function changelogEntryId(version: string) {
@@ -24,10 +28,14 @@ export function MethodologyChangelogPage({
   path,
   title,
   lead,
-  accentClass,
-  entries,
+  accentClass = "border-l-foreground/50",
+  entries = [],
+  sections,
+  railLabel = "Jump to Version",
+  navAriaLabel,
+  children,
 }: MethodologyChangelogPageProps) {
-  const sections = [
+  const derivedSections = [
     { id: "latest-updates", label: "Latest" },
     ...entries.map((entry) => ({
       id: changelogEntryId(entry.version),
@@ -35,6 +43,7 @@ export function MethodologyChangelogPage({
     })),
   ];
 
+  const navSections = sections ?? derivedSections;
   const latestEntry = entries[0];
 
   return (
@@ -63,57 +72,60 @@ export function MethodologyChangelogPage({
       </div>
 
       <LongformScrollspyNav
-        sections={sections}
-        railLabel="Jump to Version"
-        navAriaLabel={`${title} version navigation`}
+        sections={navSections}
+        railLabel={railLabel}
+        navAriaLabel={navAriaLabel ?? `${title} version navigation`}
       />
+      {children ?? (
+        <>
+          {latestEntry && (
+            <section
+              id="latest-updates"
+              className="scroll-mt-28 rounded-xl border border-border/60 border-l-[3px] border-l-foreground/50 bg-card px-6 py-5"
+            >
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Latest Changes
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                    {`v${latestEntry.version}`}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(`${latestEntry.date}T00:00:00Z`).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    })}
+                  </span>
+                </div>
+                <h2 className="text-lg font-semibold tracking-tight">{latestEntry.title}</h2>
+                <p className="text-sm text-muted-foreground">{latestEntry.summary}</p>
+                {latestEntry.impact.length > 0 && (
+                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    {latestEntry.impact.slice(0, 3).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </section>
+          )}
 
-      {latestEntry && (
-        <section
-          id="latest-updates"
-          className="scroll-mt-28 rounded-xl border border-border/60 border-l-[3px] border-l-foreground/50 bg-card px-6 py-5"
-        >
-          <div className="space-y-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Latest Changes
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-block rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-                {`v${latestEntry.version}`}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {new Date(`${latestEntry.date}T00:00:00Z`).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                  timeZone: "UTC",
-                })}
-              </span>
-            </div>
-            <h2 className="text-lg font-semibold tracking-tight">{latestEntry.title}</h2>
-            <p className="text-sm text-muted-foreground">{latestEntry.summary}</p>
-            {latestEntry.impact.length > 0 && (
-              <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                {latestEntry.impact.slice(0, 3).map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            )}
+          <div className="space-y-4">
+            {entries.map((entry, index) => (
+              <MethodologyVersionCard
+                key={entry.version}
+                entry={entry}
+                accentClass={accentClass}
+                entryId={changelogEntryId(entry.version)}
+                defaultOpen={index === 0}
+              />
+            ))}
           </div>
-        </section>
+        </>
       )}
-
-      <div className="space-y-4">
-        {entries.map((entry, index) => (
-          <MethodologyVersionCard
-            key={entry.version}
-            entry={entry}
-            accentClass={accentClass}
-            entryId={changelogEntryId(entry.version)}
-            defaultOpen={index === 0}
-          />
-        ))}
-      </div>
     </div>
   );
 }
