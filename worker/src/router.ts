@@ -32,9 +32,14 @@ import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
+import { handleFeedback, type FeedbackEnv } from "./api/feedback";
 import { runIdempotentAdminAction } from "./lib/idempotency";
+import { requireAdmin } from "./lib/auth";
+import { generateDailyDigest } from "./cron/daily-digest";
 import { getRouterHandledPaths, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
+import type { TwitterCreds } from "./lib/twitter";
+import type { TelegramCreds } from "./lib/telegram";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -46,6 +51,10 @@ interface RouteContext {
   adminKey?: string;
   alchemyApiKey?: string | null;
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
+  feedbackEnv?: FeedbackEnv;
+  anthropicApiKey?: string | null;
+  twitterCreds?: TwitterCreds | null;
+  telegramCreds?: TelegramCreds | null;
 }
 
 type StaticRouteHandler = (context: RouteContext) => Promise<Response>;
@@ -125,6 +134,81 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   )],
   ["/api/stress-signals", ({ db, url }) => handleStressSignals(db, url)],
   ["/api/backfill-dews", ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request)],
+  ["/api/feedback", ({ db, request, feedbackEnv }) => {
+    if (!request) {
+      return Promise.resolve(new Response(JSON.stringify({ error: "Bad request" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }));
+    }
+    return handleFeedback(db, request, feedbackEnv ?? {});
+  }],
+  ["/api/trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
+    const authError = await requireAdmin(request, adminKey);
+    if (authError) return authError;
+    if (!request) {
+      return new Response(JSON.stringify({ error: "Bad request" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return runIdempotentAdminAction(
+      db,
+      "trigger-digest",
+      request,
+      async () => {
+        const result = await generateDailyDigest(
+          db,
+          anthropicApiKey ?? null,
+          twitterCreds ?? null,
+          true,
+          telegramCreds ?? null,
+        );
+        return new Response(JSON.stringify({ ok: true, result }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      },
+    );
+  }],
+  ["/api/reset-blacklist-sync", async ({ db, request, adminKey }) => {
+    const authError = await requireAdmin(request, adminKey);
+    if (authError) return authError;
+    if (!request) {
+      return new Response(JSON.stringify({ error: "Bad request" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    return runIdempotentAdminAction(
+      db,
+      "reset-blacklist-sync",
+      request,
+      async () => {
+        const result = await db.batch([
+          db.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 50000, 0) WHERE config_key NOT LIKE 'tron-%'"),
+          db.prepare("UPDATE blacklist_sync_state SET last_block = MAX(last_block - 604800000, 0) WHERE config_key LIKE 'tron-%'"),
+        ]);
+        const evmChanged = result[0]?.meta?.changes ?? 0;
+        const tronChanged = result[1]?.meta?.changes ?? 0;
+        return new Response(
+          JSON.stringify({ ok: true, evmReset: evmChanged, tronReset: tronChanged }),
+          { headers: { "Content-Type": "application/json" } },
+        );
+      },
+    );
+  }],
+  ["/api/debug-sync-state", async ({ db, request, adminKey }) => {
+    const authError = await requireAdmin(request, adminKey);
+    if (authError) return authError;
+    const rows = await db
+      .prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key")
+      .all();
+    return new Response(JSON.stringify(rows.results), {
+      headers: { "Content-Type": "application/json" },
+    });
+  }],
 ]);
 
 export const ROUTER_STATIC_PATHS = getRouterHandledPaths();
@@ -149,6 +233,10 @@ export function route(
   adminKey?: string,
   alchemyApiKey?: string | null,
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
+  feedbackEnv?: FeedbackEnv,
+  anthropicApiKey?: string | null,
+  twitterCreds?: TwitterCreds | null,
+  telegramCreds?: TelegramCreds | null,
 ): Promise<Response> | null {
   const path = url.pathname;
   const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
@@ -174,6 +262,10 @@ export function route(
       adminKey,
       alchemyApiKey,
       mintBurnFreshnessConfig,
+      feedbackEnv,
+      anthropicApiKey,
+      twitterCreds,
+      telegramCreds,
     });
   }
 

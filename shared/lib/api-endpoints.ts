@@ -239,7 +239,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: true,
-    routerHandled: false,
   },
 
   // Admin status/probe endpoints.
@@ -266,7 +265,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
-    routerHandled: false,
     probeGroup: "manual",
     statusPageAction: {
       label: "Trigger Digest",
@@ -280,7 +278,6 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: true,
     mutatingAdmin: true,
     cacheBypass: false,
-    routerHandled: false,
     probeGroup: "manual",
     statusPageAction: {
       label: "Reset Blacklist Sync",
@@ -294,8 +291,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     methods: ["GET"],
     adminRequired: true,
     mutatingAdmin: false,
-    cacheBypass: false,
-    routerHandled: false,
+    cacheBypass: true,
     probeGroup: "admin",
     statusPageAction: {
       label: "Debug Sync State",
