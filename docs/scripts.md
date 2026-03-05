@@ -10,7 +10,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 |--------|---------|--------|------------------------|
 | `scripts/sync-digests.ts` | Fetch digest archive before frontend build | `https://api.pharos.watch/api/digest-archive` | Writes `data/digests.json` |
 | `scripts/check-seo-static.mjs` | Validate static-export SEO/meta/link integrity | `out/` build output | Fails non-zero on SEO/crawlability issues |
-| `scripts/smoke-api.mjs` | HTTP smoke checks for strict API contract paths | `--base-url` or `SMOKE_API_BASE` / `API_BASE_URL` | Exits non-zero on shape/range/status failures |
+| `scripts/smoke-api.mjs` | HTTP smoke checks for strict API contract paths | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS` | Exits non-zero on shape/range/status failures |
 | `scripts/smoke-ui.mjs` | Browser smoke check for live homepage data state + mobile overflow regression routes | `--url`, `--skip-overflow`, `SMOKE_UI_URL`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on tracked mobile routes |
 | `scripts/check-worker-import-boundary.mjs` | Enforce worker import boundary (`worker/src/**` must not import `src/lib/*`) | Worker source tree (`worker/src/**`) | Exits non-zero with offending import locations |
 | `scripts/check-critical-coverage.mjs` | Enforce line coverage floor for critical files | `coverage/lcov.info`, `CRITICAL_COVERAGE_THRESHOLD` | Exits non-zero if critical files are below threshold |
@@ -59,6 +59,13 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
   - `/`, `/dependency-map/`, `/flows/`, `/yield/`, `/liquidity/`, `/depeg/`, `/blacklist/`, `/stability-index/`, `/safety-scores/`
 - Overflow detection samples layout multiple times and retries once before failing, which filters transient post-deploy layout jitter while still catching sustained overflow regressions.
 - Override checked routes via `SMOKE_UI_OVERFLOW_ROUTES` (comma-separated), or skip overflow checks with `--skip-overflow`.
+
+### `smoke-api.mjs`
+
+- Validates `/api/health` and every strict contract endpoint from `shared/lib/strict-contract-paths.json`.
+- Executes strict endpoint checks sequentially to avoid post-deploy request fan-out against a freshly deployed worker.
+- Retries transient request failures once by default (timeouts/network errors/5xx/429/408); tune with `SMOKE_API_RETRY_COUNT` and `SMOKE_API_RETRY_DELAY_MS`.
+- Per-request timeout defaults to `12000ms`; tune with `SMOKE_API_TIMEOUT_MS`.
 
 ## Safe Usage Guidelines
 

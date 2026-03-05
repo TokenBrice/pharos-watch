@@ -5,19 +5,45 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
+const DEFAULT_RETRY_COUNT = 1;
+const DEFAULT_RETRY_DELAY_MS = 1_500;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STRICT_PATHS_FILE = path.join(__dirname, "../shared/lib/strict-contract-paths.json");
 
 function parseArgs(argv) {
-  const args = { baseUrl: process.env.SMOKE_API_BASE ?? process.env.API_BASE_URL ?? "" };
+  const args = {
+    baseUrl: process.env.SMOKE_API_BASE ?? process.env.API_BASE_URL ?? "",
+    timeoutMs: parsePositiveInt(process.env.SMOKE_API_TIMEOUT_MS, DEFAULT_TIMEOUT_MS),
+    retryCount: parseNonNegativeInt(process.env.SMOKE_API_RETRY_COUNT, DEFAULT_RETRY_COUNT),
+    retryDelayMs: parsePositiveInt(process.env.SMOKE_API_RETRY_DELAY_MS, DEFAULT_RETRY_DELAY_MS),
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--base-url" || arg === "--base") {
       args.baseUrl = argv[i + 1] ?? "";
       i += 1;
+    } else if (arg === "--timeout-ms") {
+      args.timeoutMs = parsePositiveInt(argv[i + 1], args.timeoutMs);
+      i += 1;
+    } else if (arg === "--retry-count") {
+      args.retryCount = parseNonNegativeInt(argv[i + 1], args.retryCount);
+      i += 1;
+    } else if (arg === "--retry-delay-ms") {
+      args.retryDelayMs = parsePositiveInt(argv[i + 1], args.retryDelayMs);
+      i += 1;
     }
   }
   return args;
+}
+
+function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseNonNegativeInt(value, fallback) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
 function ensureBaseUrl(input) {
@@ -33,9 +59,9 @@ function ensureBaseUrl(input) {
   return normalized;
 }
 
-async function fetchJson(baseUrl, path) {
-  const url = `${baseUrl}${path}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS) });
+async function fetchJson(baseUrl, endpointPath, timeoutMs) {
+  const url = `${baseUrl}${endpointPath}`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
 
   let body;
   try {
@@ -45,6 +71,55 @@ async function fetchJson(baseUrl, path) {
   }
 
   return { url, status: res.status, body };
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+function isRetryableError(error) {
+  return (
+    error instanceof TypeError ||
+    (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError"))
+  );
+}
+
+function formatError(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs) {
+  const totalAttempts = retryCount + 1;
+  let lastError = null;
+  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    try {
+      const result = await fetchJson(baseUrl, endpointPath, timeoutMs);
+      if (attempt < totalAttempts && isRetryableStatus(result.status)) {
+        console.log(
+          `[smoke-api] WARN ${endpointPath} returned ${result.status} on attempt ${attempt}/${totalAttempts}; retrying in ${retryDelayMs}ms`,
+        );
+        await sleep(retryDelayMs);
+        continue;
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      if (attempt < totalAttempts && isRetryableError(error)) {
+        console.log(
+          `[smoke-api] WARN ${endpointPath} failed on attempt ${attempt}/${totalAttempts} (${formatError(error)}); retrying in ${retryDelayMs}ms`,
+        );
+        await sleep(retryDelayMs);
+        continue;
+      }
+      throw new Error(`${endpointPath} request failed: ${formatError(error)}`);
+    }
+  }
+
+  throw new Error(`${endpointPath} request failed after ${totalAttempts} attempts: ${formatError(lastError)}`);
 }
 
 function assert(condition, message) {
@@ -176,13 +251,15 @@ export function assertPathCoverage(strictPaths, endpointAssertions) {
 }
 
 async function run() {
-  const { baseUrl: rawBaseUrl } = parseArgs(process.argv.slice(2));
+  const { baseUrl: rawBaseUrl, timeoutMs, retryCount, retryDelayMs } = parseArgs(process.argv.slice(2));
   const baseUrl = ensureBaseUrl(rawBaseUrl);
   const strictPaths = loadStrictContractPaths();
   assertPathCoverage(strictPaths, ENDPOINT_ASSERTIONS);
-  console.log(`[smoke-api] Running checks against ${baseUrl}`);
+  console.log(
+    `[smoke-api] Running checks against ${baseUrl} (timeout=${timeoutMs}ms, retries=${retryCount}, retryDelay=${retryDelayMs}ms)`,
+  );
 
-  const health = await fetchJson(baseUrl, "/api/health");
+  const health = await fetchJsonWithRetry(baseUrl, "/api/health", timeoutMs, retryCount, retryDelayMs);
   assert(health.status === 200, `/api/health returned ${health.status}`);
   assert(
     health.body && ["healthy", "degraded", "stale"].includes(health.body.status),
@@ -190,10 +267,8 @@ async function run() {
   );
   console.log(`[smoke-api] OK /api/health (${health.body.status})`);
 
-  const strictResults = await Promise.all(
-    strictPaths.map(async (endpointPath) => ({ path: endpointPath, result: await fetchJson(baseUrl, endpointPath) })),
-  );
-  for (const { path: endpointPath, result } of strictResults) {
+  for (const endpointPath of strictPaths) {
+    const result = await fetchJsonWithRetry(baseUrl, endpointPath, timeoutMs, retryCount, retryDelayMs);
     const details = ENDPOINT_ASSERTIONS[endpointPath](result);
     console.log(`[smoke-api] OK ${endpointPath} (${details})`);
   }

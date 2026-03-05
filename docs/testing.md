@@ -39,6 +39,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 3. `smoke-api` (needs `deploy-worker`):
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`
+   - Runs strict API checks sequentially with bounded transient retry behavior (`SMOKE_API_RETRY_COUNT` default `1`, `SMOKE_API_TIMEOUT_MS` default `12000`)
 4. `deploy-pages` (needs `smoke-api`):
    - `npx tsx scripts/sync-digests.ts`
    - `npm run build`
@@ -356,7 +357,7 @@ Current critical file set:
 - `npm run test:critical-contracts` covers strict contract paths (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) plus router mapping tests to guarantee these paths are wired in `worker/src/router.ts`.
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
-- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions.
+- `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions, sequential endpoint execution, and bounded retries for transient failures.
 - `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.
 
 ### Tier-3 Structural Refactor Targeted Suites
