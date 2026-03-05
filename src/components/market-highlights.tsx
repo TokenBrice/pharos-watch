@@ -106,9 +106,9 @@ function BiggestDepegs({
               <span
                 className={`text-xs font-mono font-semibold flex-shrink-0 ${
                   Math.abs(d.bps) >= 50
-                    ? "text-red-500"
+                    ? "text-red-700 dark:text-red-400"
                     : Math.abs(d.bps) >= 10
-                      ? "text-amber-500"
+                      ? "text-amber-700 dark:text-amber-400"
                       : "text-muted-foreground"
                 }`}
               >
@@ -172,7 +172,7 @@ function FastestMovers({
         <div className="grid grid-cols-2 gap-x-4">
           {/* Growing */}
           <div className="space-y-2.5">
-            <p className="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Growing</p>
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Growing</p>
             {growers.length === 0 && <p className="text-xs text-muted-foreground">None</p>}
             {growers.map((g) => (
               <Link
@@ -190,7 +190,7 @@ function FastestMovers({
                     {g.symbol}
                   </span>
                 </div>
-                <span className="text-xs font-mono font-semibold text-emerald-500 flex-shrink-0">
+                <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400 flex-shrink-0">
                   +{g.pctChange.toFixed(1)}%
                 </span>
               </Link>
@@ -198,7 +198,7 @@ function FastestMovers({
           </div>
           {/* Shrinking */}
           <div className="space-y-2.5">
-            <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Shrinking</p>
+            <p className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider">Shrinking</p>
             {shrinkers.length === 0 && (
               <p className="text-xs text-muted-foreground">None</p>
             )}
@@ -218,7 +218,7 @@ function FastestMovers({
                     {s.symbol}
                   </span>
                 </div>
-                <span className="text-xs font-mono font-semibold text-red-500 flex-shrink-0">
+                <span className="text-xs font-mono font-semibold text-red-700 dark:text-red-400 flex-shrink-0">
                   {s.pctChange.toFixed(1)}%
                 </span>
               </Link>

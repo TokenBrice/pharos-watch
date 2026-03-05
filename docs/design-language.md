@@ -17,6 +17,8 @@ Pharos ships as a **dark-first financial dashboard**:
 
 The default theme class on load is `dark`, with a user toggle for light mode.
 
+Light mode keeps the same hierarchy as dark mode, but status/accent text is calibrated one step darker to preserve readability on pale surfaces (typical pattern: `text-*-700 dark:text-*-400`).
+
 ---
 
 ## Global App Shell
@@ -221,6 +223,7 @@ className="pharos-card-shell pharos-focus-ring pharos-interactive-card group fle
 
 - **Mature**: emerald badge (`bg-emerald-500/15 ... border-emerald-500/30`)
 - **Experimental**: amber badge (`bg-amber-500/15 ... border-amber-500/30`)
+- Status text should follow light/dark pairing (`text-*-700 dark:text-*-400`) instead of fixed `text-*-300/400` tones.
 
 ### Version Badge
 

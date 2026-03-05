@@ -70,15 +70,15 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             {gov && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${gov.cls}`}>{gov.label}</span>}
             {backing && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${backing.cls}`}>{backing.label}</span>}
             {peg && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}>{peg.label}</span>}
-            {meta.flags.yieldBearing && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Yield-Bearing</span>}
-            {meta.flags.rwa && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-500 border-sky-500/20">RWA</span>}
+            {meta.flags.yieldBearing && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Yield-Bearing</span>}
+            {meta.flags.rwa && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">RWA</span>}
             {!isDecentralized && (
               meta.proofOfReserves ? (
                 <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}>
                   {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
                 </span>
               ) : (
-                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-500 border-red-500/20">
+                <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
                   No PoR
                 </span>
               )
@@ -119,7 +119,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                     href={meta.proofOfReserves.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-blue-500 hover:underline shrink-0"
+                    className="inline-flex items-center gap-1 text-sm text-blue-700 dark:text-blue-400 hover:underline shrink-0"
                   >
                     View reserves <ExternalLink className="h-3 w-3" />
                   </a>
@@ -135,12 +135,12 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
                   {meta.jurisdiction.regulator && (
-                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-500 border-blue-500/20">
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
                       {meta.jurisdiction.regulator}
                     </span>
                   )}
                   {meta.jurisdiction.license && (
-                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-500 border-violet-500/20">
+                    <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
                       {meta.jurisdiction.license}
                     </span>
                   )}
@@ -209,7 +209,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                       href={explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-blue-500 hover:underline"
+                      className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 hover:underline"
                     >
                       View on {chain?.name ? `${chain.name} explorer` : "explorer"}
                       <ExternalLink className="h-3 w-3" />

@@ -96,17 +96,17 @@ export const GRADE_THRESHOLDS: { grade: ReportCardGrade; min: number }[] = [
  * These MUST be static literals (Tailwind purge requirement).
  */
 export const REPORT_CARD_GRADE_COLORS: Record<ReportCardGrade, string> = {
-  "A+": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "A":  "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "A-": "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "B+": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "B":  "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "B-": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "C+": "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  "C":  "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  "C-": "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  "D":  "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  "F":  "bg-red-500/10 text-red-500 border-red-500/20",
+  "A+": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  "A":  "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  "A-": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  "B+": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+  "B":  "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+  "B-": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+  "C+": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  "C":  "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  "C-": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  "D":  "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  "F":  "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
   "NR": "bg-muted text-muted-foreground border-muted",
 };
 

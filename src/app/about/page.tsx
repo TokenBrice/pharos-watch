@@ -171,7 +171,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-amber-500" />
+                <BarChart3 className="h-5 w-5 text-amber-700 dark:text-amber-400" />
                 <span className="font-bold">{TRACKED_STABLECOINS.length} Stablecoins</span>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -183,7 +183,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Skull className="h-5 w-5 text-zinc-500" />
+                <Skull className="h-5 w-5 text-zinc-700 dark:text-zinc-400" />
                 <Link href="/cemetery" className="font-bold underline underline-offset-4 hover:text-zinc-500 transition-colors">{DEAD_STABLECOINS.length} in the Cemetery</Link>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -195,7 +195,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-red-500" />
+                <ShieldAlert className="h-5 w-5 text-red-700 dark:text-red-400" />
                 <Link href="/blacklist" className="font-bold underline underline-offset-4 hover:text-red-500 transition-colors">Blacklist Tracker</Link>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -207,7 +207,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-emerald-500" />
+                <Activity className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
                 <Link href="/" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
                   Peg Tracker
                 </Link>
@@ -221,7 +221,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-sky-500" />
+                <ShieldCheck className="h-5 w-5 text-sky-700 dark:text-sky-400" />
                 <span className="font-bold">Safety Ratings</span>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -242,7 +242,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Droplets className="h-5 w-5 text-cyan-500" />
+                <Droplets className="h-5 w-5 text-cyan-700 dark:text-cyan-400" />
                 <Link href="/liquidity" className="font-bold underline underline-offset-4 hover:text-cyan-500 transition-colors">
                   DEX Liquidity
                 </Link>
@@ -256,7 +256,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Flame className="h-5 w-5 text-orange-500" />
+                <Flame className="h-5 w-5 text-orange-700 dark:text-orange-400" />
                 <Link href="/flows" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
                   Mint/Burn Flows
                 </Link>
@@ -277,7 +277,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Newspaper className="h-5 w-5 text-orange-500" />
+                <Newspaper className="h-5 w-5 text-orange-700 dark:text-orange-400" />
                 <Link href="/digest" className="font-bold underline underline-offset-4 hover:text-orange-500 transition-colors">
                   Daily Digest
                 </Link>
@@ -291,7 +291,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Gauge className="h-5 w-5 text-indigo-500" />
+                <Gauge className="h-5 w-5 text-indigo-700 dark:text-indigo-400" />
                 <a href="/stability-index" className="font-bold hover:underline">Pharos Stability Index (PSI)</a>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -303,7 +303,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <FlaskConical className="h-5 w-5 text-emerald-500" />
+                <FlaskConical className="h-5 w-5 text-emerald-700 dark:text-emerald-400" />
                 <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-emerald-500 transition-colors">
                   Safety Grades
                 </Link>
@@ -317,7 +317,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Network className="h-5 w-5 text-rose-500" />
+                <Network className="h-5 w-5 text-rose-700 dark:text-rose-400" />
                 <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-rose-500 transition-colors">
                   Contagion Map
                 </Link>
@@ -331,7 +331,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-violet-500" />
+                <Layers className="h-5 w-5 text-violet-700 dark:text-violet-400" />
                 <Link href="/safety-scores" className="font-bold underline underline-offset-4 hover:text-violet-500 transition-colors">
                   Systemic Risk Scoreboard
                 </Link>
@@ -345,7 +345,7 @@ export default function AboutPage() {
           <Card className="rounded-xl">
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-amber-500" />
+                <ShieldAlert className="h-5 w-5 text-amber-700 dark:text-amber-400" />
                 <span className="font-bold">Depeg Early Warning (DEWS)</span>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -361,7 +361,7 @@ export default function AboutPage() {
         <h2 className="text-xl font-semibold tracking-tight">Learn More About Pharos</h2>
         <Card className="rounded-xl border-l-[3px] border-l-sky-500">
           <CardContent className="flex items-start gap-4 text-sm text-muted-foreground leading-relaxed">
-            <Radio className="h-5 w-5 text-sky-500 mt-0.5 shrink-0" />
+            <Radio className="h-5 w-5 text-sky-700 dark:text-sky-400 mt-0.5 shrink-0" />
             <div className="space-y-2">
               <p>
                 TokenBrice walked through Pharos live on Leviathan News — covering the motivation behind the project, how the data pipeline works, and what each metric means in practice.

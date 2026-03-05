@@ -145,14 +145,14 @@ export function FlowEventFeed({ stablecoinId, limit }: FlowEventFeedProps) {
                   {evt.direction === "mint" ? (
                     <Badge
                       variant="outline"
-                      className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-xs"
+                      className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-xs"
                     >
                       Mint
                     </Badge>
                   ) : (
                     <Badge
                       variant="outline"
-                      className="bg-red-500/10 text-red-500 border-red-500/20 text-xs"
+                      className="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 text-xs"
                     >
                       Burn
                     </Badge>

@@ -11,11 +11,11 @@ import type { StablecoinData, ReportCard } from "@shared/types";
 import { GOVERNANCE_TIER_COLORS } from "@shared/lib/classification";
 
 const COLLATERAL_TIERS = [
-  { key: "rwa", label: "RWA", bg: "bg-blue-500", text: "text-blue-500" },
-  { key: "native", label: "Native", bg: "bg-emerald-500", text: "text-emerald-500" },
-  { key: "eth-lst", label: "ETH LST", bg: "bg-indigo-500", text: "text-indigo-500" },
-  { key: "alt-lst-bridged-or-mixed", label: "Mixed", bg: "bg-purple-500", text: "text-purple-500" },
-  { key: "exotic", label: "Exotic", bg: "bg-orange-500", text: "text-orange-500" },
+  { key: "rwa", label: "RWA", bg: "bg-blue-500", text: "text-blue-700 dark:text-blue-400" },
+  { key: "native", label: "Native", bg: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
+  { key: "eth-lst", label: "ETH LST", bg: "bg-indigo-500", text: "text-indigo-700 dark:text-indigo-400" },
+  { key: "alt-lst-bridged-or-mixed", label: "Mixed", bg: "bg-purple-500", text: "text-purple-700 dark:text-purple-400" },
+  { key: "exotic", label: "Exotic", bg: "bg-orange-500", text: "text-orange-700 dark:text-orange-400" },
 ] as const;
 
 interface CategoryStatsProps {
@@ -133,10 +133,10 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                 </div>
                 <div className="space-y-1">
                   {([
-                    { label: "A tier", count: stats.gradeA, bg: "bg-emerald-500", text: "text-emerald-500" },
-                    { label: "B tier", count: stats.gradeB, bg: "bg-blue-500", text: "text-blue-500" },
-                    { label: "C tier", count: stats.gradeC, bg: "bg-amber-500", text: "text-amber-500" },
-                    { label: "D / F", count: stats.gradeDF, bg: "bg-red-500", text: "text-red-500" },
+                    { label: "A tier", count: stats.gradeA, bg: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" },
+                    { label: "B tier", count: stats.gradeB, bg: "bg-blue-500", text: "text-blue-700 dark:text-blue-400" },
+                    { label: "C tier", count: stats.gradeC, bg: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" },
+                    { label: "D / F", count: stats.gradeDF, bg: "bg-red-500", text: "text-red-700 dark:text-red-400" },
                   ] as const).map((t) => (
                     <div key={t.label} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-1.5">

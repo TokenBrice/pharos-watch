@@ -5,19 +5,19 @@ const STYLES: Record<CoinNoticeType["type"], { border: string; bg: string; icon:
   danger: {
     border: "border-red-500/40",
     bg: "bg-red-500/5",
-    icon: "text-red-500",
+    icon: "text-red-700 dark:text-red-400",
     title: "text-red-600 dark:text-red-400",
   },
   warning: {
     border: "border-amber-500/40",
     bg: "bg-amber-500/5",
-    icon: "text-amber-500",
+    icon: "text-amber-700 dark:text-amber-400",
     title: "text-amber-600 dark:text-amber-400",
   },
   info: {
     border: "border-blue-500/40",
     bg: "bg-blue-500/5",
-    icon: "text-blue-500",
+    icon: "text-blue-700 dark:text-blue-400",
     title: "text-blue-600 dark:text-blue-400",
   },
 };

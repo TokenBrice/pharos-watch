@@ -51,7 +51,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
           {noData ? (
             <p className="text-sm text-muted-foreground">No depeg events recorded. No price data available to verify peg status.</p>
           ) : (
-            <p className="text-sm text-emerald-500 font-medium">No depeg events recorded. This stablecoin has maintained its peg.</p>
+            <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">No depeg events recorded. This stablecoin has maintained its peg.</p>
           )}
         </CardContent>
       </Card>
@@ -86,7 +86,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
             <div>
               <span className="text-muted-foreground">Current Streak </span>
               {metrics.depeggedNow ? (
-                <span className="inline-flex items-center gap-1.5 font-semibold text-red-500">
+                <span className="inline-flex items-center gap-1.5 font-semibold text-red-700 dark:text-red-400">
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
@@ -94,7 +94,7 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
                   Depegged now
                 </span>
               ) : metrics.currentStreakDays !== null ? (
-                <span className="font-mono font-semibold text-emerald-500">{metrics.currentStreakDays}d at peg</span>
+                <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">{metrics.currentStreakDays}d at peg</span>
               ) : (
                 <span className="font-mono font-semibold text-muted-foreground">N/A</span>
               )}

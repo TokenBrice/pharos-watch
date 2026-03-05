@@ -11,10 +11,10 @@ export function BluechipHeaderBadge({ stablecoinId }: { stablecoinId: string }) 
 
   const order = GRADE_ORDER[rating.grade] ?? 0;
   const gradeColor =
-    order >= 10 ? "text-emerald-500" :
-    order >= 7  ? "text-blue-500" :
-    order >= 4  ? "text-amber-500" :
-                  "text-red-500";
+    order >= 10 ? "text-emerald-700 dark:text-emerald-400" :
+    order >= 7  ? "text-blue-700 dark:text-blue-400" :
+    order >= 4  ? "text-amber-700 dark:text-amber-400" :
+                  "text-red-700 dark:text-red-400";
 
   return (
     <a

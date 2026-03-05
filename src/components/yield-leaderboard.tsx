@@ -29,9 +29,9 @@ type SortKey = "pys" | "apy30d" | "safetyScore" | "tvl" | "yieldStability" | "yi
 /** Static PYS color classes (Tailwind purge-safe). */
 function getPysColor(pys: number | null): string {
   if (pys === null) return "text-muted-foreground";
-  if (pys > 40) return "text-emerald-500";
-  if (pys > 20) return "text-amber-500";
-  return "text-red-500";
+  if (pys > 40) return "text-emerald-700 dark:text-emerald-400";
+  if (pys > 20) return "text-amber-700 dark:text-amber-400";
+  return "text-red-700 dark:text-red-400";
 }
 
 /** Small pill badge that opens an inline popover listing alternative yield sources. */
@@ -65,7 +65,7 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
           {altSources.map((src) => (
             <div key={src.sourceKey} className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
               <span className="truncate text-foreground">{src.yieldSource}</span>
-              <span className="font-mono text-emerald-500 shrink-0">{src.currentApy.toFixed(2)}%</span>
+              <span className="font-mono text-emerald-700 dark:text-emerald-400 shrink-0">{src.currentApy.toFixed(2)}%</span>
             </div>
           ))}
         </div>

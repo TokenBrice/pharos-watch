@@ -108,7 +108,7 @@ export function HomepageClient() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/stability-index/"
-              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-500 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-cyan-500/60 hover:bg-cyan-500/20 whitespace-normal"
+              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:text-cyan-400 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-cyan-500/60 hover:bg-cyan-500/20 whitespace-normal"
             >
               Open Stability Index
             </Link>

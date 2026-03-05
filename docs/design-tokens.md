@@ -43,6 +43,15 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 | Chart | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary` | Chart-specific theming |
 | Motion | `--motion-duration-fast`, `--motion-duration-base`, `--motion-ease-standard` | Shared transition timing |
 
+#### Light-Mode Contrast Baseline (March 2026)
+
+- `--text-secondary` and `--text-tertiary` are intentionally darker in light mode than earlier revisions to keep metadata and helper text readable on pale surfaces.
+- `--ring` is blue in both themes (`blue-500` light, `blue-400` dark) to keep keyboard focus visible against neutral backgrounds.
+- For semantic status/accent text classes used in badges and KPI callouts, use the two-theme pattern:
+  - `text-*-700 dark:text-*-400`
+- Avoid unscoped `text-*-300` / `text-*-400` in app code unless the element only renders on dark-only surfaces.
+- DEWS radar guide lines should stay theme-tuned via tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`); dark mode requires visibly higher alpha than `0.04` to keep axis spokes readable.
+
 #### Hex Companion Variables
 
 Recharts (and other SVG/canvas libraries) require literal hex color strings — CSS `var()` doesn't work in SVG attributes rendered by React. For every semantic color used in charts, there's a `-hex` companion:
@@ -89,7 +98,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 | File | Exports | Purpose |
 |------|---------|---------|
 | `src/lib/chart-colors.ts` | `CHART_PALETTE`, `CHART_BLUE`, `PSI_BAND_COLORS`, `RECHARTS_TOOLTIP_STYLES` | Chart fill/stroke colors (also has module-private `TOKEN` map) |
-| `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers | Peg-deviation and score-tier color helpers shared across UI + charts |
+| `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
 
 These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css`.
 

@@ -24,8 +24,8 @@ function trendDirection(value: number): TrendDirection {
 }
 
 function trendTextClass(value: number): string {
-  if (value > 0) return "text-green-500";
-  if (value < 0) return "text-red-500";
+  if (value > 0) return "text-green-700 dark:text-green-400";
+  if (value < 0) return "text-red-700 dark:text-red-400";
   return "text-muted-foreground";
 }
 
@@ -39,9 +39,9 @@ function TrendChip({
   direction: TrendDirection;
 }) {
   const toneClasses = direction === "up"
-    ? "border-green-500/25 bg-green-500/10 text-green-500"
+    ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
     : direction === "down"
-      ? "border-red-500/25 bg-red-500/10 text-red-500"
+      ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
       : "border-border bg-muted/40 text-muted-foreground";
   const Icon = direction === "up" ? ArrowUpRight : direction === "down" ? ArrowDownRight : Minus;
 
@@ -64,11 +64,11 @@ function InfoChip({
   tone?: "neutral" | "positive" | "negative" | "warning";
 }) {
   const toneClasses = tone === "positive"
-    ? "border-green-500/25 bg-green-500/10 text-green-500"
+    ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
     : tone === "negative"
-      ? "border-red-500/25 bg-red-500/10 text-red-500"
+      ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
     : tone === "warning"
-        ? "border-amber-500/25 bg-amber-500/10 text-amber-500"
+        ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
         : "border-border bg-muted/40 text-muted-foreground";
 
   return (
@@ -347,19 +347,19 @@ export function KpiBar() {
                   {dewsBandCounts.danger > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className="text-red-500">Critical {dewsBandCounts.danger}</span>
+                      <span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span>
                     </>
                   )}
                   {dewsBandCounts.warning > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className="text-amber-500">Warning {dewsBandCounts.warning}</span>
+                      <span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span>
                     </>
                   )}
                   {dewsBandCounts.alert > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className="text-amber-500">Alert {dewsBandCounts.alert}</span>
+                      <span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span>
                     </>
                   )}
                   {allDewsCalm && (

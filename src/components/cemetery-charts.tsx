@@ -416,7 +416,7 @@ function CumulativeDestroyedChart() {
                     <p className="font-semibold">{d.symbol}</p>
                     <p className="text-muted-foreground text-xs">{d.date}</p>
                     <p className="font-mono tabular-nums">+{formatCurrency(d.added, 1)}</p>
-                    <p className="font-mono tabular-nums text-red-500">
+                    <p className="font-mono tabular-nums text-red-700 dark:text-red-400">
                       Total: {formatCurrency(d.cumulative, 1)}
                     </p>
                   </ChartTooltip>

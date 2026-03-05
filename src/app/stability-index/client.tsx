@@ -99,7 +99,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-blue-500 hover:underline inline-flex items-center gap-1 min-w-0 shrink"
+                    className="text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink"
                   >
                     <span className="truncate">{link.title}</span>
                     <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -339,13 +339,13 @@ function Methodology({
             {methodology.versionLabel}
           </Badge>
           {!methodology.isCurrent && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30">
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
               latest {methodology.currentVersionLabel}
             </Badge>
           )}
           <Link
             href={methodology.changelogPath}
-            className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors"
+            className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors"
           >
             Version history &rarr;
           </Link>
@@ -424,27 +424,27 @@ function Methodology({
               <tbody className="text-muted-foreground">
                 <tr className="border-b">
                   <td className="py-2 pr-4 tabular-nums">90 &ndash; 100</td>
-                  <td className="py-2 pr-4 font-medium text-green-500">BEDROCK</td>
+                  <td className="py-2 pr-4 font-medium text-green-700 dark:text-green-400">BEDROCK</td>
                   <td className="py-2">Exceptional stability across all tracked stablecoins</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 tabular-nums">75 &ndash; 89</td>
-                  <td className="py-2 pr-4 font-medium text-teal-500">STEADY</td>
+                  <td className="py-2 pr-4 font-medium text-teal-700 dark:text-teal-400">STEADY</td>
                   <td className="py-2">Normal conditions with minor deviations</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 tabular-nums">60 &ndash; 74</td>
-                  <td className="py-2 pr-4 font-medium text-yellow-500">TREMOR</td>
+                  <td className="py-2 pr-4 font-medium text-yellow-700 dark:text-yellow-400">TREMOR</td>
                   <td className="py-2">Notable stress in parts of the market</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 tabular-nums">40 &ndash; 59</td>
-                  <td className="py-2 pr-4 font-medium text-orange-500">FRACTURE</td>
+                  <td className="py-2 pr-4 font-medium text-orange-700 dark:text-orange-400">FRACTURE</td>
                   <td className="py-2">Significant depegs affecting multiple assets</td>
                 </tr>
                 <tr className="border-b">
                   <td className="py-2 pr-4 tabular-nums">20 &ndash; 39</td>
-                  <td className="py-2 pr-4 font-medium text-red-500">CRISIS</td>
+                  <td className="py-2 pr-4 font-medium text-red-700 dark:text-red-400">CRISIS</td>
                   <td className="py-2">Severe market-wide instability</td>
                 </tr>
                 <tr>
@@ -516,13 +516,13 @@ function ContributorsTable({
                   <td className="py-2 pr-4">
                     <a
                       href={`/stablecoin/${r.id}`}
-                      className="flex items-center gap-2 font-medium text-foreground hover:text-blue-500 transition-colors"
+                      className="flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
                     >
                       <StablecoinLogo src={logos[r.id]} name={r.symbol} size={20} />
                       {r.symbol}
                     </a>
                   </td>
-                  <td className={`py-2 pr-4 text-right tabular-nums ${r.bps < 0 ? "text-red-500" : "text-amber-500"}`}>
+                  <td className={`py-2 pr-4 text-right tabular-nums ${r.bps < 0 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"}`}>
                     {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
                   </td>
                   <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">
@@ -677,7 +677,7 @@ export function StabilityIndexClient() {
               </div>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 {delta !== null && (
-                  <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
                     {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
                   </span>
                 )}

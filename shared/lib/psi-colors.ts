@@ -21,12 +21,12 @@ export const PSI_HEX_COLORS: Record<ConditionBand, string> = {
 
 /** Static Tailwind text-color classes for each PSI condition band. */
 export const PSI_BAND_CLASSES: Record<ConditionBand, string> = {
-  BEDROCK: "text-green-500",
-  STEADY: "text-teal-500",
-  TREMOR: "text-yellow-500",
-  FRACTURE: "text-orange-500",
-  CRISIS: "text-red-500",
-  MELTDOWN: "text-red-800",
+  BEDROCK: "text-green-700 dark:text-green-400",
+  STEADY: "text-teal-700 dark:text-teal-400",
+  TREMOR: "text-yellow-700 dark:text-yellow-400",
+  FRACTURE: "text-orange-700 dark:text-orange-400",
+  CRISIS: "text-red-700 dark:text-red-400",
+  MELTDOWN: "text-red-800 dark:text-red-300",
 };
 
 /** Static Tailwind border-l color classes for each PSI condition band. */

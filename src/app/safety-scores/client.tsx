@@ -370,12 +370,12 @@ export function ReportCardsClient() {
       {/* Simulation banner */}
       {stressTest.stressedCards && (
         <div className="sticky top-14 z-30 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 flex items-center justify-between">
-          <span className="text-sm text-amber-500 font-medium">
+          <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
             Viewing simulated grades
           </span>
           <button
             onClick={stressTest.clear}
-            className="text-sm text-amber-500 underline underline-offset-2 hover:text-amber-400"
+            className="text-sm text-amber-700 dark:text-amber-400 underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-300"
           >
             Clear simulation
           </button>

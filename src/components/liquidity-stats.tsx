@@ -175,7 +175,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
             <p className="text-sm text-muted-foreground">
               Across all tracked stablecoins
               {stats.agg7dChange != null && (
-                <span className={`ml-2 font-mono ${stats.agg7dChange >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                <span className={`ml-2 font-mono ${stats.agg7dChange >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
                   {stats.agg7dChange >= 0 ? "\u2191" : "\u2193"}{Math.abs(stats.agg7dChange).toFixed(1)}% 7d
                 </span>
               )}

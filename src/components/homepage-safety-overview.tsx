@@ -26,12 +26,12 @@ const GRADE_BAR_COLORS: Record<(typeof GRADE_RANGES)[number], string> = {
 };
 
 const RANGE_PILL_CLASSES: Record<(typeof GRADE_RANGES)[number], string> = {
-  A: "border-emerald-500/40 bg-emerald-500/15 text-emerald-300",
-  B: "border-blue-500/40 bg-blue-500/15 text-blue-300",
-  C: "border-amber-500/40 bg-amber-500/15 text-amber-300",
-  D: "border-orange-500/40 bg-orange-500/15 text-orange-300",
-  F: "border-red-500/40 bg-red-500/15 text-red-300",
-  NR: "border-zinc-500/40 bg-zinc-500/15 text-zinc-300",
+  A: "border-emerald-600/35 bg-emerald-500/15 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+  B: "border-blue-600/35 bg-blue-500/15 text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-300",
+  C: "border-amber-600/35 bg-amber-500/15 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300",
+  D: "border-orange-600/35 bg-orange-500/15 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/15 dark:text-orange-300",
+  F: "border-red-600/35 bg-red-500/15 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
+  NR: "border-zinc-600/30 bg-zinc-500/15 text-zinc-700 dark:border-zinc-500/40 dark:bg-zinc-500/15 dark:text-zinc-300",
 };
 
 const PULSE_THEME: Record<(typeof GRADE_RANGES)[number], {
@@ -43,37 +43,37 @@ const PULSE_THEME: Record<(typeof GRADE_RANGES)[number], {
   A: {
     ring: "border-emerald-500/35",
     bg: "bg-emerald-500/10",
-    accent: "text-emerald-300",
+    accent: "text-emerald-700 dark:text-emerald-300",
     tagline: "High-grade assets dominate the market mix.",
   },
   B: {
     ring: "border-blue-500/35",
     bg: "bg-blue-500/10",
-    accent: "text-blue-300",
+    accent: "text-blue-700 dark:text-blue-300",
     tagline: "Safety profile is balanced with moderate fragility.",
   },
   C: {
     ring: "border-amber-500/35",
     bg: "bg-amber-500/10",
-    accent: "text-amber-300",
+    accent: "text-amber-700 dark:text-amber-300",
     tagline: "Quality mix is split; watch weaker structures.",
   },
   D: {
     ring: "border-orange-500/35",
     bg: "bg-orange-500/10",
-    accent: "text-orange-300",
+    accent: "text-orange-700 dark:text-orange-300",
     tagline: "Risk pressure is elevated in lower-grade tiers.",
   },
   F: {
     ring: "border-red-500/35",
     bg: "bg-red-500/10",
-    accent: "text-red-300",
+    accent: "text-red-700 dark:text-red-300",
     tagline: "Failure-prone segment is meaningfully outsized.",
   },
   NR: {
     ring: "border-zinc-500/35",
     bg: "bg-zinc-500/10",
-    accent: "text-zinc-300",
+    accent: "text-zinc-700 dark:text-zinc-300",
     tagline: "Data coverage is incomplete for a full pulse read.",
   },
 };
@@ -212,11 +212,11 @@ export function HomepageSafetyOverview({ cards, peggedAssets, className }: Homep
         <div className="grid grid-cols-3 gap-2">
           <div className="rounded-lg border border-border/60 bg-background/35 px-2.5 py-2">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">A/B share</p>
-            <p className="mt-1 font-mono text-lg font-bold text-emerald-300">{strongPct}%</p>
+            <p className="mt-1 font-mono text-lg font-bold text-emerald-700 dark:text-emerald-300">{strongPct}%</p>
           </div>
           <div className="rounded-lg border border-border/60 bg-background/35 px-2.5 py-2">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">D/F pressure</p>
-            <p className="mt-1 font-mono text-lg font-bold text-red-300">{highRiskPct}%</p>
+            <p className="mt-1 font-mono text-lg font-bold text-red-700 dark:text-red-300">{highRiskPct}%</p>
           </div>
           <div className="rounded-lg border border-border/60 bg-background/35 px-2.5 py-2">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Coverage</p>

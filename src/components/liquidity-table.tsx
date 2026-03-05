@@ -311,7 +311,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 <TableCell className="text-right font-mono tabular-nums">{formatCurrency(liq.totalTvlUsd)}</TableCell>
                 <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums text-sm">
                   {liq.tvlChange7d != null ? (
-                    <span className={liq.tvlChange7d >= 0 ? "text-emerald-500" : "text-red-500"}>
+                    <span className={liq.tvlChange7d >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
                       {liq.tvlChange7d >= 0 ? "\u2191" : "\u2193"}{Math.abs(liq.tvlChange7d).toFixed(1)}%
                     </span>
                   ) : (

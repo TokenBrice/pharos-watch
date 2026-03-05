@@ -141,8 +141,8 @@ export function formatDeathDateShort(d: string): string {
 
 /** Tailwind color class for net flow values (positive = green, negative = red) */
 export function getNetColor(value: number): string {
-  if (value > 0) return "text-emerald-500";
-  if (value < 0) return "text-red-500";
+  if (value > 0) return "text-emerald-700 dark:text-emerald-400";
+  if (value < 0) return "text-red-700 dark:text-red-400";
   return "text-muted-foreground";
 }
 
@@ -150,4 +150,3 @@ export function getNetColor(value: number): string {
 export function getNetPrefix(value: number): string {
   return value > 0 ? "+" : "";
 }
-

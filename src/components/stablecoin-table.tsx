@@ -605,7 +605,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   )}
                   {isVisible("change24h") && (
                     <TableCell className="text-right font-mono tabular-nums text-sm">
-                      <span className={change24h >= 0 ? "text-green-500" : "text-red-500"}>
+                      <span className={change24h >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
                         {prevDay > 0 ? (
                           <>{change24h >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevDay)}</>
                         ) : "N/A"}
@@ -614,7 +614,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   )}
                   {isVisible("change7d") && (
                     <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
-                      <span className={change7d >= 0 ? "text-green-500" : "text-red-500"}>
+                      <span className={change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
                         {prevWeek > 0 ? (
                           <>
                             <span className="hidden sm:inline">

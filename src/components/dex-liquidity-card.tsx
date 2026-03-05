@@ -27,16 +27,16 @@ function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
   const isPositive = value >= 0;
   return (
-    <span className={`text-xs font-mono ${isPositive ? "text-emerald-500" : "text-red-500"}`}>
+    <span className={`text-xs font-mono ${isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
       {isPositive ? "\u2191" : "\u2193"}{Math.abs(value).toFixed(1)}%
     </span>
   );
 }
 
 function getConcentrationLabel(hhi: number): { label: string; color: string } {
-  if (hhi >= 0.5) return { label: "High", color: "text-red-500" };
-  if (hhi >= 0.25) return { label: "Medium", color: "text-amber-500" };
-  return { label: "Low", color: "text-emerald-500" };
+  if (hhi >= 0.5) return { label: "High", color: "text-red-700 dark:text-red-400" };
+  if (hhi >= 0.25) return { label: "Medium", color: "text-amber-700 dark:text-amber-400" };
+  return { label: "Low", color: "text-emerald-700 dark:text-emerald-400" };
 }
 
 function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, number> }) {
@@ -446,7 +446,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               <div>
                 <span className="text-muted-foreground">Organic: </span>
                 <span className={`font-mono tabular-nums ${
-                  liq.organicFraction >= 0.8 ? "text-emerald-500" : liq.organicFraction >= 0.5 ? "text-amber-500" : "text-red-500"
+                  liq.organicFraction >= 0.8 ? "text-emerald-700 dark:text-emerald-400" : liq.organicFraction >= 0.5 ? "text-amber-700 dark:text-amber-400" : "text-red-700 dark:text-red-400"
                 }`}>{Math.round(liq.organicFraction * 100)}%</span>
               </div>
             )}
@@ -463,7 +463,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
               </span>
               {liq.dexDeviationBps != null && (
                 <span className={`text-sm font-mono ${
-                  Math.abs(liq.dexDeviationBps) >= 50 ? "text-amber-500" : "text-muted-foreground"
+                  Math.abs(liq.dexDeviationBps) >= 50 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground"
                 }`}>
                   {liq.dexDeviationBps >= 0 ? "+" : ""}{liq.dexDeviationBps}bps vs primary
                 </span>

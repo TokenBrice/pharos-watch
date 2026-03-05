@@ -294,7 +294,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 </TableCell>
                 <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
                   {coin.largestEvent24h ? (
-                    <span className={coin.largestEvent24h.direction === "mint" ? "text-emerald-500" : "text-red-500"}>
+                    <span className={coin.largestEvent24h.direction === "mint" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
                       {coin.largestEvent24h.direction === "mint" ? "+" : "-"}{formatCurrency(coin.largestEvent24h.amountUsd)}
                     </span>
                   ) : (

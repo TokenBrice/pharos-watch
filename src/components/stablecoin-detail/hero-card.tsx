@@ -137,7 +137,7 @@ export function HeroCard({
                 <div className="text-2xl font-bold font-mono tracking-tight">
                   {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef)}
                 </div>
-                <p className={`text-sm font-mono ${isNavToken ? "text-green-500" : deviationColorClass(Math.abs(deviationBps))}`}>
+                <p className={`text-sm font-mono ${isNavToken ? "text-green-700 dark:text-green-400" : deviationColorClass(Math.abs(deviationBps))}`}>
                   {formatPegDeviation(coinData.price, pegRef)}
                   {isNavToken && (
                     <span className="text-xs text-muted-foreground ml-1" title="Price reflects NAV appreciation — not a peg deviation">
@@ -168,7 +168,7 @@ export function HeroCard({
               <div className="px-3.5 py-2.5 min-h-[76px] border-b border-r border-border/30">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Market Cap</p>
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
-                <p className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-500" : "text-red-500"}`}>
+                <p className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
                   {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"} <span className="text-muted-foreground">24h</span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -180,14 +180,14 @@ export function HeroCard({
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Supply</p>
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatSupply(supply)} <span className="text-sm text-muted-foreground">{coin.symbol}</span></div>
                 <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span className={mcap >= prevWeek ? "text-green-500" : "text-red-500"}>
+                  <span className={mcap >= prevWeek ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
                     {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
                   </span>
                   <span className="text-muted-foreground"> 7d</span>
                   {prevMonth > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className={mcap >= prevMonth ? "text-green-500" : "text-red-500"}>
+                      <span className={mcap >= prevMonth ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
                         {formatPercentChange(mcap, prevMonth)}
                       </span>
                       <span className="text-muted-foreground"> 30d</span>
@@ -196,7 +196,7 @@ export function HeroCard({
                   {prev90d > 0 && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span className={mcap >= prev90d ? "text-green-500" : "text-red-500"}>
+                      <span className={mcap >= prev90d ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
                         {formatPercentChange(mcap, prev90d)}
                       </span>
                       <span className="text-muted-foreground"> 90d</span>
@@ -258,7 +258,7 @@ export function HeroCard({
 
             {pegScoreResult?.activeDepeg && (
               <div className="px-3.5 pt-2.5 pb-2.5 border-t border-border/30 text-xs bg-red-500/5">
-                <span className="text-red-500 font-medium">Active depeg</span>
+                <span className="text-red-700 dark:text-red-400 font-medium">Active depeg</span>
               </div>
             )}
           </div>

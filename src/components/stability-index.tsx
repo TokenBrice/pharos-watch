@@ -146,7 +146,7 @@ export function StabilityIndex() {
         </div>
       </div>
       {delta !== null && (
-        <span className={`text-sm font-medium tabular-nums ${delta >= 0 ? "text-green-500" : "text-red-500"}`}>
+        <span className={`text-sm font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
           {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1)}
         </span>
       )}

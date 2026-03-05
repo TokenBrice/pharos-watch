@@ -212,10 +212,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Stability Index Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-500">
+            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-700 dark:text-cyan-400">
               {PSI_METHODOLOGY_VERSION_LABEL}
             </span>
-            <Link href="/methodology/stability-index-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-500 transition-colors">
+            <Link href="/methodology/stability-index-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-700 dark:text-cyan-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>
@@ -420,11 +420,11 @@ export default function MethodologyPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  <tr><td className="py-2 pr-4">90&ndash;100</td><td className="py-2 pr-4 text-green-500 font-medium">BEDROCK</td><td className="py-2">Near-ideal market stability</td></tr>
-                  <tr><td className="py-2 pr-4">75&ndash;89</td><td className="py-2 pr-4 text-teal-500 font-medium">STEADY</td><td className="py-2">Normal conditions with minor stress</td></tr>
-                  <tr><td className="py-2 pr-4">60&ndash;74</td><td className="py-2 pr-4 text-yellow-500 font-medium">TREMOR</td><td className="py-2">Meaningful instability emerging</td></tr>
-                  <tr><td className="py-2 pr-4">40&ndash;59</td><td className="py-2 pr-4 text-orange-500 font-medium">FRACTURE</td><td className="py-2">Broad, significant market stress</td></tr>
-                  <tr><td className="py-2 pr-4">20&ndash;39</td><td className="py-2 pr-4 text-red-500 font-medium">CRISIS</td><td className="py-2">Contagion-level instability</td></tr>
+                  <tr><td className="py-2 pr-4">90&ndash;100</td><td className="py-2 pr-4 text-green-700 dark:text-green-400 font-medium">BEDROCK</td><td className="py-2">Near-ideal market stability</td></tr>
+                  <tr><td className="py-2 pr-4">75&ndash;89</td><td className="py-2 pr-4 text-teal-700 dark:text-teal-400 font-medium">STEADY</td><td className="py-2">Normal conditions with minor stress</td></tr>
+                  <tr><td className="py-2 pr-4">60&ndash;74</td><td className="py-2 pr-4 text-yellow-700 dark:text-yellow-400 font-medium">TREMOR</td><td className="py-2">Meaningful instability emerging</td></tr>
+                  <tr><td className="py-2 pr-4">40&ndash;59</td><td className="py-2 pr-4 text-orange-700 dark:text-orange-400 font-medium">FRACTURE</td><td className="py-2">Broad, significant market stress</td></tr>
+                  <tr><td className="py-2 pr-4">20&ndash;39</td><td className="py-2 pr-4 text-red-700 dark:text-red-400 font-medium">CRISIS</td><td className="py-2">Contagion-level instability</td></tr>
                   <tr><td className="py-2 pr-4">0&ndash;19</td><td className="py-2 pr-4 text-red-800 font-medium">MELTDOWN</td><td className="py-2">Systemic peg failure conditions</td></tr>
                 </tbody>
               </table>
@@ -439,10 +439,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-500">
+            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400">
               {SAFETY_SCORE_VERSION_LABEL}
             </span>
-            <Link href="/methodology/scoring-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
+            <Link href="/methodology/scoring-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>
@@ -798,10 +798,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Liquidity Score</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-500">
+            <span className="inline-flex items-center rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-cyan-700 dark:text-cyan-400">
               {LIQUIDITY_METHODOLOGY_VERSION_LABEL}
             </span>
-            <Link href="/methodology/liquidity-score-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-500 transition-colors">
+            <Link href="/methodology/liquidity-score-changelog" className="text-xs text-foreground underline underline-offset-4 hover:text-cyan-700 dark:text-cyan-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>
@@ -989,10 +989,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-orange-500">
+            <span className="inline-flex items-center rounded-md border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-orange-700 dark:text-orange-400">
               {MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
             </span>
-            <Link href={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-orange-500 transition-colors">
+            <Link href={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-orange-700 dark:text-orange-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>
@@ -1196,10 +1196,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Yield Intelligence</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-violet-500">
+            <span className="inline-flex items-center rounded-md border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-violet-700 dark:text-violet-400">
               {YIELD_METHODOLOGY_VERSION_LABEL}
             </span>
-            <Link href={YIELD_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-violet-500 transition-colors">
+            <Link href={YIELD_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-violet-700 dark:text-violet-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>
@@ -1391,10 +1391,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">PegScore and Depeg Early Warning Score (DEWS)</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-500">
+            <span className="inline-flex items-center rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-amber-700 dark:text-amber-400">
               {DEPEG_DEWS_METHODOLOGY_VERSION_LABEL}
             </span>
-            <Link href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-amber-500 transition-colors">
+            <Link href={DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>
@@ -1630,23 +1630,23 @@ export default function MethodologyPage() {
             {/* Threat bands */}
             <div className="flex flex-col gap-1.5 w-36 justify-center flex-shrink-0">
               <div className="rounded-lg border p-2 text-center">
-                <p className="text-green-500 font-medium text-xs">CALM</p>
+                <p className="text-green-700 dark:text-green-400 font-medium text-xs">CALM</p>
                 <p className="text-xs text-muted-foreground">0–15</p>
               </div>
               <div className="rounded-lg border p-2 text-center">
-                <p className="text-teal-500 font-medium text-xs">WATCH</p>
+                <p className="text-teal-700 dark:text-teal-400 font-medium text-xs">WATCH</p>
                 <p className="text-xs text-muted-foreground">16–35</p>
               </div>
               <div className="rounded-lg border p-2 text-center">
-                <p className="text-yellow-500 font-medium text-xs">ALERT</p>
+                <p className="text-yellow-700 dark:text-yellow-400 font-medium text-xs">ALERT</p>
                 <p className="text-xs text-muted-foreground">36–55</p>
               </div>
               <div className="rounded-lg border p-2 text-center">
-                <p className="text-orange-500 font-medium text-xs">WARNING</p>
+                <p className="text-orange-700 dark:text-orange-400 font-medium text-xs">WARNING</p>
                 <p className="text-xs text-muted-foreground">56–75</p>
               </div>
               <div className="rounded-lg border p-2 text-center">
-                <p className="text-red-500 font-medium text-xs">DANGER</p>
+                <p className="text-red-700 dark:text-red-400 font-medium text-xs">DANGER</p>
                 <p className="text-xs text-muted-foreground">76–100</p>
               </div>
             </div>
@@ -1696,23 +1696,23 @@ export default function MethodologyPage() {
             <div className="text-muted-foreground text-xl font-bold">&darr;</div>
             <div className="grid grid-cols-5 gap-1 w-full">
               <div className="rounded-lg border p-1.5 text-center">
-                <p className="text-green-500 font-medium text-xs">CALM</p>
+                <p className="text-green-700 dark:text-green-400 font-medium text-xs">CALM</p>
                 <p className="text-xs text-muted-foreground">0–15</p>
               </div>
               <div className="rounded-lg border p-1.5 text-center">
-                <p className="text-teal-500 font-medium text-xs">WATCH</p>
+                <p className="text-teal-700 dark:text-teal-400 font-medium text-xs">WATCH</p>
                 <p className="text-xs text-muted-foreground">16–35</p>
               </div>
               <div className="rounded-lg border p-1.5 text-center">
-                <p className="text-yellow-500 font-medium text-xs">ALERT</p>
+                <p className="text-yellow-700 dark:text-yellow-400 font-medium text-xs">ALERT</p>
                 <p className="text-xs text-muted-foreground">36–55</p>
               </div>
               <div className="rounded-lg border p-1.5 text-center">
-                <p className="text-orange-500 font-medium text-xs">WARN</p>
+                <p className="text-orange-700 dark:text-orange-400 font-medium text-xs">WARN</p>
                 <p className="text-xs text-muted-foreground">56–75</p>
               </div>
               <div className="rounded-lg border p-1.5 text-center">
-                <p className="text-red-500 font-medium text-xs">DANGER</p>
+                <p className="text-red-700 dark:text-red-400 font-medium text-xs">DANGER</p>
                 <p className="text-xs text-muted-foreground">76–100</p>
               </div>
             </div>
@@ -1746,11 +1746,11 @@ export default function MethodologyPage() {
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">Threat Bands</h3>
             <ul className="list-disc list-inside space-y-1">
-              <li><span className="text-green-500 font-medium">CALM (0&ndash;15)</span> &mdash; no stress signals detected</li>
-              <li><span className="text-teal-500 font-medium">WATCH (16&ndash;35)</span> &mdash; mild stress on 1&ndash;2 indicators</li>
-              <li><span className="text-yellow-500 font-medium">ALERT (36&ndash;55)</span> &mdash; multiple indicators elevated</li>
-              <li><span className="text-orange-500 font-medium">WARNING (56&ndash;75)</span> &mdash; strong stress signals, depeg plausible</li>
-              <li><span className="text-red-500 font-medium">DANGER (76&ndash;100)</span> &mdash; all precursors firing</li>
+              <li><span className="text-green-700 dark:text-green-400 font-medium">CALM (0&ndash;15)</span> &mdash; no stress signals detected</li>
+              <li><span className="text-teal-700 dark:text-teal-400 font-medium">WATCH (16&ndash;35)</span> &mdash; mild stress on 1&ndash;2 indicators</li>
+              <li><span className="text-yellow-700 dark:text-yellow-400 font-medium">ALERT (36&ndash;55)</span> &mdash; multiple indicators elevated</li>
+              <li><span className="text-orange-700 dark:text-orange-400 font-medium">WARNING (56&ndash;75)</span> &mdash; strong stress signals, depeg plausible</li>
+              <li><span className="text-red-700 dark:text-red-400 font-medium">DANGER (76&ndash;100)</span> &mdash; all precursors firing</li>
             </ul>
           </div>
 
@@ -1905,10 +1905,10 @@ export default function MethodologyPage() {
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Blacklist Tracker Methodology</CardTitle>
-            <span className="inline-flex items-center rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-rose-500">
+            <span className="inline-flex items-center rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-xs font-mono font-semibold text-rose-700 dark:text-rose-400">
               {BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}
             </span>
-            <Link href={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-rose-500 transition-colors">
+            <Link href={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH} className="text-xs text-foreground underline underline-offset-4 hover:text-rose-700 dark:text-rose-400 transition-colors">
               Version history &rarr;
             </Link>
           </div>

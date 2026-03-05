@@ -46,7 +46,7 @@ export function ReportCardMini({
         <CardContent className="relative flex flex-col items-center gap-3 pt-2 pb-2">
           {/* Simulated badge */}
           {isSimulated && (
-            <span className="absolute top-1 right-1 text-xs font-medium text-amber-500 bg-amber-500/10 rounded px-1 py-0.5 leading-none">
+            <span className="absolute top-1 right-1 text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 rounded px-1 py-0.5 leading-none">
               Simulated
             </span>
           )}
@@ -87,7 +87,7 @@ export function ReportCardMini({
                 {card.overallGrade}
               </Badge>
               {originalScore != null && card.overallScore != null && (
-                <span className="text-xs font-medium text-red-500">
+                <span className="text-xs font-medium text-red-700 dark:text-red-400">
                   {"\u25BC"}
                   {Math.abs(card.overallScore - originalScore)}
                 </span>

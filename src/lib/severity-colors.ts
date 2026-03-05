@@ -22,10 +22,10 @@ const SEVERITY_HEX = {
 } as const;
 
 export function deviationColorClass(absBps: number): string {
-  if (absBps < THRESHOLDS.GREEN) return "text-green-500";
-  if (absBps < THRESHOLDS.AMBER) return "text-amber-500";
-  if (absBps < THRESHOLDS.ORANGE) return "text-orange-500";
-  return "text-red-500";
+  if (absBps < THRESHOLDS.GREEN) return "text-green-700 dark:text-green-400";
+  if (absBps < THRESHOLDS.AMBER) return "text-amber-700 dark:text-amber-400";
+  if (absBps < THRESHOLDS.ORANGE) return "text-orange-700 dark:text-orange-400";
+  return "text-red-700 dark:text-red-400";
 }
 
 export function deviationBgClass(absBps: number): string {
@@ -59,10 +59,10 @@ export function deviationIconName(absBps: number): SeverityIcon {
 export type ScoreTier = "green" | "blue" | "amber" | "red";
 
 export const TIER_TEXT: Record<ScoreTier, string> = {
-  green: "text-emerald-500",
-  blue: "text-blue-500",
-  amber: "text-amber-500",
-  red: "text-red-500",
+  green: "text-emerald-700 dark:text-emerald-400",
+  blue: "text-blue-700 dark:text-blue-400",
+  amber: "text-amber-700 dark:text-amber-400",
+  red: "text-red-700 dark:text-red-400",
 };
 
 export const TIER_BORDER: Record<ScoreTier, string> = {
@@ -88,9 +88,9 @@ export function getScoreColor(score: number): string {
 /** Map a peg score (0-100, null) to a Tailwind text color class */
 export function pegScoreColor(score: number | null): string {
   if (score === null) return "text-muted-foreground";
-  if (score >= 90) return "text-green-500";
-  if (score >= 70) return "text-amber-500";
-  return "text-red-500";
+  if (score >= 90) return "text-green-700 dark:text-green-400";
+  if (score >= 70) return "text-amber-700 dark:text-amber-400";
+  return "text-red-700 dark:text-red-400";
 }
 
 // ---------------------------------------------------------------------------
@@ -100,9 +100,9 @@ export function pegScoreColor(score: number | null): string {
 
 /** Map a 0-100 durability score to a Tailwind text color class */
 export function getDurabilityColor(score: number): string {
-  if (score >= 70) return "text-emerald-500";
-  if (score >= 40) return "text-amber-500";
-  return "text-red-500";
+  if (score >= 70) return "text-emerald-700 dark:text-emerald-400";
+  if (score >= 40) return "text-amber-700 dark:text-amber-400";
+  return "text-red-700 dark:text-red-400";
 }
 
 /** Map a 0-100 durability score to a Tailwind background color class */

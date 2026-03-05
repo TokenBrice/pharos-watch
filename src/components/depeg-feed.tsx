@@ -71,7 +71,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium group-hover:underline">{evt.symbol}</span>
                     <span className={`font-mono text-xs font-semibold ${
-                      Math.abs(evt.peakDeviationBps) >= 500 ? "text-red-500" : "text-amber-500"
+                      Math.abs(evt.peakDeviationBps) >= 500 ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400"
                     }`}>
                       {formatBps(evt.peakDeviationBps)}
                     </span>
@@ -79,14 +79,14 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
                       variant="outline"
                       className={`text-xs px-1.5 py-0 ${
                         evt.direction === "below"
-                          ? "border-red-500/50 text-red-500"
-                          : "border-amber-500/50 text-amber-500"
+                          ? "border-red-500/50 text-red-700 dark:text-red-400"
+                          : "border-amber-500/50 text-amber-700 dark:text-amber-400"
                       }`}
                     >
                       {evt.direction}
                     </Badge>
                     {isOngoing && (
-                      <span className="flex items-center gap-1 text-xs text-red-500 font-medium">
+                      <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-400 font-medium">
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />

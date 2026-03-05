@@ -13,8 +13,8 @@
 
   /* ── Text ─────────────────────────────────────────────────────── */
   --text-primary:   var(--p-neutral-950);
-  --text-secondary: oklch(0.46 0.008 260);
-  --text-tertiary:  oklch(0.63 0.005 260);
+  --text-secondary: oklch(0.40 0.009 260);
+  --text-tertiary:  oklch(0.52 0.007 260);
   --text-inverse:   var(--p-neutral-50);
 
   /* ── Borders ──────────────────────────────────────────────────── */
@@ -161,8 +161,8 @@
   --chart-tertiary:  var(--p-teal-400);
   --chart-negative:  var(--p-red-400);
   --psi-band-opacity: 0.06;
-  --dews-radar-spoke:              rgba(255, 255, 255, 0.04);
-  --dews-radar-calm-boundary:      rgba(255, 255, 255, 0.07);
+  --dews-radar-spoke:              rgba(255, 255, 255, 0.12);
+  --dews-radar-calm-boundary:      rgba(255, 255, 255, 0.16);
   --dews-radar-band-ring-opacity:  0.25;
   --dews-radar-outer-ring-opacity: 0.35;
   --dews-radar-calm-dot-bloom:     rgba(255, 255, 255, 0.06);

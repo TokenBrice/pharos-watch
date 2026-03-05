@@ -92,62 +92,62 @@ function getPrinterMode(score: number | null, net24h: number): PrinterMode {
   if (score >= 70) {
     return {
       label: "MAX BRRRR",
-      badgeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
-      headlineClass: "text-emerald-300",
-      panelClass: "border-emerald-500/35 bg-emerald-500/10",
+      badgeClass: "bg-emerald-500/15 text-emerald-700 border-emerald-600/30 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40",
+      headlineClass: "text-emerald-700 dark:text-emerald-300",
+      panelClass: "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
       description: "Issuance is extreme relative to baseline activity.",
     };
   }
   if (score >= 40) {
     return {
       label: "PRINT SURGE",
-      badgeClass: "bg-lime-500/20 text-lime-300 border-lime-500/40",
-      headlineClass: "text-lime-300",
-      panelClass: "border-lime-500/35 bg-lime-500/10",
+      badgeClass: "bg-lime-500/15 text-lime-700 border-lime-600/30 dark:bg-lime-500/20 dark:text-lime-300 dark:border-lime-500/40",
+      headlineClass: "text-lime-700 dark:text-lime-300",
+      panelClass: "border-lime-600/30 bg-lime-500/10 dark:border-lime-500/35 dark:bg-lime-500/10",
       description: "Strong mint pressure. Demand for stable liquidity is elevated.",
     };
   }
   if (score >= 10) {
     return {
       label: "PRINTING",
-      badgeClass: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
-      headlineClass: "text-cyan-300",
-      panelClass: "border-cyan-500/35 bg-cyan-500/10",
+      badgeClass: "bg-cyan-500/15 text-cyan-700 border-cyan-600/30 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/40",
+      headlineClass: "text-cyan-700 dark:text-cyan-300",
+      panelClass: "border-cyan-600/30 bg-cyan-500/10 dark:border-cyan-500/35 dark:bg-cyan-500/10",
       description: "Net inflows are positive but not yet euphoric.",
     };
   }
   if (score >= -10) {
     return {
       label: "NEUTRAL",
-      badgeClass: "bg-zinc-500/20 text-zinc-300 border-zinc-500/40",
-      headlineClass: "text-zinc-200",
-      panelClass: "border-border/60 bg-background/35",
+      badgeClass: "bg-zinc-500/15 text-zinc-700 border-zinc-600/30 dark:bg-zinc-500/20 dark:text-zinc-300 dark:border-zinc-500/40",
+      headlineClass: "text-zinc-800 dark:text-zinc-200",
+      panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
       description: "Printer and shredder are roughly balanced.",
     };
   }
   if (score >= -40) {
     return {
       label: "SHREDDING",
-      badgeClass: "bg-amber-500/20 text-amber-300 border-amber-500/40",
-      headlineClass: "text-amber-300",
-      panelClass: "border-amber-500/35 bg-amber-500/10",
+      badgeClass: "bg-amber-500/15 text-amber-700 border-amber-600/35 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40",
+      headlineClass: "text-amber-700 dark:text-amber-300",
+      panelClass: "border-amber-600/30 bg-amber-500/10 dark:border-amber-500/35 dark:bg-amber-500/10",
       description: "Burn pressure is climbing versus normal flow.",
     };
   }
   if (net24h < 0) {
     return {
       label: "REVERSE BRRRR",
-      badgeClass: "bg-red-500/20 text-red-300 border-red-500/40",
-      headlineClass: "text-red-300",
-      panelClass: "border-red-500/35 bg-red-500/10",
+      badgeClass: "bg-red-500/15 text-red-700 border-red-600/35 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40",
+      headlineClass: "text-red-700 dark:text-red-300",
+      panelClass: "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
       description: "Net supply is contracting hard. Redemptions dominate.",
     };
   }
   return {
     label: "STRESSED",
-    badgeClass: "bg-red-500/20 text-red-300 border-red-500/40",
-    headlineClass: "text-red-300",
-    panelClass: "border-red-500/35 bg-red-500/10",
+    badgeClass: "bg-red-500/15 text-red-700 border-red-600/35 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40",
+    headlineClass: "text-red-700 dark:text-red-300",
+    panelClass: "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
     description: "Score is weak despite net flow trying to recover.",
   };
 }
@@ -260,7 +260,7 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
             {snapshot.mode.label}
           </span>
           {gauge?.flightToQuality && (
-            <span className="inline-flex rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+            <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
               FTQ {Math.round(gauge.flightIntensity)}%
             </span>
           )}
@@ -276,14 +276,14 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Minted 24h</p>
-                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-400">
+                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   <TrendingUp className="h-3.5 w-3.5" />
                   {formatCurrency(snapshot.mint24h)}
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Burned 24h</p>
-                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-400">
+                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-700 dark:text-red-400">
                   <TrendingDown className="h-3.5 w-3.5" />
                   {formatCurrency(snapshot.burn24h)}
                 </p>
@@ -300,14 +300,14 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
             <div className="hidden lg:grid gap-2 sm:grid-cols-3">
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Minted 7d</p>
-                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-400">
+                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   <TrendingUp className="h-3.5 w-3.5" />
                   {formatMaybeCurrency(snapshot.mint7d)}
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Burned 7d</p>
-                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-400">
+                <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-700 dark:text-red-400">
                   <TrendingDown className="h-3.5 w-3.5" />
                   {formatMaybeCurrency(snapshot.burn7d)}
                 </p>
@@ -360,7 +360,7 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top minter</p>
                 <p className="mt-1 font-mono text-xs">
                   {snapshot.topMint ? (
-                    <span className="text-emerald-400">
+                    <span className="text-emerald-700 dark:text-emerald-400">
                       {snapshot.topMint.symbol} +{formatCurrency(snapshot.topMint.netFlow24hUsd)}
                     </span>
                   ) : (
@@ -372,7 +372,7 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top burner</p>
                 <p className="mt-1 font-mono text-xs">
                   {snapshot.topBurn ? (
-                    <span className="text-red-400">
+                    <span className="text-red-700 dark:text-red-400">
                       {snapshot.topBurn.symbol} {formatCurrency(snapshot.topBurn.netFlow24hUsd)}
                     </span>
                   ) : (

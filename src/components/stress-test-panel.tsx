@@ -42,7 +42,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
       {/* Header */}
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Network className="h-5 w-5 text-rose-500 shrink-0" />
+          <Network className="h-5 w-5 text-rose-700 dark:text-rose-400 shrink-0" />
           <CardTitle as="h2" className="text-lg">
             Contagion Map
           </CardTitle>
@@ -210,7 +210,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
                         <GradeBadge grade={impact.gradeAfter} score={impact.scoreAfter} />
                       </td>
                       <td className="py-2">
-                        <span className="font-medium text-red-500">
+                        <span className="font-medium text-red-700 dark:text-red-400">
                           {impact.delta > 0 ? "+" : ""}
                           {impact.delta} {severityArrow(impact.delta)}
                         </span>

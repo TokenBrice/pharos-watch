@@ -170,7 +170,7 @@ function ExposureBar({
             <span className="text-muted-foreground"> ({symbol})</span>
           )}
           {isWarning && (
-            <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />
+            <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-700 dark:text-amber-400" />
           )}
         </span>
         <span className="text-muted-foreground ml-2 shrink-0">
@@ -348,7 +348,7 @@ export function PortfolioClient() {
         <CardHeader>
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-violet-500 shrink-0" />
+              <Wallet className="h-5 w-5 text-violet-700 dark:text-violet-400 shrink-0" />
               <CardTitle className="text-lg">My Holdings</CardTitle>
             </div>
             <div className="flex items-center gap-2">

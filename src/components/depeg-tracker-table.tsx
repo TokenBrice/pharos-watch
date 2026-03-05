@@ -293,9 +293,9 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
                 <TableCell className="text-center hidden xl:table-cell">
                   {coin.dexPriceCheck ? (
                     coin.dexPriceCheck.agrees ? (
-                      <span className="text-green-500 text-sm" title="DEX price agrees">&#10003;</span>
+                      <span className="text-green-700 dark:text-green-400 text-sm" title="DEX price agrees">&#10003;</span>
                     ) : (
-                      <span className="text-red-500 text-sm" title="DEX price disagrees">&#10007;</span>
+                      <span className="text-red-700 dark:text-red-400 text-sm" title="DEX price disagrees">&#10007;</span>
                     )
                   ) : (
                     <span className="text-muted-foreground text-sm">--</span>

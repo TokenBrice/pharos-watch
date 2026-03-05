@@ -34,8 +34,8 @@ function SnapshotCard({
 
 /** Green for positive, red for negative, muted for zero. */
 function deltaColor(value: number): string {
-  if (value > 0) return "text-green-500";
-  if (value < 0) return "text-red-500";
+  if (value > 0) return "text-green-700 dark:text-green-400";
+  if (value < 0) return "text-red-700 dark:text-red-400";
   return "text-muted-foreground";
 }
 

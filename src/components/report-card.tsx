@@ -121,7 +121,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                     </div>
                   </div>
                   {key === "pegStability" && dim.detail.includes("capped at C") && (
-                    <p className="ml-4 mt-1 text-xs text-amber-500">
+                    <p className="ml-4 mt-1 text-xs text-amber-700 dark:text-amber-400">
                       Capped — active depeg in progress
                     </p>
                   )}
@@ -141,7 +141,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                             <span>
                               {label}: <span className="text-foreground/70">{desc}</span>
                             </span>
-                            <span className={`tabular-nums ${isNegative ? "text-amber-500" : ""}`}>
+                            <span className={`tabular-nums ${isNegative ? "text-amber-700 dark:text-amber-400" : ""}`}>
                               {isNegative ? subScore : subScore === 0 ? "—" : subScore}
                             </span>
                           </div>
@@ -158,7 +158,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
         {/* Dependency callout */}
         {card.dependencies && card.dependencies.length > 0 && (
           <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3">
-            <p className="mb-2 text-sm font-medium text-blue-500">
+            <p className="mb-2 text-sm font-medium text-blue-700 dark:text-blue-400">
               Dependencies
             </p>
             <p className="text-sm text-muted-foreground">
@@ -176,12 +176,12 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                     {i > 0 && ", "}
                     <Link
                       href={`/stablecoin/${dep.id}`}
-                      className="font-medium text-blue-500 underline underline-offset-2 hover:text-blue-400 transition-colors"
+                      className="font-medium text-blue-700 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     >
                       {name}
                     </Link>
                     {typeLabel && (
-                      <span className="text-xs text-blue-500/70">{typeLabel}</span>
+                      <span className="text-xs text-blue-700/80 dark:text-blue-400/80">{typeLabel}</span>
                     )}
                   </span>
                 );
