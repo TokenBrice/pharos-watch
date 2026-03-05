@@ -94,23 +94,23 @@ export function HomepageClient() {
         ]}
       />
 
-      <section className="rounded-xl border border-border/60 bg-muted/20 p-4 lg:hidden">
-        <div className="space-y-2">
+      <section className="rounded-xl border border-border/60 bg-muted/20 p-4 lg:hidden overflow-x-clip">
+        <div className="space-y-2 min-w-0">
           <p className="text-sm font-semibold tracking-tight">Pharos Stablecoin Radar</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground break-words">
             Live coverage for {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg families.
             Start with PSI for market-wide risk, then drill into depegs, blacklist events, or liquidity depth.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/stability-index/"
-              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-500 transition-colors hover:bg-cyan-500/20"
+              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-500 transition-colors hover:bg-cyan-500/20 whitespace-normal"
             >
               Open Stability Index
             </Link>
             <Link
               href="/depeg/"
-              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground whitespace-normal"
             >
               View Depeg Tracker
             </Link>

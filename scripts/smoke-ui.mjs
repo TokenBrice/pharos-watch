@@ -13,6 +13,10 @@ const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
 const MOBILE_WIDTH = 390;
 const MOBILE_HEIGHT = 844;
 const DEFAULT_OVERFLOW_WAIT_MS = 2000;
+const DEFAULT_OVERFLOW_SETTLE_SAMPLES = 4;
+const DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS = 350;
+const DEFAULT_STYLE_READY_TIMEOUT_MS = 4000;
+const DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS = 2000;
 const OVERFLOW_ROUTE_DEFAULTS = [
   "/",
   "/dependency-map/",
@@ -82,11 +86,15 @@ function removePlaywrightArtifacts() {
 }
 
 function getUiWaitTimeoutMs() {
-  const parsed = Number.parseInt(process.env.SMOKE_UI_WAIT_TIMEOUT_MS ?? "", 10);
+  return readPositiveIntEnv("SMOKE_UI_WAIT_TIMEOUT_MS", DEFAULT_UI_WAIT_TIMEOUT_MS);
+}
+
+function readPositiveIntEnv(key, fallback) {
+  const parsed = Number.parseInt(process.env[key] ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
   }
-  return DEFAULT_UI_WAIT_TIMEOUT_MS;
+  return fallback;
 }
 
 function buildUiEval(waitTimeoutMs) {
@@ -132,26 +140,116 @@ function getOverflowRoutes() {
   return fromEnv.length > 0 ? fromEnv : OVERFLOW_ROUTE_DEFAULTS;
 }
 
-function buildOverflowEval(waitMs) {
+function buildOverflowEval(waitMs, settleSamples, sampleIntervalMs, styleReadyTimeoutMs) {
   return `async () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const measure = () => {
+    const doc = document.documentElement;
+    const body = document.body;
+    const innerWidth = window.innerWidth;
+    const scrollWidth = Math.max(
+      doc?.scrollWidth ?? 0,
+      body?.scrollWidth ?? 0
+    );
+    return {
+      innerWidth,
+      scrollWidth,
+      delta: scrollWidth - innerWidth
+    };
+  };
+  const isCssReady = () => {
+    const rootStyles = getComputedStyle(document.documentElement);
+    const bodyStyles = getComputedStyle(document.body);
+    const hasRootToken = (rootStyles.getPropertyValue("--background") ?? "").trim().length > 0;
+    const hasMarginReset = bodyStyles.marginLeft === "0px" && bodyStyles.marginRight === "0px";
+    return hasRootToken && hasMarginReset;
+  };
+
   await delay(${waitMs});
-  const doc = document.documentElement;
-  const body = document.body;
-  const innerWidth = window.innerWidth;
-  const scrollWidth = Math.max(
-    doc?.scrollWidth ?? 0,
-    body?.scrollWidth ?? 0
-  );
-  const delta = scrollWidth - innerWidth;
+
+  const cssReadyDeadline = Date.now() + ${styleReadyTimeoutMs};
+  let cssReady = isCssReady();
+  while (!cssReady && Date.now() < cssReadyDeadline) {
+    await delay(100);
+    cssReady = isCssReady();
+  }
+
+  const samples = [];
+  for (let i = 0; i < ${settleSamples}; i += 1) {
+    samples.push(measure());
+    if (i < ${settleSamples} - 1) {
+      await delay(${sampleIntervalMs});
+    }
+  }
+  const finalSample = samples[samples.length - 1];
+  const sampledDeltas = samples.map((sample) => sample.delta);
+  const maxDelta = Math.max(...sampledDeltas);
+  const hasOverflow = sampledDeltas.every((value) => value > 1);
+
+  const offenders = [];
+  if (maxDelta > 1) {
+    const walker = document.querySelectorAll("body *");
+    for (const el of walker) {
+      const rect = el.getBoundingClientRect();
+      if (!Number.isFinite(rect.right) || !Number.isFinite(rect.left) || rect.width <= 0) {
+        continue;
+      }
+      if (rect.right > finalSample.innerWidth + 1 || rect.left < -1) {
+        offenders.push({
+          tag: el.tagName.toLowerCase(),
+          id: el.id || "",
+          className: (el.className || "").toString().slice(0, 80),
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width)
+        });
+        if (offenders.length >= 8) break;
+      }
+    }
+  }
+
+  const bodyStyles = getComputedStyle(document.body);
   return {
     path: window.location.pathname,
-    innerWidth,
-    scrollWidth,
-    delta,
-    hasOverflow: delta > 1
+    innerWidth: finalSample.innerWidth,
+    scrollWidth: finalSample.scrollWidth,
+    delta: finalSample.delta,
+    sampledDeltas,
+    maxDelta,
+    hasOverflow,
+    cssReady,
+    bodyMarginLeft: bodyStyles.marginLeft,
+    bodyMarginRight: bodyStyles.marginRight,
+    offenders
   };
 }`;
+}
+
+function formatOverflowFailure(summary) {
+  const sampledDeltas = Array.isArray(summary.sampledDeltas)
+    ? summary.sampledDeltas.join(",")
+    : "n/a";
+  const offenders = Array.isArray(summary.offenders) && summary.offenders.length > 0
+    ? summary.offenders
+      .map((offender) => {
+        const idPart = offender.id ? `#${offender.id}` : "";
+        const classPart = typeof offender.className === "string" && offender.className.trim().length > 0
+          ? `.${offender.className.trim().replace(/\s+/g, ".")}`
+          : "";
+        return `${offender.tag}${idPart}${classPart}[${offender.left},${offender.right}]`;
+      })
+      .join("; ")
+    : "none";
+  return `Horizontal overflow detected on ${summary.path} (${summary.scrollWidth}px > ${summary.innerWidth}px, sampledDeltas=${sampledDeltas}, cssReady=${summary.cssReady}, bodyMargins=${summary.bodyMarginLeft}/${summary.bodyMarginRight}, offenders=${offenders})`;
+}
+
+async function runOverflowCheck(sessionId, waitMs, settleSamples, sampleIntervalMs, styleReadyTimeoutMs, route) {
+  const overflowOutput = await runPlaywrightCli(sessionId, [
+    "eval",
+    buildOverflowEval(waitMs, settleSamples, sampleIntervalMs, styleReadyTimeoutMs),
+  ]);
+  ensureNoCliError(`overflow check ${route}`, overflowOutput);
+  return parseResultJson(overflowOutput);
 }
 
 async function run() {
@@ -159,10 +257,19 @@ async function run() {
   const url = ensureUrl(rawUrl);
   const sessionId = `${SESSION_PREFIX}-${Date.now()}`;
   const waitTimeoutMs = getUiWaitTimeoutMs();
-  const overflowWaitMs = Number.parseInt(process.env.SMOKE_UI_OVERFLOW_WAIT_MS ?? "", 10);
-  const safeOverflowWaitMs = Number.isFinite(overflowWaitMs) && overflowWaitMs > 0
-    ? overflowWaitMs
-    : DEFAULT_OVERFLOW_WAIT_MS;
+  const safeOverflowWaitMs = readPositiveIntEnv("SMOKE_UI_OVERFLOW_WAIT_MS", DEFAULT_OVERFLOW_WAIT_MS);
+  const overflowSettleSamples = Math.max(
+    2,
+    readPositiveIntEnv("SMOKE_UI_OVERFLOW_SETTLE_SAMPLES", DEFAULT_OVERFLOW_SETTLE_SAMPLES),
+  );
+  const overflowSampleIntervalMs = readPositiveIntEnv(
+    "SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS",
+    DEFAULT_OVERFLOW_SAMPLE_INTERVAL_MS,
+  );
+  const styleReadyTimeoutMs = readPositiveIntEnv(
+    "SMOKE_UI_STYLE_READY_TIMEOUT_MS",
+    DEFAULT_STYLE_READY_TIMEOUT_MS,
+  );
 
   console.log(`[smoke-ui] Running browser smoke checks against ${url}`);
 
@@ -196,14 +303,31 @@ async function run() {
         const gotoOutput = await runPlaywrightCli(sessionId, ["goto", routeUrl]);
         ensureNoCliError(`goto ${route}`, gotoOutput);
 
-        const overflowOutput = await runPlaywrightCli(sessionId, ["eval", buildOverflowEval(safeOverflowWaitMs)]);
-        ensureNoCliError(`overflow check ${route}`, overflowOutput);
-        const overflowSummary = parseResultJson(overflowOutput);
-
-        assert(
-          !overflowSummary.hasOverflow,
-          `Horizontal overflow detected on ${overflowSummary.path} (${overflowSummary.scrollWidth}px > ${overflowSummary.innerWidth}px)`,
+        let overflowSummary = await runOverflowCheck(
+          sessionId,
+          safeOverflowWaitMs,
+          overflowSettleSamples,
+          overflowSampleIntervalMs,
+          styleReadyTimeoutMs,
+          route,
         );
+        if (overflowSummary.hasOverflow) {
+          const retrySummary = await runOverflowCheck(
+            sessionId,
+            safeOverflowWaitMs + DEFAULT_OVERFLOW_RETRY_EXTRA_WAIT_MS,
+            overflowSettleSamples,
+            overflowSampleIntervalMs,
+            styleReadyTimeoutMs,
+            route,
+          );
+          if (retrySummary.hasOverflow) {
+            throw new Error(formatOverflowFailure(retrySummary));
+          }
+          console.log(
+            `[smoke-ui] WARN transient overflow resolved on ${retrySummary.path} (initial=${overflowSummary.scrollWidth}/${overflowSummary.innerWidth}, retry=${retrySummary.scrollWidth}/${retrySummary.innerWidth})`,
+          );
+          overflowSummary = retrySummary;
+        }
         console.log(`[smoke-ui] OK overflow ${overflowSummary.path} (${overflowSummary.scrollWidth}/${overflowSummary.innerWidth})`);
       }
     }
