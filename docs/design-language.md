@@ -1,658 +1,373 @@
-# Design Language Reference
+# Design Language Reference (Live Baseline)
 
-Pharos follows a **dark financial terminal** aesthetic — data-dense and serious, softened by modern rounded cards, subtle gradients, and colored accent borders. Every colored element communicates meaning; decoration is minimal.
+This document reflects the deployed UI on [pharos.watch](https://pharos.watch) and was re-verified on **March 5, 2026**.
 
-This doc codifies the patterns already established in the codebase. For the **token system** (CSS custom properties, color scales, hex companions), see [`design-tokens.md`](design-tokens.md).
+Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md).
+
+---
+
+## Visual Direction
+
+Pharos ships as a **dark-first financial dashboard**:
+
+- Dense data presentation
+- Conservative card-and-table surfaces
+- Small, meaningful color accents (risk, status, category)
+- Heavy use of monospace for numeric trust and scanability
+
+The default theme class on load is `dark`, with a user toggle for light mode.
+
+---
+
+## Global App Shell
+
+### Root + Fonts
+
+- Body classes: `geist_*` font variables + `antialiased`
+- Sans font: `Geist`
+- Mono font: `Geist Mono`
+- Default corner radius token: `--radius: .5rem`
+
+### Layout Structure
+
+Public pages use this shell:
+
+```tsx
+<header className="md:hidden sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" />
+<div className="flex min-h-screen">
+  <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border bg-card z-40 transition-all duration-200" />
+  <div className="hidden md:block shrink-0 transition-all duration-200 w-[220px]" />
+
+  <div className="flex-1 flex flex-col min-w-0">
+    <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">
+      {/* route content */}
+    </main>
+
+    <footer className="border-t py-6" />
+  </div>
+</div>
+```
+
+### Chrome Patterns
+
+- Desktop sidebar width: `220px`
+- Mobile header height: `h-14`
+- Main container padding:
+  - Mobile: `px-4`
+  - Desktop (`lg`): `px-6`
+- Footer nav is muted text with hover promotion to foreground.
+
+---
+
+## Page Shell Variants
+
+### Standard Analytics Pages
+
+Most routes use:
+
+- Wrapper: `space-y-6`
+- Title block: `space-y-2`
+- Breadcrumb: `flex items-center gap-1.5 text-sm text-muted-foreground`
+- Title row: `flex max-w-full flex-wrap items-start gap-x-3 gap-y-2`
+
+### Longform Pages
+
+- Privacy: `mx-auto w-full space-y-6 max-w-2xl`
+- Methodology: `mx-auto w-full max-w-6xl space-y-8`
+
+### Home Dashboard (Special)
+
+Home has no large feature `h1` hero title. Instead it uses a top logotype strip:
+
+- `h1`: `text-base font-mono font-semibold uppercase tracking-[0.18em] text-foreground`
+- Snapshot shell: `pharos-card-shell` + `pharos-kicker`
+
+### Stablecoin Detail (Special)
+
+Detail pages include an `sr-only` `h1` and visually foreground the coin name with:
+
+- `h2`: `text-2xl font-extrabold tracking-tighter`
+
+This is intentionally denser than standard feature pages.
+
+### Digest Article (Special)
+
+Digest entries use:
+
+- `h1`: `text-3xl font-extrabold tracking-tighter`
+- Editorial prose: `text-[1.15rem] leading-relaxed text-foreground/90 italic` with Georgia/Times serif fallback.
 
 ---
 
 ## Typography
 
-### Hierarchy
+### Heading Scale
 
-| Role | Classes | Notes |
-|------|---------|-------|
-| **Page title (h1)** | `text-4xl font-extrabold tracking-tighter` | All main pages. Detail sub-pages use `text-2xl`. |
-| **Section header (h2)** | `text-xl font-semibold tracking-tight` | Major sections within a page. |
-| **Subsection header (h3)** | `text-foreground font-medium` | No explicit size class (inherits base). |
-| **Card label** | `text-xs font-semibold uppercase tracking-wider text-muted-foreground` | KPI labels, card headers, table column labels. The signature Pharos "small caps" style. |
-| **Body text** | `text-sm text-muted-foreground` | Descriptions, subtitles, paragraphs. Add `leading-relaxed` for longer prose. |
-| **AI editorial** | `text-[1.1rem] leading-relaxed text-foreground/90 italic` + Georgia serif | Distinctive serif treatment for AI-generated summaries. |
+| Role | Live class pattern |
+|---|---|
+| Standard page title | `min-w-0 text-4xl font-extrabold tracking-tighter` |
+| Digest article title | `text-3xl font-extrabold tracking-tighter` |
+| Home logotype title | `text-base font-mono font-semibold uppercase tracking-[0.18em]` |
+| Primary section heading | `leading-none font-semibold` |
+| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight` |
+| Table/section kicker | `text-sm font-semibold uppercase tracking-wider text-muted-foreground` |
+| Subsection heading | `text-foreground font-medium` |
 
-### Fonts
+### Body + Supporting Text
 
-- **Sans-serif** — default for all UI text.
-- **Monospace (`font-mono`)** — reserved for numbers and technical values: prices, market caps, percentages, scores, timestamps. Always pair with `tabular-nums` when values need columnar alignment (tables, stat rows).
-- **Serif** — only for AI editorial summaries (inline `fontFamily: Georgia`).
+| Role | Live class pattern |
+|---|---|
+| Standard body copy | `text-sm text-muted-foreground` |
+| Small metadata | `text-xs text-muted-foreground` |
+| Card micro-labels | `text-xs uppercase tracking-wide` |
+| Footer disclaimer | `text-center text-xs text-muted-foreground/60` |
 
-### Text Colors
+### Numeric Language
 
-| Purpose | Class |
-|---------|-------|
-| Primary | `text-foreground` |
-| Secondary | `text-muted-foreground` |
-| Slightly muted | `text-foreground/80` or `text-foreground/90` |
-| Very muted | `text-muted-foreground/70` |
-| Disclaimer | `text-muted-foreground/50` |
-| Positive | `text-green-500` |
-| Negative | `text-red-500` |
-| Warning | `text-amber-500` |
-| Link accent | `text-sky-500` (hover on inline links) |
+Numbers are consistently mono/tabular where precision matters:
 
-### Links
-
-- **Inline links:** `text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors`
-- **Muted links:** `text-muted-foreground hover:text-foreground transition-colors` (footer, nav)
-- **Button-style links:** `inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors`
+- `font-mono`
+- `tabular-nums`
 
 ---
 
-## Spacing & Layout
+## Spacing and Layout Rhythm
 
-### Page Structure
+### Common Vertical Rhythm
 
-Every page follows this hierarchy:
+- Section rhythm: `space-y-6`
+- Header block rhythm: `space-y-2`
+- Longform rhythm: `space-y-8`
+- Card prose rhythm: `space-y-6 text-sm text-muted-foreground leading-relaxed`
 
-```
-<main className="container mx-auto px-4 py-6 lg:px-6">   ← from layout.tsx
-  <div className="space-y-6">                              ← page wrapper
-    <div className="space-y-2">                            ← title block
-      <h1>Page Title</h1>
-      <p>Subtitle</p>
-    </div>
-    {/* sections */}
-  </div>
-</main>
-```
+### Common Grids
 
-`FeaturePageShell` is the canonical top-of-page primitive for feature and content routes. It now supports:
-- `standard` (default analytics pages),
-- `longform` (narrative/legal pages with narrower measure),
-- `auth-gated` (operator/admin routes),
-with consistent breadcrumb/title/lead spacing and mobile-safe title/status wrapping.
+- KPI grid (dense analytics): `grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5`
+- Home feature grid: `grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5`
+- Home snapshot desktop partition: `hidden sm:grid grid-cols-2 xl:grid-cols-4 divide-x divide-border/50`
 
-### Vertical Spacing Scale
+### Chip/Pill Layout
 
-| Context | Class | Value |
-|---------|-------|-------|
-| Between page sections | `space-y-6` | 24px |
-| About page (extra breathing room) | `space-y-8` | 32px |
-| Within card content | `space-y-4` | 16px |
-| Within subsections | `space-y-3` | 12px |
-| Title + subtitle groups | `space-y-2` | 8px |
-| Dense list items | `space-y-2.5` or `space-y-1` | 10px / 4px |
-
-### Grids
-
-**Stat card grids** use a consistent responsive pattern:
-
-```
-grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-{3|4|5|6}
-```
-
-- Mobile: always 2 columns.
-- Gap: `gap-3` on mobile, `sm:gap-5` on tablet+.
-- Desktop: expand to 3–6 columns depending on content density.
-
-**Content grids** (features, info cards):
-
-```
-grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5
-```
-
-**Feed/event grids** (lower density):
-
-```
-grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-1.5
-```
-
-### Responsive Breakpoints
-
-| Breakpoint | Usage |
-|------------|-------|
-| `sm:` (640px) | Gap increases, minor layout tweaks |
-| `md:` (768px) | Flex direction changes (`flex-col → flex-row`), sidebar visible |
-| `lg:` (1024px) | Grid column expansion, main content padding increase (`px-6`) |
-| `xl:` (1280px) | Rare — only for 6-column stat grids |
+- Chips are frequently wrapped in `flex flex-wrap gap-2`
+- Category links and peg links prioritize `rounded-full` micro-surfaces.
 
 ---
 
-## Shared Utilities
+## Shared Utility Classes
 
-For consistency across custom components, use the global utility classes in `globals.css`:
+Live production uses all four shared utility classes:
 
-| Utility | Purpose |
-|---------|---------|
-| `pharos-kicker` | Canonical tiny uppercase label style (`11px`, semi-bold, tracked) for card labels and section kickers |
-| `pharos-focus-ring` | Standard focus-visible ring (`ring-2`, `ring-ring/60`, offset) for links/buttons outside shadcn primitives |
-| `pharos-card-shell` | Shared card-like shell (`rounded-xl`, themed border, themed background) for custom containers |
-| `pharos-interactive-card` | Restrained hover/transition treatment for interactive cards |
+- `pharos-kicker`
+- `pharos-focus-ring`
+- `pharos-card-shell`
+- `pharos-interactive-card`
 
-Prefer these over rewriting similar class strings in each component.
+Current high-use areas:
+
+- Homepage snapshot and explore cards
+- Peg filter pills
+- CTA links with custom focus treatment
 
 ---
 
 ## Cards
 
-### Structure
+### Base Card Primitive
 
-Always use the shadcn `Card` component hierarchy:
+Default card composition in production:
 
-```tsx
-<Card>
-  <CardHeader className="pb-1">         {/* pb-1 or pb-2 to tighten */}
-    <CardTitle as="h2">{label}</CardTitle>
-  </CardHeader>
-  <CardContent>
-    {/* content */}
-  </CardContent>
-</Card>
-```
+- `data-slot="card"`
+- `bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-4 shadow-sm`
 
-Use `CardAction` for top-right actions (time range buttons, export buttons):
+### Card Header + Title
 
-```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Chart Title</CardTitle>
-    <CardAction>
-      <TimeRangeButtons ... />
-    </CardAction>
-  </CardHeader>
-  <CardContent>...</CardContent>
-</Card>
-```
+- Header: `@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-4 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-4`
+- Tight variants add `pb-1`, `pb-1.5`, or `pb-2`
+- Titles: mostly `leading-none font-semibold`
 
-For chart headers with multiple controls, keep mobile layouts overflow-safe:
+### Accent Border Palette (Live)
 
-- Use a stacked header on mobile (`flex-col items-start gap-2`) and switch to row on `sm+`.
-- Set `CardAction` to `w-full min-w-0` on mobile (`sm:w-auto`).
-- Keep icon buttons `shrink-0`, and let time-range chips scroll inside a `min-w-0` wrapper.
+`border-l-[3px]` is actively used with:
 
-### Base Styling
+- `border-l-cyan-500`
+- `border-l-amber-500`
+- `border-l-violet-500`
+- `border-l-sky-500`
+- `border-l-zinc-500`
+- `border-l-rose-500`
+- `border-l-orange-500`
+- `border-l-emerald-500`
+- `border-l-teal-500`
+- `border-l-red-500`
+- `border-l-blue-500`
 
-Cards inherit `rounded-xl border py-4 shadow-sm` from the shadcn primitive. Do not override these.
+Navigation active state uses `border-l-frost-blue`.
 
-### Left Accent Borders
+### Interactive Card Pattern
 
-Many cards use a colored left border for visual identity:
+Homepage explore cards use:
 
 ```tsx
-<Card className="border-l-[3px] border-l-cyan-500">
+className="pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-1.5 border-l-[3px] p-4"
 ```
 
-Common accent colors and their semantic usage:
+---
 
-| Color | Usage |
-|-------|-------|
-| `border-l-cyan-500` | Liquidity, TVL metrics |
-| `border-l-violet-500` | Active count, distribution |
-| `border-l-blue-500` | Informational sections |
-| `border-l-green-500` | Positive/growth metrics |
-| `border-l-amber-500` | Warnings, disclaimers |
-| `border-l-red-500` | Risk, danger, shrinking metrics |
-| `border-l-pink-500` | Organic/quality metrics |
-| `border-l-muted` | Loading/skeleton state |
+## Badges and Chips
 
-### Card Header Labels
+### Feature Status Badges
 
-The "small caps" pattern is the canonical card header style:
+- **Mature**: emerald badge (`bg-emerald-500/15 ... border-emerald-500/30`)
+- **Experimental**: amber badge (`bg-amber-500/15 ... border-amber-500/30`)
 
-```tsx
-<CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-  MARKET CAP
-</CardTitle>
-```
+### Version Badge
 
-### KPI Values Inside Cards
+Secondary version pill:
 
-```tsx
-<span className="text-xl font-extrabold font-mono tabular-nums">
-  {formatCurrency(value)}
-</span>
-```
+- `bg-muted/50 text-muted-foreground border-border/60`
 
-For slightly smaller KPIs: `text-lg font-bold font-mono tracking-tight`.
+### Micro Chips
 
-### Loading State
+Common chip form:
 
-```tsx
-<Card className="border-l-[3px] border-l-muted">
-  <CardHeader className="pb-1">
-    <Skeleton className="h-4 w-32" />
-  </CardHeader>
-  <CardContent>
-    <Skeleton className="h-6 w-20" />
-  </CardContent>
-</Card>
-```
+- `inline-flex items-center rounded-full border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors`
 
 ---
 
 ## Tables
 
-### Component
+### Base Table Styling
 
-Always use the shadcn `Table` primitives. For sortable columns, use `SortableTableHead`.
-For feature tables that need shared sorting/pagination plumbing, use:
-- `useSortedTableRows` (`src/hooks/use-sorted-table-rows.ts`) for sort state + sorted data memoization.
-- `useTablePagination` (`src/hooks/use-table-pagination.ts`) for consistent page/effective-page/range handling.
+- Table: `w-full caption-bottom text-sm`
+- Row: `hover:bg-muted/40 data-[state=selected]:bg-muted border-b transition-colors`
 
-### Column Alignment
+### Header Variants
 
-| Data Type | Alignment | Extra Classes |
-|-----------|-----------|---------------|
-| Text (names, labels) | Left (default) | — |
-| Numbers (prices, volumes, caps) | Right | `text-right font-mono tabular-nums` |
-| Status (badges, grades) | Center | `text-center` |
-| Rank | Right | `text-right text-muted-foreground text-xs tabular-nums` |
+- Standard header: `[&_tr]:border-b bg-muted/80`
+- Sticky directory header (peg pages): `[&_tr]:border-b bg-muted/80 sticky top-0 z-10 backdrop-blur-sm`
 
-### Header Styling
+### Sortable Head Pattern
 
-For sticky headers:
+Sortable heads consistently include:
 
-```tsx
-<TableHeader className="bg-muted/80 sticky top-0 z-10 backdrop-blur-sm">
-```
+- `cursor-pointer`
+- `hover:bg-muted/50 transition-colors`
 
-### Row Interactivity
+Numeric columns remain right-aligned (`text-right`) and collapse progressively by breakpoint (`hidden sm:table-cell`, `hidden md:table-cell`, etc.).
 
-Clickable rows use:
+### Clickable Rows
 
-```tsx
-<TableRow
-  className="group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
-  onClick={() => router.push(`/stablecoin/${coin.id}`)}
-  onKeyDown={handleKeyNav}
-  tabIndex={0}
->
-```
+Interactive rows use:
 
-### Number Formatting
-
-Use the shared formatters from `src/lib/format.ts`:
-
-- `formatCurrency(value)` → `$1.2M`, `$45.6B`
-- `formatPercentChange(current, previous)` → `↑ +2.5%` or `↓ -1.2%`
-- `formatPegDeviation(bps)` → `+4 bps` with color coding
-
-### Empty State
-
-```tsx
-<TableRow>
-  <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-    <p>No results for "{query}"</p>
-    <p className="mt-2 text-sm">
-      <button onClick={onClear} className="text-primary hover:underline cursor-pointer text-sm">
-        Clear search
-      </button>
-    </p>
-  </TableCell>
-</TableRow>
-```
+- `group cursor-pointer`
+- `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none`
 
 ---
 
-## Charts (Recharts)
+## Charts
 
-### Container
+### Live Chart Container Pattern
 
-```tsx
-<div className="h-[250px] sm:h-[350px]" role="figure" aria-label="Description">
-  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-    <AreaChart data={data} margin={{ top: 5, right: 20, bottom: 20, left: 5 }}>
-      ...
-    </AreaChart>
-  </ResponsiveContainer>
-</div>
-```
+- Height: `h-[250px] sm:h-[350px]`
+- Recharts container keeps `min-width: 0; min-height: 0`
 
-- Heights: `h-[250px]` mobile, `sm:h-[350px]` desktop. Mini charts use `h-32`.
-- Always set `minWidth={0} minHeight={0}` on `ResponsiveContainer`.
-- Standard margins: `{ top: 5, right: 5–20, bottom: 20, left: 5 }`.
+### Axis + Grid (Observed)
 
-### Axis Styling
+From production rendered charts:
 
-```tsx
-<XAxis
-  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-  tickLine={false}
-  axisLine={false}
-  minTickGap={72}
-/>
-<YAxis
-  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-  tickLine={false}
-  axisLine={false}
-/>
-```
+- Tick text: `font-size: 12`, `font-family: var(--font-mono, monospace)`, `fill: var(--color-muted-foreground)`
+- Grid lines: `stroke="var(--color-border)"`, `strokeDasharray="3 3"`
 
-- Always hide `tickLine` and `axisLine`.
-- Tick font: monospace, 12px, muted color.
-- Use `minTickGap={72}` on time axes to prevent label crowding.
+### Area Chart Styling (Observed)
 
-### Tooltip
+- Areas use gradient fills (e.g. `fill="url(#psiScoreGradient)"`)
+- Stroke widths are typically `1.5` or `2`
+- Tooltips are present (`.recharts-tooltip-wrapper` appears on interaction)
 
-Spread `RECHARTS_TOOLTIP_STYLES` from `chart-colors.ts`:
+### Loading Fallbacks
 
-```tsx
-<Tooltip
-  formatter={(value) => [formatCurrency(Number(value)), "Label"]}
-  labelFormatter={(label) => formatDate(label)}
-  {...RECHARTS_TOOLTIP_STYLES}
-/>
-```
+Common chart skeletons:
 
-For custom tooltips, use `content={<CustomTooltip />}` with `cursor={{ fill: "currentColor", opacity: 0.05 }}`.
-
-### Grid Lines
-
-```tsx
-<CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-```
-
-Use dashed grid lines or omit entirely.
-
-### Colors
-
-Always import from `chart-colors.ts`:
-
-```tsx
-import { CHART_BLUE, CHART_PALETTE, PSI_BAND_COLORS, TOKEN } from "@/lib/chart-colors";
-```
-
-Never hardcode hex values in chart components.
-
-### Gradients
-
-```tsx
-<defs>
-  <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
-    <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
-  </linearGradient>
-</defs>
-<Area fill="url(#mcapGradient)" stroke={CHART_BLUE} strokeWidth={2} />
-```
-
-### Legend
-
-Prefer custom legends above charts over the Recharts `<Legend>` component:
-
-```tsx
-<div className="flex flex-wrap gap-4 mb-4">
-  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLOR }} />
-    Label
-  </div>
-</div>
-```
-
-### Loading State
-
-Use the `ChartSkeleton` component:
-
-```tsx
-<ChartSkeleton className="h-[250px] sm:h-[350px]" variant="area" />
-```
-
-Variants: `"area"` (default), `"bars"`.
-
-### Time Range Filtering
-
-Use the `useTimeRangeFilter` hook + `TimeRangeButtons`:
-
-```tsx
-const { range, setRange, filteredData, options } = useTimeRangeFilter(data, "ts");
-
-<CardAction>
-  <TimeRangeButtons options={options} value={range} onChange={setRange} />
-</CardAction>
-```
-
-### Chart Export
-
-```tsx
-const chartRef = useRef<HTMLDivElement>(null);
-
-<CardAction>
-  <Button variant="ghost" size="icon-sm" onClick={() => downloadChartPng(chartRef, "chart-name")} title="Save as PNG">
-    <Camera className="h-4 w-4" />
-  </Button>
-</CardAction>
-```
+- `rounded-lg bg-muted/30 animate-pulse relative overflow-hidden h-[250px] sm:h-[350px] w-full`
+- `bg-accent animate-pulse h-[250px] sm:h-[350px] w-full rounded-xl`
 
 ---
 
-## Interactive States
+## Interaction and State Patterns
 
-### Hover
+### Navigation Active vs Inactive
 
-| Element | Pattern |
-|---------|---------|
-| Cards | `pharos-interactive-card` (or `hover:bg-muted/40 transition-colors` for legacy surfaces) |
-| List items / feed rows | `hover:bg-accent/50 transition-colors` |
-| Muted text → primary | `hover:text-foreground transition-colors` |
-| Text underline reveal | `group-hover:underline` (via `group` on parent) |
+- Active sidebar item:
+  - `border-l-[3px] border-l-frost-blue text-foreground bg-muted/50`
+- Inactive sidebar item:
+  - `text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-[3px] border-l-transparent`
 
-### Focus
+### Focus Treatment
 
-Standard focus ring (all interactive elements):
+Two dominant focus patterns:
 
-```
-focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none
-```
+- `focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none`
+- `focus-visible:ring-[3px] focus-visible:ring-ring/50`
 
-Preferred shorthand for custom elements:
+### Loading States
 
-```
-pharos-focus-ring
-```
+- Skeletons are the default loading surface (`data-slot="skeleton"` + `animate-pulse`)
+- Page-level loader currently appears as:
+  - `flex min-h-[40vh] items-center justify-center`
+  - `h-10 w-10 rounded-full bg-frost-blue/30 animate-pharos-pulse`
 
-Alternative (larger, for tab-like elements):
+### Live/Event Indicator
 
-```
-focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50
-```
+Depeg live indicator uses animated ping:
 
-### Active / Selected
+- `animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75`
 
-| Element | Active state | Inactive state |
-|---------|-------------|----------------|
-| Sidebar nav item | `border-l-[3px] border-l-frost-blue text-foreground bg-muted/50` | `text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-[3px] border-l-transparent` |
-| Section tab | `text-foreground bg-muted border-b-2 border-foreground/60` | `text-muted-foreground hover:text-foreground hover:bg-muted/50` |
-| Time range button | `bg-primary text-primary-foreground` | `text-muted-foreground hover:bg-accent hover:text-foreground` |
+### Data Availability Banner
 
-### Transitions
+When data streams are missing:
 
-| Duration | Usage |
-|----------|-------|
-| `transition-colors` (default ~150ms) | Color changes on hover/focus |
-| `duration-200` | Quick layout changes (sidebar width) |
-| `duration-300` | Fade-in animations, content appearing |
-| `2.5s ease-in-out` | Pharos pulse animation (loader) |
+- `rounded-md border px-4 py-2.5 text-sm border-border/60 bg-muted/40 text-muted-foreground`
 
-### Animations
-
-- **Fade-in:** `animate-in fade-in duration-300` (content appearing)
-- **Pharos pulse:** `animate-pharos-pulse` (page-level loading indicator — pulsing teal circle)
-- **Ping:** `animate-ping` (live depeg dot indicator)
+Used with copy like: `Some data is not yet available (...)`.
 
 ---
 
-## Loading States
+## Responsive Behavior
 
-### Page-Level
+### Breakpoint Behavior in Production
 
-Use this loader pattern:
+- `sm`:
+  - Compacts/expands table columns
+  - Converts details/nav patterns
+- `md`:
+  - Sidebar becomes active (`md:flex`)
+  - Mobile header hides (`md:hidden`)
+- `lg`:
+  - Main horizontal padding increases (`lg:px-6`)
+  - Larger grid splits and extra table columns
+- `xl`:
+  - Additional dense table columns
+  - Home KPI grid expands to 4 panels in snapshot module
 
-```tsx
-<div className="flex min-h-[40vh] items-center justify-center">
-  <div className="h-10 w-10 rounded-full bg-frost-blue/50 animate-pharos-pulse" />
-</div>
-```
+### Mobile-Specific UX
 
-### Component-Level
-
-Use `Skeleton` placeholders that mirror the shape of the real content:
-
-```tsx
-<div className="flex items-center gap-3 px-4 py-2 border-t">
-  <Skeleton className="h-4 w-8 shrink-0" />
-  <Skeleton className="h-6 w-6 rounded-full shrink-0" />
-  <Skeleton className="h-4 w-32" />
-  <Skeleton className="h-4 w-20 ml-auto" />
-</div>
-```
-
-Skeletons inherit `rounded bg-muted animate-pulse` from shadcn.
-
-### Error Boundaries
-
-Wrap major sections with `SectionErrorBoundary` to isolate failures:
-
-```tsx
-<SectionErrorBoundary name="highlights">
-  <MarketHighlights ... />
-</SectionErrorBoundary>
-```
+- Category browse collapses into `details` (`sm:hidden`)
+- `--table-header-top: 56px` is set on mobile for sticky header offset alignment
 
 ---
 
-## Error States
+## Accessibility Baseline
 
-### Inline Error
+Live app-wide patterns:
 
-```tsx
-<div className="rounded-md bg-destructive/10 p-4 text-destructive flex items-center justify-between">
-  <span>Failed to load data.</span>
-  <button onClick={() => window.location.reload()}
-    className="text-sm font-medium underline hover:no-underline">
-    Retry
-  </button>
-</div>
-```
-
-### Full-Page Error
-
-```tsx
-<div className="flex min-h-[60vh] flex-col items-center justify-center gap-6">
-  <div className="text-center space-y-2">
-    <h1 className="text-4xl font-bold font-mono tracking-tight">Something went wrong</h1>
-    <p className="text-muted-foreground text-sm max-w-md">{error.message}</p>
-  </div>
-  <button className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors">
-    Try again
-  </button>
-</div>
-```
+- Skip link present on every page: `sr-only focus:not-sr-only ...`
+- Breadcrumb navigation on content routes
+- Focus-visible rings on sidebar links, buttons, table rows, and chips
+- Keyboard-ready clickable rows on interactive tables
+- Color is reinforced with structure and iconography for key status states
 
 ---
 
-## Badges & Indicators
+## Maintenance Rule
 
-### Grade Badges
-
-Use `GradeBadge` from `src/components/grade-badge.tsx`:
-
-```tsx
-<GradeBadge grade="B+" score={76} size="sm" />
-```
-
-Sizes: `"sm"` (`text-xs px-2 py-0.5`) or `"lg"` (`text-2xl px-4 py-2`).
-
-Grade colors follow the spectrum defined in `REPORT_CARD_GRADE_COLORS`:
-- **A** = bright green
-- **B** = teal / blue-green
-- **C** = amber / orange
-- **D** = orange-red
-- **F** = red
-
-### Classification Badges
-
-```tsx
-<Badge variant="outline" className={`text-xs ${BACKING_COLORS[backing]}`}>
-  {BACKING_LABELS_SHORT[backing]}
-</Badge>
-```
-
-Always source label text and colors from `classification.ts`.
-
-### Live Indicator (Animated Ping Dot)
-
-```tsx
-<span className="relative flex h-2 w-2">
-  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-</span>
-```
-
-### Trend Indicators
-
-```tsx
-<span className={change >= 0 ? "text-green-500" : "text-red-500"}>
-  {change >= 0 ? "↑" : "↓"} {formatPercentChange(current, previous)}
-</span>
-```
-
----
-
-## Notices & Alerts
-
-Use `CoinNotice` from `src/components/coin-notice.tsx`:
-
-```tsx
-<CoinNotice notice={{ type: "warning", title: "Unstable peg", message: "..." }} />
-```
-
-Types and their color mapping:
-
-| Type | Border | Background | Icon/Title |
-|------|--------|------------|------------|
-| `danger` | `border-red-500/40` | `bg-red-500/5` | `text-red-500` / `text-red-600 dark:text-red-400` |
-| `warning` | `border-amber-500/40` | `bg-amber-500/5` | `text-amber-500` / `text-amber-600 dark:text-amber-400` |
-| `info` | `border-blue-500/40` | `bg-blue-500/5` | `text-blue-500` / `text-blue-600 dark:text-blue-400` |
-
-Layout: `flex items-start gap-3 rounded-lg border-l-4 px-4 py-3`.
-
----
-
-## Icons
-
-### Library
-
-**Lucide React** (`lucide-react`) — the only icon library.
-
-### Sizes
-
-| Size | Usage |
-|------|-------|
-| `h-3 w-3` | Inline indicators (peg deviation icons) |
-| `h-3.5 w-3.5` | Search icons, sort indicators |
-| `h-4 w-4` | Standard — nav items, buttons, actions |
-| `h-5 w-5` | Notice/alert icons |
-
-### Icon + Text
-
-Always use flex alignment:
-
-```tsx
-<span className="flex items-center gap-1.5">
-  <Icon className="h-4 w-4 shrink-0" />
-  <span>Label</span>
-</span>
-```
-
-### Tooltips
-
-Use native HTML `title` attributes. No custom tooltip library.
-
----
-
-## Accessibility
-
-- **Skip link:** `<a href="#main-content" className="sr-only focus:not-sr-only ...">Skip to main content</a>`
-- **Keyboard navigation:** All interactive rows support `tabIndex={0}` + `onKeyDown` (Enter/Space).
-- **ARIA labels:** Charts use `role="figure" aria-label="..."`.
-- **Focus indicators:** Visible `ring-2` focus rings on all interactive elements.
-- **Sort announcements:** `SortableTableHead` includes `aria-sort` values.
+If a deployed class pattern changes in production, update this document immediately after release. This file is intended to describe what users currently see, not aspirational or historical styles.
