@@ -14,22 +14,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Columns3 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
+import { Download } from "lucide-react";
 import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
-import { downloadCsv } from "@/lib/csv-export";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@shared/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
-import { getFilterTags, OTHER_PEG_TAGS } from "@shared/types";
 import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
@@ -38,13 +28,16 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { usePreference, DEFAULT_VISIBLE_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
+import { ColumnVisibilityDropdown } from "@/components/stablecoin-table-column-visibility";
 import {
-  usePreference,
-  ALL_COLUMNS,
-  DEFAULT_VISIBLE_COLUMNS,
-  LOCKED_COLUMNS,
-  type ColumnId,
-} from "@/hooks/use-preferences";
+  buildTrackedIdSet,
+  exportStablecoinsCsv,
+  filterStablecoins,
+  resolveEffectiveSortKey,
+  sortStablecoins,
+  type StablecoinTableSortKey,
+} from "@/components/stablecoin-table-logic";
 
 const ROW_HEIGHT = 37;
 const OVERSCAN = 10;
@@ -83,75 +76,8 @@ function MiniSparkline({ values }: { values: number[] }) {
   );
 }
 
-/* ─── Column Visibility Dropdown ─────────────────────────── */
-
-function ColumnVisibilityDropdown({
-  visibleColumns,
-  setVisibleColumns,
-  resetColumns,
-}: {
-  visibleColumns: ColumnId[];
-  setVisibleColumns: (value: ColumnId[] | ((prev: ColumnId[]) => ColumnId[])) => void;
-  resetColumns: () => void;
-}) {
-  const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
-  const hiddenCount = ALL_COLUMNS.length - visibleColumns.length;
-
-  return (
-      <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="min-h-11 border-border/70 sm:min-h-8">
-          <Columns3 className="h-3.5 w-3.5" />
-          Columns
-          {hiddenCount > 0 && (
-            <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold w-4 h-4">
-              {hiddenCount}
-            </span>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs uppercase tracking-[0.1em] text-muted-foreground">Toggle columns</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {ALL_COLUMNS.map((col) => (
-          <DropdownMenuCheckboxItem
-            key={col.id}
-            checked={visibleSet.has(col.id)}
-            disabled={LOCKED_COLUMNS.has(col.id)}
-            onCheckedChange={(checked) => {
-              setVisibleColumns((prev) =>
-                checked
-                  ? [...prev, col.id]
-                  : prev.filter((c) => c !== col.id)
-              );
-            }}
-            onSelect={(e) => e.preventDefault()}
-          >
-            {col.label}
-          </DropdownMenuCheckboxItem>
-        ))}
-        {hiddenCount > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={false}
-              onCheckedChange={() => resetColumns()}
-              onSelect={(e) => e.preventDefault()}
-              className="text-xs text-muted-foreground"
-            >
-              Reset to defaults
-            </DropdownMenuCheckboxItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-
 export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, dexLiquidity, reportCards, onClearSearch, onClearFilters }: StablecoinTableProps) {
-  type SortKey = "name" | "price" | "mcap" | "change24h" | "change7d" | "stability" | "liquidity" | "grade" | "peg";
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("mcap", "desc");
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<StablecoinTableSortKey>("mcap", "desc");
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const router = useRouter();
   const prefetch = usePrefetchStablecoin();
@@ -166,132 +92,31 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
 
-  // If the current sort column is hidden, fall back to mcap
-  const effectiveSortKey = useMemo(() => {
-    const SORT_KEY_TO_COLUMN: Record<SortKey, ColumnId> = {
-      name: "name",
-      price: "price",
-      mcap: "mcap",
-      change24h: "change24h",
-      change7d: "change7d",
-      stability: "stability",
-      liquidity: "liquidity",
-      grade: "grade",
-      peg: "peg",
-    };
-    const colId = SORT_KEY_TO_COLUMN[sortKey];
-    return visibleSet.has(colId) ? sortKey : "mcap" as SortKey;
-  }, [sortKey, visibleSet]);
+  const effectiveSortKey = useMemo(
+    () => resolveEffectiveSortKey(sortKey, visibleSet),
+    [sortKey, visibleSet],
+  );
 
-  const trackedIds = useMemo(() => {
-    if (activeFilters.length === 0) {
-      return TRACKED_IDS;
-    }
-    return new Set(
-      TRACKED_STABLECOINS.filter((s) => {
-        const tags = getFilterTags(s);
-        return activeFilters.every((f) =>
-          f === "other-peg" ? tags.some((t) => OTHER_PEG_TAGS.includes(t)) : tags.includes(f)
-        );
-      }).map((s) => s.id)
-    );
-  }, [activeFilters]);
+  const trackedIds = useMemo(() => buildTrackedIdSet(activeFilters), [activeFilters]);
 
-  const filtered = useMemo(() => {
-    if (!data) return [];
-    const q = searchQuery?.toLowerCase().trim() ?? "";
-    return data.filter((coin) => {
-      if (!trackedIds.has(coin.id)) return false;
-      if (q && !coin.name.toLowerCase().includes(q) && !coin.symbol.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [data, trackedIds, searchQuery]);
+  const filtered = useMemo(
+    () => filterStablecoins(data, trackedIds, searchQuery),
+    [data, trackedIds, searchQuery],
+  );
 
-  const sorted = useMemo(() => {
-    const sk = effectiveSortKey;
-    return [...filtered].sort((a, b) => {
-      let aVal: number, bVal: number;
-      switch (sk) {
-        case "name":
-          return sort.direction === "asc"
-            ? a.name.localeCompare(b.name)
-            : b.name.localeCompare(a.name);
-        case "price":
-          aVal = a.price ?? 0;
-          bVal = b.price ?? 0;
-          break;
-        case "mcap":
-          aVal = getCirculatingRaw(a);
-          bVal = getCirculatingRaw(b);
-          break;
-        case "change24h": {
-          const aPrev24 = getPrevDayRaw(a);
-          const bPrev24 = getPrevDayRaw(b);
-          aVal = aPrev24 > 0 ? (getCirculatingRaw(a) - aPrev24) / aPrev24 : 0;
-          bVal = bPrev24 > 0 ? (getCirculatingRaw(b) - bPrev24) / bPrev24 : 0;
-          break;
-        }
-        case "change7d": {
-          const aPrev7 = getPrevWeekRaw(a);
-          const bPrev7 = getPrevWeekRaw(b);
-          aVal = aPrev7 > 0 ? (getCirculatingRaw(a) - aPrev7) / aPrev7 : 0;
-          bVal = bPrev7 > 0 ? (getCirculatingRaw(b) - bPrev7) / bPrev7 : 0;
-          break;
-        }
-        case "stability": {
-          const aScore = pegScores?.get(a.id)?.pegScore ?? null;
-          const bScore = pegScores?.get(b.id)?.pegScore ?? null;
-          if (aScore === null && bScore === null) return 0;
-          if (aScore === null) return 1;
-          if (bScore === null) return -1;
-          aVal = aScore;
-          bVal = bScore;
-          break;
-        }
-        case "liquidity": {
-          const aLiq = dexLiquidity?.[a.id]?.liquidityScore ?? null;
-          const bLiq = dexLiquidity?.[b.id]?.liquidityScore ?? null;
-          if (aLiq === null && bLiq === null) return 0;
-          if (aLiq === null) return 1;
-          if (bLiq === null) return -1;
-          aVal = aLiq;
-          bVal = bLiq;
-          break;
-        }
-        case "grade": {
-          const aGrade = reportCards?.[a.id]?.overallScore ?? null;
-          const bGrade = reportCards?.[b.id]?.overallScore ?? null;
-          if (aGrade === null && bGrade === null) return 0;
-          if (aGrade === null) return 1;
-          if (bGrade === null) return -1;
-          aVal = aGrade;
-          bVal = bGrade;
-          break;
-        }
-        case "peg": {
-          const getAbsBps = (coin: (typeof filtered)[0]) => {
-            const m = metaById.get(coin.id);
-            if (m?.flags.navToken) return null;
-            const ref = getPegReference(coin.pegType, pegRates, m?.commodityOunces);
-            const price = coin.price;
-            return price != null && ref > 0 ? Math.abs(price / ref - 1) * 10_000 : null;
-          };
-          const aDev = getAbsBps(a);
-          const bDev = getAbsBps(b);
-          if (aDev === null && bDev === null) return 0;
-          if (aDev === null) return 1;
-          if (bDev === null) return -1;
-          aVal = aDev;
-          bVal = bDev;
-          break;
-        }
-        default:
-          aVal = getCirculatingRaw(a);
-          bVal = getCirculatingRaw(b);
-      }
-      return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-    });
-  }, [filtered, sort, effectiveSortKey, pegScores, dexLiquidity, reportCards, pegRates, metaById]);
+  const sorted = useMemo(
+    () =>
+      sortStablecoins({
+        filtered,
+        sort,
+        effectiveSortKey,
+        pegRates,
+        pegScores,
+        dexLiquidity,
+        reportCards,
+      }),
+    [filtered, sort, effectiveSortKey, pegRates, pegScores, dexLiquidity, reportCards],
+  );
 
   // Reset scroll when filters, search, or sort change.
   const prevRef = useRef<{ filtered: typeof filtered; sort: typeof sort } | null>(null);
@@ -324,33 +149,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const rangeEnd = virtualItems.length > 0 ? virtualItems[virtualItems.length - 1].index + 1 : 0;
 
   const handleCsvExport = useCallback(() => {
-    // CSV always exports all columns regardless of visibility
-    downloadCsv(sorted, [
-      { header: "Rank", accessor: (_row, i) => i + 1 },
-      { header: "Name", accessor: (row) => row.name },
-      { header: "Symbol", accessor: (row) => row.symbol },
-      { header: "Price", accessor: (row) => row.price ?? null },
-      { header: "Market Cap (USD)", accessor: (row) => getCirculatingRaw(row) },
-      {
-        header: "24h Change (%)",
-        accessor: (row) => {
-          const prev = getPrevDayRaw(row);
-          if (prev <= 0) return null;
-          return Number((((getCirculatingRaw(row) - prev) / prev) * 100).toFixed(2));
-        },
-      },
-      {
-        header: "7d Change (%)",
-        accessor: (row) => {
-          const prev = getPrevWeekRaw(row);
-          if (prev <= 0) return null;
-          return Number((((getCirculatingRaw(row) - prev) / prev) * 100).toFixed(2));
-        },
-      },
-      { header: "Peg Score", accessor: (row) => pegScores?.get(row.id)?.pegScore ?? null },
-      { header: "Liquidity Score", accessor: (row) => dexLiquidity?.[row.id]?.liquidityScore ?? null },
-      { header: "Grade", accessor: (row) => reportCards?.[row.id]?.overallGrade ?? null },
-    ], "pharos-stablecoins");
+    exportStablecoinsCsv(sorted, pegScores, dexLiquidity, reportCards);
   }, [sorted, pegScores, dexLiquidity, reportCards]);
 
   if (isLoading) {
