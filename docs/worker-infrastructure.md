@@ -6,6 +6,33 @@ Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CO
 
 ---
 
+## Runtime Limits and Observability
+
+Worker runtime safety and telemetry controls are declared in `worker/wrangler.toml` and should be managed in git (the CI deploy job runs `wrangler deploy`, so dashboard-only edits can be overwritten on the next deployment).
+
+```toml
+logpush = true
+
+[limits]
+cpu_ms = 5000
+
+[observability]
+enabled = true
+head_sampling_rate = 0.1
+
+[observability.logs]
+enabled = true
+invocation_logs = true
+```
+
+- `cpu_ms = 5000`: hard cap per invocation to limit runaway CPU cost.
+- `observability.enabled`: enables Worker traces.
+- `head_sampling_rate = 0.1`: samples 10% of traces.
+- `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
+- `logpush = true`: allows Worker observability data to be exported to a Logpush destination.
+
+---
+
 ## Env Interface
 
 The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worker/src/index.ts` plus `worker/src/handlers/http.ts` and `worker/src/handlers/scheduled.ts`. `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
