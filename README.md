@@ -14,7 +14,7 @@ Public-facing analytics dashboard tracking 148 stablecoins (plus 2 shadow assets
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
 - **Compare** — side-by-side stablecoin comparison across key metrics
 - **Daily Digest** — AI-generated daily summary of market movements and notable events
-- **Stability Index** — composite daily health score (0–100) aggregating peg integrity, supply growth, and liquidity depth into a single ecosystem signal
+- **Stability Index** — composite ecosystem health score (0–100) combining active depeg severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend
 - **Stablecoin Cemetery** — 78 dead stablecoins documented with cause of death, peak market cap, and obituaries
 - **Bluechip Safety Ratings** — independent stablecoin safety ratings from the SMIDGE framework
 - **Detail pages** — price chart, supply history, chain distribution, liquidity card, and safety ratings for each stablecoin
@@ -188,6 +188,8 @@ Optional GitHub variable: `SMOKE_API_BASE_URL` (recommended when smoke-testing a
 Optional GitHub variable: `SMOKE_UI_URL` (for non-default frontend smoke target)
 
 Worker secrets (set via `wrangler secret put`): `ETHERSCAN_API_KEY`, `TRONGRID_API_KEY`, `DRPC_API_KEY`, `ALCHEMY_API_KEY`, `GRAPH_API_KEY`, `CMC_API_KEY`, `COINGECKO_API_KEY`, `ANTHROPIC_API_KEY`, `ALERT_WEBHOOK_URL`, `ADMIN_KEY`, `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_TOKEN_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `GITHUB_PAT`, `FEEDBACK_IP_SALT`, `GITHUB_REPO_NODE_ID`, `GITHUB_DISCUSSION_CATEGORY_ID`
+
+Optional mint/burn freshness env overrides (secret or plain env): `MINT_BURN_DISABLED_IDS`, `MINT_BURN_DISABLED_SYMBOLS`, `MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`
 
 ## License
 

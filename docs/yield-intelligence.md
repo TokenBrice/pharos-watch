@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 41 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
+Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 40 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -263,7 +263,7 @@ CREATE TABLE yield_history (
 
 **Retention:** 365 days. Older rows are pruned at the end of each sync run.
 
-**Estimated volume:** ~39 coins × 48 points/day × 365 days ≈ 684K rows/year.
+**Estimated volume:** ~40 coins × 48 points/day × 365 days ≈ 701K rows/year.
 
 ---
 

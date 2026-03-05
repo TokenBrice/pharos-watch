@@ -8,13 +8,13 @@ Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CO
 
 ## Env Interface
 
-All bindings defined in `worker/src/index.ts`. Only `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; all others are secrets configured via `wrangler secret put`.
+All bindings are defined in `worker/src/index.ts`. `DB` and `CORS_ORIGIN` are set in `wrangler.toml`; remaining bindings are runtime env values (typically provided via `wrangler secret put`).
 
 | Binding | Type | Required | Used by |
 |---------|------|----------|---------|
 | `DB` | D1Database | Yes | All crons and API handlers |
 | `CORS_ORIGIN` | string | Yes | CORS headers (`https://pharos.watch`) |
-| `ETHERSCAN_API_KEY` | string | No | Blacklist sync, USDS status, price enrichment |
+| `ETHERSCAN_API_KEY` | string | No | Blacklist sync, USDS status |
 | `TRONGRID_API_KEY` | string | No | Blacklist sync (Tron chain) |
 | `DRPC_API_KEY` | string | No | L2 archive node balance lookups |
 | `ALCHEMY_API_KEY` | string | No | Chain RPC primary endpoints |
@@ -34,6 +34,12 @@ All bindings defined in `worker/src/index.ts`. Only `DB` and `CORS_ORIGIN` are s
 | `TWITTER_ACCESS_TOKEN_SECRET` | string | No | Digest → Twitter (access token secret) |
 | `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram |
 | `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
+| `MINT_BURN_DISABLED_IDS` | string | No | Mint/burn runtime disable list by stablecoin ID (CSV) |
+| `MINT_BURN_DISABLED_SYMBOLS` | string | No | Mint/burn runtime disable list by symbol (CSV) |
+| `MINT_BURN_MAJOR_SYMBOLS` | string | No | Mint/burn health-check major symbols override (CSV) |
+| `MINT_BURN_STALE_WARN_SEC` | string | No | Mint/burn stale-warning threshold override (seconds) |
+| `MINT_BURN_STALE_CRIT_SEC` | string | No | Mint/burn stale-critical threshold override (seconds) |
+| `MINT_BURN_ALERT_COOLDOWN_SEC` | string | No | Mint/burn stale alert dedupe cooldown override (seconds) |
 
 ---
 
@@ -73,6 +79,7 @@ Applied to every response via `addCorsHeaders()`:
 | `Access-Control-Allow-Origin` | `CORS_ORIGIN` env var (static: `https://pharos.watch`) |
 | `Access-Control-Allow-Methods` | `GET, POST, OPTIONS` |
 | `Access-Control-Allow-Headers` | `Content-Type, X-Admin-Key, Idempotency-Key` |
+| `Access-Control-Expose-Headers` | `X-Data-Age, Warning` |
 | `Access-Control-Max-Age` | `86400` |
 | `X-Content-Type-Options` | `nosniff` |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` |

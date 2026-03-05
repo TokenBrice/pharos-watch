@@ -724,7 +724,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
 
 ### `GET /api/health`
 
-Worker health check. Reports cache freshness and blacklist table integrity. Not served from Cloudflare edge cache (`no-store`).
+Worker health check. Reports cache freshness, blacklist integrity, mint/burn freshness, and circuit-breaker states. Not served from Cloudflare edge cache (`no-store`).
 
 **Response**
 
@@ -736,13 +736,23 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
     "stablecoins": { "ageSeconds": 323, "maxAge": 600, "healthy": true },
     "stablecoin-charts": { "ageSeconds": 323, "maxAge": 600, "healthy": true },
     "usds-status": { "ageSeconds": 47118, "maxAge": 86400, "healthy": true },
-    "fx-rates": { "ageSeconds": 1223, "maxAge": 14400, "healthy": true },
-    "bluechip-ratings": { "ageSeconds": 22815, "maxAge": 43200, "healthy": true },
-    "dex-liquidity": { "ageSeconds": 290, "maxAge": 43200, "healthy": true }
+    "fx-rates": { "ageSeconds": 1223, "maxAge": 1800, "healthy": true },
+    "bluechip-ratings": { "ageSeconds": 22815, "maxAge": 86400, "healthy": true },
+    "dex-liquidity": { "ageSeconds": 290, "maxAge": 43200, "healthy": true },
+    "yield-data": { "ageSeconds": 820, "maxAge": 3600, "healthy": true },
+    "dews": { "ageSeconds": 240, "maxAge": 1800, "healthy": true }
   },
   "blacklist": {
     "totalEvents": 13422,
     "missingAmounts": 0
+  },
+  "mintBurn": {
+    "totalEvents": 112345,
+    "latestEventTs": 1771856430,
+    "latestHourlyTs": 1771855200,
+    "freshnessAgeSec": 23,
+    "majorStaleCount": 0,
+    "staleMajorSymbols": []
   },
   "circuits": {
     "defillama-stablecoins": { "state": "closed", "consecutiveFailures": 0, "lastSuccessAt": 1772190029 },
@@ -758,7 +768,13 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 | `caches` | `Record<string, CacheStatus>` | Per-cache freshness status |
 | `blacklist.totalEvents` | `number` | Total events in blacklist table |
 | `blacklist.missingAmounts` | `number` | Events where `amount` is null (should be 0) |
-| `circuits` | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`. Empty until first cron run |
+| `mintBurn.totalEvents` | `number` | Total mint+burn event count (aggregated from `mint_burn_hourly`) |
+| `mintBurn.latestEventTs` | `number \| null` | Latest raw event timestamp from `mint_burn_events` |
+| `mintBurn.latestHourlyTs` | `number \| null` | Latest hourly bucket timestamp from `mint_burn_hourly` |
+| `mintBurn.freshnessAgeSec` | `number \| null` | Seconds since latest mint/burn event |
+| `mintBurn.majorStaleCount` | `number` | Number of configured major symbols currently stale |
+| `mintBurn.staleMajorSymbols` | `string[]` | Symbol list currently marked stale |
+| `circuits` | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`, `etherscan`, `alchemy`. Empty until first cron run |
 
 **`CacheStatus`**
 
@@ -769,9 +785,9 @@ Worker health check. Reports cache freshness and blacklist table integrity. Not 
 | `healthy` | `boolean` | `true` when `ageSeconds / maxAge ≤ 1.5` |
 
 **Overall status logic:**
-- `healthy` — worst cache ratio ≤ 1.5 and no open circuits
-- `degraded` — worst ratio between 1.5 and 2, or any circuit is open
-- `stale` — worst ratio > 2
+- `healthy` — worst cache ratio ≤ 1.5, no open circuits, and no stale major mint/burn symbols
+- `degraded` — worst ratio between 1.5 and 2, or any circuit is open, or at least 1 major mint/burn symbol is stale
+- `stale` — worst ratio > 2, or 3+ major mint/burn symbols are stale
 
 ---
 
@@ -835,7 +851,7 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 
 ### `GET /api/report-cards`
 
-Stablecoin risk grade cards with dimension-level scores. Grades are computed from 5 dimensions using weighted scoring.
+Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimensions; overall score is the weighted base (liquidity/resilience/decentralization/dependency) plus peg-multiplier adjustment.
 
 **Cache:** standard
 

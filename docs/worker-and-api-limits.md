@@ -59,7 +59,7 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 **Rate limit in code**: `RATE_LIMITS.COINGECKO_ONCHAIN_MS = 250` ms in `worker/src/lib/rate-limits.ts` (used by `worker/src/lib/coingecko-onchain.ts`)
 
-> **Key constraint**: 500,000 calls/month ÷ ~2,880 cron runs/month (every 15 min) = ~174 CG calls per cron run on average before hitting the monthly cap. The pool crawl can easily blow through this if not throttled.
+> **Key constraint**: 500,000 calls/month ÷ ~1,440 cron runs/month (every 30 min) = ~347 CG calls per cron run on average before hitting the monthly cap. The pool crawl can still blow through this if not throttled.
 
 ---
 
@@ -120,13 +120,13 @@ Used for blacklist event fetching and on-chain balance lookups. Mint/burn flows 
 |---|---|
 | **Requests/second** | 5 req/s |
 | **Requests/day** | 100,000 |
-| **Chains available on free tier** | Ethereum mainnet + select others |
-| **Chains now requiring paid plan ($49/mo)** | ⚠️ Base, BNB, Avalanche, Optimism |
+| **Chains available on free tier** | Multi-chain via `chainid` parameter (coverage can change by plan/account) |
+| **L2 historical `eth_call` via Etherscan free** | Limited / unreliable for several L2s (we use dRPC for L2 balance lookups) |
 | **V1 API** | Deprecated — disabled after May 31, 2025 |
 
 **Budget system in code**: `createBudget(900)` — the blacklist cron self-caps at 900 Etherscan subrequests per run (`worker/src/cron/sync-blacklist.ts`).
 
-> **Key constraint**: If we add blacklist tracking for Base, BNB, Avalanche, or Optimism, we need the $49/month Etherscan paid plan for each chain. Currently using public RPC fallbacks for those chains.
+> **Key constraint**: Blacklist sync is hard-capped to 900 Etherscan subrequests/run. Historical L2 balance lookups are routed through dRPC archive RPC instead of Etherscan `eth_call`.
 
 ---
 
@@ -145,7 +145,7 @@ Used for USDT-Tron blacklist event fetching.
 
 ## Alchemy (PAYG Plan)
 
-Primary RPC provider for EVM chains (Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Tron).
+Primary RPC provider for mint/burn ingestion and shared chain-RPC utilities (Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Tron).
 
 | Resource | Limit |
 |---|---|
@@ -155,7 +155,7 @@ Primary RPC provider for EVM chains (Ethereum, Arbitrum, Base, Optimism, Polygon
 | **`eth_call` cost** | 26 CUs |
 | **Overage** | HTTP 429 — no auto-upgrade |
 
-> **Key constraint**: The on-chain supply cron and mint/burn flow sync are the two biggest consumers. Batch `eth_call` calls (our code supports up to 25 per batch on Alchemy). 30M CUs ÷ 26 CU/call = ~1.15 M `eth_call`s/month.
+> **Key constraint**: Mint/burn flow sync is the largest steady Alchemy consumer. Batch `eth_call` calls (where used) support up to 25 per batch. 30M CUs ÷ 26 CU/call = ~1.15 M `eth_call`s/month.
 
 **Mint/burn usage**: `sync-mint-burn` now uses Alchemy for all `eth_getLogs` and `eth_blockNumber` calls.
 Steady-state: ~35 getLogs + 4 blockNumbers + ~30 batch timestamp lookups per run → ~3,000 CUs/run.

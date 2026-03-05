@@ -70,6 +70,7 @@ Read these when working on related code:
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
 - **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation, portfolio analyzer, stress test
+- **`docs/methodology-page.md`** — `/methodology` page section-to-source mapping and update contract
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
 - **`docs/design-tokens.md`** — 3-layer design token architecture (primitives, semantic, component tokens)
 - **`docs/design-language.md`** — Typography, spacing, cards, tables, charts, interactive states, loading/error patterns

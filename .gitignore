@@ -41,6 +41,7 @@ yarn-error.log*
 
 # claude code
 .claude/settings.local.json
+.playwright-cli/
 .mcp.json
 
 # shell/editor config
