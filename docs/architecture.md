@@ -108,9 +108,6 @@ src/                              # Next.js frontend (static export)
 │   ├── about/                    # About & methodology
 │   │   ├── page.tsx
 │   │   └── error.tsx
-│   ├── stability-index-alt/      # Alternative PSI visualization (seismograph, strata)
-│   │   ├── page.tsx
-│   │   └── client.tsx
 │   ├── status/                   # Admin status dashboard (not in nav)
 │   │   ├── page.tsx
 │   │   ├── client.tsx
@@ -210,9 +207,6 @@ src/                              # Next.js frontend (static export)
 │   ├── stability-index.tsx       # Stability index visualizations (sparklines, lighthouse icon)
 │   ├── stability-index-summary.tsx # PSI summary stats for homepage
 │   ├── psi-history-chart.tsx     # PSI historical score chart
-│   ├── psi-atmosphere.tsx        # PSI atmospheric particle visualization
-│   ├── psi-seismograph.tsx       # PSI seismograph waveform visualization
-│   ├── psi-strata-chart.tsx      # PSI strata (geological layers) breakdown chart
 │   ├── chart-skeleton.tsx        # Loading skeleton for charts
 │   ├── severity-icon.tsx         # Severity level icon
 │   ├── feedback-button.tsx        # Feedback FAB button (bottom-right)

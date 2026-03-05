@@ -4,3 +4,5 @@
 /risk-lab /safety-scores 301
 /peg-tracker / 301
 /peg-tracker/ / 301
+/stability-index-alt/* /stability-index/:splat 301
+/stability-index-alt /stability-index 301
