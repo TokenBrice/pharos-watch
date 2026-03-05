@@ -1,7 +1,6 @@
 import {
   withErrorHandler,
-  parseStablecoinHistoryQuery,
-  jsonResponse,
+  handleStablecoinHistoryRequest,
   addFreshnessHeaders,
   getLatestSuccessfulCronTimestamp,
 } from "../lib/api-utils";
@@ -21,42 +20,43 @@ export const handleSafetyScoreHistory = withErrorHandler("safety-score-history",
   db: D1Database,
   url: URL,
 ): Promise<Response> => {
-  const parsed = parseStablecoinHistoryQuery(url, {
-    defaultDays: 365,
-    minDays: 1,
-    maxDays: 3650,
+  return handleStablecoinHistoryRequest(db, url, {
+    query: {
+      defaultDays: 365,
+      minDays: 1,
+      maxDays: 3650,
+    },
+    cacheControl: CACHE_PROFILES.slow,
+    fetchRows: async ({ db: database, stablecoinId, cutoff }) => {
+      const result = await database
+        .prepare(
+          `SELECT recorded_at, grade, score, prev_grade, prev_score, methodology_version
+             FROM safety_grade_history
+             WHERE stablecoin_id = ? AND recorded_at >= ?
+             ORDER BY recorded_at ASC`,
+        )
+        .bind(stablecoinId, cutoff)
+        .all<SafetyScoreHistoryRow>();
+      return result.results ?? [];
+    },
+    mapRow: (row) => ({
+      date: row.recorded_at,
+      grade: row.grade,
+      score: row.score,
+      prevGrade: row.prev_grade,
+      prevScore: row.prev_score,
+      methodologyVersion: row.methodology_version,
+    }),
+    buildHeaders: async ({ db: database, history }) => {
+      const latestTs = history.length > 0
+        ? history[history.length - 1]?.date ?? Math.floor(Date.now() / 1000)
+        : Math.floor(Date.now() / 1000);
+      const freshnessTs = await getLatestSuccessfulCronTimestamp(
+        database,
+        "snapshot-safety-grade-history",
+        latestTs,
+      );
+      return addFreshnessHeaders({}, freshnessTs, 86_400);
+    },
   });
-  if (parsed instanceof Response) {
-    return parsed;
-  }
-
-  const { stablecoinId, cutoff } = parsed;
-
-  const result = await db
-    .prepare(
-      `SELECT recorded_at, grade, score, prev_grade, prev_score, methodology_version
-         FROM safety_grade_history
-         WHERE stablecoin_id = ? AND recorded_at >= ?
-         ORDER BY recorded_at ASC`,
-    )
-    .bind(stablecoinId, cutoff)
-    .all<SafetyScoreHistoryRow>();
-
-  const history = (result.results ?? []).map((row) => ({
-    date: row.recorded_at,
-    grade: row.grade,
-    score: row.score,
-    prevGrade: row.prev_grade,
-    prevScore: row.prev_score,
-    methodologyVersion: row.methodology_version,
-  }));
-
-  const latestTs = history.length > 0
-    ? history[history.length - 1]?.date ?? Math.floor(Date.now() / 1000)
-    : Math.floor(Date.now() / 1000);
-  const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "snapshot-safety-grade-history", latestTs);
-
-  return jsonResponse(history, addFreshnessHeaders({
-    "Cache-Control": CACHE_PROFILES.slow,
-  }, freshnessTs, 86_400));
 });
