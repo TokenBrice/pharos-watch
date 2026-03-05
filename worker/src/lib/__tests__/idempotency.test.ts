@@ -117,17 +117,22 @@ describe("runIdempotentAdminAction", () => {
     });
 
     let calls = 0;
+    let markFirstStarted: (() => void) | null = null;
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
+    });
     let resolveGate: ((value: Response) => void) | null = null;
     const gate = new Promise<Response>((resolve) => {
       resolveGate = resolve;
     });
     const execute = async () => {
       calls++;
+      markFirstStarted?.();
       return gate;
     };
 
     const first = runIdempotentAdminAction(db, "backfill-depegs", makeRequest(), execute);
-    await Promise.resolve(); // allow first call to reserve key
+    await firstStarted; // ensure first call reserved the key and entered execute
 
     const second = await runIdempotentAdminAction(db, "backfill-depegs", makeRequest(), execute);
     expect(second.status).toBe(409);
