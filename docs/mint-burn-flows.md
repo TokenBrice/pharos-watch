@@ -432,8 +432,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 | Component | File | Description |
 |-----------|------|-------------|
-| `FlowGauge` | `src/components/flow-gauge.tsx` | Semicircle gauge (180-degree arc), 7 colored segments, animated needle, calibrating/loading states, flight-to-quality badge |
-| `FlowGaugeMini` | `src/components/flow-gauge-mini.tsx` | Compact gauge for KPI bar: score + colored dot + band label |
+| `GAUGE_BANDS` | `src/components/flow-gauge.tsx` | Shared Flow Intensity band config map (label, hex, Tailwind text/bg classes) consumed by flow summary UI |
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
 | `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, fis. Responsive column hiding |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
@@ -441,7 +440,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 ### Dashboard Integration
 
-`FlowGaugeMini` appears as the 6th cell in the `KpiBar` component (`src/components/kpi-bar.tsx`) on the homepage, showing the composite gauge score and net 24h flow alongside PSI, mcap, DEX volume, and peg status.
+`FlowSummaryCard` (`src/components/flow-summary-card.tsx`) imports `GAUGE_BANDS` to keep Flow Intensity label/color semantics consistent with worker gauge band scoring.
 
 ---
 
@@ -523,8 +522,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page |
 | `src/app/flows/layout.tsx` | Page metadata/layout |
-| `src/components/flow-gauge.tsx` | Semicircle gauge component |
-| `src/components/flow-gauge-mini.tsx` | Compact gauge for KPI bar |
+| `src/components/flow-gauge.tsx` | Shared Flow Intensity band config map |
 | `src/components/flow-chart.tsx` | Recharts flow chart |
 | `src/components/flow-table.tsx` | Sortable per-coin table |
 | `src/components/flow-event-feed.tsx` | Paginated event table |

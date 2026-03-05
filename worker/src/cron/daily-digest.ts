@@ -1,4 +1,4 @@
-import type { StablecoinData } from "../../../src/lib/types";
+import type { DigestInputData, StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { TRACKED_IDS } from "../../../src/lib/stablecoins";
 import { formatCurrency } from "../../../src/lib/format";
@@ -50,47 +50,6 @@ const SYSTEM_PROMPT =
   "The text field (write this AFTER extended): distill the single most compelling take from your extended analysis into a tweet-sized line. Do NOT start or repeat the title in this field — the title is prepended automatically. " +
   "The title and text will be concatenated as '{title}\\n\\n{text}' for a tweet. The combined result MUST be under 270 characters (leave ~10 chars headroom for cashtag formatting). " +
   "Pack every character with data and wit — density is a virtue. No sentence count limit.";
-
-interface DigestInputData {
-  totalMcapUsd: number;
-  mcap7dDelta: number;
-  activeDepegCount: number;
-  topDepegs: { symbol: string; bps: number; mcapUsd: number }[];
-  biggestSupplyChange: {
-    id: string;
-    symbol: string;
-    name: string;
-    changeUsd: number;
-    currentMcap: number;
-  } | null;
-  stabilityIndex: { score: number; band: string; components: { severity: number; breadth: number; trend: number } } | null;
-  yesterdayIndex: { score: number; band: string } | null;
-
-  // Enrichment signals (all optional — omitted when below threshold)
-  blacklistActivity?: {
-    eventCount: number;
-    totalAmountUsd: number;
-    topEvents: { symbol: string; chain: string; type: "blacklist" | "destroy"; amountUsd: number }[];
-  };
-  supplyVelocity?: {
-    coin: string;
-    change1d: number;
-    change7d: number;
-    signal: string;
-  }[];
-  safetyScores?: {
-    mentionedCoins: { symbol: string; grade: string; score: number; peg: number | null; liq: number | null }[];
-    medianGrade: string;
-    aboveBCount: number;
-    fCount: number;
-  };
-  resolvedDepegs?: {
-    symbol: string;
-    peakBps: number;
-    durationHours: number;
-    mcapUsd: number;
-  }[];
-}
 
 function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): string {
   const lines: string[] = [

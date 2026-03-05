@@ -469,7 +469,7 @@ focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50
 
 ### Page-Level
 
-Use `PharosLoader`:
+Use this loader pattern:
 
 ```tsx
 <div className="flex min-h-[40vh] items-center justify-center">

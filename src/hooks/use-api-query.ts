@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
 import type { ZodType } from "zod";
-import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
 
 /** Cron interval constants — staleTime = cron interval, refetchInterval = 2x. */
 export const CRON_1MIN = 60_000;
@@ -71,43 +69,4 @@ export function useApiQueryWithMeta<T>(
     cronInterval,
     { enabled: opts?.enabled },
   ));
-}
-
-/**
- * Health-aware query wrapper. Keeps the meta-aware payload and derives
- * a canonical trust state (`fresh`, `degraded`, `stale`, `unavailable`, `error`).
- */
-export function useApiQueryWithHealth<T>(
-  key: readonly unknown[],
-  path: string,
-  cronInterval: number,
-  opts?: { enabled?: boolean; schema?: ZodType<T>; label?: string },
-): UseQueryResult<{ data: T; meta: ApiMeta | null }, Error> & {
-  health: DataHealthInfo;
-  payload: T | undefined;
-  meta: ApiMeta | null;
-} {
-  const query = useApiQueryWithMeta<T>(key, path, cronInterval, opts);
-  const meta = query.data?.meta ?? null;
-  const payload = query.data?.data;
-
-  const health = useMemo(
-    () =>
-      deriveDataHealth({
-        label: opts?.label ?? path,
-        dataUpdatedAt: query.dataUpdatedAt,
-        staleTime: cronInterval,
-        error: query.error,
-        hasData: payload !== undefined,
-        meta,
-      }),
-    [cronInterval, meta, opts?.label, path, payload, query.dataUpdatedAt, query.error],
-  );
-
-  return {
-    ...query,
-    health,
-    payload,
-    meta,
-  };
 }

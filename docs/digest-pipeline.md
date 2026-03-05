@@ -45,6 +45,8 @@ The cron assembles a `DigestInputData` object from 8 sources before calling the 
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
 | Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
 
+`DigestInputData` is defined once in `src/lib/types.ts` and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
+
 Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
 
 ### LLM call

@@ -138,8 +138,7 @@ src/                              # Next.js frontend (static export)
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
 │   ├── stablecoin-table.tsx      # Sortable table with filters
-│   ├── flow-gauge.tsx             # Bank Run Gauge visualization (full-size)
-│   ├── flow-gauge-mini.tsx       # Compact gauge for homepage/detail page
+│   ├── flow-gauge.tsx            # Shared Flow Intensity band configuration map (labels/colors/classes)
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
 │   ├── flow-table.tsx            # Per-coin flow table with FIS, volumes, net flows
 │   ├── flow-event-feed.tsx       # Live mint/burn event feed with filtering
@@ -230,8 +229,7 @@ src/                              # Next.js frontend (static export)
 │   ├── time-range-buttons.tsx    # Shared time range pill toggle buttons
 │   ├── yield-leaderboard.tsx     # Yield rankings sortable table with score breakdown
 │   ├── yield-scatter-plot.tsx    # Yield vs risk scatter chart with quadrant labels
-│   ├── theme-toggle.tsx          # Dark/light mode toggle
-│   └── pharos-loader.tsx         # Loading spinner
+│   └── theme-toggle.tsx          # Dark/light mode toggle
 ├── hooks/
 │   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (GET /api/supply-history with fallback)
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
