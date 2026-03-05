@@ -214,7 +214,7 @@ The radar is center-is-danger: higher threat bands occupy inner rings, CALM coin
 
 | Zone | Radius range | Description |
 |------|-------------|-------------|
-| Center label | r 0–38 | Highest band label + count |
+| Center label | r 0–38 | `SCANNING` status label + total monitored count |
 | DANGER | r 45–90 | Innermost elevated ring |
 | WARNING | r 95–140 | |
 | ALERT | r 143–175 | |
@@ -222,7 +222,7 @@ The radar is center-is-danger: higher threat bands occupy inner rings, CALM coin
 | CALM starfield | r 212–238 | Non-interactive ambient dots (r=2 core + r=5 bloom, theme-aware opacity tokens) |
 | Outer boundary | r 240 | Radar edge |
 
-Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) using the zone's threat color, plus a faint gray ring at r=212 delimiting the calm zone. Ring/spoke/calm-dot visibility is theme-aware via the DEWS radar tokens listed above. CALM dots are scattered deterministically using `deterministicRadiusOffset(id, 26)` from `src/lib/dews-radar-utils.ts`. The legend renders bands in center-out order: DANGER → WARNING → ALERT → WATCH.
+Dashed ring boundaries are drawn at each zone's inner edge (r=45, 95, 143, 178) using the zone's threat color, plus a faint gray ring at r=212 delimiting the calm zone. Ring/spoke/calm-dot visibility is theme-aware via the DEWS radar tokens listed above. CALM dots are scattered deterministically using `deterministicRadiusOffset(id, 26)` from `src/lib/dews-radar-utils.ts`. The legend renders severity-order bands with live counts: `Danger (n)`, `Warning (n)`, `Alert (n)`, `Watch (n)`, `Calm (n)`. The `Calm` legend marker uses the same faint bloom+core star-dot treatment as the calm outer starfield.
 
 ---
 

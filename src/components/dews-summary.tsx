@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { cn } from "@/lib/utils";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { THREAT_BAND_HEX } from "@shared/lib/classification";
+import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
 import {
   scoreToRadius,
@@ -29,8 +29,10 @@ const VB_W = 560;
 const VB_H = 500;
 
 type ElevatedBand = Exclude<ThreatBand, "CALM">;
+type BandCounts = Record<ThreatBand, number>;
 
 const RING_BANDS: ElevatedBand[] = ["WATCH", "ALERT", "WARNING", "DANGER"];
+const LEGEND_BANDS: ThreatBand[] = ["DANGER", "WARNING", "ALERT", "WATCH", "CALM"];
 const RING_RADII: Record<ElevatedBand, number> = {
   DANGER: 45, WARNING: 95, ALERT: 143, WATCH: 178,
 };
@@ -152,6 +154,26 @@ function computeCalmDots(
       y: CY + r * Math.sin(angle),
     };
   });
+}
+
+export function computeBandCounts(
+  signals: Record<string, { score: number; band: string }>,
+): BandCounts {
+  const counts: BandCounts = {
+    CALM: 0,
+    WATCH: 0,
+    ALERT: 0,
+    WARNING: 0,
+    DANGER: 0,
+  };
+
+  for (const { band } of Object.values(signals)) {
+    if (band in counts) {
+      counts[band as ThreatBand] += 1;
+    }
+  }
+
+  return counts;
 }
 
 export function resolveRadarClick(
@@ -281,19 +303,16 @@ function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
 
 function DEWSCenter({
   highest,
-  elevatedCount,
   totalCount,
   sweepDur,
 }: {
   highest: ThreatBand;
-  elevatedCount: number;
   totalCount: number;
   sweepDur: number;
 }) {
   const hex = THREAT_BAND_HEX[highest];
-  const label = highest === "CALM" ? "ALL CALM" : highest;
-  const sublabel =
-    highest === "CALM" ? `${totalCount} monitored` : `${elevatedCount} elevated`;
+  const label = "SCANNING";
+  const sublabel = `${totalCount} monitored`;
 
   return (
     <g>
@@ -433,7 +452,6 @@ function DEWSRadar({
       })()}
       <DEWSCenter
         highest={highest}
-        elevatedCount={elevated.length}
         totalCount={totalCount}
         sweepDur={dur}
       />
@@ -446,22 +464,31 @@ function DEWSRadar({
 // ---------------------------------------------------------------------------
 
 function DEWSLegend({
+  bandCounts,
   updatedAtLabel,
   compact = false,
 }: {
+  bandCounts: BandCounts;
   updatedAtLabel: string;
   compact?: boolean;
 }) {
   return (
     <div className={`flex flex-wrap items-center gap-y-1 border-t ${compact ? "gap-x-3 pt-2" : "gap-x-4 pt-3"}`}>
-      {[...RING_BANDS].reverse().map((band) => (
+      {LEGEND_BANDS.map((band) => (
         <div key={band} className="flex items-center gap-1.5">
-          <svg width={20} height={4} aria-hidden="true">
-            <line x1={0} y1={2} x2={20} y2={2}
-              stroke={THREAT_BAND_HEX[band]} strokeWidth={2} />
-          </svg>
+          {band === "CALM" ? (
+            <svg width={20} height={8} aria-hidden="true">
+              <circle cx={10} cy={4} r={3.5} fill="var(--dews-radar-calm-dot-bloom)" />
+              <circle cx={10} cy={4} r={1.75} fill="var(--dews-radar-calm-dot-core)" />
+            </svg>
+          ) : (
+            <svg width={20} height={4} aria-hidden="true">
+              <line x1={0} y1={2} x2={20} y2={2}
+                stroke={THREAT_BAND_HEX[band]} strokeWidth={2} />
+            </svg>
+          )}
           <span className="text-xs text-muted-foreground capitalize">
-            {band.charAt(0) + band.slice(1).toLowerCase()}
+            {THREAT_BAND_LABELS[band]} ({bandCounts[band]})
           </span>
         </div>
       ))}
@@ -506,6 +533,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
   const totalCount = Object.keys(data.signals).length;
   const elevated = computePositions(data.signals, logos);
   const calmDots = computeCalmDots(data.signals);
+  const bandCounts = computeBandCounts(data.signals);
   const highest = highestBand(elevated.map((c) => c.band));
   const updatedAtLabel = new Date(data.updatedAt * 1000).toLocaleString(undefined, {
     month: "short",
@@ -538,7 +566,11 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
           compact={!showHeader}
         />
-        <DEWSLegend updatedAtLabel={updatedAtLabel} compact={!showHeader} />
+        <DEWSLegend
+          bandCounts={bandCounts}
+          updatedAtLabel={updatedAtLabel}
+          compact={!showHeader}
+        />
       </CardContent>
     </Card>
   );
