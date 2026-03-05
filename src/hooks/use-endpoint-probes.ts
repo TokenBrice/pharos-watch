@@ -1,10 +1,10 @@
 "use client";
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { API_BASE } from "@/lib/api";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import type { EndpointProbeResult } from "@shared/types";
-import { CRON_1MIN, createPollingQueryOptions } from "./use-api-query";
+import { CRON_1MIN, usePollingQuery } from "./use-api-query";
 
 /** Endpoint definitions grouped by status-page probe group. */
 export const ENDPOINT_GROUPS = {
@@ -61,10 +61,10 @@ async function probeEndpoint(
 export function useEndpointProbes(
   adminKey: string,
 ): UseQueryResult<EndpointProbeResult[], Error> {
-  return useQuery<EndpointProbeResult[], Error>(createPollingQueryOptions(
+  return usePollingQuery(
     ["endpoint-probes", adminKey],
     () => Promise.all(ALL_ENDPOINTS.map((path) => probeEndpoint(path, adminKey))),
     CRON_1MIN,
     { enabled: !!adminKey, retry: 0 },
-  ));
+  );
 }

@@ -94,8 +94,12 @@ export interface ApiMeta {
 /** Fetch JSON from the API. Throws on non-OK responses.
  *  When a Zod schema is provided, validates the response and warns on mismatch
  *  (graceful degradation — returns data as-is on failure). */
-export async function apiFetch<T>(path: string, schema?: ZodType<T>): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
+export async function apiFetch<T>(
+  path: string,
+  schema?: ZodType<T>,
+  init?: RequestInit,
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) throw await buildFetchError(path, res);
 
   const data: unknown = await res.json();
@@ -122,8 +126,9 @@ export async function apiFetch<T>(path: string, schema?: ZodType<T>): Promise<T>
 export async function apiFetchWithMeta<T>(
   path: string,
   schema?: ZodType<T>,
+  init?: RequestInit,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
-  const res = await fetch(`${API_BASE}${path}`);
+  const res = await fetch(`${API_BASE}${path}`, init);
   if (!res.ok) throw await buildFetchError(path, res);
 
   const json: unknown = await res.json();

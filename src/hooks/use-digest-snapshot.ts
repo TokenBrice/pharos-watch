@@ -3,6 +3,7 @@
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { DigestInputData } from "@shared/types";
+import { createStaticQueryOptions } from "./use-api-query";
 
 export interface DigestSnapshotData {
   date: string;
@@ -27,11 +28,9 @@ export interface DigestSnapshotData {
 }
 
 export function useDigestSnapshot(date: string): UseQueryResult<DigestSnapshotData, Error> {
-  return useQuery<DigestSnapshotData, Error>({
-    queryKey: ["digest-snapshot", date],
-    queryFn: () => apiFetch<DigestSnapshotData>(`/api/digest-snapshot?date=${date}`),
-    staleTime: Infinity,
-    enabled: !!date,
-    retry: 1,
-  });
+  return useQuery<DigestSnapshotData, Error>(createStaticQueryOptions(
+    ["digest-snapshot", date],
+    () => apiFetch<DigestSnapshotData>(`/api/digest-snapshot?date=${date}`),
+    { enabled: !!date, retry: 1 },
+  ));
 }

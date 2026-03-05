@@ -14,15 +14,22 @@ import type { ZodType } from "zod";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 
+export interface PollingQueryControlOptions {
+  enabled?: boolean;
+  retry?: number | boolean;
+  retryDelay?: (attempt: number) => number;
+}
+
+interface ApiQueryOptions<T> extends PollingQueryControlOptions {
+  schema?: ZodType<T>;
+  fetchInit?: RequestInit;
+}
+
 export function createPollingQueryOptions<T>(
   key: readonly unknown[],
   queryFn: () => Promise<T>,
   cronInterval: number,
-  opts?: {
-    enabled?: boolean;
-    retry?: number | boolean;
-    retryDelay?: (attempt: number) => number;
-  },
+  opts?: PollingQueryControlOptions,
 ) {
   return {
     queryKey: key,
@@ -35,6 +42,40 @@ export function createPollingQueryOptions<T>(
   };
 }
 
+export function usePollingQuery<T>(
+  key: readonly unknown[],
+  queryFn: () => Promise<T>,
+  cronInterval: number,
+  opts?: PollingQueryControlOptions,
+): UseQueryResult<T, Error> {
+  return useQuery<T, Error>(createPollingQueryOptions(
+    key,
+    queryFn,
+    cronInterval,
+    opts,
+  ));
+}
+
+export function createStaticQueryOptions<T>(
+  key: readonly unknown[],
+  queryFn: () => Promise<T>,
+  opts?: {
+    enabled?: boolean;
+    retry?: number | boolean;
+    retryDelay?: (attempt: number) => number;
+    staleTime?: number;
+  },
+) {
+  return {
+    queryKey: key,
+    queryFn,
+    staleTime: opts?.staleTime ?? Infinity,
+    enabled: opts?.enabled,
+    retry: opts?.retry ?? 1,
+    retryDelay: opts?.retryDelay ?? DEFAULT_RETRY_DELAY,
+  };
+}
+
 /**
  * Generic TanStack Query hook for API endpoints.
  * Encodes the staleTime = cronInterval, refetchInterval = 2 × cronInterval rule.
@@ -44,14 +85,23 @@ export function useApiQuery<T>(
   key: readonly unknown[],
   path: string,
   cronInterval: number,
-  opts?: { enabled?: boolean; schema?: ZodType<T> }
+  opts?: ApiQueryOptions<T>,
 ): UseQueryResult<T, Error> {
-  return useQuery<T, Error>(createPollingQueryOptions(
+  return usePollingQuery(
     key,
-    () => apiFetch<T>(path, opts?.schema),
+    () => {
+      if (opts?.fetchInit) {
+        return apiFetch<T>(path, opts.schema, opts.fetchInit);
+      }
+      return apiFetch<T>(path, opts?.schema);
+    },
     cronInterval,
-    { enabled: opts?.enabled },
-  ));
+    {
+      enabled: opts?.enabled,
+      retry: opts?.retry,
+      retryDelay: opts?.retryDelay,
+    },
+  );
 }
 
 /**
@@ -62,12 +112,21 @@ export function useApiQueryWithMeta<T>(
   key: readonly unknown[],
   path: string,
   cronInterval: number,
-  opts?: { enabled?: boolean; schema?: ZodType<T> }
+  opts?: ApiQueryOptions<T>,
 ): UseQueryResult<{ data: T; meta: ApiMeta | null }, Error> {
-  return useQuery<{ data: T; meta: ApiMeta | null }, Error>(createPollingQueryOptions(
+  return usePollingQuery(
     key,
-    () => apiFetchWithMeta<T>(path, opts?.schema),
+    () => {
+      if (opts?.fetchInit) {
+        return apiFetchWithMeta<T>(path, opts.schema, opts.fetchInit);
+      }
+      return apiFetchWithMeta<T>(path, opts?.schema);
+    },
     cronInterval,
-    { enabled: opts?.enabled },
-  ));
+    {
+      enabled: opts?.enabled,
+      retry: opts?.retry,
+      retryDelay: opts?.retryDelay,
+    },
+  );
 }

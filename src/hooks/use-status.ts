@@ -1,28 +1,32 @@
 "use client";
 
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { API_BASE } from "@/lib/api";
+import type { UseQueryResult } from "@tanstack/react-query";
+import { ApiFetchError, apiFetch } from "@/lib/api";
 import type { StatusResponse } from "@shared/types";
-import { CRON_1MIN, createPollingQueryOptions } from "./use-api-query";
+import { CRON_1MIN, usePollingQuery } from "./use-api-query";
 
 /**
  * Fetches /api/status with admin key auth.
  * Auto-refreshes every 60s for live ops monitoring.
  */
 export function useStatus(adminKey: string): UseQueryResult<StatusResponse, Error> {
-  return useQuery<StatusResponse, Error>(createPollingQueryOptions(
+  return usePollingQuery<StatusResponse>(
     ["status", adminKey],
     async () => {
-      const res = await fetch(`${API_BASE}/api/status`, {
-        headers: { "X-Admin-Key": adminKey },
-      });
-      if (!res.ok) {
-        if (res.status === 401) throw new Error("Invalid admin key");
-        throw new Error(`Failed to fetch status: ${res.status}`);
+      try {
+        return await apiFetch<StatusResponse>(
+          "/api/status",
+          undefined,
+          { headers: { "X-Admin-Key": adminKey } },
+        );
+      } catch (err) {
+        if (err instanceof ApiFetchError && err.status === 401) {
+          throw new Error("Invalid admin key");
+        }
+        throw err;
       }
-      return res.json() as Promise<StatusResponse>;
     },
     CRON_1MIN,
     { enabled: !!adminKey, retry: 0 },
-  ));
+  );
 }
