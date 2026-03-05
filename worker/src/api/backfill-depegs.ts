@@ -202,7 +202,7 @@ async function buildCommodityMedianSeriesFromCg(): Promise<Record<string, FxTime
  * timestamp, using binary search nearest-neighbor on the daily ECB series.
  * If the series is empty, returns the static fallback.
  */
-function buildFxLookup(series: FxTimeSeries[], fallback: number): (timestamp: number) => number {
+export function buildFxLookup(series: FxTimeSeries[], fallback: number): (timestamp: number) => number {
   if (series.length === 0) return () => fallback;
 
   return (timestamp: number): number =>
@@ -582,7 +582,7 @@ async function fetchDlPriceChart(coinId: string, start: number): Promise<PricePo
   }
 }
 
-function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
+export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
   const map = new Map<number, number>();
   for (const point of tokens) {
     const ts = parseInt(point.date, 10);
@@ -595,7 +595,7 @@ function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
     .sort((a, b) => a.ts - b.ts);
 }
 
-function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): number | null {
+export function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): number | null {
   if (supplyByDate.length === 0) return null;
 
   let lo = 0;
@@ -619,7 +619,7 @@ function findNearestSupply(supplyByDate: SupplySnapshot[], timestamp: number): n
   return candidates[0].supply;
 }
 
-function extractDepegEvents(
+export function extractDepegEvents(
   prices: PricePoint[],
   getPegRef: (timestamp: number) => number,
   pegType: string,

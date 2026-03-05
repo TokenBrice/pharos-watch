@@ -25,6 +25,14 @@ interface UseSortedTableRowsReturn<T, K extends string> {
   sortedRows: T[];
 }
 
+export function sortTableRows<T, K extends string>(
+  rows: readonly T[],
+  sort: TableSortState<K>,
+  compareRows: (a: T, b: T, sort: TableSortState<K>) => number
+): T[] {
+  return [...rows].sort((a, b) => compareRows(a, b, sort));
+}
+
 export function useSortedTableRows<T, K extends string>(
   rows: readonly T[],
   options: UseSortedTableRowsOptions<K>,
@@ -41,10 +49,7 @@ export function useSortedTableRows<T, K extends string>(
     [sortKey, sortDirection]
   );
 
-  const sortedRows = useMemo(
-    () => [...rows].sort((a, b) => compareRows(a, b, sort)),
-    [rows, compareRows, sort]
-  );
+  const sortedRows = useMemo(() => sortTableRows(rows, sort, compareRows), [rows, compareRows, sort]);
 
   return {
     sortKey,

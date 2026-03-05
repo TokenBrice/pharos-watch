@@ -198,8 +198,12 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | File | What It Covers |
 |------|----------------|
 | `src/components/__tests__/dews-summary.test.ts` | DEWS radar tap/click interaction resolver logic |
+| `src/components/__tests__/liquidity-table.test.ts` | Liquidity row comparator behavior and filter-driven pagination reset flow |
 | `src/hooks/__tests__/use-url-filters.test.ts` | URL param state helpers and encoding rules |
 | `src/hooks/__tests__/query-polling-policy.test.ts` | Shared polling policy wiring (`staleTime`, `refetchInterval`, `retry`) for status-page hooks |
+| `src/hooks/__tests__/use-sort.test.ts` | Table sort state transitions and keyboard activation key gating |
+| `src/hooks/__tests__/use-sorted-table-rows.test.ts` | Pure table row sorting helper behavior and immutability |
+| `src/hooks/__tests__/use-table-pagination.test.ts` | Pagination derivation + persisted page reset semantics when row totals change |
 
 ### Worker Library Tests (`worker/src/lib/__tests__/`)
 
@@ -225,6 +229,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 |------|---------|--------------|
 | `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts`, unknown paths return null, mutating admin GET guards hold (with audit dry-run exception) |
 | `backfill-depegs.test.ts` | `handleBackfillDepegs` | Auth guard, unknown stablecoin 404, out-of-range batch no-op |
+| `backfill-depegs-helpers.test.ts` | `backfill-depegs` helper logic | Supply parsing/nearest-snapshot lookup, FX lookup fallback/nearest selection, large-cap depeg confirmation behavior |
 | `backfill-supply-history.test.ts` | `handleBackfillSupplyHistory` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, USD insertion path |
 | `backfill-cg-prices.test.ts` | `handleBackfillCgPrices` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, NULL-price fill |
 | `backfill-stability-index.test.ts` | `handleBackfillStabilityIndex` | Auth guard, no-events 404, rebuild success shape |
@@ -239,6 +244,8 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `peg-summary.test.ts` | `handlePegSummary` | 503 cache miss, 200 with coins + summary, X-Data-Age |
 | `report-cards.test.ts` | `handleReportCards` | 503 cache miss, 200 with cards/methodology/dependencyGraph |
 | `stablecoin-detail.test.ts` | `handleStablecoinDetail` | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics |
+| `stablecoin-detail-commodity.test.ts` | `fetchCommodityTokens` helper | DefiLlama-empty fallback to CoinGecko market-chart + failure fallback to empty |
+| `stablecoin-detail-defillama.test.ts` | `normalizeDefiLlamaDetailBody` helper | Non-USD normalization branches, USD no-op behavior, invalid JSON throw path |
 | `daily-digest.test.ts` | `handleDailyDigest` | 200 with null digest, 200 with digest text, X-Data-Age |
 | `digest-archive.test.ts` | `handleDigestArchive` | 200 empty, 200 with digests, PSI/mcap from input_data, null input_data |
 | `digest-snapshot.test.ts` | `handleDigestSnapshot` | 400 missing/invalid date, 404 no digest, 200 with snapshot |

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-interface UseTablePaginationOptions {
+export interface UseTablePaginationOptions {
   pageSize: number;
   resetPageOnTotalChange?: boolean;
 }
@@ -20,22 +20,73 @@ interface UseTablePaginationReturn<T> {
   onNextPage: () => void;
 }
 
+export interface TablePaginationState {
+  page: number;
+  totalRowsSnapshot: number;
+}
+
+export interface DerivedPagination {
+  basePage: number;
+  effectivePage: number;
+  totalPages: number;
+  pageStartIndex: number;
+}
+
+export function reconcilePaginationStateOnTotalChange(
+  previous: TablePaginationState,
+  totalRows: number,
+  resetPageOnTotalChange: boolean
+): TablePaginationState {
+  if (!resetPageOnTotalChange || previous.totalRowsSnapshot === totalRows) {
+    return previous;
+  }
+  return {
+    page: 0,
+    totalRowsSnapshot: totalRows,
+  };
+}
+
+export function derivePagination(
+  pageState: TablePaginationState,
+  totalRows: number,
+  pageSize: number,
+  resetPageOnTotalChange: boolean
+): DerivedPagination {
+  const basePage =
+    resetPageOnTotalChange && pageState.totalRowsSnapshot !== totalRows ? 0 : pageState.page;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+  const effectivePage = basePage >= totalPages ? 0 : basePage;
+  return {
+    basePage,
+    effectivePage,
+    totalPages,
+    pageStartIndex: effectivePage * pageSize,
+  };
+}
+
 export function useTablePagination<T>(
   rows: readonly T[],
   options: UseTablePaginationOptions
 ): UseTablePaginationReturn<T> {
   const { pageSize, resetPageOnTotalChange = false } = options;
-  const [pageState, setPageState] = useState<{ page: number; totalRowsSnapshot: number }>(() => ({
+  const [pageState, setPageState] = useState<TablePaginationState>(() => ({
     page: 0,
     totalRowsSnapshot: rows.length,
   }));
 
   const totalRows = rows.length;
-  const basePage =
-    resetPageOnTotalChange && pageState.totalRowsSnapshot !== totalRows ? 0 : pageState.page;
-  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-  const effectivePage = basePage >= totalPages ? 0 : basePage;
-  const pageStartIndex = effectivePage * pageSize;
+  const { effectivePage, totalPages, pageStartIndex } = derivePagination(
+    pageState,
+    totalRows,
+    pageSize,
+    resetPageOnTotalChange
+  );
+
+  useEffect(() => {
+    setPageState((previous) =>
+      reconcilePaginationStateOnTotalChange(previous, totalRows, resetPageOnTotalChange)
+    );
+  }, [resetPageOnTotalChange, totalRows]);
 
   const paginatedRows = useMemo(
     () => rows.slice(pageStartIndex, pageStartIndex + pageSize),

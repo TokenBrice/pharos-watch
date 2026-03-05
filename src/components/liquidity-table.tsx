@@ -25,7 +25,19 @@ import type { StablecoinMeta, DexLiquidityData } from "@shared/types";
 
 const PAGE_SIZE = 25;
 
-type SortKey = "score" | "tvl" | "effectiveTvl" | "tvlTrend" | "volume" | "volume7d" | "vtRatio" | "pools" | "chains" | "balance" | "organic" | "durability";
+export type LiquiditySortKey =
+  | "score"
+  | "tvl"
+  | "effectiveTvl"
+  | "tvlTrend"
+  | "volume"
+  | "volume7d"
+  | "vtRatio"
+  | "pools"
+  | "chains"
+  | "balance"
+  | "organic"
+  | "durability";
 
 export interface LiquidityRow {
   meta: StablecoinMeta;
@@ -39,68 +51,75 @@ interface LiquidityTableProps {
   onRowClick: (id: string) => void;
 }
 
+export function compareLiquidityRows(
+  a: LiquidityRow,
+  b: LiquidityRow,
+  sort: TableSortState<LiquiditySortKey>
+): number {
+  const aLiq = a.liq;
+  const bLiq = b.liq;
+  let aVal: number;
+  let bVal: number;
+  switch (sort.key) {
+    case "score":
+      aVal = aLiq.liquidityScore ?? 0;
+      bVal = bLiq.liquidityScore ?? 0;
+      break;
+    case "tvl":
+      aVal = aLiq.totalTvlUsd;
+      bVal = bLiq.totalTvlUsd;
+      break;
+    case "tvlTrend":
+      aVal = aLiq.tvlChange7d ?? 0;
+      bVal = bLiq.tvlChange7d ?? 0;
+      break;
+    case "volume":
+      aVal = aLiq.totalVolume24hUsd;
+      bVal = bLiq.totalVolume24hUsd;
+      break;
+    case "volume7d":
+      aVal = aLiq.totalVolume7dUsd;
+      bVal = bLiq.totalVolume7dUsd;
+      break;
+    case "vtRatio":
+      aVal = aLiq.totalTvlUsd > 0 ? aLiq.totalVolume24hUsd / aLiq.totalTvlUsd : 0;
+      bVal = bLiq.totalTvlUsd > 0 ? bLiq.totalVolume24hUsd / bLiq.totalTvlUsd : 0;
+      break;
+    case "pools":
+      aVal = aLiq.poolCount;
+      bVal = bLiq.poolCount;
+      break;
+    case "chains":
+      aVal = aLiq.chainCount;
+      bVal = bLiq.chainCount;
+      break;
+    case "effectiveTvl":
+      aVal = aLiq.effectiveTvlUsd ?? 0;
+      bVal = bLiq.effectiveTvlUsd ?? 0;
+      break;
+    case "balance":
+      aVal = aLiq.weightedBalanceRatio ?? 0;
+      bVal = bLiq.weightedBalanceRatio ?? 0;
+      break;
+    case "organic":
+      aVal = aLiq.organicFraction ?? 0;
+      bVal = bLiq.organicFraction ?? 0;
+      break;
+    case "durability":
+      aVal = aLiq.durabilityScore ?? 0;
+      bVal = bLiq.durabilityScore ?? 0;
+      break;
+    default:
+      aVal = aLiq.liquidityScore ?? 0;
+      bVal = bLiq.liquidityScore ?? 0;
+  }
+  return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
+}
+
 export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: LiquidityTableProps) {
   const compareRows = useCallback(
-    (a: LiquidityRow, b: LiquidityRow, sort: TableSortState<SortKey>): number => {
-      const aLiq = a.liq;
-      const bLiq = b.liq;
-      let aVal: number;
-      let bVal: number;
-      switch (sort.key) {
-        case "score":
-          aVal = aLiq.liquidityScore ?? 0;
-          bVal = bLiq.liquidityScore ?? 0;
-          break;
-        case "tvl":
-          aVal = aLiq.totalTvlUsd;
-          bVal = bLiq.totalTvlUsd;
-          break;
-        case "tvlTrend":
-          aVal = aLiq.tvlChange7d ?? 0;
-          bVal = bLiq.tvlChange7d ?? 0;
-          break;
-        case "volume":
-          aVal = aLiq.totalVolume24hUsd;
-          bVal = bLiq.totalVolume24hUsd;
-          break;
-        case "volume7d":
-          aVal = aLiq.totalVolume7dUsd;
-          bVal = bLiq.totalVolume7dUsd;
-          break;
-        case "vtRatio":
-          aVal = aLiq.totalTvlUsd > 0 ? aLiq.totalVolume24hUsd / aLiq.totalTvlUsd : 0;
-          bVal = bLiq.totalTvlUsd > 0 ? bLiq.totalVolume24hUsd / bLiq.totalTvlUsd : 0;
-          break;
-        case "pools":
-          aVal = aLiq.poolCount;
-          bVal = bLiq.poolCount;
-          break;
-        case "chains":
-          aVal = aLiq.chainCount;
-          bVal = bLiq.chainCount;
-          break;
-        case "effectiveTvl":
-          aVal = aLiq.effectiveTvlUsd ?? 0;
-          bVal = bLiq.effectiveTvlUsd ?? 0;
-          break;
-        case "balance":
-          aVal = aLiq.weightedBalanceRatio ?? 0;
-          bVal = bLiq.weightedBalanceRatio ?? 0;
-          break;
-        case "organic":
-          aVal = aLiq.organicFraction ?? 0;
-          bVal = bLiq.organicFraction ?? 0;
-          break;
-        case "durability":
-          aVal = aLiq.durabilityScore ?? 0;
-          bVal = bLiq.durabilityScore ?? 0;
-          break;
-        default:
-          aVal = aLiq.liquidityScore ?? 0;
-          bVal = bLiq.liquidityScore ?? 0;
-      }
-      return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-    },
+    (a: LiquidityRow, b: LiquidityRow, sort: TableSortState<LiquiditySortKey>) =>
+      compareLiquidityRows(a, b, sort),
     []
   );
 
@@ -120,7 +139,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
     totalRows,
     onPreviousPage,
     onNextPage,
-  } = useSortedPaginatedTable<LiquidityRow, SortKey>(
+  } = useSortedPaginatedTable<LiquidityRow, LiquiditySortKey>(
     rows,
     {
       defaultKey: "score",

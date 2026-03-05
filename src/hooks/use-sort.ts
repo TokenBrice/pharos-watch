@@ -2,36 +2,46 @@
 
 import { useState, useCallback } from "react";
 
+export type SortDirection = "asc" | "desc";
+
+export interface SortState<K extends string> {
+  key: K;
+  direction: SortDirection;
+}
+
 interface UseSortReturn<K extends string> {
   sortKey: K;
-  sortDirection: "asc" | "desc";
+  sortDirection: SortDirection;
   toggleSort: (key: K) => void;
   getAriaSortValue: (columnKey: string) => "ascending" | "descending" | "none";
   handleSortKeyDown: (e: React.KeyboardEvent, key: K) => void;
 }
 
-export function useSort<K extends string>(defaultKey: K, defaultDir: "asc" | "desc"): UseSortReturn<K> {
-  const [sortState, setSortState] = useState<{
-    key: K;
-    direction: "asc" | "desc";
-  }>({
+export function getNextSortState<K extends string>(previous: SortState<K>, key: K): SortState<K> {
+  if (previous.key === key) {
+    return {
+      key,
+      direction: previous.direction === "asc" ? "desc" : "asc",
+    };
+  }
+  return {
+    key,
+    direction: "desc",
+  };
+}
+
+export function shouldToggleSortOnKeyDown(key: string): boolean {
+  return key === "Enter" || key === " ";
+}
+
+export function useSort<K extends string>(defaultKey: K, defaultDir: SortDirection): UseSortReturn<K> {
+  const [sortState, setSortState] = useState<SortState<K>>({
     key: defaultKey,
     direction: defaultDir,
   });
 
   const toggleSort = useCallback((key: K) => {
-    setSortState((prev) => {
-      if (prev.key === key) {
-        return {
-          key,
-          direction: prev.direction === "asc" ? "desc" : "asc",
-        };
-      }
-      return {
-        key,
-        direction: "desc",
-      };
-    });
+    setSortState((prev) => getNextSortState(prev, key));
   }, []);
 
   const sortKey = sortState.key;
@@ -47,7 +57,7 @@ export function useSort<K extends string>(defaultKey: K, defaultDir: "asc" | "de
 
   const handleSortKeyDown = useCallback(
     (e: React.KeyboardEvent, key: K) => {
-      if (e.key === "Enter" || e.key === " ") {
+      if (shouldToggleSortOnKeyDown(e.key)) {
         e.preventDefault();
         toggleSort(key);
       }
