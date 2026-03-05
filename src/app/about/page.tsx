@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, BarChart3, Droplets, ExternalLink, Flame, FlaskConical, Gauge, Github, Layers, Network, Newspaper, Radio, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
@@ -45,65 +45,58 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="space-y-8">
-      <BreadcrumbJsonLd name="About Pharos" path="/about/" />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "Why does Pharos exist?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Pharos is a project by TokenBrice, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+    <FeaturePageShell
+      breadcrumbName="About Pharos"
+      path="/about/"
+      title="About Pharos"
+      leadParagraphs={["Open stablecoin analytics dashboard, built with love and care."]}
+      preface={(
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: [
+                {
+                  "@type": "Question",
+                  name: "Why does Pharos exist?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Pharos is a project by TokenBrice, Claude, and Codex. It puts the stablecoin data you want to monitor in one place: honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
+                  },
                 },
-              },
-              {
-                "@type": "Question",
-                name: "What does Pharos track?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: `Pharos tracks ${TRACKED_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 risk dimensions: Peg Stability (25%), Liquidity (20%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%).`,
+                {
+                  "@type": "Question",
+                  name: "What does Pharos track?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: `Pharos tracks ${TRACKED_STABLECOINS.length} stablecoins across every major chain, classified by governance, backing, and peg currency. It documents ${DEAD_STABLECOINS.length} dead stablecoins in the cemetery, monitors USDC/USDT/PAXG/XAUT freeze events on-chain, provides composite peg scores with depeg detection and heatmaps, integrates independent Bluechip SMIDGE safety ratings, scores DEX liquidity depth 0–100 across decentralized exchanges, computes a daily Pharos Stability Index for ecosystem health, and issues report cards grading each stablecoin across 5 risk dimensions: Peg Stability (25%), Liquidity (20%), Resilience (20%), Decentralization (15%), and Dependency Risk (25%).`,
+                  },
                 },
-              },
-              {
-                "@type": "Question",
-                name: "How does Pharos classify stablecoins?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Pharos classifies stablecoins into three governance tiers: CeFi (fully centralized), CeFi-Dependent (decentralized infrastructure but reliant on centralized collateral or peg mechanisms), and DeFi (fully on-chain, no centralized custody dependency). This reflects actual infrastructure dependency, not marketing claims.",
+                {
+                  "@type": "Question",
+                  name: "How does Pharos classify stablecoins?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "Pharos classifies stablecoins into three governance tiers: CeFi (fully centralized), CeFi-Dependent (decentralized infrastructure but reliant on centralized collateral or peg mechanisms), and DeFi (fully on-chain, no centralized custody dependency). This reflects actual infrastructure dependency, not marketing claims.",
+                  },
                 },
-              },
-              {
-                "@type": "Question",
-                name: "Where does Pharos get its data?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2, TronGrid, Alchemy, and dRPC for on-chain freeze events, mint/burn flow tracking, and direct contract calls; Bluechip for safety ratings; ECB via Frankfurter and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                {
+                  "@type": "Question",
+                  name: "Where does Pharos get its data?",
+                  acceptedAnswer: {
+                    "@type": "Answer",
+                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2, TronGrid, Alchemy, and dRPC for on-chain freeze events, mint/burn flow tracking, and direct contract calls; Bluechip for safety ratings; ECB via Frankfurter and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                  },
                 },
-              },
-            ],
-          }),
-        }}
-      />
-
-      {/* Section 1: Hero / Why Pharos */}
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">About Pharos</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">About Pharos</h1>
-        <p className="text-sm text-muted-foreground">
-          Open stablecoin analytics dashboard, built with love and care.
-        </p>
-      </div>
-
+              ],
+            }),
+          }}
+        />
+      )}
+    >
+      <div className="space-y-8">
       <Card className="rounded-xl border-l-[3px] border-l-sky-500">
         <CardHeader>
           <CardTitle as="h2">Why Pharos?</CardTitle>
@@ -560,5 +553,6 @@ export default function AboutPage() {
         </CardContent>
       </Card>
     </div>
+    </FeaturePageShell>
   );
 }

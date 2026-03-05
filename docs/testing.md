@@ -17,7 +17,7 @@ npm run test:invariants # Critical numerical/schema invariant suite
 npm run coverage:critical # Full coverage + critical-path line-coverage gate
 npm run test:merge-gate # Delta-aware local gate before pushing merged worktree changes
 npm run test:smoke-api -- --base-url https://api.pharos.watch # HTTP smoke checks for critical API endpoints
-npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check (Playwright CLI)
+npm run test:smoke-ui -- --url https://pharos.watch # Browser-level UI smoke check + mobile overflow route checks
 ```
 
 ## CI Pipeline
@@ -45,6 +45,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 5. `smoke-ui` (needs `deploy-pages`):
    - Run `npm run test:smoke-ui`
    - Uses `SMOKE_UI_URL` from `vars.SMOKE_UI_URL` (fallback: `https://pharos.watch`)
+   - Validates homepage data render and checks for horizontal overflow at `390x844` on critical routes
 
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
 
@@ -341,7 +342,7 @@ Current critical file set:
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions.
-- `npm run test:smoke-ui` performs a fast browser smoke check on the live homepage and fails on the `Failed to load data` outage state.
+- `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage state and on horizontal overflow across tracked mobile routes.
 
 ### Tier-3 Structural Refactor Targeted Suites
 

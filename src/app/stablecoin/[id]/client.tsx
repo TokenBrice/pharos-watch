@@ -11,6 +11,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ChartSection } from "@/components/stablecoin-detail/chart-section";
 import { DepegHistorySection } from "@/components/stablecoin-detail/depeg-history-section";
+import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { FlowsSection } from "@/components/stablecoin-detail/flows-section";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
 import { InfoSection } from "@/components/stablecoin-detail/info-section";
@@ -74,6 +75,10 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
     );
   }
 
+  const detailSections = viewModel.hasFlows
+    ? DETAIL_SECTIONS
+    : DETAIL_SECTIONS.filter((section) => section.id !== "flows");
+
   return (
     <div className="space-y-6">
       {viewModel.supplyError != null ? (
@@ -105,9 +110,13 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
         pegScoreBorderClass={viewModel.pegScoreBorderClass}
         liquidityData={viewModel.liquidityData}
         liqBorderClass={viewModel.liqBorderClass}
-        hasFlows={viewModel.hasFlows}
-        sections={DETAIL_SECTIONS}
         onOpenFeedback={() => setFeedbackOpen(true)}
+      />
+
+      <LongformScrollspyNav
+        sections={detailSections}
+        railLabel="Jump to Section"
+        navAriaLabel="Stablecoin detail section navigation"
       />
 
       <section id="report-card">

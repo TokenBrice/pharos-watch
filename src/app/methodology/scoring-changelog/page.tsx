@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
 import {
   Card,
@@ -45,8 +46,10 @@ function VersionCard({
   accent: string;
   children: React.ReactNode;
 }) {
+  const anchorId = `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+
   return (
-    <Card className={`rounded-xl border-l-[3px] ${accent}`}>
+    <Card id={anchorId} className={`scroll-mt-28 rounded-xl border-l-[3px] ${accent}`}>
       <CardHeader>
         <CardTitle as="h2">
           <span className="flex flex-wrap items-center gap-2">
@@ -110,6 +113,25 @@ function WeightRow({
 /* ── page ────────────────────────────────────────────────────────── */
 
 export default function ScoringChangelogPage() {
+  const sections = [
+    SAFETY_SCORE_VERSION_LABEL,
+    "v5.4",
+    "v5.3",
+    "v5.2",
+    "v5.1",
+    "v5.0",
+    "v4.1",
+    "v4.0",
+    "v3.3",
+    "v3.2",
+    "v3.0",
+    "v2.0",
+    "v1.0",
+  ].map((version) => ({
+    id: `scoring-${version.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`,
+    label: version,
+  }));
+
   return (
     <div className="space-y-8">
       <BreadcrumbJsonLd
@@ -148,11 +170,17 @@ export default function ScoringChangelogPage() {
         </p>
       </div>
 
+      <LongformScrollspyNav
+        sections={sections}
+        railLabel="Jump to Version"
+        navAriaLabel="Safety score changelog version navigation"
+      />
+
       {/* ──────────── v5.5 ──────────── */}
       <VersionCard
         version={SAFETY_SCORE_VERSION_LABEL}
         title="Peg score fairness for young coins"
-        date="Mar 1"
+        date="Mar 1, 2026"
         accent="border-l-amber-500"
       >
         <p>
@@ -184,7 +212,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v5.4"
         title="No-liquidity penalty"
-        date="Feb 28"
+        date="Feb 28, 2026"
         accent="border-l-amber-500"
       >
         <p>
@@ -205,7 +233,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v5.3"
         title="Remove chain infra from Resilience"
-        date="Feb 28"
+        date="Feb 28, 2026"
         accent="border-l-amber-500"
       >
         <p>
@@ -232,7 +260,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v5.2"
         title="Immutable-code governance tier"
-        date="Feb 28"
+        date="Feb 28, 2026"
         accent="border-l-amber-500"
       >
         <p>
@@ -281,7 +309,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v5.1"
         title="Regulated-entity tier + blacklist softening"
-        date="Feb 28"
+        date="Feb 28, 2026"
         accent="border-l-amber-500"
       >
         <ul className="list-disc list-inside space-y-1">
@@ -313,7 +341,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v5.0"
         title="GovernanceQuality + universal dependency scoring"
-        date="Feb 28"
+        date="Feb 28, 2026"
         accent="border-l-amber-500"
       >
         <div className="space-y-2">
@@ -355,7 +383,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v4.1"
         title="Liquidity weight increase + reclassifications"
-        date="Feb 27"
+        date="Feb 27, 2026"
         accent="border-l-cyan-500"
       >
         <p>
@@ -374,7 +402,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v4.0"
         title="Peg stability becomes a multiplier"
-        date="Feb 27"
+        date="Feb 27, 2026"
         accent="border-l-cyan-500"
       >
         <p>
@@ -440,7 +468,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v3.3"
         title="Reserve-derived collateral quality"
-        date="Feb 27"
+        date="Feb 27, 2026"
         accent="border-l-emerald-500"
       >
         <p>
@@ -479,7 +507,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v3.2"
         title="Dependency type ceilings"
-        date="Feb 27"
+        date="Feb 27, 2026"
         accent="border-l-emerald-500"
       >
         <p>
@@ -511,7 +539,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v3.0"
         title="Resilience 4-factor model"
-        date="Feb 26"
+        date="Feb 26, 2026"
         accent="border-l-emerald-500"
       >
         <p>
@@ -570,7 +598,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v2.0"
         title="Remove Safety dimension"
-        date="Feb 26"
+        date="Feb 26, 2026"
         accent="border-l-violet-500"
       >
         <p>
@@ -614,7 +642,7 @@ export default function ScoringChangelogPage() {
       <VersionCard
         version="v1.0"
         title="Initial implementation"
-        date="Feb 25"
+        date="Feb 25, 2026"
         accent="border-l-zinc-500"
       >
         <p>Six weighted dimensions:</p>

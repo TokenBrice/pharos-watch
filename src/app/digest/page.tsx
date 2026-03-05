@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import digests from "../../../data/digests.json";
 
 interface DigestIndexEntry {
@@ -35,20 +35,14 @@ export const metadata: Metadata = {
 
 export default function DigestArchivePage() {
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name="Daily Digest Archive" path="/digest/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Daily Digest Archive</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Daily Digest Archive</h1>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          Every daily stablecoin recap, newest first. Browse historical entries to track major peg events,
-          market-cap shifts, and ecosystem risk transitions over time.
-        </p>
-      </div>
+    <FeaturePageShell
+      breadcrumbName="Daily Digest Archive"
+      path="/digest/"
+      title="Daily Digest Archive"
+      leadParagraphs={[
+        "Every daily stablecoin recap, newest first. Browse historical entries to track major peg events, market-cap shifts, and ecosystem risk transitions over time.",
+      ]}
+    >
 
       <DigestArchiveClient />
 
@@ -84,6 +78,6 @@ export default function DigestArchivePage() {
           Pharos Telegram channel
         </a>.
       </p>
-    </div>
+    </FeaturePageShell>
   );
 }

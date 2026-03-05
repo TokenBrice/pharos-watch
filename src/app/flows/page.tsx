@@ -64,13 +64,15 @@ function FlowsPageInner() {
           <span>/</span>
           <span className="text-foreground">Mint/Burn Flows</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
-          Mint/Burn Flows
+        <div className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-2">
+          <h1 className="min-w-0 text-4xl font-extrabold tracking-tighter">
+            Mint/Burn Flows
+          </h1>
           <FeatureStatusBadge
             status="experimental"
             version={MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}
           />
-        </h1>
+        </div>
         <p className="text-xs text-muted-foreground">
           Methodology {MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}.{" "}
           <Link

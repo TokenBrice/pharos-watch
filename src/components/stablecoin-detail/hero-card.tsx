@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeftRight, Flag } from "lucide-react";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
-import { DetailSectionNav } from "@/components/detail-section-nav";
 import { PegGauge } from "@/components/peg-gauge";
 import { Card } from "@/components/ui/card";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
@@ -21,11 +20,6 @@ import {
   pegScoreColor,
 } from "@/lib/severity-colors";
 import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@/lib/types";
-
-interface SectionNavItem {
-  id: string;
-  label: string;
-}
 
 interface HeroCardProps {
   coin: StablecoinMeta;
@@ -46,8 +40,6 @@ interface HeroCardProps {
   pegScoreBorderClass: string;
   liquidityData: DexLiquidityData | undefined;
   liqBorderClass: string;
-  hasFlows: boolean;
-  sections: SectionNavItem[];
   onOpenFeedback: () => void;
 }
 
@@ -70,8 +62,6 @@ export function HeroCard({
   pegScoreBorderClass,
   liquidityData,
   liqBorderClass,
-  hasFlows,
-  sections,
   onOpenFeedback,
 }: HeroCardProps) {
   return (
@@ -275,9 +265,6 @@ export function HeroCard({
         </div>
       </div>
 
-      <div className="border-t border-border/30">
-        <DetailSectionNav sections={hasFlows ? sections : sections.filter((section) => section.id !== "flows")} />
-      </div>
     </Card>
   );
 }

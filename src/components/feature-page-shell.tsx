@@ -4,11 +4,14 @@ import {
   FeatureStatusBadge,
   type FeatureStatus,
 } from "@/components/feature-status-badge";
+import { cn } from "@/lib/utils";
 
 interface FeaturePageShellProps {
   breadcrumbName: string;
   path: string;
   title: string;
+  variant?: "standard" | "longform" | "auth-gated";
+  containerClassName?: string;
   breadcrumbLabel?: string;
   statusBadge?: {
     status: FeatureStatus;
@@ -27,6 +30,8 @@ export function FeaturePageShell({
   breadcrumbName,
   path,
   title,
+  variant = "standard",
+  containerClassName,
   breadcrumbLabel,
   statusBadge,
   methodology,
@@ -34,8 +39,15 @@ export function FeaturePageShell({
   preface,
   children,
 }: FeaturePageShellProps) {
+  const variantClassName =
+    variant === "longform"
+      ? "mx-auto w-full max-w-3xl space-y-6"
+      : variant === "auth-gated"
+        ? "mx-auto w-full max-w-5xl space-y-6"
+        : "space-y-6";
+
   return (
-    <div className="space-y-6">
+    <div className={cn(variantClassName, containerClassName)}>
       <BreadcrumbJsonLd name={breadcrumbName} path={path} />
       {preface}
       <div className="space-y-2">
@@ -44,12 +56,14 @@ export function FeaturePageShell({
           <span>/</span>
           <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
         </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
-          {title}
+        <div className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-2">
+          <h1 className="min-w-0 text-4xl font-extrabold tracking-tighter">
+            {title}
+          </h1>
           {statusBadge && (
             <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />
           )}
-        </h1>
+        </div>
         {methodology && (
           <p className="text-xs text-muted-foreground">
             Methodology {methodology.version}.{" "}

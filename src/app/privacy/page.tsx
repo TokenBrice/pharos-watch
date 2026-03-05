@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -19,18 +19,14 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <div className="space-y-6 max-w-2xl">
-      <BreadcrumbJsonLd name="Privacy Policy" path="/privacy/" />
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Privacy Policy</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">Privacy Policy</h1>
-        <p className="text-sm text-muted-foreground">Last updated: February 2026</p>
-      </div>
-
+    <FeaturePageShell
+      breadcrumbName="Privacy Policy"
+      path="/privacy/"
+      title="Privacy Policy"
+      variant="longform"
+      containerClassName="max-w-2xl"
+      leadParagraphs={["Last updated: February 2026"]}
+    >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <section className="space-y-2">
           <h2 className="text-lg font-semibold text-foreground">What We Collect</h2>
@@ -93,6 +89,6 @@ export default function PrivacyPage() {
           </p>
         </section>
       </div>
-    </div>
+    </FeaturePageShell>
   );
 }

@@ -1,5 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 export interface MethodologyChangelogEntry {
   version: string;
   title: string;
@@ -21,9 +19,13 @@ function Pill({ children }: { children: React.ReactNode }) {
 export function MethodologyVersionCard({
   entry,
   accentClass,
+  entryId,
+  defaultOpen = false,
 }: {
   entry: MethodologyChangelogEntry;
   accentClass: string;
+  entryId?: string;
+  defaultOpen?: boolean;
 }) {
   const dateLabel = new Date(`${entry.date}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "short",
@@ -33,22 +35,30 @@ export function MethodologyVersionCard({
   });
 
   return (
-    <Card className={`rounded-xl border-l-[3px] ${accentClass}`}>
-      <CardHeader className="space-y-2">
-        <CardTitle as="h2">
-          <span className="flex flex-wrap items-center gap-2">
-            <Pill>{`v${entry.version}`}</Pill>
-            {entry.title}
-            <span className="text-sm font-normal text-muted-foreground">{dateLabel}</span>
-          </span>
-        </CardTitle>
+    <details
+      id={entryId}
+      open={defaultOpen}
+      className={`group rounded-xl border border-border/60 border-l-[3px] bg-card ${accentClass}`}
+    >
+      <summary className="cursor-pointer list-none px-6 py-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Pill>{`v${entry.version}`}</Pill>
+              <h2 className="text-base font-semibold text-foreground">{entry.title}</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">{dateLabel}</p>
+          </div>
+          <span className="text-xs text-muted-foreground group-open:hidden">Expand</span>
+          <span className="hidden text-xs text-muted-foreground group-open:inline">Collapse</span>
+        </div>
         {entry.reconstructed && (
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-muted-foreground">
             Reconstructed from git commit history.
           </p>
         )}
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed">
+      </summary>
+      <div className="space-y-4 border-t border-border/60 px-6 pb-5 pt-4 text-sm text-muted-foreground leading-relaxed">
         <p>{entry.summary}</p>
         <ul className="list-disc list-inside space-y-1">
           {entry.impact.map((item) => (
@@ -58,7 +68,7 @@ export function MethodologyVersionCard({
         <p className="text-xs text-muted-foreground">
           Commits: {entry.commits.map((sha) => `\`${sha}\``).join(", ")}
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </details>
   );
 }

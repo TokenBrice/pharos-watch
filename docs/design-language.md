@@ -65,6 +65,12 @@ Every page follows this hierarchy:
 </main>
 ```
 
+`FeaturePageShell` is the canonical top-of-page primitive for feature and content routes. It now supports:
+- `standard` (default analytics pages),
+- `longform` (narrative/legal pages with narrower measure),
+- `auth-gated` (operator/admin routes),
+with consistent breadcrumb/title/lead spacing and mobile-safe title/status wrapping.
+
 ### Vertical Spacing Scale
 
 | Context | Class | Value |

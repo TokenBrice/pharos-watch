@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { Search } from "lucide-react";
 import { useBlacklistEvents } from "@/hooks/use-blacklist-events";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -12,7 +11,7 @@ import { BlacklistStats } from "@/components/blacklist-stats";
 import { BlacklistChart } from "@/components/blacklist-chart";
 import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -173,35 +172,23 @@ function BlacklistPageInner() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>/</span>
-          <span className="text-foreground">Blacklist Tracker</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter flex items-center gap-3">
-          Blacklist Tracker <FeatureStatusBadge status="mature" version={BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL} />
-        </h1>
-        <p className="text-xs text-muted-foreground">
-          Methodology {BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL}.{" "}
-          <Link
-            href={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
-            className="underline underline-offset-4 hover:text-foreground transition-colors"
-          >
-            Version history &rarr;
-          </Link>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Who got frozen. When. Why it matters.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Centralized stablecoin issuers like Circle and Tether can freeze or destroy tokens at any address.
-          This tracker documents every on-chain blacklist, unblacklist, and destroy event, giving you a
-          transparent record of issuer intervention across Ethereum and Tron.
-        </p>
-      </div>
-
+    <FeaturePageShell
+      breadcrumbName="Blacklist Tracker"
+      path="/blacklist/"
+      title="Blacklist Tracker"
+      statusBadge={{
+        status: "mature",
+        version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+      }}
+      methodology={{
+        version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
+        changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
+      }}
+      leadParagraphs={[
+        "Who got frozen. When. Why it matters.",
+        "Centralized stablecoin issuers like Circle and Tether can freeze or destroy tokens at any address. This tracker documents every on-chain blacklist, unblacklist, and destroy event, giving you a transparent record of issuer intervention across Ethereum and Tron.",
+      ]}
+    >
       <QueryErrorNotice
         error={error}
         hasData={!!events?.length}
@@ -286,7 +273,7 @@ function BlacklistPageInner() {
         <UsdsStatusCard />
         <EurcBlacklistCard />
       </div>
-    </div>
+    </FeaturePageShell>
   );
 }
 

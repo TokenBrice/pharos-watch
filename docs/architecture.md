@@ -159,7 +159,6 @@ src/                              # Next.js frontend (static export)
 │   ├── key-info-card.tsx         # Key info card: peg mechanism, issuer, collateral (detail page)
 │   ├── ai-summary.tsx            # AI-generated editorial summary (detail page)
 │   ├── contract-addresses.tsx    # Contract address display (detail page)
-│   ├── detail-section-nav.tsx    # In-page section navigation (detail page)
 │   ├── peg-gauge.tsx             # Peg score gauge visualization
 │   ├── peg-heatmap.tsx           # Real-time peg deviation heatmap
 │   ├── depeg-feed.tsx            # Depeg event list
@@ -214,6 +213,7 @@ src/                              # Next.js frontend (static export)
 │   ├── page-error.tsx            # Shared error boundary component
 │   ├── create-page-error.tsx     # Factory for route-level error.tsx wrappers
 │   ├── feature-page-shell.tsx    # Shared page header/breadcrumb/status shell for feature routes
+│   ├── longform-scrollspy-nav.tsx # Sticky scrollspy navigator for methodology/changelog long-form pages
 │   ├── methodology-changelog-page.tsx # Shared renderer for methodology changelog pages
 │   ├── methodology-version-card.tsx # Shared changelog version card
 │   ├── stale-data-banner.tsx     # Stale data warning banner
@@ -283,7 +283,7 @@ src/                              # Next.js frontend (static export)
     ├── faq.ts                    # FAQ item type + FAQPage JSON-LD builder
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
     ├── peg-landing.ts            # Peg currency landing page data helpers
-    ├── report-cards.ts           # Report card scoring: 5 dimensions, grade thresholds, weights, computeStressedGrades()
+    ├── report-cards.ts           # Report card scoring: 5 dimension outputs (4 weighted base + peg multiplier), grade thresholds, computeStressedGrades()
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── peg-score.ts              # Composite peg score algorithm (0-100)
     ├── peg-stability.ts          # Per-coin peg stability metrics

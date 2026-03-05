@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
 import {
   ACTIVE_PEGS,
@@ -61,44 +61,32 @@ export default async function PegLandingPage({
   );
 
   return (
-    <div className="space-y-6">
-      <BreadcrumbJsonLd name={`${label} Stablecoins`} path={`/stablecoins/${slug}/`} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            name: `${label} Stablecoins`,
-            description: `${coins.length} stablecoin${coins.length !== 1 ? "s" : ""} pegged to ${PEG_LABELS[pegCurrency]}, tracked by Pharos.`,
-            numberOfItems: coins.length,
-            itemListElement: coins.map((coin, i) => ({
-              "@type": "ListItem",
-              position: i + 1,
-              name: `${coin.name} (${coin.symbol})`,
-              url: `https://pharos.watch/stablecoin/${coin.id}/`,
-            })),
-          }),
-        }}
-      />
-      <div className="space-y-2">
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground"
-        >
-          <Link href="/" className="hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{label} Stablecoins</span>
-        </nav>
-        <h1 className="text-4xl font-extrabold tracking-tighter">
-          {label} Stablecoins
-        </h1>
-        {intro && (
-          <p className="text-sm text-muted-foreground">{intro}</p>
-        )}
-      </div>
+    <FeaturePageShell
+      breadcrumbName={`${label} Stablecoins`}
+      path={`/stablecoins/${slug}/`}
+      title={`${label} Stablecoins`}
+      leadParagraphs={intro ? [intro] : []}
+      preface={(
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              name: `${label} Stablecoins`,
+              description: `${coins.length} stablecoin${coins.length !== 1 ? "s" : ""} pegged to ${PEG_LABELS[pegCurrency]}, tracked by Pharos.`,
+              numberOfItems: coins.length,
+              itemListElement: coins.map((coin, i) => ({
+                "@type": "ListItem",
+                position: i + 1,
+                name: `${coin.name} (${coin.symbol})`,
+                url: `https://pharos.watch/stablecoin/${coin.id}/`,
+              })),
+            }),
+          }}
+        />
+      )}
+    >
 
       <section className="space-y-2">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -123,6 +111,6 @@ export default async function PegLandingPage({
       </section>
 
       <PegLandingClient pegCurrency={pegCurrency} />
-    </div>
+    </FeaturePageShell>
   );
 }

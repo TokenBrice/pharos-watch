@@ -11,14 +11,14 @@ interface FeatureStatusBadgeProps {
 export function FeatureStatusBadge({ status, version }: FeatureStatusBadgeProps) {
   const { label, cls } = FEATURE_STATUS_CONFIG[status];
   return (
-    <span className="inline-flex items-center gap-1.5 tracking-normal font-normal">
-      <Badge variant="outline" className={cls}>
+    <span className="inline-flex max-w-full flex-wrap items-center gap-1.5 tracking-normal font-normal">
+      <Badge variant="outline" className={`${cls} shrink-0`}>
         {label}
       </Badge>
       {version && (
         <Badge
           variant="outline"
-          className="bg-muted/50 text-muted-foreground border-border/60"
+          className="w-fit basis-full bg-muted/50 text-muted-foreground border-border/60 sm:basis-auto"
         >
           {version}
         </Badge>

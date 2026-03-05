@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, type FormEvent } from "react";
+import Link from "next/link";
 import { useStatus } from "@/hooks/use-status";
 import { useHealth } from "@/hooks/use-health";
 import { useEndpointProbes, ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import { API_BASE } from "@/lib/api";
 import { getStatusPageActions, type StatusPageAction } from "@/lib/api-endpoints";
 import type { EndpointProbeResult, CircuitRecord, StatusTransition } from "@/lib/types";
+import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -738,7 +740,13 @@ function AdminKeyForm({ onSubmit }: { onSubmit: (key: string) => void }) {
   }
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+      <p className="max-w-md text-center text-sm text-muted-foreground">
+        Restricted route for Pharos operators. Enter an admin key to access cron telemetry, endpoint probes, and recovery controls.
+      </p>
+      <Link href="/" className="text-sm text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors">
+        Return to dashboard
+      </Link>
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Pharos System Status</CardTitle>
@@ -781,10 +789,30 @@ export default function StatusClient() {
   }, []);
 
   if (!adminKey) {
-    return <AdminKeyForm onSubmit={handleKeySubmit} />;
+    return (
+      <FeaturePageShell
+        breadcrumbName="System Status"
+        path="/status/"
+        title="System Status"
+        variant="auth-gated"
+        leadParagraphs={["Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions."]}
+      >
+        <AdminKeyForm onSubmit={handleKeySubmit} />
+      </FeaturePageShell>
+    );
   }
 
-  return <StatusDashboard adminKey={adminKey} onSignOut={handleSignOut} />;
+  return (
+    <FeaturePageShell
+      breadcrumbName="System Status"
+      path="/status/"
+      title="System Status"
+      variant="auth-gated"
+      leadParagraphs={["Private operator panel for monitoring pipeline health, endpoint reliability, and incident state transitions."]}
+    >
+      <StatusDashboard adminKey={adminKey} onSignOut={handleSignOut} />
+    </FeaturePageShell>
+  );
 }
 
 function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
@@ -832,8 +860,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-extrabold tracking-tighter">Pharos System Status</h1>
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-3">
           <RefreshCountdown key={lastUpdated} onRefresh={handleRefresh} />
           <Button variant="outline" size="sm" onClick={onSignOut}>Sign out</Button>

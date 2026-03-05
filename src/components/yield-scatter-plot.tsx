@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect, useState } from "react";
 import {
   ScatterChart,
   Scatter,
@@ -35,6 +35,20 @@ interface YieldScatterPlotProps {
   onDotClick: (id: string) => void;
 }
 
+function useIsMobile(breakpoint = 640) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: ScatterDataPoint }> }) {
   if (!active || !payload || payload.length === 0) return null;
   const d = payload[0].payload;
@@ -56,6 +70,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 }
 
 export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldScatterPlotProps) {
+  const isMobile = useIsMobile();
   const data = useMemo((): ScatterDataPoint[] => {
     return rankings
       .filter((r) => r.safetyScore !== null)
@@ -101,29 +116,29 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
 
   return (
     <div className="space-y-3">
-      <div className={CHART_HEIGHT}>
+      <div className={`${CHART_HEIGHT} overflow-hidden`}>
         <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <ScatterChart margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+          <ScatterChart margin={isMobile ? { top: 10, right: 8, bottom: 18, left: 8 } : { top: 10, right: 20, bottom: 20, left: 10 }}>
             {/* Quadrant shading */}
             <ReferenceArea
               x1={60} x2={100} y1={riskFreeRate} y2={maxApy}
               fill={CHART_GREEN} fillOpacity={0.05}
-              label={{ value: "Sweet Spot", position: "insideTopRight", fill: CHART_GREEN, fontSize: 11, opacity: 0.7 }}
+              label={isMobile ? undefined : { value: "Sweet Spot", position: "insideTopRight", fill: CHART_GREEN, fontSize: 12, opacity: 0.7 }}
             />
             <ReferenceArea
               x1={0} x2={60} y1={riskFreeRate} y2={maxApy}
               fill={CHART_RED} fillOpacity={0.05}
-              label={{ value: "Danger Zone", position: "insideTopLeft", fill: CHART_RED, fontSize: 11, opacity: 0.7 }}
+              label={isMobile ? undefined : { value: "Danger Zone", position: "insideTopLeft", fill: CHART_RED, fontSize: 12, opacity: 0.7 }}
             />
             <ReferenceArea
               x1={60} x2={100} y1={0} y2={riskFreeRate}
               fill={CHART_BLUE} fillOpacity={0.05}
-              label={{ value: "Play It Safe", position: "insideBottomRight", fill: CHART_BLUE, fontSize: 11, opacity: 0.7 }}
+              label={isMobile ? undefined : { value: "Play It Safe", position: "insideBottomRight", fill: CHART_BLUE, fontSize: 12, opacity: 0.7 }}
             />
             <ReferenceArea
               x1={0} x2={60} y1={0} y2={riskFreeRate}
               fill="#94a3b8" fillOpacity={0.05}
-              label={{ value: "Why Bother?", position: "insideBottomLeft", fill: "#94a3b8", fontSize: 11, opacity: 0.7 }}
+              label={isMobile ? undefined : { value: "Why Bother?", position: "insideBottomLeft", fill: "#94a3b8", fontSize: 12, opacity: 0.7 }}
             />
 
             {/* Risk-free rate reference line */}
@@ -131,7 +146,7 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
               y={riskFreeRate}
               stroke="#94a3b8"
               strokeDasharray="4 4"
-              label={{ value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: "#94a3b8", fontSize: 11 }}
+              label={isMobile ? undefined : { value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: "#94a3b8", fontSize: 12 }}
             />
 
             <XAxis
@@ -139,8 +154,9 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
               dataKey="x"
               domain={[0, 100]}
               name="Safety Score"
-              label={{ value: "Safety Score", position: "insideBottom", offset: -10, fill: "var(--color-muted-foreground)", fontSize: 12 }}
-              tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+              label={isMobile ? undefined : { value: "Safety Score", position: "insideBottom", offset: -10, fill: "var(--color-muted-foreground)", fontSize: 12 }}
+              tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+              ticks={isMobile ? [0, 25, 50, 75, 100] : undefined}
               tickLine={false}
               axisLine={{ stroke: "var(--color-border)" }}
             />
@@ -149,12 +165,13 @@ export function YieldScatterPlot({ rankings, riskFreeRate, onDotClick }: YieldSc
               dataKey="y"
               domain={[0, maxApy]}
               name="APY (%)"
-              label={{ value: "APY %", angle: -90, position: "insideLeft", offset: -5, fill: "var(--color-muted-foreground)", fontSize: 12 }}
-              tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+              label={isMobile ? undefined : { value: "APY %", angle: -90, position: "insideLeft", offset: -5, fill: "var(--color-muted-foreground)", fontSize: 12 }}
+              tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
+              tickCount={isMobile ? 5 : 7}
               tickFormatter={(v: number) => v.toFixed(0)}
               tickLine={false}
               axisLine={{ stroke: "var(--color-border)" }}
-              width={40}
+              width={isMobile ? 34 : 40}
             />
 
             <Tooltip content={<CustomTooltip />} cursor={false} />

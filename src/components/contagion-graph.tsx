@@ -804,42 +804,50 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
           Showing {visibleNodeIds.size} of {nodes.length} dependency-linked stablecoins with {visibleLinks.length} visible edges.
           Adaptive supernode emphasis keeps key hubs centered and their links visually prioritized.
         </p>
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-[10px] text-muted-foreground">Focus</span>
-          <ToggleGroup
-            type="single"
-            value={focusMode}
-            onValueChange={(v) => { if (v) setFocusMode(v as FocusMode); }}
-            variant="outline"
-            size="sm"
-            className="h-7"
-          >
-            <ToggleGroupItem value="all" className="text-[10px]">All</ToggleGroupItem>
-            <ToggleGroupItem value="hub" className="text-[10px]">Hub dependencies</ToggleGroupItem>
-            <ToggleGroupItem value="neighborhood" className="text-[10px]">Selected neighborhood</ToggleGroupItem>
-          </ToggleGroup>
+        <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <span className="shrink-0 text-[10px] text-muted-foreground">Focus</span>
+            <div className="w-0 min-w-0 flex-1 overflow-x-auto sm:w-auto sm:flex-none">
+              <ToggleGroup
+                type="single"
+                value={focusMode}
+                onValueChange={(v) => { if (v) setFocusMode(v as FocusMode); }}
+                variant="outline"
+                size="sm"
+                className="inline-flex h-7 min-w-max"
+              >
+                <ToggleGroupItem value="all" className="text-[10px]">All</ToggleGroupItem>
+                <ToggleGroupItem value="hub" className="text-[10px]">Hub dependencies</ToggleGroupItem>
+                <ToggleGroupItem value="neighborhood" className="text-[10px]">Selected neighborhood</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
 
-          <span className="text-[10px] text-muted-foreground">Min edge</span>
-          <ToggleGroup
-            type="single"
-            value={weakEdgePreset}
-            onValueChange={(v) => { if (v) setWeakEdgePreset(v as WeakEdgePreset); }}
-            variant="outline"
-            size="sm"
-            className="h-7"
-          >
-            <ToggleGroupItem value="off" className="text-[10px]">Off</ToggleGroupItem>
-            <ToggleGroupItem value="3" className="text-[10px]">3%</ToggleGroupItem>
-            <ToggleGroupItem value="5" className="text-[10px]">5%</ToggleGroupItem>
-            <ToggleGroupItem value="8" className="text-[10px]">8%</ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <span className="shrink-0 text-[10px] text-muted-foreground">Min edge</span>
+            <div className="w-0 min-w-0 flex-1 overflow-x-auto sm:w-auto sm:flex-none">
+              <ToggleGroup
+                type="single"
+                value={weakEdgePreset}
+                onValueChange={(v) => { if (v) setWeakEdgePreset(v as WeakEdgePreset); }}
+                variant="outline"
+                size="sm"
+                className="inline-flex h-7 min-w-max"
+              >
+                <ToggleGroupItem value="off" className="text-[10px]">Off</ToggleGroupItem>
+                <ToggleGroupItem value="3" className="text-[10px]">3%</ToggleGroupItem>
+                <ToggleGroupItem value="5" className="text-[10px]">5%</ToggleGroupItem>
+                <ToggleGroupItem value="8" className="text-[10px]">8%</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
 
           {focusMode === "neighborhood" && (
-            <div className="ml-auto flex flex-col items-end gap-1">
+            <div className="flex w-full flex-col gap-1 sm:ml-auto sm:w-auto sm:items-end">
               <label className="flex items-center gap-1 text-[10px] text-muted-foreground">
                 Coin
                 <select
-                  className="h-7 rounded-md border bg-background px-2 text-[11px] text-foreground"
+                  className="h-7 max-w-full rounded-md border bg-background px-2 text-[11px] text-foreground"
                   value={neighborhoodFocusId ?? ""}
                   onChange={(e) => setSelectedNeighborhoodId(e.target.value || null)}
                 >

@@ -10,14 +10,30 @@ const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 const SESSION_PREFIX = "prod-ui-smoke";
 const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
+const MOBILE_WIDTH = 390;
+const MOBILE_HEIGHT = 844;
+const DEFAULT_OVERFLOW_WAIT_MS = 2000;
+const OVERFLOW_ROUTE_DEFAULTS = [
+  "/",
+  "/dependency-map/",
+  "/flows/",
+  "/yield/",
+  "/liquidity/",
+  "/depeg/",
+  "/blacklist/",
+  "/stability-index/",
+  "/safety-scores/",
+];
 
 function parseArgs(argv) {
-  const args = { url: DEFAULT_URL };
+  const args = { url: DEFAULT_URL, skipOverflow: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--url") {
       args.url = argv[i + 1] ?? "";
       i += 1;
+    } else if (arg === "--skip-overflow") {
+      args.skipOverflow = true;
     }
   }
   return args;
@@ -108,11 +124,45 @@ function buildUiEval(waitTimeoutMs) {
 }`;
 }
 
+function getOverflowRoutes() {
+  const fromEnv = (process.env.SMOKE_UI_OVERFLOW_ROUTES ?? "")
+    .split(",")
+    .map((route) => route.trim())
+    .filter(Boolean);
+  return fromEnv.length > 0 ? fromEnv : OVERFLOW_ROUTE_DEFAULTS;
+}
+
+function buildOverflowEval(waitMs) {
+  return `async () => {
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  await delay(${waitMs});
+  const doc = document.documentElement;
+  const body = document.body;
+  const innerWidth = window.innerWidth;
+  const scrollWidth = Math.max(
+    doc?.scrollWidth ?? 0,
+    body?.scrollWidth ?? 0
+  );
+  const delta = scrollWidth - innerWidth;
+  return {
+    path: window.location.pathname,
+    innerWidth,
+    scrollWidth,
+    delta,
+    hasOverflow: delta > 1
+  };
+}`;
+}
+
 async function run() {
-  const { url: rawUrl } = parseArgs(process.argv.slice(2));
+  const { url: rawUrl, skipOverflow } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
   const sessionId = `${SESSION_PREFIX}-${Date.now()}`;
   const waitTimeoutMs = getUiWaitTimeoutMs();
+  const overflowWaitMs = Number.parseInt(process.env.SMOKE_UI_OVERFLOW_WAIT_MS ?? "", 10);
+  const safeOverflowWaitMs = Number.isFinite(overflowWaitMs) && overflowWaitMs > 0
+    ? overflowWaitMs
+    : DEFAULT_OVERFLOW_WAIT_MS;
 
   console.log(`[smoke-ui] Running browser smoke checks against ${url}`);
 
@@ -135,6 +185,29 @@ async function run() {
 
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
+
+    if (!skipOverflow) {
+      const resizeOutput = await runPlaywrightCli(sessionId, ["resize", String(MOBILE_WIDTH), String(MOBILE_HEIGHT)]);
+      ensureNoCliError("resize", resizeOutput);
+
+      const routes = getOverflowRoutes();
+      for (const route of routes) {
+        const routeUrl = new URL(route, url).toString();
+        const gotoOutput = await runPlaywrightCli(sessionId, ["goto", routeUrl]);
+        ensureNoCliError(`goto ${route}`, gotoOutput);
+
+        const overflowOutput = await runPlaywrightCli(sessionId, ["eval", buildOverflowEval(safeOverflowWaitMs)]);
+        ensureNoCliError(`overflow check ${route}`, overflowOutput);
+        const overflowSummary = parseResultJson(overflowOutput);
+
+        assert(
+          !overflowSummary.hasOverflow,
+          `Horizontal overflow detected on ${overflowSummary.path} (${overflowSummary.scrollWidth}px > ${overflowSummary.innerWidth}px)`,
+        );
+        console.log(`[smoke-ui] OK overflow ${overflowSummary.path} (${overflowSummary.scrollWidth}/${overflowSummary.innerWidth})`);
+      }
+    }
+
     console.log("[smoke-ui] All checks passed.");
   } finally {
     try {

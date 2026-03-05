@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
+import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
 import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
@@ -168,25 +169,16 @@ export default function MethodologyPage() {
         </p>
       </div>
 
-      <div className="sticky top-14 md:top-0 z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">Jump to Section</p>
+      <LongformScrollspyNav
+        sections={METHODOLOGY_SECTIONS}
+        railLabel="Jump to Section"
+        navAriaLabel="Methodology section controls"
+        rightSlot={(
           <div className="hidden md:block">
             <MethodologyModeToggle />
           </div>
-        </div>
-        <nav aria-label="Methodology section controls" className="mt-2 flex gap-2 overflow-x-auto scrollbar-none">
-          {METHODOLOGY_SECTIONS.map((section) => (
-            <a
-              key={`sticky-${section.id}`}
-              href={`#${section.id}`}
-              className="shrink-0 whitespace-nowrap rounded-md border border-border/60 bg-background px-2.5 py-1.5 text-xs text-foreground transition-colors hover:border-foreground/30 hover:bg-muted"
-            >
-              {section.label}
-            </a>
-          ))}
-        </nav>
-      </div>
+        )}
+      />
 
       <Card className="rounded-xl border-dashed border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
         <CardHeader className="space-y-2">

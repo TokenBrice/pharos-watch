@@ -195,6 +195,8 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={`Open ${evt.chainName} transaction ${evt.txHash} in explorer`}
+                  title={`View tx ${evt.txHash.slice(0, 10)}... on ${evt.chainName}`}
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
