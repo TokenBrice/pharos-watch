@@ -400,6 +400,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── coingecko-onchain.ts  # CoinGecko Onchain API client (16 chains, pool discovery, locked liquidity)
         ├── twitter.ts            # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
+        ├── backfill-query.ts     # Shared admin backfill query parsing/selection helpers (stablecoin/batch/batchSize)
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
         ├── status-reliability.ts # Status hysteresis, transitions, probe/discrepancy persistence
         ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)

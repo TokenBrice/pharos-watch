@@ -3,9 +3,10 @@ import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
+import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { RATE_LIMITS } from "../lib/rate-limits";
+import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -27,24 +28,16 @@ export const handleBackfillCgPrices = withErrorHandler(
     const authError = await requireAdmin(request, adminSecret);
     if (authError) return authError;
 
-    const singleId = url.searchParams.get("stablecoin");
-
-    let coins;
-    if (singleId) {
-      const match = TRACKED_STABLECOINS.filter((c) => c.id === singleId);
-      if (match.length === 0) {
-        return errorResponse(404, "Stablecoin not found");
-      }
-      coins = match;
-    } else {
-      const batchSize = parseIntParam(url.searchParams.get("batchSize"), DEFAULT_BATCH_SIZE, 1, 1000);
-      const batch = parseIntParam(url.searchParams.get("batch"), 0, 0, 100_000);
-      const start = batch * batchSize;
-      coins = TRACKED_STABLECOINS.slice(start, start + batchSize);
+    const selection = selectBackfillCoins(url, TRACKED_STABLECOINS, {
+      defaultBatchSize: DEFAULT_BATCH_SIZE,
+    });
+    if ("response" in selection) {
+      return selection.response;
     }
+    const coins = selection.coins;
 
     if (coins.length === 0) {
-      return jsonResponse({ message: "No coins in this batch" });
+      return noCoinsInBatchResponse();
     }
 
     let totalPricesFilled = 0;

@@ -2,10 +2,11 @@ import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";
-import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
+import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
+import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -180,25 +181,18 @@ export const handleBackfillSupplyHistory = withErrorHandler(
     const authError = await requireAdmin(request, adminSecret);
     if (authError) return authError;
 
-    const singleId = url.searchParams.get("stablecoin");
     const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
 
-    let coins;
-    if (singleId) {
-      const match = PSI_ELIGIBLE_STABLECOINS.filter((c) => c.id === singleId);
-      if (match.length === 0) {
-        return errorResponse(404, "Stablecoin not found");
-      }
-      coins = match;
-    } else {
-      const batchSize = parseIntParam(url.searchParams.get("batchSize"), DEFAULT_BATCH_SIZE, 1, 1000);
-      const batch = parseIntParam(url.searchParams.get("batch"), 0, 0, 100_000);
-      const start = batch * batchSize;
-      coins = PSI_ELIGIBLE_STABLECOINS.slice(start, start + batchSize);
+    const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
+      defaultBatchSize: DEFAULT_BATCH_SIZE,
+    });
+    if ("response" in selection) {
+      return selection.response;
     }
+    const coins = selection.coins;
 
     if (coins.length === 0) {
-      return jsonResponse({ message: "No coins in this batch" });
+      return noCoinsInBatchResponse();
     }
 
     let totalRows = 0;

@@ -4,7 +4,7 @@ import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../.
 import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
-import { withErrorHandler, errorResponse, jsonResponse, parseIntParam } from "../lib/api-utils";
+import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { requireAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
@@ -12,6 +12,7 @@ import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limits";
 import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
+import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 const BATCH_SIZE = 3;
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
@@ -229,23 +230,17 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   const authError = await requireAdmin(request, adminSecret);
   if (authError) return authError;
 
-  const singleId = url.searchParams.get("stablecoin");
-
-  let coins;
-  if (singleId) {
-    const match = PSI_ELIGIBLE_STABLECOINS.filter((c) => c.id === singleId);
-    if (match.length === 0) {
-      return errorResponse(404, "Stablecoin not found");
-    }
-    coins = match;
-  } else {
-    const batch = parseIntParam(url.searchParams.get("batch"), 0, 0, 100_000);
-    const start = batch * BATCH_SIZE;
-    coins = PSI_ELIGIBLE_STABLECOINS.slice(start, start + BATCH_SIZE);
+  const selection = selectBackfillCoins(url, PSI_ELIGIBLE_STABLECOINS, {
+    defaultBatchSize: BATCH_SIZE,
+    allowBatchSizeOverride: false,
+  });
+  if ("response" in selection) {
+    return selection.response;
   }
+  const coins = selection.coins;
 
   if (coins.length === 0) {
-    return jsonResponse({ message: "No coins in this batch" });
+    return noCoinsInBatchResponse();
   }
 
   // Get peg rates from cached stablecoin data

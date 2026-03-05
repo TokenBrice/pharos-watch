@@ -117,6 +117,19 @@ Three admin endpoints are handled directly in `index.ts` (not via the router):
 | `POST /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
 | `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
 
+### Backfill Query Helper
+
+**File:** `worker/src/lib/backfill-query.ts`
+
+Backfill handlers reuse shared parsing/selection helpers for `stablecoin`, `batch`, and `batchSize` query params:
+- `selectBackfillCoins(...)` resolves single-coin mode (`?stablecoin=<id>`) vs batched mode (`?batch=<n>[&batchSize=<n>]`) with bounded integer parsing.
+- `noCoinsInBatchResponse()` returns the canonical no-op payload `{ "message": "No coins in this batch" }`.
+
+Current consumers:
+- `worker/src/api/backfill-cg-prices.ts`
+- `worker/src/api/backfill-supply-history.ts`
+- `worker/src/api/backfill-depegs.ts`
+
 ---
 
 ## Cron Scheduling
