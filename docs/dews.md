@@ -152,7 +152,8 @@ Score = `min(100, sum of active signal points)`.
 6. Compute DEWS per PSI-eligible coin
 7. Batch write to `stress_signals`
 8. Daily snapshot to `stress_signal_history` (first run of UTC day)
-9. Prune old data
+9. Purge rows for IDs no longer in the current PSI-eligible universe
+10. Prune old data
 
 ---
 
@@ -160,7 +161,7 @@ Score = `min(100, sum of active signal points)`.
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns latest DEWS for all coins.
+**All coins (no params):** Returns latest DEWS for tracked stablecoins only.
 
 ```json
 {
@@ -173,6 +174,8 @@ Score = `min(100, sum of active signal points)`.
 ```
 
 **Single coin:** `?stablecoin=1&days=30` — Returns latest + daily history.
+
+Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
 
 ```json
 {

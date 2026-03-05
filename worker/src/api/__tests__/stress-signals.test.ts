@@ -102,6 +102,16 @@ describe("handleStressSignals contract tests", () => {
     expect(body.error).toContain("Invalid");
   });
 
+  it("rejects untracked stablecoin ID with 404", async () => {
+    const db = mockD1();
+    const url = new URL("https://x/api/stress-signals?stablecoin=999999999&days=7");
+    const res = await handleStressSignals(db, url);
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain("not tracked");
+  });
+
   it("skips malformed rows instead of failing the whole response", async () => {
     const db = mockD1([
       {
@@ -134,5 +144,37 @@ describe("handleStressSignals contract tests", () => {
     expect(body.signals).toHaveProperty("1");
     expect(body.signals).not.toHaveProperty("2");
     expect(body.malformedRows).toBe(1);
+  });
+
+  it("filters out untracked IDs from aggregate responses", async () => {
+    const db = mockD1([
+      {
+        match: "stress_signals",
+        rows: [
+          {
+            stablecoin_id: "1",
+            score: 12,
+            band: "CALM",
+            signals_json: signalsJson,
+            computed_at: nowSec,
+          },
+          {
+            stablecoin_id: "999999999",
+            score: 65,
+            band: "ALERT",
+            signals_json: signalsJson,
+            computed_at: nowSec,
+          },
+        ],
+      },
+    ]);
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      signals: Record<string, unknown>;
+    };
+    expect(body.signals).toHaveProperty("1");
+    expect(body.signals).not.toHaveProperty("999999999");
   });
 });

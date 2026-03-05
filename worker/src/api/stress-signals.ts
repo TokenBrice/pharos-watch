@@ -6,6 +6,7 @@ import {
   parseIntParam,
   jsonResponse,
   safeParse,
+  buildMethodologyEnvelope,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
@@ -15,6 +16,7 @@ import {
   getDepegDewsMethodologyVersionAt,
   toDepegDewsMethodologyVersionLabel,
 } from "@shared/lib/depeg-dews-version";
+import { TRACKED_IDS } from "@shared/lib/stablecoins";
 
 export const handleStressSignals = withErrorHandler(
   "stress-signals",
@@ -25,6 +27,9 @@ export const handleStressSignals = withErrorHandler(
     if (stablecoinId) {
       if (!isValidStablecoinId(stablecoinId)) {
         return errorResponse(400, "Invalid stablecoin ID");
+      }
+      if (!TRACKED_IDS.has(stablecoinId)) {
+        return errorResponse(404, "Stablecoin not tracked");
       }
       // Single coin: latest + daily history
       const latest = await db
@@ -93,15 +98,14 @@ export const handleStressSignals = withErrorHandler(
           : null,
         history: historyRows,
         malformedRows,
-        methodology: {
+        methodology: buildMethodologyEnvelope({
           version: methodologyVersion,
           versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
           currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
           currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
           changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
           asOf: computedAt,
-          isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
-        },
+        }),
       }, addFreshnessHeaders({
         "Cache-Control": CACHE_PROFILES.standard,
       }, computedAt, 900));
@@ -129,6 +133,9 @@ export const handleStressSignals = withErrorHandler(
     let updatedAt = 0;
     let malformedRows = 0;
     for (const row of rows.results) {
+      if (!TRACKED_IDS.has(row.stablecoin_id)) {
+        continue;
+      }
       const parsedSignals = safeParse<Record<string, unknown> | null>(row.signals_json, null);
       if (parsedSignals == null) {
         malformedRows++;
@@ -148,15 +155,14 @@ export const handleStressSignals = withErrorHandler(
     const asOf = updatedAt > 0 ? updatedAt : Math.floor(Date.now() / 1000);
     const methodologyVersion = getDepegDewsMethodologyVersionAt(asOf);
 
-    return jsonResponse({ signals, updatedAt, malformedRows, methodology: {
+    return jsonResponse({ signals, updatedAt, malformedRows, methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf,
-      isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
-    } }, addFreshnessHeaders({
+    }) }, addFreshnessHeaders({
       "Cache-Control": CACHE_PROFILES.standard,
     }, asOf, 900));
   },

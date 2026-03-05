@@ -41,6 +41,7 @@ export async function computeAndStoreDEWS(
   _signal?: AbortSignal,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
+  const eligibleIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((meta) => meta.id));
   const sourceFailures: SourceFailure[] = [];
   const sourceCoverage: Record<string, number> = {};
   let validationFailures = 0;
@@ -466,15 +467,37 @@ export async function computeAndStoreDEWS(
     );
   }
 
-  // 11. Prune old data (7 days for signals, 365 for history)
-  await db
+  let rowsDropped = 0;
+
+  // 11. Remove orphan rows for coins no longer in the PSI universe.
+  if (eligibleIds.size > 0) {
+    const placeholders = Array.from({ length: eligibleIds.size }, () => "?").join(", ");
+    const idBindings = [...eligibleIds];
+
+    const orphanSignals = await db
+      .prepare(`DELETE FROM stress_signals WHERE stablecoin_id NOT IN (${placeholders})`)
+      .bind(...idBindings)
+      .run();
+    rowsDropped += orphanSignals.meta?.changes ?? 0;
+
+    const orphanHistory = await db
+      .prepare(`DELETE FROM stress_signal_history WHERE stablecoin_id NOT IN (${placeholders})`)
+      .bind(...idBindings)
+      .run();
+    rowsDropped += orphanHistory.meta?.changes ?? 0;
+  }
+
+  // 12. Prune old data (7 days for signals, 365 for history)
+  const oldSignals = await db
     .prepare("DELETE FROM stress_signals WHERE computed_at < ?")
     .bind(nowSec - 7 * 86400)
     .run();
-  await db
+  rowsDropped += oldSignals.meta?.changes ?? 0;
+  const oldHistory = await db
     .prepare("DELETE FROM stress_signal_history WHERE snapshot_date < ?")
     .bind(nowSec - 365 * 86400)
     .run();
+  rowsDropped += oldHistory.meta?.changes ?? 0;
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
   if (results.length > 0 && liqHistCoverage < 0.5) {
@@ -494,7 +517,7 @@ export async function computeAndStoreDEWS(
     metadata: JSON.stringify({
       rowsRead: assets.length + dexLiqRows.results.length + liqHistRowsRead,
       rowsWritten: results.length,
-      rowsDropped: 0,
+      rowsDropped,
       sourceCoverage,
       sourceFailures,
       fallbackMode: hardFailures.length > 0 ? "degraded-inputs" : null,

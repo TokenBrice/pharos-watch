@@ -175,4 +175,18 @@ describe("computeAndStoreDEWS", () => {
     };
     expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
   });
+
+  it("purges orphan stress rows for IDs outside the current eligible set", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen);
+
+    await computeAndStoreDEWS(db);
+
+    expect(
+      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signals WHERE stablecoin_id NOT IN")),
+    ).toBe(true);
+    expect(
+      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id NOT IN")),
+    ).toBe(true);
+  });
 });

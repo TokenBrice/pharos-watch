@@ -1281,6 +1281,8 @@ Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
 
 **Single coin:** Add `?stablecoin=ID&days=30` for latest + daily history.
 
+`stablecoin` must be a tracked Pharos stablecoin ID. Untracked IDs return `404` with `{ "error": "Stablecoin not tracked" }`.
+
 **Cache:** standard (`public, s-maxage=300, max-age=60`)
 
 **Query parameters**
@@ -1289,6 +1291,8 @@ Returns Depeg Early Warning Score (DEWS) data for tracked stablecoins.
 |-------|------|---------|-------------|
 | `stablecoin` | `string` | — | Single coin mode: return latest + daily history |
 | `days` | `integer` | `30` | History lookback (max 365) |
+
+Aggregate responses are filtered to tracked stablecoin IDs only, even if stale rows for de-tracked IDs still exist in storage.
 
 **Response (all coins)**
 
