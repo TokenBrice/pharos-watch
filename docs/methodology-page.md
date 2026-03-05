@@ -9,6 +9,7 @@
 - **Route:** `src/app/methodology/page.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Version badges:** imported from per-system version modules in `shared/lib/*-version.ts`
+- **Changelog wrappers:** config-driven route wrappers via `src/app/methodology/changelog-route-factory.tsx`
 
 ---
 
