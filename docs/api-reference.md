@@ -36,11 +36,30 @@ Endpoints backed by the cron cache include these additional headers:
 
 | Profile | `Cache-Control` | Used by |
 |---------|----------------|---------|
-| realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary, mint-burn-events |
+| realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events |
 | standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | per-coin | `public, s-maxage=300, max-age=10` | stablecoin/:id (cache-aside with 5-min per-coin TTL in D1) |
 | slow | `public, s-maxage=3600, max-age=300` | supply-history, dex-liquidity-history, bluechip-ratings, yield-history, safety-score-history, digest-snapshot |
 | no-store | `no-store` | health, status |
+
+---
+
+## Polling Guidance
+
+Recommended minimum polling cadence for external integrations:
+
+| Cache profile | Minimum poll interval | Notes |
+|---------------|-----------------------|-------|
+| realtime | 60 seconds | Polling faster usually re-fetches the same edge-cached payload |
+| standard | 300 seconds | Preferred baseline for most dashboards |
+| per-coin | 300 seconds | `GET /api/stablecoin/:id` is history-heavy; avoid short loops |
+| slow | 3600 seconds | Historical/timeline endpoints should generally be polled hourly |
+| no-store | On-demand only | Health/admin diagnostics; avoid high-frequency polling |
+
+Client best practices:
+- Add interval jitter (`±10%`) to avoid synchronized bursts.
+- Read `X-Data-Age` + `Warning` for freshness/stale decisions.
+- Back off exponentially on `429` and `5xx` responses.
 
 ---
 
@@ -160,6 +179,62 @@ For regular stablecoins the response is the raw DefiLlama stablecoin detail shap
 Non-USD pegs have their `totalCirculatingUSD` values converted to USD using the current token price before caching, so the `totalCirculatingUSD` field always reflects the USD market cap regardless of peg type.
 
 **Error responses:** `502` when DefiLlama/CoinGecko is unavailable and no cached value exists; stale cache is returned in preference to an error.
+
+For integrations that only need current per-coin metrics (without full historical arrays), prefer `GET /api/stablecoin-summary/:id`.
+
+---
+
+### `GET /api/stablecoin-summary/:id`
+
+Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed for integrators that need current price/supply context without transferring full `/api/stablecoin/:id` history payloads.
+
+**Path parameter:** `:id` — Pharos stablecoin ID.
+
+**Cache:** realtime — `X-Data-Age` and `Warning` headers included.
+
+**Response**
+
+```json
+{
+  "id": "1",
+  "name": "Tether",
+  "symbol": "USDT",
+  "pegType": "peggedUSD",
+  "pegMechanism": "fiat-backed",
+  "priceUsd": 1.0001,
+  "priceSource": "defillama+coingecko",
+  "priceConfidence": "high",
+  "supplySource": "defillama",
+  "supplyByPegUsd": { "peggedUSD": 183883564940.52 },
+  "supplyUsd": {
+    "current": 183883564940.52,
+    "prevDay": 183697699496.48,
+    "prevWeek": 183673067145.19,
+    "prevMonth": 185316486043.16,
+    "change1d": 185865444.03,
+    "change7d": 210497795.33,
+    "change30d": -1432921102.64
+  },
+  "chainCount": 17,
+  "updatedAt": 1772718367
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Pharos stablecoin ID |
+| `name` | `string` | Asset name |
+| `symbol` | `string` | Ticker symbol |
+| `pegType` | `string` | Peg type key (`peggedUSD`, `peggedEUR`, etc.) |
+| `pegMechanism` | `string` | Backing/mechanism classification |
+| `priceUsd` | `number \| null` | Current price in USD |
+| `priceSource` | `string` | Price source identifier |
+| `priceConfidence` | `string \| null` | Price confidence label |
+| `supplySource` | `string \| null` | Supply source identifier |
+| `supplyByPegUsd` | `Record<string, number>` | Current supply by peg bucket (USD) |
+| `supplyUsd` | `object` | Aggregate USD supply values and deltas (`current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d`) |
+| `chainCount` | `number` | Number of chains where the asset is deployed |
+| `updatedAt` | `number` | Unix seconds of the stablecoins snapshot used for this response |
 
 ---
 

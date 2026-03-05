@@ -102,9 +102,25 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 | Profile | `Cache-Control` header | Used by |
 |---------|----------------------|---------|
-| Realtime | `public, s-maxage=60, max-age=10` | stablecoins, blacklist, depeg-events, peg-summary, mint-burn-events |
+| Realtime | `public, s-maxage=60, max-age=10` | stablecoins, stablecoin-summary, blacklist, depeg-events, peg-summary, mint-burn-events |
 | Standard | `public, s-maxage=300, max-age=60` | stablecoin-charts, dex-liquidity, usds-status, daily-digest, digest-archive, report-cards, stability-index, yield-rankings, mint-burn-flows, stress-signals |
 | Slow | `public, s-maxage=3600, max-age=300` | supply-history, bluechip-ratings, dex-liquidity-history, yield-history, safety-score-history, digest-snapshot |
+
+### External API Monitoring Baseline
+
+When public API usage grows, monitor these three Cloudflare dimensions first:
+
+1. **Per-endpoint request volume**
+   - Track top paths by requests and trend (`/api/stablecoin/:id`, `/api/stablecoin-summary/:id`, `/api/stablecoins`, `/api/report-cards`).
+   - Alert on sudden spikes (for example, >2x 24h baseline).
+2. **Per-endpoint cache performance**
+   - Track `CF-Cache-Status` mix (HIT vs MISS/BYPASS) and overall cache-hit ratio by path.
+   - Investigate if heavy endpoints drift toward MISS-heavy traffic.
+3. **Per-endpoint error rate**
+   - Track 5xx rate by path (especially `502`/`503`), not just global error rate.
+   - Alert when 5xx ratio breaches your SLO target (for example, >1% for 5 minutes).
+
+This baseline is enough to catch most abuse, regression, or cache-efficiency problems early.
 
 ### Admin Auth
 

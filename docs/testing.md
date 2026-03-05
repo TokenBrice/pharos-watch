@@ -248,6 +248,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `peg-summary.test.ts` | `handlePegSummary` | 503 cache miss, 200 with coins + summary, X-Data-Age |
 | `report-cards.test.ts` | `handleReportCards` | 503 cache miss, 200 with cards/methodology/dependencyGraph |
 | `stablecoin-detail.test.ts` | `handleStablecoinDetail` | Upstream retry/timeout fallback behavior, stale-cache fallback, parse-failure diagnostics |
+| `stablecoin-summary.test.ts` | `handleStablecoinSummary` | 503 cache-miss/corrupt-cache handling, 404 unknown coin, 200 compact supply/price summary + freshness headers |
 | `stablecoin-detail-commodity.test.ts` | `fetchCommodityTokens` helper | DefiLlama-empty fallback to CoinGecko market-chart + failure fallback to empty |
 | `stablecoin-detail-defillama.test.ts` | `normalizeDefiLlamaDetailBody` helper | Non-USD normalization branches, USD no-op behavior, invalid JSON throw path |
 | `daily-digest.test.ts` | `handleDailyDigest` | 200 with null digest, 200 with digest text, X-Data-Age |

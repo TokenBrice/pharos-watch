@@ -1,5 +1,6 @@
 import { handleStablecoins } from "./api/stablecoins";
 import { handleStablecoinDetail } from "./api/stablecoin-detail";
+import { handleStablecoinSummary } from "./api/stablecoin-summary";
 import { handleStablecoinCharts } from "./api/stablecoin-charts";
 import { handleBlacklist } from "./api/blacklist";
 import { handleDepegEvents } from "./api/depeg-events";
@@ -52,6 +53,7 @@ type StaticRouteHandler = (context: RouteContext) => Promise<Response>;
 const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   ["/api/stablecoins", ({ db }) => handleStablecoins(db)],
   ["/api/stablecoin/1", ({ db, ctx }) => handleStablecoinDetail(db, "1", ctx)],
+  ["/api/stablecoin-summary/1", ({ db }) => handleStablecoinSummary(db, "1")],
   ["/api/stablecoin-charts", ({ db }) => handleStablecoinCharts(db)],
   ["/api/blacklist", ({ db, url }) => handleBlacklist(db, url)],
   ["/api/depeg-events", ({ db, url }) => handleDepegEvents(db, url)],
@@ -173,6 +175,19 @@ export function route(
       alchemyApiKey,
       mintBurnFreshnessConfig,
     });
+  }
+
+  // /api/stablecoin-summary/:id — validate ID format to prevent cache pollution
+  const summaryMatch = path.match(/^\/api\/stablecoin-summary\/(.+)$/);
+  if (summaryMatch) {
+    const id = decodeURIComponent(summaryMatch[1]);
+    if (!isValidStablecoinId(id)) {
+      return Promise.resolve(new Response(JSON.stringify({ error: "Invalid stablecoin ID" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }));
+    }
+    return handleStablecoinSummary(db, id);
   }
 
   // /api/stablecoin/:id — validate ID format to prevent cache pollution

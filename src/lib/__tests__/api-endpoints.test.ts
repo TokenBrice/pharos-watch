@@ -12,6 +12,7 @@ describe("api endpoint registry", () => {
     expect(getProbePaths("public")).toEqual([
       "/api/stablecoins",
       "/api/stablecoin/1",
+      "/api/stablecoin-summary/1",
       "/api/stablecoin-charts",
       "/api/peg-summary",
       "/api/health",
@@ -75,6 +76,7 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
     expect(
       validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET")
     ).toBeNull();
