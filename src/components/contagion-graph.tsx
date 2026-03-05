@@ -67,7 +67,6 @@ interface ResolvedLink {
 }
 
 type FocusMode = "all" | "hub" | "neighborhood";
-type WeakEdgePreset = "off" | "3" | "5" | "8";
 
 interface ContagionGraphProps {
   cards: ReportCard[];
@@ -139,12 +138,6 @@ const TYPE_DASH: Record<string, string | undefined> = {
   wrapper: "2 3",
 };
 
-const WEAK_EDGE_THRESHOLD_BY_PRESET: Record<WeakEdgePreset, number> = {
-  off: 0,
-  "3": 0.03,
-  "5": 0.05,
-  "8": 0.08,
-};
 
 function gradeColor(grade: string): string {
   return GRADE_RADAR_COLORS[gradeRange(grade as ReportCardGrade)] ?? GRADE_RADAR_COLORS.NR;
@@ -480,10 +473,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   }, [supernodeState.tierById]);
 
   const [focusMode, setFocusMode] = useState<FocusMode>("all");
-  const [weakEdgePreset, setWeakEdgePreset] = useState<WeakEdgePreset>("5");
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string | null>(null);
-
-  const weakEdgeThreshold = WEAK_EDGE_THRESHOLD_BY_PRESET[weakEdgePreset];
 
   const hubIdsByScore = useMemo(
     () => [...nodes]
@@ -711,11 +701,10 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     [resolvedLinks],
   );
 
-  const { visibleLinks, visibleLinkIndices, visibleNodeIds, hiddenMinorByNode } = useMemo(() => {
+  const { visibleLinks, visibleLinkIndices, visibleNodeIds } = useMemo(() => {
     const scopeNodeIds = new Set<string>();
     const visible = [] as ResolvedLink[];
     const visibleIndices = new Set<number>();
-    const hiddenMinor = new Map<string, number>();
 
     for (const link of resolvedLinks) {
       const inScope = focusMode === "all"
@@ -729,20 +718,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
 
       scopeNodeIds.add(link.srcId);
       scopeNodeIds.add(link.tgtId);
-
-      const touchesHovered = hoveredId !== null && (link.srcId === hoveredId || link.tgtId === hoveredId);
-      const touchesNeighborhood = neighborhoodFocusId !== null
-        && (link.srcId === neighborhoodFocusId || link.tgtId === neighborhoodFocusId);
-      const hideAsWeak = weakEdgeThreshold > 0
-        && link.weight < weakEdgeThreshold
-        && !touchesHovered
-        && !touchesNeighborhood;
-
-      if (hideAsWeak) {
-        hiddenMinor.set(link.srcId, (hiddenMinor.get(link.srcId) ?? 0) + 1);
-        hiddenMinor.set(link.tgtId, (hiddenMinor.get(link.tgtId) ?? 0) + 1);
-        continue;
-      }
 
       visible.push(link);
       visibleIndices.add(link.index);
@@ -768,9 +743,8 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       visibleLinks: visible,
       visibleLinkIndices: visibleIndices,
       visibleNodeIds: nodeIds,
-      hiddenMinorByNode: hiddenMinor,
     };
-  }, [resolvedLinks, focusMode, neighborhoodFocusId, hoveredId, weakEdgeThreshold, nodes, hubIdsByScore]);
+  }, [resolvedLinks, focusMode, neighborhoodFocusId, hoveredId, nodes, hubIdsByScore]);
 
   useEffect(() => {
     if (hoveredEdge !== null && !visibleLinkIndices.has(hoveredEdge)) setHoveredEdge(null);
@@ -819,25 +793,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                 <ToggleGroupItem value="all" className="text-[10px]">All</ToggleGroupItem>
                 <ToggleGroupItem value="hub" className="text-[10px]">Hub dependencies</ToggleGroupItem>
                 <ToggleGroupItem value="neighborhood" className="text-[10px]">Selected neighborhood</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
-
-          <div className="flex w-full items-center gap-2 sm:w-auto">
-            <span className="shrink-0 text-[10px] text-muted-foreground">Min edge</span>
-            <div className="w-0 min-w-0 flex-1 overflow-x-auto sm:w-auto sm:flex-none">
-              <ToggleGroup
-                type="single"
-                value={weakEdgePreset}
-                onValueChange={(v) => { if (v) setWeakEdgePreset(v as WeakEdgePreset); }}
-                variant="outline"
-                size="sm"
-                className="inline-flex h-7 min-w-max"
-              >
-                <ToggleGroupItem value="off" className="text-[10px]">Off</ToggleGroupItem>
-                <ToggleGroupItem value="3" className="text-[10px]">3%</ToggleGroupItem>
-                <ToggleGroupItem value="5" className="text-[10px]">5%</ToggleGroupItem>
-                <ToggleGroupItem value="8" className="text-[10px]">8%</ToggleGroupItem>
               </ToggleGroup>
             </div>
           </div>
@@ -977,7 +932,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const tier = supernodeState.tierById.get(node.id) ?? 0;
               const isHub = tier > 0;
               const isCoreHub = tier === 2;
-              const hiddenMinorCount = hiddenMinorByNode.get(node.id) ?? 0;
               const color = gradeColor(node.grade);
               const innerR = node.r - RING_WIDTH;
               const logoUrl = logos?.[node.id];
@@ -1080,30 +1034,6 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     </text>
                   )}
 
-                  {hiddenMinorCount > 0 && weakEdgeThreshold > 0 && (
-                    <g pointerEvents="none">
-                      <circle
-                        cx={pos.x + node.r * 0.72}
-                        cy={pos.y - node.r * 0.66}
-                        r={6.2}
-                        fill="var(--color-card, #1a1a2e)"
-                        stroke="var(--color-border, #334155)"
-                        strokeWidth={1}
-                        opacity={0.95}
-                      />
-                      <text
-                        x={pos.x + node.r * 0.72}
-                        y={pos.y - node.r * 0.66 + 0.5}
-                        textAnchor="middle"
-                        dominantBaseline="central"
-                        fill="currentColor"
-                        fontSize={8}
-                        fontWeight={700}
-                      >
-                        +{hiddenMinorCount}
-                      </text>
-                    </g>
-                  )}
                 </g>
               );
             })}
