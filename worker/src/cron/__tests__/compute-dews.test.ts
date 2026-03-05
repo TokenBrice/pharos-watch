@@ -62,10 +62,27 @@ import { getCache } from "../../lib/db";
 import { computeDEWS } from "../../lib/dews";
 import { computeAndStoreDEWS } from "../compute-dews";
 
-function makeDb(sqlSeen: string[], opts: { failDexLiquidity?: boolean } = {}): D1Database {
+interface MakeDbOptions {
+  failDexLiquidity?: boolean;
+  signalIds?: string[];
+  historyIds?: string[];
+  onBind?: (sql: string, args: unknown[]) => void;
+}
+
+function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
     const all = async <T>() => {
+      if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
+        return {
+          results: (opts.signalIds ?? ["1"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
+        };
+      }
+      if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history")) {
+        return {
+          results: (opts.historyIds ?? ["1"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
+        };
+      }
       if (/FROM dex_liquidity(?!_history)/.test(sql)) {
         if (opts.failDexLiquidity) {
           throw new Error("dex-liquidity unavailable");
@@ -107,7 +124,10 @@ function makeDb(sqlSeen: string[], opts: { failDexLiquidity?: boolean } = {}): D
     const run = async () => ({ success: true, meta: { changes: 1 } });
 
     return {
-      bind: () => ({ all, first, run }),
+      bind: (...args: unknown[]) => {
+        opts.onBind?.(sql, args);
+        return { all, first, run };
+      },
       all,
       first,
       run,
@@ -178,15 +198,51 @@ describe("computeAndStoreDEWS", () => {
 
   it("purges orphan stress rows for IDs outside the current eligible set", async () => {
     const sqlSeen: string[] = [];
-    const db = makeDb(sqlSeen);
+    const db = makeDb(sqlSeen, {
+      signalIds: ["1", "999"],
+      historyIds: ["1", "999"],
+    });
 
     await computeAndStoreDEWS(db);
 
     expect(
-      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signals WHERE stablecoin_id NOT IN")),
+      sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")),
     ).toBe(true);
     expect(
-      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id NOT IN")),
+      sqlSeen.some((sql) => sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history")),
     ).toBe(true);
+    expect(
+      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")),
+    ).toBe(true);
+    expect(
+      sqlSeen.some((sql) => sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")),
+    ).toBe(true);
+    expect(
+      sqlSeen.some((sql) => sql.includes("NOT IN")),
+    ).toBe(false);
+  });
+
+  it("chunks orphan deletes to avoid D1 bind-variable overflow", async () => {
+    const sqlSeen: string[] = [];
+    const deleteBindCounts: number[] = [];
+    const orphanIds = Array.from({ length: 145 }, (_, i) => `orphan-${i}`);
+    const db = makeDb(sqlSeen, {
+      signalIds: ["1", ...orphanIds],
+      historyIds: ["1", ...orphanIds],
+      onBind: (sql, args) => {
+        if (
+          sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")
+          || sql.includes("DELETE FROM stress_signal_history WHERE stablecoin_id IN")
+        ) {
+          deleteBindCounts.push(args.length);
+        }
+      },
+    });
+
+    await computeAndStoreDEWS(db);
+
+    expect(deleteBindCounts.length).toBeGreaterThan(2);
+    expect(Math.max(...deleteBindCounts)).toBeLessThanOrEqual(90);
+    expect(sqlSeen.some((sql) => sql.includes("NOT IN"))).toBe(false);
   });
 });

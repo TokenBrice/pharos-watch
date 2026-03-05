@@ -25,6 +25,7 @@ for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
 }
 
 const BOOTSTRAP_GRACE_SEC = 24 * 3600;
+const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 
 interface SourceFailure {
   source: string;
@@ -34,6 +35,41 @@ interface SourceFailure {
 
 function isMissingTableError(error: unknown): boolean {
   return String(error).toLowerCase().includes("no such table");
+}
+
+function chunkArray<T>(values: T[], chunkSize: number): T[][] {
+  if (values.length === 0) return [];
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function deleteOrphansForTable(
+  db: D1Database,
+  table: "stress_signals" | "stress_signal_history",
+  eligibleIds: Set<string>,
+): Promise<number> {
+  const existingIds = await db
+    .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
+    .all<{ stablecoin_id: string }>();
+  const orphanIds = (existingIds.results ?? [])
+    .map((row) => row.stablecoin_id)
+    .filter((id) => !eligibleIds.has(id));
+
+  if (orphanIds.length === 0) return 0;
+
+  let deleted = 0;
+  for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
+    const placeholders = idChunk.map(() => "?").join(", ");
+    const result = await db
+      .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${placeholders})`)
+      .bind(...idChunk)
+      .run();
+    deleted += result.meta?.changes ?? 0;
+  }
+  return deleted;
 }
 
 export async function computeAndStoreDEWS(
@@ -470,21 +506,10 @@ export async function computeAndStoreDEWS(
   let rowsDropped = 0;
 
   // 11. Remove orphan rows for coins no longer in the PSI universe.
+  // Keep deletes chunked because D1 has a low bind-variable ceiling.
   if (eligibleIds.size > 0) {
-    const placeholders = Array.from({ length: eligibleIds.size }, () => "?").join(", ");
-    const idBindings = [...eligibleIds];
-
-    const orphanSignals = await db
-      .prepare(`DELETE FROM stress_signals WHERE stablecoin_id NOT IN (${placeholders})`)
-      .bind(...idBindings)
-      .run();
-    rowsDropped += orphanSignals.meta?.changes ?? 0;
-
-    const orphanHistory = await db
-      .prepare(`DELETE FROM stress_signal_history WHERE stablecoin_id NOT IN (${placeholders})`)
-      .bind(...idBindings)
-      .run();
-    rowsDropped += orphanHistory.meta?.changes ?? 0;
+    rowsDropped += await deleteOrphansForTable(db, "stress_signals", eligibleIds);
+    rowsDropped += await deleteOrphansForTable(db, "stress_signal_history", eligibleIds);
   }
 
   // 12. Prune old data (7 days for signals, 365 for history)

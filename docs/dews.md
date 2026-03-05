@@ -152,7 +152,7 @@ Score = `min(100, sum of active signal points)`.
 6. Compute DEWS per PSI-eligible coin
 7. Batch write to `stress_signals`
 8. Daily snapshot to `stress_signal_history` (first run of UTC day)
-9. Purge rows for IDs no longer in the current PSI-eligible universe
+9. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 10. Prune old data
 
 ---
