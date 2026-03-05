@@ -1,10 +1,11 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 import {
-  MINT_BURN_MAJOR_SYMBOLS,
-  MINT_BURN_STALE_WARN_SEC,
-  MINT_BURN_STALE_CRIT_SEC,
+  evaluateMintBurnFreshness,
+  resolveMintBurnFreshnessConfig,
+  type MintBurnFreshnessConfig,
 } from "../lib/mint-burn-health-config";
+import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
 
 interface HealthResponse {
   status: "healthy" | "degraded" | "stale";
@@ -22,24 +23,20 @@ interface HealthResponse {
   circuits: Record<string, CircuitRecord>;
 }
 
-export const handleHealth = withErrorHandler("health", async (db: D1Database): Promise<Response> => {
+interface HealthOptions {
+  mintBurnConfig?: MintBurnFreshnessConfig;
+}
+
+export const handleHealth = withErrorHandler("health", async (db: D1Database, options?: HealthOptions): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
+  const mintBurnConfig = options?.mintBurnConfig ?? resolveMintBurnFreshnessConfig();
   const { caches, worstRatio } = await buildCacheStatuses(db, now);
   let worstRatioMut = worstRatio;
 
   let blacklist = { totalEvents: 0, missingAmounts: 0 };
   try {
-    const counts = await db
-      .prepare(
-        `SELECT
-           COUNT(*) as total,
-           SUM(CASE WHEN amount IS NULL THEN 1 ELSE 0 END) as missing
-         FROM blacklist_events`
-      )
-      .first<{ total: number; missing: number }>();
-    if (counts) {
-      blacklist = { totalEvents: counts.total, missingAmounts: counts.missing };
-    }
+    const counts = await queryBlacklistGapMetrics(db, now);
+    blacklist = { totalEvents: counts.totalEvents, missingAmounts: counts.missingAmounts };
   } catch (err) {
     console.error("[health] Failed to query blacklist counts:", err);
   }
@@ -71,10 +68,10 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
       .prepare(
         `SELECT symbol, MAX(timestamp) as latest
          FROM mint_burn_events
-         WHERE symbol IN (${MINT_BURN_MAJOR_SYMBOLS.map(() => "?").join(",")})
+         WHERE symbol IN (${mintBurnConfig.majorSymbols.map(() => "?").join(",")})
          GROUP BY symbol`,
       )
-      .bind(...MINT_BURN_MAJOR_SYMBOLS)
+      .bind(...mintBurnConfig.majorSymbols)
       .all<{ symbol: string; latest: number | null }>(),
     ]);
     if (counts) {
@@ -83,18 +80,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         if (row.latest != null) latestBySymbol.set(row.symbol, row.latest);
       }
 
-      const staleMajorSymbols: string[] = [];
-      let criticalStaleCount = 0;
-      for (const symbol of MINT_BURN_MAJOR_SYMBOLS) {
-        const latest = latestBySymbol.get(symbol);
-        const ageSec = latest == null ? Number.POSITIVE_INFINITY : now - latest;
-        if (ageSec >= MINT_BURN_STALE_WARN_SEC) {
-          staleMajorSymbols.push(symbol);
-          if (ageSec >= MINT_BURN_STALE_CRIT_SEC) {
-            criticalStaleCount++;
-          }
-        }
-      }
+      const freshness = evaluateMintBurnFreshness(now, latestBySymbol, mintBurnConfig);
 
       const latestEventTs = latestEvent?.latest ?? null;
       mintBurn = {
@@ -102,11 +88,11 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database): P
         latestEventTs,
         latestHourlyTs: latestHourly?.latest ?? null,
         freshnessAgeSec: latestEventTs == null ? null : Math.max(0, now - latestEventTs),
-        majorStaleCount: staleMajorSymbols.length,
-        staleMajorSymbols,
+        majorStaleCount: freshness.staleMajorSymbols.length,
+        staleMajorSymbols: freshness.staleMajorSymbols,
       };
 
-      if (criticalStaleCount > 0 && worstRatioMut < 2.1) {
+      if (freshness.criticalStaleCount > 0 && worstRatioMut < 2.1) {
         worstRatioMut = 2.1; // stale
       }
     }

@@ -11,35 +11,16 @@ import {
   type StatusLevel,
 } from "../lib/status-reliability";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { CRON_INTERVALS } from "../lib/cron-schedule";
+import {
+  BLACKLIST_RECENT_WINDOW_SEC,
+  STATUS_BLACKLIST_THRESHOLDS,
+  STATUS_ONCHAIN_THRESHOLDS,
+} from "../lib/status-thresholds";
+import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
 import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse } from "../../../src/lib/types";
 
 // --- Config ---
-
-const CRON_INTERVALS: Record<string, number> = {
-  "sync-stablecoins": 900,
-  "sync-stablecoin-charts": 900,
-  "sync-blacklist": 1200,
-  "sync-mint-burn": 1200,
-  "sync-dex-liquidity": 1800,
-  "sync-usds-status": 86400,
-  "sync-bluechip": 86400,
-  "sync-fx-rates": 900,
-  "daily-digest": 86400,
-  "snapshot-supply": 86400,
-  "stability-index": 900,
-  "snapshot-psi": 86400,
-  "sync-yield-data": 1800,
-  "fetch-tbill-rate": 86400,
-  "compute-dews": 900,
-  "status-self-check": 900,
-};
-
-const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
-const BLACKLIST_MISSING_RATIO_DEGRADED = 0.005; // 0.5%
-const BLACKLIST_MISSING_RATIO_STALE = 0.02; // 2%
-const BLACKLIST_MISSING_RECENT_STALE = 25;
-const ONCHAIN_RATIO_DEGRADED = 0.1; // 10% of tracked coins
-const ONCHAIN_RATIO_STALE = 0.25; // 25% of tracked coins
 
 const STATUS_SEVERITY: Record<StatusLevel, number> = {
   healthy: 0,
@@ -264,18 +245,18 @@ async function computeRawStatus(
 
   const dataQualityStatus: StatusResponse["dataQualityStatus"] =
     missingPriceRatio > 0.4 ||
-    blacklistMissingRatio >= BLACKLIST_MISSING_RATIO_STALE ||
-    blacklistRecentMissing >= BLACKLIST_MISSING_RECENT_STALE ||
-    staleOnchainSupply >= 10 ||
-    onchainSupplyDivergences >= 25 ||
-    staleOnchainRatio >= ONCHAIN_RATIO_STALE ||
-    onchainDivergenceRatio >= ONCHAIN_RATIO_STALE
+    blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
+    blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale ||
+    staleOnchainSupply >= STATUS_ONCHAIN_THRESHOLDS.staleAbsoluteStale ||
+    onchainSupplyDivergences >= STATUS_ONCHAIN_THRESHOLDS.divergenceAbsoluteStale ||
+    staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
+    onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
       ? "stale"
       : missingPriceRatio > 0.15 ||
           blacklistRecentMissing > 0 ||
-          blacklistMissingRatio >= BLACKLIST_MISSING_RATIO_DEGRADED ||
-          staleOnchainRatio >= ONCHAIN_RATIO_DEGRADED ||
-          onchainDivergenceRatio >= ONCHAIN_RATIO_DEGRADED
+          blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded ||
+          staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
+          onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
         ? "degraded"
         : "healthy";
 
@@ -369,7 +350,10 @@ async function computeRawStatus(
       threshold: 0.15,
     });
   }
-  if (blacklistMissingRatio >= BLACKLIST_MISSING_RATIO_STALE || blacklistRecentMissing >= BLACKLIST_MISSING_RECENT_STALE) {
+  if (
+    blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale ||
+    blacklistRecentMissing >= STATUS_BLACKLIST_THRESHOLDS.missingRecentStale
+  ) {
     pushCause(dataQualityCauses, {
       code: "blacklist_gaps_stale",
       layer: "data-quality",
@@ -377,9 +361,12 @@ async function computeRawStatus(
       message: `Blacklist amount gaps exceed stale thresholds (ratio=${formatRatio(blacklistMissingRatio)}, recent=${blacklistRecentMissing}).`,
       metric: "blacklistMissingRatio",
       value: blacklistMissingRatio,
-      threshold: BLACKLIST_MISSING_RATIO_STALE,
+      threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale,
     });
-  } else if (blacklistRecentMissing > 0 || blacklistMissingRatio >= BLACKLIST_MISSING_RATIO_DEGRADED) {
+  } else if (
+    blacklistRecentMissing > 0 ||
+    blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
+  ) {
     pushCause(dataQualityCauses, {
       code: "blacklist_gaps_degraded",
       layer: "data-quality",
@@ -387,11 +374,14 @@ async function computeRawStatus(
       message: `Recent or elevated blacklist amount gaps detected (ratio=${formatRatio(blacklistMissingRatio)}, recent=${blacklistRecentMissing}).`,
       metric: "blacklistMissingRatio",
       value: blacklistMissingRatio,
-      threshold: BLACKLIST_MISSING_RATIO_DEGRADED,
+      threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded,
     });
   }
   if (hasActiveOnchainMonitor) {
-    if (staleOnchainRatio >= ONCHAIN_RATIO_STALE || onchainDivergenceRatio >= ONCHAIN_RATIO_STALE) {
+    if (
+      staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale ||
+      onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioStale
+    ) {
       pushCause(dataQualityCauses, {
         code: "onchain_integrity_stale",
         layer: "data-quality",
@@ -399,9 +389,12 @@ async function computeRawStatus(
         message: `On-chain integrity stale (stale=${formatRatio(staleOnchainRatio)}, divergence=${formatRatio(onchainDivergenceRatio)}).`,
         metric: "onchainStaleRatio",
         value: staleOnchainRatio,
-        threshold: ONCHAIN_RATIO_STALE,
+        threshold: STATUS_ONCHAIN_THRESHOLDS.ratioStale,
       });
-    } else if (staleOnchainRatio >= ONCHAIN_RATIO_DEGRADED || onchainDivergenceRatio >= ONCHAIN_RATIO_DEGRADED) {
+    } else if (
+      staleOnchainRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded ||
+      onchainDivergenceRatio >= STATUS_ONCHAIN_THRESHOLDS.ratioDegraded
+    ) {
       pushCause(dataQualityCauses, {
         code: "onchain_integrity_degraded",
         layer: "data-quality",
@@ -409,7 +402,7 @@ async function computeRawStatus(
         message: `On-chain integrity degraded (stale=${formatRatio(staleOnchainRatio)}, divergence=${formatRatio(onchainDivergenceRatio)}).`,
         metric: "onchainStaleRatio",
         value: staleOnchainRatio,
-        threshold: ONCHAIN_RATIO_DEGRADED,
+        threshold: STATUS_ONCHAIN_THRESHOLDS.ratioDegraded,
       });
     }
   } else {
@@ -531,36 +524,10 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
   let blacklistMissingAmounts = 0;
   let blacklistRecentMissingAmounts = 0;
   try {
-    const bl = await db
-      .prepare(
-        `SELECT
-           COUNT(*) as total,
-           SUM(
-             CASE
-               WHEN amount IS NULL
-                 AND NOT (chain_id = 'tron' AND event_type IN ('blacklist', 'unblacklist'))
-               THEN 1
-               ELSE 0
-             END
-           ) as missing,
-           SUM(
-             CASE
-               WHEN amount IS NULL
-                 AND NOT (chain_id = 'tron' AND event_type IN ('blacklist', 'unblacklist'))
-                 AND timestamp >= ?
-               THEN 1
-               ELSE 0
-             END
-           ) as missing_recent
-         FROM blacklist_events`
-      )
-      .bind(now - BLACKLIST_RECENT_WINDOW_SEC)
-      .first<{ total: number; missing: number; missing_recent: number }>();
-    if (bl) {
-      blacklistTotal = bl.total;
-      blacklistMissingAmounts = bl.missing ?? 0;
-      blacklistRecentMissingAmounts = bl.missing_recent ?? 0;
-    }
+    const gaps = await queryBlacklistGapMetrics(db, now, BLACKLIST_RECENT_WINDOW_SEC);
+    blacklistTotal = gaps.totalEvents;
+    blacklistMissingAmounts = gaps.missingAmounts;
+    blacklistRecentMissingAmounts = gaps.recentMissingAmounts;
   } catch (e) {
     console.error("[status] Failed to query blacklist gaps:", e);
   }

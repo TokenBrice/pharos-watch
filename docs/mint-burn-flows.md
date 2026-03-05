@@ -7,7 +7,7 @@ Operational freshness configuration is shared via `worker/src/lib/mint-burn-heal
 - warning threshold (`6h`)
 - critical threshold (`24h`)
 
-The scheduler (`worker/src/index.ts`) applies env overrides on top of these defaults; `/api/health` uses the same default baseline for status evaluation.
+The scheduler (`worker/src/index.ts`) applies env overrides on top of these defaults, and `/api/health` uses the same resolved config for status evaluation.
 
 ---
 

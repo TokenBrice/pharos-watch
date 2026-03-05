@@ -25,6 +25,7 @@ import { validatePayloadWithSchema } from "../lib/api-utils";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
+const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
 
 interface DlPool {
   pool: string;
@@ -175,16 +176,30 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     outputMode: "map",
   });
   const safetyScores = safetySnapshot.scores;
+  const safetyCoverageRatio =
+    TRACKED_STABLECOINS.length > 0 ? safetyScores.size / TRACKED_STABLECOINS.length : 1;
+  const safetySnapshotDegraded =
+    safetyScores.size === 0 || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+
+  if (safetySnapshotDegraded) {
+    console.warn(
+      `[sync-yield-data] Safety snapshot coverage degraded: ${safetyScores.size}/${TRACKED_STABLECOINS.length} (${(safetyCoverageRatio * 100).toFixed(1)}%)`,
+    );
+  }
 
   // Cache safety scores for other consumers (flow API, digest, etc.)
   const scoresObj: Record<string, { score: number; grade: string }> = {};
   for (const [id, val] of safetyScores) {
     scoresObj[id] = val;
   }
-  await setCache(db, "report_card_cache", JSON.stringify({
-    scores: scoresObj,
-    updatedAt: startSec,
-  }));
+  if (!safetySnapshotDegraded) {
+    await setCache(db, "report_card_cache", JSON.stringify({
+      scores: scoresObj,
+      updatedAt: startSec,
+    }));
+  } else {
+    console.warn("[sync-yield-data] Skipped report_card_cache write due to degraded safety snapshot");
+  }
 
   // 5. Resolve yield for each coin
   const resolved: { id: string; symbol: string; yield: ResolvedYield | null }[] = [];
@@ -617,18 +632,41 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     rankingsPayload,
     "sync-yield-data:yield-rankings",
   );
-  if (validation.ok) {
+  const degradationReasons: string[] = [];
+  if (safetySnapshotDegraded) {
+    degradationReasons.push("safety-snapshot-coverage");
+  }
+
+  let validationFailures = 0;
+  if (validation.ok && !safetySnapshotDegraded) {
     await setCache(db, "yield-rankings", JSON.stringify(validation.data));
-  } else {
+  } else if (!validation.ok) {
+    validationFailures++;
+    degradationReasons.push("schema-validation-failed");
     console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
+  } else {
+    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to degraded safety snapshot");
   }
 
   console.log(`[sync-yield-data] Updated ${updatedCount} coins (${yieldCoins.length} yield-bearing + auto-discovered)`);
+  const status = degradationReasons.length > 0 ? "degraded" : "ok";
   return {
     itemCount: updatedCount,
-    metadata: validation.ok
-      ? `${updatedCount} coins, rf=${riskFreeRate}%`
-      : `${updatedCount} coins, rf=${riskFreeRate}%, cacheWriteSkipped=schema-validation-failed`,
+    ...(status === "degraded" ? { status: "degraded" as const } : {}),
+    metadata: JSON.stringify({
+      rowsRead: yieldCoins.length,
+      rowsWritten: updatedCount,
+      rowsDropped: 0,
+      sourceCoverage: {
+        safetyScoresComputed: safetyScores.size,
+        safetyScoresExpected: TRACKED_STABLECOINS.length,
+        safetyCoverageRatio: Number(safetyCoverageRatio.toFixed(4)),
+      },
+      fallbackMode: degradationReasons.length > 0 ? degradationReasons.join(",") : null,
+      validationFailures,
+      riskFreeRate,
+      cacheWriteSkipped: !validation.ok || safetySnapshotDegraded,
+    }),
   };
 }
 

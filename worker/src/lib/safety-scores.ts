@@ -10,10 +10,11 @@ import {
 } from "../../../src/lib/report-cards";
 import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
 import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
-import type { DexLiquidityData, PegSummaryCoin, StablecoinData } from "../../../src/lib/types";
+import type { PegSummaryCoin, StablecoinData } from "../../../src/lib/types";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { getFirstSeenDates } from "./db";
 import { loadStablecoinsCache } from "./stablecoins-cache";
+import { loadDexLiquidityMap } from "./dex-liquidity";
 
 interface SafetyResult {
   score: number;
@@ -46,14 +47,6 @@ type SafetyScoresResultFull = {
 };
 
 export type SafetyScoresSnapshotResult = SafetyScoresResultMap | SafetyScoresResultFull;
-
-interface DexLiquidityRow {
-  stablecoin_id: string;
-  liquidity_score: number | null;
-  concentration_hhi: number | null;
-  pool_count: number;
-  chain_count: number;
-}
 
 function toMapResult(scores: Map<string, SafetyResult>): SafetyScoresResultMap {
   return { mode: "map", scores };
@@ -91,12 +84,11 @@ export async function computeSafetyScoresSnapshot(
 
     const nowSec = Math.floor(Date.now() / 1000);
     const fourYearsAgoSec = nowSec - Math.ceil(4 * 365.25 * 86400);
-    const [eventsResult, dexLiqResult, firstSeenMap] = await Promise.all([
+    const [eventsResult, dexLiqMap, firstSeenMap] = await Promise.all([
       db.prepare("SELECT * FROM depeg_events WHERE started_at > ? ORDER BY started_at DESC")
         .bind(fourYearsAgoSec)
         .all<DepegRow>(),
-      db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity")
-        .all<DexLiquidityRow>(),
+      loadDexLiquidityMap(db),
       getFirstSeenDates(db),
     ]);
 
@@ -106,16 +98,6 @@ export async function computeSafetyScoresSnapshot(
       const list = eventsByCoin.get(event.stablecoinId) ?? [];
       list.push(event);
       eventsByCoin.set(event.stablecoinId, list);
-    }
-
-    const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
-    for (const row of dexLiqResult.results ?? []) {
-      dexLiqMap[row.stablecoin_id] = {
-        liquidityScore: row.liquidity_score,
-        concentrationHhi: row.concentration_hhi,
-        poolCount: row.pool_count,
-        chainCount: row.chain_count,
-      };
     }
 
     const overallScores = new Map<string, number>();

@@ -1,7 +1,6 @@
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/lib/psi-eligible";
 import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "../../../src/lib/peg-rates";
-import { getCache } from "../lib/db";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { isReasonablePrice } from "../cron/enrich-prices";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
@@ -10,9 +9,10 @@ import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limits";
-import type { StablecoinData, StablecoinMeta } from "../../../src/lib/types";
+import type { StablecoinMeta } from "../../../src/lib/types";
 import { sumPegBuckets } from "../../../src/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 const BATCH_SIZE = 3;
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
@@ -244,19 +244,23 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   }
 
   // Get peg rates from cached stablecoin data
-  const cached = await getCache(db, "stablecoins");
   let pegRates: Record<string, number> = { peggedUSD: 1 };
   let fxRates: Record<string, number> | undefined;
 
-  if (cached) {
-    try {
-      const data = JSON.parse(cached.value) as { peggedAssets: StablecoinData[]; fxFallbackRates?: Record<string, number> };
-      const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
-      ({ rates: pegRates } = derivePegRates(data.peggedAssets, metaById, data.fxFallbackRates));
-      fxRates = data.fxFallbackRates;
-    } catch (err) {
-      console.error("[backfill-depegs] Failed to parse peg rates from cache:", err);
-    }
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  if (stablecoinsCache.ok && stablecoinsCache.warningReason) {
+    console.warn(`[backfill-depegs] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
+  } else if (!stablecoinsCache.ok) {
+    console.warn(`[backfill-depegs] stablecoins cache unavailable (${stablecoinsCache.reason})`);
+  }
+  if (stablecoinsCache.ok) {
+    const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
+    ({ rates: pegRates } = derivePegRates(
+      stablecoinsCache.payload.peggedAssets,
+      metaById,
+      stablecoinsCache.payload.fxFallbackRates,
+    ));
+    fxRates = stablecoinsCache.payload.fxFallbackRates;
   }
 
   // Filter to processable coins (skip NAV tokens)

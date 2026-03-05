@@ -2,14 +2,14 @@
 // (same pattern as stability-index).
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
-import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/lib/psi-eligible";
 import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { getCache, batchExecute } from "../lib/db";
+import { batchExecute } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput, PoolEntry } from "../lib/dews";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
@@ -24,38 +24,105 @@ for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
   for (const id of ids) BLACKLIST_ID_TO_SYMBOL.set(id, sym);
 }
 
+const BOOTSTRAP_GRACE_SEC = 24 * 3600;
+
+interface SourceFailure {
+  source: string;
+  reason: string;
+  bootstrapAllowed: boolean;
+}
+
+function isMissingTableError(error: unknown): boolean {
+  return String(error).toLowerCase().includes("no such table");
+}
+
 export async function computeAndStoreDEWS(
   db: D1Database,
   _signal?: AbortSignal,
 ): Promise<CronResult> {
   const nowSec = Math.floor(Date.now() / 1000);
+  const sourceFailures: SourceFailure[] = [];
+  const sourceCoverage: Record<string, number> = {};
+  let validationFailures = 0;
 
   // 1. Read stablecoins cache
-  const stablecoinsCache = await getCache(db, "stablecoins");
-  if (!stablecoinsCache) {
-    return { metadata: "skipped: no stablecoins cache" };
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  if (!stablecoinsCache.ok) {
+    const failure: SourceFailure = {
+      source: "stablecoins-cache",
+      reason: stablecoinsCache.reason,
+      bootstrapAllowed: false,
+    };
+    return {
+      itemCount: 0,
+      status: "degraded",
+      metadata: JSON.stringify({
+        rowsRead: 0,
+        rowsWritten: 0,
+        rowsDropped: 0,
+        sourceCoverage: { stablecoins: 0 },
+        sourceFailures: [failure],
+        fallbackMode: "stablecoins-cache-unavailable",
+        validationFailures: 1,
+      }),
+    };
   }
 
-  const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-  const assets = parsed.peggedAssets;
+  if (stablecoinsCache.warningReason) {
+    console.warn(`[dews] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
+  }
+
+  const assets = stablecoinsCache.payload.peggedAssets;
+  sourceCoverage.stablecoins = assets.length;
   const assetById = new Map(assets.map((a) => [a.id, a]));
+  const bootstrapWindowActive =
+    stablecoinsCache.updatedAt != null && (nowSec - stablecoinsCache.updatedAt) <= BOOTSTRAP_GRACE_SEC;
+
+  const registerSourceFailure = (
+    source: string,
+    error: unknown,
+    options?: { bootstrapAllowed?: boolean },
+  ): void => {
+    const bootstrapAllowed = options?.bootstrapAllowed ?? false;
+    sourceFailures.push({
+      source,
+      reason: String(error),
+      bootstrapAllowed,
+    });
+    console.warn(`[dews] ${source} unavailable${bootstrapAllowed ? " (bootstrap-allowed)" : ""}:`, error);
+  };
 
   // Derive peg rates for non-USD reference prices
   const { rates: pegRates } = derivePegRates(assets, PSI_ELIGIBLE_META_BY_ID);
 
   // 2. Read dex_liquidity
-  const dexLiqRows = await db
-    .prepare(
-      "SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd FROM dex_liquidity",
-    )
-    .all<{
+  let dexLiqRows = {
+    results: [] as Array<{
       stablecoin_id: string;
       weighted_balance_ratio: number | null;
       avg_pool_stress: number | null;
       top_pools_json: string | null;
       liquidity_score: number | null;
       total_tvl_usd: number | null;
-    }>();
+    }>,
+  };
+  try {
+    dexLiqRows = await db
+      .prepare(
+        "SELECT stablecoin_id, weighted_balance_ratio, avg_pool_stress, top_pools_json, liquidity_score, total_tvl_usd FROM dex_liquidity",
+      )
+      .all<{
+        stablecoin_id: string;
+        weighted_balance_ratio: number | null;
+        avg_pool_stress: number | null;
+        top_pools_json: string | null;
+        liquidity_score: number | null;
+        total_tvl_usd: number | null;
+      }>();
+  } catch (error) {
+    registerSourceFailure("dex-liquidity", error);
+  }
+  sourceCoverage.dexLiquidity = dexLiqRows.results.length;
   const dexLiqMap = new Map(dexLiqRows.results.map((r) => [r.stablecoin_id, r]));
 
   // 3. Read dex_prices
@@ -65,8 +132,12 @@ export async function computeAndStoreDEWS(
       .prepare("SELECT stablecoin_id, dex_price_usd FROM dex_prices")
       .all<{ stablecoin_id: string; dex_price_usd: number }>();
     dexPriceMap = new Map(dexPriceRows.results.map((r) => [r.stablecoin_id, r.dex_price_usd]));
-  } catch {
-    /* table may not exist */
+    sourceCoverage.dexPrices = dexPriceRows.results.length;
+  } catch (error) {
+    registerSourceFailure("dex-prices", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
+    sourceCoverage.dexPrices = 0;
   }
 
   // 4. Read dex_liquidity_history (7d lookback)
@@ -98,12 +169,16 @@ export async function computeAndStoreDEWS(
         });
       }
     }
-  } catch {
-    /* table may not exist */
+  } catch (error) {
+    registerSourceFailure("dex-liquidity-history", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
   }
+  sourceCoverage.dexLiquidityHistory = liqHistRowsRead;
 
   // 5. Read blacklist_events counts (24h + 7d)
   const blacklistCounts = new Map<string, { count24h: number; count7d: number }>();
+  let blacklistRowsRead = 0;
   try {
     const bl7d = await db
       .prepare(
@@ -117,6 +192,7 @@ export async function computeAndStoreDEWS(
       )
       .bind(nowSec - 86400)
       .all<{ stablecoin: string; cnt: number }>();
+    blacklistRowsRead = (bl7d.results?.length ?? 0) + (bl24h.results?.length ?? 0);
 
     const map7d = new Map(bl7d.results.map((r) => [r.stablecoin, r.cnt]));
     const map24h = new Map(bl24h.results.map((r) => [r.stablecoin, r.cnt]));
@@ -127,13 +203,16 @@ export async function computeAndStoreDEWS(
         count7d,
       });
     }
-  } catch {
-    /* blacklist_events may not exist */
+  } catch (error) {
+    registerSourceFailure("blacklist-events", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
   }
+  sourceCoverage.blacklistEvents = blacklistRowsRead;
 
   // 6. Read previous stress_signals (for smoothing S_pool, S_diverg)
   const prevSignals = new Map<string, Record<string, { value: number }>>();
-  const prevBandMap = new Map<string, string>();
+  let prevSignalRowsRead = 0;
   try {
     const prevRows = await db
       .prepare(
@@ -145,17 +224,20 @@ export async function computeAndStoreDEWS(
          ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
       )
       .all<{ stablecoin_id: string; signals_json: string; band: string }>();
+    prevSignalRowsRead = prevRows.results.length;
     for (const row of prevRows.results) {
       try {
         prevSignals.set(row.stablecoin_id, JSON.parse(row.signals_json));
       } catch {
-        /* ignore malformed JSON */
+        validationFailures++;
       }
-      if (row.band) prevBandMap.set(row.stablecoin_id, row.band);
     }
-  } catch {
-    /* table may not exist on first run */
+  } catch (error) {
+    registerSourceFailure("stress-signals", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
   }
+  sourceCoverage.previousStressSignals = prevSignalRowsRead;
 
   // 7. Read mint/burn hourly aggregates (24h + 30d baselines)
   const mintBurnMap = new Map<
@@ -168,6 +250,7 @@ export async function computeAndStoreDEWS(
       dataAgeDays: number;
     }
   >();
+  let mintBurnRowsRead = 0;
   try {
     const mb24h = await db
       .prepare(
@@ -194,6 +277,7 @@ export async function computeAndStoreDEWS(
         avg_mint: number;
         days_with_data: number;
       }>();
+    mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
     const mb24hMap = new Map(mb24h.results.map((r) => [r.stablecoin_id, r]));
     const mb30dMap = new Map(mb30d.results.map((r) => [r.stablecoin_id, r]));
@@ -208,23 +292,35 @@ export async function computeAndStoreDEWS(
         dataAgeDays: d30?.days_with_data ?? 0,
       });
     }
-  } catch {
-    /* mint_burn_hourly may not exist */
+  } catch (error) {
+    registerSourceFailure("mint-burn-hourly", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
   }
+  sourceCoverage.mintBurnHourly = mintBurnRowsRead;
 
   // 7b. Read yield warnings
   const yieldWarnings = new Map<string, string[]>();
+  let yieldWarningRowsRead = 0;
   try {
     const yieldRows = await db
       .prepare("SELECT stablecoin_id, warning_signals FROM yield_data WHERE warning_signals IS NOT NULL")
       .all<{ stablecoin_id: string; warning_signals: string }>();
+    yieldWarningRowsRead = yieldRows.results.length;
     for (const row of yieldRows.results) {
       try {
         const parsed = JSON.parse(row.warning_signals);
         if (Array.isArray(parsed)) yieldWarnings.set(row.stablecoin_id, parsed);
-      } catch { /* ignore */ }
+      } catch {
+        validationFailures++;
+      }
     }
-  } catch { /* yield_data may not have column yet */ }
+  } catch (error) {
+    registerSourceFailure("yield-data", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
+  }
+  sourceCoverage.yieldWarnings = yieldWarningRowsRead;
 
   // 7c. Read latest PSI score (from previous cycle)
   let latestPsiScore: number | null = null;
@@ -233,7 +329,11 @@ export async function computeAndStoreDEWS(
       .prepare("SELECT score FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
       .first<{ score: number }>();
     if (psiRow) latestPsiScore = psiRow.score;
-  } catch { /* table may not exist */ }
+  } catch (error) {
+    registerSourceFailure("stability-index-samples", error, {
+      bootstrapAllowed: isMissingTableError(error) && bootstrapWindowActive,
+    });
+  }
 
   // 8. Compute DEWS for each eligible coin
   const results: {
@@ -278,7 +378,7 @@ export async function computeAndStoreDEWS(
           balanceRatio: ((p.extra as Record<string, unknown>)?.balanceRatio as number) ?? 1.0,
         }));
       } catch {
-        /* ignore malformed JSON */
+        validationFailures++;
       }
     }
 
@@ -383,16 +483,22 @@ export async function computeAndStoreDEWS(
     );
   }
 
+  const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
+  sourceCoverage.liquidityHistoryCoveragePct = Number((liqHistCoverage * 100).toFixed(2));
+  sourceCoverage.coinsComputed = results.length;
+
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
   return {
     itemCount: results.length,
+    ...(hardFailures.length > 0 ? { status: "degraded" as const } : {}),
     metadata: JSON.stringify({
       rowsRead: assets.length + dexLiqRows.results.length + liqHistRowsRead,
       rowsWritten: results.length,
       rowsDropped: 0,
-      sourceCoverage: { liquidityHistory7d: Number(liqHistCoverage.toFixed(4)) },
-      fallbackMode: null,
-      validationFailures: 0,
+      sourceCoverage,
+      sourceFailures,
+      fallbackMode: hardFailures.length > 0 ? "degraded-inputs" : null,
+      validationFailures,
     }),
   };
 }

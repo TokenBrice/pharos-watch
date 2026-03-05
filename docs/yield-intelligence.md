@@ -280,7 +280,7 @@ CREATE TABLE yield_history (
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
 4. Read cached risk-free rate from D1
-5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`
+5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; classify safety input as degraded when coverage is empty or below the minimum ratio
 6. Resolve APY for each coin (Tier 1 → 2 → 3, potentially multiple sources per coin)
 7. Determine `is_best` per coin: source with highest `currentApy` wins
 8. Batch preload `yield_history` datasets (7d previous exchange rates, previous TVL rows, and 30d APY history), group in memory, then compute trailing averages and PYS without per-coin query loops
@@ -288,7 +288,9 @@ CREATE TABLE yield_history (
 10. Batch upsert `yield_data` (all sources) + insert `yield_history` point (best source only)
 11. Purge stale `is_best = 0` rows not written in this run
 12. Prune `yield_history` older than 365 days
-13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, cache rankings JSON (with safe `warning_signals` JSON parsing on read paths)
+13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, then cache rankings JSON only when safety input is healthy and schema validation succeeds (with safe `warning_signals` JSON parsing on read paths)
+
+**Degraded semantics:** If safety coverage is degraded or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"` and skips `yield-rankings` cache overwrite. Safety-degraded runs also skip `report_card_cache` writes to preserve last-known-good snapshots.
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 

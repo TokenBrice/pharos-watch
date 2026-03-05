@@ -140,7 +140,9 @@ function rotateArray<T>(values: T[], start: number): T[] {
   return [...values.slice(idx), ...values.slice(0, idx)];
 }
 
-async function getMintBurnRunState(db: D1Database): Promise<MintBurnRunStateRow> {
+async function getMintBurnRunState(
+  db: D1Database,
+): Promise<{ state: MintBurnRunStateRow; persistenceFailed: boolean }> {
   try {
     const row = await db
       .prepare(
@@ -150,12 +152,19 @@ async function getMintBurnRunState(db: D1Database): Promise<MintBurnRunStateRow>
       .first<{ next_config_index: number; degraded_streak: number }>();
 
     return {
-      nextConfigIndex: row?.next_config_index ?? 0,
-      degradedStreak: row?.degraded_streak ?? 0,
+      state: {
+        nextConfigIndex: row?.next_config_index ?? 0,
+        degradedStreak: row?.degraded_streak ?? 0,
+      },
+      persistenceFailed: false,
     };
-  } catch {
+  } catch (error) {
+    console.warn("[sync-mint-burn] Failed to load run-state; using defaults:", error);
     // Migration may not exist in local/unit tests.
-    return { nextConfigIndex: 0, degradedStreak: 0 };
+    return {
+      state: { nextConfigIndex: 0, degradedStreak: 0 },
+      persistenceFailed: true,
+    };
   }
 }
 
@@ -163,7 +172,7 @@ async function setMintBurnRunState(
   db: D1Database,
   nextConfigIndex: number,
   degradedStreak: number,
-): Promise<void> {
+): Promise<boolean> {
   try {
     const now = Math.floor(Date.now() / 1000);
     await db
@@ -177,8 +186,11 @@ async function setMintBurnRunState(
       )
       .bind(MINT_BURN_JOB, nextConfigIndex, degradedStreak, now)
       .run();
-  } catch {
+    return true;
+  } catch (error) {
+    console.warn("[sync-mint-burn] Failed to persist run-state:", error);
     // Non-fatal in environments where migrations are behind.
+    return false;
   }
 }
 
@@ -273,7 +285,8 @@ export async function syncMintBurn(
   }
   const apiKey = alchemyApiKey;
 
-  const runState = await getMintBurnRunState(db);
+  const runStateSnapshot = await getMintBurnRunState(db);
+  const runState = runStateSnapshot.state;
   const startIndex = runState.nextConfigIndex % enabledConfigs.length;
   const rotatedConfigs = rotateArray(enabledConfigs, startIndex);
   // Always process critical contracts first so extended backlogs cannot starve
@@ -602,7 +615,12 @@ export async function syncMintBurn(
   const nextConfigIndex = enabledConfigs.length > 0
     ? (startIndex + 1) % enabledConfigs.length
     : 0;
-  await setMintBurnRunState(db, nextConfigIndex, degradedStreak);
+  const runStatePersisted = await setMintBurnRunState(db, nextConfigIndex, degradedStreak);
+  const runStatePersistenceFailed = runStateSnapshot.persistenceFailed || !runStatePersisted;
+
+  if (runStatePersistenceFailed && status === "ok") {
+    status = "degraded";
+  }
 
   const metadata = JSON.stringify({
     rowsRead,
@@ -641,6 +659,7 @@ export async function syncMintBurn(
     coverageRatio,
     degradedSignal,
     degradedStreak,
+    runStatePersistenceFailed,
   });
 
   console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);

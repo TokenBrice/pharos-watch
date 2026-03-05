@@ -160,6 +160,7 @@ import { syncYieldData } from "../sync-yield-data";
 import { getCache, setCache, batchExecute } from "../../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
+import * as safetyScoresModule from "../../lib/safety-scores";
 
 // --- Helpers ---
 
@@ -422,9 +423,44 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
 
-    expect(result.metadata).toContain("cacheWriteSkipped=schema-validation-failed");
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string | null;
+      validationFailures: number;
+      cacheWriteSkipped: boolean;
+    };
+    expect(metadata.fallbackMode ?? "").toContain("schema-validation-failed");
+    expect(metadata.validationFailures).toBe(1);
+    expect(metadata.cacheWriteSkipped).toBe(true);
     const cacheCalls = vi.mocked(setCache).mock.calls;
     const wroteYieldRankings = cacheCalls.some((call) => call[1] === "yield-rankings");
     expect(wroteYieldRankings).toBe(false);
+  });
+
+  it("marks run degraded and preserves yield-rankings cache when safety snapshot coverage is empty", async () => {
+    const db = makeDb();
+    vi.mocked(getCache).mockResolvedValue(null);
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    vi
+      .spyOn(safetyScoresModule, "computeSafetyScoresSnapshot")
+      .mockResolvedValueOnce({ mode: "map", scores: new Map() } as never);
+
+    const result = await syncYieldData(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      fallbackMode: string | null;
+      cacheWriteSkipped: boolean;
+      sourceCoverage: { safetyCoverageRatio: number };
+    };
+    expect(metadata.fallbackMode ?? "").toContain("safety-snapshot-coverage");
+    expect(metadata.cacheWriteSkipped).toBe(true);
+    expect(metadata.sourceCoverage.safetyCoverageRatio).toBe(0);
+
+    const cacheCalls = vi.mocked(setCache).mock.calls;
+    expect(cacheCalls.some((call) => call[1] === "yield-rankings")).toBe(false);
+    expect(cacheCalls.some((call) => call[1] === "report_card_cache")).toBe(false);
   });
 });

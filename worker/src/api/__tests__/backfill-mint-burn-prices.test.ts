@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "./helpers/auth";
 import { handleBackfillMintBurnPrices } from "../backfill-mint-burn-prices";
 

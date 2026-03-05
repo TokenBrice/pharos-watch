@@ -7,6 +7,12 @@ import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { getPsiMethodologyVersionAt } from "../../../src/lib/stability-index-version";
+import {
+  buildStabilityInputForDay,
+  buildSupplySnapshotMap,
+  type PsiDepegEventRow,
+  type PsiSupplyRow,
+} from "../lib/psi-recompute";
 
 const DAY = 86400;
 
@@ -304,90 +310,23 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
 
   const remainingDepegs = await db
     .prepare("SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
-    .all<{ stablecoin_id: string; peak_deviation_bps: number; peg_reference: number; started_at: number; ended_at: number | null }>();
+    .all<PsiDepegEventRow>();
   const depegEvents = remainingDepegs.results ?? [];
 
   const allSupply = await db
     .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history ORDER BY snapshot_date")
-    .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
-  const supplyByCoin = new Map<string, { date: number; mcap: number }[]>();
-  for (const r of allSupply.results ?? []) {
-    const list = supplyByCoin.get(r.stablecoin_id) ?? [];
-    list.push({ date: r.snapshot_date, mcap: r.circulating_usd });
-    supplyByCoin.set(r.stablecoin_id, list);
-  }
-
-  function getMcapForDay(coinId: string, day: number): number {
-    const snapshots = supplyByCoin.get(coinId);
-    if (!snapshots || snapshots.length === 0) return 0;
-    let best = snapshots[0];
-    for (const s of snapshots) {
-      if (Math.abs(s.date - day) < Math.abs(best.date - day)) best = s;
-      if (s.date > day) break;
-    }
-    return Math.abs(best.date - day) <= 14 * DAY ? best.mcap : 0;
-  }
+    .all<PsiSupplyRow>();
+  const supplyByCoin = buildSupplySnapshotMap(allSupply.results ?? []);
 
   const stmts: D1PreparedStatement[] = [];
 
   for (const day of sortedDays) {
-    const activeDepegs = depegEvents.filter(
-      (e) => e.started_at <= day && (e.ended_at === null ? day <= now : e.ended_at > day)
-    );
-
-    const grouped = new Map<string, typeof activeDepegs>();
-    for (const e of activeDepegs) {
-      const list = grouped.get(e.stablecoin_id) ?? [];
-      list.push(e);
-      grouped.set(e.stablecoin_id, list);
-    }
-
-    const depegs: { bps: number; mcapUsd: number; depegAgeDays: number }[] = [];
-    for (const [coinId, events] of grouped) {
-      let worstBps = 0;
-      let earliestStart = Infinity;
-      for (const e of events) {
-        if (e.peg_reference <= 0) continue;
-        if (Math.abs(e.peak_deviation_bps) > Math.abs(worstBps)) worstBps = e.peak_deviation_bps;
-        if (e.started_at < earliestStart) earliestStart = e.started_at;
-      }
-      if (earliestStart === Infinity) continue;
-      depegs.push({
-        bps: worstBps,
-        mcapUsd: getMcapForDay(coinId, day),
-        depegAgeDays: Math.max(0, (day - earliestStart) / DAY),
-      });
-    }
-
-    let totalMcapUsd = 0;
-    for (const [, snapshots] of supplyByCoin) {
-      let best = snapshots[0];
-      for (const s of snapshots) {
-        if (Math.abs(s.date - day) < Math.abs(best.date - day)) best = s;
-        if (s.date > day) break;
-      }
-      if (Math.abs(best.date - day) <= 14 * DAY) totalMcapUsd += best.mcap;
-    }
-
-    const day7ago = day - 7 * DAY;
-    let totalMcap7dAgo = 0;
-    for (const [, snapshots] of supplyByCoin) {
-      let best = snapshots[0];
-      for (const s of snapshots) {
-        if (Math.abs(s.date - day7ago) < Math.abs(best.date - day7ago)) best = s;
-        if (s.date > day7ago) break;
-      }
-      if (Math.abs(best.date - day7ago) <= 14 * DAY) totalMcap7dAgo += best.mcap;
-    }
-
-    const mcap7dChangePct = totalMcap7dAgo > 0
-      ? ((totalMcapUsd - totalMcap7dAgo) / totalMcap7dAgo) * 100
-      : 0;
+    const input = buildStabilityInputForDay(day, now, depegEvents, supplyByCoin);
 
     const indexResult = computeStabilityIndex({
-      depegs,
-      totalMcapUsd,
-      mcap7dChangePct,
+      depegs: input.depegs,
+      totalMcapUsd: input.totalMcapUsd,
+      mcap7dChangePct: input.mcap7dChangePct,
     });
     const methodologyVersion = getPsiMethodologyVersionAt(day);
 
@@ -406,7 +345,12 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
         indexResult.score,
         indexResult.band,
         JSON.stringify(indexResult.components),
-        JSON.stringify({ depegCount: depegs.length, totalMcapUsd, mcap7dChangePct, methodologyVersion }),
+        JSON.stringify({
+          depegCount: input.depegCount,
+          totalMcapUsd: input.totalMcapUsd,
+          mcap7dChangePct: input.mcap7dChangePct,
+          methodologyVersion,
+        }),
         methodologyVersion,
       )
     );

@@ -58,14 +58,18 @@ vi.mock("../../lib/dews", () => ({
   })),
 }));
 
+import { getCache } from "../../lib/db";
 import { computeDEWS } from "../../lib/dews";
 import { computeAndStoreDEWS } from "../compute-dews";
 
-function makeDb(sqlSeen: string[]): D1Database {
+function makeDb(sqlSeen: string[], opts: { failDexLiquidity?: boolean } = {}): D1Database {
   const stmt = (sql: string) => {
     sqlSeen.push(sql);
     const all = async <T>() => {
-      if (sql.includes("FROM dex_liquidity WHERE")) {
+      if (/FROM dex_liquidity(?!_history)/.test(sql)) {
+        if (opts.failDexLiquidity) {
+          throw new Error("dex-liquidity unavailable");
+        }
         return {
           results: [
             {
@@ -123,6 +127,23 @@ describe("computeAndStoreDEWS", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-03T12:00:00Z"));
     vi.mocked(computeDEWS).mockClear();
+    vi.mocked(getCache).mockResolvedValue({
+      value: JSON.stringify({
+        peggedAssets: [
+          {
+            id: "1",
+            symbol: "USDT",
+            pegType: "peggedUSD",
+            price: 1,
+            priceConfidence: "high",
+            circulating: { peggedUSD: 100_000_000 },
+            circulatingPrevDay: { peggedUSD: 99_000_000 },
+            circulatingPrevWeek: { peggedUSD: 98_000_000 },
+          },
+        ],
+      }),
+      updatedAt: Math.floor(Date.now() / 1000),
+    });
   });
 
   it("loads 7d liquidity history from snapshot_date/liquidity_score/total_tvl_usd", async () => {
@@ -140,5 +161,18 @@ describe("computeAndStoreDEWS", () => {
         tvl7dAgo: 1_200_000,
       }),
     );
+  });
+
+  it("marks run degraded when dex_liquidity is unavailable", async () => {
+    const sqlSeen: string[] = [];
+    const db = makeDb(sqlSeen, { failDexLiquidity: true });
+
+    const result = await computeAndStoreDEWS(db);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      sourceFailures: Array<{ source: string; bootstrapAllowed: boolean }>;
+    };
+    expect(metadata.sourceFailures.some((failure) => failure.source === "dex-liquidity")).toBe(true);
   });
 });

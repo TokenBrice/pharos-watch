@@ -32,8 +32,43 @@ import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { validateEndpointMethod } from "../../src/lib/api-endpoints";
+import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 
 import { isValidStablecoinId } from "./lib/api-utils";
+
+export const ROUTER_STATIC_PATHS = [
+  "/api/stablecoins",
+  "/api/stablecoin-charts",
+  "/api/blacklist",
+  "/api/depeg-events",
+  "/api/backfill-depegs",
+  "/api/backfill-supply-history",
+  "/api/peg-summary",
+  "/api/health",
+  "/api/usds-status",
+  "/api/bluechip-ratings",
+  "/api/dex-liquidity",
+  "/api/dex-liquidity-history",
+  "/api/supply-history",
+  "/api/status",
+  "/api/status-history",
+  "/api/daily-digest",
+  "/api/digest-archive",
+  "/api/digest-snapshot",
+  "/api/stability-index",
+  "/api/backfill-stability-index",
+  "/api/audit-depeg-history",
+  "/api/backfill-cg-prices",
+  "/api/report-cards",
+  "/api/yield-rankings",
+  "/api/yield-history",
+  "/api/mint-burn-flows",
+  "/api/mint-burn-events",
+  "/api/backfill-mint-burn-prices",
+  "/api/backfill-mint-burn",
+  "/api/stress-signals",
+  "/api/backfill-dews",
+] as const;
 
 export function route(
   url: URL,
@@ -42,6 +77,7 @@ export function route(
   request?: Request,
   adminKey?: string,
   alchemyApiKey?: string | null,
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
 ): Promise<Response> | null {
   const path = url.pathname;
   const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
@@ -96,7 +132,7 @@ export function route(
   }
 
   if (path === "/api/health") {
-    return handleHealth(db);
+    return handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig });
   }
 
   if (path === "/api/usds-status") {

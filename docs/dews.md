@@ -141,6 +141,8 @@ Score = `min(100, sum of active signal points)`.
 
 **Cron name:** `compute-dews`
 
+**Run health semantics:** DEWS records upstream read problems as structured cron metadata (`sourceFailures`, `sourceCoverage`, `validationFailures`). The cron returns `status: "degraded"` when non-bootstrap source dependencies fail. Missing optional tables during the bootstrap grace window are tagged `bootstrapAllowed=true` and do not force degraded status.
+
 **Data flow:**
 1. Read stablecoins cache, derive peg rates
 2. Read `dex_liquidity`, `dex_prices`, `dex_liquidity_history`

@@ -11,7 +11,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 - **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
 - **Function:** `syncBlacklist(db, etherscanApiKey, trongridApiKey, drpcApiKey)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
-- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, budgetUsed, budgetLimit } }`
+- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, apiErrorClasses, budgetUsed, budgetLimit } }`
 
 ---
 

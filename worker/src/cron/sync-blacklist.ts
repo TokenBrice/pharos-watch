@@ -614,6 +614,7 @@ export async function syncBlacklist(
   let totalNewEvents = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
+  const apiErrorClasses: Record<string, number> = {};
 
   const configStates = await Promise.all(
     CONTRACT_CONFIGS.map(async (config) => {
@@ -707,6 +708,9 @@ export async function syncBlacklist(
         `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.maxBlock}`
       );
     } catch (err) {
+      apiErrors++;
+      const errorClass = err instanceof Error ? err.name : "UnknownError";
+      apiErrorClasses[errorClass] = (apiErrorClasses[errorClass] ?? 0) + 1;
       console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
     }
   }
@@ -714,6 +718,12 @@ export async function syncBlacklist(
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   return {
     itemCount: totalNewEvents,
-    metadata: JSON.stringify({ contractsSkipped, apiErrors, budgetUsed: budget.count, budgetLimit: budget.limit }),
+    metadata: JSON.stringify({
+      contractsSkipped,
+      apiErrors,
+      apiErrorClasses,
+      budgetUsed: budget.count,
+      budgetLimit: budget.limit,
+    }),
   };
 }

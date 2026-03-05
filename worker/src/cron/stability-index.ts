@@ -1,19 +1,29 @@
-import type { StablecoinData } from "../../../src/lib/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
 import { PSI_ELIGIBLE_IDS } from "../../../src/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "../../../src/lib/stability-index-version";
-import { getCache } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
+import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
-  const stablecoinsCache = await getCache(db, "stablecoins");
-  if (!stablecoinsCache) {
-    return { metadata: "skipped: no stablecoins cache" };
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  if (!stablecoinsCache.ok) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        fallbackMode: "stablecoins-cache-unavailable",
+        stablecoinsCacheReason: stablecoinsCache.reason,
+        dewsUnavailable: true,
+      }),
+    };
   }
 
-  const parsed = JSON.parse(stablecoinsCache.value) as { peggedAssets: StablecoinData[] };
-  const tracked = parsed.peggedAssets.filter((c) => PSI_ELIGIBLE_IDS.has(c.id));
+  if (stablecoinsCache.warningReason) {
+    console.warn(`[stability-index] stablecoins cache fallback (${stablecoinsCache.warningReason})`);
+  }
+
+  const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => PSI_ELIGIBLE_IDS.has(coin.id));
 
   let totalMcapUsd = 0;
   let totalPrevWeek = 0;
@@ -47,6 +57,8 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
 
   // Read DEWS stress signals (from previous 15-min cycle) for stress breadth
   let dewsStressBreadth = 0;
+  let dewsUnavailable = false;
+  let dewsFailureReason: string | null = null;
   try {
     const dewsRows = await db
       .prepare(
@@ -65,7 +77,11 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
       const coinMcap = mcapById.get(row.stablecoin_id) ?? 0;
       dewsStressBreadth += Math.sqrt(coinMcap / 1e9) * 1.5;
     }
-  } catch { /* stress_signals may not exist */ }
+  } catch (error) {
+    dewsUnavailable = true;
+    dewsFailureReason = String(error);
+    console.warn("[stability-index] DEWS dependency unavailable; stress breadth defaulted to 0:", error);
+  }
 
   // Deduplicate by stablecoin_id: group events, pick worst deviation, earliest start
   type DepegRow = { stablecoin_id: string; peg_reference: number; started_at: number };
@@ -128,6 +144,9 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
         depegCount: depegs.length,
         totalMcapUsd,
         mcap7dChangePct,
+        dewsStressBreadth,
+        dewsUnavailable,
+        dewsFailureReason,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
@@ -141,5 +160,14 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
     .run();
 
   console.log(`[stability-index] score=${result.score} band=${result.band}`);
-  return { metadata: `score=${result.score} band=${result.band}` };
+  return {
+    ...(dewsUnavailable ? { status: "degraded" as const } : {}),
+    metadata: JSON.stringify({
+      score: result.score,
+      band: result.band,
+      dewsStressBreadth,
+      dewsUnavailable,
+      dewsFailureReason,
+    }),
+  };
 }

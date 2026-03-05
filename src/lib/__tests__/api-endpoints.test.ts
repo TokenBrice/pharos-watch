@@ -24,6 +24,7 @@ describe("api endpoint registry", () => {
       "/api/supply-history?stablecoin=1",
       "/api/daily-digest",
       "/api/digest-archive",
+      "/api/digest-snapshot",
       "/api/yield-rankings",
       "/api/yield-history?stablecoin=1",
       "/api/stability-index",

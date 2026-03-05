@@ -5,6 +5,7 @@ import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
 import { deriveDependencies } from "../../../src/lib/reserve-templates";
 import { DEAD_STABLECOINS } from "../../../src/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import {
   METHODOLOGY_VERSION,
   DIMENSION_WEIGHTS,
@@ -42,20 +43,12 @@ import type {
 // Handler
 // ---------------------------------------------------------------------------
 
-interface DexLiquidityRow {
-  stablecoin_id: string;
-  liquidity_score: number | null;
-  concentration_hhi: number | null;
-  pool_count: number;
-  chain_count: number;
-}
-
 export const handleReportCards = withErrorHandler("report-cards", async (db: D1Database): Promise<Response> => {
   // 1. Load caches + dex_liquidity table in parallel
-  const [stablecoinsCached, bluechipCached, dexLiqResult] = await Promise.all([
+  const [stablecoinsCached, bluechipCached, dexLiqMap] = await Promise.all([
     getCache(db, "stablecoins"),
     getCache(db, "bluechip-ratings"),
-    db.prepare("SELECT stablecoin_id, liquidity_score, concentration_hhi, pool_count, chain_count FROM dex_liquidity").all<DexLiquidityRow>(),
+    loadDexLiquidityMap(db),
   ]);
 
   if (!stablecoinsCached) {
@@ -73,17 +66,6 @@ export const handleReportCards = withErrorHandler("report-cards", async (db: D1D
     fxFallbackRates = parsed.fxFallbackRates;
   } catch {
     return errorResponse(503, "Cached stablecoins data is corrupt");
-  }
-
-  // Build dex liquidity map from table rows (only fields scoreLiquidity needs)
-  const dexLiqMap: Record<string, Pick<DexLiquidityData, "liquidityScore" | "concentrationHhi" | "poolCount" | "chainCount">> = {};
-  for (const row of dexLiqResult.results ?? []) {
-    dexLiqMap[row.stablecoin_id] = {
-      liquidityScore: row.liquidity_score,
-      concentrationHhi: row.concentration_hhi,
-      poolCount: row.pool_count,
-      chainCount: row.chain_count,
-    };
   }
 
   let bluechipMap: Record<string, BluechipRating> = {};

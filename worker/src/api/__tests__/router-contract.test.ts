@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ENDPOINT_DEFINITIONS } from "../../../../src/lib/api-endpoints";
 import { STRICT_CONTRACT_PATHS_LIST } from "../../../../src/lib/strict-contract-paths";
-import { route } from "../../router";
+import { route, ROUTER_STATIC_PATHS } from "../../router";
 import worker from "../../index";
 import { mockD1 } from "./helpers/mock-d1";
 
@@ -43,6 +43,17 @@ describe("router contract: strict frontend paths are routable", () => {
   it("returns null for unknown paths", () => {
     const result = route(new URL("https://api.pharos.watch/api/definitely-not-real"), db, ctx);
     expect(result).toBeNull();
+  });
+
+  it("keeps router static paths registered in endpoint definitions", () => {
+    const registeredPaths = new Set(ENDPOINT_DEFINITIONS.map((endpoint) => endpoint.path));
+
+    for (const path of ROUTER_STATIC_PATHS) {
+      expect(
+        registeredPaths.has(path),
+        `expected ${path} to be present in ENDPOINT_DEFINITIONS`,
+      ).toBe(true);
+    }
   });
 
   it("keeps endpoint registry and router behavior aligned", async () => {

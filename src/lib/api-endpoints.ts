@@ -151,6 +151,14 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
+    path: "/api/digest-snapshot",
+    methods: ["GET"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: false,
+    probeGroup: "public",
+  },
+  {
     path: "/api/yield-rankings",
     methods: ["GET"],
     adminRequired: false,

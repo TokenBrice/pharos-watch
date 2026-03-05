@@ -81,9 +81,11 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 19. **Security headers**: Worker adds `X-Content-Type-Options: nosniff` to all responses
 20. **Admin cache bypass**: mutating/backfill endpoints skip edge response caching (`/api/backfill-depegs`, `/api/backfill-supply-history`, `/api/backfill-cg-prices`, `/api/backfill-stability-index`, `/api/backfill-mint-burn-prices`, `/api/backfill-mint-burn`, `/api/audit-depeg-history`, `/api/backfill-dews`) alongside `/api/health` and `/api/status`
 21. **Fail-closed schema guard (stablecoins)**: `syncStablecoins()` validates both main and fallback payloads against `StablecoinListResponseSchema` before `setCacheIfNewer()`. On schema failure, it does **not** overwrite the canonical `stablecoins` cache; instead it writes the rejected payload to `stablecoins:invalid-last`, returns cron `status: "degraded"`, and alerts with validation context (`main`/`fallback`) plus last-known-good cache age
-22. **Strict cache payload validation (yield rankings)**: `syncYieldData()` validates the `yield-rankings` cache payload against `YieldRankingsResponseSchema` before `setCache()`. On schema failure, cache write is skipped to avoid corrupting downstream readers
-23. **Shared stablecoins cache loader**: Consumers that read `stablecoins` (`/api/status`, `/api/peg-summary`, `/api/mint-burn-flows`, `daily-digest`) now use `worker/src/lib/stablecoins-cache.ts` instead of ad-hoc `JSON.parse` logic. The loader supports strict mode (typed error reason) and lenient mode (safe empty defaults + warning reason), with optional legacy array-shape compatibility.
-24. **Stage-structured stablecoins sync**: `syncStablecoins()` keeps the same output contract but now delegates normalization/filtering/staleness/supply-history fill to `worker/src/cron/sync-stablecoins/stages.ts`, reducing monolith complexity while preserving run metadata and fallback semantics.
+22. **Strict cache payload validation (yield rankings)**: `syncYieldData()` validates the `yield-rankings` cache payload against `YieldRankingsResponseSchema` before `setCache()`. On schema failure, cache write is skipped, `validationFailures` is incremented in cron metadata, and the run returns `status: "degraded"` so status surfaces do not mark it healthy
+23. **Safety snapshot coverage guard (yield)**: `syncYieldData()` treats empty/low-coverage safety snapshots as degraded input. In degraded mode, it skips `report_card_cache` and `yield-rankings` cache writes to preserve last-known-good rankings while still writing fresh row-level data
+24. **Shared stablecoins cache loader**: Consumers that read `stablecoins` (`/api/status`, `/api/peg-summary`, `/api/mint-burn-flows`, `daily-digest`, `compute-dews`, `stability-index`, `backfill-depegs`) use `worker/src/lib/stablecoins-cache.ts` instead of ad-hoc `JSON.parse` logic. The loader supports strict mode (typed error reason) and lenient mode (safe empty defaults + warning reason), with optional legacy array-shape compatibility.
+25. **DEWS source-failure accounting**: `computeAndStoreDEWS()` records upstream read failures as structured `sourceFailures` metadata and emits `status: "degraded"` when non-bootstrap-critical inputs fail. Metadata now includes source coverage and validation-failure counts.
+26. **Stage-structured stablecoins sync**: `syncStablecoins()` keeps the same output contract but now delegates normalization/filtering/staleness/supply-history fill to `worker/src/cron/sync-stablecoins/stages.ts`, reducing monolith complexity while preserving run metadata and fallback semantics.
 
 ## Gold & Silver Spot Prices (gold-api.com)
 
@@ -113,7 +115,7 @@ The live `/price/` endpoint requires no API key and has no documented rate limit
 
 ## Stability Index (PSI) Computation
 
-`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
+`computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` runs every 15 minutes and computes a composite ecosystem health score (0–100). Formula: `Score = 100 − severity − breadth − stressBreadth + trend`. If the DEWS dependency query is unavailable, the run stores `dewsUnavailable=true` in `input_snapshot` and returns `status: "degraded"` (stress breadth is defaulted to 0 for continuity). See `docs/stability-index.md` for full algorithm, calibration examples, and band definitions.
 
 **Band classification:** `BEDROCK` (90–100), `STEADY` (75–89), `TREMOR` (60–74), `FRACTURE` (40–59), `CRISIS` (20–39), `MELTDOWN` (0–19)
 

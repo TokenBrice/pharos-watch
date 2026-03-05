@@ -24,11 +24,11 @@ import { shouldAttemptFetch, recordOutcome } from "./lib/circuit-breaker";
 import { CIRCUIT_SOURCE } from "./lib/constants";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import {
-  MINT_BURN_MAJOR_SYMBOLS,
-  MINT_BURN_STALE_WARN_SEC,
-  MINT_BURN_STALE_CRIT_SEC,
+  evaluateMintBurnFreshness,
+  resolveMintBurnFreshnessConfig,
 } from "./lib/mint-burn-health-config";
 import { isCacheBypassPath, validateEndpointMethod } from "../../src/lib/api-endpoints";
+import { CRON_SCHEDULES } from "./lib/cron-schedule";
 
 interface Env {
   DB: D1Database;
@@ -95,20 +95,13 @@ function parseCsvEnv(value: string | undefined): string[] {
     .filter((part) => part.length > 0);
 }
 
-function parsePositiveInt(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
-
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     initCoinGecko(env.COINGECKO_API_KEY);
     initAlerts(env.ALERT_WEBHOOK_URL);
     initChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
     const origin = env.CORS_ORIGIN;
+    const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
 
     // Handle CORS preflight
     if (request.method === "OPTIONS") {
@@ -234,7 +227,15 @@ const worker = {
       }
     }
 
-    const response = await route(url, env.DB, ctx, request, env.ADMIN_KEY, env.ALCHEMY_API_KEY ?? null);
+    const response = await route(
+      url,
+      env.DB,
+      ctx,
+      request,
+      env.ADMIN_KEY,
+      env.ALCHEMY_API_KEY ?? null,
+      mintBurnFreshnessConfig,
+    );
 
     if (!response) {
       return addCorsHeaders(
@@ -262,13 +263,7 @@ const worker = {
     const cron = event.cron;
     const mintBurnDisabledIds = parseCsvEnv(env.MINT_BURN_DISABLED_IDS);
     const mintBurnDisabledSymbols = parseCsvEnv(env.MINT_BURN_DISABLED_SYMBOLS);
-    const mintBurnMajorSymbols = parseCsvEnv(env.MINT_BURN_MAJOR_SYMBOLS);
-    const mintBurnWarnSec = parsePositiveInt(env.MINT_BURN_STALE_WARN_SEC, MINT_BURN_STALE_WARN_SEC);
-    const mintBurnCritSec = parsePositiveInt(env.MINT_BURN_STALE_CRIT_SEC, MINT_BURN_STALE_CRIT_SEC);
-    const mintBurnAlertCooldownSec = parsePositiveInt(
-      env.MINT_BURN_ALERT_COOLDOWN_SEC,
-      DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC,
-    );
+    const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
     const normalizeCronMetadata = (result: CronResult): string | undefined => {
       const parsed: Record<string, unknown> = {};
       if (result.metadata) {
@@ -340,7 +335,7 @@ const worker = {
       });
 
     switch (cron) {
-      case "*/15 * * * *": {
+      case CRON_SCHEDULES.quarterHourly: {
         const stablecoinsSync = runLeasedCron("sync-stablecoins", (signal) => syncStablecoins(db, env.CMC_API_KEY, signal));
         ctx.waitUntil(stablecoinsSync);
         // Retry daily supply snapshots throughout the day so a stale-cache skip at 08:00
@@ -376,7 +371,7 @@ const worker = {
       }
       // Blacklist + mint/burn on a 20-min cycle (offset at :03/:23/:43 to avoid colliding with the 15-min trigger)
       // Blacklist uses Etherscan; mint/burn uses Alchemy (independent providers, independent circuit breakers).
-      case "3,23,43 * * * *": {
+      case CRON_SCHEDULES.twentyMinuteOffset: {
         // Blacklist — gated by Etherscan circuit breaker
         const etherscanAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.ETHERSCAN);
         if (etherscanAllowed) {
@@ -415,7 +410,7 @@ const worker = {
           ));
           ctx.waitUntil(mintBurnJob.then(async () => {
             try {
-              const symbols = mintBurnMajorSymbols.length > 0 ? mintBurnMajorSymbols : [...MINT_BURN_MAJOR_SYMBOLS];
+              const symbols = mintBurnFreshnessConfig.majorSymbols;
               if (symbols.length === 0) return;
               const now = Math.floor(Date.now() / 1000);
               const rows = await db
@@ -428,29 +423,21 @@ const worker = {
                 .bind(...symbols)
                 .all<{ symbol: string; latest_ts: number | null }>();
 
-              const latestBySymbol = new Map<string, number>();
+              const latestBySymbol = new Map<string, number | null>();
               for (const row of rows.results ?? []) {
-                if (row.latest_ts != null) latestBySymbol.set(row.symbol, row.latest_ts);
+                latestBySymbol.set(row.symbol, row.latest_ts ?? null);
               }
 
-              const warn: string[] = [];
-              const crit: string[] = [];
-              for (const symbol of symbols) {
-                const latest = latestBySymbol.get(symbol);
-                const ageSec = latest == null ? Number.POSITIVE_INFINITY : now - latest;
-                if (ageSec >= mintBurnCritSec) {
-                  crit.push(`${symbol}:${latest == null ? "missing" : Math.round(ageSec / 3600) + "h"}`);
-                } else if (ageSec >= mintBurnWarnSec) {
-                  warn.push(`${symbol}:${Math.round(ageSec / 3600)}h`);
-                }
-              }
+              const freshness = evaluateMintBurnFreshness(now, latestBySymbol, mintBurnFreshnessConfig);
 
               const emitAlert = async (severity: "warn" | "crit", details: string[]): Promise<void> => {
                 if (details.length === 0) return;
                 const cacheKey = `alert:mint-burn-stale:${severity}`;
                 const prior = await getCache(db, cacheKey);
-                if (prior && now - prior.updatedAt < mintBurnAlertCooldownSec) return;
-                const threshold = severity === "crit" ? mintBurnCritSec : mintBurnWarnSec;
+                if (prior && now - prior.updatedAt < mintBurnFreshnessConfig.alertCooldownSec) return;
+                const threshold = severity === "crit"
+                  ? mintBurnFreshnessConfig.staleCritSec
+                  : mintBurnFreshnessConfig.staleWarnSec;
                 await sendAlert(
                   `Mint/burn staleness (${severity.toUpperCase()})`,
                   `Threshold=${Math.round(threshold / 3600)}h, symbols=${details.join(", ")}`,
@@ -458,8 +445,8 @@ const worker = {
                 await setCache(db, cacheKey, JSON.stringify({ symbols: details, at: now }));
               };
 
-              await emitAlert("warn", warn);
-              await emitAlert("crit", crit);
+              await emitAlert("warn", freshness.warnDetails);
+              await emitAlert("crit", freshness.critDetails);
             } catch {
               // Non-blocking alert path.
             }
@@ -471,7 +458,7 @@ const worker = {
       }
       // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
       // Yield depends on dex_liquidity for safety scores — chain after DEX sync
-      case "10,40 * * * *": {
+      case CRON_SCHEDULES.halfHourlyOffset: {
         const dexSync = runLeasedCron("sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null, signal));
         ctx.waitUntil(dexSync);
         ctx.waitUntil(dexSync.then(() =>
@@ -479,7 +466,7 @@ const worker = {
         ));
         break;
       }
-      case "0 8 * * *": {
+      case CRON_SCHEDULES.daily0800Utc: {
         ctx.waitUntil(runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal)));
         ctx.waitUntil(runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
         const psiPromise = runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal));

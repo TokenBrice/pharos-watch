@@ -498,9 +498,11 @@ Returns cache freshness for key data sources, with per-source staleness threshol
 | `yield-data` | 3,600s (1h) |
 | `dews` | 1,800s (30 min) |
 
+Health freshness checks for mint/burn major symbols and scheduler stale alerts use the same shared resolver in `worker/src/lib/mint-burn-health-config.ts`, including env overrides (`MINT_BURN_MAJOR_SYMBOLS`, `MINT_BURN_STALE_WARN_SEC`, `MINT_BURN_STALE_CRIT_SEC`, `MINT_BURN_ALERT_COOLDOWN_SEC`).
+
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 16 cron jobs via the `CRON_INTERVALS` map:
+Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 16 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -556,9 +558,15 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/auth.ts` | Admin auth: timing-safe `X-Admin-Key` comparison |
 | `worker/src/lib/alerts.ts` | Webhook alerts: auto-detects Discord/Slack format |
 | `worker/src/lib/constants.ts` | Shared constants: API URLs, thresholds, cache profiles |
+| `worker/src/lib/cron-schedule.ts` | Canonical cron expressions + per-job expected intervals (`CRON_INTERVALS`) |
+| `worker/src/lib/status-thresholds.ts` | Shared status threshold constants for blacklist/on-chain quality bands |
+| `worker/src/lib/blacklist-gaps.ts` | Shared blacklist gap query helper (Tron null-amount exclusion + recent window) |
 | `worker/src/lib/chain-rpcs.ts` | Chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
 | `worker/src/lib/coingecko.ts` | CoinGecko init: free/pro URL switching, auth headers |
 | `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → DefiLlama ID mapping (17 coins) |
+| `worker/src/lib/mint-burn-health-config.ts` | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator |
+| `worker/src/lib/dex-liquidity.ts` | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`) |
+| `worker/src/lib/psi-recompute.ts` | Shared historical PSI day-input builder used by audit/backfill admin APIs |
 | `worker/src/lib/mint-burn-contracts.ts` | Mint/burn contract configs: stablecoin/chain mappings, mint addresses, decimals, `startBlock` (earliest block to scan), `SAFE_HAVEN_IDS` |
 | `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
