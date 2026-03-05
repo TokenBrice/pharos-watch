@@ -346,7 +346,12 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   └── status-self-check.ts  # Status reliability cron: probes, hysteresis persistence, discrepancy alerts
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
-    │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id
+    │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id (orchestrator + branch routing)
+    │   ├── stablecoin-detail/    # Stablecoin detail handler internals (focused modules)
+    │   │   ├── shared.ts         # Shared cache/logging/response helpers + supply_history fallback
+    │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)
+    │   │   ├── coingecko-only.ts # CoinGecko-only token branch assembly
+    │   │   └── defillama.ts      # DefiLlama detail normalization (non-USD USD-conversion)
     │   ├── stablecoin-charts.ts  # GET /api/stablecoin-charts
     │   ├── supply-history.ts     # GET /api/supply-history
     │   ├── blacklist.ts          # GET /api/blacklist
