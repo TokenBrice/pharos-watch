@@ -9,12 +9,12 @@
   /* ── Surfaces ─────────────────────────────────────────────────── */
   --surface-base:    var(--p-neutral-50);
   --surface-raised:  var(--p-neutral-100);
-  --surface-overlay: oklch(1 0 0);
+  --surface-overlay: oklch(0.998 0.002 260);
 
   /* ── Text ─────────────────────────────────────────────────────── */
   --text-primary:   var(--p-neutral-950);
-  --text-secondary: var(--p-neutral-500);
-  --text-tertiary:  var(--p-neutral-400);
+  --text-secondary: oklch(0.46 0.008 260);
+  --text-tertiary:  oklch(0.63 0.005 260);
   --text-inverse:   var(--p-neutral-50);
 
   /* ── Borders ──────────────────────────────────────────────────── */
@@ -67,6 +67,12 @@
   --dews-alert-hex:   #eab308;
   --dews-warning-hex: #f97316;
   --dews-danger-hex:  #ef4444;
+  --dews-radar-spoke:              oklch(0.54 0.01 260 / 0.22);
+  --dews-radar-calm-boundary:      oklch(0.50 0.01 260 / 0.28);
+  --dews-radar-band-ring-opacity:  0.42;
+  --dews-radar-outer-ring-opacity: 0.48;
+  --dews-radar-calm-dot-bloom:     oklch(0.34 0.01 260 / 0.12);
+  --dews-radar-calm-dot-core:      oklch(0.30 0.01 260 / 0.36);
 
   /* ── Score Tiers ──────────────────────────────────────────────── */
   --score-green: var(--p-green-500);
@@ -75,14 +81,14 @@
   --score-red:   var(--p-red-500);
 
   /* ── Interactive States ───────────────────────────────────────── */
-  --interactive-hover:   var(--p-neutral-100);
-  --interactive-active:  var(--p-neutral-200);
-  --interactive-focus:   var(--p-blue-300);
+  --interactive-hover:   oklch(0.95 0.005 260);
+  --interactive-active:  oklch(0.91 0.005 260);
+  --interactive-focus:   var(--p-blue-400);
   --interactive-disabled: var(--p-neutral-200);
 
   /* ── Chart ────────────────────────────────────────────────────── */
-  --chart-grid-opacity: 0.1;
-  --chart-fill-opacity: 0.25;
+  --chart-grid-opacity: 0.12;
+  --chart-fill-opacity: 0.28;
   --chart-primary:   var(--p-blue-500);
   --chart-secondary: var(--p-green-400);
   --chart-tertiary:  var(--p-teal-400);
@@ -97,19 +103,24 @@
   /* ── Component: Card ──────────────────────────────────────────── */
   --card-bg:         var(--surface-overlay);
   --card-border:     var(--border-default);
-  --card-shadow:     0 1px 3px oklch(0 0 0 / 8%), 0 1px 2px oklch(0 0 0 / 4%);
-  --card-shadow-hover: 0 4px 6px oklch(0 0 0 / 8%), 0 2px 4px oklch(0 0 0 / 4%);
+  --card-shadow:     0 1px 2px oklch(0 0 0 / 6%), 0 8px 20px oklch(0 0 0 / 4%);
+  --card-shadow-hover: 0 2px 6px oklch(0 0 0 / 7%), 0 14px 32px oklch(0 0 0 / 8%);
 
   /* ── Component: Table ─────────────────────────────────────────── */
   --table-header-bg:    var(--surface-raised);
   --table-row-hover:    var(--interactive-hover);
-  --table-row-stripe:   oklch(0.985 0 0 / 50%);
+  --table-row-stripe:   oklch(0.97 0.003 260 / 60%);
   --table-border:       var(--border-subtle);
 
   /* ── Component: Sidebar ───────────────────────────────────────── */
   --sidebar-bg:        var(--surface-overlay);
   --sidebar-border:    var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
+
+  /* ── Motion ───────────────────────────────────────────────────── */
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 220ms;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ── Dark Mode ─────────────────────────────────────────────────── */
@@ -121,7 +132,7 @@
 
   /* ── Text ─────────────────────────────────────────────────────── */
   --text-primary:   var(--p-neutral-50);
-  --text-secondary: oklch(0.82 0 0);
+  --text-secondary: oklch(0.76 0.006 260);
   --text-tertiary:  var(--p-neutral-400);
   --text-inverse:   var(--p-neutral-950);
 
@@ -137,34 +148,45 @@
   --severity-severe:   var(--p-red-400);
 
   /* ── Interactive States ───────────────────────────────────────── */
-  --interactive-hover:   var(--p-neutral-900);
-  --interactive-active:  var(--p-neutral-850);
-  --interactive-focus:   var(--p-blue-600);
+  --interactive-hover:   oklch(0.26 0.015 260);
+  --interactive-active:  oklch(0.30 0.016 260);
+  --interactive-focus:   var(--p-blue-500);
   --interactive-disabled: var(--p-neutral-800);
 
   /* ── Chart ────────────────────────────────────────────────────── */
-  --chart-grid-opacity: 0.06;
-  --chart-fill-opacity: 0.20;
+  --chart-grid-opacity: 0.08;
+  --chart-fill-opacity: 0.24;
   --chart-primary:   var(--p-blue-600);
   --chart-secondary: var(--p-green-400);
   --chart-tertiary:  var(--p-teal-400);
   --chart-negative:  var(--p-red-400);
   --psi-band-opacity: 0.06;
+  --dews-radar-spoke:              rgba(255, 255, 255, 0.04);
+  --dews-radar-calm-boundary:      rgba(255, 255, 255, 0.07);
+  --dews-radar-band-ring-opacity:  0.25;
+  --dews-radar-outer-ring-opacity: 0.35;
+  --dews-radar-calm-dot-bloom:     rgba(255, 255, 255, 0.06);
+  --dews-radar-calm-dot-core:      rgba(255, 255, 255, 0.28);
 
   /* ── Component: Card ──────────────────────────────────────────── */
   --card-bg:         var(--surface-overlay);
   --card-border:     var(--border-default);
-  --card-shadow:     0 1px 3px oklch(0 0 0 / 20%), 0 1px 2px oklch(0 0 0 / 12%);
-  --card-shadow-hover: 0 4px 6px oklch(0 0 0 / 20%), 0 2px 4px oklch(0 0 0 / 12%);
+  --card-shadow:     0 1px 2px oklch(0 0 0 / 30%), 0 10px 30px oklch(0 0 0 / 22%);
+  --card-shadow-hover: 0 2px 6px oklch(0 0 0 / 32%), 0 18px 44px oklch(0 0 0 / 28%);
 
   /* ── Component: Table ─────────────────────────────────────────── */
   --table-header-bg:    var(--surface-raised);
   --table-row-hover:    var(--interactive-hover);
-  --table-row-stripe:   oklch(1 0 0 / 3%);
+  --table-row-stripe:   oklch(1 0 0 / 4%);
   --table-border:       var(--border-subtle);
 
   /* ── Component: Sidebar ───────────────────────────────────────── */
   --sidebar-bg:        var(--surface-overlay);
   --sidebar-border:    var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
+
+  /* ── Motion ───────────────────────────────────────────────────── */
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 220ms;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
 }

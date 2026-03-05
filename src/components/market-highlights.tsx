@@ -17,8 +17,8 @@ interface MarketHighlightsProps {
   pegRates?: Record<string, number>;
 }
 
-const HIGHLIGHT_CARD_CLASS = "pharos-card-shell pharos-interactive-card border-l-[3px]";
-const ROW_LINK_CLASS = "pharos-focus-ring group -mx-1 flex min-h-11 items-center justify-between gap-2 rounded-md px-1 py-1.5 transition-colors hover:bg-muted/40";
+const HIGHLIGHT_CARD_CLASS = "pharos-card-shell pharos-interactive-card border-l-[3px] bg-gradient-to-b from-background/35 to-transparent";
+const ROW_LINK_CLASS = "pharos-focus-ring group -mx-1 flex min-h-11 items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1.5 transition-[background-color,border-color,color] duration-200 hover:border-border/65 hover:bg-muted/40";
 
 // --- Biggest Depegs ---
 
@@ -71,7 +71,7 @@ function BiggestDepegs({
 
   return (
     <Card className={`${HIGHLIGHT_CARD_CLASS} border-l-red-500`}>
-      <CardHeader className="pb-1.5">
+      <CardHeader className="pb-2">
         <CardTitle as="h2" className="pharos-kicker flex items-center justify-between">
           Current Biggest Depegs
         </CardTitle>
@@ -163,7 +163,7 @@ function FastestMovers({
 
   return (
     <Card className={`${HIGHLIGHT_CARD_CLASS} border-l-emerald-500`}>
-      <CardHeader className="pb-1.5">
+      <CardHeader className="pb-2">
         <CardTitle as="h2" className="pharos-kicker">
           Fastest Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span>
         </CardTitle>

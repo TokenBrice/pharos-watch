@@ -21,7 +21,7 @@ export function ScrollToTop() {
     <Button
       variant="outline"
       size="icon"
-      className="fixed right-4 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] sm:right-6 sm:bottom-20 z-50 animate-in fade-in duration-300 shadow-md"
+      className="fixed right-4 bottom-[calc(max(0.75rem,env(safe-area-inset-bottom))+3.5rem)] sm:right-6 sm:bottom-20 z-50 animate-in fade-in duration-300 border-border/70 bg-background/80 shadow-lg backdrop-blur-sm"
       aria-label="Scroll to top"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
     >

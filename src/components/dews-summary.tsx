@@ -178,9 +178,9 @@ function DEWSCalmDot({ x, y }: CalmDot) {
   return (
     <g>
       {/* Bloom halo */}
-      <circle cx={cx} cy={cy} r={5} fill="white" fillOpacity={0.06} />
+      <circle cx={cx} cy={cy} r={5} fill="var(--dews-radar-calm-dot-bloom)" />
       {/* Core */}
-      <circle cx={cx} cy={cy} r={2} fill="white" fillOpacity={0.28} />
+      <circle cx={cx} cy={cy} r={2} fill="var(--dews-radar-calm-dot-core)" />
     </g>
   );
 }
@@ -370,20 +370,23 @@ function DEWSRadar({
       {/* Spokes */}
       {SPOKES.map((s, i) => (
         <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-          stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
+          stroke="var(--dews-radar-spoke)" strokeWidth={1} />
       ))}
 
       {/* Band ring boundaries */}
       {RING_BANDS.map((band) => (
         <circle key={band} cx={CX} cy={CY} r={RING_RADII[band]}
           fill="none" stroke={THREAT_BAND_HEX[band]}
-          strokeOpacity={0.25} strokeWidth={1} strokeDasharray="4 6" />
+          style={{ strokeOpacity: "var(--dews-radar-band-ring-opacity)" }}
+          strokeWidth={1} strokeDasharray="4 6" />
       ))}
       {/* Calm zone inner boundary — faint gray, not a threat color */}
       <circle cx={CX} cy={CY} r={CALM_INNER_R}
-        fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={1} strokeDasharray="4 6" />
+        fill="none" stroke="var(--dews-radar-calm-boundary)" strokeWidth={1} strokeDasharray="4 6" />
       <circle cx={CX} cy={CY} r={OUTER_R}
-        fill="none" stroke={hex} strokeOpacity={0.35} strokeWidth={1} strokeDasharray="4 6" />
+        fill="none" stroke={hex}
+        style={{ strokeOpacity: "var(--dews-radar-outer-ring-opacity)" }}
+        strokeWidth={1} strokeDasharray="4 6" />
 
       {/* Sweep group — wake arc + line, rotates together */}
       <g

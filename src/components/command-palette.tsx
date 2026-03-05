@@ -259,7 +259,7 @@ export function CommandPalette() {
   return createPortal(
      
     <div
-      className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm"
       onClick={closePalette}
       onKeyDown={(e) => {
         if (e.key === "Escape") closePalette();
@@ -267,7 +267,7 @@ export function CommandPalette() {
     >
       { }
       <div
-        className="w-full max-w-lg mx-auto mt-[20vh] bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
+        className="mx-auto mt-[18vh] w-full max-w-lg overflow-hidden rounded-xl border border-border/75 bg-card/95 shadow-[0_28px_50px_oklch(0_0_0_/0.35)] backdrop-blur"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
@@ -278,7 +278,7 @@ export function CommandPalette() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search stablecoins, pages..."
-          className="h-12 w-full px-4 text-base border-b border-border bg-transparent focus:outline-none placeholder:text-muted-foreground text-foreground"
+          className="h-12 w-full border-b border-border/70 bg-transparent px-4 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
           aria-label="Search"
           role="combobox"
           aria-expanded={flatResults.length > 0}
@@ -319,8 +319,8 @@ export function CommandPalette() {
                     role="option"
                     aria-selected={isSelected}
                     data-selected={isSelected}
-                    className={`w-full px-4 py-2.5 flex items-center gap-3 cursor-pointer rounded-lg mx-2 text-sm text-foreground text-left ${
-                      isSelected ? "bg-muted/50" : "hover:bg-muted/50"
+                    className={`pharos-focus-ring mx-2 flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-2.5 text-left text-sm text-foreground ${
+                      isSelected ? "border-border/70 bg-muted/55 shadow-sm" : "border-transparent hover:border-border/55 hover:bg-muted/45"
                     }`}
                     style={{ width: "calc(100% - 16px)" }}
                     onClick={() => item.onSelect()}
@@ -366,15 +366,15 @@ export function CommandPalette() {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground flex items-center gap-4">
+        <div className="flex items-center gap-4 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground">
           <span>
-            <kbd className="font-mono">&#8593;&#8595;</kbd> navigate
+            <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#8593;&#8595;</kbd> navigate
           </span>
           <span>
-            <kbd className="font-mono">&#9166;</kbd> select
+            <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#9166;</kbd> select
           </span>
           <span>
-            <kbd className="font-mono">esc</kbd> close
+            <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">esc</kbd> close
           </span>
         </div>
       </div>

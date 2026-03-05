@@ -100,7 +100,7 @@ function ColumnVisibilityDropdown({
   return (
       <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8">
+        <Button variant="outline" size="sm" className="min-h-11 border-border/70 sm:min-h-8">
           <Columns3 className="h-3.5 w-3.5" />
           Columns
           {hiddenCount > 0 && (
@@ -111,7 +111,7 @@ function ColumnVisibilityDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs">Toggle columns</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs uppercase tracking-[0.1em] text-muted-foreground">Toggle columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {ALL_COLUMNS.map((col) => (
           <DropdownMenuCheckboxItem
@@ -376,14 +376,14 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
 
   return (
     <div className="pharos-card-shell animate-in fade-in duration-300 overflow-hidden">
-      <div className="flex items-center justify-end gap-2 border-b bg-muted/25 px-3 py-1.5">
+      <div className="flex items-center justify-end gap-2 border-b border-border/60 bg-muted/22 px-3 py-2">
         <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
         <ColumnVisibilityDropdown
           visibleColumns={visibleColumns}
           setVisibleColumns={setVisibleColumns}
           resetColumns={resetColumns}
         />
-        <Button variant="outline" size="sm" className="min-h-11 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
+        <Button variant="outline" size="sm" className="min-h-11 border-border/70 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
           <Download className="h-3.5 w-3.5" />
           Export CSV
         </Button>
@@ -392,10 +392,10 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
       {/* Scroll container — handles both horizontal and vertical overflow */}
       <div
         ref={scrollRef}
-        className="overflow-auto max-h-[50vh] sm:max-h-[70vh] scroll-shadow"
+        className="scroll-shadow max-h-[50vh] overflow-auto sm:max-h-[70vh]"
       >
         <table className="w-full caption-bottom text-sm">
-          <TableHeader className="bg-muted/80 sticky top-0 z-10 backdrop-blur-sm">
+          <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
               {isVisible("rank") && (
                 <TableHead className="w-[50px] text-right">#</TableHead>
@@ -731,7 +731,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
 
       {/* Scroll position footer */}
       {sorted.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-2 border-t text-sm text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-border/60 px-4 py-2 text-sm text-muted-foreground">
           <span aria-live="polite">
             Showing {rangeStart}–{rangeEnd} of {sorted.length} stablecoins
           </span>

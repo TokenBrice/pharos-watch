@@ -41,13 +41,13 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
       : "border-destructive/50 bg-destructive/10 text-destructive";
 
   return (
-    <div className={`rounded-md border p-4 text-sm ${toneClass}`}>
+    <div className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${toneClass}`}>
       <p className="font-medium">{title}</p>
       <p className="mt-1">{message}</p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="mt-2 text-sm font-medium underline hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none rounded"
+          className="pharos-focus-ring mt-2 rounded-sm text-sm font-medium underline hover:no-underline"
         >
           Retry
         </button>

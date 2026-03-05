@@ -50,14 +50,14 @@ export function FeaturePageShell({
     <div className={cn(variantClassName, containerClassName)}>
       <BreadcrumbJsonLd name={breadcrumbName} path={path} />
       {preface}
-      <div className="space-y-2">
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground transition-colors">Dashboard</Link>
+      <div className="space-y-2.5">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+          <Link href="/" className="pharos-focus-ring rounded-sm hover:text-foreground">Dashboard</Link>
           <span>/</span>
           <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
         </nav>
         <div className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-2">
-          <h1 className="min-w-0 text-4xl font-extrabold tracking-tighter">
+          <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">
             {title}
           </h1>
           {statusBadge && (
@@ -65,18 +65,18 @@ export function FeaturePageShell({
           )}
         </div>
         {methodology && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             Methodology {methodology.version}.{" "}
             <Link
               href={methodology.changelogPath}
-              className="underline underline-offset-4 hover:text-foreground transition-colors"
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
             >
               Version history &rarr;
             </Link>
           </p>
         )}
         {leadParagraphs.map((paragraph, index) => (
-          <p key={index} className="text-sm text-muted-foreground">
+          <p key={index} className="text-sm leading-relaxed text-muted-foreground">
             {paragraph}
           </p>
         ))}

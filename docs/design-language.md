@@ -27,23 +27,24 @@ The default theme class on load is `dark`, with a user toggle for light mode.
 - Sans font: `Geist`
 - Mono font: `Geist Mono`
 - Default corner radius token: `--radius: .5rem`
+- Body background adds two subtle radial glow layers via `--page-glow-top` and `--page-glow-bottom`
 
 ### Layout Structure
 
 Public pages use this shell:
 
 ```tsx
-<header className="md:hidden sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" />
+<header className="md:hidden sticky top-0 z-50 border-b border-border/80 bg-background/88 shadow-[0_6px_20px_oklch(0_0_0_/0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72" />
 <div className="flex min-h-screen">
-  <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border bg-card z-40 transition-all duration-200" />
+  <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border/70 bg-card/92 shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] backdrop-blur-xl z-40 transition-all duration-200" />
   <div className="hidden md:block shrink-0 transition-all duration-200 w-[220px]" />
 
   <div className="flex-1 flex flex-col min-w-0">
-    <main id="main-content" className="flex-1 container mx-auto px-4 py-6 lg:px-6">
+    <main id="main-content" className="flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
       {/* route content */}
     </main>
 
-    <footer className="border-t py-6" />
+    <footer className="border-t border-border/70 bg-muted/10 py-6" />
   </div>
 </div>
 ```
@@ -54,6 +55,7 @@ Public pages use this shell:
 - Mobile header height: `h-14`
 - Main container padding:
   - Mobile: `px-4`
+  - Vertical rhythm: `py-6` (`md:py-7`)
   - Desktop (`lg`): `px-6`
 - Footer nav is muted text with hover promotion to foreground.
 
@@ -66,8 +68,8 @@ Public pages use this shell:
 Most routes use:
 
 - Wrapper: `space-y-6`
-- Title block: `space-y-2`
-- Breadcrumb: `flex items-center gap-1.5 text-sm text-muted-foreground`
+- Title block: `space-y-2.5`
+- Breadcrumb: `flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm`
 - Title row: `flex max-w-full flex-wrap items-start gap-x-3 gap-y-2`
 
 ### Longform Pages
@@ -79,7 +81,7 @@ Most routes use:
 
 Home has no large feature `h1` hero title. Instead it uses a top logotype strip:
 
-- `h1`: `text-base font-mono font-semibold uppercase tracking-[0.18em] text-foreground`
+- `h1`: `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground`
 - Snapshot shell: `pharos-card-shell` + `pharos-kicker`
 
 ### Stablecoin Detail (Special)
@@ -105,12 +107,12 @@ Digest entries use:
 
 | Role | Live class pattern |
 |---|---|
-| Standard page title | `min-w-0 text-4xl font-extrabold tracking-tighter` |
+| Standard page title | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]` |
 | Digest article title | `text-3xl font-extrabold tracking-tighter` |
-| Home logotype title | `text-base font-mono font-semibold uppercase tracking-[0.18em]` |
+| Home logotype title | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]` |
 | Primary section heading | `leading-none font-semibold` |
 | Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight` |
-| Table/section kicker | `text-sm font-semibold uppercase tracking-wider text-muted-foreground` |
+| Table/section kicker | `text-[11px] font-semibold uppercase tracking-[0.13em] text-muted-foreground` |
 | Subsection heading | `text-foreground font-medium` |
 
 ### Body + Supporting Text
@@ -136,7 +138,7 @@ Numbers are consistently mono/tabular where precision matters:
 ### Common Vertical Rhythm
 
 - Section rhythm: `space-y-6`
-- Header block rhythm: `space-y-2`
+- Header block rhythm: `space-y-2.5`
 - Longform rhythm: `space-y-8`
 - Card prose rhythm: `space-y-6 text-sm text-muted-foreground leading-relaxed`
 
@@ -208,7 +210,7 @@ Navigation active state uses `border-l-frost-blue`.
 Homepage explore cards use:
 
 ```tsx
-className="pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-1.5 border-l-[3px] p-4"
+className="pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent p-4"
 ```
 
 ---

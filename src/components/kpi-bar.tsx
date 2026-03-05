@@ -16,7 +16,7 @@ import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification"
 
 type TrendDirection = "up" | "down" | "flat";
 type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
-const KPI_CHIP_BASE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]";
+const KPI_CHIP_BASE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
 
 function trendDirection(value: number): TrendDirection {
   if (value === 0) return "flat";
@@ -259,7 +259,7 @@ export function KpiBar() {
   if (isLoading) {
     return (
       <Card className="pharos-card-shell overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border/50 bg-muted/20 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
           <p className="pharos-kicker">Market Snapshot</p>
           <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
         </div>
@@ -303,7 +303,7 @@ export function KpiBar() {
 
   return (
     <Card className="pharos-card-shell overflow-hidden p-0">
-      <div className="flex items-center justify-between border-b border-border/50 bg-muted/20 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
         <p className="pharos-kicker">Market Snapshot</p>
         <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
       </div>

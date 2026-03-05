@@ -87,12 +87,12 @@ function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded:
       href={item.href}
       title={expanded ? undefined : item.label}
       aria-current={isActive ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-        expanded ? "mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
+      className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
+        expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
       } ${
         isActive
-          ? "border-l-[3px] border-l-frost-blue text-foreground bg-muted/50"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground border-l-[3px] border-l-transparent"
+          ? "border-l-frost-blue bg-muted/60 text-foreground shadow-sm"
+          : "border-l-transparent text-muted-foreground hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -119,8 +119,8 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
         setTheme(next);
       }}
       title={expanded ? undefined : label}
-      className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
-        expanded ? "w-full mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
+      className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
+        expanded ? "w-full mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -153,17 +153,23 @@ export function Sidebar() {
 
   return (
     <aside
-      className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border bg-card z-40 transition-all duration-200"
+      className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border/70 bg-card/92 shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] backdrop-blur-xl z-40 transition-all duration-200"
       style={{ width: expanded ? 220 : 56 }}
       aria-label="Main navigation"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       {/* Logo */}
-      <div className={`flex items-center h-14 shrink-0 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
-        <Link href="/" className="flex items-center gap-3" aria-label="Pharos home">
-          <Image src="/pharos-icon.png" alt="" width={28} height={28} className="rounded-lg shrink-0" />
-          {expanded && <span className="text-sm font-mono uppercase tracking-[0.2em] font-semibold">PHAROS</span>}
+      <div className={`flex items-center h-14 shrink-0 border-b border-border/65 ${expanded ? "px-4 gap-3" : "justify-center"}`}>
+        <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md" aria-label="Pharos home">
+          <Image
+            src="/pharos-icon.png"
+            alt=""
+            width={28}
+            height={28}
+            className="rounded-lg ring-1 ring-border/60 shrink-0 bg-slate-900/90 dark:bg-transparent"
+          />
+          {expanded && <span className="text-sm font-mono uppercase tracking-[0.18em] font-semibold">PHAROS</span>}
         </Link>
       </div>
 
@@ -171,14 +177,14 @@ export function Sidebar() {
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
         title={expanded ? undefined : "Search (Ctrl+K)"}
-        className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${
-          expanded ? "mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
+        className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
+          expanded ? "mx-2 mt-1 px-3 py-2.5" : "mx-auto mt-1 px-0 py-2 justify-center w-10"
         }`}
       >
         <Search className="h-4 w-4 shrink-0" />
         {expanded && <span className="text-sm">Search</span>}
         {expanded && (
-          <kbd className="ml-auto text-xs font-mono text-muted-foreground/60 border border-border rounded px-1 py-0.5">
+          <kbd className="ml-auto text-[10px] font-mono text-muted-foreground/70 border border-border/75 rounded-md px-1.5 py-0.5">
             Ctrl+K
           </kbd>
         )}
@@ -193,7 +199,7 @@ export function Sidebar() {
         {NAV_GROUPS.map((group) => (
           <div key={group.label}>
             {expanded && (
-              <div className="px-5 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+              <div className="px-5 pb-1.5 text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65">
                 {group.label}
               </div>
             )}
@@ -212,7 +218,7 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom section */}
-      <div className="shrink-0 border-t border-border py-2 space-y-0.5">
+      <div className="shrink-0 border-t border-border/65 bg-muted/15 py-2 space-y-0.5">
         {BOTTOM_NAV_ITEMS.map((item) => (
           <SidebarNavItem
             key={item.href}
@@ -225,8 +231,8 @@ export function Sidebar() {
         <button
           onClick={togglePin}
           title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
-          className={`flex items-center gap-3 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors ${
-            expanded ? "mx-2 px-3 py-2" : "mx-auto px-0 py-2 justify-center w-10"
+          className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
+            expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
           }`}
         >
           {expanded ? (

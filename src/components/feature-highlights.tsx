@@ -123,22 +123,22 @@ export function FeatureHighlights() {
 
   return (
     <section>
-      <h2 className="text-xl font-semibold tracking-tight mb-4">Explore</h2>
+      <h2 className="mb-4 text-xl font-semibold tracking-tight">Explore</h2>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
         {selected.map((f) => (
           <Link
             key={f.href}
             href={f.href}
-            className={`pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-1.5 border-l-[3px] ${f.borderClass} p-4`}
+            className={`pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent ${f.borderClass} p-4`}
           >
-            <span className="flex items-center gap-1.5 text-sm font-semibold tracking-tight">
+            <span className="flex items-center gap-1.5 text-sm font-semibold tracking-tight text-foreground">
               <f.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
               {f.title}
             </span>
-            <span className="text-xs text-muted-foreground leading-relaxed">
+            <span className="text-xs leading-relaxed text-muted-foreground">
               {f.description}
             </span>
-            <span className="mt-auto pt-1 text-xs text-muted-foreground/70 transition-colors group-hover:text-foreground group-focus-visible:text-foreground">
+            <span className="mt-auto pt-1 text-xs text-muted-foreground/75 transition-colors group-hover:text-foreground group-focus-visible:text-foreground">
               {f.linkLabel} &rarr;
             </span>
           </Link>

@@ -23,10 +23,10 @@ function MobileNavLink({ item, active, onNavigate }: { item: NavItem; active: bo
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      className={`flex items-start gap-3 rounded-md px-3 py-3 transition-colors ${
+      className={`pharos-focus-ring flex items-start gap-3 rounded-lg border px-3 py-3 transition-[background-color,border-color,color,box-shadow] duration-200 ${
         active
-          ? "bg-muted/50 font-medium text-foreground"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+          ? "border-border/70 bg-muted/60 font-medium text-foreground shadow-sm"
+          : "border-transparent text-muted-foreground hover:border-border/55 hover:bg-muted/45 hover:text-foreground"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0 mt-0.5" />
@@ -50,11 +50,18 @@ export function Header() {
   }
 
   return (
-    <header className="md:hidden sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="md:hidden sticky top-0 z-50 border-b border-border/80 bg-background/88 shadow-[0_6px_20px_oklch(0_0_0_/0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-background/72">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-3 font-semibold">
-          <Image src="/pharos-icon.png" alt="Pharos" width={32} height={32} className="rounded-lg" priority />
-          <span className="text-lg font-mono uppercase tracking-[0.2em]">PHAROS</span>
+        <Link href="/" className="pharos-focus-ring flex items-center gap-3 rounded-md font-semibold">
+          <Image
+            src="/pharos-icon.png"
+            alt="Pharos"
+            width={32}
+            height={32}
+            className="rounded-lg ring-1 ring-border/60 bg-slate-900/90 dark:bg-transparent"
+            priority
+          />
+          <span className="text-[1.05rem] font-mono uppercase tracking-[0.18em]">PHAROS</span>
         </Link>
 
         <Sheet open={open} onOpenChange={setOpen}>
@@ -67,13 +74,19 @@ export function Header() {
           <SheetContent
             side="left"
             showCloseButton={false}
-            className="w-full sm:max-w-full flex flex-col p-0"
+            className="w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card/95 p-0"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 h-14 border-b shrink-0">
-              <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3">
-                <Image src="/pharos-icon.png" alt="" width={28} height={28} className="rounded-lg" />
-                <SheetTitle className="text-lg font-mono uppercase tracking-[0.2em]">PHAROS</SheetTitle>
+            <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
+              <Link href="/" onClick={() => setOpen(false)} className="pharos-focus-ring flex items-center gap-3 rounded-md">
+                <Image
+                  src="/pharos-icon.png"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="rounded-lg ring-1 ring-border/60 bg-slate-900/90 dark:bg-transparent"
+                />
+                <SheetTitle className="text-lg font-mono uppercase tracking-[0.18em]">PHAROS</SheetTitle>
               </Link>
               <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setOpen(false)}>
                 <X className="h-4 w-4" />
@@ -102,7 +115,7 @@ export function Header() {
                     }`}
                     style={{ animationDelay: `${(groupIndex + 1) * 50}ms`, animationDuration: "200ms" }}
                   >
-                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">
+                    <div className="text-xs font-semibold uppercase tracking-[0.11em] text-muted-foreground/65 mb-1.5">
                       {group.label}
                     </div>
                     {group.items.map((item) => (
@@ -114,7 +127,7 @@ export function Header() {
             </nav>
 
             {/* Footer */}
-            <div className="border-t px-4 py-3 flex items-center justify-between shrink-0">
+            <div className="border-t border-border/70 bg-muted/20 px-4 py-3 flex items-center justify-between shrink-0">
               <Button
                 variant="ghost"
                 size="sm"

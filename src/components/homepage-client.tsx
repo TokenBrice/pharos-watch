@@ -98,23 +98,23 @@ export function HomepageClient() {
         ]}
       />
 
-      <section className="rounded-xl border border-border/60 bg-muted/20 p-4 lg:hidden overflow-x-clip">
+      <section className="pharos-card-shell lg:hidden overflow-x-clip p-4">
         <div className="space-y-2 min-w-0">
-          <p className="text-sm font-semibold tracking-tight">Pharos Stablecoin Radar</p>
-          <p className="text-xs text-muted-foreground break-words">
+          <p className="text-sm font-semibold tracking-tight text-foreground">Pharos Stablecoin Radar</p>
+          <p className="text-xs leading-relaxed text-muted-foreground break-words">
             Live coverage for {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg families.
             Start with PSI for market-wide risk, then drill into depegs, blacklist events, or liquidity depth.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/stability-index/"
-              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-500 transition-colors hover:bg-cyan-500/20 whitespace-normal"
+              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-500 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-cyan-500/60 hover:bg-cyan-500/20 whitespace-normal"
             >
               Open Stability Index
             </Link>
             <Link
               href="/depeg/"
-              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground whitespace-normal"
+              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground whitespace-normal"
             >
               View Depeg Tracker
             </Link>
@@ -132,7 +132,7 @@ export function HomepageClient() {
 
       <SectionErrorBoundary name="table">
         <section>
-          <div className="space-y-2 mb-6">
+          <div className="space-y-2.5 mb-6">
             <h2 className="pharos-kicker">
               Browse By Peg
             </h2>
@@ -144,7 +144,7 @@ export function HomepageClient() {
                   <Link
                     key={peg}
                     href={`/stablecoins/${slug}/`}
-                    className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-0 sm:py-1"
+                    className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-0 sm:py-1"
                   >
                     {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
                   </Link>
@@ -152,7 +152,7 @@ export function HomepageClient() {
               })}
             </div>
           </div>
-          <h2 className="text-xl font-semibold tracking-tight mb-4">Key Stablecoin Data</h2>
+          <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
           <FilterBar {...filters} />
           <div className="mt-6">
             <StablecoinTable
@@ -179,7 +179,7 @@ export function HomepageClient() {
               <h2 className="text-xl font-semibold tracking-tight">DEWS: Depeg Early Warning System</h2>
               <Link
                 href="/depeg/"
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
               >
                 View Depeg Tracker
                 <ArrowRight className="h-3 w-3" />
@@ -202,7 +202,7 @@ export function HomepageClient() {
               <h2 className="text-xl font-semibold tracking-tight">Safety Scores Overview</h2>
               <Link
                 href="/safety-scores/"
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
               >
                 View Safety Scores
                 <ArrowRight className="h-3 w-3" />
@@ -219,7 +219,7 @@ export function HomepageClient() {
               <h2 className="text-xl font-semibold tracking-tight">Pharos Stability Index History</h2>
               <Link
                 href="/stability-index/"
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs text-muted-foreground hover:text-foreground"
               >
                 More Information on PSI
                 <ArrowRight className="h-3 w-3" />
@@ -248,7 +248,7 @@ export function HomepageClient() {
 
       <PegDiversityChart />
 
-      <p className="text-xs text-muted-foreground text-center max-w-3xl mx-auto">
+      <p className="mx-auto max-w-3xl text-center text-xs leading-relaxed text-muted-foreground">
         Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP,
         gold, silver, and more) with honest governance classification: {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,
         {" "}{TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
