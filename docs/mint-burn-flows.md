@@ -436,6 +436,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
 | `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, fis. Responsive column hiding |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
+| `HomepageFlowOverview` | `src/components/homepage-flow-overview.tsx` | Homepage snapshot wrapper: pulls 24h/7d aggregate flow data and renders the same printer/shredder scene used on `/flows` |
 | `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: FIS, net 24h/7d, mint/burn volumes |
 
 ### Dashboard Integration

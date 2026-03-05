@@ -13,6 +13,8 @@ import { CategoryStats } from "@/components/category-stats";
 import { MarketHighlights } from "@/components/market-highlights";
 import { TotalMcapChart } from "@/components/total-mcap-chart";
 import { PsiHistoryChart } from "@/components/psi-history-chart";
+import { DEWSSummary } from "@/components/dews-summary";
+import { HomepageFlowOverview } from "@/components/homepage-flow-overview";
 import { PegDiversityChart } from "@/components/peg-diversity-chart";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -126,13 +128,6 @@ export function HomepageClient() {
         <DailyDigest />
       </SectionErrorBoundary>
 
-      <SectionErrorBoundary name="charts">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TotalMcapChart />
-          <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
-        </div>
-      </SectionErrorBoundary>
-
       <SectionErrorBoundary name="table">
         <section>
           <div className="space-y-2 mb-6">
@@ -174,6 +169,22 @@ export function HomepageClient() {
           </div>
         </section>
       </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="charts">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TotalMcapChart />
+          <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} />
+        </div>
+      </SectionErrorBoundary>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SectionErrorBoundary name="dews-radar">
+          <DEWSSummary logos={logos} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="mint-burn-snapshot">
+          <HomepageFlowOverview />
+        </SectionErrorBoundary>
+      </div>
 
       <FeatureHighlights />
 

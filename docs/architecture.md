@@ -46,7 +46,7 @@
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
-│   ├── page.tsx                  # Homepage: stats, charts, peg tracker, filters, table
+│   ├── page.tsx                  # Homepage: stats, charts, DEWS/flow snapshots, peg tracker, filters, table
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
@@ -136,6 +136,7 @@ src/                              # Next.js frontend (static export)
 │   ├── command-palette.tsx       # ⌘K command palette for quick navigation
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
+│   ├── homepage-flow-overview.tsx # Homepage mint/burn snapshot block (FlowBrrrOverview wrapper)
 │   ├── stablecoin-table.tsx      # Sortable table with filters
 │   ├── flow-gauge.tsx            # Shared Flow Intensity band configuration map (labels/colors/classes)
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
