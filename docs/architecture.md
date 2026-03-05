@@ -252,6 +252,8 @@ src/                              # Next.js frontend (static export)
 │   ├── use-health.ts             # GET /api/health using shared polling policy helper
 │   ├── use-status.ts             # GET /api/status (admin key auth) using shared polling policy helper
 │   ├── use-sort.ts               # Generic useSort<K> hook (sort state, toggle, keyboard, aria)
+│   ├── use-sorted-table-rows.ts  # Shared table sorting scaffold (useSort wiring + sorted row memo)
+│   ├── use-table-pagination.ts   # Shared table pagination scaffold (effective page, ranges, prev/next handlers)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover

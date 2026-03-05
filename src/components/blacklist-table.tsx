@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -19,7 +19,7 @@ import { isGoldStablecoin } from "@/lib/blacklist-helpers";
 import type { BlacklistEvent } from "@/lib/types";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@/lib/classification";
 import { SortableTableHead } from "@/components/sortable-table-head";
-import { useSort } from "@/hooks/use-sort";
+import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 
 interface BlacklistTableProps {
   events: BlacklistEvent[];
@@ -30,11 +30,8 @@ interface BlacklistTableProps {
 
 export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistTableProps) {
   type SortKey = "date" | "stablecoin" | "chain" | "event";
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("date", "desc");
-  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
-
-  const sorted = useMemo(() => {
-    return [...events].sort((a, b) => {
+  const compareRows = useCallback(
+    (a: BlacklistEvent, b: BlacklistEvent, sort: TableSortState<SortKey>): number => {
       let cmp = 0;
       switch (sort.key) {
         case "date":
@@ -53,8 +50,15 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
           cmp = a.timestamp - b.timestamp;
       }
       return sort.direction === "asc" ? cmp : -cmp;
-    });
-  }, [events, sort]);
+    },
+    []
+  );
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
+    useSortedTableRows<BlacklistEvent, SortKey>(
+      events,
+      { defaultKey: "date", defaultDirection: "desc" },
+      compareRows
+    );
 
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize;

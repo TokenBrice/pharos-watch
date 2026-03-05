@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
-import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { formatCurrency } from "@/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
@@ -79,14 +80,10 @@ interface YieldLeaderboardProps {
 }
 
 export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboardProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("pys", "desc");
-  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
-  const [page, setPage] = useState(0);
-  const prefetch = usePrefetchStablecoin();
-
-  const sorted = useMemo(() => {
-    return [...rankings].sort((a, b) => {
-      let aVal: number, bVal: number;
+  const compareRows = useCallback(
+    (a: YieldRanking, b: YieldRanking, sort: TableSortState<SortKey>): number => {
+      let aVal: number;
+      let bVal: number;
       switch (sort.key) {
         case "pys":
           aVal = a.pharosYieldScore ?? -1;
@@ -117,12 +114,28 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
           bVal = b.pharosYieldScore ?? -1;
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-    });
-  }, [rankings, sort]);
+    },
+    []
+  );
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const effectivePage = page >= totalPages ? 0 : page;
-  const paginated = sorted.slice(effectivePage * PAGE_SIZE, (effectivePage + 1) * PAGE_SIZE);
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
+    useSortedTableRows<YieldRanking, SortKey>(
+      rankings,
+      { defaultKey: "pys", defaultDirection: "desc" },
+      compareRows
+    );
+  const {
+    effectivePage,
+    totalPages,
+    paginatedRows: paginated,
+    pageStartIndex,
+    rangeStart,
+    rangeEnd,
+    totalRows,
+    onPreviousPage,
+    onNextPage,
+  } = useTablePagination(sorted, { pageSize: PAGE_SIZE });
+  const prefetch = usePrefetchStablecoin();
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
@@ -205,7 +218,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 tabIndex={0}
               >
                 <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
-                  {effectivePage * PAGE_SIZE + index + 1}
+                  {pageStartIndex + index + 1}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -298,11 +311,11 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
         <TablePagination
           page={effectivePage}
           totalPages={totalPages}
-          rangeStart={sorted.length === 0 ? 0 : effectivePage * PAGE_SIZE + 1}
-          rangeEnd={Math.min((effectivePage + 1) * PAGE_SIZE, sorted.length)}
-          total={sorted.length}
-          onPrevious={() => setPage(Math.max(0, effectivePage - 1))}
-          onNext={() => setPage(Math.min(totalPages - 1, effectivePage + 1))}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={totalRows}
+          onPrevious={onPreviousPage}
+          onNext={onNextPage}
           noun="coins"
         />
       )}

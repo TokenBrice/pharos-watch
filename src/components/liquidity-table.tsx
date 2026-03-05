@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback } from "react";
 import Image from "next/image";
 import {
   Table,
@@ -14,8 +14,9 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
 import { BalanceBar } from "@/components/balance-bar";
-import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { formatCurrency } from "@/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
@@ -38,16 +39,12 @@ interface LiquidityTableProps {
 }
 
 export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: LiquidityTableProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<SortKey>("score", "desc");
-  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
-  const [page, setPage] = useState(0);
-  const prefetch = usePrefetchStablecoin();
-
-  const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
+  const compareRows = useCallback(
+    (a: LiquidityRow, b: LiquidityRow, sort: TableSortState<SortKey>): number => {
       const aLiq = a.liq;
       const bLiq = b.liq;
-      let aVal: number, bVal: number;
+      let aVal: number;
+      let bVal: number;
       switch (sort.key) {
         case "score":
           aVal = aLiq.liquidityScore ?? 0;
@@ -102,18 +99,28 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           bVal = bLiq.liquidityScore ?? 0;
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-    });
-  }, [rows, sort]);
+    },
+    []
+  );
 
-  // Reset page when rows change (filter/search change causes new rows array)
-  const [prevRowCount, setPrevRowCount] = useState(rows.length);
-  if (prevRowCount !== rows.length) {
-    setPrevRowCount(rows.length);
-    setPage(0);
-  }
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
+    useSortedTableRows<LiquidityRow, SortKey>(
+      rows,
+      { defaultKey: "score", defaultDirection: "desc" },
+      compareRows
+    );
+  const {
+    effectivePage,
+    totalPages,
+    paginatedRows: paginated,
+    pageStartIndex,
+    rangeStart,
+    rangeEnd,
+    totalRows,
+    onPreviousPage,
+    onNextPage,
+  } = useTablePagination(sorted, { pageSize: PAGE_SIZE, resetPageOnTotalChange: true });
+  const prefetch = usePrefetchStablecoin();
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
@@ -261,7 +268,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
                 tabIndex={0}
               >
                 <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
-                  {page * PAGE_SIZE + index + 1}
+                  {pageStartIndex + index + 1}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -336,13 +343,13 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
       </Table>
       {sorted.length > 0 && (
         <TablePagination
-          page={page}
+          page={effectivePage}
           totalPages={totalPages}
-          rangeStart={sorted.length === 0 ? 0 : page * PAGE_SIZE + 1}
-          rangeEnd={Math.min((page + 1) * PAGE_SIZE, sorted.length)}
-          total={sorted.length}
-          onPrevious={() => setPage((p) => Math.max(0, p - 1))}
-          onNext={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          total={totalRows}
+          onPrevious={onPreviousPage}
+          onNext={onNextPage}
           noun="pools"
         />
       )}

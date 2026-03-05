@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -13,8 +13,9 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TablePagination } from "@/components/table-pagination";
 import { DEWSBadge } from "@/components/dews-badge";
-import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
+import { useTablePagination } from "@/hooks/use-table-pagination";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@/lib/classification";
@@ -50,20 +51,15 @@ function rowAccentClass(row: DepegTrackerRow): string {
 }
 
 export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTableProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
-    useSort<SortKey>("__attention", "desc");
-  const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
-  const [page, setPage] = useState(0);
-  const prefetch = usePrefetchStablecoin();
-
-  const sorted = useMemo(() => {
-    return [...rows].sort((a, b) => {
+  const compareRows = useCallback(
+    (a: DepegTrackerRow, b: DepegTrackerRow, sort: TableSortState<SortKey>): number => {
       // Default "attention" sort
       if (sort.key === "__attention") {
         return attentionScore(b) - attentionScore(a);
       }
 
-      let aVal: number, bVal: number;
+      let aVal: number;
+      let bVal: number;
       switch (sort.key) {
         case "pegScore":
           aVal = a.coin.pegScore ?? -1;
@@ -105,12 +101,28 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
           return attentionScore(b) - attentionScore(a);
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
-    });
-  }, [rows, sort]);
+    },
+    []
+  );
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const effectivePage = page >= totalPages ? 0 : page;
-  const paginated = sorted.slice(effectivePage * PAGE_SIZE, (effectivePage + 1) * PAGE_SIZE);
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
+    useSortedTableRows<DepegTrackerRow, SortKey>(
+      rows,
+      { defaultKey: "__attention", defaultDirection: "desc" },
+      compareRows
+    );
+  const {
+    effectivePage,
+    totalPages,
+    paginatedRows: paginated,
+    pageStartIndex,
+    rangeStart,
+    rangeEnd,
+    totalRows,
+    onPreviousPage,
+    onNextPage,
+  } = useTablePagination(sorted, { pageSize: PAGE_SIZE });
+  const prefetch = usePrefetchStablecoin();
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
@@ -207,7 +219,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
             const dews = row.dews;
             const absDev = Math.abs(coin.currentDeviationBps ?? 0);
             const accent = rowAccentClass(row);
-            const rank = effectivePage * PAGE_SIZE + i + 1;
+            const rank = pageStartIndex + i + 1;
 
             return (
               <TableRow
@@ -301,11 +313,11 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
       <TablePagination
         page={effectivePage}
         totalPages={totalPages}
-        rangeStart={sorted.length === 0 ? 0 : effectivePage * PAGE_SIZE + 1}
-        rangeEnd={Math.min((effectivePage + 1) * PAGE_SIZE, sorted.length)}
-        total={sorted.length}
-        onPrevious={() => setPage(Math.max(0, effectivePage - 1))}
-        onNext={() => setPage(Math.min(totalPages - 1, effectivePage + 1))}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        total={totalRows}
+        onPrevious={onPreviousPage}
+        onNext={onNextPage}
         noun="stablecoins"
       />
     </div>

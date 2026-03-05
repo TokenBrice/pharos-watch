@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -13,9 +13,9 @@ import {
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSort } from "@/hooks/use-sort";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
 import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
 import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
@@ -30,16 +30,11 @@ type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "net30d" | "net90d" 
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } =
-    useSort<SortKey>("fis", "desc");
-  const { data: logos } = useLogos();
-  const prefetch = usePrefetchStablecoin();
-
-  const sorted = useMemo(() => {
-    return [...coins].sort((a, b) => {
+  const compareRows = useCallback(
+    (a: MintBurnCoinFlow, b: MintBurnCoinFlow, sort: TableSortState<SortKey>): number => {
       let aVal: number;
       let bVal: number;
-      switch (sortKey) {
+      switch (sort.key) {
         case "net24h":
           aVal = Math.abs(a.netFlow24hUsd);
           bVal = Math.abs(b.netFlow24hUsd);
@@ -79,9 +74,18 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           aVal = Math.abs(a.netFlow24hUsd);
           bVal = Math.abs(b.netFlow24hUsd);
       }
-      return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
-    });
-  }, [coins, sortKey, sortDirection]);
+      return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
+    },
+    []
+  );
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
+    useSortedTableRows<MintBurnCoinFlow, SortKey>(
+      coins,
+      { defaultKey: "fis", defaultDirection: "desc" },
+      compareRows
+    );
+  const { data: logos } = useLogos();
+  const prefetch = usePrefetchStablecoin();
 
   if (isLoading) {
     return (

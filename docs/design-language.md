@@ -222,6 +222,9 @@ For slightly smaller KPIs: `text-lg font-bold font-mono tracking-tight`.
 ### Component
 
 Always use the shadcn `Table` primitives. For sortable columns, use `SortableTableHead`.
+For feature tables that need shared sorting/pagination plumbing, use:
+- `useSortedTableRows` (`src/hooks/use-sorted-table-rows.ts`) for sort state + sorted data memoization.
+- `useTablePagination` (`src/hooks/use-table-pagination.ts`) for consistent page/effective-page/range handling.
 
 ### Column Alignment
 
