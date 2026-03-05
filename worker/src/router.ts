@@ -31,7 +31,7 @@ import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { runIdempotentAdminAction } from "./lib/idempotency";
-import { isMutatingAdminPath } from "../../src/lib/api-endpoints";
+import { validateEndpointMethod } from "../../src/lib/api-endpoints";
 
 import { isValidStablecoinId } from "./lib/api-utils";
 
@@ -44,15 +44,15 @@ export function route(
   alchemyApiKey?: string | null,
 ): Promise<Response> | null {
   const path = url.pathname;
-
-  const allowAuditDryRunGet =
-    path === "/api/audit-depeg-history" && url.searchParams.get("dry-run") === "true";
-
-  if (request?.method === "GET" && isMutatingAdminPath(path) && !allowAuditDryRunGet) {
+  const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
+  if (methodValidation) {
     return Promise.resolve(
-      new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
+      new Response(JSON.stringify({ error: methodValidation.message }), {
         status: 405,
-        headers: { "Content-Type": "application/json", "Allow": "POST" },
+        headers: {
+          "Content-Type": "application/json",
+          "Allow": methodValidation.allowedMethods.join(", "),
+        },
       }),
     );
   }

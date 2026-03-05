@@ -62,6 +62,19 @@ All error responses use `{ "error": "message" }` JSON format.
 
 ---
 
+## Method Gating Policy
+
+HTTP method allowance is defined centrally in `src/lib/api-endpoints.ts` and enforced by both `worker/src/index.ts` and `worker/src/router.ts`.
+
+- `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
+- `POST` is accepted for mutating admin endpoints and `POST /api/feedback`.
+- `/api/audit-depeg-history` allows `GET` only with `?dry-run=true`; otherwise it is `POST`-only.
+- Unknown `POST` paths return `405` with `Allow: GET`; unsupported verbs return `405` with `Allow: GET, POST`.
+
+This keeps endpoint metadata, router behavior, and method guards aligned from one definition source.
+
+---
+
 ## Public Endpoints
 
 ### `GET /api/stablecoins`

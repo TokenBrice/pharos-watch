@@ -4,6 +4,7 @@ import {
   getStatusPageActions,
   isCacheBypassPath,
   isMutatingAdminPath,
+  validateEndpointMethod,
 } from "../api-endpoints";
 
 describe("api endpoint registry", () => {
@@ -64,7 +65,42 @@ describe("api endpoint registry", () => {
     expect(isCacheBypassPath("/api/health")).toBe(true);
     expect(isCacheBypassPath("/api/status")).toBe(true);
     expect(isCacheBypassPath("/api/backfill-dews")).toBe(true);
+    expect(isCacheBypassPath("/api/feedback")).toBe(true);
     expect(isCacheBypassPath("/api/stablecoins")).toBe(false);
+  });
+
+  it("validates endpoint methods from shared definitions", () => {
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "GET")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "POST")).toBeNull();
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
+    expect(
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET")
+    ).toBeNull();
+
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "POST")).toEqual({
+      message: "Method not allowed",
+      allowedMethods: ["GET"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/trigger-digest"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/feedback"), "GET")).toEqual({
+      message: "Method not allowed. Use POST for this endpoint.",
+      allowedMethods: ["POST"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/unknown"), "POST")).toEqual({
+      message: "Method not allowed",
+      allowedMethods: ["GET"],
+    });
+    expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "DELETE")).toEqual({
+      message: "Method not allowed",
+      allowedMethods: ["GET", "POST"],
+    });
   });
 
   it("provides status-page actions in UI order", () => {

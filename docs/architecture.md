@@ -263,7 +263,7 @@ src/                              # Next.js frontend (static export)
 │   └── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
-    ├── api-endpoints.ts          # Shared API endpoint registry (worker method/cache rules + status probes/actions)
+    ├── api-endpoints.ts          # Authoritative API endpoint definitions (methods/auth/cache/probes/actions + method validation helpers)
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, ReserveSlice (with coinId/depType), RawDimensionInputs, CacheStatus (shared with worker)
@@ -301,8 +301,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
 ├── migrations/                   # D1 SQL migrations (49 total)
 └── src/
-    ├── index.ts                  # Entry: fetch + scheduled handlers, CORS
-    ├── router.ts                 # Route matching for API endpoints
+    ├── index.ts                  # Entry: fetch + scheduled handlers, CORS, inline admin/feedback handlers (consumes shared endpoint method policy)
+    ├── router.ts                 # Router-dispatched API handlers (consumes shared endpoint method policy)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/

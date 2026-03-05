@@ -28,7 +28,7 @@ import {
   MINT_BURN_STALE_WARN_SEC,
   MINT_BURN_STALE_CRIT_SEC,
 } from "./lib/mint-burn-health-config";
-import { isMutatingAdminPath, isCacheBypassPath } from "../../src/lib/api-endpoints";
+import { isCacheBypassPath, validateEndpointMethod } from "../../src/lib/api-endpoints";
 
 interface Env {
   DB: D1Database;
@@ -116,9 +116,19 @@ const worker = {
     }
 
     const url = new URL(request.url);
-    const mutatingAdminPath = isMutatingAdminPath(url.pathname);
-    const allowAuditDryRunGet =
-      url.pathname === "/api/audit-depeg-history" && url.searchParams.get("dry-run") === "true";
+    const methodValidation = validateEndpointMethod(url, request.method);
+    if (methodValidation) {
+      return addCorsHeaders(
+        new Response(JSON.stringify({ error: methodValidation.message }), {
+          status: 405,
+          headers: {
+            "Content-Type": "application/json",
+            "Allow": methodValidation.allowedMethods.join(", "),
+          },
+        }),
+        origin
+      );
+    }
 
     // POST /api/feedback — in-app feedback submission (public, no edge cache)
     if (request.method === "POST" && url.pathname === "/api/feedback") {
@@ -131,36 +141,6 @@ const worker = {
       };
       return addCorsHeaders(
         await handleFeedback(env.DB, request, feedbackEnv),
-        origin
-      );
-    }
-
-    if (request.method === "GET" && mutatingAdminPath && !allowAuditDryRunGet) {
-      return addCorsHeaders(
-        new Response(JSON.stringify({ error: "Method not allowed. Use POST for this endpoint." }), {
-          status: 405,
-          headers: { "Content-Type": "application/json", "Allow": "POST" },
-        }),
-        origin
-      );
-    }
-
-    if (request.method === "POST" && !mutatingAdminPath) {
-      return addCorsHeaders(
-        new Response(JSON.stringify({ error: "Method not allowed" }), {
-          status: 405,
-          headers: { "Content-Type": "application/json", "Allow": "GET" },
-        }),
-        origin
-      );
-    }
-
-    if (request.method !== "GET" && request.method !== "POST") {
-      return addCorsHeaders(
-        new Response(JSON.stringify({ error: "Method not allowed" }), {
-          status: 405,
-          headers: { "Content-Type": "application/json", "Allow": "GET, POST" },
-        }),
         origin
       );
     }

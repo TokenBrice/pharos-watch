@@ -29,6 +29,11 @@ export interface StatusPageAction {
   method: EndpointMethod;
 }
 
+export interface EndpointMethodValidationError {
+  message: string;
+  allowedMethods: readonly EndpointMethod[];
+}
+
 export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   // Public endpoints probed by the status dashboard.
   {
@@ -203,6 +208,14 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     cacheBypass: false,
     probeGroup: "public",
   },
+  {
+    path: "/api/feedback",
+    methods: ["POST"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: true,
+    routerHandled: false,
+  },
 
   // Admin status/probe endpoints.
   {
@@ -373,6 +386,16 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
   },
 ] as const;
 
+const ENDPOINT_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(
+  ENDPOINT_DEFINITIONS.map((endpoint) => [endpoint.path, endpoint]),
+);
+
+const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
+const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
+const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
+const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
+const AUDIT_DEPEG_HISTORY_PATH = "/api/audit-depeg-history";
+
 const MUTATING_ADMIN_PATHS = new Set<string>(
   ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.mutatingAdmin).map((endpoint) => endpoint.path),
 );
@@ -387,6 +410,50 @@ export function isMutatingAdminPath(path: string): boolean {
 
 export function isCacheBypassPath(path: string): boolean {
   return CACHE_BYPASS_PATHS.has(path);
+}
+
+export function getEndpointDefinition(path: string): EndpointDefinition | undefined {
+  return ENDPOINT_DEFINITION_BY_PATH.get(path);
+}
+
+export function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] | null {
+  const definition = getEndpointDefinition(url.pathname);
+  if (definition) {
+    if (url.pathname === AUDIT_DEPEG_HISTORY_PATH && url.searchParams.get("dry-run") !== "true") {
+      return POST_ONLY_METHODS;
+    }
+    return definition.methods;
+  }
+
+  if (STABLECOIN_DETAIL_PATH_PATTERN.test(url.pathname)) {
+    return GET_ONLY_METHODS;
+  }
+
+  return null;
+}
+
+export function validateEndpointMethod(url: URL, method: string): EndpointMethodValidationError | null {
+  if (method !== "GET" && method !== "POST") {
+    return { message: "Method not allowed", allowedMethods: GET_AND_POST_METHODS };
+  }
+
+  const allowedMethods = getAllowedEndpointMethods(url);
+  if (!allowedMethods) {
+    if (method === "POST") {
+      return { message: "Method not allowed", allowedMethods: GET_ONLY_METHODS };
+    }
+    return null;
+  }
+
+  if (allowedMethods.includes(method as EndpointMethod)) {
+    return null;
+  }
+
+  const postOnly = method === "GET" && allowedMethods.length === 1 && allowedMethods[0] === "POST";
+  return {
+    message: postOnly ? "Method not allowed. Use POST for this endpoint." : "Method not allowed",
+    allowedMethods,
+  };
 }
 
 export function getProbePaths(group: EndpointProbeGroup): string[] {
