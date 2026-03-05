@@ -36,11 +36,11 @@
 | `POST /api/backfill-cg-prices` | Admin: backfill CoinGecko historical prices into price_cache (requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn` | Admin: controlled mint/burn ingestion backfill by `configKey` (requires `X-Admin-Key`) |
 | `POST /api/audit-depeg-history` | Admin: audit depeg events against CoinGecko price data for false positive detection (GET supports `dry-run=true` only; requires `X-Admin-Key`) |
-| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`). Handled in `worker/src/handlers/http.ts` (non-router path) |
-| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`). Handled in `worker/src/handlers/http.ts` (non-router path) |
+| `POST /api/trigger-digest` | Admin: force digest regeneration bypassing 1h dedup (requires `X-Admin-Key`) |
+| `POST /api/reset-blacklist-sync` | Admin: roll back blacklist sync state to re-scan missed events (requires `X-Admin-Key`) |
 | `GET /api/backfill-dews` | Admin: DEWS backtest audit against historical depeg events (reports true-positive rate and lead time; requires `X-Admin-Key`) |
 | `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
-| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`). Handled in `worker/src/handlers/http.ts` (non-router path) |
+| `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`) |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
 
 ## Full File Tree
@@ -80,6 +80,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── page.tsx
 │   │   ├── error.tsx
 │   │   ├── changelog-page-utils.ts # Shared metadata + entry mapping helpers for methodology changelog routes
+│   │   ├── changelog-route-factory.tsx # Config-driven wrapper factory for methodology changelog routes
 │   │   ├── scoring-changelog/page.tsx  # Safety Score methodology changelog
 │   │   ├── depeg-changelog/page.tsx    # Depeg/DEWS methodology changelog
 │   │   ├── liquidity-score-changelog/page.tsx # Liquidity score changelog
@@ -142,6 +143,9 @@ src/                              # Next.js frontend (static export)
 │   ├── homepage-flow-overview.tsx # Homepage mint/burn snapshot block (FlowBrrrOverview wrapper)
 │   ├── homepage-safety-overview.tsx # Homepage safety snapshot block (report-card distribution + largest coins)
 │   ├── stablecoin-table.tsx      # Sortable table with filters
+│   ├── stablecoin-table-logic.ts # Stablecoin table filtering/sorting/export helpers
+│   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
+│   ├── status/                   # Status dashboard component decomposition
 │   ├── flow-gauge.tsx            # Shared Flow Intensity band configuration map (labels/colors/classes)
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
 │   ├── flow-table.tsx            # Per-coin flow table with FIS, volumes, net flows
@@ -303,13 +307,14 @@ worker/                           # Cloudflare Worker (API + cron jobs)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
-    │   ├── http.ts               # HTTP flow: CORS, edge cache, non-router endpoints, router dispatch
+    │   ├── http.ts               # HTTP flow: CORS, edge cache, method/auth gating, router dispatch
     │   └── scheduled.ts          # Cron flow: trigger-slot orchestration + lease-aware scheduling
     ├── router.ts                 # Router-dispatched API handlers (method gating + path dispatch from endpoint contract)
     ├── cron/
     │   ├── sync-stablecoins.ts   # DefiLlama + CoinGecko gold → D1 (orchestrator with explicit stage boundaries)
     │   ├── sync-stablecoins/
-    │   │   └── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
+    │   │   ├── stages.ts         # Extracted sync-stablecoins stage helpers (normalize/filter/staleness/supply-history fill)
+    │   │   └── supplemental-assets.ts # Extracted supplemental token fetch helpers (gold/silver/CG-only fiat overlays)
     │   ├── enrich-prices.ts      # Dual-primary price validation + 6-pass enrichment pipeline (DefiLlama, CoinGecko, CoinMarketCap, DexScreener)
     │   ├── detect-depegs.ts      # Depeg event detection + orphan event cleanup
     │   ├── sync-stablecoin-charts.ts  # Historical chart data → D1
@@ -382,7 +387,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
-    │   └── feedback.ts          # POST /api/feedback (public, handled in handlers/http.ts not router)
+    │   └── feedback.ts          # POST /api/feedback (public)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, logCronRun with protected catch)
         ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)

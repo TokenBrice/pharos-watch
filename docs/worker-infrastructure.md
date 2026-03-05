@@ -154,15 +154,16 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 - Compares against `ADMIN_KEY` env var using timing-safe comparison: both values are SHA-256 hashed via `crypto.subtle.digest()`, then compared with `crypto.subtle.timingSafeEqual()`
 - Returns `null` if authorized, 401 Response if not
 
-### Non-Router Admin Endpoints
+### Router-Dispatched Status Actions
 
-Three admin endpoints are handled directly in `worker/src/handlers/http.ts` (not via `worker/src/router.ts`):
+Status page manual/admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`):
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
 | `POST /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
 | `POST /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
 | `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
+| `POST /api/feedback` | Public | Feedback intake endpoint (rate-limited + GitHub routing) |
 
 ### Backfill Query Helper
 
@@ -253,6 +254,7 @@ These files are called internally by `syncStablecoins()`, not registered as stan
 | `worker/src/cron/detect-depegs.ts` | `syncStablecoins()` | `docs/depeg-detection.md` |
 | `worker/src/cron/confirm-pending-depegs.ts` | `syncStablecoins()` | `docs/depeg-detection.md` |
 | `worker/src/cron/enrich-prices.ts` | `syncStablecoins()` | `docs/data-pipeline.md` |
+| `worker/src/cron/sync-stablecoins/supplemental-assets.ts` | `syncStablecoins()` | `docs/data-pipeline.md` |
 
 ---
 
@@ -602,7 +604,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | File | Role |
 |------|------|
 | `worker/src/index.ts` | Thin worker entry: delegates `fetch`/`scheduled` to handler modules |
-| `worker/src/handlers/http.ts` | HTTP request pipeline: CORS, method gating, edge cache, non-router admin routes, router dispatch |
+| `worker/src/handlers/http.ts` | HTTP request pipeline: CORS, method gating, edge cache, route-context assembly, router dispatch |
 | `worker/src/handlers/scheduled.ts` | Cron scheduler pipeline: trigger-slot orchestration, `logCronRun`, lease wrappers, staleness alert |
 | `worker/src/lib/env.ts` | Worker Env interface + `parseCsvEnv()` helper for CSV-based runtime overrides |
 | `worker/wrangler.toml` | Deployment config: custom domain, cron triggers, D1 binding, vars |

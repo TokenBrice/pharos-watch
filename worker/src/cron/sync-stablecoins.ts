@@ -2,11 +2,10 @@ import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice, fetchDualPrimaryPrices } from "./enrich-prices";
-import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
+import type { PeggedAsset } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
 import { confirmPendingDepegs } from "./confirm-pending-depegs";
-import { resolveMarketCap } from "../lib/resolve-market-cap";
 import {
   applyTrackedAssetOverrides,
   detectPriceStaleness,
@@ -14,27 +13,20 @@ import {
   filterStructurallyValidAssets,
   normalizeChainCirculating,
 } from "./sync-stablecoins/stages";
+import {
+  fetchCoinGeckoMarketData,
+  fetchSupplementalTrackedTokens,
+  type CoinGeckoMcapData,
+} from "./sync-stablecoins/supplemental-assets";
 
-import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
+import { DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { cgUrl, cgHeaders } from "../lib/coingecko";
-import { StablecoinListResponseSchema, type StablecoinMeta } from "@shared/types";
+import { StablecoinListResponseSchema } from "@shared/types";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { sendAlert } from "../lib/alerts";
 
-// Derive commodity + CG-only fiat token lists from the central registry
-const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
-  (s) => s.flags.pegCurrency === "GOLD" || s.flags.pegCurrency === "SILVER"
-);
-const GOLD_METAS = TRACKED_STABLECOINS.filter((s) => s.flags.pegCurrency === "GOLD");
-const SILVER_METAS = TRACKED_STABLECOINS.filter((s) => s.flags.pegCurrency === "SILVER");
-const FIAT_CG_METAS = TRACKED_STABLECOINS.filter((s) => s.id.startsWith("cg-"));
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
-
-function pegTypeKey(meta: StablecoinMeta): string {
-  return `pegged${meta.flags.pegCurrency}`;
-}
 
 type StablecoinsPayload = {
   peggedAssets: PeggedAsset[];
@@ -135,291 +127,6 @@ function isReasonablePriceForAsset(
   const meta = TRACKED_META_BY_ID.get(String(asset.id));
   const navToken = !!meta?.flags?.navToken || !!asset.navToken;
   return isReasonablePrice(price, asset.pegType as string | undefined, fxRates, { navToken });
-}
-
-async function fetchSilverTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
-  if (SILVER_METAS.length === 0) return [];
-  try {
-    const coinIds = SILVER_METAS.map((t) => `coingecko:${t.geckoId}`).join(",");
-    const cgIds = SILVER_METAS.map((t) => t.geckoId).filter(Boolean).join(",");
-
-    // Fetch DL prices + CG circulating_supply in parallel
-    const [priceRes, cgMarketsRes] = await Promise.all([
-      fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`),
-      cgIds
-        ? fetchWithRetry(
-            cgUrl(`/coins/markets?vs_currency=usd&ids=${cgIds}`),
-            { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) },
-          )
-        : Promise.resolve(null),
-    ]);
-
-    if (!priceRes || !priceRes.ok) {
-      console.error(`[silver] Price fetch failed: ${priceRes?.status ?? "no response"}`);
-      return [];
-    }
-    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
-
-    // Parse circulating_supply per geckoId from CG markets response
-    const cgSupplyMap = new Map<string, number>();
-    if (cgMarketsRes?.ok) {
-      const cgMarketsRaw = await cgMarketsRes.json();
-      if (!Array.isArray(cgMarketsRaw)) {
-        console.warn("[silver] CG markets returned unexpected shape, falling back to cgData mcap");
-      } else {
-        const cgMarketsData = cgMarketsRaw as { id: string; circulating_supply?: number }[];
-        for (const item of cgMarketsData) {
-          if (item.circulating_supply != null && item.circulating_supply > 0) {
-            cgSupplyMap.set(item.id, item.circulating_supply);
-          }
-        }
-      }
-    } else {
-      console.warn(`[silver] CG markets fetch failed (${cgMarketsRes?.status ?? "no response"}), falling back to cgData mcap`);
-    }
-
-    // Build mcap map — validate cgData.usd_market_cap against supply×price
-    const mcapMap: Record<string, number> = {};
-    for (const t of SILVER_METAS) {
-      if (!t.geckoId) continue;
-      const cgMcap = cgData[t.geckoId]?.usd_market_cap;
-      const circulatingSupply = cgSupplyMap.get(t.geckoId);
-      const priceInfo = priceData.coins[`coingecko:${t.geckoId}`];
-      const price = priceInfo?.price ?? 0;
-      const mcap = resolveMarketCap(cgMcap, circulatingSupply, price);
-      if (mcap > 0) {
-        if (circulatingSupply && cgMcap && Math.abs(cgMcap - mcap) / mcap > 0.01) {
-          console.warn(
-            `[silver] ${t.symbol}: cgMcap=${cgMcap.toFixed(0)} rejected, using computed=${mcap.toFixed(0)} (supply=${circulatingSupply.toFixed(0)} × price=${price.toFixed(2)})`,
-          );
-        }
-        mcapMap[t.id] = mcap;
-      }
-    }
-
-    return SILVER_METAS
-      .map((meta) => {
-        const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        if (!priceInfo) return null;
-
-        const mcap = mcapMap[meta.id] ?? 0;
-        if (!mcap) {
-          console.warn(`[silver] No mcap for ${meta.symbol}, including with mcap=0`);
-        }
-
-        const pKey = pegTypeKey(meta);
-        return {
-          id: meta.id,
-          name: meta.name,
-          symbol: meta.symbol,
-          geckoId: meta.geckoId,
-          pegType: pKey,
-          pegMechanism: "rwa-backed",
-          price: priceInfo.price,
-          priceSource: "defillama",
-          circulating: { [pKey]: mcap },
-          circulatingPrevDay: null,
-          circulatingPrevWeek: null,
-          circulatingPrevMonth: null,
-          chainCirculating: {},
-          chains: ["Ethereum"],
-          commodityOunces: meta.commodityOunces,
-        };
-      })
-      .filter((t): t is NonNullable<typeof t> => t !== null);
-  } catch (err) {
-    console.error("[silver] fetchSilverTokens failed:", err);
-    return [];
-  }
-}
-
-async function fetchGoldTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
-  try {
-    // Fetch prices from DefiLlama coins API
-    const coinIds = GOLD_METAS.map((t) => `coingecko:${t.geckoId}`).join(",");
-    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-    if (!priceRes || !priceRes.ok) {
-      console.error(`[gold] Price fetch failed: ${priceRes?.status ?? "no response"}`);
-      return [];
-    }
-    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
-
-    // Fetch market caps + historical TVL from DefiLlama protocol API
-    const mcapMap: Record<string, number> = {};
-    const tvlHistoryMap: Record<string, { date: number; totalLiquidityUSD: number }[]> = {};
-    const protocolFetches = GOLD_METAS
-      .filter((t) => t.protocolSlug)
-      .map(async (t) => {
-        try {
-          const res = await fetchWithRetry(`${DEFILLAMA_API}/protocol/${t.protocolSlug}`, { headers: { "User-Agent": USER_AGENT } });
-          if (!res) return;
-          const data = (await res.json()) as { mcap?: number; tvl?: { date: number; totalLiquidityUSD: number }[] };
-          if (data.mcap) mcapMap[t.id] = data.mcap;
-          if (data.tvl) tvlHistoryMap[t.id] = data.tvl;
-        } catch (e) {
-          console.warn(`[sync-stablecoins] Protocol fetch failed for ${t.protocolSlug}:`, e);
-        }
-      });
-    await Promise.all(protocolFetches);
-
-    // Fallback: use pre-fetched CoinGecko data for tokens without a DefiLlama protocol slug
-    const noSlugTokens = GOLD_METAS.filter((t) => !t.protocolSlug && !mcapMap[t.id]);
-    for (const t of noSlugTokens) {
-      const mcap = t.geckoId ? cgData[t.geckoId]?.usd_market_cap : undefined;
-      if (mcap && mcap > 0) mcapMap[t.id] = mcap;
-    }
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const dayAgo = nowSec - 86400;
-    const weekAgo = nowSec - 7 * 86400;
-    const monthAgo = nowSec - 30 * 86400;
-
-    function findNearestTvl(history: { date: number; totalLiquidityUSD: number }[], targetSec: number): number | null {
-      if (!history || history.length === 0) return null;
-      let closest: { date: number; totalLiquidityUSD: number } | null = null;
-      let closestDist = Infinity;
-      for (const point of history) {
-        const dist = Math.abs(point.date - targetSec);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = point;
-        }
-      }
-      // Only use if within 2 days of target
-      return closest && closestDist < 2 * 86400 ? closest.totalLiquidityUSD : null;
-    }
-
-    return GOLD_METAS
-      .map((meta) => {
-        const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        if (!priceInfo) return null;
-
-        // Use protocol mcap if available; if missing, still include token (mcap = 0)
-        const mcap = mcapMap[meta.id] ?? 0;
-        if (!mcap) {
-          console.warn(`[gold] No mcap for ${meta.symbol}, including with mcap=0`);
-        }
-
-        // TVL history is only usable when TVL ~ mcap. For some protocols (e.g. Tether Gold)
-        // TVL includes multi-chain reserves that far exceed the token's market cap, so using
-        // TVL history for supply change % would produce wildly wrong numbers.
-        const history = tvlHistoryMap[meta.id];
-        let usableHistory: typeof history | undefined = undefined;
-        if (history && history.length > 0 && mcap > 0) {
-          const latestTvl = history[history.length - 1].totalLiquidityUSD;
-          const ratio = mcap / latestTvl;
-          if (ratio > 0.85 && ratio < 1.15) {
-            usableHistory = history;
-          } else {
-            console.warn(`[gold] ${meta.symbol}: mcap/tvl divergence (ratio=${ratio.toFixed(3)}), skipping TVL history`);
-          }
-        }
-        const prevDay = usableHistory ? findNearestTvl(usableHistory, dayAgo) : null;
-        const prevWeek = usableHistory ? findNearestTvl(usableHistory, weekAgo) : null;
-        const prevMonth = usableHistory ? findNearestTvl(usableHistory, monthAgo) : null;
-
-        const pKey = pegTypeKey(meta);
-        return {
-          id: meta.id,
-          name: meta.name,
-          symbol: meta.symbol,
-          geckoId: meta.geckoId,
-          pegType: pKey,
-          pegMechanism: "rwa-backed",
-          price: priceInfo.price,
-          priceSource: "defillama",
-          circulating: { [pKey]: mcap },
-          circulatingPrevDay: prevDay != null ? { [pKey]: prevDay } : null,
-          circulatingPrevWeek: prevWeek != null ? { [pKey]: prevWeek } : null,
-          circulatingPrevMonth: prevMonth != null ? { [pKey]: prevMonth } : null,
-          chainCirculating: {},
-          chains: ["Ethereum"],
-          commodityOunces: meta.commodityOunces,
-        };
-      })
-      .filter((t): t is NonNullable<typeof t> => t !== null);
-  } catch (err) {
-    console.error("[gold] fetchGoldTokens failed:", err);
-    return [];
-  }
-}
-
-async function fetchFiatCoinGeckoTokens(cgData: CoinGeckoMcapData): Promise<unknown[]> {
-  if (FIAT_CG_METAS.length === 0) return [];
-  try {
-    // Fetch prices from DefiLlama coins API
-    const coinIds = FIAT_CG_METAS.map((t) => `coingecko:${t.geckoId}`).join(",");
-    const priceRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
-    if (!priceRes || !priceRes.ok) {
-      console.error(`[fiat-cg] Price fetch failed: ${priceRes?.status ?? "no response"}`);
-      return [];
-    }
-    const priceData = (await priceRes.json()) as { coins: Record<string, DefiLlamaCoinPrice> };
-
-    // Use pre-fetched CoinGecko market cap data
-    const mcapMap: Record<string, number> = {};
-    for (const t of FIAT_CG_METAS) {
-      const mcap = t.geckoId ? cgData[t.geckoId]?.usd_market_cap : undefined;
-      if (mcap && mcap > 0) mcapMap[t.id] = mcap;
-    }
-
-    return FIAT_CG_METAS
-      .map((meta) => {
-        const priceInfo = priceData.coins[`coingecko:${meta.geckoId}`];
-        // DefiLlama Coins API may not index every CoinGecko token (e.g. NAV-appreciating
-        // tokens like wsrUSD). Fall back to the CoinGecko price already fetched in cgData.
-        const price = priceInfo?.price ?? (meta.geckoId ? cgData[meta.geckoId]?.usd : undefined);
-        if (price == null) return null;
-
-        const mcap = mcapMap[meta.id];
-        if (!mcap) {
-          console.log(`[fiat-cg] No mcap for ${meta.symbol}, skipping`);
-          return null;
-        }
-
-        const pKey = pegTypeKey(meta);
-        return {
-          id: meta.id,
-          name: meta.name,
-          symbol: meta.symbol,
-          geckoId: meta.geckoId,
-          pegType: pKey,
-          pegMechanism: meta.flags.backing,
-          price,
-          priceSource: priceInfo ? "defillama" : "coingecko",
-          circulating: { [pKey]: mcap },
-          circulatingPrevDay: null,
-          circulatingPrevWeek: null,
-          circulatingPrevMonth: null,
-          chainCirculating: {},
-          chains: ["Ethereum"],
-        };
-      })
-      .filter((t): t is NonNullable<typeof t> => t !== null);
-  } catch (err) {
-    console.error("[fiat-cg] fetchFiatCoinGeckoTokens failed:", err);
-    return [];
-  }
-}
-
-type CoinGeckoMcapData = Record<string, { usd?: number; usd_market_cap?: number }>;
-
-async function fetchCoinGeckoMarketData(): Promise<CoinGeckoMcapData> {
-  const ids = [
-    ...COMMODITY_TOKENS.filter((t) => !t.protocolSlug).map((t) => t.geckoId).filter(Boolean),
-    ...FIAT_CG_METAS.map((t) => t.geckoId).filter(Boolean),
-  ].join(",");
-  if (!ids) return {};
-
-  const res = await fetchWithRetry(
-    cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd&include_market_cap=true`),
-    { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) }
-  );
-  if (!res || !res.ok) {
-    console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${res?.status ?? "no response"}`);
-    return {};
-  }
-  return (await res.json()) as CoinGeckoMcapData;
 }
 
 /**
@@ -585,14 +292,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // Check circuit breaker before DL fetch
   const dlAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_STABLECOINS);
 
-  const [llamaRes, goldTokens, silverTokens, fiatCgTokens] = await Promise.all([
+  const [llamaRes, supplementalTokens] = await Promise.all([
     dlAllowed
       ? fetchWithRetry(`${DEFILLAMA_BASE}/stablecoins?includePrices=true`, signal ? { signal } : undefined)
       : Promise.resolve(null),
-    fetchGoldTokens(cgData),
-    fetchSilverTokens(cgData),
-    fetchFiatCoinGeckoTokens(cgData),
+    fetchSupplementalTrackedTokens(cgData),
   ]);
+  const { goldTokens, silverTokens, fiatCgTokens } = supplementalTokens;
 
   // Record DL outcome and fallback if needed
   if (dlAllowed) {
@@ -649,7 +355,7 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   normalizeChainCirculating(llamaData.peggedAssets);
 
   if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
-    llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens as PeggedAsset[], ...silverTokens as PeggedAsset[], ...fiatCgTokens as PeggedAsset[]];
+    llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens, ...silverTokens, ...fiatCgTokens];
   }
 
   // Always prefer curated metadata over DefiLlama fields; includes known address patches.

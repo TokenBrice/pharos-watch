@@ -1,6 +1,6 @@
 # 2026-03-05 Simplification Audit - Autonomous Execution Plan
 
-Status: Planned (not implemented)  
+Status: Completed (implemented locally on 2026-03-05)  
 Owner: Codex (autonomous execution after context reset)  
 Source: Simplification/deduplication audit findings from 2026-03-05
 
@@ -543,25 +543,30 @@ Do not re-open these during implementation unless tests force it:
 
 Update this section while executing. Keep most recent entries first.
 
-```md
 ### Execution Log
 
 | Date (UTC) | WP | Branch | Status | Evidence | Notes |
 |------------|----|--------|--------|----------|-------|
-| YYYY-MM-DD | WP-XX | refactor/... | started/completed/blocked | commit SHA + key test command | blockers/decisions |
-```
+| 2026-03-05 | WP-01 | current working branch | completed | `npm run build && npm run lint && npm test && (cd worker && npx tsc --noEmit)` | Removed `tabs` UI file/dependency and unused `useStablecoinsWithMeta` export |
+| 2026-03-05 | WP-02 | current working branch | completed | `npm run build && npm run lint` | Converted `stablecoin/[id]/error.tsx` + `stablecoins/[peg]/error.tsx` to `createPageError(...)` |
+| 2026-03-05 | WP-03 | current working branch | completed | `npm run build && npm run lint` | Added changelog route factory and migrated six methodology changelog wrappers |
+| 2026-03-05 | WP-05 | current working branch | completed | `npx vitest run src/lib/__tests__/api-fetch-contracts.test.ts src/lib/__tests__/strict-path-drift.test.ts worker/src/api/__tests__/status.test.ts worker/src/api/__tests__/health.test.ts worker/src/api/__tests__/digest-snapshot.test.ts` | Standardized hook polling/fetch patterns on shared query primitives |
+| 2026-03-05 | WP-06 | current working branch | completed | `npx vitest run worker/src/api/__tests__/depeg-events.test.ts worker/src/api/__tests__/blacklist.test.ts worker/src/api/__tests__/peg-summary.test.ts worker/src/api/__tests__/stability-index.test.ts worker/src/api/__tests__/stress-signals.test.ts` | Centralized methodology envelope + shared response wrappers |
+| 2026-03-05 | WP-07 | current working branch | completed | `npx vitest run worker/src/api/__tests__/depeg-events.test.ts worker/src/api/__tests__/blacklist.test.ts worker/src/api/__tests__/mint-burn-events.test.ts` | Added shared paginated-event scaffold and migrated 3 handlers |
+| 2026-03-05 | WP-08 | current working branch | completed | `npx vitest run worker/src/api/__tests__/supply-history.test.ts worker/src/api/__tests__/yield-history.test.ts worker/src/api/__tests__/dex-liquidity-history.test.ts worker/src/api/__tests__/safety-score-history.test.ts` | Added shared stablecoin-history scaffold and migrated 4 handlers |
+| 2026-03-05 | WP-09 | current working branch | completed | `npx vitest run worker/src/api/__tests__/router-contract.test.ts src/lib/__tests__/strict-path-drift.test.ts src/lib/__tests__/api-endpoints.test.ts worker/src/api/__tests__/feedback.test.ts` | Unified static endpoint dispatch via router + endpoint registry metadata |
+| 2026-03-05 | WP-10 | current working branch | completed | `npm run build && npm run lint && npm run test:smoke-ui` | Decomposed status client into focused `src/components/status/*` modules |
+| 2026-03-05 | WP-11 | current working branch | completed | `npm run build && npm run lint && npx vitest run src/components/__tests__/liquidity-table.test.ts src/components/__tests__/dews-summary.test.ts` | Extracted stablecoin-table logic/column visibility helpers; preserved virtualization behavior |
+| 2026-03-05 | WP-04 | current working branch | completed | `npx vitest run worker/src/api/__tests__/blacklist.test.ts worker/src/api/__tests__/dex-liquidity-history.test.ts` | Removed legacy blacklist array fallback and dex-liquidity missing-column fallback |
+| 2026-03-05 | WP-12 | current working branch | completed | `npx vitest run worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data.test.ts && npm run test:invariants` | Continued `sync-stablecoins` decomposition by extracting supplemental asset source logic into helper module |
 
-```md
 ### Open Blockers
 
-1. [WP-XX] blocker description, owner, next action.
-```
+1. None.
 
-```md
 ### Resume Cursor
 
-Current WP:
-Next file to edit:
-Last completed command:
-Next command to run:
-```
+Current WP: Completed (all WPs in scope)
+Next file to edit: none (await review/follow-up)
+Last completed command: `npx vitest run worker/src/cron/__tests__/sync-stablecoins.test.ts worker/src/cron/__tests__/sync-yield-data.test.ts && npm run test:invariants`
+Next command to run: full repo validation gate (`npm run build && npm run lint && npm test && (cd worker && npx tsc --noEmit)`)
