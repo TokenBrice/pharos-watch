@@ -204,7 +204,7 @@ Validates DEWS against historical depeg events. Reports TP rate and lead time.
 
 **Hook:** `useStressSignals()` and `useStressSignalDetail(id, days)` in `src/hooks/use-stress-signals.ts`
 
-**Classification constants:** `ThreatBand`, `THREAT_BAND_COLORS`, `THREAT_BAND_HEX`, `THREAT_BAND_LABELS` in `src/lib/classification.ts`
+**Classification constants:** `ThreatBand`, `THREAT_BAND_COLORS`, `THREAT_BAND_HEX`, `THREAT_BAND_LABELS` in `shared/lib/classification.ts`
 
 **Design tokens:** `--dews-calm` through `--dews-danger` in `src/styles/tokens/semantic.css`
 

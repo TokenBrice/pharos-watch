@@ -20,12 +20,13 @@ Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn
 ## Directory Overview
 
 ```
-src/app/         — Pages (homepage, blacklist, cemetery, compare, dependency-map, depeg, digest, flows, liquidity, methodology, mint, portfolio, privacy, safety-scores, stability-index, stability-index-alt, status, about, yield, stablecoin/[id], stablecoins/[peg])
+src/app/         — Pages (homepage, blacklist, cemetery, compare, dependency-map, depeg, digest, flows, liquidity, methodology, portfolio, privacy, safety-scores, stability-index, status, about, yield, stablecoin/[id], stablecoins/[peg])
 src/components/  — UI components (ui/ = shadcn primitives, do not edit)
 src/hooks/       — TanStack Query hooks + shared state hooks
-src/lib/         — Types, stablecoin list, formatters, classification, peg logic
+src/lib/         — Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
+shared/lib/      — Runtime-neutral shared modules (stablecoin metadata, supply/classification/peg/report-card logic)
 worker/src/cron/ — Data sync crons
-worker/src/api/  — REST API handlers (31 static router endpoints + dynamic stablecoin detail + 3 inline admin + POST feedback)
+worker/src/api/  — REST API handlers (router-dispatched endpoints + dynamic stablecoin detail + non-router feedback/admin paths)
 worker/src/lib/  — DB helpers, constants, shared utilities
 ```
 
@@ -50,11 +51,11 @@ cd worker && npx tsc --noEmit      # Worker type-check
 ## Key Gotchas
 
 - **Tailwind classes must be static strings** — never construct dynamically (purge won't find them)
-- **Classification labels/colors**: all in `src/lib/classification.ts` — never define locally
-- **Supply helpers**: use `getCirculatingRaw()` from `src/lib/supply.ts`; all values are already in USD (DL converts)
+- **Classification labels/colors**: all in `shared/lib/classification.ts` — never define locally
+- **Supply helpers**: use `getCirculatingRaw()` from `shared/lib/supply.ts`; all values are already in USD (DL converts)
 - **Hook timing**: `staleTime = cron interval`, `refetchInterval = 2× cron interval`
 - **Workers 6-connection limit is per-cron-trigger, not per-job** — all `ctx.waitUntil()` jobs on the same cron slot share one 6-connection pool. Consume response bodies before starting new fetch batches to release connections for sibling jobs.
-- **Worker imports `src/lib/`** — root tsconfig excludes `worker/` to avoid D1 type conflicts
+- **Worker shared boundary**: worker and frontend share runtime-neutral logic via `shared/lib/` (`@shared/*` alias); root tsconfig excludes `worker/` to avoid D1 type conflicts
 - **DL list vs detail API**: The list endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values already in USD for all peg types. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs. Do NOT multiply list endpoint values by price — that double-converts.
 - **No supply overrides**: Supply data comes from DefiLlama only. No on-chain, CMC, or DEX overrides. Prices fall back to CG → CMC → DexScreener when DL has no price.
 
@@ -65,7 +66,7 @@ All the codebase is documented. While working, make sure to update the correspon
 Read these when working on related code:
 
 - **`docs/architecture.md`** — Full file tree, API endpoints
-- **`docs/api-reference.md`** — Full API reference: all endpoints (31 static router handlers + dynamic stablecoin detail + 3 inline admin + POST feedback), query params, response shapes, caching
+- **`docs/api-reference.md`** — Full API reference: endpoints, query params, response shapes, caching
 - **`docs/classification.md`** — Classification system, peg currencies, gold/JPY/IDR stablecoins
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration

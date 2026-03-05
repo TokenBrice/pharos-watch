@@ -1645,7 +1645,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateral: "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
     pegMechanism: "Direct 1:1 redemption through Anchored Coins",
     links: [
-      { label: "Website", url: "https://www.anchoredcoins.com/en/landing/aeur" }, // TODO: verify — domain may have been repurposed
+      { label: "Website", url: "https://www.anchoredcoins.com/en/landing/aeur" },
       { label: "Twitter", url: "https://x.com/AnchoredCoins" },
     ],
     jurisdiction: { country: "Switzerland", regulator: "VQF (FINMA-recognized SRO)", license: "SRO Member" },

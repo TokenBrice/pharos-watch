@@ -178,7 +178,7 @@ Examples: BOLD (immutable-code) = **100** (no chain penalty). LUSD (immutable-co
 
 **Universal scoring (v5.1):** All coins with upstream stablecoin dependencies get blended scores, regardless of governance type. Topological sort ensures every coin is scored after all its upstreams.
 
-**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `src/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
+**Dependency derivation:** Dependencies are primarily derived from reserve composition data. Reserve slices with a `coinId` field (linking to a tracked stablecoin) are extracted by `deriveDependencies()` in `shared/lib/reserve-templates.ts` and converted to `DependencyWeight[]` (weight = `pct / 100`, type = `depType ?? "collateral"`). Weights come directly from reserve percentages and are not renormalized, so non-stablecoin reserve slices contribute to the "self-backed" component of the score. For coins whose reserves don't reference tracked stablecoins, the function falls back to the manual `dependencies` array on `StablecoinMeta`.
 
 **Scoring:**
 - **No dependencies**: 95 (any governance tier)
@@ -295,7 +295,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 
 | File | Purpose |
 |------|---------|
-| `src/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
+| `shared/lib/report-cards.ts` | Pure grading engine: dimension scorers, weights, thresholds, colors, `computeStressedGrades()` |
 | `worker/src/api/report-cards.ts` | API handler: data loading, topological sort computation, `rawInputs`, `dependencyGraph`, response |
 | `src/components/stress-test-panel.tsx` | Combined portfolio analyzer + stress test collapsible panel |
 | `src/components/report-card.tsx` | Full detail card with radar |

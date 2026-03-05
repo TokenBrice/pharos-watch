@@ -96,4 +96,4 @@ Score = 100 - severity - breadth - freezes + trend
 ## Notes
 
 - PSI did not initially ship with explicit version tags/changelog; versions above were assigned retroactively from score-impacting commit boundaries.
-- Effective boundaries for data backfills are encoded in `src/lib/stability-index-version.ts` and migration `worker/migrations/0035_stability_index_methodology_version.sql`.
+- Effective boundaries for data backfills are encoded in `shared/lib/stability-index-version.ts` and migration `worker/migrations/0035_stability_index_methodology_version.sql`.

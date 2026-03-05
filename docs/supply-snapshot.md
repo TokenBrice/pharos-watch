@@ -89,7 +89,7 @@ Per-chain supply cache. Not actively used by the current snapshot pipeline.
 
 ### sumPegBuckets()
 
-**File:** `src/lib/supply.ts`
+**File:** `shared/lib/supply.ts`
 
 ```typescript
 export function sumPegBuckets(obj: Record<string, number> | undefined): number {
@@ -102,7 +102,7 @@ Safely sums across all peg types (`peggedUSD`, `peggedEUR`, etc.). Invalid value
 
 ### Other supply helpers
 
-All in `src/lib/supply.ts`:
+All in `shared/lib/supply.ts`:
 
 | Helper | Description |
 |--------|-------------|
@@ -274,9 +274,9 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `worker/src/lib/chain-rpcs.ts` | Chain RPC configs (future on-chain supply) |
 | `worker/migrations/0015_supply_history.sql` | `supply_history` table |
 | `worker/migrations/0013_onchain_supply.sql` | `onchain_supply` table (per-chain cache) |
-| `src/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
+| `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
 | `shared/types/index.ts` | `SupplyMethodConfig`, `StablecoinMeta` types |
-| `src/lib/stablecoins.ts` | Stablecoin metadata including `supplyMethod` configs |
+| `shared/lib/stablecoins.ts` | Stablecoin metadata including `supplyMethod` configs |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook, `detailToSupplyHistory()` transform |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |
 | `src/components/total-mcap-chart.tsx` | Aggregated mcap breakdown chart |

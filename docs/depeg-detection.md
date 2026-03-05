@@ -343,7 +343,7 @@ Returns `null` if < 30 days tracking.
 | `worker/migrations/0023_depeg_pending.sql` | `depeg_pending` table for multi-source confirmation |
 | `worker/migrations/0016_cleanup_non_usd_depeg_events.sql` | Cleanup when non-USD threshold raised |
 | `shared/types/index.ts` | `DepegEvent` frontend type |
-| `src/lib/peg-score.ts` | Peg score computation for report cards |
+| `shared/lib/peg-score.ts` | Peg score computation for report cards |
 | `src/lib/peg-stability.ts` | Peg stability metrics (`pegPct`, streak, tracking span) |
 | `src/hooks/use-depeg-events.ts` | TanStack Query hook |
 | `src/components/depeg-feed.tsx` | Recent events grid (homepage) |

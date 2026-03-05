@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` enters the yield pipeline. Currently 40 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. Currently 40 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -25,7 +25,7 @@ Every stablecoin with `flags.yieldBearing: true` in `src/lib/stablecoins.ts` ent
 | `governance-set` | Gov. Set | Yield rate set by governance vote |
 | `lending-opportunity` | Lending Opp. | Auto-discovered best lending market for non-yield-bearing coins |
 
-Labels and styles are centralized in `src/lib/classification.ts` (`YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`), both typed as `Record<YieldType, ...>` so adding a new variant without updating the maps is a compile error.
+Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`), both typed as `Record<YieldType, ...>` so adding a new variant without updating the maps is a compile error.
 
 ---
 
@@ -441,7 +441,7 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 ## Testing
 
-**File:** `src/lib/__tests__/yield-helpers.test.ts`
+**File:** `worker/src/cron/__tests__/yield-helpers.test.ts`
 
 Covers all pure functions in `yield-helpers.ts`:
 
@@ -479,10 +479,10 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/src/api/yield-rankings.ts` | `GET /api/yield-rankings` handler |
 | `worker/src/api/yield-history.ts` | `GET /api/yield-history` handler |
 | `shared/types/index.ts` | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
-| `src/lib/classification.ts` | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES` |
+| `shared/lib/classification.ts` | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES` |
 | `src/hooks/use-yield-rankings.ts` | TanStack Query hook for rankings |
 | `src/app/yield/page.tsx` | SSG page wrapper with metadata |
 | `src/app/yield/client.tsx` | Interactive page: stats, scatter, leaderboard |
 | `src/components/yield-leaderboard.tsx` | Sortable rankings table with `+N` alt-source pill badge |
 | `src/components/yield-scatter-plot.tsx` | Risk-adjusted scatter visualization |
-| `src/lib/__tests__/yield-helpers.test.ts` | Unit tests for all pure yield functions |
+| `worker/src/cron/__tests__/yield-helpers.test.ts` | Unit tests for all pure yield functions |

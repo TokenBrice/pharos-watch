@@ -98,4 +98,4 @@ Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` 
 ## Notes
 
 - Mint/burn methodology did not initially ship with explicit version tracking; versions above were assigned retroactively from methodology-impacting commit boundaries.
-- Canonical machine-readable source: `src/lib/mint-burn-flow-version.ts`.
+- Canonical machine-readable source: `shared/lib/mint-burn-flow-version.ts`.

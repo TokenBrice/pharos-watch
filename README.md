@@ -110,12 +110,16 @@ src/                              Frontend (Next.js static export)
 │   └── about/                    About & methodology
 ├── components/                   UI components (table, charts, cards, shared sort-icon, time-range-buttons)
 ├── hooks/                        Data fetching hooks (TanStack Query) + shared UI hooks (useSort, useUrlFilters, useTimeRangeFilter)
-└── lib/                          Types, formatters, peg score, classification labels, shared helpers
+└── lib/                          Frontend-only utilities (API client, charts/colors, metadata, UI helpers)
+
+shared/                           Runtime-neutral shared boundary (`@shared/*`)
+├── lib/                          Stablecoin metadata, supply/peg/classification/report-card logic, endpoint contract registry
+└── types/                        Shared TypeScript types and schema helpers
 
 worker/                           Cloudflare Worker (API + cron jobs)
 ├── src/
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
-│   ├── api/                      REST endpoints (31 static router handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
+│   ├── api/                      REST endpoints (router-dispatched handlers + dynamic stablecoin detail + inline feedback/admin endpoints)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
 └── migrations/                   D1 SQL migrations (49 total)
 ```

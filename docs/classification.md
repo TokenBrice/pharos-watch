@@ -2,7 +2,7 @@
 
 ## Stablecoin Classification System
 
-Each stablecoin in `src/lib/stablecoins.ts` has flags:
+Each stablecoin in `shared/lib/stablecoins.ts` has flags:
 
 ### Type (governance field internally)
 
@@ -60,7 +60,7 @@ Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interfa
 
 ## Non-USD Peg Handling
 
-Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `src/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` (from DefiLlama data) with >$1M supply. This avoids hardcoding FX rates. The function always returns a `PegRatesResult` containing both `rates` (the numeric lookup) and `sources` (which source was used per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
+Peg deviation for non-USD stablecoins requires knowing the USD value of the peg currency. `shared/lib/peg-rates.ts` derives this by computing the median price among stablecoins of each `pegType` (from DefiLlama data) with >$1M supply. This avoids hardcoding FX rates. The function always returns a `PegRatesResult` containing both `rates` (the numeric lookup) and `sources` (which source was used per currency). The deviation is then `((price / pegRef) - 1) * 10000` basis points.
 
 For thin peg groups (often <3 qualifying coins), live `fxFallbackRates` from `sync-fx-rates.ts` are used when available. In `derivePegRates()`, if a peg group has fewer than 3 qualifying coins and a fallback rate exists, the fallback is used directly instead of the peer median. This prevents one or two coins from becoming their own unstable peg reference.
 
@@ -68,7 +68,7 @@ Live FX rates are fetched every 15 minutes by `sync-fx-rates.ts` from frankfurte
 
 ## Commodity & Non-DefiLlama Stablecoins
 
-Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These are identified by their `geckoId` and/or `protocolSlug` fields in `StablecoinMeta` (in `src/lib/stablecoins.ts`), and use synthetic IDs (e.g., `gold-xaut`, `silver-kag`, `cg-jpyc`).
+Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These are identified by their `geckoId` and/or `protocolSlug` fields in `StablecoinMeta` (in `shared/lib/stablecoins.ts`), and use synthetic IDs (e.g., `gold-xaut`, `silver-kag`, `cg-jpyc`).
 
 The Worker's `sync-stablecoins` cron derives the list of commodity and CoinGecko-only tokens directly from `TRACKED_STABLECOINS` by filtering on `geckoId` and `pegType`. Data is fetched from CoinGecko, shaped into DefiLlama-compatible format, and merged into the `peggedAssets` array before caching.
 

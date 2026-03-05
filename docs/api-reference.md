@@ -1486,6 +1486,22 @@ Backfills mint/burn event ingestion for a specific contract config using the sam
 | `chunkSize` | `integer` | `50000` | Block span per fetch chunk (max 50000) |
 | `maxChunks` | `integer` | `24` | Maximum chunks to process per request |
 
+### `GET /api/audit-depeg-history?dry-run=true`
+
+Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Query parameters**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | `integer` | `200` | Max events to audit |
+| `offset` | `integer` | `0` | Pagination offset |
+| `dry-run` | `"true"` | required | Must be exactly `"true"` for `GET` |
+| `min-supply` | `number` | `0` | Minimum supply (USD) to include in audit |
+| `symbol` | `string` | — | Filter by symbol (case-insensitive) |
+
 ### `POST /api/audit-depeg-history`
 
 Audits existing depeg events against CoinGecko historical price data to detect false positives.

@@ -6,7 +6,7 @@ Composite ecosystem health score (0–100) measuring how stable the stablecoin m
 
 - **Current methodology version:** `v3.0`
 - **Public changelog page:** `/methodology/stability-index-changelog/`
-- **Canonical source:** `src/lib/stability-index-version.ts`
+- **Canonical source:** `shared/lib/stability-index-version.ts`
 
 PSI versions are bumped when formula terms, caps, condition bands, or score-affecting input semantics change.
 Historical entries before formal versioning were reconstructed from git commit history and marked as such.

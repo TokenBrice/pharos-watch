@@ -15,7 +15,7 @@ Primary files:
 - `src/components/stablecoin-cemetery.tsx`
 - `src/components/cemetery-tombstones.tsx`
 - `src/components/cemetery-charts.tsx`
-- `src/lib/dead-stablecoins.ts`
+- `shared/lib/dead-stablecoins.ts`
 
 ### Data model
 
@@ -78,5 +78,5 @@ Compare includes client-side share/export rendering:
 ## Operational notes
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
-- Cemetery reliability depends on repository data curation (`src/lib/dead-stablecoins.ts`).
+- Cemetery reliability depends on repository data curation (`shared/lib/dead-stablecoins.ts`).
 - Compare reliability depends on five independent API datasets plus per-coin detail fetches; partial failures are surfaced via query error/stale-data UI components.

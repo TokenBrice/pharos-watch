@@ -135,4 +135,4 @@ score = 0.5*pegPct + 0.5*severity - activePenalty - spreadPenalty
 ## Notes
 
 - Versions above are reconstructed retroactively from methodology-impacting commit boundaries.
-- Canonical machine-readable source: `src/lib/depeg-dews-version.ts`.
+- Canonical machine-readable source: `shared/lib/depeg-dews-version.ts`.

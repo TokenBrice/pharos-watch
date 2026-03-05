@@ -1,6 +1,6 @@
 # Adding a New Stablecoin
 
-Step-by-step reference for adding a coin to `TRACKED_STABLECOINS` in `src/lib/stablecoins.ts`. The process has seven phases; all are automatable via the skills listed below.
+Step-by-step reference for adding a coin to `TRACKED_STABLECOINS` in `shared/lib/stablecoins.ts`. The process has seven phases; all are automatable via the skills listed below.
 
 ---
 
@@ -56,7 +56,7 @@ For batches of independent coins, dispatch parallel agents (one per coin) using 
 | `pegMechanism` | Yes | HOW the peg is maintained |
 | `jurisdiction` | For centralized/centralized-dependent | Country, regulator, license |
 | `links` | Yes | Website, Twitter, Docs, Proof of Reserve |
-| `contracts` | Yes | Only chains in `src/lib/chains.ts`; verify each address |
+| `contracts` | Yes | Only chains in `shared/lib/chains.ts`; verify each address |
 | `proofOfReserves` | Yes if exists | type, url, provider |
 | `backing` | Yes | `rwa-backed` / `crypto-backed` / `algorithmic` |
 | `governance` | Yes | `centralized` / `centralized-dependent` / `decentralized` |
@@ -241,7 +241,7 @@ curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=cg-ousg
 npm run build          # TypeScript compile + static export; must pass with zero errors
 python3 -m json.tool data/ai-summaries.json > /dev/null  # validate JSON
 npm test               # run test suite (optional but recommended)
-git add src/lib/stablecoins.ts data/ai-summaries.json data/logos.json public/logos/
+git add shared/lib/stablecoins.ts data/ai-summaries.json data/logos.json public/logos/
 git commit -m "Add {SYMBOL}: {one-line description}"
 git push origin main
 ```
@@ -285,4 +285,4 @@ Who controls the peg / can pause / change reserves?
 - `docs/yield-intelligence.md` — yieldConfig fields, APY resolution tiers, navToken behavior
 - `docs/report-cards.md` — how collateralQuality / custodyModel affect safety scores
 - `shared/types/index.ts` — canonical TypeScript types for all fields
-- `src/lib/chains.ts` — supported chain identifiers for `contracts[]`
+- `shared/lib/chains.ts` — supported chain identifiers for `contracts[]`

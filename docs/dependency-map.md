@@ -17,7 +17,7 @@ The page combines three data sources:
 2. `useStablecoins()` (`/api/stablecoins`) for market-cap sizing (`sumPegBuckets(circulating)`).
 3. `useLogos()` (static `data/logos.json` import) for node logos.
 
-Market-cap map construction lives in `src/app/dependency-map/client.tsx` and uses `sumPegBuckets()` from `src/lib/supply.ts`.
+Market-cap map construction lives in `src/app/dependency-map/client.tsx` and uses `sumPegBuckets()` from `shared/lib/supply.ts`.
 
 ## Graph Construction
 
