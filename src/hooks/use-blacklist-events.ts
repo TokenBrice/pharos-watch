@@ -1,40 +1,18 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import type { BlacklistEvent } from "@shared/types";
-import { CRON_20MIN } from "./use-api-query";
-
-interface BlacklistResponse {
-  events: BlacklistEvent[];
-  total: number;
-  methodology?: {
-    version: string;
-    versionLabel: string;
-    currentVersion: string;
-    currentVersionLabel: string;
-    changelogPath: string;
-    asOf: number;
-    isCurrent: boolean;
-  };
-}
+import { BlacklistResponseSchema, type BlacklistResponse } from "@shared/types";
+import { CRON_20MIN, usePollingQuery } from "./use-api-query";
 
 async function fetchBlacklistEvents(): Promise<BlacklistResponse> {
-  const json = await apiFetch<BlacklistResponse | BlacklistEvent[]>("/api/blacklist");
-
-  // Support both old (plain array) and new ({ events, total }) response format
-  if (Array.isArray(json)) {
-    return { events: json, total: json.length };
-  }
-  return json as BlacklistResponse;
+  return apiFetch("/api/blacklist", BlacklistResponseSchema);
 }
 
 export function useBlacklistEvents() {
-  return useQuery({
-    queryKey: ["blacklist-events"],
-    queryFn: fetchBlacklistEvents,
-    staleTime: CRON_20MIN,
-    refetchInterval: 2 * CRON_20MIN,
-    retry: 1,
-  });
+  return usePollingQuery(
+    ["blacklist-events"],
+    fetchBlacklistEvents,
+    CRON_20MIN,
+    { retry: 1 },
+  );
 }
