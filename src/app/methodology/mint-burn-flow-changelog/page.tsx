@@ -1,38 +1,32 @@
-import type { Metadata } from "next";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/mint-burn-flow-version";
+import {
+  buildMethodologyChangelogMetadata,
+  mapMethodologyChangelogEntries,
+} from "../changelog-page-utils";
 
-export const metadata: Metadata = {
+const PAGE_PATH = "/methodology/mint-burn-flow-changelog/";
+
+export const metadata = buildMethodologyChangelogMetadata({
   title: "Mint/Burn Flow Changelog - Version History",
   description:
     `Full version history of the Pharos Mint/Burn Flow methodology, from v1.0 through ${MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}. Every scoring and ingestion-policy revision documented.`,
-  alternates: { canonical: "/methodology/mint-burn-flow-changelog/" },
-  openGraph: {
-    title: "Mint/Burn Flow Changelog - Version History",
-    description:
-      `Full version history of the Pharos Mint/Burn Flow methodology, from v1.0 through ${MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL}.`,
-    url: "/methodology/mint-burn-flow-changelog/",
-  },
-};
+  path: PAGE_PATH,
+});
 
-const entries = MINT_BURN_FLOW_METHODOLOGY_CHANGELOG.map((entry) => ({
-  version: entry.version,
-  title: entry.title,
-  date: entry.date,
-  summary: entry.summary,
-  impact: entry.methodologyImpact,
-  commits: entry.commits,
-  reconstructed: entry.reconstructed,
-}));
+const entries = mapMethodologyChangelogEntries(
+  MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
+  (entry) => entry.methodologyImpact,
+);
 
 export default function MintBurnFlowChangelogPage() {
   return (
     <MethodologyChangelogPage
       breadcrumbName="Mint/Burn Flow Changelog"
-      path="/methodology/mint-burn-flow-changelog/"
+      path={PAGE_PATH}
       title="Mint/Burn Flow Changelog"
       lead={
         <>

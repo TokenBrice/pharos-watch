@@ -3,7 +3,9 @@ import Link from "next/link";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
+import { FaqSection } from "@/components/faq-section";
 import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
+import type { FaqItem } from "@/lib/faq";
 
 const cemeteryDescription = `A memorial to ${DEAD_STABLECOINS.length} fallen stablecoins. From TerraUSD to HUSD: what went wrong, when, and why.`;
 
@@ -23,6 +25,14 @@ export const metadata: Metadata = {
     images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 628 }],
   },
 };
+
+const FAQ_ITEMS = [
+  {
+    question: "What causes stablecoins to fail?",
+    answer:
+      "Stablecoins fail for several recurring reasons: algorithmic designs that rely on reflexive token mechanics (like TerraUSD), custodial failures where the issuer loses or mismanages reserves, liquidity drains where redemptions outpace available collateral, regulatory shutdowns that freeze operations, and simple abandonment when the team stops maintaining the peg. Most failures share a common pattern: loss of market confidence triggers a bank-run dynamic that the stabilization mechanism cannot absorb.",
+  },
+] as const satisfies readonly FaqItem[];
 
 export default function CemeteryPage() {
   return (
@@ -63,40 +73,7 @@ export default function CemeteryPage() {
 
       <CemeteryCharts />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
-        <details className="group border border-border/50 rounded-lg">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-            What causes stablecoins to fail?
-          </summary>
-          <p className="px-4 pb-4 text-sm text-muted-foreground">
-            Stablecoins fail for several recurring reasons: algorithmic designs that rely on reflexive token mechanics
-            (like TerraUSD), custodial failures where the issuer loses or mismanages reserves, liquidity drains where
-            redemptions outpace available collateral, regulatory shutdowns that freeze operations, and simple
-            abandonment when the team stops maintaining the peg. Most failures share a common pattern: loss of market
-            confidence triggers a bank-run dynamic that the stabilization mechanism cannot absorb.
-          </p>
-        </details>
-      </section>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: [
-              {
-                "@type": "Question",
-                name: "What causes stablecoins to fail?",
-                acceptedAnswer: {
-                  "@type": "Answer",
-                  text: "Stablecoins fail for several recurring reasons: algorithmic designs that rely on reflexive token mechanics (like TerraUSD), custodial failures where the issuer loses or mismanages reserves, liquidity drains where redemptions outpace available collateral, regulatory shutdowns that freeze operations, and simple abandonment when the team stops maintaining the peg. Most failures share a common pattern: loss of market confidence triggers a bank-run dynamic that the stabilization mechanism cannot absorb.",
-                },
-              },
-            ],
-          }),
-        }}
-      />
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </div>
   );
 }

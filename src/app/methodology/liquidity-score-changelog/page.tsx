@@ -1,38 +1,32 @@
-import type { Metadata } from "next";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/liquidity-score-version";
+import {
+  buildMethodologyChangelogMetadata,
+  mapMethodologyChangelogEntries,
+} from "../changelog-page-utils";
 
-export const metadata: Metadata = {
+const PAGE_PATH = "/methodology/liquidity-score-changelog/";
+
+export const metadata = buildMethodologyChangelogMetadata({
   title: "Liquidity Score Changelog - Version History",
   description:
     `Full version history of the Pharos Liquidity Score methodology, from v1.0 through ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}. Every scoring and normalization revision documented.`,
-  alternates: { canonical: "/methodology/liquidity-score-changelog/" },
-  openGraph: {
-    title: "Liquidity Score Changelog - Version History",
-    description:
-      `Full version history of the Pharos Liquidity Score methodology, from v1.0 through ${LIQUIDITY_METHODOLOGY_VERSION_LABEL}.`,
-    url: "/methodology/liquidity-score-changelog/",
-  },
-};
+  path: PAGE_PATH,
+});
 
-const entries = LIQUIDITY_METHODOLOGY_CHANGELOG.map((entry) => ({
-  version: entry.version,
-  title: entry.title,
-  date: entry.date,
-  summary: entry.summary,
-  impact: entry.scoreImpact,
-  commits: entry.commits,
-  reconstructed: entry.reconstructed,
-}));
+const entries = mapMethodologyChangelogEntries(
+  LIQUIDITY_METHODOLOGY_CHANGELOG,
+  (entry) => entry.scoreImpact,
+);
 
 export default function LiquidityScoreChangelogPage() {
   return (
     <MethodologyChangelogPage
       breadcrumbName="Liquidity Score Changelog"
-      path="/methodology/liquidity-score-changelog/"
+      path={PAGE_PATH}
       title="Liquidity Score Changelog"
       lead={
         <>

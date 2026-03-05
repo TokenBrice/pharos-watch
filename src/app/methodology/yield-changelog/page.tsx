@@ -1,38 +1,32 @@
-import type { Metadata } from "next";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import {
   YIELD_METHODOLOGY_CHANGELOG,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/yield-methodology-version";
+import {
+  buildMethodologyChangelogMetadata,
+  mapMethodologyChangelogEntries,
+} from "../changelog-page-utils";
 
-export const metadata: Metadata = {
+const PAGE_PATH = "/methodology/yield-changelog/";
+
+export const metadata = buildMethodologyChangelogMetadata({
   title: "Yield Intelligence Changelog - Version History",
   description:
     `Full version history of the Pharos Yield Intelligence methodology, from v1.0 through ${YIELD_METHODOLOGY_VERSION_LABEL}. Every source-resolution and scoring revision documented.`,
-  alternates: { canonical: "/methodology/yield-changelog/" },
-  openGraph: {
-    title: "Yield Intelligence Changelog - Version History",
-    description:
-      `Full version history of the Pharos Yield Intelligence methodology, from v1.0 through ${YIELD_METHODOLOGY_VERSION_LABEL}.`,
-    url: "/methodology/yield-changelog/",
-  },
-};
+  path: PAGE_PATH,
+});
 
-const entries = YIELD_METHODOLOGY_CHANGELOG.map((entry) => ({
-  version: entry.version,
-  title: entry.title,
-  date: entry.date,
-  summary: entry.summary,
-  impact: entry.methodologyImpact,
-  commits: entry.commits,
-  reconstructed: entry.reconstructed,
-}));
+const entries = mapMethodologyChangelogEntries(
+  YIELD_METHODOLOGY_CHANGELOG,
+  (entry) => entry.methodologyImpact,
+);
 
 export default function YieldChangelogPage() {
   return (
     <MethodologyChangelogPage
       breadcrumbName="Yield Intelligence Changelog"
-      path="/methodology/yield-changelog/"
+      path={PAGE_PATH}
       title="Yield Intelligence Changelog"
       lead={
         <>

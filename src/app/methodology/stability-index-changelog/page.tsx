@@ -1,38 +1,32 @@
-import type { Metadata } from "next";
 import { MethodologyChangelogPage } from "@/components/methodology-changelog-page";
 import {
   PSI_METHODOLOGY_CHANGELOG,
   PSI_METHODOLOGY_VERSION_LABEL,
 } from "@/lib/stability-index-version";
+import {
+  buildMethodologyChangelogMetadata,
+  mapMethodologyChangelogEntries,
+} from "../changelog-page-utils";
 
-export const metadata: Metadata = {
+const PAGE_PATH = "/methodology/stability-index-changelog/";
+
+export const metadata = buildMethodologyChangelogMetadata({
   title: "Stability Index Changelog — Version History",
   description:
     `Full version history of the Pharos Stability Index methodology, from v1.0 through ${PSI_METHODOLOGY_VERSION_LABEL}. Every formula, cap, and component revision documented.`,
-  alternates: { canonical: "/methodology/stability-index-changelog/" },
-  openGraph: {
-    title: "Stability Index Changelog — Version History",
-    description:
-      `Full version history of the Pharos Stability Index methodology, from v1.0 through ${PSI_METHODOLOGY_VERSION_LABEL}.`,
-    url: "/methodology/stability-index-changelog/",
-  },
-};
+  path: PAGE_PATH,
+});
 
-const entries = PSI_METHODOLOGY_CHANGELOG.map((entry) => ({
-  version: entry.version,
-  title: entry.title,
-  date: entry.date,
-  summary: entry.summary,
-  impact: entry.scoreImpact,
-  commits: entry.commits,
-  reconstructed: entry.reconstructed,
-}));
+const entries = mapMethodologyChangelogEntries(
+  PSI_METHODOLOGY_CHANGELOG,
+  (entry) => entry.scoreImpact,
+);
 
 export default function StabilityIndexChangelogPage() {
   return (
     <MethodologyChangelogPage
       breadcrumbName="Stability Index Changelog"
-      path="/methodology/stability-index-changelog/"
+      path={PAGE_PATH}
       title="Stability Index Changelog"
       lead={
         <>

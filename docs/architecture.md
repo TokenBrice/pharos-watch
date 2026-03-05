@@ -77,12 +77,14 @@ src/                              # Next.js frontend (static export)
 │   ├── methodology/              # Detailed methodology documentation
 │   │   ├── page.tsx
 │   │   ├── error.tsx
+│   │   ├── changelog-page-utils.ts # Shared metadata + entry mapping helpers for methodology changelog routes
 │   │   ├── scoring-changelog/page.tsx  # Safety Score methodology changelog
 │   │   ├── depeg-changelog/page.tsx    # Depeg/DEWS methodology changelog
 │   │   ├── liquidity-score-changelog/page.tsx # Liquidity score changelog
 │   │   ├── stability-index-changelog/page.tsx # PSI methodology changelog
 │   │   ├── blacklist-tracker-changelog/page.tsx # Blacklist tracker changelog
-│   │   └── mint-burn-flow-changelog/page.tsx # Mint/Burn flow changelog
+│   │   ├── mint-burn-flow-changelog/page.tsx # Mint/Burn flow changelog
+│   │   └── yield-changelog/page.tsx # Yield intelligence methodology changelog
 │   ├── portfolio/                # Portfolio stress testing & upstream exposure
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -222,6 +224,7 @@ src/                              # Next.js frontend (static export)
 │   ├── methodology-version-card.tsx # Shared changelog version card
 │   ├── stale-data-banner.tsx     # Stale data warning banner
 │   ├── breadcrumb-json-ld.tsx    # Structured data for breadcrumbs
+│   ├── faq-section.tsx           # Shared FAQ renderer (accordion UI + optional FAQPage JSON-LD script)
 │   ├── sortable-table-head.tsx   # Shared sortable table header
 │   ├── table-pagination.tsx      # Shared pagination component
 │   ├── balance-bar.tsx           # Balance ratio visualization bar
@@ -281,6 +284,7 @@ src/                              # Next.js frontend (static export)
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── page-metadata.ts          # Shared metadata builder for feature routes
+    ├── faq.ts                    # FAQ item type + FAQPage JSON-LD builder
     ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
     ├── peg-landing.ts            # Peg currency landing page data helpers
     ├── report-cards.ts           # Report card scoring: 5 dimensions, grade thresholds, weights, computeStressedGrades()

@@ -1,7 +1,9 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { FaqSection } from "@/components/faq-section";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import type { FaqItem } from "@/lib/faq";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
@@ -21,28 +23,18 @@ export const metadata = buildPageMetadata({
   ogImage: "https://pharos.watch/og-stability-index.png",
 });
 
-const faqJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: [
-    {
-      "@type": "Question",
-      name: "What is the Pharos Stability Index?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "The Pharos Stability Index (PSI) is a composite 0–100 score that measures stablecoin market health. It combines peg deviation severity, depeg breadth, DEWS stress breadth, and 7-day market-cap trend. A higher score means calmer markets.",
-      },
-    },
-    {
-      "@type": "Question",
-      name: "What do the condition bands mean?",
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: "PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74), FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Lower bands indicate broader and deeper market instability.",
-      },
-    },
-  ],
-};
+const FAQ_ITEMS = [
+  {
+    question: "What is the Pharos Stability Index?",
+    answer:
+      "The Pharos Stability Index (PSI) is a composite 0–100 score that measures the overall health of the stablecoin market. It combines four signals: peg deviation severity (how far coins are from their target price), depeg breadth (what fraction of coins are actively depegged), DEWS stress breadth (coins under elevated stress before full depegs), and 7-day market-cap trend. A higher score means calmer markets.",
+  },
+  {
+    question: "What do the condition bands mean?",
+    answer:
+      "PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74), FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Each lower band reflects broader and deeper stablecoin stress.",
+  },
+] as const satisfies readonly FaqItem[];
 
 export default function StabilityIndexPage() {
   return (
@@ -61,35 +53,7 @@ export default function StabilityIndexPage() {
       ]}
     >
       <StabilityIndexClient />
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Frequently Asked Questions</h2>
-        <details className="group border border-border/50 rounded-lg">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-            What is the Pharos Stability Index?
-          </summary>
-          <p className="px-4 pb-4 text-sm text-muted-foreground">
-            The Pharos Stability Index (PSI) is a composite 0–100 score that measures the overall health of the
-            stablecoin market. It combines four signals: peg deviation severity (how far coins are from their target
-            price), depeg breadth (what fraction of coins are actively depegged), DEWS stress breadth (coins under
-            elevated stress before full depegs), and 7-day market-cap trend. A higher score means calmer markets.
-          </p>
-        </details>
-        <details className="group border border-border/50 rounded-lg">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-            What do the condition bands mean?
-          </summary>
-          <p className="px-4 pb-4 text-sm text-muted-foreground">
-            PSI scores map to six condition bands: BEDROCK (90–100), STEADY (75–89), TREMOR (60–74),
-            FRACTURE (40–59), CRISIS (20–39), and MELTDOWN (0–19). Each lower band reflects broader and deeper
-            stablecoin stress.
-          </p>
-        </details>
-      </section>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      <FaqSection items={FAQ_ITEMS} includeJsonLd />
     </FeaturePageShell>
   );
 }
