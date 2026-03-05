@@ -2,8 +2,7 @@
 
 import { useMemo } from "react";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types";
-import { useApiQuery, useApiQueryWithMeta, CRON_15MIN, CRON_1H } from "./use-api-query";
-import type { ApiMeta } from "@/lib/api";
+import { useApiQuery, CRON_15MIN, CRON_1H } from "./use-api-query";
 
 export interface SupplyHistoryPoint {
   date: number;
@@ -16,20 +15,6 @@ export function useStablecoins() {
     ["stablecoins"], "/api/stablecoins", CRON_15MIN,
     { schema: StablecoinListResponseSchema },
   );
-}
-
-/** Meta-aware variant: returns { data, meta } with freshness info. */
-export function useStablecoinsWithMeta() {
-  const query = useApiQueryWithMeta<StablecoinListResponse>(
-    ["stablecoins-meta"], "/api/stablecoins", CRON_15MIN,
-    { schema: StablecoinListResponseSchema },
-  );
-
-  return {
-    ...query,
-    stablecoins: query.data?.data ?? undefined,
-    meta: query.data?.meta ?? null,
-  } as typeof query & { stablecoins: StablecoinListResponse | undefined; meta: ApiMeta | null };
 }
 
 /** Stablecoin detail shape (tokens array from DL, CG, or commodity paths) */
