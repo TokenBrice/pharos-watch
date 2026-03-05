@@ -13,7 +13,7 @@ import { FeatureStatusBadge } from "@/components/feature-status-badge";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/mint-burn-flow-version";
+} from "@shared/lib/mint-burn-flow-version";
 
 const TIME_RANGES = [
   { value: "24", label: "24h", hours: 24 },

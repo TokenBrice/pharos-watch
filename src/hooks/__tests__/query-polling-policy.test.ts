@@ -8,7 +8,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: useQueryMock,
 }));
 
-vi.mock("@/lib/api-endpoints", () => ({
+vi.mock("@shared/lib/api-endpoints", () => ({
   getProbePaths: (group: "public" | "admin" | "manual") => {
     if (group === "public") return ["/api/health"];
     if (group === "admin") return ["/api/status"];

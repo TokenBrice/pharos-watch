@@ -1,6 +1,6 @@
 "use client";
 
-import type { DexLiquidityHistoryPoint } from "@/lib/types";
+import type { DexLiquidityHistoryPoint } from "@shared/types";
 import { useApiQuery, CRON_1H } from "./use-api-query";
 
 export function useDexLiquidityHistory(stablecoinId: string, days = 90) {

@@ -5,7 +5,7 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
   toDepegDewsMethodologyVersionLabel,
-} from "../depeg-dews-version";
+} from "@shared/lib/depeg-dews-version";
 
 describe("depeg-dews-version", () => {
   it("keeps current version aligned with latest changelog entry", () => {

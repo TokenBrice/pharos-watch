@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { formatDuration, formatEventDate, formatBps } from "@/lib/format";
-import type { DepegEvent } from "@/lib/types";
+import { formatDuration, formatEventDate, formatBps } from "@shared/lib/format";
+import type { DepegEvent } from "@shared/types";
 
 interface DepegFeedProps {
   events: DepegEvent[];

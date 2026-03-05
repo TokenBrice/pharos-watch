@@ -5,7 +5,7 @@ import {
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
   getMintBurnFlowMethodologyVersionAt,
   toMintBurnFlowMethodologyVersionLabel,
-} from "../mint-burn-flow-version";
+} from "@shared/lib/mint-burn-flow-version";
 
 describe("mint-burn-flow-version", () => {
   it("keeps current version aligned with latest changelog entry", () => {

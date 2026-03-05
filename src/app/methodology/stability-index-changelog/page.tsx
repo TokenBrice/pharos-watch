@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   PSI_METHODOLOGY_CHANGELOG,
   PSI_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/stability-index-version";
+} from "@shared/lib/stability-index-version";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,

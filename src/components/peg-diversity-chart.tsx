@@ -14,9 +14,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
-import { PEG_CHART_COLORS } from "@/lib/classification";
+import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 
 function pegKeyToCode(key: string): string {

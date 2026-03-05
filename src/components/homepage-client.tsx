@@ -20,11 +20,11 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import { PEG_CURRENCY_COUNT } from "@/lib/classification";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
-import { derivePegRates } from "@/lib/peg-rates";
-import type { PegSummaryCoin } from "@/lib/types";
+import { derivePegRates } from "@shared/lib/peg-rates";
+import type { PegSummaryCoin } from "@shared/types";
 
 export function HomepageClient() {
   const {

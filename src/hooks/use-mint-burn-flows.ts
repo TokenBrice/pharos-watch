@@ -8,7 +8,7 @@ import {
   type MintBurnFlowsResponse,
   type MintBurnPerCoinResponse,
   type MintBurnEventsResponse,
-} from "@/lib/types";
+} from "@shared/types";
 import {
   normalizeToSignedFlowIntensity,
   type FlowIntensitySemantics,

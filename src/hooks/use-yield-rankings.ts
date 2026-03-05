@@ -1,6 +1,6 @@
 "use client";
 
-import type { YieldRankingsResponse } from "@/lib/types";
+import type { YieldRankingsResponse } from "@shared/types";
 import { useApiQuery, CRON_30MIN } from "./use-api-query";
 
 export function useYieldRankings() {

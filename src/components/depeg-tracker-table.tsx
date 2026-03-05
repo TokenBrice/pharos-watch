@@ -19,7 +19,7 @@ import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
-import type { ThreatBand } from "@/lib/classification";
+import type { ThreatBand } from "@shared/lib/classification";
 
 export type { DepegTrackerRow } from "@/lib/depeg-sort";
 

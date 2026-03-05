@@ -1,6 +1,6 @@
 "use client";
 
-import type { DepegEvent } from "@/lib/types";
+import type { DepegEvent } from "@shared/types";
 import { useApiQuery, CRON_15MIN } from "./use-api-query";
 
 interface DepegEventsResponse {

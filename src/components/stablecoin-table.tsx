@@ -23,15 +23,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@/lib/format";
+import { formatCurrency, formatNativePrice, formatPegDeviation, formatPercentChange } from "@shared/lib/format";
 import { downloadCsv } from "@/lib/csv-export";
-import { getPegReference } from "@/lib/peg-rates";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@/lib/stablecoins";
-import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@/lib/types";
-import { getFilterTags, OTHER_PEG_TAGS } from "@/lib/types";
-import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
-import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
+import { getPegReference } from "@shared/lib/peg-rates";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID, TRACKED_IDS } from "@shared/lib/stablecoins";
+import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
+import { getFilterTags, OTHER_PEG_TAGS } from "@shared/types";
+import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";

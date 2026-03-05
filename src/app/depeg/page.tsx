@@ -1,12 +1,12 @@
 import dynamic from "next/dynamic";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/depeg-dews-version";
+} from "@shared/lib/depeg-dews-version";
 
 const DepegClient = dynamic(
   () => import("./client").then((m) => ({ default: m.DepegClient })),

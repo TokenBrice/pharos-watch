@@ -1,6 +1,6 @@
 "use client";
 
-import { ReportCardsResponseSchema, type ReportCardsResponse } from "@/lib/types";
+import { ReportCardsResponseSchema, type ReportCardsResponse } from "@shared/types";
 import { useApiQuery, CRON_15MIN } from "./use-api-query";
 import type { ZodType } from "zod";
 

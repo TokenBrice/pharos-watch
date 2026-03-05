@@ -7,7 +7,7 @@ import { useLogos } from "@/hooks/use-logos";
 import { ContagionGraph } from "@/components/contagion-graph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
-import { sumPegBuckets } from "@/lib/supply";
+import { sumPegBuckets } from "@shared/lib/supply";
 
 export function DependencyMapClient() {
   const { data: reportData, isLoading: isLoadingCards } = useReportCards();

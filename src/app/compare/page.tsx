@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";

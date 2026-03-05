@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { scoreToGrade, DIMENSION_ORDER } from "@/lib/report-cards";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { scoreToGrade, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import type {
   ReportCard,
   DimensionKey,
   ReportCardGrade,
   DependencyWeight,
   ReserveSlice,
-} from "@/lib/types";
+} from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Types

@@ -1,5 +1,5 @@
 import React from "react";
-import type { CoinNotice as CoinNoticeType } from "@/lib/types";
+import type { CoinNotice as CoinNoticeType } from "@shared/types";
 
 const STYLES: Record<CoinNoticeType["type"], { border: string; bg: string; icon: string; title: string }> = {
   danger: {

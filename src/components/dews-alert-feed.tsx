@@ -8,9 +8,9 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { BAND_ORDER } from "@/lib/depeg-sort";
-import { PSI_ELIGIBLE_META_BY_ID } from "@/lib/psi-eligible";
-import type { StressSignalEntry } from "@/lib/types";
-import type { ThreatBand } from "@/lib/classification";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import type { StressSignalEntry } from "@shared/types";
+import type { ThreatBand } from "@shared/lib/classification";
 
 interface DEWSAlertFeedProps {
   signals?: Record<string, StressSignalEntry>;

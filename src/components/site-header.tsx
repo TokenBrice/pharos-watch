@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useHealth } from "@/hooks/use-health";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { TRACKED_IDS } from "@/lib/stablecoins";
+import { TRACKED_IDS } from "@shared/lib/stablecoins";
 
 function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;

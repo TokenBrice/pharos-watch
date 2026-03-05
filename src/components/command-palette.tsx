@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { Moon, Sun, FileText, Coins } from "lucide-react";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import { useLogos } from "@/hooks/use-logos";
 

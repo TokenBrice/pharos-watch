@@ -1,6 +1,6 @@
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { PEG_CURRENCY_COUNT } from "@/lib/classification";
-import { CHAIN_META } from "@/lib/chains";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
+import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";

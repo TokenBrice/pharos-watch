@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TRACKED_STABLECOINS } from "../stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { CG_CHAIN_MAP } from "../../../worker/src/lib/coingecko-onchain";
 import { DS_CHAIN_MAP } from "../../../worker/src/lib/dexscreener";
 

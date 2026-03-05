@@ -7,8 +7,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { FlowMachineScene } from "@/components/flow-machine-scene";
-import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
-import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@/lib/types";
+import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
+import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@shared/types";
 import { cn } from "@/lib/utils";
 
 interface FlowBrrrOverviewProps {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TRACKED_STABLECOINS } from "../stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 // Known stablecoin tickers that should be linked when referenced in reserves
 const KNOWN_TICKERS = ["USDC", "USDT", "DAI", "FRAX", "USDe", "USDtb", "BUIDL", "USDS", "USYC", "OUSG", "DOLA", "GHO", "crvUSD", "FRXUSD", "USD0"];

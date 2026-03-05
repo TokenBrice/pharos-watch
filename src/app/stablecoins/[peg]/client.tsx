@@ -9,10 +9,10 @@ import { useReportCards } from "@/hooks/use-report-cards";
 import { StablecoinTable } from "@/components/stablecoin-table";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import { derivePegRates } from "@/lib/peg-rates";
-import { pegCurrencyToFilterTag } from "@/lib/types";
-import type { PegCurrency, PegSummaryCoin } from "@/lib/types";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { derivePegRates } from "@shared/lib/peg-rates";
+import { pegCurrencyToFilterTag } from "@shared/types";
+import type { PegCurrency, PegSummaryCoin } from "@shared/types";
 
 export function PegLandingClient({ pegCurrency }: { pegCurrency: PegCurrency }) {
   const { data, isLoading, dataUpdatedAt, error, refetch } = useStablecoins();

@@ -10,7 +10,7 @@ import {
   formatNativePrice,
   formatDeathDate,
   formatDeathDateShort,
-} from "../format";
+} from "@shared/lib/format";
 
 // ---------------------------------------------------------------------------
 // formatCurrency

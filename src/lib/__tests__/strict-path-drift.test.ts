@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STRICT_CONTRACT_PATHS_LIST } from "../strict-contract-paths";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
 import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-api.mjs";
 
 describe("strict API path drift guards", () => {

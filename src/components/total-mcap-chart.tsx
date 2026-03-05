@@ -17,7 +17,7 @@ import { downloadChartPng } from "@/lib/chart-export";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";

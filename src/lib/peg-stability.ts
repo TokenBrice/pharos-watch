@@ -1,5 +1,5 @@
-import type { DepegEvent } from "./types";
-import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
+import type { DepegEvent } from "@shared/types";
+import { mergeDepegSeconds, worstDeviation } from "@shared/lib/peg-utils";
 
 interface PegStabilityMetrics {
   /** Percentage of tracked history at peg (0–100) */

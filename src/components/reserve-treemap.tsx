@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ReserveSlice, ReserveRisk } from "@/lib/types";
+import type { ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
   reserves: ReserveSlice[];

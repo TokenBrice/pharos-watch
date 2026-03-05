@@ -2,15 +2,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { ReportCard as ReportCardType } from "@/lib/types";
+import type { ReportCard as ReportCardType } from "@shared/types";
 import {
   REPORT_CARD_GRADE_COLORS,
   DIMENSION_LABELS,
   DIMENSION_ORDER,
   METHODOLOGY_VERSION,
-} from "@/lib/report-cards";
+} from "@shared/lib/report-cards";
 import { ReportCardRadar } from "./radar-chart";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
 
 // ---------------------------------------------------------------------------

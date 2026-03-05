@@ -1,4 +1,4 @@
-import type { PegAssetBase, StablecoinMeta } from "./types";
+import type { PegAssetBase, StablecoinMeta } from "../types";
 import { sumPegBuckets } from "./supply";
 
 /**

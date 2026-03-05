@@ -1,4 +1,4 @@
-import type { DependencyWeight, ReserveSlice, StablecoinMeta } from "./types";
+import type { DependencyWeight, ReserveSlice, StablecoinMeta } from "../types";
 
 export interface ReserveResult {
   reserves: ReserveSlice[];

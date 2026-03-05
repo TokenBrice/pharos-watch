@@ -13,7 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";

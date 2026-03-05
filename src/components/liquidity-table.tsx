@@ -18,10 +18,10 @@ import { BalanceBar } from "@/components/balance-bar";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
-import type { StablecoinMeta, DexLiquidityData } from "@/lib/types";
+import type { StablecoinMeta, DexLiquidityData } from "@shared/types";
 
 const PAGE_SIZE = 25;
 

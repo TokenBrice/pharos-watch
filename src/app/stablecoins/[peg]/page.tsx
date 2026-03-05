@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   ACTIVE_PEGS,
   PEG_SLUGS,

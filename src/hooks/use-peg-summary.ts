@@ -1,6 +1,6 @@
 "use client";
 
-import { PegSummaryResponseSchema, type PegSummaryResponse } from "@/lib/types";
+import { PegSummaryResponseSchema, type PegSummaryResponse } from "@shared/types";
 import { useApiQuery, CRON_15MIN } from "./use-api-query";
 
 export function usePegSummary() {

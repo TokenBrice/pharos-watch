@@ -4,7 +4,7 @@ import { useId } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
-import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/psi-colors";
 
 export function PsiLighthouse({ band, color, size = 36 }: { band: string; color: string; size?: number }) {
   const uid = useId();

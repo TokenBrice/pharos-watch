@@ -1,4 +1,4 @@
-import type { GovernanceType, StablecoinData } from "./types";
+import type { GovernanceType, StablecoinData } from "../types";
 import { TRACKED_META_BY_ID } from "./stablecoins";
 
 /** Safely coerce to number, treating null/undefined/NaN/Infinity as 0 */

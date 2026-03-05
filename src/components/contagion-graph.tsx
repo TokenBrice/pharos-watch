@@ -13,10 +13,10 @@ import {
 } from "d3-force";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { deriveDependencies } from "@/lib/reserve-templates";
-import { GRADE_RADAR_COLORS, gradeRange } from "@/lib/report-cards";
-import type { DependencyType, ReportCard, ReportCardGrade } from "@/lib/types";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
+import type { DependencyType, ReportCard, ReportCardGrade } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -744,7 +744,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
       visibleLinkIndices: visibleIndices,
       visibleNodeIds: nodeIds,
     };
-  }, [resolvedLinks, focusMode, neighborhoodFocusId, hoveredId, nodes, hubIdsByScore]);
+  }, [resolvedLinks, focusMode, neighborhoodFocusId, nodes, hubIdsByScore]);
 
   useEffect(() => {
     if (hoveredEdge !== null && !visibleLinkIndices.has(hoveredEdge)) setHoveredEdge(null);

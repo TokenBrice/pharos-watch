@@ -17,10 +17,10 @@ import {
   Legend,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
+import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import { CHART_RED, CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
-import { formatCurrency } from "@/lib/format";
-import type { CauseOfDeath } from "@/lib/types";
+import { formatCurrency } from "@shared/lib/format";
+import type { CauseOfDeath } from "@shared/types";
 
 /* ── Custom tooltip shell ── */
 

@@ -2,7 +2,7 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { API_BASE } from "@/lib/api";
-import type { HealthResponse } from "@/lib/types";
+import type { HealthResponse } from "@shared/types";
 import { CRON_1MIN, createPollingQueryOptions } from "./use-api-query";
 
 /**

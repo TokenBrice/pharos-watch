@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { StablecoinListResponseSchema, type StablecoinListResponse } from "@/lib/types";
+import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types";
 import { useApiQuery, useApiQueryWithMeta, CRON_15MIN, CRON_1H } from "./use-api-query";
 import type { ApiMeta } from "@/lib/api";
 

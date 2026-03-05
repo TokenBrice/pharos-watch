@@ -22,7 +22,7 @@ import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
 import { trackEvent, trackSearch } from "@/lib/analytics";
-import type { PegCurrency, GovernanceType } from "@/lib/types";
+import type { PegCurrency, GovernanceType } from "@shared/types";
 import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
 const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { CAUSE_META, CAUSE_HEX } from "@/lib/dead-stablecoins";
-import { formatCurrency, formatDeathDate } from "@/lib/format";
-import type { DeadStablecoin, CauseOfDeath } from "@/lib/types";
+import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
+import { formatCurrency, formatDeathDate } from "@shared/lib/format";
+import type { DeadStablecoin, CauseOfDeath } from "@shared/types";
 
 type TombSize = "lg" | "md" | "sm";
 

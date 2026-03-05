@@ -5,7 +5,7 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   getBlacklistTrackerMethodologyVersionAt,
   toBlacklistTrackerMethodologyVersionLabel,
-} from "../blacklist-tracker-version";
+} from "@shared/lib/blacklist-tracker-version";
 
 describe("blacklist-tracker-version", () => {
   it("keeps current version aligned with latest changelog entry", () => {

@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/depeg-dews-version";
+} from "@shared/lib/depeg-dews-version";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,

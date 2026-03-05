@@ -478,7 +478,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/src/cron/fetch-tbill-rate.ts` | Daily T-bill rate cron |
 | `worker/src/api/yield-rankings.ts` | `GET /api/yield-rankings` handler |
 | `worker/src/api/yield-history.ts` | `GET /api/yield-history` handler |
-| `src/lib/types.ts` | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
+| `shared/types/index.ts` | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `src/lib/classification.ts` | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES` |
 | `src/hooks/use-yield-rankings.ts` | TanStack Query hook for rankings |
 | `src/app/yield/page.tsx` | SSG page wrapper with metadata |

@@ -5,7 +5,7 @@
  * Tailwind class strings are always complete static literals (never constructed dynamically).
  */
 
-import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin, YieldType } from "./types";
+import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin, YieldType } from "../types";
 import { TRACKED_STABLECOINS } from "./stablecoins";
 
 // ---------------------------------------------------------------------------

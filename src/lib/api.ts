@@ -1,5 +1,5 @@
 import type { ZodType } from "zod";
-import { STRICT_CONTRACT_PATHS_LIST } from "./strict-contract-paths";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
 
 export function resolveApiBase(
   hostname?: string | null,

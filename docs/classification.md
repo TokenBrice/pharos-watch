@@ -36,7 +36,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 ### Additional Metadata
 
-Key fields on `StablecoinMeta` (see `src/lib/types.ts` for the full interface):
+Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interface):
 
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism

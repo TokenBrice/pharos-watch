@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyInfoCard } from "@/components/key-info-card";
-import type { StablecoinMeta } from "@/lib/types";
+import type { StablecoinMeta } from "@shared/types";
 
 interface InfoSectionProps {
   coin: StablecoinMeta;

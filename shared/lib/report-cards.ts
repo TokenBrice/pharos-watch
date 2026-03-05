@@ -23,7 +23,7 @@ import type {
   DependencyType,
   ReserveRisk,
   ReserveSlice,
-} from "./types";
+} from "../types";
 import { deriveDependencies } from "./reserve-templates";
 import { SAFETY_SCORE_VERSION } from "./safety-score-version";
 

@@ -7,7 +7,7 @@ import type { FaqItem } from "@/lib/faq";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/stability-index-version";
+} from "@shared/lib/stability-index-version";
 
 const StabilityIndexClient = dynamic(
   () => import("./client").then((m) => ({ default: m.StabilityIndexClient })),

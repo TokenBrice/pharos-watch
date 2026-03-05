@@ -6,9 +6,9 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { getCirculatingRaw, getPrevDayRaw, getPrevMonthRaw, getPrevWeekRaw } from "@/lib/supply";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import { getReserves, type ReserveResult } from "@/lib/reserve-templates";
+import { getCirculatingRaw, getPrevDayRaw, getPrevMonthRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { getReserves, type ReserveResult } from "@shared/lib/reserve-templates";
 import {
   deriveDeviationBps,
   deriveGaugeDeviationBps,
@@ -24,7 +24,7 @@ import type {
   ReportCard,
   StablecoinData,
   StablecoinMeta,
-} from "@/lib/types";
+} from "@shared/types";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
 const SESSION_NOW_MS = Date.now();

@@ -17,10 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
-import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
+import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
-import { TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import type { MintBurnCoinFlow } from "@/lib/types";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { MintBurnCoinFlow } from "@shared/types";
 
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];

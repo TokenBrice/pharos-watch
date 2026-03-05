@@ -40,7 +40,7 @@ This page is **admin-only in practice** because all status/probe calls require `
 
 ### Endpoint groups
 
-Probe groups are sourced from `src/lib/api-endpoints.ts`:
+Probe groups are sourced from `shared/lib/api-endpoints.ts`:
 
 - `public`: user-facing read endpoints
 - `admin`: admin read endpoints
@@ -198,7 +198,7 @@ Mutating admin paths are protected by method guardrails:
 | `src/app/status/client.tsx` | Status UI (banner, cron cards, cache table, probe grid, circuit table, action dialog) |
 | `src/hooks/use-status.ts` | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth |
 | `src/hooks/use-endpoint-probes.ts` | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions |
-| `src/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |
+| `shared/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |
 | `worker/src/api/status.ts` | Raw status synthesis + effective state response |
 | `worker/src/api/status-history.ts` | Machine-readable status timeline/history endpoint |
 | `worker/src/api/health.ts` | Public health endpoint for cache/circuit observability |

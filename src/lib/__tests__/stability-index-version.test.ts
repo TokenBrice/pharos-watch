@@ -5,7 +5,7 @@ import {
   PSI_METHODOLOGY_VERSION_LABEL,
   getPsiMethodologyVersionAt,
   toPsiMethodologyVersionLabel,
-} from "../stability-index-version";
+} from "@shared/lib/stability-index-version";
 
 describe("stability-index-version", () => {
   it("keeps current version aligned with latest changelog entry", () => {

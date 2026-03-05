@@ -17,10 +17,10 @@ import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
-import { formatCurrency } from "@/lib/format";
-import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
-import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
-import type { YieldRanking, AltYieldSource } from "@/lib/types";
+import { formatCurrency } from "@shared/lib/format";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import type { YieldRanking, AltYieldSource } from "@shared/types";
 
 const PAGE_SIZE = 25;
 

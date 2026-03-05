@@ -16,8 +16,8 @@ import {
   THREAT_BAND_COLORS,
   THREAT_BAND_LABELS,
   THREAT_BAND_HEX,
-} from "@/lib/classification";
-import type { ThreatBand } from "@/lib/classification";
+} from "@shared/lib/classification";
+import type { ThreatBand } from "@shared/lib/classification";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 
 const SIGNAL_META: Record<

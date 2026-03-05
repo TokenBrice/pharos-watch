@@ -1,6 +1,6 @@
-import type { PegCurrency } from "./types";
-import { TRACKED_STABLECOINS } from "./stablecoins";
-import { PEG_LABELS, PEG_LABELS_SHORT } from "./classification";
+import type { PegCurrency } from "@shared/types";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { PEG_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 
 // ---------------------------------------------------------------------------
 // Slug ↔ PegCurrency mapping

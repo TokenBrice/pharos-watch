@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { GradeBadge } from "@/components/grade-badge";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import type { StressTestState } from "@/hooks/use-stress-test";
-import type { ReportCardGrade } from "@/lib/types";
+import type { ReportCardGrade } from "@shared/types";
 import { Network, Play } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 

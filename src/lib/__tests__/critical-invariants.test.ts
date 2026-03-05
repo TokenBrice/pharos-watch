@@ -3,9 +3,9 @@ import {
   MintBurnFlowsResponseSchema,
   StressSignalsAllResponseSchema,
   YieldRankingsResponseSchema,
-} from "../types";
-import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
-import type { DepegEvent } from "../types";
+} from "@shared/types";
+import { mergeDepegSeconds, worstDeviation } from "@shared/lib/peg-utils";
+import type { DepegEvent } from "@shared/types";
 
 function makeDepegEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">): DepegEvent {
   return {

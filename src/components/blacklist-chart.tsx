@@ -13,12 +13,12 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { isGoldStablecoin, extractGoldPrices } from "@/lib/blacklist-helpers";
-import { BLACKLIST_CHART_COLORS } from "@/lib/classification";
+import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { CHART_HEIGHT, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
-import type { BlacklistEvent } from "@/lib/types";
+import type { BlacklistEvent } from "@shared/types";
 
 const STABLECOINS_ORDER = ["USDT", "USDC", "PAXG", "XAUT"] as const;
 

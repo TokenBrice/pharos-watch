@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ArrowDownUp } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
-import { formatCurrency, timeAgo, formatEventDate } from "@/lib/format";
-import { CHAIN_META } from "@/lib/chains";
+import { formatCurrency, timeAgo, formatEventDate } from "@shared/lib/format";
+import { CHAIN_META } from "@shared/lib/chains";
 
 // ---------------------------------------------------------------------------
 // Props

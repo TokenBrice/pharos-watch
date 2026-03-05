@@ -3,12 +3,12 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
-import { CHAIN_META } from "@/lib/chains";
+import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
-import type { DexLiquidityData } from "@/lib/types";
-import { DEX_GLOBAL_KEY } from "@/lib/types";
+import type { DexLiquidityData } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types";
 
 export interface LiquidityStatsData {
   totalTvl: number;

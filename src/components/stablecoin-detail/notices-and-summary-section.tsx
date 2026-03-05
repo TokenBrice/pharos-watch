@@ -2,8 +2,8 @@
 
 import { CoinNotices } from "@/components/coin-notice";
 import { OverviewSection } from "@/components/stablecoin-detail/overview-section";
-import type { ReserveResult } from "@/lib/reserve-templates";
-import type { StablecoinMeta } from "@/lib/types";
+import type { ReserveResult } from "@shared/lib/reserve-templates";
+import type { StablecoinMeta } from "@shared/types";
 
 interface SummaryData {
   title: string;

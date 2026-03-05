@@ -115,7 +115,7 @@ All in `src/lib/supply.ts`:
 
 ## Supply Method Configuration
 
-Defined in `StablecoinMeta.supplyMethod` (`src/lib/types.ts`). **Not** used by the snapshot cron but documented here for completeness since it is part of the supply system.
+Defined in `StablecoinMeta.supplyMethod` (`shared/types/index.ts`). **Not** used by the snapshot cron but documented here for completeness since it is part of the supply system.
 
 ```typescript
 interface SupplyMethodConfig {
@@ -275,7 +275,7 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `worker/migrations/0015_supply_history.sql` | `supply_history` table |
 | `worker/migrations/0013_onchain_supply.sql` | `onchain_supply` table (per-chain cache) |
 | `src/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
-| `src/lib/types.ts` | `SupplyMethodConfig`, `StablecoinMeta` types |
+| `shared/types/index.ts` | `SupplyMethodConfig`, `StablecoinMeta` types |
 | `src/lib/stablecoins.ts` | Stablecoin metadata including `supplyMethod` configs |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook, `detailToSupplyHistory()` transform |
 | `src/components/mcap-chart.tsx` | Individual mcap chart |

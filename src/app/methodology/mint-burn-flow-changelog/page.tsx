@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/mint-burn-flow-version";
+} from "@shared/lib/mint-burn-flow-version";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,

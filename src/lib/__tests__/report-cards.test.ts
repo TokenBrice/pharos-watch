@@ -8,9 +8,9 @@ import {
   scoreDependencyRisk,
   computeOverallGrade,
   NO_LIQUIDITY_PENALTY,
-} from "../report-cards";
-import type { ReportCardDimension } from "../types";
-import type { StablecoinMeta } from "../types";
+} from "@shared/lib/report-cards";
+import type { ReportCardDimension } from "@shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 // Minimal meta helper
 function makeMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {

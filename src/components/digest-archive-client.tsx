@@ -8,8 +8,8 @@ import { useDigestArchive } from "@/hooks/use-digest-archive";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@/lib/psi-colors";
-import { formatCurrency } from "@/lib/format";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { formatCurrency } from "@shared/lib/format";
 
 function tsToDateSlug(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);

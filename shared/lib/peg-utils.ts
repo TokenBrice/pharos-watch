@@ -1,4 +1,4 @@
-import type { DepegEvent } from "./types";
+import type { DepegEvent } from "../types";
 
 /**
  * Merge overlapping depeg intervals and return total depeg seconds.

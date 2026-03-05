@@ -1,6 +1,6 @@
 "use client";
 
-import { DexLiquidityMapSchema, type DexLiquidityMap } from "@/lib/types";
+import { DexLiquidityMapSchema, type DexLiquidityMap } from "@shared/types";
 import { useApiQuery, CRON_30MIN } from "./use-api-query";
 
 export function useDexLiquidity() {

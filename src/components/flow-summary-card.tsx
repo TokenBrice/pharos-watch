@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { FlowMachineScene } from "@/components/flow-machine-scene";
 import { useMintBurnFlows, useMintBurnFlowsCoin } from "@/hooks/use-mint-burn-flows";
-import { formatCurrency, getNetColor, getNetPrefix } from "@/lib/format";
+import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
 import { getMintBurnSummaryTimeframe, getNetFlowForHours } from "@/lib/mint-burn-timeframes";
 import { GAUGE_BANDS } from "@/components/flow-gauge";

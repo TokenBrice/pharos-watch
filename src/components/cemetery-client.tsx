@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { CemeteryTombstones } from "@/components/cemetery-tombstones";
 import { StablecoinCemetery } from "@/components/stablecoin-cemetery";
 

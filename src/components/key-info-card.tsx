@@ -4,15 +4,15 @@ import { useState } from "react";
 import Image from "next/image";
 import { Copy, ExternalLink, Globe } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CHAIN_META } from "@/lib/chains";
+import { CHAIN_META } from "@shared/lib/chains";
 import { trackEvent } from "@/lib/analytics";
-import type { StablecoinMeta } from "@/lib/types";
+import type { StablecoinMeta } from "@shared/types";
 import {
   GOVERNANCE_BADGE_STYLES,
   BACKING_BADGE_STYLES,
   PEG_BADGE_STYLES,
   POR_BADGE_STYLES,
-} from "@/lib/classification";
+} from "@shared/lib/classification";
 
 function getExplorerUrl(chainKey: string, address: string): string | null {
   const chain = CHAIN_META[chainKey];

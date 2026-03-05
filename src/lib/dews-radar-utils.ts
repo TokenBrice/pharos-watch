@@ -1,5 +1,5 @@
 // src/lib/dews-radar-utils.ts
-import type { ThreatBand } from "@/lib/classification";
+import type { ThreatBand } from "@shared/lib/classification";
 
 type ElevatedBand = Exclude<ThreatBand, "CALM">;
 

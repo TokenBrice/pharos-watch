@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { mergeDepegSeconds, worstDeviation } from "../peg-utils";
-import { coinTrackingStart, computePegScore, computePegScoreWithWindow } from "../peg-score";
+import { mergeDepegSeconds, worstDeviation } from "@shared/lib/peg-utils";
+import { coinTrackingStart, computePegScore, computePegScoreWithWindow } from "@shared/lib/peg-score";
 import { computePegStability } from "../peg-stability";
-import type { DepegEvent } from "../types";
+import type { DepegEvent } from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Helpers

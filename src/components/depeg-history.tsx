@@ -12,11 +12,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDuration, formatNativePrice, formatEventDate, formatBps } from "@/lib/format";
+import { formatDuration, formatNativePrice, formatEventDate, formatBps } from "@shared/lib/format";
 import { deviationColorClass } from "@/lib/severity-colors";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { computePegStability } from "@/lib/peg-stability";
-import type { DepegEvent } from "@/lib/types";
+import type { DepegEvent } from "@shared/types";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
   return [...events].sort((a, b) => {

@@ -1,4 +1,4 @@
-import type { CauseOfDeath, DeadStablecoin } from "./types";
+import type { CauseOfDeath, DeadStablecoin } from "../types";
 
 export const CAUSE_HEX: Record<CauseOfDeath, string> = {
   "algorithmic-failure": "#ef4444",

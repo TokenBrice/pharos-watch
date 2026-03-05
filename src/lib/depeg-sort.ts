@@ -1,4 +1,4 @@
-import type { PegSummaryCoin, StressSignalEntry } from "@/lib/types";
+import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 
 export interface DepegTrackerRow {
   coin: PegSummaryCoin;

@@ -212,7 +212,7 @@ Orphan cleanup:
 - `direction` must be `"above"` or `"below"` (defaults to `"below"`)
 - `source` must be `"live"` or `"backfill"` (defaults to `"live"`)
 
-Frontend type (`src/lib/types.ts`):
+Frontend type (`shared/types/index.ts`):
 
 ```typescript
 interface DepegEvent {
@@ -342,7 +342,7 @@ Returns `null` if < 30 days tracking.
 | `worker/migrations/0008_depeg_dedup.sql` | Uniqueness + open events indexes |
 | `worker/migrations/0023_depeg_pending.sql` | `depeg_pending` table for multi-source confirmation |
 | `worker/migrations/0016_cleanup_non_usd_depeg_events.sql` | Cleanup when non-USD threshold raised |
-| `src/lib/types.ts` | `DepegEvent` frontend type |
+| `shared/types/index.ts` | `DepegEvent` frontend type |
 | `src/lib/peg-score.ts` | Peg score computation for report cards |
 | `src/lib/peg-stability.ts` | Peg stability metrics (`pegPct`, streak, tracking span) |
 | `src/hooks/use-depeg-events.ts` | TanStack Query hook |

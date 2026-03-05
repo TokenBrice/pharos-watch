@@ -38,7 +38,6 @@ function hasTypeScriptOrJsChange(files) {
 function hasCriticalApiContractChange(files) {
   return files.some((f) =>
     f.startsWith("worker/src/api/")
-    || f === "src/lib/types.ts"
     || f === "src/lib/api.ts"
     || f === "shared/lib/api-endpoints.ts"
     || f === "shared/lib/strict-contract-paths.ts"

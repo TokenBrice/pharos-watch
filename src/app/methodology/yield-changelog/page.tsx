@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   YIELD_METHODOLOGY_CHANGELOG,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/yield-methodology-version";
+} from "@shared/lib/yield-methodology-version";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,

@@ -7,7 +7,7 @@ import type { FaqItem } from "@/lib/faq";
 import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_VERSION_LABEL,
-} from "@/lib/safety-score-version";
+} from "@shared/lib/safety-score-version";
 
 const ReportCardsClient = dynamic(
   () => import("./client").then((m) => ({ default: m.ReportCardsClient })),

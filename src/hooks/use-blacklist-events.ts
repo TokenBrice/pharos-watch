@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import type { BlacklistEvent } from "@/lib/types";
+import type { BlacklistEvent } from "@shared/types";
 import { CRON_20MIN } from "./use-api-query";
 
 interface BlacklistResponse {

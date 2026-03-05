@@ -1,7 +1,7 @@
 "use client";
 
-import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@/lib/classification";
-import type { ThreatBand } from "@/lib/classification";
+import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
+import type { ThreatBand } from "@shared/lib/classification";
 
 interface DEWSBadgeProps {
   score: number;

@@ -1,4 +1,4 @@
-import type { BluechipGrade } from "./types";
+import type { BluechipGrade } from "@shared/types";
 
 export const BLUECHIP_REPORT_BASE = "https://bluechip.org/en/coins";
 

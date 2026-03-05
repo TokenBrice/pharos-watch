@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/csv-export";
-import { formatAddress, formatEventDate, formatCurrency } from "@/lib/format";
+import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/format";
 import { isGoldStablecoin } from "@/lib/blacklist-helpers";
-import type { BlacklistEvent } from "@/lib/types";
-import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@/lib/classification";
+import type { BlacklistEvent } from "@shared/types";
+import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 

@@ -1,4 +1,4 @@
-import type { DepegEvent } from "./types";
+import type { DepegEvent } from "../types";
 import { mergeDepegSeconds, worstDeviation } from "./peg-utils";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * 86400);

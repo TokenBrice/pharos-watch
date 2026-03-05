@@ -284,5 +284,5 @@ Who controls the peg / can pause / change reserves?
 - `docs/data-pipeline.md` — how supply data is fetched and enriched per ID type
 - `docs/yield-intelligence.md` — yieldConfig fields, APY resolution tiers, navToken behavior
 - `docs/report-cards.md` — how collateralQuality / custodyModel affect safety scores
-- `src/lib/types.ts` — canonical TypeScript types for all fields
+- `shared/types/index.ts` — canonical TypeScript types for all fields
 - `src/lib/chains.ts` — supported chain identifiers for `contracts[]`

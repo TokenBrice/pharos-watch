@@ -3,10 +3,10 @@
 import { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { extractGoldPrices, computeBlacklistStats } from "@/lib/blacklist-helpers";
-import type { BlacklistEvent } from "@/lib/types";
+import type { BlacklistEvent } from "@shared/types";
 
 interface BlacklistStatsProps {
   events: BlacklistEvent[] | undefined;

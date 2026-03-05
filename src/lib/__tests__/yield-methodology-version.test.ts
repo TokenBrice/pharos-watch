@@ -5,7 +5,7 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
   getYieldMethodologyVersionAt,
   toYieldMethodologyVersionLabel,
-} from "../yield-methodology-version";
+} from "@shared/lib/yield-methodology-version";
 
 describe("yield-methodology-version", () => {
   it("keeps current version aligned with latest changelog entry", () => {

@@ -13,9 +13,9 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
-import type { MintBurnHourlyBucket } from "@/lib/types";
+import type { MintBurnHourlyBucket } from "@shared/types";
 
 interface FlowChartProps {
   hourly: MintBurnHourlyBucket[];

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { ReportCard, ReportCardGrade } from "@/lib/types";
-import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
+import type { ReportCard, ReportCardGrade } from "@shared/types";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { ReportCardRadar } from "./radar-chart";
 
 // ---------------------------------------------------------------------------

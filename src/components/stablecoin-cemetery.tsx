@@ -2,9 +2,9 @@
 
 import Image from "next/image";
 import { ExternalLink, ChevronDown, ChevronRight } from "lucide-react";
-import { CAUSE_META } from "@/lib/dead-stablecoins";
-import { formatCurrency, formatDeathDate } from "@/lib/format";
-import type { DeadStablecoin } from "@/lib/types";
+import { CAUSE_META } from "@shared/lib/dead-stablecoins";
+import { formatCurrency, formatDeathDate } from "@shared/lib/format";
+import type { DeadStablecoin } from "@shared/types";
 
 interface StablecoinCemeteryProps {
   coins: DeadStablecoin[];

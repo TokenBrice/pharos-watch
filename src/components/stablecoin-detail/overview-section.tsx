@@ -3,8 +3,8 @@
 import { AiSummary } from "@/components/ai-summary";
 import { DEWSDetail } from "@/components/dews-detail";
 import { ReserveTreemap } from "@/components/reserve-treemap";
-import type { ReserveResult } from "@/lib/reserve-templates";
-import type { StablecoinMeta } from "@/lib/types";
+import type { ReserveResult } from "@shared/lib/reserve-templates";
+import type { StablecoinMeta } from "@shared/types";
 
 interface SummaryData {
   title: string;

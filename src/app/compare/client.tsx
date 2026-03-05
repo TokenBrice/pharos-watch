@@ -9,9 +9,9 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import { derivePegRates, getPegReference } from "@/lib/peg-rates";
-import { formatCurrency, formatNativePrice } from "@/lib/format";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { apiFetch } from "@/lib/api";
 import { CRON_1H } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
@@ -26,18 +26,18 @@ import {
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { Share2, Twitter, Download, Search } from "lucide-react";
-import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
-import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@/lib/classification";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import {
   renderCompareShareImage,
   canvasToBlob,
   loadImage,
 } from "@/lib/compare-share-image";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
-import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@/lib/report-cards";
+import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import type { CoinOption } from "@/components/coin-selector";
 import type { StablecoinDetail } from "@/hooks/use-stablecoins";
-import type { ReportCard } from "@/lib/types";
+import type { ReportCard } from "@shared/types";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";

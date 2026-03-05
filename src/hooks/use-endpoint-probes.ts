@@ -2,8 +2,8 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { API_BASE } from "@/lib/api";
-import { getProbePaths } from "@/lib/api-endpoints";
-import type { EndpointProbeResult } from "@/lib/types";
+import { getProbePaths } from "@shared/lib/api-endpoints";
+import type { EndpointProbeResult } from "@shared/types";
 import { CRON_1MIN, createPollingQueryOptions } from "./use-api-query";
 
 /** Endpoint definitions grouped by status-page probe group. */

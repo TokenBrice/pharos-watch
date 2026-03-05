@@ -3,12 +3,12 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
-import { PEG_CHART_COLORS as PEG_META } from "@/lib/classification";
-import { getCirculatingRaw, computeGovernanceBreakdown } from "@/lib/supply";
-import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import type { StablecoinData, ReportCard } from "@/lib/types";
-import { GOVERNANCE_TIER_COLORS } from "@/lib/classification";
+import { formatCurrency } from "@shared/lib/format";
+import { PEG_CHART_COLORS as PEG_META } from "@shared/lib/classification";
+import { getCirculatingRaw, computeGovernanceBreakdown } from "@shared/lib/supply";
+import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { StablecoinData, ReportCard } from "@shared/types";
+import { GOVERNANCE_TIER_COLORS } from "@shared/lib/classification";
 
 const COLLATERAL_TIERS = [
   { key: "rwa", label: "RWA", bg: "bg-blue-500", text: "text-blue-500" },

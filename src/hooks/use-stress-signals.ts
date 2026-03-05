@@ -5,11 +5,11 @@ import type {
   StressSignalsAllResponse,
   StressSignalDetailResponse,
   StressSignalEntry,
-} from "@/lib/types";
+} from "@shared/types";
 import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
-} from "@/lib/types";
+} from "@shared/types";
 
 export type { StressSignalEntry };
 

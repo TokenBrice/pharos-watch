@@ -44,4 +44,4 @@ Defined centrally in `src/hooks/use-api-query.ts`.
 ## Notes
 
 - Cache passthrough endpoints include freshness metadata via `_meta` and/or `X-Data-Age`.
-- Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `src/lib/api-endpoints.ts`.
+- Admin/backfill endpoints bypass edge cache via `cacheBypass` flags in `shared/lib/api-endpoints.ts`.

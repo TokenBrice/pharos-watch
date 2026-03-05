@@ -1,12 +1,12 @@
 import dynamic from "next/dynamic";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/liquidity-score-version";
+} from "@shared/lib/liquidity-score-version";
 
 const LiquidityClient = dynamic(
   () => import("./client").then((m) => ({ default: m.LiquidityClient })),

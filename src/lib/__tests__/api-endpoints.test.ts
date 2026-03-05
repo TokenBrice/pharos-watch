@@ -5,7 +5,7 @@ import {
   isCacheBypassPath,
   isMutatingAdminPath,
   validateEndpointMethod,
-} from "../api-endpoints";
+} from "@shared/lib/api-endpoints";
 
 describe("api endpoint registry", () => {
   it("keeps probe path groups stable", () => {

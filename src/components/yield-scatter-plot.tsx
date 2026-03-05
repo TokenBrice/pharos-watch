@@ -13,8 +13,8 @@ import {
   Cell,
 } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES, CHART_HEIGHT, CHART_BLUE, CHART_GREEN, CHART_RED } from "@/lib/chart-colors";
-import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@/lib/classification";
-import type { YieldRanking, YieldType } from "@/lib/types";
+import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import type { YieldRanking, YieldType } from "@shared/types";
 
 interface ScatterDataPoint {
   x: number;          // safety score

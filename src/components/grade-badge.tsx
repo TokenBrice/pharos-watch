@@ -1,8 +1,8 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { REPORT_CARD_GRADE_COLORS } from "@/lib/report-cards";
-import type { ReportCardGrade } from "@/lib/types";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import type { ReportCardGrade } from "@shared/types";
 
 export function GradeBadge({
   grade,

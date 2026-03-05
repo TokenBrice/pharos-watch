@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "./types";
+import type { StablecoinMeta } from "../types";
 
 // Helper to reduce boilerplate
 interface StablecoinOpts {
@@ -11,22 +11,22 @@ interface StablecoinOpts {
   geckoId?: string;
   cmcSlug?: string;
   protocolSlug?: string;
-  proofOfReserves?: import("./types").ProofOfReserves;
-  links?: import("./types").StablecoinLink[];
-  jurisdiction?: import("./types").Jurisdiction;
-  contracts?: import("./types").ContractDeployment[];
-  supplyMethod?: import("./types").SupplyMethodConfig;
-  dependencies?: import("./types").DependencyWeight[];
+  proofOfReserves?: import("../types").ProofOfReserves;
+  links?: import("../types").StablecoinLink[];
+  jurisdiction?: import("../types").Jurisdiction;
+  contracts?: import("../types").ContractDeployment[];
+  supplyMethod?: import("../types").SupplyMethodConfig;
+  dependencies?: import("../types").DependencyWeight[];
   canBeBlacklisted?: boolean | "possible";
-  chainTier?: import("./types").ChainTier;
-  deploymentModel?: import("./types").DeploymentModel;
-  collateralQuality?: import("./types").CollateralQuality;
-  custodyModel?: import("./types").CustodyModel;
-  governanceQuality?: import("./types").GovernanceQuality;
-  reserves?: import("./types").ReserveSlice[];
-  notices?: import("./types").CoinNotice[];
+  chainTier?: import("../types").ChainTier;
+  deploymentModel?: import("../types").DeploymentModel;
+  collateralQuality?: import("../types").CollateralQuality;
+  custodyModel?: import("../types").CustodyModel;
+  governanceQuality?: import("../types").GovernanceQuality;
+  reserves?: import("../types").ReserveSlice[];
+  notices?: import("../types").CoinNotice[];
   tags?: string[];
-  yieldConfig?: import("./types").YieldConfig;
+  yieldConfig?: import("../types").YieldConfig;
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {

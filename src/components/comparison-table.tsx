@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import type { StablecoinData, StablecoinMeta, BluechipGrade } from "@/lib/types";
-import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
-import { formatCurrency, formatNativePrice } from "@/lib/format";
-import { getPegReference } from "@/lib/peg-rates";
+import type { StablecoinData, StablecoinMeta, BluechipGrade } from "@shared/types";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { formatCurrency, formatNativePrice } from "@shared/lib/format";
+import { getPegReference } from "@shared/lib/peg-rates";
 import { GRADE_ORDER } from "@/lib/bluechip";
-import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@/lib/classification";
+import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   Table,

@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   SAFETY_SCORE_VERSION_LABEL,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
-} from "@/lib/safety-score-version";
+} from "@shared/lib/safety-score-version";
 import { buildMethodologyChangelogMetadata } from "../changelog-page-utils";
 import {
   Card,

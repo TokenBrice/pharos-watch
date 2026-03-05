@@ -14,11 +14,11 @@ import { useLogos } from "@/hooks/use-logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { LiquidityStats } from "@/components/liquidity-stats";
 import { LiquidityTable } from "@/components/liquidity-table";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { LiquidityRow } from "@/components/liquidity-table";
 import type { LiquidityStatsData } from "@/components/liquidity-stats";
-import type { PegCurrency } from "@/lib/types";
-import { DEX_GLOBAL_KEY } from "@/lib/types";
+import type { PegCurrency } from "@shared/types";
+import { DEX_GLOBAL_KEY } from "@shared/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [

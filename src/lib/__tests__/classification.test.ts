@@ -9,7 +9,7 @@ import {
   PEG_CURRENCY_COUNT,
   GOVERNANCE_COLORS,
   BACKING_COLORS,
-} from "../classification";
+} from "@shared/lib/classification";
 
 // ---------------------------------------------------------------------------
 // GOVERNANCE_LABELS

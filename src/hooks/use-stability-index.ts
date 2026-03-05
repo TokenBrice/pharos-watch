@@ -7,7 +7,7 @@ import {
   type StabilityContributor,
   type StabilityIndexCurrent,
   type StabilityIndexHistoryPoint,
-} from "@/lib/types";
+} from "@shared/types";
 
 export type { StabilityContributor, StabilityIndexCurrent, StabilityIndexHistoryPoint };
 

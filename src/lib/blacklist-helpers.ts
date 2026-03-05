@@ -1,5 +1,5 @@
 import { THIRTY_DAYS_SECONDS } from "@/lib/constants";
-import type { BlacklistEvent, StablecoinData } from "@/lib/types";
+import type { BlacklistEvent, StablecoinData } from "@shared/types";
 
 /** Returns true if the symbol is a gold-pegged stablecoin (XAUT or PAXG). */
 export function isGoldStablecoin(symbol: string): symbol is "PAXG" | "XAUT" {

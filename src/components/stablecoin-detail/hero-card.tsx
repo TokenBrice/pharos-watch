@@ -6,20 +6,20 @@ import { ArrowLeftRight, Flag } from "lucide-react";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { PegGauge } from "@/components/peg-gauge";
 import { Card } from "@/components/ui/card";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import {
   formatCurrency,
   formatNativePrice,
   formatPegDeviation,
   formatPercentChange,
   formatSupply,
-} from "@/lib/format";
+} from "@shared/lib/format";
 import {
   deviationColorClass,
   getScoreColor,
   pegScoreColor,
 } from "@/lib/severity-colors";
-import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@/lib/types";
+import type { DexLiquidityData, PegSummaryCoin, StablecoinData, StablecoinMeta } from "@shared/types";
 
 interface HeroCardProps {
   coin: StablecoinMeta;

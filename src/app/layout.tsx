@@ -8,9 +8,9 @@ import { Sidebar, SidebarProvider, SidebarSpacer } from "@/components/sidebar";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
-import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
-import { PEG_CURRENCY_COUNT } from "@/lib/classification";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -9,11 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { deviationBgClass } from "@/lib/severity-colors";
-import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@/lib/types";
-import type { PegRateSource } from "@/lib/peg-rates";
-import { GOVERNANCE_LABELS_SHORT } from "@/lib/classification";
+import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@shared/types";
+import type { PegRateSource } from "@shared/lib/peg-rates";
+import { GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 
 interface PegHeatmapProps {
   coins: PegSummaryCoin[];

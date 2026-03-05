@@ -4,8 +4,8 @@ import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FILTER_GROUPS } from "@/hooks/use-homepage-filters";
-import type { FilterTag } from "@/lib/types";
-import { FILTER_TAG_LABELS } from "@/lib/types";
+import type { FilterTag } from "@shared/types";
+import { FILTER_TAG_LABELS } from "@shared/types";
 
 interface FilterBarProps {
   groupSelections: Record<string, FilterTag | "">;

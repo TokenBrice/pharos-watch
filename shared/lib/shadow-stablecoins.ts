@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "./types";
+import type { StablecoinMeta } from "../types";
 
 /** Stablecoins no longer actively displayed but still included in PSI computation
  *  for historical accuracy. Must have a valid DefiLlama or CoinGecko ID. */

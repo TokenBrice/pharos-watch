@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
-import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@/lib/classification";
+import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import StablecoinDetailClient from "./client";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import logos from "../../../../data/logos.json";

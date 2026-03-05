@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG,
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/liquidity-score-version";
+} from "@shared/lib/liquidity-score-version";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,

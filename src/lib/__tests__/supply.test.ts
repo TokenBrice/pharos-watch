@@ -6,9 +6,9 @@ import {
   getPrevWeekRaw,
   getPrevMonthRaw,
   computeGovernanceBreakdown,
-} from "../supply";
-import type { GovernanceType, StablecoinData } from "../types";
-import { TRACKED_META_BY_ID } from "../stablecoins";
+} from "@shared/lib/supply";
+import type { GovernanceType, StablecoinData } from "@shared/types";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 /** Minimal mock — only the fields each function accesses */
 function mockCoin(overrides: Partial<StablecoinData> = {}): StablecoinData {

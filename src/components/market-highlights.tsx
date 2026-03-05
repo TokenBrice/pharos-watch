@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { formatNativePrice, formatPegDeviation } from "@/lib/format";
-import { getPegReference } from "@/lib/peg-rates";
-import { getCirculatingRaw, getPrevWeekRaw } from "@/lib/supply";
-import { TRACKED_IDS, TRACKED_META_BY_ID } from "@/lib/stablecoins";
-import type { StablecoinData } from "@/lib/types";
+import { formatNativePrice, formatPegDeviation } from "@shared/lib/format";
+import { getPegReference } from "@shared/lib/peg-rates";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { StablecoinData } from "@shared/types";
 
 interface MarketHighlightsProps {
   data: StablecoinData[] | undefined;

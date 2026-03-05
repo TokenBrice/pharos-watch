@@ -1,6 +1,6 @@
 "use client";
 
-import type { BluechipRatingsMap } from "@/lib/types";
+import type { BluechipRatingsMap } from "@shared/types";
 import { useApiQuery, CRON_24H } from "./use-api-query";
 
 export function useBluechipRatings() {

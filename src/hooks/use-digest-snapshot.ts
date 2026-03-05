@@ -2,7 +2,7 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import type { DigestInputData } from "@/lib/types";
+import type { DigestInputData } from "@shared/types";
 
 export interface DigestSnapshotData {
   date: string;

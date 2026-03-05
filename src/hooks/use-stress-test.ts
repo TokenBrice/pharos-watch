@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { computeStressedGrades, GRADE_THRESHOLDS } from "@/lib/report-cards";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { computeStressedGrades, GRADE_THRESHOLDS } from "@shared/lib/report-cards";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type {
   ReportCard,
   ReportCardGrade,
   ReportCardsResponse,
-} from "@/lib/types";
+} from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Types

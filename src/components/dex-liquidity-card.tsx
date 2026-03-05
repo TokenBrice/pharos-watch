@@ -15,13 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
-import { CHAIN_META } from "@/lib/chains";
+import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreTier, TIER_TEXT, getDurabilityColor, getDurabilityBgColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
-import type { DexLiquidityPool, DexLiquidityData } from "@/lib/types";
+import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 
 function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;

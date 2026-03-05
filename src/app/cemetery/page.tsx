@@ -4,7 +4,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { CemeteryClient } from "@/components/cemetery-client";
 import { CemeteryCharts } from "@/components/cemetery-charts";
 import { FaqSection } from "@/components/faq-section";
-import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { FaqItem } from "@/lib/faq";
 
 const cemeteryDescription = `A memorial to ${DEAD_STABLECOINS.length} fallen stablecoins. From TerraUSD to HUSD: what went wrong, when, and why.`;

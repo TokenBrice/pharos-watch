@@ -18,8 +18,8 @@ import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/blacklist-tracker-version";
-import type { BlacklistStablecoin, BlacklistEventType } from "@/lib/types";
+} from "@shared/lib/blacklist-tracker-version";
+import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const PAGE_SIZE = 50;

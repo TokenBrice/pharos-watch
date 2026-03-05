@@ -5,7 +5,7 @@ import {
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
   getLiquidityMethodologyVersionAt,
   toLiquidityMethodologyVersionLabel,
-} from "../liquidity-score-version";
+} from "@shared/lib/liquidity-score-version";
 
 describe("liquidity-score-version", () => {
   it("keeps current version aligned with latest changelog entry", () => {

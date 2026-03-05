@@ -21,7 +21,7 @@ import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
 } from "@/hooks/use-stablecoin-detail-view-model";
-import type { StablecoinMeta } from "@/lib/types";
+import type { StablecoinMeta } from "@shared/types";
 
 const DETAIL_SECTIONS = [
   { id: "report-card", label: "Safety Score" },

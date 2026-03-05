@@ -1,7 +1,7 @@
 # Two-Phase Simplification and Decoupling Implementation Plan
 
 **Date:** 2026-03-05  
-**Status:** Phase 1 complete; Phase 2 in progress  
+**Status:** Phase 1 and Phase 2 complete  
 **Owner:** Engineering  
 **Execution Mode:** Autonomous, reset-safe  
 **Last Updated:** 2026-03-05
@@ -119,7 +119,7 @@ Update this table in every implementation PR.
 | P2-W2 | done | local | Added top-level `shared/` boundary (`shared/lib`, `shared/types`, `shared/index.ts`) + `@shared/*` aliases in root/worker/vitest |
 | P2-W3 | done | local | Migrated worker and shared cross-runtime modules to `@shared/*`; `worker/src` direct imports from `src/lib/*` reduced to zero |
 | P2-W4 | done | local | Added boundary enforcement in lint + CI (`no-restricted-imports`, `check:worker-boundary`, workflow validate step) |
-| P2-W5 | in-progress | local | Docs and scripts reconciled; frontend compatibility re-export shims in `src/lib/*` are intentionally retained for staged cleanup |
+| P2-W5 | done | local | Removed `src/lib/*` compatibility shims, migrated frontend/tests to `@shared/*`, and reconciled docs/scripts for final boundary state |
 
 ## 4.3) Branch and PR Conventions (Autonomous Default)
 

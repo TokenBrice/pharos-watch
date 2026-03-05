@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { FEATURE_STATUS_CONFIG, type FeatureStatus } from "@/lib/classification";
+import { FEATURE_STATUS_CONFIG, type FeatureStatus } from "@shared/lib/classification";
 
 export type { FeatureStatus };
 

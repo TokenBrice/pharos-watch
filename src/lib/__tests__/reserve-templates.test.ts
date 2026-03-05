@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { deriveDependencies } from "../reserve-templates";
-import type { StablecoinMeta, DependencyWeight } from "../types";
+import { deriveDependencies } from "@shared/lib/reserve-templates";
+import type { StablecoinMeta, DependencyWeight } from "@shared/types";
 
 // Minimal helper — only fields deriveDependencies reads
 function makeMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {

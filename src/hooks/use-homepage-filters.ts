@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import type { FilterTag } from "@/lib/types";
+import type { FilterTag } from "@shared/types";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 
 interface FilterGroup {

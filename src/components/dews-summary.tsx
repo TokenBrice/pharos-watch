@@ -4,9 +4,9 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
-import { PSI_ELIGIBLE_META_BY_ID } from "@/lib/psi-eligible";
-import { THREAT_BAND_HEX } from "@/lib/classification";
-import type { ThreatBand } from "@/lib/classification";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
+import type { ThreatBand } from "@shared/lib/classification";
 import {
   scoreToRadius,
   deterministicOffset,

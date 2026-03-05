@@ -9,10 +9,10 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useStressSignals } from "@/hooks/use-stress-signals";
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@/lib/supply";
-import { formatCurrency } from "@/lib/format";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@/lib/psi-colors";
-import { THREAT_BAND_COLORS, type ThreatBand } from "@/lib/classification";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { formatCurrency } from "@shared/lib/format";
+import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
+import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 
 type TrendDirection = "up" | "down" | "flat";
 type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;

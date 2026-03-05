@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Activity, BarChart3, Droplets, ExternalLink, Flame, FlaskConical, Gauge, Github, Layers, Network, Newspaper, Radio, ShieldAlert, ShieldCheck, Skull } from "lucide-react";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DEAD_STABLECOINS } from "@/lib/dead-stablecoins";
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 const DATA_SOURCE_GROUPS = [
   { label: "Supply & Price", sources: "DefiLlama, CoinGecko, CoinMarketCap, DexScreener" },

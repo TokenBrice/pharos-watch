@@ -527,7 +527,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `src/components/flow-table.tsx` | Sortable per-coin table |
 | `src/components/flow-event-feed.tsx` | Paginated event table |
 | `src/components/flow-summary-card.tsx` | Summary card for detail pages |
-| `src/lib/types.ts` | TypeScript types + Zod schemas |
+| `shared/types/index.ts` | TypeScript types + Zod schemas |
 | `worker/src/lib/__tests__/mint-burn-scoring.test.ts` | Scoring unit tests |
 | `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` | Shared ingestion pipeline tests |
 | `worker/src/cron/__tests__/sync-mint-burn.test.ts` | Cron ingestion tests |

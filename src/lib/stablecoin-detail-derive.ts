@@ -1,6 +1,6 @@
-import { derivePegRates, getPegReference, type PegRateSource } from "./peg-rates";
+import { derivePegRates, getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
 import { TIER_BORDER, getScoreTier } from "./severity-colors";
-import type { DexLiquidityData, PegAssetBase, StablecoinMeta } from "./types";
+import type { DexLiquidityData, PegAssetBase, StablecoinMeta } from "@shared/types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NINETY_DAYS_MS = 90 * DAY_MS;

@@ -175,15 +175,15 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 
 | File | Module Under Test | What It Covers |
 |------|-------------------|----------------|
-| `format.test.ts` | `src/lib/format.ts` | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
-| `supply.test.ts` | `src/lib/supply.ts` | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw` |
-| `classification.test.ts` | `src/lib/classification.ts` | Label maps, short label consistency, color map integrity, `PEG_CURRENCY_COUNT` |
-| `report-cards.test.ts` | `src/lib/report-cards.ts` | Grade computation, dimension scorers, peg multiplier, dependency risk, stress test |
-| `reserve-templates.test.ts` | `src/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
-| `reserve-coinid-validation.test.ts` | `src/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
+| `format.test.ts` | `shared/lib/format.ts` | `formatCurrency`, `formatBps`, `formatPegDeviation`, `formatPercentChange`, `formatSupply`, `formatAddress`, `formatDuration`, `formatNativePrice`, `formatPegStability`, `formatDeathDate`, `formatDeathDateShort` |
+| `supply.test.ts` | `shared/lib/supply.ts` | `sumPegBuckets`, `getCirculatingRaw`, `getPrevDayRaw`, `getPrevWeekRaw`, `getPrevMonthRaw` |
+| `classification.test.ts` | `shared/lib/classification.ts` | Label maps, short label consistency, color map integrity, `PEG_CURRENCY_COUNT` |
+| `report-cards.test.ts` | `shared/lib/report-cards.ts` | Grade computation, dimension scorers, peg multiplier, dependency risk, stress test |
+| `reserve-templates.test.ts` | `shared/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
+| `reserve-coinid-validation.test.ts` | `shared/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
-| `api-endpoints.test.ts` | `src/lib/api-endpoints.ts` (re-export of `shared/lib/api-endpoints.ts`) | Endpoint registry invariants: probe groups, status actions, cache/method flags |
-| `strict-path-drift.test.ts` | `src/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage (`shared/lib/strict-contract-paths.json`) |
+| `api-endpoints.test.ts` | `shared/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags |
+| `strict-path-drift.test.ts` | `shared/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage (`shared/lib/strict-contract-paths.json`) |
 | `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
 
 ### Frontend Component Tests (`src/__tests__/`)
@@ -358,13 +358,15 @@ These are the narrow suites used to lock behavior parity before and after the Ti
 
 **Frontend library test:**
 1. Create `src/lib/__tests__/<module>.test.ts`.
-2. Import from the module under test (use `@/lib/...` alias).
+2. Import from the module under test using the canonical boundary:
+   - `@shared/*` for runtime-shared modules
+   - `@/lib/*` for frontend-only modules
 3. Write `describe`/`it` blocks following the conventions above.
 4. Run `npm test` to verify, then `npm run lint` to check for issues.
 
 **Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
 
-**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `helpers/mock-d1.ts`. Use shared fixtures from `helpers/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts` (or `src/lib/types.ts` compatibility re-export).
+**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `helpers/mock-d1.ts`. Use shared fixtures from `helpers/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts`.
 
 **Cron test:** Create in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Test both normal path and at least one degraded-mode scenario.
 
@@ -451,7 +453,7 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 On validation failure, hooks log warnings and return data in degraded mode rather than hard-crashing the UI.
 
 When adding a new API endpoint:
-1. Define the response schema in `shared/types/index.ts` (or `src/lib/types.ts` compatibility re-export) if the response has nested arrays or objects accessed via `.find()` / `.map()`
+1. Define the response schema in `shared/types/index.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
 2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 

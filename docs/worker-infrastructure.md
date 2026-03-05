@@ -68,7 +68,7 @@ This pattern exists because Cloudflare Workers don't have persistent module stat
 | `GET` | Read endpoints + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
 | Other | Returns 405 `{ error: "Method not allowed" }` |
 
-Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `shared/lib/api-endpoints.ts` (re-exported by `src/lib/api-endpoints.ts`) and consumed by both worker and frontend status tooling.
+Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `shared/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
 
 ### CORS Headers
 

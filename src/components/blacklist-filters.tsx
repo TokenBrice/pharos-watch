@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { BlacklistEvent, BlacklistStablecoin, BlacklistEventType } from "@/lib/types";
+import type { BlacklistEvent, BlacklistStablecoin, BlacklistEventType } from "@shared/types";
 
 interface BlacklistFiltersProps {
   events: BlacklistEvent[] | undefined;

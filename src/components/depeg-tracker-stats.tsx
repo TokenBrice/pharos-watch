@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { PegSummaryStats } from "@/lib/types";
+import type { PegSummaryStats } from "@shared/types";
 
 interface DepegTrackerStatsProps {
   stats: PegSummaryStats;

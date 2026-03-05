@@ -5,25 +5,25 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { MethodologyModeToggle } from "@/components/methodology-mode-toggle";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SAFETY_SCORE_VERSION_LABEL } from "@/lib/safety-score-version";
-import { PSI_METHODOLOGY_VERSION_LABEL } from "@/lib/stability-index-version";
+import { SAFETY_SCORE_VERSION_LABEL } from "@shared/lib/safety-score-version";
+import { PSI_METHODOLOGY_VERSION_LABEL } from "@shared/lib/stability-index-version";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/blacklist-tracker-version";
+} from "@shared/lib/blacklist-tracker-version";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/depeg-dews-version";
-import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@/lib/liquidity-score-version";
+} from "@shared/lib/depeg-dews-version";
+import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/liquidity-score-version";
 import {
   MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH,
   MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/mint-burn-flow-version";
+} from "@shared/lib/mint-burn-flow-version";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/yield-methodology-version";
+} from "@shared/lib/yield-methodology-version";
 
 const METHODOLOGY_SECTIONS = [
   { id: "stability-index-methodology", label: "Stability Index" },

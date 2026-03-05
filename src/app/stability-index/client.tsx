@@ -21,7 +21,7 @@ import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
-import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@/lib/psi-colors";
+import { PSI_BAND_CLASSES, PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
 import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";

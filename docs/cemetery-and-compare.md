@@ -21,7 +21,7 @@ Primary files:
 
 Cemetery data is static and versioned in-repo (`DEAD_STABLECOINS`).
 
-Each entry follows `DeadStablecoin` (`src/lib/types.ts`) with fields such as:
+Each entry follows `DeadStablecoin` (`shared/types/index.ts`) with fields such as:
 - identity (`name`, `symbol`, optional `llamaId`)
 - context (`pegCurrency`, `causeOfDeath`, `deathDate`)
 - narrative (`epitaph`, `obituary`, `sourceUrl`, `sourceLabel`)

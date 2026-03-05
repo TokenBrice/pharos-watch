@@ -2,7 +2,7 @@ import { MethodologyChangelogPage } from "@/components/methodology-changelog-pag
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
-} from "@/lib/blacklist-tracker-version";
+} from "@shared/lib/blacklist-tracker-version";
 import {
   buildMethodologyChangelogMetadata,
   mapMethodologyChangelogEntries,
