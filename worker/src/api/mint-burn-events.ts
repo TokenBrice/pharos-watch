@@ -6,8 +6,8 @@ import {
   parseIntParam,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
+  fetchPaginatedEvents,
 } from "../lib/api-utils";
-import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
@@ -87,23 +87,32 @@ export const handleMintBurnEvents = withErrorHandler(
       filterBindings.push(minAmount);
     }
 
-    const { where, limitClause, offsetClause, paginationBindings } =
-      buildPaginatedQuery({ conditions, limit, offset });
-
-    const sql = `SELECT * FROM mint_burn_events${where} ORDER BY timestamp DESC${limitClause}${offsetClause}`;
-
-    const [countBatch, dataBatch] = await db.batch([
-      db
-        .prepare(`SELECT COUNT(*) as total FROM mint_burn_events${where}`)
-        .bind(...filterBindings),
-      db.prepare(sql).bind(...filterBindings, ...paginationBindings),
-    ]);
-
-    const total =
-      ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
-    const rows = (dataBatch.results ?? []) as EventRow[];
-
-    const events = rows.map((row) => ({
+    const { events, total } = await fetchPaginatedEvents<EventRow, {
+      id: string;
+      stablecoinId: string;
+      symbol: string;
+      chainId: string;
+      direction: "mint" | "burn";
+      amount: number;
+      amountUsd: number | null;
+      burnType: EventRow["burn_type"];
+      burnReviewReason: string | null;
+      counterparty: string | null;
+      txHash: string;
+      blockNumber: number;
+      timestamp: number;
+      explorerTxUrl: string;
+      priceUsed: number | null;
+      priceTimestamp: number | null;
+      priceSource: string | null;
+    }>(db, {
+      tableName: "mint_burn_events",
+      orderBy: "timestamp DESC",
+      conditions,
+      filterBindings,
+      limit,
+      offset,
+      mapRow: (row) => ({
       id: row.id,
       stablecoinId: row.stablecoin_id,
       symbol: row.symbol,
@@ -121,7 +130,8 @@ export const handleMintBurnEvents = withErrorHandler(
       priceUsed: row.price_used,
       priceTimestamp: row.price_timestamp,
       priceSource: row.price_source,
-    }));
+      }),
+    });
 
     const latestTs =
       events.length > 0
