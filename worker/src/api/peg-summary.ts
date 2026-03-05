@@ -3,7 +3,13 @@ import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
-import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  addFreshnessHeaders,
+  errorResponse,
+  jsonResponse,
+  buildMethodologyEnvelope,
+} from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
@@ -199,15 +205,14 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       depegEventsYesterday,
       ...(fallbackPegTypes.length > 0 ? { fallbackPegRates: fallbackPegTypes } : {}),
     },
-    methodology: {
+    methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
       currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
       currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       asOf: stablecoinsCache.updatedAt,
-      isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
-    },
+    }),
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
   }, stablecoinsCache.updatedAt, 900));

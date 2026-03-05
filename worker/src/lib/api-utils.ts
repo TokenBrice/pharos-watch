@@ -1,4 +1,4 @@
-import { getCache } from "./db";
+import { buildPaginatedQuery, getCache } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import type { CacheStatus } from "@shared/types";
 import type { ZodType } from "zod";
@@ -142,6 +142,34 @@ export function parseIntParam(
   return Number.isNaN(parsed) ? defaultVal : Math.min(max, Math.max(min, parsed));
 }
 
+export interface MethodologyEnvelopeInput {
+  version: string;
+  versionLabel: string;
+  currentVersion: string;
+  currentVersionLabel: string;
+  changelogPath: string;
+  asOf: number;
+}
+
+export function buildMethodologyEnvelope({
+  version,
+  versionLabel,
+  currentVersion,
+  currentVersionLabel,
+  changelogPath,
+  asOf,
+}: MethodologyEnvelopeInput): MethodologyEnvelopeInput & { isCurrent: boolean } {
+  return {
+    version,
+    versionLabel,
+    currentVersion,
+    currentVersionLabel,
+    changelogPath,
+    asOf,
+    isCurrent: version === currentVersion,
+  };
+}
+
 export interface StablecoinHistoryQueryOptions {
   defaultDays: number;
   minDays: number;
@@ -180,6 +208,88 @@ export function parseStablecoinHistoryQuery(
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
 
   return { stablecoinId, days, cutoff };
+}
+
+interface StablecoinHistoryContext<TRow, THistory> {
+  db: D1Database;
+  stablecoinId: string;
+  cutoff: number;
+  rows: TRow[];
+  history: THistory[];
+}
+
+interface StablecoinHistoryHandlerConfig<TRow, THistory> {
+  query: StablecoinHistoryQueryOptions;
+  cacheControl: string;
+  fetchRows: (ctx: { db: D1Database; stablecoinId: string; cutoff: number }) => Promise<TRow[]>;
+  mapRow: (row: TRow) => THistory;
+  buildHeaders?: (
+    ctx: StablecoinHistoryContext<TRow, THistory>,
+  ) => Promise<Record<string, string>> | Record<string, string>;
+}
+
+export async function handleStablecoinHistoryRequest<TRow, THistory>(
+  db: D1Database,
+  url: URL,
+  config: StablecoinHistoryHandlerConfig<TRow, THistory>,
+): Promise<Response> {
+  const parsed = parseStablecoinHistoryQuery(url, config.query);
+  if (parsed instanceof Response) {
+    return parsed;
+  }
+
+  const rows = await config.fetchRows({
+    db,
+    stablecoinId: parsed.stablecoinId,
+    cutoff: parsed.cutoff,
+  });
+  const history = rows.map(config.mapRow);
+
+  const extraHeaders = config.buildHeaders
+    ? await config.buildHeaders({
+        db,
+        stablecoinId: parsed.stablecoinId,
+        cutoff: parsed.cutoff,
+        rows,
+        history,
+      })
+    : undefined;
+
+  return jsonResponse(history, {
+    "Cache-Control": config.cacheControl,
+    ...(extraHeaders ?? {}),
+  });
+}
+
+interface PaginatedEventQueryConfig<TRow, TEvent> {
+  tableName: string;
+  orderBy: string;
+  conditions: string[];
+  filterBindings: (string | number)[];
+  limit: number;
+  offset: number;
+  mapRow: (row: TRow) => TEvent;
+}
+
+export async function fetchPaginatedEvents<TRow, TEvent>(
+  db: D1Database,
+  config: PaginatedEventQueryConfig<TRow, TEvent>,
+): Promise<{ events: TEvent[]; total: number }> {
+  const { where, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({
+    conditions: config.conditions,
+    limit: config.limit,
+    offset: config.offset,
+  });
+
+  const dataSql = `SELECT * FROM ${config.tableName}${where} ORDER BY ${config.orderBy}${limitClause}${offsetClause}`;
+  const [countBatch, dataBatch] = await db.batch([
+    db.prepare(`SELECT COUNT(*) as total FROM ${config.tableName}${where}`).bind(...config.filterBindings),
+    db.prepare(dataSql).bind(...config.filterBindings, ...paginationBindings),
+  ]);
+
+  const total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
+  const events = ((dataBatch.results ?? []) as TRow[]).map(config.mapRow);
+  return { events, total };
 }
 
 /** Build a JSON success response with optional extra headers. */

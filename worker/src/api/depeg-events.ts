@@ -7,8 +7,9 @@ import {
   parseIntParam,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
+  buildMethodologyEnvelope,
+  fetchPaginatedEvents,
 } from "../lib/api-utils";
-import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -39,33 +40,28 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
     conditions.push("ended_at IS NULL");
   }
 
-  const { where, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({
-    conditions, limit, offset,
+  const { events, total } = await fetchPaginatedEvents<DepegRow, ReturnType<typeof rowToDepegEvent>>(db, {
+    tableName: "depeg_events",
+    orderBy: "started_at DESC",
+    conditions,
+    filterBindings,
+    limit,
+    offset,
+    mapRow: rowToDepegEvent,
   });
-
-  // Batch COUNT + SELECT for transactional consistency
-  const sql = `SELECT * FROM depeg_events${where} ORDER BY started_at DESC${limitClause}${offsetClause}`;
-
-  const [countBatch, dataBatch] = await db.batch([
-    db.prepare(`SELECT COUNT(*) as total FROM depeg_events${where}`).bind(...filterBindings),
-    db.prepare(sql).bind(...filterBindings, ...paginationBindings),
-  ]);
-  const total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
-  const events = ((dataBatch.results ?? []) as DepegRow[]).map(rowToDepegEvent);
 
   const latestEventTs = events.length > 0 ? events[0].startedAt : Math.floor(Date.now() / 1000);
   const freshnessTs = await getLatestSuccessfulCronTimestamp(db, "sync-stablecoins", latestEventTs);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
 
-  return jsonResponse({ events, total, methodology: {
+  return jsonResponse({ events, total, methodology: buildMethodologyEnvelope({
     version: methodologyVersion,
     versionLabel: toDepegDewsMethodologyVersionLabel(methodologyVersion),
     currentVersion: DEPEG_DEWS_METHODOLOGY_VERSION,
     currentVersionLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
     changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     asOf: latestEventTs,
-    isCurrent: methodologyVersion === DEPEG_DEWS_METHODOLOGY_VERSION,
-  } }, addFreshnessHeaders({
+  }) }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.realtime,
   }, freshnessTs, 900));
 });

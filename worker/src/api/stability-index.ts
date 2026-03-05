@@ -1,4 +1,10 @@
-import { withErrorHandler, addFreshnessHeaders, safeParse, jsonResponse } from "../lib/api-utils";
+import {
+  withErrorHandler,
+  addFreshnessHeaders,
+  safeParse,
+  jsonResponse,
+  buildMethodologyEnvelope,
+} from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getConditionBand } from "../lib/stability-index";
 import {
@@ -46,15 +52,14 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
     return jsonResponse({
       current: null,
       history: [],
-      methodology: {
+      methodology: buildMethodologyEnvelope({
         version: PSI_METHODOLOGY_VERSION,
         versionLabel: PSI_METHODOLOGY_VERSION_LABEL,
         currentVersion: PSI_METHODOLOGY_VERSION,
         currentVersionLabel: PSI_METHODOLOGY_VERSION_LABEL,
         changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
         asOf: now,
-        isCurrent: true,
-      },
+      }),
     }, { "Cache-Control": CACHE_PROFILES.standard });
   }
 
@@ -123,15 +128,14 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
       methodologyVersion,
     },
     history,
-    methodology: {
+    methodology: buildMethodologyEnvelope({
       version: methodologyVersion,
       versionLabel: toPsiMethodologyVersionLabel(methodologyVersion),
       currentVersion: PSI_METHODOLOGY_VERSION,
       currentVersionLabel: PSI_METHODOLOGY_VERSION_LABEL,
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
       asOf: computedAt,
-      isCurrent: methodologyVersion === PSI_METHODOLOGY_VERSION,
-    },
+    }),
   }, addFreshnessHeaders({
     "Cache-Control": CACHE_PROFILES.standard,
   }, computedAt, 86400));

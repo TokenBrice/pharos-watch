@@ -619,6 +619,17 @@ export type ReportCardMap = Record<string, ReportCard>;
 
 // --- Stability Index types ---
 
+export const MethodologyEnvelopeSchema = z.object({
+  version: z.string(),
+  versionLabel: z.string(),
+  currentVersion: z.string(),
+  currentVersionLabel: z.string(),
+  changelogPath: z.string(),
+  asOf: z.number(),
+  isCurrent: z.boolean(),
+});
+export type MethodologyEnvelope = z.infer<typeof MethodologyEnvelopeSchema>;
+
 export const StabilityIndexComponentsSchema = z.object({
   severity: z.number(),
   breadth: z.number(),
@@ -635,15 +646,7 @@ export const StabilityContributorSchema = z.object({
   factor: z.number(),
 });
 
-export const StabilityIndexMethodologySchema = z.object({
-  version: z.string(),
-  versionLabel: z.string(),
-  currentVersion: z.string(),
-  currentVersionLabel: z.string(),
-  changelogPath: z.string(),
-  asOf: z.number(),
-  isCurrent: z.boolean(),
-});
+export const StabilityIndexMethodologySchema = MethodologyEnvelopeSchema;
 
 export const StabilityIndexCurrentSchema = z.object({
   score: z.number(),
@@ -871,17 +874,31 @@ export interface DepegEvent {
   source: "live" | "backfill";
 }
 
+export const DepegEventSchema = z.object({
+  id: z.number(),
+  stablecoinId: z.string(),
+  symbol: z.string(),
+  pegType: z.string(),
+  direction: z.enum(["above", "below"]),
+  peakDeviationBps: z.number(),
+  startedAt: z.number(),
+  endedAt: z.number().nullable(),
+  startPrice: z.number(),
+  peakPrice: z.number().nullable(),
+  recoveryPrice: z.number().nullable(),
+  pegReference: z.number(),
+  source: z.enum(["live", "backfill"]),
+});
+export const DepegEventsResponseSchema = z.object({
+  events: z.array(DepegEventSchema),
+  total: z.number(),
+  methodology: MethodologyEnvelopeSchema.optional(),
+});
+export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
+
 // --- Peg Summary types (from /api/peg-summary) ---
 
-export const DepegDewsMethodologySchema = z.object({
-  version: z.string(),
-  versionLabel: z.string(),
-  currentVersion: z.string(),
-  currentVersionLabel: z.string(),
-  changelogPath: z.string(),
-  asOf: z.number(),
-  isCurrent: z.boolean(),
-});
+export const DepegDewsMethodologySchema = MethodologyEnvelopeSchema;
 export type DepegDewsMethodology = z.infer<typeof DepegDewsMethodologySchema>;
 
 export const PegSummaryCoinSchema = z.object({
@@ -950,6 +967,28 @@ export interface BlacklistEvent {
   explorerTxUrl: string;
   explorerAddressUrl: string;
 }
+
+export const BlacklistEventSchema = z.object({
+  id: z.string(),
+  stablecoin: z.enum(["USDC", "USDT", "PAXG", "XAUT"]),
+  chainId: z.string(),
+  chainName: z.string(),
+  eventType: z.enum(["blacklist", "unblacklist", "destroy"]),
+  address: z.string(),
+  amount: z.number().nullable(),
+  txHash: z.string(),
+  blockNumber: z.number(),
+  timestamp: z.number(),
+  methodologyVersion: z.string(),
+  explorerTxUrl: z.string(),
+  explorerAddressUrl: z.string(),
+});
+export const BlacklistResponseSchema = z.object({
+  events: z.array(BlacklistEventSchema),
+  total: z.number(),
+  methodology: MethodologyEnvelopeSchema.optional(),
+});
+export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
 
 // ── Yield Intelligence ──────────────────────────────────────────────
 export type YieldType = "lending-vault" | "rebase" | "fee-sharing" | "lp-receipt" | "nav-appreciation" | "governance-set" | "lending-opportunity";
