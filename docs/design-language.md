@@ -163,6 +163,12 @@ Use `CardAction` for top-right actions (time range buttons, export buttons):
 </Card>
 ```
 
+For chart headers with multiple controls, keep mobile layouts overflow-safe:
+
+- Use a stacked header on mobile (`flex-col items-start gap-2`) and switch to row on `sm+`.
+- Set `CardAction` to `w-full min-w-0` on mobile (`sm:w-auto`).
+- Keep icon buttons `shrink-0`, and let time-range chips scroll inside a `min-w-0` wrapper.
+
 ### Base Styling
 
 Cards inherit `rounded-xl border py-4 shadow-sm` from the shadcn primitive. Do not override these.

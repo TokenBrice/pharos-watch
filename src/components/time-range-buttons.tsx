@@ -10,7 +10,7 @@ interface TimeRangeButtonsProps {
 
 export function TimeRangeButtons({ options, value, onChange }: TimeRangeButtonsProps) {
   return (
-    <div className="flex gap-1 overflow-x-auto scrollbar-none max-w-full">
+    <div className="flex min-w-0 max-w-full flex-1 gap-1 overflow-x-auto scrollbar-none sm:flex-none">
       {options.map((r) => (
         <button
           key={r}

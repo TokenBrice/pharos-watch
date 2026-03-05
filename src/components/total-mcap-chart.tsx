@@ -94,11 +94,11 @@ export function TotalMcapChart() {
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle as="h2">Stablecoin Total Marketcap</CardTitle>
-        <CardAction className="flex items-center gap-2">
+      <CardHeader className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle as="h2" className="min-w-0">Stablecoin Total Marketcap</CardTitle>
+        <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
           <TimeRangeButtons options={options} value={range} onChange={setRange} />
-          <Button variant="ghost" size="icon-sm" onClick={handlePngExport} title="Save chart as PNG">
+          <Button variant="ghost" size="icon-sm" className="shrink-0" onClick={handlePngExport} title="Save chart as PNG">
             <Camera className="h-4 w-4" />
           </Button>
         </CardAction>
