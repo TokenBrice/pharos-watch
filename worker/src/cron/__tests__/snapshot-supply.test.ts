@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 // Stub psi-eligible to avoid importing the full stablecoins list
-vi.mock("../../../../src/lib/psi-eligible", () => ({
+vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     { id: "1", symbol: "USDT" },
     { id: "2", symbol: "USDC" },
@@ -10,7 +10,7 @@ vi.mock("../../../../src/lib/psi-eligible", () => ({
 }));
 
 // Stub supply helper
-vi.mock("../../../../src/lib/supply", () => ({
+vi.mock("@shared/lib/supply", () => ({
   sumPegBuckets: (c: Record<string, number> | undefined) => {
     if (!c) return 0;
     return Object.values(c).reduce((a, b) => a + b, 0);

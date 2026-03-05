@@ -1,6 +1,6 @@
 import type { CronResult } from "../lib/db";
 import { getConditionBand } from "../lib/stability-index";
-import { PSI_METHODOLOGY_VERSION } from "../../../src/lib/stability-index-version";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 
 export async function snapshotPsiDaily(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
   const now = Math.floor(Date.now() / 1000);

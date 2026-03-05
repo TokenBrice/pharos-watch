@@ -1,6 +1,6 @@
-import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
-import { PSI_ELIGIBLE_IDS } from "../../../src/lib/psi-eligible";
-import { PSI_METHODOLOGY_VERSION } from "../../../src/lib/stability-index-version";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
+import { PSI_METHODOLOGY_VERSION } from "@shared/lib/stability-index-version";
 import type { CronResult } from "../lib/db";
 import { computeStabilityIndex, getDepreciationFactor } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";

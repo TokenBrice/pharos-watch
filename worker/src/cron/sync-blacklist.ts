@@ -4,7 +4,7 @@ import {
   type ChainConfig,
 } from "../lib/blacklist-contracts";
 import { ETHERSCAN_V2_BASE } from "../lib/constants";
-import type { BlacklistEventType } from "../../../src/lib/types";
+import type { BlacklistEventType } from "@shared/types";
 import { bigIntToDecimal } from "../lib/bigint";
 import { getLastBlock, setLastBlock, batchExecute } from "../lib/db";
 import {
@@ -19,7 +19,7 @@ import {
   fetchEvmLogsForTopic,
   getEvmBlockNumber,
 } from "../lib/evm-logs";
-import { getBlacklistTrackerMethodologyVersionAt } from "../../../src/lib/blacklist-tracker-version";
+import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;

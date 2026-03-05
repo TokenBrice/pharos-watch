@@ -8,14 +8,14 @@ import {
 } from "../lib/api-utils";
 import { buildPaginatedQuery } from "../lib/db";
 import { CACHE_PROFILES } from "../lib/constants";
-import { CHAIN_META } from "../../../src/lib/chains";
+import { CHAIN_META } from "@shared/lib/chains";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
   getBlacklistTrackerMethodologyVersionAt,
   toBlacklistTrackerMethodologyVersionLabel,
-} from "../../../src/lib/blacklist-tracker-version";
+} from "@shared/lib/blacklist-tracker-version";
 
 const VALID_STABLECOINS = new Set(["USDC", "USDT", "PAXG", "XAUT"]);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));

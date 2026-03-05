@@ -1,4 +1,4 @@
-import type { DepegEvent } from "../../../src/lib/types";
+import type { DepegEvent } from "@shared/types";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {

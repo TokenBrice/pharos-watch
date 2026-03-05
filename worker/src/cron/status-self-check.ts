@@ -1,7 +1,7 @@
 import type { CronResult } from "../lib/db";
 import { route } from "../router";
 import { sendAlert } from "../lib/alerts";
-import { getProbePaths } from "../../../src/lib/api-endpoints";
+import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../api/status";
 import {
   buildDiscrepancy,

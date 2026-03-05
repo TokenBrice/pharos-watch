@@ -1,6 +1,6 @@
 import { getCache, batchExecute } from "../lib/db";
-import { PSI_ELIGIBLE_STABLECOINS } from "../../../src/lib/psi-eligible";
-import { sumPegBuckets } from "../../../src/lib/supply";
+import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
+import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/db";
 
 export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {

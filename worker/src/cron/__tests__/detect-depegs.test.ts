@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
 // Stub psi-eligible to avoid importing the full stablecoins list
-vi.mock("../../../../src/lib/psi-eligible", () => ({
+vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     { id: "1", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false }, commodityOunces: undefined },
     { id: "2", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined },
@@ -12,13 +12,13 @@ vi.mock("../../../../src/lib/psi-eligible", () => ({
 }));
 
 // Stub peg-rates
-vi.mock("../../../../src/lib/peg-rates", () => ({
+vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: () => ({ rates: { peggedUSD: 1, peggedEUR: 1.08 } }),
   getPegReference: (pegType: string, rates: Record<string, number>) => rates[pegType] ?? 1,
 }));
 
 // Stub supply
-vi.mock("../../../../src/lib/supply", () => ({
+vi.mock("@shared/lib/supply", () => ({
   sumPegBuckets: (c: Record<string, number> | undefined) => {
     if (!c) return 0;
     return Object.values(c).reduce((a, b) => a + b, 0);

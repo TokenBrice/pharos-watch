@@ -251,16 +251,16 @@ src/                              # Next.js frontend (static export)
 │   └── use-yield-rankings.ts     # GET /api/yield-rankings (yield leaderboard data)
 └── lib/
     ├── api.ts                    # API_BASE URL config + apiFetch<T>() typed fetch wrapper
-    ├── api-endpoints.ts          # Authoritative API endpoint definitions (methods/auth/cache/probes/actions + method validation helpers)
+    ├── api-endpoints.ts          # Compatibility re-export to `shared/lib/api-endpoints.ts` (authoritative endpoint contract)
     ├── analytics.ts              # Analytics tracking (page views, events)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
-    ├── types.ts                  # All TypeScript types, filter tag system, BluechipGrade union, DependencyWeight, ReserveSlice (with coinId/depType), RawDimensionInputs, CacheStatus (shared with worker)
-    ├── reserve-templates.ts      # Reserve composition templates, getReserves(), deriveDependencies() (reserve slices → DependencyWeight[])
-    ├── stablecoins.ts            # Master list of tracked stablecoins with classification flags, contract addresses, geckoId, protocolSlug
-    ├── shadow-stablecoins.ts     # Shadow stablecoins (UST, IRON) tracked in cemetery but not in main list
-    ├── dead-stablecoins.ts       # 78 dead stablecoins with cause of death, peak mcap, obituaries
-    ├── format.ts                 # Currency, price, peg deviation, percent change, timeAgo, duration formatters
-    ├── supply.ts                 # Shared supply helpers: sumPegBuckets, getCirculatingRaw/USD, getPrevDay/Week/MonthRaw/USD, computeGovernanceBreakdown
+    ├── types.ts                  # Compatibility re-export to `shared/types/index.ts` (shared TypeScript types + Zod schemas)
+    ├── reserve-templates.ts      # Compatibility re-export to `shared/lib/reserve-templates.ts`
+    ├── stablecoins.ts            # Compatibility re-export to `shared/lib/stablecoins.ts`
+    ├── shadow-stablecoins.ts     # Compatibility re-export to `shared/lib/shadow-stablecoins.ts`
+    ├── dead-stablecoins.ts       # Compatibility re-export to `shared/lib/dead-stablecoins.ts`
+    ├── format.ts                 # Compatibility re-export to `shared/lib/format.ts`
+    ├── supply.ts                 # Compatibility re-export to `shared/lib/supply.ts`
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
     ├── chart-export.ts           # Chart export utilities (PNG download)
     ├── csv-export.ts             # CSV export helpers
@@ -270,21 +270,36 @@ src/                              # Next.js frontend (static export)
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── page-metadata.ts          # Shared metadata builder for feature routes
     ├── faq.ts                    # FAQ item type + FAQPage JSON-LD builder
-    ├── peg-rates.ts              # Derives FX reference rates from median prices in data (always returns PegRatesResult with rates + sources)
+    ├── peg-rates.ts              # Compatibility re-export to `shared/lib/peg-rates.ts`
     ├── peg-landing.ts            # Peg currency landing page data helpers
-    ├── report-cards.ts           # Report card scoring: 5 dimension outputs (4 weighted base + peg multiplier), grade thresholds, computeStressedGrades()
+    ├── report-cards.ts           # Compatibility re-export to `shared/lib/report-cards.ts`
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
-    ├── peg-score.ts              # Composite peg score algorithm (0-100)
+    ├── peg-score.ts              # Compatibility re-export to `shared/lib/peg-score.ts`
     ├── peg-stability.ts          # Per-coin peg stability metrics
-    ├── peg-utils.ts              # Shared peg helpers: mergeDepegSeconds(), worstDeviation()
+    ├── peg-utils.ts              # Compatibility re-export to `shared/lib/peg-utils.ts`
     ├── stablecoin-detail-derive.ts # Pure stablecoin detail derivations (supply/deviation/90d reference/border classes)
-    ├── psi-colors.ts             # PSI condition band color mapping
-    ├── psi-eligible.ts           # PSI eligibility logic (which coins qualify for index)
+    ├── psi-colors.ts             # Compatibility re-export to `shared/lib/psi-colors.ts`
+    ├── psi-eligible.ts           # Compatibility re-export to `shared/lib/psi-eligible.ts`
     ├── blacklist-helpers.ts      # Shared blacklist helpers: isGoldStablecoin() type guard, extractGoldPrices(), computeBlacklistStats()
-    ├── classification.ts         # Single source of truth for governance/backing/peg labels, badge colors, tier colors, chart hex colors (PEG_CHART_COLORS, BLACKLIST_CHART_COLORS, GRADE_COLORS)
+    ├── classification.ts         # Compatibility re-export to `shared/lib/classification.ts`
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red) + getDurabilityColor/getDurabilityBgColor
-    ├── chains.ts                 # CHAIN_META: chain names, explorer URLs, evmChainId, type (single source of truth)
+    ├── chains.ts                 # Compatibility re-export to `shared/lib/chains.ts`
     └── utils.ts                  # cn() helper for Tailwind class merging
+
+shared/                           # Runtime-neutral boundary (import via `@shared/*`)
+├── index.ts                      # Curated exports for shared boundary consumers
+├── types/
+│   └── index.ts                  # Shared TypeScript types + Zod schemas
+└── lib/
+    ├── api-endpoints.ts          # Authoritative endpoint metadata + method/cache/probe/status-action helpers
+    ├── strict-contract-paths.ts  # Strict API contract path exports
+    ├── strict-contract-paths.json # Strict API contract path source for smoke checks
+    ├── stablecoins.ts            # Tracked stablecoin metadata list
+    ├── supply.ts                 # Supply helper utilities
+    ├── classification.ts         # Classification labels/colors + threat/style maps
+    ├── peg-rates.ts              # Peg reference derivation helpers
+    ├── report-cards.ts           # Report-card scoring helpers
+    └── ...                       # Additional pure cross-runtime modules migrated from `src/lib/`
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
@@ -393,7 +408,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── twitter.ts            # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── backfill-query.ts     # Shared admin backfill query parsing/selection helpers (stablecoin/batch/batchSize)
-        ├── api-utils.ts          # withErrorHandler(), CacheStatus (re-exported from src/lib/types), buildCacheStatuses()
+        ├── api-utils.ts          # withErrorHandler(), CacheStatus (from shared types via compatibility re-export), buildCacheStatuses()
         ├── status-reliability.ts # Status hysteresis, transitions, probe/discrepancy persistence
         ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)
         ├── mint-burn-scoring.ts  # Flow Intensity Score (FIS), Bank Run Gauge, flight-to-quality detection

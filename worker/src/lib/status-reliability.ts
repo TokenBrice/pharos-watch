@@ -5,7 +5,7 @@ import type {
   StatusStateInfo,
   StatusStaleness,
   StatusTransition,
-} from "../../../src/lib/types";
+} from "@shared/types";
 
 export type StatusLevel = "healthy" | "degraded" | "stale";
 

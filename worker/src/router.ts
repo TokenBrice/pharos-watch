@@ -31,7 +31,7 @@ import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { runIdempotentAdminAction } from "./lib/idempotency";
-import { getRouterHandledPaths, validateEndpointMethod } from "../../src/lib/api-endpoints";
+import { getRouterHandledPaths, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 
 import { isValidStablecoinId } from "./lib/api-utils";

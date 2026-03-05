@@ -1,4 +1,4 @@
-import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/lib/psi-eligible";
+import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { batchExecute } from "../lib/db";

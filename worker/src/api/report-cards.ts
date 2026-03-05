@@ -1,9 +1,9 @@
 import { getCache } from "../lib/db";
 import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
-import { deriveDependencies } from "../../../src/lib/reserve-templates";
-import { DEAD_STABLECOINS } from "../../../src/lib/dead-stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { loadDexLiquidityMap } from "../lib/dex-liquidity";
 import {
@@ -20,7 +20,7 @@ import {
   resolveResilienceFactors,
   resolveGovernanceQuality,
   isBlacklistable,
-} from "../../../src/lib/report-cards";
+} from "@shared/lib/report-cards";
 import type {
   StablecoinData,
   StablecoinMeta,
@@ -37,7 +37,7 @@ import type {
   DeploymentModel,
   CollateralQuality,
   CustodyModel,
-} from "../../../src/lib/types";
+} from "@shared/types";
 
 // ---------------------------------------------------------------------------
 // Handler

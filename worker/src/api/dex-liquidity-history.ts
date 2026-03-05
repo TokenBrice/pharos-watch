@@ -1,6 +1,6 @@
 import { withErrorHandler, parseStablecoinHistoryQuery, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import { getLiquidityMethodologyVersionAt } from "../../../src/lib/liquidity-score-version";
+import { getLiquidityMethodologyVersionAt } from "@shared/lib/liquidity-score-version";
 
 interface LiquidityHistoryRow {
   total_tvl_usd: number;

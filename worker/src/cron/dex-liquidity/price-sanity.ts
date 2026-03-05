@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { isReasonablePrice } from "../enrich-prices";
 
 const metaById = new Map(TRACKED_STABLECOINS.map((meta) => [meta.id, meta]));

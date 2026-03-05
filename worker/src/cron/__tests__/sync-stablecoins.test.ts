@@ -5,7 +5,7 @@ import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 // --- Module-level mocks ---
 
 // Stub the stablecoins list to avoid importing the full registry
-vi.mock("../../../../src/lib/stablecoins", () => {
+vi.mock("@shared/lib/stablecoins", () => {
   const fallbackTrackedTokens = Array.from({ length: 60 }, (_, i) => ({
     id: `cg-fb-${i}`,
     name: `Fallback Coin ${i}`,

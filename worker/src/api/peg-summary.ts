@@ -1,8 +1,8 @@
 import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
-import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
-import type { StablecoinData } from "../../../src/lib/types";
-import { sumPegBuckets } from "../../../src/lib/supply";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import type { StablecoinData } from "@shared/types";
+import { sumPegBuckets } from "@shared/lib/supply";
 import { withErrorHandler, addFreshnessHeaders, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
@@ -13,7 +13,7 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
   toDepegDewsMethodologyVersionLabel,
-} from "../../../src/lib/depeg-dews-version";
+} from "@shared/lib/depeg-dews-version";
 
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)

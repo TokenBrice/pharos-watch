@@ -1,4 +1,4 @@
-import { CHAIN_META } from "../../../src/lib/chains";
+import { CHAIN_META } from "@shared/lib/chains";
 
 export interface ChainRpcConfig {
   chainId: string;

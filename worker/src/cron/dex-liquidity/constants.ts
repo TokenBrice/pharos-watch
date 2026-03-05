@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 export const DEFILLAMA_YIELDS_URL = "https://yields.llama.fi/pools";
 export const DEFILLAMA_PROTOCOLS_URL = "https://api.llama.fi/protocols";

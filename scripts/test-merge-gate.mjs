@@ -40,6 +40,10 @@ function hasCriticalApiContractChange(files) {
     f.startsWith("worker/src/api/")
     || f === "src/lib/types.ts"
     || f === "src/lib/api.ts"
+    || f === "shared/lib/api-endpoints.ts"
+    || f === "shared/lib/strict-contract-paths.ts"
+    || f === "shared/lib/strict-contract-paths.json"
+    || f === "shared/types/index.ts"
   );
 }
 
@@ -47,6 +51,7 @@ function hasCronOrWorkerLibChange(files) {
   return files.some((f) =>
     f.startsWith("worker/src/cron/")
     || f.startsWith("worker/src/lib/")
+    || f.startsWith("shared/lib/")
   );
 }
 

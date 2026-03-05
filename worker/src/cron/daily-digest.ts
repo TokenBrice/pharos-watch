@@ -1,8 +1,8 @@
-import type { DigestInputData, StablecoinData } from "../../../src/lib/types";
-import { getCirculatingRaw, getPrevWeekRaw } from "../../../src/lib/supply";
-import { TRACKED_IDS } from "../../../src/lib/stablecoins";
-import { formatCurrency } from "../../../src/lib/format";
-import { scoreToGrade } from "../../../src/lib/report-cards";
+import type { DigestInputData, StablecoinData } from "@shared/types";
+import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { TRACKED_IDS } from "@shared/lib/stablecoins";
+import { formatCurrency } from "@shared/lib/format";
+import { scoreToGrade } from "@shared/lib/report-cards";
 import type { CronResult } from "../lib/db";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";

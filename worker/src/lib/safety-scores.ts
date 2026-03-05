@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   computeOverallGrade,
   isBlacklistable,
@@ -7,10 +7,10 @@ import {
   scoreLiquidity,
   scorePegStability,
   scoreResilience,
-} from "../../../src/lib/report-cards";
-import { computePegScore, coinTrackingStart } from "../../../src/lib/peg-score";
-import { getDepegDewsMethodologyVersionAt } from "../../../src/lib/depeg-dews-version";
-import type { PegSummaryCoin, StablecoinData } from "../../../src/lib/types";
+} from "@shared/lib/report-cards";
+import { computePegScore, coinTrackingStart } from "@shared/lib/peg-score";
+import { getDepegDewsMethodologyVersionAt } from "@shared/lib/depeg-dews-version";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { getFirstSeenDates } from "./db";
 import { loadStablecoinsCache } from "./stablecoins-cache";

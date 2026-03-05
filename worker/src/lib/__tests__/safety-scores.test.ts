@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
-vi.mock("../../../../src/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     {
       id: "1",
@@ -24,7 +24,7 @@ vi.mock("../../../../src/lib/stablecoins", () => ({
   ],
 }));
 
-vi.mock("../../../../src/lib/report-cards", () => ({
+vi.mock("@shared/lib/report-cards", () => ({
   isBlacklistable: vi.fn(() => false),
   scorePegStability: vi.fn(() => ({ score: 80, grade: "B", detail: "ok" })),
   scoreLiquidity: vi.fn(() => ({ score: 80, grade: "B", detail: "ok" })),
@@ -38,7 +38,7 @@ vi.mock("../../../../src/lib/report-cards", () => ({
   })),
 }));
 
-vi.mock("../../../../src/lib/peg-score", () => ({
+vi.mock("@shared/lib/peg-score", () => ({
   computePegScore: vi.fn(() => ({
     pegScore: 88,
     pegPct: 0.88,
@@ -53,7 +53,7 @@ vi.mock("../../../../src/lib/peg-score", () => ({
   coinTrackingStart: vi.fn(() => 0),
 }));
 
-vi.mock("../../../../src/lib/depeg-dews-version", () => ({
+vi.mock("@shared/lib/depeg-dews-version", () => ({
   getDepegDewsMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
 

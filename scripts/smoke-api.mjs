@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STRICT_PATHS_FILE = path.join(__dirname, "../src/lib/strict-contract-paths.json");
+const STRICT_PATHS_FILE = path.join(__dirname, "../shared/lib/strict-contract-paths.json");
 
 function parseArgs(argv) {
   const args = { baseUrl: process.env.SMOKE_API_BASE ?? process.env.API_BASE_URL ?? "" };

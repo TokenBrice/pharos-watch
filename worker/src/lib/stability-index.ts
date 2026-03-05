@@ -3,8 +3,8 @@
  * See docs/plans/2026-02-25-stability-index-design.md for algorithm details.
  */
 
-import type { ConditionBand } from "../../../src/lib/psi-colors";
-export type { ConditionBand } from "../../../src/lib/psi-colors";
+import type { ConditionBand } from "@shared/lib/psi-colors";
+export type { ConditionBand } from "@shared/lib/psi-colors";
 
 export interface StabilityInput {
   depegs: { bps: number; mcapUsd: number; depegAgeDays?: number }[];
@@ -84,4 +84,4 @@ export function getConditionBand(score: number): ConditionBand {
 }
 
 /** Re-export hex colors from shared module. */
-export { PSI_HEX_COLORS as BAND_COLORS } from "../../../src/lib/psi-colors";
+export { PSI_HEX_COLORS as BAND_COLORS } from "@shared/lib/psi-colors";

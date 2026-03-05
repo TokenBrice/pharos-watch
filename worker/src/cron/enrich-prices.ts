@@ -2,7 +2,7 @@ import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOU
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import type { PriceConfidence } from "../../../src/lib/types";
+import type { PriceConfidence } from "@shared/types";
 
 export interface DefiLlamaCoinPrice {
   price: number;

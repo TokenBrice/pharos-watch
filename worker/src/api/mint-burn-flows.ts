@@ -9,8 +9,8 @@ import {
   getGaugeBand,
 } from "../lib/mint-burn-scoring";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import type { StablecoinData } from "../../../src/lib/types";
-import { sumPegBuckets } from "../../../src/lib/supply";
+import type { StablecoinData } from "@shared/types";
+import { sumPegBuckets } from "@shared/lib/supply";
 
 // ---------------------------------------------------------------------------
 // Safe-haven classification (flight-to-quality)

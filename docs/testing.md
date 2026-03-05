@@ -10,6 +10,7 @@ The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-ne
 npm test              # Run all tests once (CI mode)
 npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
+npm run check:worker-boundary # Enforce worker/src import boundary (no src/lib/* imports)
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
 npm run test:critical-contracts # Critical endpoint contract suite
@@ -28,6 +29,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 
 1. `validate` (runs before any deployment):
    - `npm run lint`
+   - `npm run check:worker-boundary`
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
@@ -63,7 +65,7 @@ export default defineConfig({
       thresholds: { lines: 55 }, // Coverage gate — CI fails if lines < 55%
     },
   },
-  resolve: { alias: { "@": path.resolve(__dirname, "src") } }, // Same path alias as Next.js
+  resolve: { alias: { "@": path.resolve(__dirname, "src"), "@shared": path.resolve(__dirname, "shared") } },
 });
 ```
 
@@ -180,8 +182,8 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `reserve-templates.test.ts` | `src/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
 | `reserve-coinid-validation.test.ts` | `src/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
-| `api-endpoints.test.ts` | `src/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags |
-| `strict-path-drift.test.ts` | `src/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage |
+| `api-endpoints.test.ts` | `src/lib/api-endpoints.ts` (re-export of `shared/lib/api-endpoints.ts`) | Endpoint registry invariants: probe groups, status actions, cache/method flags |
+| `strict-path-drift.test.ts` | `src/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage (`shared/lib/strict-contract-paths.json`) |
 | `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
 
 ### Frontend Component Tests (`src/__tests__/`)
@@ -362,7 +364,7 @@ These are the narrow suites used to lock behavior parity before and after the Ti
 
 **Worker library test:** Same as above but in `worker/src/lib/__tests__/`. Import via relative paths (no `@/` alias).
 
-**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `helpers/mock-d1.ts`. Use shared fixtures from `helpers/fixtures.ts` for row data. Validate response shape against Zod schemas from `src/lib/types.ts`.
+**API contract test:** Create in `worker/src/api/__tests__/`. Import the handler and use `mockD1()` from `helpers/mock-d1.ts`. Use shared fixtures from `helpers/fixtures.ts` for row data. Validate response shape against Zod schemas from `shared/types/index.ts` (or `src/lib/types.ts` compatibility re-export).
 
 **Cron test:** Create in `worker/src/cron/__tests__/`. Mock external dependencies with `vi.mock()` and HTTP calls with `mockFetch()`. Test both normal path and at least one degraded-mode scenario.
 
@@ -449,10 +451,10 @@ Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current s
 On validation failure, hooks log warnings and return data in degraded mode rather than hard-crashing the UI.
 
 When adding a new API endpoint:
-1. Define the response schema in `src/lib/types.ts` if the response has nested arrays or objects accessed via `.find()` / `.map()`
+1. Define the response schema in `shared/types/index.ts` (or `src/lib/types.ts` compatibility re-export) if the response has nested arrays or objects accessed via `.find()` / `.map()`
 2. Pass the schema to `useApiQuery` via `{ schema: MyResponseSchema }`
 3. Add a contract test in `worker/src/api/__tests__/` if the endpoint has multiple response modes
 
 **Narrow-type gotcha:** If your response type uses string unions or branded types (e.g. `ReportCardGrade`, `DimensionKey`), Zod schemas infer `string`. In those cases, keep hand-written interfaces and cast schema wiring intentionally where needed (see `use-report-cards.ts`).
 
-**Worker CI note:** `src/lib/types.ts` imports `zod`, and the worker type-checks that file via its `@/*` path alias in the `validate` job (`cd worker && npx tsc --noEmit`) before any deploy step runs. Root deps are installed first (`npm ci`) so shared `src/lib/` imports resolve during worker type-check. If you add new npm packages imported at the top level of shared `src/lib/` files, they'll be resolved from root `node_modules/` — no need to add them to `worker/package.json` unless the worker uses them at runtime.
+**Worker CI note:** `shared/types/index.ts` imports `zod`, and the worker type-checks shared modules via the `@shared/*` path alias in the `validate` job (`cd worker && npx tsc --noEmit`) before any deploy step runs. Root deps are installed first (`npm ci`) so shared imports resolve from root `node_modules/`. If you add new npm packages imported at the top level of shared files, they do not need duplication in `worker/package.json` unless the worker uses a worker-local build/runtime path that requires it.

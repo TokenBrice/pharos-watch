@@ -4,7 +4,7 @@ import { handleStressSignals } from "../stress-signals";
 import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
-} from "../../../../src/lib/types";
+} from "@shared/types";
 
 const nowSec = Math.floor(Date.now() / 1000);
 

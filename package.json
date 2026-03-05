@@ -21,6 +21,7 @@
     "sync:digests": "tsx scripts/sync-digests.ts",
     "test:smoke-api": "node scripts/smoke-api.mjs",
     "test:smoke-ui": "node scripts/smoke-ui.mjs",
+    "check:worker-boundary": "node scripts/check-worker-import-boundary.mjs",
     "seo:check": "node scripts/check-seo-static.mjs",
     "format": "prettier --write ."
   },

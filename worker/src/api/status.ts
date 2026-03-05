@@ -18,7 +18,7 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
 } from "../lib/status-thresholds";
 import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
-import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse } from "../../../src/lib/types";
+import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse } from "@shared/types";
 
 // --- Config ---
 

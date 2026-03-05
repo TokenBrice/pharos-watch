@@ -1,5 +1,5 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
-import { LIQUIDITY_METHODOLOGY_VERSION } from "../../../../src/lib/liquidity-score-version";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/liquidity-score-version";
 import { batchExecute } from "../../lib/db";
 import type { LiquidityMetrics, ScoreResult, FullScoreResult, GlobalAgg } from "./types";
 

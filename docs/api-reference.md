@@ -64,7 +64,7 @@ All error responses use `{ "error": "message" }` JSON format.
 
 ## Method Gating Policy
 
-HTTP method allowance is defined centrally in `src/lib/api-endpoints.ts` and enforced by `worker/src/router.ts` plus non-router path guards in `worker/src/handlers/http.ts`.
+HTTP method allowance is defined centrally in `shared/lib/api-endpoints.ts` (re-exported by `src/lib/api-endpoints.ts`) and enforced by `worker/src/router.ts` plus non-router path guards in `worker/src/handlers/http.ts`.
 
 - `GET` is accepted for read endpoints (plus admin debug/status endpoints and `GET /api/backfill-dews`).
 - `POST` is accepted for mutating admin endpoints and `POST /api/feedback`.
@@ -1297,7 +1297,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
-**Response shape:** `StatusResponse` (defined in `src/lib/types.ts`)
+**Response shape:** `StatusResponse` (defined in `shared/types/index.ts`, re-exported by `src/lib/types.ts`)
 
 ```json
 {
@@ -1396,7 +1396,7 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 |-------|------|---------|-------------|
 | `limit` | `integer` | `50` | Number of transitions to return (1–200) |
 
-**Response shape:** `StatusHistoryResponse` (defined in `src/lib/types.ts`)
+**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`, re-exported by `src/lib/types.ts`)
 
 ### `POST /api/backfill-depegs`
 

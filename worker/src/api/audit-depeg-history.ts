@@ -1,12 +1,12 @@
 import { withErrorHandler, parseIntParam } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } from "../lib/constants";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
-import { getPsiMethodologyVersionAt } from "../../../src/lib/stability-index-version";
+import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
 import {
   buildStabilityInputForDay,
   buildSupplySnapshotMap,

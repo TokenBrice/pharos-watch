@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../../src/lib/psi-eligible", () => ({
+vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     {
       id: "1",
@@ -20,7 +20,7 @@ vi.mock("../../../../src/lib/psi-eligible", () => ({
   ]),
 }));
 
-vi.mock("../../../../src/lib/peg-rates", () => ({
+vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: () => ({ rates: { peggedUSD: 1 } }),
   getPegReference: () => 1,
 }));

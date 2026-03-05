@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";

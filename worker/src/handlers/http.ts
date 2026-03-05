@@ -5,7 +5,7 @@ import { initCoinGecko } from "../lib/coingecko";
 import { runIdempotentAdminAction } from "../lib/idempotency";
 import { generateDailyDigest } from "../cron/daily-digest";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
-import { getEndpointDefinition, isCacheBypassPath } from "../../../src/lib/api-endpoints";
+import { getEndpointDefinition, isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
 function corsHeaders(origin: string): Record<string, string> {

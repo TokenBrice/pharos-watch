@@ -1,5 +1,5 @@
 // worker/src/cron/sync-yield-data.ts
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache, batchExecute } from "../lib/db";
 import {
@@ -19,7 +19,7 @@ import {
   LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS,
   AUTO_LENDING_POOL_MAP, AUTO_LENDING_SAFETY_BYPASS_IDS,
 } from "./yield-config";
-import { YieldRankingsResponseSchema, type AltYieldSource } from "../../../src/lib/types";
+import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
 import type { CronResult } from "../lib/db";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";

@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { getCache, batchExecute } from "../../lib/db";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg, DexPriceObs } from "./types";
 import { computeDurabilityScore, computeLiquidityScore, normalizeProtocol } from "./pool-helpers";

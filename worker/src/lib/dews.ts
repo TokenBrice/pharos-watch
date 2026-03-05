@@ -7,7 +7,7 @@
  * Pattern: same as stability-index.ts — no DB access, no side effects.
  */
 
-import type { ThreatBand } from "../../../src/lib/classification";
+import type { ThreatBand } from "@shared/lib/classification";
 
 // ---------------------------------------------------------------------------
 // Types

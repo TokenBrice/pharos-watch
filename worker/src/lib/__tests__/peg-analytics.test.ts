@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 
-vi.mock("../../../../src/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     {
       id: "1",
@@ -20,7 +20,7 @@ vi.mock("../../../../src/lib/stablecoins", () => ({
   ],
 }));
 
-vi.mock("../../../../src/lib/peg-score", () => ({
+vi.mock("@shared/lib/peg-score", () => ({
   computePegScore: vi.fn(() => ({
     pegScore: 91,
     pegPct: 0.91,
@@ -35,12 +35,12 @@ vi.mock("../../../../src/lib/peg-score", () => ({
   coinTrackingStart: vi.fn(() => 0),
 }));
 
-vi.mock("../../../../src/lib/peg-rates", () => ({
+vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({ rates: { USD: 1 }, sources: {} })),
   getPegReference: vi.fn(() => 1),
 }));
 
-vi.mock("../../../../src/lib/depeg-dews-version", () => ({
+vi.mock("@shared/lib/depeg-dews-version", () => ({
   getDepegDewsMethodologyVersionAt: vi.fn(() => "test-methodology"),
 }));
 

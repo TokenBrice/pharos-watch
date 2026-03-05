@@ -2,7 +2,7 @@ import { withErrorHandler, errorResponse, jsonResponse } from "../lib/api-utils"
 import { withAdmin } from "../lib/auth";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
-import { getPsiMethodologyVersionAt } from "../../../src/lib/stability-index-version";
+import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
 import {
   buildStabilityInputForDay,
   buildSupplySnapshotMap,

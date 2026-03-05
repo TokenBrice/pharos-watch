@@ -37,7 +37,7 @@ vi.mock("../../lib/status-reliability", () => ({
   updateDiscrepancyObservation: updateDiscrepancyObservationMock,
   writeStatusProbeRun: writeStatusProbeRunMock,
 }));
-vi.mock("../../../../src/lib/api-endpoints", () => ({
+vi.mock("@shared/lib/api-endpoints", () => ({
   getProbePaths: (group: "public" | "admin" | "manual") => {
     if (group === "public") return ["/api/health"];
     if (group === "admin") return ["/api/status", "/api/status-history?limit=10"];

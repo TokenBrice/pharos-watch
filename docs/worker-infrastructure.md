@@ -64,11 +64,11 @@ This pattern exists because Cloudflare Workers don't have persistent module stat
 | Method | Handling |
 |--------|----------|
 | `OPTIONS` | Returns 204 with CORS headers (preflight) |
-| `POST` | `/api/feedback` and mutating admin endpoints from `src/lib/api-endpoints.ts` |
+| `POST` | `/api/feedback` and mutating admin endpoints from `shared/lib/api-endpoints.ts` |
 | `GET` | Read endpoints + admin debug routes; mutating admin routes return 405 except `/api/audit-depeg-history?dry-run=true` |
 | Other | Returns 405 `{ error: "Method not allowed" }` |
 
-Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `src/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
+Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `shared/lib/api-endpoints.ts` (re-exported by `src/lib/api-endpoints.ts`) and consumed by both worker and frontend status tooling.
 
 ### CORS Headers
 
@@ -92,7 +92,7 @@ The Worker uses `caches.default` (Cloudflare's per-colo edge cache) to cache GET
 
 1. **Cache bypass rules**:
    - All non-GET requests bypass edge cache.
-   - GET paths marked `cacheBypass: true` in `src/lib/api-endpoints.ts` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`).
+   - GET paths marked `cacheBypass: true` in `shared/lib/api-endpoints.ts` bypass edge cache (health, status, and admin/backfill endpoints like `/api/backfill-*`, `/api/audit-depeg-history`, `/api/backfill-dews`).
 
 2. **Cache check:** `caches.default.match(cacheKey)` — returns cached response if available
 

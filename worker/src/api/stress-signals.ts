@@ -14,7 +14,7 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
   toDepegDewsMethodologyVersionLabel,
-} from "../../../src/lib/depeg-dews-version";
+} from "@shared/lib/depeg-dews-version";
 
 export const handleStressSignals = withErrorHandler(
   "stress-signals",

@@ -1,5 +1,5 @@
-import { CHAIN_META } from "../../../src/lib/chains";
-import type { BlacklistStablecoin, BlacklistEventType } from "../../../src/lib/types";
+import { CHAIN_META } from "@shared/lib/chains";
+import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
 
 export interface ChainConfig {
   chainId: string;          // Internal identifier (e.g. "ethereum")

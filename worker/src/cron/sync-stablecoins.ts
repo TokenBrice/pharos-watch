@@ -1,6 +1,6 @@
 import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice, fetchDualPrimaryPrices } from "./enrich-prices";
 import type { PeggedAsset, DefiLlamaCoinPrice } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
@@ -18,7 +18,7 @@ import {
 import { DEFILLAMA_BASE, DEFILLAMA_COINS, DEFILLAMA_API, USER_AGENT, MIN_VALID_ASSET_COUNT, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import { StablecoinListResponseSchema, type StablecoinMeta } from "../../../src/lib/types";
+import { StablecoinListResponseSchema, type StablecoinMeta } from "@shared/types";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { sendAlert } from "../lib/alerts";
 

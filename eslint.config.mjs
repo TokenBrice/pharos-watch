@@ -35,6 +35,26 @@ const eslintConfig = defineConfig([
       }],
     },
   },
+  {
+    files: ["worker/src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          {
+            group: [
+              "@/lib/*",
+              "src/lib/*",
+              "../src/lib/*",
+              "../../src/lib/*",
+              "../../../src/lib/*",
+              "../../../../src/lib/*",
+            ],
+            message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
+          },
+        ],
+      }],
+    },
+  },
 ]);
 
 export default eslintConfig;

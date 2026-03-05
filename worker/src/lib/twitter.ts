@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 export interface TwitterCreds {
   apiKey: string;

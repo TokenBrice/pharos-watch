@@ -2,10 +2,10 @@ import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRE
 import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
 import type { DepegRow } from "../lib/depeg-helpers";
-import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
-import { PSI_ELIGIBLE_STABLECOINS } from "../../../src/lib/psi-eligible";
-import type { PegAssetBase } from "../../../src/lib/types";
-import { sumPegBuckets } from "../../../src/lib/supply";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
+import type { PegAssetBase } from "@shared/types";
+import { sumPegBuckets } from "@shared/lib/supply";
 
 // --- Depeg event detection ---
 

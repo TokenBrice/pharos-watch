@@ -78,7 +78,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
 });
 
 // Stub chains module (used by blacklist-contracts)
-vi.mock("../../../../src/lib/chains", () => ({
+vi.mock("@shared/lib/chains", () => ({
   CHAIN_META: {
     ethereum: { name: "Ethereum", evmChainId: 1, explorerUrl: "https://etherscan.io", type: "evm" },
     tron: { name: "Tron", evmChainId: null, explorerUrl: "https://tronscan.org", type: "tron" },

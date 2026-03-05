@@ -9,7 +9,7 @@
  * Requires Node 18+ (native fetch).
  */
 
-import { TRACKED_STABLECOINS } from "@/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { CG_CHAIN_MAP } from "../lib/coingecko-onchain";
 
 // ---------------------------------------------------------------------------

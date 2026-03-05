@@ -7,11 +7,11 @@ import {
   USER_AGENT,
 } from "../lib/constants";
 import { batchExecute } from "../lib/db";
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import type { PegAssetBase } from "../../../src/lib/types";
-import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
+import type { PegAssetBase } from "@shared/types";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 
 interface PendingRow {
   id: number;

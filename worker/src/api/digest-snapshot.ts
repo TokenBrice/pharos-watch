@@ -1,6 +1,6 @@
 import { withErrorHandler, safeParse, errorResponse, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
-import type { DigestInputData } from "../../../src/lib/types";
+import type { DigestInputData } from "@shared/types";
 
 interface DigestRow {
   generated_at: number;

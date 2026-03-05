@@ -1,6 +1,6 @@
 import { getCache } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
-import type { CacheStatus } from "../../../src/lib/types";
+import type { CacheStatus } from "@shared/types";
 import type { ZodType } from "zod";
 
 export type { CacheStatus };

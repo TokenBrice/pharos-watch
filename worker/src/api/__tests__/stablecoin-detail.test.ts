@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
-import { TRACKED_META_BY_ID } from "../../../../src/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 
 // Stub external fetches before importing the handler
 const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();

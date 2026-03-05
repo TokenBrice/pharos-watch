@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "../../../../src/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getCache } from "../../lib/db";
 import type { PeggedAsset } from "../enrich-prices";
 

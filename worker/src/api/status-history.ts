@@ -7,7 +7,7 @@ import {
   getStatusStateSnapshot,
   listRecentStatusTransitions,
 } from "../lib/status-reliability";
-import type { StatusHistoryResponse } from "../../../src/lib/types";
+import type { StatusHistoryResponse } from "@shared/types";
 
 export const handleStatusHistory = withErrorHandler(
   "status-history",

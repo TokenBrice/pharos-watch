@@ -1,5 +1,5 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
-import type { BluechipGrade, BluechipRating, BluechipSmidge } from "../../../src/lib/types";
+import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
 import { getCache, setCacheIfNewer } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { USER_AGENT } from "../lib/constants";

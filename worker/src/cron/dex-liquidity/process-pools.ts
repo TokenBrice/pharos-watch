@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { BLOCKED_DEX_IDS, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import type { LlamaPool, CurvePoolEntry, LiquidityMetrics } from "./types";
 import {

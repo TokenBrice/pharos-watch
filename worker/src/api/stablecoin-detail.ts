@@ -2,7 +2,7 @@ import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
 import { DEFILLAMA_BASE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { TRACKED_META_BY_ID } from "../../../src/lib/stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchCommodityTokens } from "./stablecoin-detail/commodity";
 import { fetchCoinGeckoOnlyTokens } from "./stablecoin-detail/coingecko-only";
 import { normalizeDefiLlamaDetailBody } from "./stablecoin-detail/defillama";

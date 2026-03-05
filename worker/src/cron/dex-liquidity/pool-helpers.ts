@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   isOnchainAvailable, CG_CHAIN_MAP, CG_CHAIN_REVERSE,
 } from "../../lib/coingecko-onchain";

@@ -1,7 +1,7 @@
 # Two-Phase Simplification and Decoupling Implementation Plan
 
 **Date:** 2026-03-05  
-**Status:** Proposed (execution-ready)  
+**Status:** Phase 1 complete; Phase 2 in progress  
 **Owner:** Engineering  
 **Execution Mode:** Autonomous, reset-safe  
 **Last Updated:** 2026-03-05
@@ -115,11 +115,11 @@ Update this table in every implementation PR.
 | P1-W7 | done | local | Split worker entrypoint into `handlers/http.ts` and `handlers/scheduled.ts` |
 | P1-W8 | done | local | Unified method gating + router dispatch contract via `src/lib/api-endpoints.ts` |
 | P1-W9 | done | local | Reconciled docs (`architecture`, `api-reference`, `worker-infrastructure`) + final gates |
-| P2-W1 | todo | - | - |
-| P2-W2 | todo | - | - |
-| P2-W3 | todo | - | - |
-| P2-W4 | todo | - | - |
-| P2-W5 | todo | - | - |
+| P2-W1 | done | local | Shared boundary contract documented in architecture docs + worker import inventory driven from `rg -n "src/lib/" worker/src` |
+| P2-W2 | done | local | Added top-level `shared/` boundary (`shared/lib`, `shared/types`, `shared/index.ts`) + `@shared/*` aliases in root/worker/vitest |
+| P2-W3 | done | local | Migrated worker and shared cross-runtime modules to `@shared/*`; `worker/src` direct imports from `src/lib/*` reduced to zero |
+| P2-W4 | done | local | Added boundary enforcement in lint + CI (`no-restricted-imports`, `check:worker-boundary`, workflow validate step) |
+| P2-W5 | in-progress | local | Docs and scripts reconciled; frontend compatibility re-export shims in `src/lib/*` are intentionally retained for staged cleanup |
 
 ## 4.3) Branch and PR Conventions (Autonomous Default)
 

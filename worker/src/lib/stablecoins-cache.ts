@@ -1,5 +1,5 @@
 import { getCache } from "./db";
-import type { StablecoinData } from "../../../src/lib/types";
+import type { StablecoinData } from "@shared/types";
 
 export interface StablecoinsCachePayload {
   peggedAssets: StablecoinData[];

@@ -4,7 +4,7 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 // --- Module-level mocks ---
 
 // Stub the stablecoins list — one yield-bearing, two non-yield-bearing
-vi.mock("../../../../src/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     {
       id: "100",
@@ -109,7 +109,7 @@ vi.mock("../yield-config", () => ({
 }));
 
 // Stub report-cards (used for safety score computation)
-vi.mock("../../../../src/lib/report-cards", () => ({
+vi.mock("@shared/lib/report-cards", () => ({
   computeOverallGrade: vi.fn(() => ({ score: 80, grade: "B+" })),
   scoreDecentralization: vi.fn(() => ({ score: 80, grade: "B+" })),
   scoreDependencyRisk: vi.fn(() => ({ score: 90, grade: "A-" })),
@@ -120,7 +120,7 @@ vi.mock("../../../../src/lib/report-cards", () => ({
 }));
 
 // Stub peg-score
-vi.mock("../../../../src/lib/peg-score", () => ({
+vi.mock("@shared/lib/peg-score", () => ({
   computePegScore: vi.fn(() => ({
     pegScore: 95,
     pegPct: 99.5,

@@ -12,9 +12,10 @@
     "isolatedModules": true,
     "types": ["@cloudflare/workers-types"],
     "paths": {
-      "@/*": ["../src/*"]
+      "@/*": ["../src/*"],
+      "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "../shared/**/*.ts"],
   "exclude": ["node_modules", "src/scripts"]
 }

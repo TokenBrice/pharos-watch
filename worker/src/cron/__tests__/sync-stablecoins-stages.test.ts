@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("../../../../src/lib/stablecoins", () => ({
+vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_META_BY_ID: new Map([
     ["1", { geckoId: "canonical-usdt", cmcSlug: "tether", flags: { navToken: false } }],
     ["9", { geckoId: "nav-token", cmcSlug: "nav-token", flags: { navToken: true } }],

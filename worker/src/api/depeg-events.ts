@@ -16,7 +16,7 @@ import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   getDepegDewsMethodologyVersionAt,
   toDepegDewsMethodologyVersionLabel,
-} from "../../../src/lib/depeg-dews-version";
+} from "@shared/lib/depeg-dews-version";
 
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;

@@ -1,4 +1,4 @@
-import { TRACKED_STABLECOINS } from "../../../src/lib/stablecoins";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";

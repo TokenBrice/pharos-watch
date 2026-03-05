@@ -7,7 +7,7 @@ import {
   PSI_METHODOLOGY_VERSION_LABEL,
   getPsiMethodologyVersionAt,
   toPsiMethodologyVersionLabel,
-} from "../../../src/lib/stability-index-version";
+} from "@shared/lib/stability-index-version";
 
 export const handleStabilityIndex = withErrorHandler("stability-index", async (db: D1Database, url: URL): Promise<Response> => {
   const detail = url.searchParams.get("detail") === "true";

@@ -2,9 +2,9 @@
 // (same pattern as stability-index).
 // Reads existing D1 tables, computes DEWS per eligible coin,
 // writes to stress_signals + stress_signal_history.
-import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "../../../src/lib/supply";
-import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "../../../src/lib/psi-eligible";
-import { derivePegRates, getPegReference } from "../../../src/lib/peg-rates";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
+import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { batchExecute } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeDEWS } from "../lib/dews";
