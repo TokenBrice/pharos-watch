@@ -25,6 +25,7 @@ This page is **admin-only in practice** because all status/probe calls require `
 
 - Page: `src/app/status/page.tsx`
 - Client implementation: `src/app/status/client.tsx`
+- Decomposed UI components: `src/components/status/*`
 - Metadata disables indexing (`robots: { index: false, follow: false }`)
 
 ### Data hooks
@@ -171,7 +172,7 @@ Manual actions are rendered from `getStatusPageActions()` and executed only on u
 
 ## Inline Admin Actions
 
-Status-page manual actions include both inline `worker/src/index.ts` handlers and router-handled admin endpoints:
+Status-page manual actions are router-dispatched from shared endpoint metadata (`shared/lib/api-endpoints.ts`):
 
 - `POST /api/trigger-digest`
 - `POST /api/reset-blacklist-sync`
@@ -195,13 +196,14 @@ Mutating admin paths are protected by method guardrails:
 
 | File | Role |
 |------|------|
-| `src/app/status/client.tsx` | Status UI (banner, cron cards, cache table, probe grid, circuit table, action dialog) |
+| `src/app/status/client.tsx` | Auth gate + status dashboard orchestration shell |
+| `src/components/status/*` | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables) |
 | `src/hooks/use-status.ts` | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth |
 | `src/hooks/use-endpoint-probes.ts` | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions |
 | `shared/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |
+| `worker/src/router.ts` | Static route dispatch for status/manual actions (`feedback`, `trigger-digest`, `reset-blacklist-sync`, `debug-sync-state`) |
 | `worker/src/api/status.ts` | Raw status synthesis + effective state response |
 | `worker/src/api/status-history.ts` | Machine-readable status timeline/history endpoint |
 | `worker/src/api/health.ts` | Public health endpoint for cache/circuit observability |
 | `worker/src/lib/status-reliability.ts` | Hysteresis, transitions, probes, discrepancy helpers |
 | `worker/src/cron/status-self-check.ts` | Synthetic probe + divergence alert cron |
-| `worker/src/index.ts` | Inline admin action handlers and mutating-method enforcement |
