@@ -6,6 +6,7 @@
 |----------|-------------|
 | `GET /api/stablecoins` | Full stablecoin list with supply, price, chains. Returns `X-Data-Age` header |
 | `GET /api/stablecoin/:id` | Per-coin detail (cache-aside, 5min TTL) |
+| `GET /api/stablecoin-summary/:id` | Lightweight per-coin snapshot (price + aggregate supply/deltas) |
 | `GET /api/stablecoin-charts` | Historical total supply chart data |
 | `GET /api/blacklist` | Freeze/blacklist events (filterable by token, chain) |
 | `GET /api/depeg-events` | Depeg events (`?stablecoin=ID`, `?active=true`, `?limit=N&offset=M`) |
@@ -47,7 +48,7 @@
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
-│   ├── page.tsx                  # Homepage: stats, charts, DEWS/flow snapshots, peg tracker, filters, table
+│   ├── page.tsx                  # Homepage: stats, safety/PSI/DEWS/flow snapshots, charts, peg tracker, filters, table
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
@@ -139,6 +140,7 @@ src/                              # Next.js frontend (static export)
 │   ├── scroll-to-top.tsx         # Scroll-to-top button
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
 │   ├── homepage-flow-overview.tsx # Homepage mint/burn snapshot block (FlowBrrrOverview wrapper)
+│   ├── homepage-safety-overview.tsx # Homepage safety snapshot block (report-card distribution + largest coins)
 │   ├── stablecoin-table.tsx      # Sortable table with filters
 │   ├── flow-gauge.tsx            # Shared Flow Intensity band configuration map (labels/colors/classes)
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
@@ -343,6 +345,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id (orchestrator + branch routing)
+    │   ├── stablecoin-summary.ts # GET /api/stablecoin-summary/:id (lightweight per-coin snapshot)
     │   ├── stablecoin-detail/    # Stablecoin detail handler internals (focused modules)
     │   │   ├── shared.ts         # Shared cache/logging/response helpers + supply_history fallback
     │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)
