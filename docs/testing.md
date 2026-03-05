@@ -47,7 +47,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 5. `smoke-ui` (needs `deploy-pages`):
    - Run `npm run test:smoke-ui`
    - Uses `SMOKE_UI_URL` from `vars.SMOKE_UI_URL` (fallback: `https://pharos.watch`)
-   - Validates homepage data render and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
+   - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
 
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
 
@@ -357,7 +357,7 @@ Current critical file set:
 - `npm run test:invariants` covers numerical/schema invariants and cache-write validation guards in critical cron paths.
 - `npm run test:merge-gate` runs a delta-aware local gate for merged worktree changes. It selects checks from changed paths (contracts/invariants/coverage, plus lint + worker type-check for TS/JS changes).
 - `npm run test:smoke-api` performs HTTP-level smoke checks for `/api/health` plus every strict contract path (`stablecoins`, `peg-summary`, `report-cards`, `stability-index`, `dex-liquidity`, `stress-signals`, `mint-burn-flows`) with shape/range assertions.
-- `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage state and on sustained horizontal overflow across tracked mobile routes.
+- `npm run test:smoke-ui` performs a fast browser smoke check on the live site; it fails on homepage outage/empty states (`Failed to load data`, `stablecoins:404`, `Data not yet available`, `Connection issue`, `No stablecoin data available`) and on sustained horizontal overflow across tracked mobile routes.
 
 ### Tier-3 Structural Refactor Targeted Suites
 

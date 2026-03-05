@@ -10,6 +10,8 @@ const DEFAULT_URL = process.env.SMOKE_UI_URL ?? "https://pharos.watch";
 const MAX_BUFFER_BYTES = 10 * 1024 * 1024;
 const SESSION_PREFIX = "prod-ui-smoke";
 const DEFAULT_UI_WAIT_TIMEOUT_MS = 30_000;
+const DEFAULT_UI_RETRY_COUNT = 1;
+const DEFAULT_UI_RETRY_DELAY_MS = 1500;
 const MOBILE_WIDTH = 390;
 const MOBILE_HEIGHT = 844;
 const DEFAULT_OVERFLOW_WAIT_MS = 2000;
@@ -89,9 +91,25 @@ function getUiWaitTimeoutMs() {
   return readPositiveIntEnv("SMOKE_UI_WAIT_TIMEOUT_MS", DEFAULT_UI_WAIT_TIMEOUT_MS);
 }
 
+function getUiRetryCount() {
+  return readNonNegativeIntEnv("SMOKE_UI_RETRY_COUNT", DEFAULT_UI_RETRY_COUNT);
+}
+
+function getUiRetryDelayMs() {
+  return readPositiveIntEnv("SMOKE_UI_RETRY_DELAY_MS", DEFAULT_UI_RETRY_DELAY_MS);
+}
+
 function readPositiveIntEnv(key, fallback) {
   const parsed = Number.parseInt(process.env[key] ?? "", 10);
   if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return fallback;
+}
+
+function readNonNegativeIntEnv(key, fallback) {
+  const parsed = Number.parseInt(process.env[key] ?? "", 10);
+  if (Number.isFinite(parsed) && parsed >= 0) {
     return parsed;
   }
   return fallback;
@@ -106,13 +124,23 @@ function buildUiEval(waitTimeoutMs) {
     const rows = document.querySelectorAll("table tbody tr").length;
     const hasFailedToLoad = text.includes("Failed to load data");
     const hasStablecoins404 = text.includes("stablecoins:404");
-    if (rows > 0 || hasFailedToLoad || hasStablecoins404) {
+    const hasDataNotYetAvailable = text.includes("Data not yet available");
+    const hasConnectionIssue = text.includes("Connection issue");
+    const hasLiveRefreshDelayed = text.includes("Live refresh delayed");
+    const hasNoStablecoinData = text.includes("No stablecoin data available");
+    const hasTerminalError = hasFailedToLoad || hasStablecoins404 || hasDataNotYetAvailable || hasConnectionIssue || hasNoStablecoinData;
+    if (rows > 0 || hasTerminalError) {
       return {
         rows,
         hasFailedToLoad,
         hasStablecoins404,
+        hasDataNotYetAvailable,
+        hasConnectionIssue,
+        hasLiveRefreshDelayed,
+        hasNoStablecoinData,
         hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
         title: document.title,
+        textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
         waitTimeoutMs: ${waitTimeoutMs},
         timedOut: false
       };
@@ -124,8 +152,13 @@ function buildUiEval(waitTimeoutMs) {
     rows: document.querySelectorAll("table tbody tr").length,
     hasFailedToLoad: text.includes("Failed to load data"),
     hasStablecoins404: text.includes("stablecoins:404"),
+    hasDataNotYetAvailable: text.includes("Data not yet available"),
+    hasConnectionIssue: text.includes("Connection issue"),
+    hasLiveRefreshDelayed: text.includes("Live refresh delayed"),
+    hasNoStablecoinData: text.includes("No stablecoin data available"),
     hasKnownTicker: /\\bUSDT\\b|\\bUSDC\\b/.test(text),
     title: document.title,
+    textPreview: text.replace(/\\s+/g, " ").trim().slice(0, 180),
     waitTimeoutMs: ${waitTimeoutMs},
     timedOut: true
   };
@@ -252,11 +285,35 @@ async function runOverflowCheck(sessionId, waitMs, settleSamples, sampleInterval
   return parseResultJson(overflowOutput);
 }
 
+function formatUiSummary(summary) {
+  const markers = [];
+  if (summary.hasFailedToLoad) markers.push("Failed to load data");
+  if (summary.hasStablecoins404) markers.push("stablecoins:404");
+  if (summary.hasDataNotYetAvailable) markers.push("Data not yet available");
+  if (summary.hasConnectionIssue) markers.push("Connection issue");
+  if (summary.hasLiveRefreshDelayed) markers.push("Live refresh delayed");
+  if (summary.hasNoStablecoinData) markers.push("No stablecoin data available");
+  const markerSummary = markers.length > 0 ? markers.join(", ") : "none";
+  const preview =
+    typeof summary.textPreview === "string" && summary.textPreview.length > 0
+      ? summary.textPreview.replace(/"/g, "'")
+      : "n/a";
+  return `title="${summary.title}", rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}, markers=${markerSummary}, preview="${preview}"`;
+}
+
+async function runHomepageCheck(sessionId, waitTimeoutMs) {
+  const evalOutput = await runPlaywrightCli(sessionId, ["eval", buildUiEval(waitTimeoutMs)]);
+  ensureNoCliError("eval", evalOutput);
+  return parseResultJson(evalOutput);
+}
+
 async function run() {
   const { url: rawUrl, skipOverflow } = parseArgs(process.argv.slice(2));
   const url = ensureUrl(rawUrl);
   const sessionId = `${SESSION_PREFIX}-${Date.now()}`;
   const waitTimeoutMs = getUiWaitTimeoutMs();
+  const uiRetryCount = getUiRetryCount();
+  const uiRetryDelayMs = getUiRetryDelayMs();
   const safeOverflowWaitMs = readPositiveIntEnv("SMOKE_UI_OVERFLOW_WAIT_MS", DEFAULT_OVERFLOW_WAIT_MS);
   const overflowSettleSamples = Math.max(
     2,
@@ -277,19 +334,40 @@ async function run() {
     const openOutput = await runPlaywrightCli(sessionId, ["open", url]);
     ensureNoCliError("open", openOutput);
 
-    const evalOutput = await runPlaywrightCli(sessionId, ["eval", buildUiEval(waitTimeoutMs)]);
-    ensureNoCliError("eval", evalOutput);
-    const summary = parseResultJson(evalOutput);
+    let summary = null;
+    const totalAttempts = uiRetryCount + 1;
+    for (let attempt = 0; attempt < totalAttempts; attempt += 1) {
+      summary = await runHomepageCheck(sessionId, waitTimeoutMs);
+      if (!summary.timedOut) {
+        break;
+      }
+      if (attempt < totalAttempts - 1) {
+        console.log(
+          `[smoke-ui] WARN homepage data timeout on attempt ${attempt + 1}/${totalAttempts} (${formatUiSummary(summary)}); retrying in ${uiRetryDelayMs}ms`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, uiRetryDelayMs));
+        const retryGotoOutput = await runPlaywrightCli(sessionId, ["goto", url]);
+        ensureNoCliError(`goto retry ${attempt + 1}`, retryGotoOutput);
+      }
+    }
+
+    assert(summary, "Homepage smoke check did not produce a summary result");
 
     assert(
       !summary.timedOut,
-      `Timed out waiting for homepage table data after ${summary.waitTimeoutMs}ms`,
+      `Timed out waiting for homepage table data after ${summary.waitTimeoutMs}ms (${formatUiSummary(summary)})`,
     );
     assert(!summary.hasFailedToLoad, "Found 'Failed to load data' UI banner");
     assert(!summary.hasStablecoins404, "Found '/api/stablecoins:404' style UI error");
+    assert(!summary.hasDataNotYetAvailable, "Found 'Data not yet available' UI banner");
+    assert(!summary.hasConnectionIssue, "Found 'Connection issue' UI banner");
+    assert(!summary.hasNoStablecoinData, "Found 'No stablecoin data available' empty state");
     assert(summary.rows > 0, "Expected at least one stablecoin row in the homepage table");
     assert(summary.hasKnownTicker, "Could not find a known ticker (USDT/USDC) in homepage text");
 
+    if (summary.hasLiveRefreshDelayed) {
+      console.log(`[smoke-ui] WARN homepage shows 'Live refresh delayed' (${formatUiSummary(summary)})`);
+    }
     console.log(`[smoke-ui] OK ${summary.title}`);
     console.log(`[smoke-ui] OK table rows=${summary.rows}, knownTicker=${summary.hasKnownTicker}`);
 
