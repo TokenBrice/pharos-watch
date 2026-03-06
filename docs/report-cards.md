@@ -274,6 +274,8 @@ Users enter stablecoin holdings (coin + USD amount). Derived computations (all c
 
 State: `usePortfolio` hook. Sources (priority): URL `?p=usdc:50000,dai:5000` → `localStorage` → empty. Shared links don't overwrite saved portfolio.
 
+`localStorage` migration behavior: on read, holdings are validated, then legacy DefiLlama-style IDs are resolved to canonical IDs via `resolveStablecoinId(..., { allowLegacy: true })`. Unknown IDs are dropped, duplicate canonical IDs are merged by amount, and migrated data is written back once.
+
 ### Interactive Stress Test
 
 Users simulate a grade downgrade for any upstream coin and watch cascading grade changes:

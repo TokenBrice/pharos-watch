@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { scoreToGrade, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import type {
@@ -106,6 +107,28 @@ function encodeHoldings(holdings: PortfolioHolding[]): string {
     .join(",");
 }
 
+function migratePortfolioIds(holdings: PortfolioHolding[]): PortfolioHolding[] {
+  let changed = false;
+  const migrated: PortfolioHolding[] = [];
+  for (const holding of holdings) {
+    const resolved = resolveStablecoinId(holding.coinId, { allowLegacy: true });
+    if (!resolved) {
+      // Unknown ID — drop silently (stale/removed coin)
+      changed = true;
+      continue;
+    }
+    if (resolved.canonicalId !== holding.coinId) changed = true;
+    // Merge duplicates (two legacy IDs could resolve to the same canonical)
+    const existing = migrated.find((migratedHolding) => migratedHolding.coinId === resolved.canonicalId);
+    if (existing) {
+      existing.amount += holding.amount;
+    } else {
+      migrated.push({ coinId: resolved.canonicalId, amount: holding.amount });
+    }
+  }
+  return changed ? migrated : holdings;
+}
+
 function loadFromStorage(): PortfolioHolding[] {
   if (typeof window === "undefined") return [];
   try {
@@ -113,7 +136,7 @@ function loadFromStorage(): PortfolioHolding[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
+    const validated = parsed.filter(
       (h): h is PortfolioHolding =>
         typeof h === "object" &&
         h !== null &&
@@ -121,6 +144,12 @@ function loadFromStorage(): PortfolioHolding[] {
         typeof (h as PortfolioHolding).amount === "number" &&
         (h as PortfolioHolding).amount > 0,
     );
+    // Migrate legacy IDs to canonical format
+    const migrated = migratePortfolioIds(validated);
+    if (migrated !== validated) {
+      saveToStorage(migrated);
+    }
+    return migrated;
   } catch {
     return [];
   }
@@ -238,18 +267,18 @@ export function categorizeCollateral(name: string): string {
 // fiat majors (USDT, USDC, USDS, PYUSD, FDUSD, USDP) +
 // institutional RWA products used as backing (BUIDL, M, USDtb, USDY, USYC, TBILL)
 const MAJOR_CENTRALIZED_IDS = new Set([
-  "1",   // USDT — Tether
-  "2",   // USDC — Circle
-  "11",  // USDP — Paxos
-  "119", // FDUSD — First Digital
-  "120", // PYUSD — PayPal
-  "129", // USDY — Ondo
-  "173", // BUIDL — BlackRock
-  "209", // USDS — Sky
-  "213", // M — M0 Protocol
-  "221", // USDtb — Ethena
-  "237", // USYC — Hashnote
-  "257", // TBILL — OpenEden
+  "usdt-tether", // USDT — Tether
+  "usdc-circle", // USDC — Circle
+  "usdp-paxos", // USDP — Paxos
+  "fdusd-first-digital", // FDUSD — First Digital
+  "pyusd-paypal", // PYUSD — PayPal
+  "usdy-ondo-finance", // USDY — Ondo
+  "buidl-blackrock", // BUIDL — BlackRock
+  "usds-sky", // USDS — Sky
+  "m-m0", // M — M0 Protocol
+  "usdtb-ethena", // USDtb — Ethena
+  "usyc-hashnote", // USYC — Hashnote
+  "tbill-openeden", // TBILL — OpenEden
 ]);
 
 export function computeGroupedExposure(

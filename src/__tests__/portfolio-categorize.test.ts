@@ -110,9 +110,9 @@ describe("computeGroupedExposure", () => {
 
   it("groups major centralized stablecoin deps into one entry", () => {
     const raw: UpstreamExposure[] = [
-      { coinId: "2",   name: "USD Coin", symbol: "USDC", usd: 40_000, pct: 40, isCollateral: false },
-      { coinId: "213", name: "M by M0",  symbol: "M",    usd: 20_000, pct: 20, isCollateral: false },
-      { coinId: "173", name: "BlackRock USD", symbol: "BUIDL", usd: 10_000, pct: 10, isCollateral: false },
+      { coinId: "usdc-circle", name: "USD Coin", symbol: "USDC", usd: 40_000, pct: 40, isCollateral: false },
+      { coinId: "m-m0", name: "M by M0", symbol: "M", usd: 20_000, pct: 20, isCollateral: false },
+      { coinId: "buidl-blackrock", name: "BlackRock USD", symbol: "BUIDL", usd: 10_000, pct: 10, isCollateral: false },
       { coinId: "999", name: "Other Dep", symbol: "OTH",  usd: 30_000, pct: 30, isCollateral: false },
     ];
     const grouped = computeGroupedExposure(raw, totalUsd);
@@ -139,7 +139,7 @@ describe("computeGroupedExposure", () => {
   it("returns entries sorted stablecoins first then collateral descending by usd", () => {
     const raw: UpstreamExposure[] = [
       { coinId: "__c_eth__", name: "ETH (overcollateralized CDP)", symbol: "ETH", usd: 10_000, pct: 10, isCollateral: true },
-      { coinId: "2", name: "USD Coin", symbol: "USDC", usd: 40_000, pct: 40, isCollateral: false },
+      { coinId: "usdc-circle", name: "USD Coin", symbol: "USDC", usd: 40_000, pct: 40, isCollateral: false },
       { coinId: "__c_tbills__", name: "Short-term U.S. Treasury bills", symbol: "T-Bills", usd: 50_000, pct: 50, isCollateral: true },
     ];
     const grouped = computeGroupedExposure(raw, totalUsd);
