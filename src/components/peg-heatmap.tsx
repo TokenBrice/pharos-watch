@@ -11,6 +11,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@shared/lib/format";
 import { deviationBgClass } from "@/lib/severity-colors";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@shared/types";
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
@@ -177,7 +178,7 @@ export function PegHeatmap({
                 return (
                   <Link
                     key={coin.id}
-                    href={`/stablecoin/${coin.id}`}
+                    href={buildStablecoinUrl(coin.id)}
                     className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border hover:bg-muted/40 transition-colors ${deviationTileClass(absBps)}`}
                     title={dexDisagrees
                       ? `DEX price disagrees: $${dex.dexPrice.toFixed(4)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`

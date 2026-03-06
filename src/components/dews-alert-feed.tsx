@@ -8,6 +8,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { BAND_ORDER } from "@/lib/depeg-sort";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { StressSignalEntry } from "@shared/types";
 import type { ThreatBand } from "@shared/lib/classification";
@@ -101,7 +102,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
           alertCoins.map((coin) => (
             <Link
               key={coin.id}
-              href={`/stablecoin/${coin.id}`}
+              href={buildStablecoinUrl(coin.id)}
               className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(coin.id)}
             >

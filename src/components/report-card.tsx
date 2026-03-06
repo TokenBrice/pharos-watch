@@ -12,6 +12,7 @@ import {
 import { ReportCardRadar } from "./radar-chart";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import Link from "next/link";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -175,7 +176,7 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                   <span key={dep.id}>
                     {i > 0 && ", "}
                     <Link
-                      href={`/stablecoin/${dep.id}`}
+                      href={buildStablecoinUrl(dep.id)}
                       className="font-medium text-blue-700 dark:text-blue-400 underline underline-offset-2 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                     >
                       {name}

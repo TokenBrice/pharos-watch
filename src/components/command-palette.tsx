@@ -9,6 +9,7 @@ import { Moon, Sun, FileText, Coins } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import { useLogos } from "@/hooks/use-logos";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,7 @@ export function CommandPalette() {
           section: "Stablecoins",
           logoUrl,
           onSelect: () => {
-            router.push(`/stablecoin/${coin.id}`);
+            router.push(buildStablecoinUrl(coin.id));
             closePalette();
           },
         });

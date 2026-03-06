@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { cn } from "@/lib/utils";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
@@ -563,7 +564,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           calmDots={calmDots}
           highest={highest}
           totalCount={totalCount}
-          onCoinClick={(id) => router.push(`/stablecoin/${id}`)}
+          onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
           compact={!showHeader}
         />
         <DEWSLegend

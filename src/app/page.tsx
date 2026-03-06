@@ -4,6 +4,7 @@ import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 export default function HomePage() {
   const total = TRACKED_STABLECOINS.length;
@@ -13,7 +14,7 @@ export default function HomePage() {
     "@type": "ListItem" as const,
     position: i + 1,
     name: `${coin.name} (${coin.symbol})`,
-    url: `https://pharos.watch/stablecoin/${coin.id}/`,
+    url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
   }));
   const itemListCount = itemListElements.length;
 

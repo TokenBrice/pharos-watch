@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,7 +62,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
           return (
             <Link
               key={evt.id}
-              href={`/stablecoin/${evt.stablecoinId}`}
+              href={buildStablecoinUrl(evt.stablecoinId)}
               className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(evt.stablecoinId)}
             >

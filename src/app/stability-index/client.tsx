@@ -28,6 +28,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -515,7 +516,7 @@ function ContributorsTable({
                 <tr key={r.id} className="border-b last:border-0">
                   <td className="py-2 pr-4">
                     <a
-                      href={`/stablecoin/${r.id}`}
+                      href={buildStablecoinUrl(r.id)}
                       className="flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:text-blue-400 transition-colors"
                     >
                       <StablecoinLogo src={logos[r.id]} name={r.symbol} size={20} />

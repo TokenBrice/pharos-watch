@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { ReportCard, ReportCardGrade } from "@shared/types";
@@ -35,7 +36,7 @@ export function ReportCardMini({
   const dimUnaffected = isSimulating && !isSimulated;
 
   return (
-    <Link href={`/stablecoin/${card.id}`} className="block h-full active:scale-[0.995] transition-transform">
+    <Link href={buildStablecoinUrl(card.id)} className="block h-full active:scale-[0.995] transition-transform">
       <Card
         className={`hover:bg-accent/50 hover:shadow-md transition-all cursor-pointer h-full ${
           isSimulated

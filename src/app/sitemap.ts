@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
+import { buildStablecoinUrl } from "@/lib/urls";
 import digests from "../../data/digests.json";
 
 export const dynamic = "force-static";
@@ -170,7 +171,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const stablecoinPages: MetadataRoute.Sitemap = TRACKED_STABLECOINS.map(
     (coin) => ({
-      url: `https://pharos.watch/stablecoin/${coin.id}/`,
+      url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: 0.6,
