@@ -4,7 +4,10 @@ Analytics dashboard tracking 148 stablecoins (+2 shadow assets for PSI). Static 
 
 **Live at [pharos.watch](https://pharos.watch)**
 
-All agents plans (design or implementation), as well as research and processes documents are placed in the /agents/ folder.
+## Folder Structure
+
+All agents plans (design or implementation), as well as research and processes documents are placed in the `/agents/` folder.
+**`/docs/` is to be used for application-related documentation only**
 
 ## cmcs — Orchestration
 
@@ -23,7 +26,7 @@ Single task?       → Single worktree, single ticket
 Place in `.cmcs/tickets/TICKET-001.md` (or `<worktree>/.cmcs/tickets/`):
 cmcs agents perform best on narrowly focused tasks. Tickets should be decomposed in the smallest logical chunk possible and using the appropriate `reasoning_effort` and `model` for the task.
 
-**Model selection:** `gpt-5.3-codex` for complex multi-file refactors. `gpt-5.3-codex-spark` for repetitive pattern application. `gpt-5.1-codex-mini` for mechanical/rote fixes. When unsure, use `gpt-5.3-codex`. See `agents/process/cmcs-large-implementation-preparation.md` for the full model guide.
+**Model selection:** `gpt-5.3-codex` for complex multi-file refactors. `gpt-5.3-codex-spark` for repetitive pattern application. `gpt-5.3-codex-mini` for mechanical/rote fixes. When unsure, use `gpt-5.3-codex`. See `agents/process/cmcs-large-implementation-preparation.md` for the full model guide.
 
 ```markdown
 ---
