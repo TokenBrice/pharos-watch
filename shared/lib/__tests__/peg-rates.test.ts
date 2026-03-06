@@ -1,21 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import type { StablecoinMeta } from "@shared/types";
+import type { PegAssetBase, StablecoinMeta } from "@shared/types";
 
 function asset(
   id: string,
   pegType: string,
   price: number,
   circulatingUsd: number,
-): Record<string, unknown> {
+): PegAssetBase {
   return {
     id,
     symbol: id.toUpperCase(),
     pegType,
     price,
     circulating: {
-      USD: circulatingUsd,
+      peggedUSD: circulatingUsd,
     },
   };
 }

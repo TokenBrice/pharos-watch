@@ -2,7 +2,7 @@
  * Contract tests for cache-passthrough handlers.
  * All use createCacheHandler: cache hit -> 200 + _meta, cache miss -> 503.
  */
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
 import { handleStablecoins } from "../stablecoins";
 import { handleStablecoinCharts } from "../stablecoin-charts";
@@ -10,101 +10,136 @@ import { handleUsdsStatus } from "../usds-status";
 import { handleBluechipRatings } from "../bluechip";
 import { handleYieldRankings } from "../yield-rankings";
 
-const nowSec = Math.floor(Date.now() / 1000);
-
-function makeCacheDb(key: string, value: unknown) {
+function makeCacheDb(key: string, value: unknown, updatedAt: number) {
   const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
   return mockD1([
     {
       match: "cache",
-      rows: [{ key, value: jsonValue, updated_at: nowSec }],
-      first: { key, value: jsonValue, updated_at: nowSec },
+      rows: [{ key, value: jsonValue, updated_at: updatedAt }],
+      first: { key, value: jsonValue, updated_at: updatedAt },
     },
   ]);
 }
 
-const emptyDb = mockD1();
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-03-06T12:00:00Z"));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("cache-passthrough: handleStablecoins", () => {
   it("returns 503 when cache is empty", async () => {
+    const emptyDb = mockD1();
     const res = await handleStablecoins(emptyDb);
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with _meta when cache hit (object payload)", async () => {
-    const db = makeCacheDb("stablecoins", { peggedAssets: [] });
+  it("returns 200 with concrete _meta values and matching X-Data-Age", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("stablecoins", { peggedAssets: [] }, nowSec);
     const res = await handleStablecoins(db);
+
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: { status: string } };
-    expect(body).toHaveProperty("_meta");
-    expect(body._meta).toHaveProperty("status");
-    expect(body._meta).toHaveProperty("updatedAt");
-    expect(body._meta).toHaveProperty("ageSeconds");
+    const body = (await res.json()) as {
+      _meta: { status: string; updatedAt: number; ageSeconds: number };
+    };
+
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.updatedAt).toBe(nowSec);
+    expect(body._meta.ageSeconds).toBe(0);
+    expect(new Date(body._meta.updatedAt * 1000).toISOString()).toBe("2026-03-06T12:00:00.000Z");
+    expect(res.headers.get("X-Data-Age")).toBe(String(body._meta.ageSeconds));
   });
 
-  it("includes X-Data-Age header on cache hit", async () => {
-    const db = makeCacheDb("stablecoins", { peggedAssets: [] });
+  it("returns 200 with stale metadata when cache is older than one hour", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const staleUpdatedAt = nowSec - 4000;
+    const db = makeCacheDb("stablecoins", { peggedAssets: [] }, staleUpdatedAt);
     const res = await handleStablecoins(db);
-    expect(res.headers.has("X-Data-Age")).toBe(true);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      _meta: { status: string; updatedAt: number; ageSeconds: number };
+    };
+    expect(body._meta.updatedAt).toBe(staleUpdatedAt);
+    expect(body._meta.status).toBe("stale");
+    expect(body._meta.ageSeconds).toBe(4000);
+    expect(res.headers.get("X-Data-Age")).toBe("4000");
+    expect(res.headers.get("Warning")).toContain("Response is stale");
   });
 });
 
 describe("cache-passthrough: handleStablecoinCharts", () => {
   it("returns 503 when cache is empty", async () => {
+    const emptyDb = mockD1();
     const res = await handleStablecoinCharts(emptyDb);
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with _meta on cache hit", async () => {
-    const db = makeCacheDb("stablecoin-charts", { charts: {} });
+  it("returns 200 with concrete _meta on cache hit", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("stablecoin-charts", { charts: {} }, nowSec - 5);
     const res = await handleStablecoinCharts(db);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: unknown };
-    expect(body).toHaveProperty("_meta");
+    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.ageSeconds).toBe(5);
   });
 });
 
 describe("cache-passthrough: handleUsdsStatus", () => {
   it("returns 503 when cache is empty", async () => {
+    const emptyDb = mockD1();
     const res = await handleUsdsStatus(emptyDb);
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with _meta on cache hit", async () => {
-    const db = makeCacheDb("usds-status", { status: "ok" });
+  it("returns 200 with concrete _meta on cache hit", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("usds-status", { status: "ok" }, nowSec - 42);
     const res = await handleUsdsStatus(db);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: unknown };
-    expect(body).toHaveProperty("_meta");
+    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.ageSeconds).toBe(42);
   });
 });
 
 describe("cache-passthrough: handleBluechipRatings", () => {
   it("returns 503 when cache is empty", async () => {
+    const emptyDb = mockD1();
     const res = await handleBluechipRatings(emptyDb);
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with _meta on cache hit", async () => {
-    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } });
+  it("returns 200 with concrete _meta on cache hit", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } }, nowSec - 120);
     const res = await handleBluechipRatings(db);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: unknown };
-    expect(body).toHaveProperty("_meta");
+    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.ageSeconds).toBe(120);
   });
 });
 
 describe("cache-passthrough: handleYieldRankings", () => {
   it("returns 503 when cache is empty", async () => {
+    const emptyDb = mockD1();
     const res = await handleYieldRankings(emptyDb);
     expect(res.status).toBe(503);
   });
 
-  it("returns 200 with _meta on cache hit", async () => {
-    const db = makeCacheDb("yield-rankings", { rankings: [] });
+  it("returns 200 with concrete _meta on cache hit", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const db = makeCacheDb("yield-rankings", { rankings: [] }, nowSec - 17);
     const res = await handleYieldRankings(db);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { _meta: unknown };
-    expect(body).toHaveProperty("_meta");
+    const body = (await res.json()) as { _meta: { status: string; ageSeconds: number } };
+    expect(body._meta.status).toBe("fresh");
+    expect(body._meta.ageSeconds).toBe(17);
   });
 });

@@ -61,22 +61,28 @@ describe("handlePegSummary", () => {
     const res = await handlePegSummary(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      coins: Array<Record<string, unknown>>;
-      summary: Record<string, unknown>;
-      methodology: Record<string, unknown>;
+      coins: Array<{ id: string; methodologyVersion: string }>;
+      summary: {
+        activeDepegCount: number;
+        medianDeviationBps: number;
+        totalTracked: number;
+        worstCurrent: { id: string; symbol: string; bps: number } | null;
+      };
+      methodology: {
+        version: string;
+        versionLabel: string;
+        changelogPath: string;
+      };
     };
-    expect(body).toHaveProperty("coins");
-    expect(body).toHaveProperty("summary");
-    expect(body).toHaveProperty("methodology");
-    expect(body.summary).toHaveProperty("activeDepegCount");
-    expect(body.summary).toHaveProperty("medianDeviationBps");
-    expect(body.summary).toHaveProperty("totalTracked");
-    if (body.coins.length > 0) {
-      expect(body.coins[0]).toHaveProperty("methodologyVersion");
-    }
-    expect(body.methodology).toHaveProperty("version");
-    expect(body.methodology).toHaveProperty("versionLabel");
-    expect(body.methodology).toHaveProperty("changelogPath");
+    expect(Array.isArray(body.coins)).toBe(true);
+    expect(body.summary.activeDepegCount).toBe(0);
+    expect(body.summary.medianDeviationBps).toBe(0);
+    expect(body.summary.totalTracked).toBe(body.coins.length);
+    expect(body.summary.worstCurrent).toEqual({ id: "usdt-tether", symbol: "USDT", bps: 0 });
+    expect(body.coins.some((coin) => coin.id === "usdt-tether")).toBe(true);
+    expect(body.coins[0].methodologyVersion).toBe(body.methodology.version);
+    expect(body.methodology.versionLabel.length).toBeGreaterThan(0);
+    expect(body.methodology.changelogPath).toBe("/methodology/depeg-changelog/");
   });
 
   it("includes X-Data-Age header", async () => {
@@ -91,10 +97,25 @@ describe("handlePegSummary", () => {
     const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
-      coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
+      coins: Array<{
+        id: string;
+        dexPriceCheck?: {
+          dexPrice: number;
+          dexDeviationBps: number;
+          agrees: boolean;
+          sourcePools: number;
+          sourceTvl: number;
+        } | null;
+      }>;
     };
     const coin = body.coins.find((c) => c.id === "usdt-tether");
-    expect(coin?.dexPriceCheck).toBeTruthy();
+    expect(coin?.dexPriceCheck).toEqual({
+      dexPrice: 1.0002,
+      dexDeviationBps: 2,
+      agrees: true,
+      sourcePools: 4,
+      sourceTvl: 10_000_000,
+    });
   });
 
   it("hides dexPriceCheck when data is too stale for UI display", async () => {

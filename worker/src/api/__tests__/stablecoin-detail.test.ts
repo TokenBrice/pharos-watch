@@ -211,7 +211,8 @@ describe("handleStablecoinDetail", () => {
       const entry = meta as { geckoId?: string | null; llamaId?: string | null };
       return Boolean(entry.geckoId) && !entry.llamaId;
     })?.[0];
-    expect(geckoOnlyId).toBeTruthy();
+    expect(typeof geckoOnlyId).toBe("string");
+    expect((geckoOnlyId ?? "").length).toBeGreaterThan(0);
 
     // Gecko-only coin with no market chart data returns fallback from D1
     const db = mockD1([

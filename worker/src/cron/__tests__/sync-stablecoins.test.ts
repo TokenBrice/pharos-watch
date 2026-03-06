@@ -94,6 +94,7 @@ vi.mock("../../lib/alerts", () => ({
 }));
 
 import { syncStablecoins } from "../sync-stablecoins";
+import { enrichMissingPrices, fetchDualPrimaryPrices } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
@@ -159,10 +160,17 @@ describe("syncStablecoins", () => {
     vi.setSystemTime(new Date("2025-06-15T12:00:00Z"));
     // Reset circuit-breaker mocks to factory defaults — vi.restoreAllMocks()
     // does NOT restore vi.fn() factories, only vi.spyOn() spies.
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
-    vi.mocked(recordOutcome).mockResolvedValue(undefined);
-    vi.mocked(detectDepegEvents).mockResolvedValue(undefined);
-    vi.mocked(confirmPendingDepegs).mockResolvedValue(undefined);
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    vi.mocked(recordOutcome).mockReset().mockResolvedValue(undefined);
+    vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
+      totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0,
+    });
+    vi.mocked(fetchDualPrimaryPrices).mockReset().mockResolvedValue({
+      results: new Map(),
+      stats: { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] },
+    });
+    vi.mocked(detectDepegEvents).mockReset().mockResolvedValue(undefined);
+    vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -198,6 +206,15 @@ describe("syncStablecoins", () => {
       (args) => (args[0] as string).includes("INSERT INTO cache")
     );
     expect(cacheWrites.length).toBeGreaterThanOrEqual(1);
+    expect(shouldAttemptFetch).toHaveBeenCalledWith(db, "defillama-stablecoins");
+    expect(fetchDualPrimaryPrices).toHaveBeenCalledWith(expect.any(Array), db, undefined);
+    expect(enrichMissingPrices).toHaveBeenCalledWith(expect.any(Array), undefined, db, undefined);
+    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
+    expect(confirmPendingDepegs).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
+    const dualPrimaryAssets = vi.mocked(fetchDualPrimaryPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
+    expect(dualPrimaryAssets).toHaveLength(60);
+    const enrichmentAssets = vi.mocked(enrichMissingPrices).mock.calls[0]?.[0] as Array<{ id: string }>;
+    expect(enrichmentAssets).toHaveLength(60);
   });
 
   it("fails the run when DL payload is structurally invalid and fallback is insufficient", async () => {
@@ -285,6 +302,17 @@ describe("syncStablecoins", () => {
 
     expect(detectDepegEvents).toHaveBeenCalled();
     expect(confirmPendingDepegs).toHaveBeenCalled();
+    const detectArgs = vi.mocked(detectDepegEvents).mock.calls[0];
+    expect(detectArgs?.[0]).toBe(db);
+    expect((detectArgs?.[1] as unknown[]).length).toBe(60);
+    expect(detectArgs?.[2]).toBeUndefined();
+    expect(detectArgs?.[3]).toBeUndefined();
+
+    const confirmArgs = vi.mocked(confirmPendingDepegs).mock.calls[0];
+    expect(confirmArgs?.[0]).toBe(db);
+    expect((confirmArgs?.[1] as unknown[]).length).toBe(60);
+    expect(confirmArgs?.[2]).toBeUndefined();
+    expect(confirmArgs?.[3]).toBeUndefined();
   });
 
   it("continues despite depeg detection failure", async () => {
@@ -588,5 +616,31 @@ describe("syncStablecoins", () => {
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
     expect(normalized?.price).toBe(0.999);
+  });
+
+  it("handles duplicate DefiLlama coin IDs without crashing", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    dlData.peggedAssets[1].id = "1"; // duplicate DefiLlama ID, maps to usdt-tether
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<{ id: string }> } | undefined;
+    expect(payload).toBeDefined();
+    const usdtCopies = payload?.peggedAssets.filter((asset) => asset.id === "usdt-tether").length ?? 0;
+    expect(usdtCopies).toBeGreaterThanOrEqual(2);
+    expect(detectDepegEvents).toHaveBeenCalledWith(db, expect.any(Array), undefined, undefined);
   });
 });
