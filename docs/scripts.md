@@ -38,7 +38,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 - Reads `ADMIN_KEY` from environment first; falls back to `worker/.dev.vars`.
 - Defaults `WORKER_URL` to `https://api.pharos.watch`.
 - Uses `POST` requests (admin mutating endpoint contract).
-- Backfills only configured gold IDs in the script (`gold-xaut`, `gold-paxg`, etc.).
+- Backfills only configured gold IDs in the script (`xaut-tether`, `paxg-paxos`, etc.).
 
 ### `fetch-logos.ts`
 

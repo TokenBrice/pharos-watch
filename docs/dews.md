@@ -173,7 +173,7 @@ Score = `min(100, sum of active signal points)`.
 }
 ```
 
-**Single coin:** `?stablecoin=1&days=30` — Returns latest + daily history.
+**Single coin:** `?stablecoin=usdt-tether&days=30` — Returns latest + daily history.
 
 Untracked `stablecoin` IDs return `404` (`Stablecoin not tracked`).
 

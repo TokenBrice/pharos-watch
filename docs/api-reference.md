@@ -10,15 +10,19 @@ All responses are `Content-Type: application/json`. CORS headers are added to ev
 
 ## Stablecoin IDs
 
-Most endpoints use the Pharos stablecoin ID. IDs follow the canonical **ticker-issuer** format: lowercase ticker, hyphen, lowercase issuer name (e.g., `"usdt-tether"`, `"usdc-circle"`, `"paxg-paxos"`).
+Most endpoints use the Pharos stablecoin ID in `ticker-issuer` format (e.g. `usdt-tether`). IDs are resolved through the shared stablecoin-ID registry (`shared/lib/stablecoin-id-registry.ts`). Unknown IDs return `404`.
 
-IDs are resolved through the shared stablecoin-ID registry, so handlers always execute with canonical IDs. Legacy aliases (numeric DefiLlama IDs, `cg-*`, `gold-*`, `silver-*` prefixes) are still accepted during the transition period via `allowLegacy: true` in resolver calls, but should not be used for new integrations. Unknown IDs return `404`.
+Canonical IDs use `ticker-issuer` format — lowercase ticker symbol hyphenated with the issuer/protocol name:
 
-| Form | Example | Notes |
-|------|---------|-------|
-| Canonical (ticker-issuer) | `"usdt-tether"`, `"usdc-circle"`, `"paxg-paxos"` | **Use this format** |
-| Legacy numeric | `"1"` (USDT), `"2"` (USDC) | Deprecated — resolved to canonical via registry |
-| Legacy prefixed | `"cg-ustb"`, `"gold-xaut"`, `"silver-kag"` | Deprecated — resolved to canonical via registry |
+| Example | Asset |
+|---------|-------|
+| `"usdt-tether"` | Tether (USDT) |
+| `"usdc-circle"` | USD Coin (USDC) |
+| `"paxg-paxos"` | PAX Gold (PAXG) |
+| `"ustb-superstate"` | Superstate USTB |
+| `"gyen-gyen"` | GYEN |
+
+The full list is in `shared/lib/stablecoins.ts`. The ID registry (`shared/lib/stablecoin-id-registry.ts`) resolves canonical IDs and legacy aliases.
 
 ---
 
@@ -1382,7 +1386,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
   "expectedValue": "Optional expected behavior/value",
   "stablecoinId": "Optional stablecoin id",
   "stablecoinName": "Optional stablecoin name",
-  "pageUrl": "/stablecoin/1",
+  "pageUrl": "/stablecoin/usdt-tether",
   "pegValue": "Optional UI value snapshot",
   "website": ""
 }

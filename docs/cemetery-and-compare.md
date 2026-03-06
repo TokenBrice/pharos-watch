@@ -49,7 +49,7 @@ Primary files:
 - Maximum selection: `MAX_COINS = 5`.
 - URL is the source of truth for selection state.
 - Query param `coins` accepts:
-  - numeric stablecoin IDs (primary format)
+  - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
   - lowercase symbols (legacy fallback)
 
 Selected state is normalized to IDs to avoid duplicate-symbol collisions.

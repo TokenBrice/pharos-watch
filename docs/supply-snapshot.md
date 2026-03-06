@@ -59,7 +59,7 @@ CREATE INDEX idx_supply_hist_date ON supply_history(snapshot_date DESC);
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `stablecoin_id` | TEXT | DefiLlama numeric ID (stored as string) |
+| `stablecoin_id` | TEXT | Canonical ticker-issuer ID (e.g. `usdt-tether`) |
 | `snapshot_date` | INTEGER | Unix seconds floored to UTC midnight |
 | `circulating_usd` | REAL | Total market cap in USD |
 | `price` | REAL | USD price at snapshot time (may be `null`) |
