@@ -12,7 +12,7 @@ const COMMODITY_TOKENS = TRACKED_STABLECOINS.filter(
 
 const GOLD_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "GOLD");
 const SILVER_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.flags.pegCurrency === "SILVER");
-const FIAT_CG_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.id.startsWith("cg-"));
+const FIAT_CG_METAS = TRACKED_STABLECOINS.filter((stablecoin) => stablecoin.detailProvider === "coingecko");
 
 function pegTypeKey(meta: StablecoinMeta): string {
   return `pegged${meta.flags.pegCurrency}`;

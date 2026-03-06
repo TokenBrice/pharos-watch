@@ -216,7 +216,7 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       }
 
       // Skip other non-DefiLlama coins (no historical data available)
-      if (/^(gold-|silver-|cg-)/.test(meta.id)) {
+      if (meta.detailProvider === "coingecko" || meta.detailProvider === "commodity") {
         skipped.push(meta.symbol);
         continue;
       }
@@ -225,11 +225,12 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       const isUsd = meta.flags.pegCurrency === "USD";
       const needsConversion = !isUsd;
       const geckoId = meta.geckoId ?? PSI_ELIGIBLE_META_BY_ID.get(meta.id)?.geckoId;
+      const dlId = meta.llamaId ?? meta.id;
 
       // Fetch DL detail + historical prices (for non-USD coins) in parallel
       const fetches: Promise<Response>[] = [
         fetch(
-          `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(meta.id)}`,
+          `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
           { headers: { "User-Agent": USER_AGENT } },
         ),
       ];

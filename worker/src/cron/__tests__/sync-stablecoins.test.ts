@@ -11,6 +11,7 @@ vi.mock("@shared/lib/stablecoins", () => {
     name: `Fallback Coin ${i}`,
     symbol: `FC${i}`,
     geckoId: `fallback-coin-${i}`,
+    detailProvider: "coingecko",
     flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
   }));
 
@@ -21,6 +22,7 @@ vi.mock("@shared/lib/stablecoins", () => {
       name: "Tether",
       symbol: "USDT",
       geckoId: "tether",
+      detailProvider: "defillama",
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
@@ -28,6 +30,7 @@ vi.mock("@shared/lib/stablecoins", () => {
       name: "USD Coin",
       symbol: "USDC",
       geckoId: "usd-coin",
+      detailProvider: "defillama",
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
       ...fallbackTrackedTokens,
