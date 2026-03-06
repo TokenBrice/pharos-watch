@@ -131,7 +131,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/dex-liquidity-history?stablecoin=1",
+    probePath: "/api/dex-liquidity-history?stablecoin=usdt-tether",
   },
   {
     path: "/api/supply-history",
@@ -140,7 +140,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/supply-history?stablecoin=1",
+    probePath: "/api/supply-history?stablecoin=usdt-tether",
   },
   {
     path: "/api/daily-digest",
@@ -181,7 +181,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/yield-history?stablecoin=1",
+    probePath: "/api/yield-history?stablecoin=usdt-tether",
   },
   {
     path: "/api/safety-score-history",
@@ -190,7 +190,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/safety-score-history?stablecoin=1",
+    probePath: "/api/safety-score-history?stablecoin=usdt-tether",
   },
   {
     path: "/api/stability-index",
@@ -223,7 +223,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: false,
     probeGroup: "public",
-    probePath: "/api/mint-burn-events?stablecoin=1",
+    probePath: "/api/mint-burn-events?stablecoin=usdt-tether",
   },
   {
     path: "/api/stress-signals",

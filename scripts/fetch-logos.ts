@@ -8,8 +8,8 @@ const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
 const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
 
 const EXTRA_GECKO_IDS: Record<string, string> = {
-  "tether-gold": "gold-xaut",
-  "pax-gold": "gold-paxg",
+  "tether-gold": "xaut-tether",
+  "pax-gold": "paxg-paxos",
 };
 
 interface DefiLlamaAsset {

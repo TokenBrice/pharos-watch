@@ -38,7 +38,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     let collateralTotal = 0;
     if (reportCards) {
       for (const coin of trackedData) {
-        if (coin.id === "1" || coin.id === "2") continue;
+        if (coin.id === "usdt-tether" || coin.id === "usdc-circle") continue;
         const card = reportCards[coin.id];
         if (!card || card.isDefunct) continue;
         const mcap = getCirculatingRaw(coin);

@@ -17,7 +17,7 @@ const DEFAULT_SUMMARY_TIMEFRAME: MintBurnSummaryTimeframePreset = {
 
 const SUMMARY_TIMEFRAME_OVERRIDES: Record<string, MintBurnSummaryTimeframePreset> = {
   // USDT mints/redeems in larger, less frequent batches, so shorter windows are often too sparse.
-  "1": { shortHours: 30 * DAY_HOURS, longHours: 90 * DAY_HOURS },
+  "usdt-tether": { shortHours: 30 * DAY_HOURS, longHours: 90 * DAY_HOURS },
 };
 
 export function formatMintBurnWindowLabel(hours: number): string {

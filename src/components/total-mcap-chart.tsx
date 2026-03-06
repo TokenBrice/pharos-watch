@@ -34,10 +34,10 @@ export function TotalMcapChart() {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
   const { data, isLoading } = useStablecoinCharts();
-  const { data: usdtHistory } = useSupplyHistory("1");
-  const { data: usdcHistory } = useSupplyHistory("2");
-  const { data: usdsHistory } = useSupplyHistory("209");
-  const { data: daiHistory } = useSupplyHistory("5");
+  const { data: usdtHistory } = useSupplyHistory("usdt-tether");
+  const { data: usdcHistory } = useSupplyHistory("usdc-circle");
+  const { data: usdsHistory } = useSupplyHistory("usds-sky");
+  const { data: daiHistory } = useSupplyHistory("dai-makerdao");
 
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -128,19 +128,19 @@ export function TotalMcapChart() {
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <AreaChart data={filteredData} margin={{ top: 5, right: 20, bottom: 20, left: 5 }}>
               <defs>
-                <linearGradient id="usdtGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="usdtGrad" x1={0} y1={0} x2={0} y2={1}>
                   <stop offset="5%" stopColor={USDT_GREEN} stopOpacity={0.5} />
                   <stop offset="95%" stopColor={USDT_GREEN} stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="usdcGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="usdcGrad" x1={0} y1={0} x2={0} y2={1}>
                   <stop offset="5%" stopColor={USDC_BLUE} stopOpacity={0.5} />
                   <stop offset="95%" stopColor={USDC_BLUE} stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="skyGrad" x1={0} y1={0} x2={0} y2={1}>
                   <stop offset="5%" stopColor={SKY_YELLOW} stopOpacity={0.5} />
                   <stop offset="95%" stopColor={SKY_YELLOW} stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="othersGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="othersGrad" x1={0} y1={0} x2={0} y2={1}>
                   <stop offset="5%" stopColor={OTHERS_SLATE} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.05} />
                 </linearGradient>
