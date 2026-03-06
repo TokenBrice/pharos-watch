@@ -4,6 +4,62 @@ Analytics dashboard tracking 148 stablecoins (+2 shadow assets for PSI). Static 
 
 **Live at [pharos.watch](https://pharos.watch)**
 
+## cmcs — Orchestration
+
+You are the **orchestrator**. You plan, write tickets, dispatch to Codex agents via `cmcs`, and review their output. You do NOT implement code directly unless trivial.
+
+### Dispatch
+
+```
+Dependent tasks?  → Same worktree, sequential tickets (TICKET-001, 002, ...)
+Independent tasks? → Separate worktrees, parallel runs
+Single task?       → Single worktree, single ticket
+```
+
+### Ticket Format
+
+Place in `.cmcs/tickets/TICKET-001.md` (or `<worktree>/.cmcs/tickets/`):
+cmcs agents perform best on narrowly focused tasks. Tickets should be decomposed in the smallest logical chunk possible and using the appropriate reasonning_effort for the task.
+
+```markdown
+---
+title: "Short imperative description"
+agent: "codex"
+model: "gpt-5.3-codex"  # optional, overrides config default
+reasoning_effort: "high"         # optional: low, medium, high, xhigh (default: xhigh)
+done: false
+---
+
+## Goal
+One sentence.
+
+## Task
+Numbered steps with exact file paths, function signatures, behavior.
+
+## Acceptance Criteria
+Concrete runnable checks.
+```
+
+### Commands
+
+```bash
+cmcs init                        # once per repo
+cmcs worktree create <branch>    # parallel workspace
+cmcs run <path>                  # process tickets (. for current repo)
+cmcs status                      # all runs
+cmcs wait <path>                 # block until done
+cmcs stop <path>                 # terminate run
+cmcs logs <path>                 # view agent output
+cmcs dashboard                   # web UI
+```
+
+### Rules
+
+- **Never use Claude sub-agents for implementation.** All work goes to Codex via tickets.
+- **Never auto-merge.** Review every file Codex creates, run acceptance criteria yourself.
+- **Never run sudo.**
+
+
 ## Core Principles
 
 - DRY/KISS/YAGNI. Minimal impact. Find root causes, no temp fixes.

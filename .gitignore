@@ -38,6 +38,7 @@ yarn-error.log*
 
 # worktrees
 .worktrees/
+worktrees
 
 # claude code
 .claude/settings.local.json
@@ -80,3 +81,11 @@ next-env.d.ts
 .claude/commands
 
 .claude/settings.json
+
+# cmcs
+.cmcs/
+
+# one-time migration artifacts
+migration-*.sql
+d1-backup-*.sql
+worker/d1-backup-*.sql

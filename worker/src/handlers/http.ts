@@ -70,6 +70,17 @@ export async function handleHttpRequest(
     return new Response(null, { status: 204, headers: corsHeaders(origin) });
   }
 
+  // Maintenance mode — clean 503 during DB migrations (set via `wrangler secret put MAINTENANCE_MODE`)
+  if (env.MAINTENANCE_MODE === "true") {
+    return addCorsHeaders(
+      new Response(JSON.stringify({ error: "maintenance", message: "Pharos is undergoing a brief maintenance. Please retry in a few minutes." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json", "Retry-After": "300" },
+      }),
+      origin,
+    );
+  }
+
   const url = new URL(request.url);
 
   const skipCache =

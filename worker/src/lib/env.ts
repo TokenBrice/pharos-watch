@@ -27,6 +27,7 @@ export interface Env {
   MINT_BURN_STALE_WARN_SEC?: string;
   MINT_BURN_STALE_CRIT_SEC?: string;
   MINT_BURN_ALERT_COOLDOWN_SEC?: string;
+  MAINTENANCE_MODE?: string;
 }
 
 export function parseCsvEnv(value: string | undefined): string[] {

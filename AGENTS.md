@@ -48,6 +48,7 @@ cd worker && npx tsc --noEmit      # Worker type-check
 - **Supply helpers**: use `getCirculatingRaw()` from `shared/lib/supply.ts`; all values are already in USD (DL converts)
 - **Hook timing**: `staleTime = cron interval`, `refetchInterval = 2× cron interval`
 - **Workers 6-connection limit is per-cron-trigger, not per-job** — all `ctx.waitUntil()` jobs on the same cron slot share one 6-connection pool. Consume response bodies before starting new fetch batches to release connections for sibling jobs.
+- **Import alias**: `@shared/*` maps to `shared/*` (both tsconfigs + vitest). Always use `@shared/lib/...` — e.g., `@shared/lib/stablecoins`, NOT `@shared/stablecoins` (missing `/lib/` resolves to a non-existent path)
 - **Worker shared boundary**: worker and frontend share runtime-neutral logic via `shared/lib/` (`@shared/*` alias); root tsconfig excludes `worker/` to avoid D1 type conflicts
 - **DL list vs detail API**: The list endpoint (`stablecoins.llama.fi/stablecoins`) returns `circulating` values already in USD for all peg types. The detail endpoint (`stablecoins.llama.fi/stablecoin/{id}`) returns native currency values for non-USD pegs. Do NOT multiply list endpoint values by price — that double-converts.
 - **No supply overrides**: Supply data comes from DefiLlama only. No on-chain, CMC, or DEX overrides. Prices fall back to CG → CMC → DexScreener when DL has no price.
