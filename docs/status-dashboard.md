@@ -142,6 +142,10 @@ Additional response fields:
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
 5. Sends alert on sustained divergence and independently alerts on sustained probe failures (3+ consecutive failing checks).
 
+`status_discrepancy_state` persists both divergence and probe-failure alert state:
+`consecutive_divergent`, `last_divergent_at`, `last_alert_at`,
+`consecutive_probe_failures`, `last_probe_failure_at`, and `last_probe_alert_at`.
+
 ### History endpoint (`GET /api/status-history`)
 
 Admin machine-readable timeline endpoint for internal tooling and incident audits.

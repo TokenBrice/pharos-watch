@@ -47,5 +47,8 @@ CREATE TABLE IF NOT EXISTS status_discrepancy_state (
   consecutive_divergent INTEGER NOT NULL DEFAULT 0,
   last_divergent_at INTEGER,
   last_alert_at INTEGER,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  consecutive_probe_failures INTEGER NOT NULL DEFAULT 0,
+  last_probe_failure_at INTEGER,
+  last_probe_alert_at INTEGER
 );
