@@ -295,6 +295,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
     ├── strict-contract-paths.ts  # Strict API contract path exports
     ├── strict-contract-paths.json # Strict API contract path source for smoke checks
     ├── stablecoins.ts            # Tracked stablecoin metadata list
+    ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
     ├── supply.ts                 # Supply helper utilities
     ├── classification.ts         # Classification labels/colors + threat/style maps
     ├── peg-rates.ts              # Peg reference derivation helpers

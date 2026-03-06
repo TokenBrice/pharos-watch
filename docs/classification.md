@@ -38,6 +38,9 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 Key fields on `StablecoinMeta` (see `shared/types/index.ts` for the full interface):
 
+- `id: string` — stablecoin ID (canonical ticker-issuer format in future; currently legacy)
+- `llamaId?: string` — DefiLlama numeric stablecoin ID for `stablecoins.llama.fi` calls when internal IDs diverge
+- `detailProvider?: "defillama" | "coingecko" | "commodity"` — explicit detail data source selector (migration field replacing ID-prefix heuristics)
 - `collateral?: string` — description of the collateral backing
 - `pegMechanism?: string` — description of the peg maintenance mechanism
 - `commodityOunces?: number` — troy ounces per token (for gold- and silver-pegged stablecoins)

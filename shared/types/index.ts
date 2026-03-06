@@ -68,7 +68,7 @@ export interface SupplyMethodConfig {
 export type DependencyType = "wrapper" | "mechanism" | "collateral";
 
 export interface DependencyWeight {
-  id: string;      // DefiLlama ID of upstream stablecoin
+  id: string;      // Stablecoin ID (canonical ticker-issuer format in future; currently legacy)
   weight: number;  // 0-1, fraction of collateral from this source
   type?: DependencyType;  // default: 'collateral' — see docs/plans/2026-02-27-dependency-type-ceiling-design.md
 }
@@ -79,7 +79,7 @@ export interface ReserveSlice {
   name: string;
   pct: number;        // percentage of total reserves (should sum to ~100)
   risk: ReserveRisk;  // risk tier for coloring
-  coinId?: string;           // DefiLlama ID of a tracked stablecoin (links to dependency graph)
+  coinId?: string;           // Stablecoin ID (canonical ticker-issuer format in future; currently legacy) — links to dependency graph
   depType?: DependencyType;  // dependency type when coinId is set; defaults to "collateral"
 }
 
@@ -106,7 +106,11 @@ export interface CoinNotice {
 }
 
 export interface StablecoinMeta {
-  id: string; // DefiLlama numeric ID
+  id: string; // Stablecoin ID (canonical ticker-issuer format in future; currently legacy)
+  /** DefiLlama numeric stablecoin ID (for API calls to stablecoins.llama.fi) */
+  llamaId?: string;
+  /** Data provider for detail page fetching -- replaces id-prefix heuristics */
+  detailProvider?: "defillama" | "coingecko" | "commodity";
   name: string;
   symbol: string;
   flags: StablecoinFlags;
