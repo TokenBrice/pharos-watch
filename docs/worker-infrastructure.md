@@ -51,7 +51,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `GITHUB_PAT` | string | No | Feedback → GitHub Issues/Discussions |
 | `GITHUB_REPO_NODE_ID` | string | No | Feature request → GitHub Discussions |
 | `GITHUB_DISCUSSION_CATEGORY_ID` | string | No | Discussion category routing |
-| `FEEDBACK_IP_SALT` | string | No | Rate limit IP hashing |
+| `FEEDBACK_IP_SALT` | string | Yes (for feedback) | Rate limit IP hashing for `POST /api/feedback` |
 | `TWITTER_API_KEY` | string | No | Digest → Twitter (OAuth consumer key) |
 | `TWITTER_API_SECRET` | string | No | Digest → Twitter (OAuth consumer secret) |
 | `TWITTER_ACCESS_TOKEN` | string | No | Digest → Twitter (access token) |
@@ -93,6 +93,12 @@ This pattern exists because `Env` bindings are only available inside handler fun
 | Other | Returns 405 `{ error: "Method not allowed" }` |
 
 Method/path flags (`mutatingAdmin`, `cacheBypass`, probe groups, status actions) are centralized in `shared/lib/api-endpoints.ts` and consumed by both worker and frontend status tooling.
+
+### Public API Rate Limiting
+
+- `worker/src/handlers/http.ts` applies a best-effort per-IP in-memory limiter for non-admin requests before router dispatch.
+- Default threshold: `60 requests / 60 seconds` per IP (isolate-local, not globally shared across all isolates/PoPs).
+- Admin requests authenticated with `X-Admin-Key` bypass this limiter.
 
 ### CORS Headers
 

@@ -3,6 +3,7 @@ import { initAlerts } from "../lib/alerts";
 import { initChainRpcs } from "../lib/chain-rpcs";
 import { initCoinGecko } from "../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
+import { checkRateLimit } from "../lib/rate-limit";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
@@ -30,6 +31,20 @@ function addCorsHeaders(response: Response, origin: string): Response {
     statusText: response.statusText,
     headers,
   });
+}
+
+function getClientIp(request: Request): string {
+  const cfIp = request.headers.get("CF-Connecting-IP")?.trim();
+  if (cfIp) return cfIp;
+  const forwarded = request.headers.get("X-Forwarded-For");
+  const forwardedIp = forwarded?.split(",")[0]?.trim();
+  return forwardedIp || "unknown";
+}
+
+function isAdminRequest(request: Request, adminKey?: string): boolean {
+  if (!adminKey) return false;
+  const requestAdminKey = request.headers.get("X-Admin-Key");
+  return requestAdminKey === adminKey;
 }
 
 export async function handleHttpRequest(
@@ -82,6 +97,12 @@ export async function handleHttpRequest(
   }
 
   const url = new URL(request.url);
+  if (url.pathname.startsWith("/api/") && !isAdminRequest(request, env.ADMIN_KEY)) {
+    const rateLimitResponse = checkRateLimit(getClientIp(request));
+    if (rateLimitResponse) {
+      return addCorsHeaders(rateLimitResponse, origin);
+    }
+  }
 
   const skipCache =
     request.method !== "GET" ||

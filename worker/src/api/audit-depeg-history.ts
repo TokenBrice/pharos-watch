@@ -44,8 +44,14 @@ export const handleAuditDepegHistory = withErrorHandler(
     return withAdmin(request, adminKey, async () => {
 
       // Pagination: ?limit=N&offset=M — Analyst plan (500 req/min) supports large batches
-      const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000);
-      const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, 100_000);
+      const limit = parseIntParam(url.searchParams.get("limit"), 200, 1, 100_000, "limit");
+      if (limit instanceof Response) {
+        return limit;
+      }
+      const offset = parseIntParam(url.searchParams.get("offset"), 0, 0, 100_000, "offset");
+      if (offset instanceof Response) {
+        return offset;
+      }
       // Direct delete: ?delete=ID1,ID2 skips CG checks and deletes specified events
       const deleteIds = url.searchParams.get("delete");
       // Dry run: preview deletions without touching the DB
@@ -58,7 +64,16 @@ export const handleAuditDepegHistory = withErrorHandler(
         );
       }
       // Optional supply filter: ?min-supply=N (default 0 = audit everything with a geckoId)
-      const minSupply = parseIntParam(url.searchParams.get("min-supply"), 0, 0, Number.MAX_SAFE_INTEGER);
+      const minSupply = parseIntParam(
+        url.searchParams.get("min-supply"),
+        0,
+        0,
+        Number.MAX_SAFE_INTEGER,
+        "min-supply",
+      );
+      if (minSupply instanceof Response) {
+        return minSupply;
+      }
       // Optional symbol filter: ?symbol=USDC (case-insensitive)
       const symbolFilter = url.searchParams.get("symbol")?.toUpperCase() ?? null;
 

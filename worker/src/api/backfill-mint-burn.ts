@@ -90,19 +90,59 @@ export const handleBackfillMintBurn = withErrorHandler(
 
     const chunkMax = ETHEREUM_CHUNK_SIZE;
     const defaultChunkSize = chunkMax;
+    const parsedFromBlock = parseIntParam(
+      url.searchParams.get("fromBlock"),
+      -1,
+      -1,
+      Number.MAX_SAFE_INTEGER,
+      "fromBlock",
+    );
+    if (parsedFromBlock instanceof Response) {
+      return parsedFromBlock;
+    }
+    const parsedToBlock = parseIntParam(
+      url.searchParams.get("toBlock"),
+      -1,
+      -1,
+      Number.MAX_SAFE_INTEGER,
+      "toBlock",
+    );
+    if (parsedToBlock instanceof Response) {
+      return parsedToBlock;
+    }
+    const parsedChunkSize = parseIntParam(
+      url.searchParams.get("chunkSize"),
+      defaultChunkSize,
+      1,
+      chunkMax,
+      "chunkSize",
+    );
+    if (parsedChunkSize instanceof Response) {
+      return parsedChunkSize;
+    }
+    const parsedMaxChunks = parseIntParam(
+      url.searchParams.get("maxChunks"),
+      DEFAULT_MAX_CHUNKS,
+      1,
+      500,
+      "maxChunks",
+    );
+    if (parsedMaxChunks instanceof Response) {
+      return parsedMaxChunks;
+    }
 
     const fromBlockParam =
       (typeof body.fromBlock === "number" ? Math.trunc(body.fromBlock) : null) ??
-      parseIntParam(url.searchParams.get("fromBlock"), -1, -1, Number.MAX_SAFE_INTEGER);
+      parsedFromBlock;
     const toBlockParam =
       (typeof body.toBlock === "number" ? Math.trunc(body.toBlock) : null) ??
-      parseIntParam(url.searchParams.get("toBlock"), -1, -1, Number.MAX_SAFE_INTEGER);
+      parsedToBlock;
     const chunkSizeParam =
       (typeof body.chunkSize === "number" ? Math.trunc(body.chunkSize) : null) ??
-      parseIntParam(url.searchParams.get("chunkSize"), defaultChunkSize, 1, chunkMax);
+      parsedChunkSize;
     const maxChunks =
       (typeof body.maxChunks === "number" ? Math.trunc(body.maxChunks) : null) ??
-      parseIntParam(url.searchParams.get("maxChunks"), DEFAULT_MAX_CHUNKS, 1, 500);
+      parsedMaxChunks;
 
     const currentLastBlock = await readMintBurnSyncState(db, configKey(config));
 

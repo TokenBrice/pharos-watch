@@ -20,8 +20,14 @@ import {
 
 export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = parseIntParam(params.get("limit"), 100, 1, 1000);
-  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
+  const limit = parseIntParam(params.get("limit"), 100, 1, 1000, "limit");
+  if (limit instanceof Response) {
+    return limit;
+  }
+  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
+  if (offset instanceof Response) {
+    return offset;
+  }
   const stablecoin = params.get("stablecoin");
   const active = params.get("active");
 

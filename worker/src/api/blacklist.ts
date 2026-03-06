@@ -30,8 +30,15 @@ type BlacklistRow = {
 
 export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Database, url: URL): Promise<Response> => {
   const params = url.searchParams;
-  const limit = parseIntParam(params.get("limit"), 0, 0, 5000);
-  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
+  const parsedLimit = parseIntParam(params.get("limit"), 1000, 0, 1000, "limit");
+  if (parsedLimit instanceof Response) {
+    return parsedLimit;
+  }
+  const limit = parsedLimit === 0 ? 1000 : parsedLimit;
+  const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
+  if (offset instanceof Response) {
+    return offset;
+  }
   const stablecoin = params.get("stablecoin");
   const chain = params.get("chain");
   const eventType = params.get("eventType");

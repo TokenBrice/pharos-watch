@@ -27,6 +27,8 @@ export interface FeedbackEnv {
 
 const GITHUB_OWNER = "TokenBrice";
 const GITHUB_REPO = "stablecoin-dashboard";
+const FEEDBACK_RATE_LIMIT_WINDOW_SEC = 600;
+const FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS = 3;
 
 // ── Rate limiting ─────────────────────────────────────────────────────────
 
@@ -42,19 +44,27 @@ async function checkRateLimit(
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const ipHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
 
-  const row = await db
-    .prepare("SELECT COUNT(*) as cnt FROM feedback_rate_limit WHERE ip_hash = ? AND submitted_at > ?")
-    .bind(ipHash, now - 600)
-    .first<{ cnt: number }>();
-
-  // Note: D1 lacks row-level locking, so concurrent requests can both pass this check.
-  // In practice, this allows a small burst above the limit (harmless for our use case).
-  if ((row?.cnt ?? 0) >= 3) return false;
-
-  await db
-    .prepare("INSERT INTO feedback_rate_limit (ip_hash, submitted_at) VALUES (?, ?)")
-    .bind(ipHash, now)
+  // Single-statement insert gate avoids race from check-then-insert under concurrency.
+  const insertResult = await db
+    .prepare(
+      `INSERT INTO feedback_rate_limit (ip_hash, submitted_at)
+       SELECT ?, ?
+       WHERE (
+         SELECT COUNT(*) FROM feedback_rate_limit
+         WHERE ip_hash = ? AND submitted_at > ?
+       ) < ?`,
+    )
+    .bind(
+      ipHash,
+      now,
+      ipHash,
+      now - FEEDBACK_RATE_LIMIT_WINDOW_SEC,
+      FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+    )
     .run();
+  if ((insertResult.meta?.changes ?? 0) === 0) {
+    return false;
+  }
 
   // Prune rows older than 1 hour (non-blocking, best-effort)
   db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
@@ -312,12 +322,16 @@ export async function handleFeedback(
   }
 
   // Rate limiting
+  const forwardedFor = request.headers.get("X-Forwarded-For");
   const ip =
     request.headers.get("CF-Connecting-IP") ??
-    request.headers.get("X-Forwarded-For") ??
+    forwardedFor?.split(",")[0]?.trim() ??
     "unknown";
-  const salt = env.FEEDBACK_IP_SALT ?? "pharos-default-salt";
-  const allowed = await checkRateLimit(db, ip, salt);
+  if (!env.FEEDBACK_IP_SALT) {
+    console.error("[feedback] FEEDBACK_IP_SALT secret not configured");
+    return errorResponse(503, "Service misconfigured");
+  }
+  const allowed = await checkRateLimit(db, ip, env.FEEDBACK_IP_SALT);
   if (!allowed) {
     return errorResponse(429, "Too many submissions. Please wait a few minutes.");
   }

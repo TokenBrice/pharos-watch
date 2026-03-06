@@ -65,8 +65,14 @@ export const handleMintBurnEvents = withErrorHandler(
     const minAmountRaw = params.get("minAmount");
     const minAmount = minAmountRaw !== null ? parseFloat(minAmountRaw) : null;
 
-    const limit = parseIntParam(params.get("limit"), 50, 1, 500);
-    const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER);
+    const limit = parseIntParam(params.get("limit"), 50, 1, 500, "limit");
+    if (limit instanceof Response) {
+      return limit;
+    }
+    const offset = parseIntParam(params.get("offset"), 0, 0, Number.MAX_SAFE_INTEGER, "offset");
+    if (offset instanceof Response) {
+      return offset;
+    }
 
     // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?", "chain_id = ?"];

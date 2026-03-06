@@ -207,7 +207,10 @@ export const handleMintBurnFlows = withErrorHandler(
   async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoinParam = params.get("stablecoin");
-    const hours = parseIntParam(params.get("hours"), 24, 1, 720);
+    const hours = parseIntParam(params.get("hours"), 24, 1, 720, "hours");
+    if (hours instanceof Response) {
+      return hours;
+    }
 
     if (stablecoinParam) {
       const resolved = resolveOrReject(stablecoinParam, `path=${url.pathname}`);

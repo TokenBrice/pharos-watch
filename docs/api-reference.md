@@ -77,7 +77,7 @@ All error responses use `{ "error": "message" }` JSON format.
 | 400 | Bad Request | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input) |
 | 401 | Unauthorized | Admin endpoint called without valid `X-Admin-Key` header |
 | 404 | Not Found | Unknown stablecoin ID or missing resource |
-| 429 | Too Many Requests | Rate limit exceeded (feedback endpoint) |
+| 429 | Too Many Requests | Rate limit exceeded (global public API limiter or feedback-specific limiter) |
 | 500 | Internal Server Error | Unhandled exception (caught by `withErrorHandler`) |
 | 502 | Bad Gateway | Upstream (DefiLlama / CoinGecko) fetch failed |
 | 503 | Service Unavailable | Cache-passthrough endpoint where cache has never been populated |
@@ -283,7 +283,7 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. 
 | `stablecoin` | `string` | — | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT` |
 | `chain` | `string` | — | Filter by chain name (e.g. `Ethereum`, `Tron`) |
 | `eventType` | `string` | — | Filter by type: `blacklist`, `unblacklist`, `destroy` |
-| `limit` | `integer` | 0 (all) | Max results (0–5000; 0 means no limit) |
+| `limit` | `integer` | `1000` | Max results (1–1000; `0` maps to default `1000`) |
 | `offset` | `integer` | `0` | Pagination offset |
 
 **Response**
@@ -1376,6 +1376,10 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 **Cache:** no edge cache (POST passthrough)
 
+**Rate limits**
+- Global public API limiter: best-effort per-IP in-memory limiter (`60 requests / 60 seconds`) for non-admin requests.
+- Feedback endpoint limiter: `3 submissions / 10 minutes` per salted IP hash in D1.
+
 **Request body**
 
 ```json
@@ -1412,6 +1416,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 - `400` invalid payload
 - `429` rate limited (3 submissions / 10 minutes per salted IP hash)
 - `500` forwarding/processing failure
+- `503` service misconfigured (missing `FEEDBACK_IP_SALT` or `GITHUB_PAT`)
 
 ---
 

@@ -14,6 +14,7 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 const BATCH_SIZE = 3;
+const BATCH_CHUNK_SIZE = 100;
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
  *  Mirrors the live system's pending → re-check → promote flow. */
@@ -384,7 +385,11 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
             e.startedAt, e.endedAt, e.startPrice, e.peakPrice, e.recoveryPrice, e.pegRef
           )
         );
-        await db.batch([deleteStmt, ...insertStmts]);
+        await db.batch([deleteStmt]);
+        for (let i = 0; i < insertStmts.length; i += BATCH_CHUNK_SIZE) {
+          const chunk = insertStmts.slice(i, i + BATCH_CHUNK_SIZE);
+          await db.batch(chunk);
+        }
         totalEvents += events.length;
       } else {
         await deleteStmt.run();

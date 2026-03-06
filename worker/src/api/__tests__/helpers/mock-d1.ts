@@ -11,6 +11,8 @@ interface MockTable {
   rows: unknown[];
   /** Single row to return from .first() (defaults to rows[0]) */
   first?: unknown;
+  /** Optional metadata for .run() responses */
+  runMeta?: Record<string, unknown>;
 }
 
 export function mockD1(tables: MockTable[] = []): D1Database {
@@ -27,7 +29,7 @@ export function mockD1(tables: MockTable[] = []): D1Database {
       }),
       first: async <T>() =>
         (findTable(sql)?.first ?? findTable(sql)?.rows?.[0] ?? null) as T | null,
-      run: async () => ({ success: true, meta: {} }),
+      run: async () => ({ success: true, meta: findTable(sql)?.runMeta ?? {} }),
     }),
     all: async <T>() => ({
       results: (findTable(sql)?.rows ?? []) as T[],
@@ -36,7 +38,7 @@ export function mockD1(tables: MockTable[] = []): D1Database {
     }),
     first: async <T>() =>
       (findTable(sql)?.first ?? findTable(sql)?.rows?.[0] ?? null) as T | null,
-    run: async () => ({ success: true, meta: {} }),
+    run: async () => ({ success: true, meta: findTable(sql)?.runMeta ?? {} }),
   });
 
   return {

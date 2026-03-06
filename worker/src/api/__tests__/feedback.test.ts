@@ -69,7 +69,7 @@ describe("handleFeedback", () => {
 
   it("returns 400 for invalid feedback type", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
     const res = await handleFeedback(
       db,
@@ -84,7 +84,7 @@ describe("handleFeedback", () => {
 
   it("returns 400 when description is too short", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
     const res = await handleFeedback(
       db,
@@ -99,7 +99,7 @@ describe("handleFeedback", () => {
 
   it("returns 400 when title is missing for bug type", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
     const res = await handleFeedback(
       db,
@@ -114,7 +114,7 @@ describe("handleFeedback", () => {
 
   it("returns 400 when pageUrl does not start with /", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
     const res = await handleFeedback(
       db,
@@ -144,7 +144,7 @@ describe("handleFeedback", () => {
 
   it("returns 429 when rate limited", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 5 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 0 } },
     ]);
     const res = await handleFeedback(
       db,
@@ -157,9 +157,22 @@ describe("handleFeedback", () => {
     expect(body.error).toMatch(/Too many/i);
   });
 
+  it("returns 503 when FEEDBACK_IP_SALT is not configured", async () => {
+    const db = mockD1([]);
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody()),
+      { GITHUB_PAT: "ghp_test_token" }
+    );
+
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/misconfigured/i);
+  });
+
   it("returns 503 when GITHUB_PAT is not configured", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
     // Explicitly omit GITHUB_PAT (not undefined — ?? would fill the default)
     const env: FeedbackEnv = { FEEDBACK_IP_SALT: "test-salt" };
@@ -176,7 +189,7 @@ describe("handleFeedback", () => {
 
   it("returns 200 and creates GitHub issue for bug report", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
 
     // Mock successful GitHub Issues API response
@@ -204,7 +217,7 @@ describe("handleFeedback", () => {
 
   it("returns 200 and creates GitHub issue for data-correction", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
       // verifyDataCorrection will query the stablecoins cache
       { match: "cache", rows: [], first: null },
     ]);
@@ -231,7 +244,7 @@ describe("handleFeedback", () => {
 
   it("tries GitHub Discussion first for feature-request, falls back to issue", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
 
     // First call: GraphQL Discussion creation fails
@@ -266,7 +279,7 @@ describe("handleFeedback", () => {
 
   it("returns 500 when GitHub API call fails", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
     ]);
 
     fetchSpy.mockResolvedValueOnce(
@@ -286,7 +299,7 @@ describe("handleFeedback", () => {
 
   it("does not require title for data-correction type", async () => {
     const db = mockD1([
-      { match: "feedback_rate_limit", rows: [], first: { cnt: 0 } },
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
       { match: "cache", rows: [], first: null },
     ]);
 

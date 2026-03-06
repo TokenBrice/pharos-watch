@@ -49,10 +49,24 @@ export function selectBackfillCoins<T extends BackfillCoin>(
     return { coins: match };
   }
 
-  const batchSize = allowBatchSizeOverride
-    ? parseIntParam(url.searchParams.get(batchSizeParam), options.defaultBatchSize, minBatchSize, maxBatchSize)
-    : options.defaultBatchSize;
-  const batch = parseIntParam(url.searchParams.get(batchParam), 0, 0, maxBatch);
+  let batchSize = options.defaultBatchSize;
+  if (allowBatchSizeOverride) {
+    const parsedBatchSize = parseIntParam(
+      url.searchParams.get(batchSizeParam),
+      options.defaultBatchSize,
+      minBatchSize,
+      maxBatchSize,
+      batchSizeParam,
+    );
+    if (parsedBatchSize instanceof Response) {
+      return { response: parsedBatchSize };
+    }
+    batchSize = parsedBatchSize;
+  }
+  const batch = parseIntParam(url.searchParams.get(batchParam), 0, 0, maxBatch, batchParam);
+  if (batch instanceof Response) {
+    return { response: batch };
+  }
   const start = batch * batchSize;
   return { coins: allCoins.slice(start, start + batchSize) };
 }

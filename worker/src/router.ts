@@ -41,7 +41,7 @@ import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 
-import { resolveOrReject } from "./lib/api-utils";
+import { resolveOrReject, withErrorHandler } from "./lib/api-utils";
 
 interface RouteContext {
   url: URL;
@@ -143,7 +143,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     }
     return handleFeedback(db, request, feedbackEnv ?? {});
   }],
-  ["/api/trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
+  ["/api/trigger-digest", withErrorHandler("route-trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     if (!request) {
@@ -170,8 +170,8 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
         });
       },
     );
-  }],
-  ["/api/reset-blacklist-sync", async ({ db, request, adminKey }) => {
+  })],
+  ["/api/reset-blacklist-sync", withErrorHandler("route-reset-blacklist-sync", async ({ db, request, adminKey }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     if (!request) {
@@ -198,8 +198,8 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
         );
       },
     );
-  }],
-  ["/api/debug-sync-state", async ({ db, request, adminKey }) => {
+  })],
+  ["/api/debug-sync-state", withErrorHandler("route-debug-sync-state", async ({ db, request, adminKey }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     const rows = await db
@@ -208,7 +208,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     return new Response(JSON.stringify(rows.results), {
       headers: { "Content-Type": "application/json" },
     });
-  }],
+  })],
 ]);
 
 export const ROUTER_STATIC_PATHS = getRouterHandledPaths();
@@ -272,7 +272,17 @@ export function route(
   // /api/stablecoin-summary/:id — resolve to canonical ID before handler lookup
   const summaryMatch = path.match(/^\/api\/stablecoin-summary\/(.+)$/);
   if (summaryMatch) {
-    const id = decodeURIComponent(summaryMatch[1]);
+    let id: string;
+    try {
+      id = decodeURIComponent(summaryMatch[1]);
+    } catch {
+      return Promise.resolve(
+        new Response(JSON.stringify({ error: "Malformed URI" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
     const resolved = resolveOrReject(id, `path=${url.pathname}`);
     if (resolved instanceof Response) {
       return Promise.resolve(resolved);
@@ -284,7 +294,17 @@ export function route(
   // /api/stablecoin/:id — resolve to canonical ID before handler lookup
   const detailMatch = path.match(/^\/api\/stablecoin\/(.+)$/);
   if (detailMatch) {
-    const id = decodeURIComponent(detailMatch[1]);
+    let id: string;
+    try {
+      id = decodeURIComponent(detailMatch[1]);
+    } catch {
+      return Promise.resolve(
+        new Response(JSON.stringify({ error: "Malformed URI" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+    }
     const resolved = resolveOrReject(id, `path=${url.pathname}`);
     if (resolved instanceof Response) {
       return Promise.resolve(resolved);

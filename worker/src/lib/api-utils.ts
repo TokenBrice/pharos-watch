@@ -177,10 +177,18 @@ export function parseIntParam(
   defaultVal: number,
   min: number,
   max: number,
-): number {
+  name = "parameter",
+): number | Response {
   if (value == null) return defaultVal;
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? defaultVal : Math.min(max, Math.max(min, parsed));
+  const trimmed = value.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    return errorResponse(400, `Invalid ${name}: must be a number`);
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed)) {
+    return errorResponse(400, `Invalid ${name}: must be a number`);
+  }
+  return Math.min(max, Math.max(min, parsed));
 }
 
 export interface MethodologyEnvelopeInput {
@@ -246,7 +254,11 @@ export function parseStablecoinHistoryQuery(
     opts.defaultDays,
     opts.minDays,
     opts.maxDays,
+    "days",
   );
+  if (days instanceof Response) {
+    return days;
+  }
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
 
   return { stablecoinId: resolved.canonicalId, days, cutoff };

@@ -102,11 +102,10 @@ Implemented in D1 via the `feedback_rate_limit` table. Logic:
 
 1. The client IP is taken from `CF-Connecting-IP` → `X-Forwarded-For` → `"unknown"`.
 2. The IP is hashed: `SHA-256(ip + FEEDBACK_IP_SALT)`, truncated to 32 hex characters.
-3. If the hash has ≥ 3 rows in the last 600 seconds → `429 Too Many Submissions`.
-4. Otherwise, a new row is inserted.
+3. A single SQL statement atomically inserts only when the 10-minute count is below 3:
+   - `INSERT INTO ... SELECT ... WHERE (SELECT COUNT(*)) < 3`
+4. If no row is inserted, the endpoint returns `429 Too Many Submissions`.
 5. Rows older than 3600 seconds are pruned in a non-blocking fire-and-forget call.
-
-Note: D1 lacks row-level locking, so a small burst above 3 is possible in practice; this is acceptable for the use case.
 
 **D1 schema** (`worker/migrations/0029_feedback_rate_limit.sql`):
 
@@ -182,6 +181,7 @@ All user-supplied string fields are sanitised: newlines stripped, lengths capped
 | `400` | `{"error": "<message>"}` | Validation failure |
 | `429` | `{"error": "Too many submissions. Please wait a few minutes."}` | Rate limit exceeded |
 | `500` | `{"error": "Failed to submit feedback. Please try again."}` | GitHub API error |
+| `503` | `{"error": "Service misconfigured"}` | `FEEDBACK_IP_SALT` missing |
 | `503` | `{"error": "Feedback service temporarily unavailable"}` | `GITHUB_PAT` not configured |
 
 ---
@@ -193,11 +193,11 @@ Set in `wrangler.toml` (non-secret) or via Cloudflare dashboard / `wrangler secr
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
 | `GITHUB_PAT` | Secret | Yes | Personal access token with `repo` scope (write Issues + Discussions) |
-| `FEEDBACK_IP_SALT` | Secret | Recommended | Random string used to hash IPs before storage |
+| `FEEDBACK_IP_SALT` | Secret | Yes | Random string used to hash IPs before storage |
 | `GITHUB_REPO_NODE_ID` | Var | No | GraphQL node ID of the repo (enables Discussion routing for feature requests) |
 | `GITHUB_DISCUSSION_CATEGORY_ID` | Var | No | GraphQL ID of the target Discussion category |
 
-Without `GITHUB_PAT` the endpoint returns 503. Without `GITHUB_REPO_NODE_ID` / `GITHUB_DISCUSSION_CATEGORY_ID` feature requests fall back to Issues silently.
+Without `FEEDBACK_IP_SALT` or `GITHUB_PAT` the endpoint returns 503. Without `GITHUB_REPO_NODE_ID` / `GITHUB_DISCUSSION_CATEGORY_ID` feature requests fall back to Issues silently.
 
 To retrieve the GraphQL IDs:
 

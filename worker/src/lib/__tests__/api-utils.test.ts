@@ -45,12 +45,20 @@ describe("parseIntParam", () => {
     expect(parseIntParam("9999", 100, 1, 500)).toBe(500);
   });
 
-  it("returns default for NaN input", () => {
-    expect(parseIntParam("abc", 100, 1, 1000)).toBe(100);
+  it("returns 400 response for malformed input", async () => {
+    const result = parseIntParam("abc", 100, 1, 1000, "limit");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid limit: must be a number" });
   });
 
-  it("returns default for empty string", () => {
-    expect(parseIntParam("", 100, 1, 1000)).toBe(100);
+  it("returns 400 response for empty string", async () => {
+    const result = parseIntParam("", 100, 1, 1000, "offset");
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid offset: must be a number" });
   });
 });
 
@@ -88,13 +96,24 @@ describe("parseStablecoinHistoryQuery", () => {
     expect(bounded.days).toBe(1825);
 
     const withDefault = parseStablecoinHistoryQuery(
-      new URL("https://x/api/yield-history?stablecoin=1&days=abc"),
+      new URL("https://x/api/yield-history?stablecoin=1"),
       { defaultDays: 90, minDays: 1, maxDays: 365 },
     );
     if (withDefault instanceof Response) {
       throw new Error("expected parsed query");
     }
     expect(withDefault.days).toBe(90);
+  });
+
+  it("returns 400 when days is malformed", async () => {
+    const result = parseStablecoinHistoryQuery(
+      new URL("https://x/api/yield-history?stablecoin=1&days=abc"),
+      { defaultDays: 90, minDays: 1, maxDays: 365 },
+    );
+    expect(result).toBeInstanceOf(Response);
+    const response = result as Response;
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "Invalid days: must be a number" });
   });
 });
 

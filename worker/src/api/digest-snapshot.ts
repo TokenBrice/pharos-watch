@@ -25,19 +25,29 @@ interface BlacklistRow {
   timestamp: number;
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export const handleDigestSnapshot = withErrorHandler("digest-snapshot", async (
   db: D1Database,
   url: URL,
 ): Promise<Response> => {
   const date = url.searchParams.get("date");
-  if (!date || !DATE_RE.test(date)) {
+  const match = date?.match(DATE_RE);
+  if (!match) {
+    return errorResponse(400, "Missing or invalid ?date=YYYY-MM-DD parameter");
+  }
+  const parsed = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== Number(match[1]) ||
+    parsed.getUTCMonth() + 1 !== Number(match[2]) ||
+    parsed.getUTCDate() !== Number(match[3])
+  ) {
     return errorResponse(400, "Missing or invalid ?date=YYYY-MM-DD parameter");
   }
 
   // Compute UTC day boundaries (epoch seconds)
-  const dayStart = Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 1000);
+  const dayStart = Math.floor(parsed.getTime() / 1000);
   const dayEnd = dayStart + 86_400;
 
   // Find the digest row for this date + the previous one for deltas.

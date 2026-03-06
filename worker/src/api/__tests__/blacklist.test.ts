@@ -6,6 +6,43 @@ import { handleBlacklist } from "../blacklist";
 describe("handleBlacklist", () => {
   const row = makeBlacklistRow();
 
+  function makeDbWithDataBindCapture(capture: (args: unknown[]) => void): D1Database {
+    const stmt = (sql: string) => ({
+      bind: (...args: unknown[]) => {
+        if (sql.includes("SELECT * FROM blacklist_events")) {
+          capture(args);
+        }
+        return {
+          all: async <T>() => ({
+            results: (sql.includes("COUNT")
+              ? [{ total: 0 }]
+              : []) as T[],
+            success: true,
+            meta: {},
+          }),
+          first: async <T>() => null as T | null,
+          run: async () => ({ success: true, meta: {} }),
+        };
+      },
+      all: async <T>() => ({ results: [] as T[], success: true, meta: {} }),
+      first: async <T>() => null as T | null,
+      run: async () => ({ success: true, meta: {} }),
+    });
+
+    return {
+      prepare: (sql: string) => stmt(sql),
+      batch: async (stmts: { all: () => Promise<unknown> }[]) => {
+        const results = [];
+        for (const statement of stmts) {
+          results.push(await statement.all());
+        }
+        return results as unknown[];
+      },
+      exec: async () => ({ count: 0, duration: 0 }),
+      dump: async () => new ArrayBuffer(0),
+    } as unknown as D1Database;
+  }
+
   it("returns 200 with events and total", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },
@@ -125,5 +162,28 @@ describe("handleBlacklist", () => {
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
+  });
+
+  it("caps oversized limit to 1000", async () => {
+    let dataBinds: unknown[] = [];
+    const db = makeDbWithDataBindCapture((args) => {
+      dataBinds = args;
+    });
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=999999"));
+    expect(res.status).toBe(200);
+    expect(dataBinds).toContain(1000);
+    expect(dataBinds).not.toContain(999999);
+  });
+
+  it("maps limit=0 to default limit 1000", async () => {
+    let dataBinds: unknown[] = [];
+    const db = makeDbWithDataBindCapture((args) => {
+      dataBinds = args;
+    });
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=0"));
+    expect(res.status).toBe(200);
+    expect(dataBinds).toContain(1000);
   });
 });

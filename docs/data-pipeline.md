@@ -69,11 +69,11 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 7. **Depeg interval merge**: `computePegScore()` and `computePegStability()` merge overlapping depeg intervals before summing duration
 8. **Depeg direction handling**: If a coin flips from below-peg to above-peg (or vice versa) without recovering, the old event is closed and a new one opened with the correct direction
 9. **Peg score consistency**: Both the detail page and peg-summary API use the same tracking-window start helper: `coinTrackingStart(...)`, which applies `max(firstSeen, fourYearsAgo)` when first-seen data exists
-10. **Backfill atomicity**: `backfill-depegs.ts` runs DELETE + INSERT via `batchExecute()` (auto-chunks to D1's 100-statement batch limit while maintaining transactional semantics per chunk)
+10. **Backfill batch safety**: `backfill-depegs.ts` chunks depeg INSERT statements into groups of 100 and executes them sequentially after the per-coin DELETE to stay within D1 batch limits
 11. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 12. **Freshness header**: `/api/stablecoins` returns `X-Data-Age` (seconds since last cache write)
 13. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) hash both keys with SHA-256 before `crypto.subtle.timingSafeEqual()`, preventing both timing side-channel attacks and length-leak attacks
-14. **Pagination defaults**: `/api/depeg-events` defaults `limit` to 100 and caps at 1000 (`Math.min(Math.max(parsed || 100, 1), 1000)`); `/api/blacklist` defaults `limit` to 0 (all results) and caps at 5000 (`Math.min(Math.max(parsed || 0, 0), 5000)`)
+14. **Pagination defaults**: `/api/depeg-events` defaults `limit` to 100 and caps at 1000; `/api/blacklist` defaults `limit` to 1000, caps at 1000, and treats `limit=0` as "use default"
 15. **Unbounded query guard**: `/api/peg-summary` bounds via the 4-year `started_at >` filter on the depeg_events query
 16. **Cache-empty 503**: `/api/peg-summary` returns HTTP 503 (not 200) when cache is empty, signaling data unavailability
 17. **Orphan depeg cleanup**: `detectDepegEvents()` closes open depeg events whose stablecoin was not processed during the current run (removed from tracked list, failed validation, etc.)

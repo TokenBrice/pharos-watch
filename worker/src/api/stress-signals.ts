@@ -22,7 +22,10 @@ export const handleStressSignals = withErrorHandler(
   "stress-signals",
   async (db: D1Database, url: URL): Promise<Response> => {
     const stablecoinId = url.searchParams.get("stablecoin");
-    const days = parseIntParam(url.searchParams.get("days"), 30, 1, 365);
+    const days = parseIntParam(url.searchParams.get("days"), 30, 1, 365, "days");
+    if (days instanceof Response) {
+      return days;
+    }
 
     if (stablecoinId) {
       const resolved = resolveOrReject(stablecoinId, `path=${url.pathname}`);
