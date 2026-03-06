@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useQueries } from "@tanstack/react-query";
 import { useLogos } from "@/hooks/use-logos";
@@ -10,6 +10,7 @@ import { useBluechipRatings } from "@/hooks/use-bluechip-ratings";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { apiFetch } from "@/lib/api";
@@ -69,7 +70,7 @@ const SYMBOL_TO_COIN = new Map<string, CoinOption>(
   ]),
 );
 
-/** Lookup from numeric ID string to coin — primary URL identifier (avoids duplicate-symbol collisions). */
+/** Lookup from canonical ID string to coin — primary URL identifier (avoids duplicate-symbol collisions). */
 const ID_TO_COIN = new Map<string, CoinOption>(
   TRACKED_STABLECOINS.map((c) => [
     c.id,
@@ -130,7 +131,7 @@ export function CompareClient() {
   const { searchParams, replaceParams } = useUrlFilters();
 
   // Derive selected IDs from URL (single source of truth).
-  // Accepts both numeric IDs (new format) and lowercase symbols (legacy/presets).
+  // Accepts canonical IDs, lowercase symbols (presets), and legacy IDs.
   const selectedIds = useMemo(() => {
     const param = searchParams.get("coins");
     if (!param) return [];
@@ -138,12 +139,42 @@ export function CompareClient() {
       .split(",")
       .map((s) => {
         const trimmed = s.trim();
-        return ID_TO_COIN.get(trimmed) ?? SYMBOL_TO_COIN.get(trimmed.toLowerCase());
+        const byId = ID_TO_COIN.get(trimmed);
+        if (byId) return byId;
+        const bySym = SYMBOL_TO_COIN.get(trimmed.toLowerCase());
+        if (bySym) return bySym;
+        const resolved = resolveStablecoinId(trimmed, { allowLegacy: true });
+        return resolved ? ID_TO_COIN.get(resolved.canonicalId) ?? null : null;
       })
       .filter((c): c is CoinOption => !!c)
       .slice(0, MAX_COINS)
       .map((c) => c.id);
   }, [searchParams]);
+
+  // Normalize legacy IDs in the URL to canonical IDs.
+  useEffect(() => {
+    const param = searchParams.get("coins");
+    if (!param) return;
+    const canonicalSegments = param
+      .split(",")
+      .map((s) => {
+        const trimmed = s.trim();
+        const byId = ID_TO_COIN.get(trimmed);
+        if (byId) return byId.id;
+        const bySym = SYMBOL_TO_COIN.get(trimmed.toLowerCase());
+        if (bySym) return bySym.id;
+        const resolved = resolveStablecoinId(trimmed, { allowLegacy: true });
+        return resolved ? resolved.canonicalId : null;
+      })
+      .filter((id): id is string => !!id)
+      .filter((id, i, arr) => arr.indexOf(id) === i);
+    const canonicalParam = canonicalSegments.join(",");
+    if (canonicalParam && param !== canonicalParam) {
+      replaceParams((params) => {
+        params.set("coins", canonicalParam);
+      });
+    }
+  }, [searchParams, replaceParams]);
 
   const range = (searchParams.get("range") as TimeRangeOption) || "all";
 
@@ -161,7 +192,7 @@ export function CompareClient() {
     [replaceParams],
   );
 
-  // Write selected IDs to URL (using numeric IDs to avoid duplicate-symbol collisions)
+  // Write selected IDs to URL (using canonical IDs to avoid duplicate-symbol collisions)
   const setSelectedIds = useCallback(
     (updater: (prev: string[]) => string[]) => {
       const next = updater(selectedIds);
