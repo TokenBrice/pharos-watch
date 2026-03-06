@@ -6,6 +6,7 @@ export default defineConfig({
     exclude: [
       ...configDefaults.exclude,
       ".worktrees/**",
+      "worktrees/**",
       ".next/**",
       "out/**",
       "coverage/**",
@@ -16,6 +17,7 @@ export default defineConfig({
       exclude: [
         ...configDefaults.exclude,
         ".worktrees/**",
+        "worktrees/**",
         ".next/**",
         "out/**",
         "coverage/**",
