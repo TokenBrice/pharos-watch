@@ -133,7 +133,7 @@ export async function handleScheduledEvent(
         runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(db, signal))
       ));
       // Status system self-check: persists hysteresis state and probes critical endpoints.
-      ctx.waitUntil(runLeasedCron("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, signal)));
+      ctx.waitUntil(runLeasedCron("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, env.SELF_URL, signal)));
       // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
       ctx.waitUntil((async () => {
         try {

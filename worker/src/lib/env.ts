@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   CORS_ORIGIN: string;
+  SELF_URL?: string;
   ETHERSCAN_API_KEY?: string;
   TRONGRID_API_KEY?: string;
   DRPC_API_KEY?: string;

@@ -136,11 +136,11 @@ Additional response fields:
 
 `status-self-check` runs on `*/15 * * * *` and:
 
-1. Probes critical public/admin read endpoints.
+1. Probes critical public/admin read endpoints over real HTTPS via `fetch()` against `SELF_URL` (fallback: `https://api.pharos.watch`), with a 10s timeout per endpoint.
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
-4. Tracks divergence streak in `status_discrepancy_state`.
-5. Sends alert on sustained divergence.
+4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
+5. Sends alert on sustained divergence and independently alerts on sustained probe failures (3+ consecutive failing checks).
 
 ### History endpoint (`GET /api/status-history`)
 
@@ -206,4 +206,4 @@ Mutating admin paths are protected by method guardrails:
 | `worker/src/api/status-history.ts` | Machine-readable status timeline/history endpoint |
 | `worker/src/api/health.ts` | Public health endpoint for cache/circuit observability |
 | `worker/src/lib/status-reliability.ts` | Hysteresis, transitions, probes, discrepancy helpers |
-| `worker/src/cron/status-self-check.ts` | Synthetic probe + divergence alert cron |
+| `worker/src/cron/status-self-check.ts` | Real-HTTP self-probe + divergence/probe-failure alert cron |

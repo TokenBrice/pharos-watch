@@ -347,7 +347,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
     │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
     │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
-    │   └── status-self-check.ts  # Status reliability cron: probes, hysteresis persistence, discrepancy alerts
+    │   └── status-self-check.ts  # Status reliability cron: real HTTP probes, hysteresis persistence, discrepancy/probe-failure alerts
     ├── api/
     │   ├── stablecoins.ts        # GET /api/stablecoins
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id (orchestrator + branch routing)

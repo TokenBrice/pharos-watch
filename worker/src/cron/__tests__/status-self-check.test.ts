@@ -1,13 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const routeMock = vi.fn(async () => new Response("{}", { status: 200 }));
+const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
 const sendAlertMock = vi.fn(async () => true);
 const writeStatusProbeRunMock = vi.fn(async () => {});
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
   consecutiveDivergent: 2,
   lastAlertAt: null,
+  consecutiveProbeFailures: 0,
+  lastProbeAlertAt: null,
 }));
 const markDiscrepancyAlertSentMock = vi.fn(async () => {});
+const markProbeFailureAlertSentMock = vi.fn(async () => {});
 const evaluateStatusAndPersistMock = vi.fn(async () => ({
   raw: { rawOverallStatus: "healthy" },
   effectiveStatus: "stale",
@@ -24,7 +27,6 @@ const buildDiscrepancyMock = vi.fn(
   }),
 );
 
-vi.mock("../../router", () => ({ route: routeMock }));
 vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
 vi.mock("../../api/status", () => ({
   evaluateStatusAndPersist: evaluateStatusAndPersistMock,
@@ -32,6 +34,7 @@ vi.mock("../../api/status", () => ({
 vi.mock("../../lib/status-reliability", () => ({
   buildDiscrepancy: buildDiscrepancyMock,
   markDiscrepancyAlertSent: markDiscrepancyAlertSentMock,
+  markProbeFailureAlertSent: markProbeFailureAlertSentMock,
   STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC: 1800,
   STATUS_DISCREPANCY_ALERT_STREAK: 2,
   updateDiscrepancyObservation: updateDiscrepancyObservationMock,
@@ -48,9 +51,25 @@ vi.mock("@shared/lib/api-endpoints", () => ({
 const { runStatusSelfCheck } = await import("../status-self-check");
 
 describe("runStatusSelfCheck", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
-    routeMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    buildDiscrepancyMock.mockImplementation(
+      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+        hasDivergence: true,
+        severityDelta: 1,
+        statusSeverity: 2,
+        probeSeverity: 1,
+        details: "forced-divergence",
+        probeAgeSeconds: 0,
+        consecutiveDivergent: streak,
+      }),
+    );
     evaluateStatusAndPersistMock.mockResolvedValue({
       raw: { rawOverallStatus: "healthy" },
       effectiveStatus: "stale",
@@ -58,6 +77,8 @@ describe("runStatusSelfCheck", () => {
     updateDiscrepancyObservationMock.mockResolvedValue({
       consecutiveDivergent: 2,
       lastAlertAt: null,
+      consecutiveProbeFailures: 0,
+      lastProbeAlertAt: null,
     });
   });
 
@@ -83,5 +104,44 @@ describe("runStatusSelfCheck", () => {
     expect(markDiscrepancyAlertSentMock).toHaveBeenCalledTimes(1);
     expect(metadata.alertAttempted).toBe(true);
     expect(metadata.alertSent).toBe(true);
+  });
+
+  it("alerts on sustained probe failures even when no status divergence exists", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("{}", { status: 503 }))
+      .mockResolvedValueOnce(new Response("{}", { status: 200 }));
+    buildDiscrepancyMock.mockImplementation(
+      (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
+        hasDivergence: false,
+        severityDelta: 0,
+        statusSeverity: 1,
+        probeSeverity: 1,
+        details: "no-divergence",
+        probeAgeSeconds: 0,
+        consecutiveDivergent: streak,
+      }),
+    );
+    updateDiscrepancyObservationMock.mockResolvedValueOnce({
+      consecutiveDivergent: 0,
+      lastAlertAt: null,
+      consecutiveProbeFailures: 3,
+      lastProbeAlertAt: null,
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database, "secret", "https://staging.api.pharos.watch");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(sendAlertMock).toHaveBeenCalledTimes(1);
+    expect(sendAlertMock).toHaveBeenCalledWith(
+      "Status probe failures detected",
+      expect.stringContaining("streak=3"),
+    );
+    expect(markDiscrepancyAlertSentMock).not.toHaveBeenCalled();
+    expect(markProbeFailureAlertSentMock).toHaveBeenCalledTimes(1);
+    expect(metadata.alertAttempted).toBe(false);
+    expect(metadata.probeFailureAlertAttempted).toBe(true);
+    expect(metadata.probeFailureAlertSent).toBe(true);
+    expect(metadata.probeFailureStreak).toBe(3);
+    expect(metadata.probeBaseUrl).toBe("https://staging.api.pharos.watch");
   });
 });

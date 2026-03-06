@@ -1,10 +1,10 @@
 import type { CronResult } from "../lib/db";
-import { route } from "../router";
 import { sendAlert } from "../lib/alerts";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../api/status";
 import {
   buildDiscrepancy,
+  markProbeFailureAlertSent,
   markDiscrepancyAlertSent,
   STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC,
   STATUS_DISCREPANCY_ALERT_STREAK,
@@ -29,6 +29,10 @@ const CRITICAL_PROBE_PATHS = [
   ...ADMIN_PROBE_PATHS,
 ];
 
+const DEFAULT_SELF_URL = "https://api.pharos.watch";
+const PROBE_TIMEOUT_MS = 10_000;
+const PROBE_FAILURE_ALERT_THRESHOLD = 3;
+
 function percentile95(latencies: number[]): number {
   if (latencies.length === 0) return 0;
   const sorted = [...latencies].sort((a, b) => a - b);
@@ -43,26 +47,53 @@ function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyM
   return "stale";
 }
 
+function resolveProbeBaseUrl(selfUrl?: string): URL {
+  const trimmed = selfUrl?.trim();
+  if (!trimmed) {
+    return new URL(DEFAULT_SELF_URL);
+  }
+
+  const withScheme = trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withScheme);
+  } catch {
+    return new URL(DEFAULT_SELF_URL);
+  }
+}
+
 async function probePath(
-  db: D1Database,
   path: string,
+  probeBaseUrl: URL,
   adminKey: string | undefined,
   signal?: AbortSignal,
 ): Promise<ProbeResult> {
   const startedAt = Date.now();
+  const timeoutController = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    timeoutController.abort("probe-timeout");
+  }, PROBE_TIMEOUT_MS);
+  const forwardAbort = () => timeoutController.abort(signal?.reason);
+
   try {
-    const url = new URL(`https://api.pharos.watch${path}`);
+    if (signal?.aborted) {
+      forwardAbort();
+    } else if (signal) {
+      signal.addEventListener("abort", forwardAbort, { once: true });
+    }
+
+    const url = new URL(path, probeBaseUrl);
     const headers = new Headers();
     if (ADMIN_PROBE_PATHS.includes(path) && adminKey) {
       headers.set("X-Admin-Key", adminKey);
     }
-    const request = new Request(url.toString(), { method: "GET", headers, signal });
-    const probeCtx = {
-      waitUntil: (_promise: Promise<unknown>) => {},
-      passThroughOnException: () => {},
-    } as unknown as ExecutionContext;
-    const res = await route(url, db, probeCtx, request, adminKey);
-    const status = res?.status ?? 404;
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers,
+      signal: timeoutController.signal,
+    });
+    const status = res.status;
     return {
       path,
       status,
@@ -75,24 +106,32 @@ async function probePath(
       status: 0,
       latencyMs: Math.max(0, Date.now() - startedAt),
       ok: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: timedOut ? "timeout" : (error instanceof Error ? error.message : String(error)),
     };
+  } finally {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener("abort", forwardAbort);
   }
 }
 
 export async function runStatusSelfCheck(
   db: D1Database,
   adminKey?: string,
+  selfUrl?: string,
   signal?: AbortSignal,
 ): Promise<CronResult> {
+  const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
+  const probes: ProbeResult[] = [];
+  for (const path of CRITICAL_PROBE_PATHS) {
+    if (signal?.aborted) break;
+    probes.push(await probePath(path, probeBaseUrl, adminKey, signal));
+  }
   const now = Math.floor(Date.now() / 1000);
-  const probes = await Promise.all(
-    CRITICAL_PROBE_PATHS.map((path) => probePath(db, path, adminKey, signal))
-  );
 
   const sampleCount = probes.length;
   const passCount = probes.filter((probe) => probe.ok).length;
   const failCount = sampleCount - passCount;
+  const hasProbeFailure = failCount > 0;
   const p95LatencyMs = percentile95(probes.map((probe) => probe.latencyMs));
   const probeStatus = classifyProbeStatus(sampleCount, failCount, p95LatencyMs);
 
@@ -130,7 +169,12 @@ export async function runStatusSelfCheck(
     0,
   );
 
-  const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObservation.hasDivergence);
+  const discrepancyState = await updateDiscrepancyObservation(
+    db,
+    now,
+    discrepancyObservation.hasDivergence,
+    hasProbeFailure,
+  );
   const discrepancy = buildDiscrepancy(
     effectiveStatus,
     {
@@ -145,23 +189,41 @@ export async function runStatusSelfCheck(
     discrepancyState.consecutiveDivergent,
   );
 
-  const shouldAlert =
+  const shouldDiscrepancyAlert =
     discrepancy.hasDivergence &&
     discrepancyState.consecutiveDivergent >= STATUS_DISCREPANCY_ALERT_STREAK &&
     (
       discrepancyState.lastAlertAt == null ||
       now - discrepancyState.lastAlertAt >= STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC
     );
+  const shouldProbeFailureAlert =
+    hasProbeFailure &&
+    discrepancyState.consecutiveProbeFailures >= PROBE_FAILURE_ALERT_THRESHOLD &&
+    (
+      discrepancyState.lastProbeAlertAt == null ||
+      now - discrepancyState.lastProbeAlertAt >= STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC
+    );
 
-  let alertSent = false;
-  if (shouldAlert) {
-    alertSent = await sendAlert(
+  let discrepancyAlertSent = false;
+  if (shouldDiscrepancyAlert) {
+    discrepancyAlertSent = await sendAlert(
       "Status divergence detected",
       `effective=${effectiveStatus}, raw=${raw.rawOverallStatus}, probe=${probeStatus}, ` +
       `delta=${discrepancy.severityDelta}, streak=${discrepancyState.consecutiveDivergent}`,
     );
-    if (alertSent) {
+    if (discrepancyAlertSent) {
       await markDiscrepancyAlertSent(db, now);
+    }
+  }
+
+  let probeFailureAlertSent = false;
+  if (shouldProbeFailureAlert) {
+    probeFailureAlertSent = await sendAlert(
+      "Status probe failures detected",
+      `probe=${probeStatus}, failures=${failCount}/${sampleCount}, streak=${discrepancyState.consecutiveProbeFailures}`,
+    );
+    if (probeFailureAlertSent) {
+      await markProbeFailureAlertSent(db, now);
     }
   }
 
@@ -178,8 +240,12 @@ export async function runStatusSelfCheck(
       effectiveStatus,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
-      alertAttempted: shouldAlert,
-      alertSent,
+      probeBaseUrl: probeBaseUrl.origin,
+      probeFailureStreak: discrepancyState.consecutiveProbeFailures,
+      alertAttempted: shouldDiscrepancyAlert,
+      alertSent: discrepancyAlertSent,
+      probeFailureAlertAttempted: shouldProbeFailureAlert,
+      probeFailureAlertSent,
     }),
   };
 }

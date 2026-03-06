@@ -43,6 +43,9 @@ interface StatusDiscrepancyStateRow {
   consecutive_divergent: number;
   last_divergent_at: number | null;
   last_alert_at: number | null;
+  consecutive_probe_failures: number;
+  last_probe_failure_at: number | null;
+  last_probe_alert_at: number | null;
 }
 
 interface StatusTransitionRow {
@@ -489,12 +492,24 @@ export async function updateDiscrepancyObservation(
   db: D1Database,
   now: number,
   hasDivergence: boolean,
-): Promise<{ consecutiveDivergent: number; lastAlertAt: number | null }> {
+  hasProbeFailure = false,
+): Promise<{
+  consecutiveDivergent: number;
+  lastAlertAt: number | null;
+  consecutiveProbeFailures: number;
+  lastProbeAlertAt: number | null;
+}> {
   let current: StatusDiscrepancyStateRow | null = null;
   try {
     current = await db
       .prepare(
-        `SELECT scope, consecutive_divergent, last_divergent_at, last_alert_at
+        `SELECT scope,
+                consecutive_divergent,
+                last_divergent_at,
+                last_alert_at,
+                consecutive_probe_failures,
+                last_probe_failure_at,
+                last_probe_alert_at
          FROM status_discrepancy_state
          WHERE scope = ?`
       )
@@ -507,25 +522,53 @@ export async function updateDiscrepancyObservation(
   const nextConsecutive = hasDivergence ? (current?.consecutive_divergent ?? 0) + 1 : 0;
   const nextLastDivergentAt = hasDivergence ? now : (current?.last_divergent_at ?? null);
   const lastAlertAt = current?.last_alert_at ?? null;
+  const nextConsecutiveProbeFailures = hasProbeFailure ? (current?.consecutive_probe_failures ?? 0) + 1 : 0;
+  const nextLastProbeFailureAt = hasProbeFailure ? now : (current?.last_probe_failure_at ?? null);
+  const lastProbeAlertAt = current?.last_probe_alert_at ?? null;
 
   try {
     await db
       .prepare(
         `INSERT INTO status_discrepancy_state
-         (scope, consecutive_divergent, last_divergent_at, last_alert_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)
+         (
+           scope,
+           consecutive_divergent,
+           last_divergent_at,
+           last_alert_at,
+           consecutive_probe_failures,
+           last_probe_failure_at,
+           last_probe_alert_at,
+           updated_at
+         )
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(scope) DO UPDATE SET
            consecutive_divergent = excluded.consecutive_divergent,
            last_divergent_at = excluded.last_divergent_at,
+           consecutive_probe_failures = excluded.consecutive_probe_failures,
+           last_probe_failure_at = excluded.last_probe_failure_at,
            updated_at = excluded.updated_at`
       )
-      .bind(STATUS_SCOPE, nextConsecutive, nextLastDivergentAt, lastAlertAt, now)
+      .bind(
+        STATUS_SCOPE,
+        nextConsecutive,
+        nextLastDivergentAt,
+        lastAlertAt,
+        nextConsecutiveProbeFailures,
+        nextLastProbeFailureAt,
+        lastProbeAlertAt,
+        now,
+      )
       .run();
   } catch {
     // Non-blocking.
   }
 
-  return { consecutiveDivergent: nextConsecutive, lastAlertAt };
+  return {
+    consecutiveDivergent: nextConsecutive,
+    lastAlertAt,
+    consecutiveProbeFailures: nextConsecutiveProbeFailures,
+    lastProbeAlertAt,
+  };
 }
 
 export async function markDiscrepancyAlertSent(db: D1Database, now: number): Promise<void> {
@@ -534,6 +577,21 @@ export async function markDiscrepancyAlertSent(db: D1Database, now: number): Pro
       .prepare(
         `UPDATE status_discrepancy_state
          SET last_alert_at = ?, updated_at = ?
+         WHERE scope = ?`
+      )
+      .bind(now, now, STATUS_SCOPE)
+      .run();
+  } catch {
+    // Non-blocking.
+  }
+}
+
+export async function markProbeFailureAlertSent(db: D1Database, now: number): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `UPDATE status_discrepancy_state
+         SET last_probe_alert_at = ?, updated_at = ?
          WHERE scope = ?`
       )
       .bind(now, now, STATUS_SCOPE)
