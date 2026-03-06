@@ -18,12 +18,12 @@ enabled = true
 invocation_logs = true
 
 [triggers]
-# crons = [
-#   "*/15 * * * *",
-#   "3,23,43 * * * *",
-#   "10,40 * * * *",
-#   "0 8 * * *",
-# ]
+crons = [
+  "*/15 * * * *",
+  "3,23,43 * * * *",
+  "10,40 * * * *",
+  "0 8 * * *",
+]
 
 [[d1_databases]]
 binding = "DB"
