@@ -4,6 +4,8 @@ Analytics dashboard tracking 148 stablecoins (+2 shadow assets for PSI). Static 
 
 **Live at [pharos.watch](https://pharos.watch)**
 
+All agents plans (design or implementation), as well as research and processes documents are placed in the /agents/ folder.
+
 ## cmcs — Orchestration
 
 You are the **orchestrator**. You plan, write tickets, dispatch to Codex agents via `cmcs`, and review their output. You do NOT implement code directly unless trivial.
@@ -19,13 +21,15 @@ Single task?       → Single worktree, single ticket
 ### Ticket Format
 
 Place in `.cmcs/tickets/TICKET-001.md` (or `<worktree>/.cmcs/tickets/`):
-cmcs agents perform best on narrowly focused tasks. Tickets should be decomposed in the smallest logical chunk possible and using the appropriate reasonning_effort for the task.
+cmcs agents perform best on narrowly focused tasks. Tickets should be decomposed in the smallest logical chunk possible and using the appropriate `reasoning_effort` and `model` for the task.
+
+**Model selection:** `gpt-5.3-codex` for complex multi-file refactors. `gpt-5.3-codex-spark` for repetitive pattern application. `gpt-5.1-codex-mini` for mechanical/rote fixes. When unsure, use `gpt-5.3-codex`. See `agents/process/cmcs-large-implementation-preparation.md` for the full model guide.
 
 ```markdown
 ---
 title: "Short imperative description"
 agent: "codex"
-model: "gpt-5.3-codex"  # optional, overrides config default
+model: "gpt-5.3-codex"  # see model selection guide above
 reasoning_effort: "high"         # optional: low, medium, high, xhigh (default: xhigh)
 done: false
 ---
@@ -58,6 +62,10 @@ cmcs dashboard                   # web UI
 - **Never use Claude sub-agents for implementation.** All work goes to Codex via tickets.
 - **Never auto-merge.** Review every file Codex creates, run acceptance criteria yourself.
 - **Never run sudo.**
+
+### Large Implementation Preparation
+
+**`/agents/process/cmcs-large-implementation-preparation.md`** — Preparation process for large multi-phase projects executed via cmcs: research → design → implementation plan → execution handover → tickets. **Read before planning any task that touches 10+ files or spans multiple worktrees.**
 
 
 ## Core Principles
@@ -101,7 +109,6 @@ cd worker && npx tsc --noEmit      # Worker type-check
 ## Web Fetching
 
 - **APIs first**: When fetching data from CoinGecko, Etherscan, DefiLlama, etc., always prefer their API endpoints over scraping web pages. APIs are structured, reliable, and rarely return 403s.
-- **Wave terminal**: Detect with `$WAVETERM=1` env var. When running inside Wave, prefer `wsh web open <url>` to open URLs in the built-in browser widget — it's native and lightweight. For actual interaction/scraping, still fall back to `agent-browser`.
 - **agent-browser for everything else**: For websites, docs pages, and any URL that returns a 403 with `WebFetch`, use `agent-browser` (headless browser CLI, globally installed). It bypasses bot detection and renders JS-heavy pages.
 
 ## Key Gotchas
@@ -144,4 +151,4 @@ Read these when working on related code:
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 17 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
-- **`docs/process/cmcs-large-implementation-preparation.md`** — Preparation process for large multi-phase projects executed via cmcs: research → design → implementation plan → execution handover → tickets. **Read before planning any task that touches 10+ files or spans multiple worktrees.**
+
