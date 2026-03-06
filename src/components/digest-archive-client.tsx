@@ -127,6 +127,7 @@ export function DigestArchiveClient() {
       {monthOptions.length > 1 && (
         <div className="mb-4">
           <select
+            aria-label="Filter by month"
             value={activeMonth ?? ""}
             onChange={(e) => setSelectedMonth(e.target.value)}
             className="text-sm bg-background border border-border rounded px-2 py-1 text-foreground"

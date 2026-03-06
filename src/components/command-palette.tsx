@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import Image from "next/image";
@@ -10,6 +9,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { NAV_ITEMS, BOTTOM_NAV_ITEMS } from "@/lib/nav-config";
 import { useLogos } from "@/hooks/use-logos";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +43,7 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { data: logos } = useLogos();
@@ -50,6 +51,12 @@ export function CommandPalette() {
   // ── Open/close handlers ──────────────────────────────────────────────────
 
   const openPalette = useCallback(() => {
+    if (typeof document !== "undefined") {
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement) {
+        lastFocusedElementRef.current = activeElement;
+      }
+    }
     setOpen(true);
     setQuery("");
     setSelectedIndex(0);
@@ -84,21 +91,21 @@ export function CommandPalette() {
     return () => window.removeEventListener("open-command-palette", handler);
   }, [openPalette]);
 
-  // ── Auto-focus input + lock body scroll on open ─────────────────────
+  // ── Restore focus on close and auto-focus input when open ────────────────────
 
   useEffect(() => {
-    if (open) {
-      // Small delay to ensure portal is mounted
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-      });
-      // Lock body scroll
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = prev;
-      };
+    if (!open) {
+      const focusTarget = lastFocusedElementRef.current;
+      if (focusTarget) {
+        focusTarget.focus();
+      }
+      lastFocusedElementRef.current = null;
+      return;
     }
+
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
   }, [open]);
 
   // ── Build results ──────────────────────────────────────────────────────
@@ -257,21 +264,18 @@ export function CommandPalette() {
 
   let flatIndex = 0;
 
-  return createPortal(
-     
-    <div
-      className="fixed inset-0 z-[100] bg-black/55 backdrop-blur-sm"
-      onClick={closePalette}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") closePalette();
-      }}
-    >
-      { }
-      <div
-        className="mx-auto mt-[18vh] w-full max-w-lg overflow-hidden rounded-xl border border-border/75 bg-card/95 shadow-[0_28px_50px_oklch(0_0_0_/0.35)] backdrop-blur"
-        onClick={(e) => e.stopPropagation()}
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent
+        className="z-[100] mx-auto mt-[18vh] w-full max-w-lg overflow-hidden rounded-xl border border-border/75 bg-card/95 p-0 shadow-[0_28px_50px_oklch(0_0_0_/0.35)] backdrop-blur"
+        showCloseButton={false}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          requestAnimationFrame(() => inputRef.current?.focus());
+        }}
         onKeyDown={handleKeyDown}
       >
+        <DialogTitle className="sr-only">Command palette</DialogTitle>
         {/* Search input */}
         <input
           ref={inputRef}
@@ -378,8 +382,7 @@ export function CommandPalette() {
             <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">esc</kbd> close
           </span>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </DialogContent>
+    </Dialog>
   );
 }

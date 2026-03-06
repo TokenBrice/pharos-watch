@@ -39,6 +39,11 @@ export async function generateMetadata({
       title: `${label} Stablecoins | Pharos`,
       description,
       url: `/stablecoins/${slug}/`,
+      type: "website",
+      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+    },
+    twitter: {
+      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
     },
   };
 }

@@ -40,6 +40,8 @@ export const metadata: Metadata = {
     description:
       "About Pharos, an open stablecoin analytics dashboard by TokenBrice, Claude, and Codex. Honest classification, freeze tracking, and a graveyard for the ones that didn't make it.",
     url: "/about/",
+    type: "website",
+    images: [{ url: "/og-card.png", width: 1200, height: 628 }],
   },
 };
 

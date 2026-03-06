@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     title: "Stablecoin Cemetery: Failed & Defunct Stablecoins",
     description: cemeteryDescription,
     url: "/cemetery/",
+    type: "website",
     images: [{ url: "https://pharos.watch/og-cemetery.png", width: 1200, height: 628 }],
   },
   twitter: {

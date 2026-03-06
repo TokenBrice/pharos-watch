@@ -4,7 +4,7 @@ interface BuildPageMetadataInput {
   title: string;
   description: string;
   canonical: string;
-  ogImage: string;
+  ogImage?: string;
   ogWidth?: number;
   ogHeight?: number;
   robots?: Metadata["robots"];
@@ -19,7 +19,11 @@ export function buildPageMetadata({
   ogHeight = 628,
   robots,
 }: BuildPageMetadataInput): Metadata {
-  const images = [{ url: ogImage, width: ogWidth, height: ogHeight }];
+  const resolvedImage = {
+    url: ogImage ?? "/og-card.png",
+    width: ogWidth,
+    height: ogHeight,
+  };
 
   return {
     title,
@@ -29,10 +33,11 @@ export function buildPageMetadata({
       title,
       description,
       url: canonical,
-      images,
+      type: "website",
+      images: [resolvedImage],
     },
     twitter: {
-      images,
+      images: [resolvedImage],
     },
     robots,
   };

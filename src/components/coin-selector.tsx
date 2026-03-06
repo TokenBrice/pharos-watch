@@ -169,6 +169,7 @@ export function CoinSelector({
             <input
               ref={inputRef}
               type="text"
+              aria-label="Search coins"
               placeholder="Search by name or symbol..."
               value={search}
               onChange={(e) => {

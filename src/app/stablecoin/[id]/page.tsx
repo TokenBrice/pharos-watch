@@ -42,6 +42,11 @@ export async function generateMetadata({
       title: `${coin.name} (${coin.symbol}): Stablecoin Analytics`,
       description: desc,
       url: buildStablecoinUrl(id),
+      type: "website",
+      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+    },
+    twitter: {
+      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
     },
   };
 }

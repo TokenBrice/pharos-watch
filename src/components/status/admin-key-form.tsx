@@ -40,6 +40,7 @@ export function AdminKeyForm({ onSubmit }: AdminKeyFormProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               type="password"
+              aria-label="Admin key"
               placeholder="Admin key"
               value={value}
               onChange={(e) => setValue(e.target.value)}

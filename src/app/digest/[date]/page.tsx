@@ -49,6 +49,10 @@ export async function generateMetadata({
       url: `/digest/${digest.date}/`,
       type: "article",
       publishedTime: new Date(digest.generatedAt * 1000).toISOString(),
+      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
+    },
+    twitter: {
+      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
     },
   };
 }

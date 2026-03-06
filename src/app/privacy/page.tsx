@@ -14,6 +14,8 @@ export const metadata: Metadata = {
     description:
       "Pharos privacy policy: what data we collect, how we use it, and your choices.",
     url: "/privacy/",
+    type: "website",
+    images: [{ url: "/og-card.png", width: 1200, height: 628 }],
   },
 };
 
