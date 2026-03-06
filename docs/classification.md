@@ -71,7 +71,7 @@ Live FX rates are fetched every 15 minutes by `sync-fx-rates.ts` from frankfurte
 
 ## Commodity & Non-DefiLlama Stablecoins
 
-Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These are identified by their `geckoId` and/or `protocolSlug` fields in `StablecoinMeta` (in `shared/lib/stablecoins.ts`), and use synthetic IDs (e.g., `gold-xaut`, `silver-kag`, `cg-jpyc`).
+Gold, silver, and some fiat stablecoins are not in DefiLlama's stablecoin API. These use the same canonical `ticker-issuer` ID format as all other stablecoins (e.g., `xaut-tether`, `kag-kinesis`, `jpyc-jpyc`) and are distinguished by their `detailProvider` field (`"commodity"` or `"coingecko"`) and `geckoId`/`protocolSlug` fields in `StablecoinMeta`.
 
 The Worker's `sync-stablecoins` cron derives the list of commodity and CoinGecko-only tokens directly from `TRACKED_STABLECOINS` by filtering on `geckoId` and `pegType`. Data is fetched from CoinGecko, shaped into DefiLlama-compatible format, and merged into the `peggedAssets` array before caching.
 

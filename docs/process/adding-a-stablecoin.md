@@ -21,18 +21,20 @@ Before starting, confirm the coin belongs on the dashboard:
 
 ## Phase 1 — Determine the ID
 
-The `id` field is the primary key used throughout the dashboard. Choose based on data availability:
+The `id` field uses canonical `ticker-issuer` format: lowercase ticker hyphenated with the issuer/protocol name.
 
-| Situation | ID format | Example | Supply source |
-|-----------|-----------|---------|---------------|
-| Coin exists in DefiLlama stablecoins API | Numeric string (DefiLlama's ID) | `"129"` | DefiLlama `/stablecoin/{id}` |
-| Coin is on CoinGecko but not DefiLlama | `cg-{geckoId}` | `"cg-ousg"` | CoinGecko `/coins/{geckoId}` market cap |
-| Coin is on neither | Next available integer after current max | `"355"` | Manual / none |
+**Format:** `{ticker}-{issuer}` — e.g. `usdt-tether`, `ousg-ondo-finance`, `paxg-paxos`
 
-**How to find DefiLlama ID:** `GET https://stablecoins.llama.fi/stablecoins` and search by name or symbol.
-**How to find CoinGecko ID:** `GET https://api.coingecko.com/api/v3/search?query={symbol}` then match on name+symbol.
+**Rules:**
+- Lowercase, hyphen-separated: `[a-z0-9]+(-[a-z0-9]+)+`
+- Multi-word issuers use hyphens: `ondo-finance`, `world-liberty-financial`
+- The `ticker-issuer` pair must be globally unique
+- Same ticker, different issuers is fine: `gusd-gemini` vs `gusd-gate`
 
-If a coin appears in DefiLlama *and* CoinGecko, always prefer the numeric DL ID — the supply pipeline reads from DL first.
+**Data source fields (separate from ID):**
+- If the coin is in DefiLlama's stablecoins API, set `llamaId` to its DefiLlama ID number (find via `GET https://stablecoins.llama.fi/stablecoins`)
+- If the coin is on CoinGecko, set `geckoId` (find via `GET https://api.coingecko.com/api/v3/search?query={symbol}`)
+- Set `detailProvider` to `"defillama"` (default), `"coingecko"` (CG-only coins), or `"commodity"` (gold/silver tokens)
 
 ---
 
@@ -113,8 +115,8 @@ Add new coins just before the `// ── Additional non-USD pegs ─` section co
 ### Example entry (minimal)
 
 ```typescript
-usd("cg-example", "Acme Stablecoin", "AUSD", "rwa-backed", "centralized", {
-  geckoId: "acme-usd",
+usd("ausd-acme", "Acme Stablecoin", "AUSD", "rwa-backed", "centralized", {
+  llamaId: "999", detailProvider: "defillama", geckoId: "acme-usd",
   yieldBearing: true, rwa: true, navToken: false,
   yieldConfig: { yieldSource: "Acme T-bill fund", yieldType: "rebase" },
   collateral: "Short-term U.S. Treasury bills held at Bank X in a bankruptcy-remote SPV",
@@ -146,11 +148,10 @@ Logos are served from `public/logos/` and mapped in `data/logos.json`. Both must
 
 ### 1. Place the image file
 
-| ID type | File name convention | Example |
-|---------|----------------------|---------|
-| Numeric DL ID | `{id}-{symbol-lowercase}.{ext}` | `129-usdy.png` |
-| `cg-` prefix | `{id}.{ext}` | `cg-ousg.png` |
-| Custom string ID | `{id}.{ext}` | `gold-vro.png` |
+| File name convention | Example |
+|----------------------|---------|
+| `{id}.{ext}` | `usdy-ondo-finance.png` |
+| `{id}.{ext}` | `ousg-ondo-finance.png` |
 
 Accepted formats: `.png`, `.svg`, `.jpg`, `.webp`. Prefer `.svg` > `.png` > `.webp` > `.jpg`. Aim for at least 64×64 px; square or near-square crops look best in the UI.
 
@@ -164,11 +165,11 @@ Accepted formats: `.png`, `.svg`, `.jpg`, `.webp`. Prefer `.svg` > `.png` > `.we
 Add one line mapping the coin's ID to its public path:
 
 ```json
-"129": "/logos/129-usdy.png",
-"cg-ousg": "/logos/cg-ousg.png",
+"usdy-ondo-finance": "/logos/usdy-ondo-finance.png",
+"ousg-ondo-finance": "/logos/ousg-ondo-finance.png",
 ```
 
-Keep the file sorted by key (numeric IDs first in insertion order, `cg-` and custom string IDs at the end) — this matches the existing file layout.
+Keep the file sorted alphabetically by key.
 
 ---
 
@@ -201,27 +202,27 @@ Key voice guidelines (see the skill for full detail):
 
 Newly added coins have no historical rows in the `supply_history` table. Without a backfill the market cap chart on the detail page will be empty until tomorrow's daily snapshot cron runs (and will stay empty forever for all prior dates).
 
-The right backfill endpoint depends on the coin's ID type:
+The right backfill endpoint depends on source fields, not the `id` format:
 
-| ID type | Endpoint | What it does |
-|---------|----------|-------------|
-| Numeric DL ID (e.g. `"129"`) | `POST /api/backfill-supply-history?stablecoin={id}` | Reads full DL history via `/stablecoin/{id}` |
-| `cg-` prefix (e.g. `"cg-ousg"`) | `POST /api/backfill-cg-prices?stablecoin={id}` | Reads CoinGecko `market_chart` (prices + market caps) and inserts rows |
-| Custom integer with no geckoId (e.g. `"355"`) | None — no historical data available | Chart will stay empty; document this in the coin's notes |
+| Condition | Endpoint | What it does |
+|-----------|----------|-------------|
+| Coin has `llamaId` (DL-tracked) | `POST /api/backfill-supply-history?stablecoin={id}` | Reads full DL history via `/stablecoin/{llamaId}` |
+| Coin has `geckoId` but no `llamaId` | `POST /api/backfill-cg-prices?stablecoin={id}` | Reads CoinGecko `market_chart` (prices + market caps) and inserts rows |
+| Neither | None — no historical data available | Chart will stay empty; document this in the coin's notes |
 
 Both endpoints require the `X-Admin-Key` header and **POST** method. Call them immediately after pushing the new entries to production.
 
 ```bash
-# For a DL-tracked coin (numeric ID):
-curl -X POST "https://api.pharos.watch/api/backfill-supply-history?stablecoin=129" \
+# For a DL-tracked coin:
+curl -X POST "https://api.pharos.watch/api/backfill-supply-history?stablecoin=usdy-ondo-finance" \
   -H "X-Admin-Key: $ADMIN_KEY"
 
-# For a CoinGecko-only coin (cg- prefix):
-curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=cg-ousg" \
+# For a CoinGecko-only coin:
+curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=ousg-ondo-finance" \
   -H "X-Admin-Key: $ADMIN_KEY"
 ```
 
-`backfill-cg-prices` also back-fills `price` for any existing rows that have `NULL` in that column, so it is safe to run on any coin with a `geckoId` — not just `cg-` coins.
+`backfill-cg-prices` also back-fills `price` for any existing rows that have `NULL` in that column, so it is safe to run on any coin with a `geckoId`.
 
 **Response shape (backfill-cg-prices):**
 ```json
@@ -229,7 +230,7 @@ curl -X POST "https://api.pharos.watch/api/backfill-cg-prices?stablecoin=cg-ousg
   "coinsProcessed": 1,
   "totalPricesFilled": 0,
   "totalRowsInserted": 365,
-  "coinDetails": [{ "id": "cg-ousg", "symbol": "OUSG", "pricesFilled": 0, "rowsInserted": 365 }]
+  "coinDetails": [{ "id": "ousg-ondo-finance", "symbol": "OUSG", "pricesFilled": 0, "rowsInserted": 365 }]
 }
 ```
 
@@ -260,11 +261,11 @@ git push origin main
 ## Quick-reference: ID decision tree
 
 ```
-Does stablecoins.llama.fi/stablecoins list it?
-  └─ Yes → use the numeric DefiLlama ID  (e.g. "129")
-  └─ No  → Is it on CoinGecko?
-              └─ Yes → use cg-{geckoId}  (e.g. "cg-ousg")
-              └─ No  → use next integer after current max  (check tail of TRACKED_STABLECOINS)
+1. Choose ticker-issuer ID:  {ticker}-{issuer}  (e.g. "usdy-ondo-finance")
+2. Set data source fields:
+   └─ In DefiLlama stablecoins API? → set llamaId + detailProvider: "defillama"
+   └─ CoinGecko only?              → set geckoId + detailProvider: "coingecko"
+   └─ Gold/silver token?            → set geckoId + detailProvider: "commodity"
 ```
 
 ## Quick-reference: governance flag
