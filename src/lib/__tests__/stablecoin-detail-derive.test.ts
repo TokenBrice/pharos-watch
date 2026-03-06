@@ -68,8 +68,8 @@ describe("stablecoin detail derivations", () => {
   describe("derivePegReferenceContext", () => {
     it("uses fallback FX rates for thin peg groups and reports fallback source", () => {
       const assets = [
-        { id: "1", symbol: "AAA", pegType: "peggedEUR", price: 1.25, circulating: { peggedEUR: 2_000_000 } },
-        { id: "2", symbol: "BBB", pegType: "peggedEUR", price: 1.24, circulating: { peggedEUR: 3_000_000 } },
+        { id: "usdt-tether", symbol: "AAA", pegType: "peggedEUR", price: 1.25, circulating: { peggedEUR: 2_000_000 } },
+        { id: "usdc-circle", symbol: "BBB", pegType: "peggedEUR", price: 1.24, circulating: { peggedEUR: 3_000_000 } },
       ];
 
       const result = derivePegReferenceContext({

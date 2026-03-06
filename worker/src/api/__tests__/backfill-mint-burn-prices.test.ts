@@ -20,14 +20,14 @@ function makeBackfillDb() {
       return {
         success: true,
         meta: {},
-        results: [{ asset_id: "1", price: 1.002, updated_at: 1_710_000_000 }] as T[],
+        results: [{ asset_id: "usdt-tether", price: 1.002, updated_at: 1_710_000_000 }] as T[],
       };
     }
     if (sql.includes("SELECT DISTINCT stablecoin_id FROM mint_burn_events")) {
       return {
         success: true,
         meta: {},
-        results: [{ stablecoin_id: "1" }] as T[],
+        results: [{ stablecoin_id: "usdt-tether" }] as T[],
       };
     }
     return { success: true, meta: {}, results: [] as T[] };
@@ -91,7 +91,7 @@ describe("handleBackfillMintBurnPrices", () => {
       coins: Array<{ id: string; updated: number }>;
     };
     expect(body.totalUpdated).toBe(2);
-    expect(body.coins).toEqual([{ id: "1", updated: 2 }]);
+    expect(body.coins).toEqual([{ id: "usdt-tether", updated: 2 }]);
 
     const selectSql = queries.find(
       (q) => q.kind === "all" && q.sql.includes("SELECT DISTINCT stablecoin_id FROM mint_burn_events"),

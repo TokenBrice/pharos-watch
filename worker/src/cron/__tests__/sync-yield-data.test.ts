@@ -24,7 +24,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
     },
     {
-      id: "2",
+      id: "usdc-circle",
       name: "USD Coin",
       symbol: "USDC",
       geckoId: "usd-coin",
@@ -37,7 +37,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
       },
     },
     {
-      id: "336",
+      id: "u-united-stables",
       name: "United Stables",
       symbol: "U",
       geckoId: "united-stables",
@@ -103,9 +103,9 @@ vi.mock("../yield-config", () => ({
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool"]),
   PRICE_DERIVED_FALLBACK_IDS: new Set(),
   AUTO_LENDING_POOL_MAP: {
-    "336": "pool-u-venus",
+    "u-united-stables": "pool-u-venus",
   },
-  AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["336"]),
+  AUTO_LENDING_SAFETY_BYPASS_IDS: new Set(["u-united-stables"]),
 }));
 
 // Stub report-cards (used for safety score computation)

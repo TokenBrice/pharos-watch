@@ -10,7 +10,7 @@ import type { DepegEvent } from "@shared/types";
 function makeDepegEvent(overrides: Partial<DepegEvent> & Pick<DepegEvent, "startedAt" | "peakDeviationBps">): DepegEvent {
   return {
     id: 1,
-    stablecoinId: "1",
+    stablecoinId: "usdt-tether",
     symbol: "USDT",
     pegType: "USD",
     direction: overrides.peakDeviationBps < 0 ? "below" : "above",
@@ -29,7 +29,7 @@ describe("critical invariants", () => {
     const base = {
       rankings: [
         {
-          id: "1",
+          id: "usdt-tether",
           symbol: "USDC",
           name: "USD Coin",
           currentApy: 5,
@@ -77,7 +77,7 @@ describe("critical invariants", () => {
   it("rejects non-finite stress and flow numbers", () => {
     const stress = {
       signals: {
-        "1": {
+        "usdt-tether": {
           score: 42,
           band: "WATCH",
           signals: {
@@ -104,7 +104,7 @@ describe("critical invariants", () => {
         ...stress,
         signals: {
           ...stress.signals,
-          "1": { ...stress.signals["1"], score: Number.NaN },
+          "usdt-tether": { ...stress.signals["usdt-tether"], score: Number.NaN },
         },
       }).success,
     ).toBe(false);

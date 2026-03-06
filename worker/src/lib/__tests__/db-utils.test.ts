@@ -169,14 +169,14 @@ describe("db utility helpers", () => {
   it("returns price cache map and supports empty save fast-path", async () => {
     const { db, batchCalls } = makeDb({
       priceRows: [
-        { asset_id: "1", price: 1.01, updated_at: 1700000000 },
-        { asset_id: "2", price: 0.99, updated_at: 1700000100 },
+        { asset_id: "usdt-tether", price: 1.01, updated_at: 1700000000 },
+        { asset_id: "usdc-circle", price: 0.99, updated_at: 1700000100 },
       ],
     });
 
     const map = await getPriceCache(db);
-    expect(map.get("1")).toEqual({ price: 1.01, updatedAt: 1700000000 });
-    expect(map.get("2")).toEqual({ price: 0.99, updatedAt: 1700000100 });
+    expect(map.get("usdt-tether")).toEqual({ price: 1.01, updatedAt: 1700000000 });
+    expect(map.get("usdc-circle")).toEqual({ price: 0.99, updatedAt: 1700000100 });
 
     await savePriceCache(db, []);
     expect(batchCalls).toHaveLength(0);
@@ -186,8 +186,8 @@ describe("db utility helpers", () => {
     const { db, batchCalls } = makeDb();
 
     await savePriceCache(db, [
-      { id: "1", price: 1.0 },
-      { id: "2", price: 0.9 },
+      { id: "usdt-tether", price: 1.0 },
+      { id: "usdc-circle", price: 0.9 },
     ]);
 
     expect(batchCalls).toHaveLength(1);
@@ -197,13 +197,13 @@ describe("db utility helpers", () => {
   it("returns first-seen date map", async () => {
     const { db } = makeDb({
       firstSeenRows: [
-        { stablecoin_id: "1", first_seen: 1690000000 },
-        { stablecoin_id: "2", first_seen: 1680000000 },
+        { stablecoin_id: "usdt-tether", first_seen: 1690000000 },
+        { stablecoin_id: "usdc-circle", first_seen: 1680000000 },
       ],
     });
 
     const firstSeen = await getFirstSeenDates(db);
-    expect(firstSeen.get("1")).toBe(1690000000);
-    expect(firstSeen.get("2")).toBe(1680000000);
+    expect(firstSeen.get("usdt-tether")).toBe(1690000000);
+    expect(firstSeen.get("usdc-circle")).toBe(1680000000);
   });
 });

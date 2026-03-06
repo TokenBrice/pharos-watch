@@ -4,19 +4,19 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     {
-      id: "1",
+      id: "usdt-tether",
       symbol: "AAA",
       name: "AAA Stable",
       flags: { pegCurrency: "USD", governance: "centralized", navToken: false },
     },
     {
-      id: "2",
+      id: "usdc-circle",
       symbol: "BBB",
       name: "BBB Stable",
       flags: { pegCurrency: "USD", governance: "centralized-dependent", navToken: false },
     },
     {
-      id: "3",
+      id: "ust-terra",
       symbol: "NAV",
       name: "NAV Token",
       flags: { pegCurrency: "USD", governance: "centralized", navToken: true },
@@ -62,9 +62,9 @@ vi.mock("../stablecoins-cache", () => ({
     ok: true,
     payload: {
       peggedAssets: [
-        { id: "1", pegType: "peggedUSD" },
-        { id: "2", pegType: "peggedUSD" },
-        { id: "3", pegType: "peggedUSD" },
+        { id: "usdt-tether", pegType: "peggedUSD" },
+        { id: "usdc-circle", pegType: "peggedUSD" },
+        { id: "ust-terra", pegType: "peggedUSD" },
       ],
     },
     updatedAt: 1_700_000_000,
@@ -98,9 +98,9 @@ describe("computeSafetyScoresSnapshot", () => {
     });
 
     expect(result.mode).toBe("map");
-    expect(result.scores.has("1")).toBe(true);
-    expect(result.scores.has("2")).toBe(true);
-    expect(result.scores.has("3")).toBe(false);
+    expect(result.scores.has("usdt-tether")).toBe(true);
+    expect(result.scores.has("usdc-circle")).toBe(true);
+    expect(result.scores.has("ust-terra")).toBe(false);
   });
 
   it("returns full-grades mode including NAV tokens when enabled", async () => {
@@ -110,7 +110,7 @@ describe("computeSafetyScoresSnapshot", () => {
     });
 
     expect(result.mode).toBe("full-grades");
-    expect(result.scores.has("3")).toBe(true);
-    expect(result.grades.some((grade) => grade.id === "3")).toBe(true);
+    expect(result.scores.has("ust-terra")).toBe(true);
+    expect(result.grades.some((grade) => grade.id === "ust-terra")).toBe(true);
   });
 });

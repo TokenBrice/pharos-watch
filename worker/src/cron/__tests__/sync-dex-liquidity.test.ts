@@ -32,7 +32,7 @@ vi.mock("../dex-liquidity/process-pools", () => ({
 }));
 
 vi.mock("../dex-liquidity/scoring", () => ({
-  computeStablecoinScores: vi.fn(async () => ({ scores: new Map([["1", {}]]), globalAgg: {} })),
+  computeStablecoinScores: vi.fn(async () => ({ scores: new Map([["usdt-tether", {}]]), globalAgg: {} })),
   computeDepthStability: vi.fn(async () => {}),
   computeDexPrices: vi.fn(async () => {}),
 }));

@@ -115,7 +115,7 @@ describe("handleBackfillStabilityIndex", () => {
         earliest: start,
         depegRows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             peak_deviation_bps: -120,
             peg_reference: 1,
             started_at: start,
@@ -123,9 +123,9 @@ describe("handleBackfillStabilityIndex", () => {
           },
         ],
         supplyRows: [
-          { stablecoin_id: "1", snapshot_date: day0, circulating_usd: 99_000_000 },
-          { stablecoin_id: "1", snapshot_date: day1, circulating_usd: 100_000_000 },
-          { stablecoin_id: "1", snapshot_date: day2, circulating_usd: 101_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day0, circulating_usd: 99_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day1, circulating_usd: 100_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day2, circulating_usd: 101_000_000 },
         ],
       }),
       "secret",

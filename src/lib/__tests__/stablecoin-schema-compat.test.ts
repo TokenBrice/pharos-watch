@@ -6,7 +6,7 @@ describe("StablecoinListResponseSchema compatibility", () => {
     const parsed = StablecoinListResponseSchema.parse({
       peggedAssets: [
         {
-          id: "1",
+          id: "usdt-tether",
           name: "Tether",
           symbol: "USDT",
           gecko_id: "tether",
@@ -45,7 +45,7 @@ describe("StablecoinListResponseSchema compatibility", () => {
     const parsed = StablecoinListResponseSchema.parse({
       peggedAssets: [
         {
-          id: "2",
+          id: "usdc-circle",
           name: "Unknown",
           symbol: "UNK",
           pegType: "peggedUSD",

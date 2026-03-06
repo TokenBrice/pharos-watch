@@ -4,10 +4,10 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 // Stub psi-eligible to avoid importing the full stablecoins list
 vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
-    { id: "1", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false }, commodityOunces: undefined },
-    { id: "2", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined },
-    { id: "3", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false }, commodityOunces: undefined },
-    { id: "99", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true }, commodityOunces: undefined },
+    { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false }, commodityOunces: undefined },
+    { id: "usdc-circle", symbol: "USDC", pegType: "peggedUSD", geckoId: "usd-coin", flags: { navToken: false }, commodityOunces: undefined },
+    { id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", geckoId: "euro-coin", flags: { navToken: false }, commodityOunces: undefined },
+    { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true }, commodityOunces: undefined },
   ],
 }));
 
@@ -67,8 +67,8 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 1.001 }),
-      makeAsset({ id: "2", symbol: "USDC", price: 0.999 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: 0.999 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -94,7 +94,7 @@ describe("detectDepegEvents", () => {
 
     // USDT at 0.98 → 200 bps below peg, above 100 bps threshold
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 0.98 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -118,7 +118,7 @@ describe("detectDepegEvents", () => {
     // 99 bps below → should NOT trigger (0.99 → ~100 bps, but round() may edge it)
     // Use 0.991 which is clearly only 90 bps
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 0.991 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.991 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -141,7 +141,7 @@ describe("detectDepegEvents", () => {
 
     // EUROC: pegRef=1.08, price=1.065 → bps = round((1.065/1.08 - 1) * 10000) = -139 → <150, no event
     const assets = [
-      makeAsset({ id: "3", symbol: "EUROC", price: 1.065, pegType: "peggedEUR" }),
+      makeAsset({ id: "eurc-circle", symbol: "EUROC", price: 1.065, pegType: "peggedEUR" }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -157,7 +157,7 @@ describe("detectDepegEvents", () => {
       {
         match: "depeg_events",
         rows: [{
-          id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
           direction: "below", peak_deviation_bps: -200, started_at: now - 600,
           start_price: 0.98, peak_price: 0.98, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
@@ -173,7 +173,7 @@ describe("detectDepegEvents", () => {
 
     // Worse deviation: 0.96 → -400 bps
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 0.96 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.96 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -191,7 +191,7 @@ describe("detectDepegEvents", () => {
       {
         match: "depeg_events",
         rows: [{
-          id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
           direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
           start_price: 0.98, peak_price: 0.98, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
@@ -207,7 +207,7 @@ describe("detectDepegEvents", () => {
 
     // Price recovered
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 1.001 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -225,7 +225,7 @@ describe("detectDepegEvents", () => {
       {
         match: "depeg_events",
         rows: [{
-          id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
           direction: "below", peak_deviation_bps: -200, started_at: now - 3600,
           start_price: 0.98, peak_price: 0.98, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
@@ -241,7 +241,7 @@ describe("detectDepegEvents", () => {
 
     // Now above peg: 1.02 → +200 bps (direction change from "below" to "above")
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 1.02 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.02 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -264,13 +264,13 @@ describe("detectDepegEvents", () => {
         match: "depeg_events",
         rows: [
           {
-            id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+            id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
             direction: "below", peak_deviation_bps: -150, started_at: now - 7200,
             start_price: 0.985, peak_price: 0.985, peg_reference: 1,
             recovery_price: null, ended_at: null, source: "live",
           },
           {
-            id: 2, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+            id: 2, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
             direction: "below", peak_deviation_bps: -300, started_at: now - 3600,
             start_price: 0.97, peak_price: 0.97, peg_reference: 1,
             recovery_price: null, ended_at: null, source: "live",
@@ -287,7 +287,7 @@ describe("detectDepegEvents", () => {
 
     // Still depegging
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 0.97 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.97 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -312,7 +312,7 @@ describe("detectDepegEvents", () => {
     // >$1B supply coin with depeg
     const assets = [
       makeAsset({
-        id: "1", symbol: "USDT", price: 0.98,
+        id: "usdt-tether", symbol: "USDT", price: 0.98,
         circulating: { ethereum: 2_000_000_000 },
       }),
     ];
@@ -345,7 +345,7 @@ describe("detectDepegEvents", () => {
 
     const assets = [
       makeAsset({
-        id: "2", symbol: "USDC", price: 0.90,
+        id: "usdc-circle", symbol: "USDC", price: 0.90,
         circulating: { ethereum: 500_000 }, // only $500k
       }),
     ];
@@ -371,7 +371,7 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     const assets = [
-      makeAsset({ id: "99", symbol: "NAVT", price: 0.50 }),
+      makeAsset({ id: "nav-token-test", symbol: "NAVT", price: 0.50 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -395,8 +395,8 @@ describe("detectDepegEvents", () => {
     }) as typeof db.prepare;
 
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 0 }),
-      makeAsset({ id: "2", symbol: "USDC", price: NaN }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0 }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: NaN }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -414,7 +414,7 @@ describe("detectDepegEvents", () => {
       {
         match: "depeg_events",
         rows: [{
-          id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
           direction: "below", peak_deviation_bps: -200, started_at: now - 2400,
           start_price: 0.98, peak_price: 0.98, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
@@ -423,7 +423,7 @@ describe("detectDepegEvents", () => {
       {
         match: "dex_prices",
         rows: [{
-          stablecoin_id: "1",
+          stablecoin_id: "usdt-tether",
           dex_price_usd: 1.001, // DEX says price is fine
           source_pool_count: 5,
           source_total_tvl: 5_000_000, // >$1M TVL
@@ -439,7 +439,7 @@ describe("detectDepegEvents", () => {
 
     // Primary source still shows depeg
     const assets = [
-      makeAsset({ id: "1", symbol: "USDT", price: 0.98 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
     ];
 
     await detectDepegEvents(db, assets);
@@ -460,7 +460,7 @@ describe("detectDepegEvents", () => {
       {
         match: "depeg_events",
         rows: [{
-          id: 1, stablecoin_id: "1", symbol: "USDT", peg_type: "peggedUSD",
+          id: 1, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD",
           direction: "below", peak_deviation_bps: -240, started_at: now - 7200,
           start_price: 0.976, peak_price: 0.976, peg_reference: 1,
           recovery_price: null, ended_at: null, source: "live",
@@ -476,7 +476,7 @@ describe("detectDepegEvents", () => {
 
     await detectDepegEvents(db, [
       {
-        id: "1",
+        id: "usdt-tether",
         symbol: "USDT",
         pegType: "peggedUSD",
         price: Number.NaN, // missing price this cycle

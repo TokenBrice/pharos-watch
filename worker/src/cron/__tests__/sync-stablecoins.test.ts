@@ -7,7 +7,7 @@ import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 // Stub the stablecoins list to avoid importing the full registry
 vi.mock("@shared/lib/stablecoins", () => {
   const fallbackTrackedTokens = Array.from({ length: 60 }, (_, i) => ({
-    id: `cg-fb-${i}`,
+    id: `fb-${i}`,
     name: `Fallback Coin ${i}`,
     symbol: `FC${i}`,
     geckoId: `fallback-coin-${i}`,
@@ -18,7 +18,7 @@ vi.mock("@shared/lib/stablecoins", () => {
   return {
     TRACKED_STABLECOINS: [
     {
-      id: "1",
+      id: "usdt-tether",
       name: "Tether",
       symbol: "USDT",
       geckoId: "tether",
@@ -26,7 +26,7 @@ vi.mock("@shared/lib/stablecoins", () => {
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
     {
-      id: "2",
+      id: "usdc-circle",
       name: "USD Coin",
       symbol: "USDC",
       geckoId: "usd-coin",
@@ -36,8 +36,8 @@ vi.mock("@shared/lib/stablecoins", () => {
       ...fallbackTrackedTokens,
     ],
     TRACKED_META_BY_ID: new Map([
-      ["1", { geckoId: "tether", cmcSlug: undefined }],
-      ["2", { geckoId: "usd-coin", cmcSlug: undefined }],
+      ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
+      ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
     ]),
   };
 });
@@ -102,7 +102,7 @@ import * as apiUtils from "../../lib/api-utils";
 
 function makeDlResponse(assetCount: number) {
   const peggedAssets = Array.from({ length: assetCount }, (_, i) => ({
-    id: String(i + 1),
+    "id": String(i + 1),
     name: `Stablecoin ${i + 1}`,
     symbol: `SC${i + 1}`,
     geckoId: null,

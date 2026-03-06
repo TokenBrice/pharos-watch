@@ -86,7 +86,7 @@ describe("cache-passthrough: handleBluechipRatings", () => {
   });
 
   it("returns 200 with _meta on cache hit", async () => {
-    const db = makeCacheDb("bluechip-ratings", { "1": { grade: "A" } });
+    const db = makeCacheDb("bluechip-ratings", { "usdt-tether": { grade: "A" } });
     const res = await handleBluechipRatings(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { _meta: unknown };

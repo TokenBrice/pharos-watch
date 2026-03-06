@@ -3,16 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
     {
-      id: "1",
+      id: "usdt-tether",
       symbol: "USDT",
       flags: { navToken: false },
     },
   ],
   PSI_ELIGIBLE_META_BY_ID: new Map([
     [
-      "1",
+      "usdt-tether",
       {
-        id: "1",
+        id: "usdt-tether",
         symbol: "USDT",
         flags: { navToken: false },
       },
@@ -33,7 +33,7 @@ vi.mock("../../lib/db", async (importOriginal) => {
       value: JSON.stringify({
         peggedAssets: [
           {
-            id: "1",
+            id: "usdt-tether",
             symbol: "USDT",
             pegType: "peggedUSD",
             price: 1,
@@ -75,12 +75,12 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     const all = async <T>() => {
       if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
         return {
-          results: (opts.signalIds ?? ["1"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
+          results: (opts.signalIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
         };
       }
       if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history")) {
         return {
-          results: (opts.historyIds ?? ["1"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
+          results: (opts.historyIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
         };
       }
       if (/FROM dex_liquidity(?!_history)/.test(sql)) {
@@ -90,7 +90,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         return {
           results: [
             {
-              stablecoin_id: "1",
+              stablecoin_id: "usdt-tether",
               weighted_balance_ratio: 0.95,
               avg_pool_stress: 0.05,
               top_pools_json: "[]",
@@ -104,7 +104,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
         return {
           results: [
             {
-              stablecoin_id: "1",
+              stablecoin_id: "usdt-tether",
               snapshot_date: Math.floor(Date.now() / 1000) - 7 * 86400,
               liquidity_score: 73,
               total_tvl_usd: 1_200_000,
@@ -151,7 +151,7 @@ describe("computeAndStoreDEWS", () => {
       value: JSON.stringify({
         peggedAssets: [
           {
-            id: "1",
+            id: "usdt-tether",
             symbol: "USDT",
             pegType: "peggedUSD",
             price: 1,
@@ -176,7 +176,7 @@ describe("computeAndStoreDEWS", () => {
     expect(sqlSeen.some((sql) => sql.includes("snapshot_date, liquidity_score, total_tvl_usd"))).toBe(true);
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
-        stablecoinId: "1",
+        stablecoinId: "usdt-tether",
         liquidityScore7dAgo: 73,
         tvl7dAgo: 1_200_000,
       }),
@@ -199,8 +199,8 @@ describe("computeAndStoreDEWS", () => {
   it("purges orphan stress rows for IDs outside the current eligible set", async () => {
     const sqlSeen: string[] = [];
     const db = makeDb(sqlSeen, {
-      signalIds: ["1", "999"],
-      historyIds: ["1", "999"],
+      signalIds: ["usdt-tether", "999"],
+      historyIds: ["usdt-tether", "999"],
     });
 
     await computeAndStoreDEWS(db);
@@ -227,8 +227,8 @@ describe("computeAndStoreDEWS", () => {
     const deleteBindCounts: number[] = [];
     const orphanIds = Array.from({ length: 145 }, (_, i) => `orphan-${i}`);
     const db = makeDb(sqlSeen, {
-      signalIds: ["1", ...orphanIds],
-      historyIds: ["1", ...orphanIds],
+      signalIds: ["usdt-tether", ...orphanIds],
+      historyIds: ["usdt-tether", ...orphanIds],
       onBind: (sql, args) => {
         if (
           sql.includes("DELETE FROM stress_signals WHERE stablecoin_id IN")

@@ -20,13 +20,13 @@ describe("deriveDependencies", () => {
   });
 
   it("falls back to manual dependencies when reserves is empty", () => {
-    const deps: DependencyWeight[] = [{ id: "2", weight: 0.5 }];
+    const deps: DependencyWeight[] = [{ id: "usdc-circle", weight: 0.5 }];
     const meta = makeMeta({ dependencies: deps, reserves: [] });
     expect(deriveDependencies(meta)).toEqual(deps);
   });
 
   it("falls back to manual dependencies when no reserve has coinId", () => {
-    const deps: DependencyWeight[] = [{ id: "1", weight: 0.3 }];
+    const deps: DependencyWeight[] = [{ id: "usdt-tether", weight: 0.3 }];
     const meta = makeMeta({
       dependencies: deps,
       reserves: [
@@ -39,16 +39,16 @@ describe("deriveDependencies", () => {
 
   it("derives dependencies from reserve coinId, ignoring manual dependencies", () => {
     const meta = makeMeta({
-      dependencies: [{ id: "2", weight: 0.1 }], // stale manual entry
+      dependencies: [{ id: "usdc-circle", weight: 0.1 }], // stale manual entry
       reserves: [
-        { name: "USDtb", pct: 90, risk: "low", coinId: "221" },
-        { name: "USDC buffer", pct: 10, risk: "low", coinId: "2" },
+        { name: "USDtb", pct: 90, risk: "low", coinId: "usdtb-ethena" },
+        { name: "USDC buffer", pct: 10, risk: "low", coinId: "usdc-circle" },
       ],
     });
     const result = deriveDependencies(meta);
     expect(result).toEqual([
-      { id: "221", weight: 0.9, type: "collateral" },
-      { id: "2", weight: 0.1, type: "collateral" },
+      { id: "usdtb-ethena", weight: 0.9, type: "collateral" },
+      { id: "usdc-circle", weight: 0.1, type: "collateral" },
     ]);
   });
 
@@ -58,39 +58,39 @@ describe("deriveDependencies", () => {
         { name: "ETH / stETH", pct: 45, risk: "low" },
         { name: "BTC", pct: 25, risk: "very-low" },
         { name: "SOL", pct: 10, risk: "high" },
-        { name: "USDC", pct: 15, risk: "low", coinId: "2" },
-        { name: "USDT", pct: 5, risk: "low", coinId: "1" },
+        { name: "USDC", pct: 15, risk: "low", coinId: "usdc-circle" },
+        { name: "USDT", pct: 5, risk: "low", coinId: "usdt-tether" },
       ],
     });
     const result = deriveDependencies(meta);
     expect(result).toEqual([
-      { id: "2", weight: 0.15, type: "collateral" },
-      { id: "1", weight: 0.05, type: "collateral" },
+      { id: "usdc-circle", weight: 0.15, type: "collateral" },
+      { id: "usdt-tether", weight: 0.05, type: "collateral" },
     ]);
   });
 
   it("preserves depType when set (wrapper)", () => {
     const meta = makeMeta({
       reserves: [
-        { name: "USDe", pct: 100, risk: "low", coinId: "146", depType: "wrapper" },
+        { name: "USDe", pct: 100, risk: "low", coinId: "usde-ethena", depType: "wrapper" },
       ],
     });
     const result = deriveDependencies(meta);
     expect(result).toEqual([
-      { id: "146", weight: 1.0, type: "wrapper" },
+      { id: "usde-ethena", weight: 1.0, type: "wrapper" },
     ]);
   });
 
   it("preserves depType when set (mechanism)", () => {
     const meta = makeMeta({
       reserves: [
-        { name: "USDC PSM", pct: 30, risk: "low", coinId: "2", depType: "mechanism" },
+        { name: "USDC PSM", pct: 30, risk: "low", coinId: "usdc-circle", depType: "mechanism" },
         { name: "ETH / LSTs", pct: 70, risk: "low" },
       ],
     });
     const result = deriveDependencies(meta);
     expect(result).toEqual([
-      { id: "2", weight: 0.3, type: "mechanism" },
+      { id: "usdc-circle", weight: 0.3, type: "mechanism" },
     ]);
   });
 

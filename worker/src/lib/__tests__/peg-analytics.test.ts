@@ -4,14 +4,14 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     {
-      id: "1",
+      id: "usdt-tether",
       symbol: "AAA",
       name: "AAA Stable",
       commodityOunces: undefined,
       flags: { pegCurrency: "USD", governance: "centralized", navToken: false },
     },
     {
-      id: "2",
+      id: "usdc-circle",
       symbol: "NAV",
       name: "NAV Stable",
       commodityOunces: undefined,
@@ -63,7 +63,7 @@ describe("derivePegAnalyticsSnapshot", () => {
         match: "depeg_events",
         rows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             symbol: "AAA",
             started_at: 1_700_000_000,
             ended_at: null,
@@ -80,7 +80,7 @@ describe("derivePegAnalyticsSnapshot", () => {
     const snapshot = await derivePegAnalyticsSnapshot(db, {
       peggedAssets: [
         {
-          id: "1",
+          id: "usdt-tether",
           symbol: "AAA",
           name: "AAA Stable",
           pegType: "peggedUSD",
@@ -91,9 +91,9 @@ describe("derivePegAnalyticsSnapshot", () => {
       methodologyAsOf: 1_700_000_000,
     });
 
-    expect(snapshot.eventsByCoin.has("1")).toBe(true);
-    expect(snapshot.pegDataById.has("1")).toBe(true);
-    expect(snapshot.pegDataById.has("2")).toBe(false); // nav token excluded by default
-    expect(snapshot.pegDataById.get("1")?.currentDeviationBps).toBe(100);
+    expect(snapshot.eventsByCoin.has("usdt-tether")).toBe(true);
+    expect(snapshot.pegDataById.has("usdt-tether")).toBe(true);
+    expect(snapshot.pegDataById.has("usdc-circle")).toBe(false); // nav token excluded by default
+    expect(snapshot.pegDataById.get("usdt-tether")?.currentDeviationBps).toBe(100);
   });
 });

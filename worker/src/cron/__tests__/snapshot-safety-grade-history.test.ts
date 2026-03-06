@@ -97,8 +97,8 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("seeds rows for live coins with no history", async () => {
     mockSnapshot([
-      makeCard("1", "B", 72),
-      makeCard("2", "A", 84),
+      makeCard("usdt-tether", "B", 72),
+      makeCard("usdc-circle", "A", 84),
       makeCard("dead-1", "F", 0, true),
     ]);
 
@@ -122,16 +122,16 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("inserts only transition rows when grades change", async () => {
     mockSnapshot([
-      makeCard("1", "B", 72),
-      makeCard("2", "B+", 77),
+      makeCard("usdt-tether", "B", 72),
+      makeCard("usdc-circle", "B+", 77),
     ]);
 
     const db = mockD1([
       {
         match: "FROM safety_grade_history h",
         rows: [
-          { stablecoin_id: "1", grade: "B", score: 71, recorded_at: 1_777_680_000 },
-          { stablecoin_id: "2", grade: "A", score: 83, recorded_at: 1_777_680_000 },
+          { stablecoin_id: "usdt-tether", grade: "B", score: 71, recorded_at: 1_777_680_000 },
+          { stablecoin_id: "usdc-circle", grade: "A", score: 83, recorded_at: 1_777_680_000 },
         ],
       },
     ]);
@@ -150,16 +150,16 @@ describe("snapshotSafetyGradeHistory", () => {
 
   it("is idempotent when all live grades are unchanged", async () => {
     mockSnapshot([
-      makeCard("1", "B", 72),
-      makeCard("2", "A", 84),
+      makeCard("usdt-tether", "B", 72),
+      makeCard("usdc-circle", "A", 84),
     ]);
 
     const db = mockD1([
       {
         match: "FROM safety_grade_history h",
         rows: [
-          { stablecoin_id: "1", grade: "B", score: 72, recorded_at: 1_777_760_000 },
-          { stablecoin_id: "2", grade: "A", score: 84, recorded_at: 1_777_760_000 },
+          { stablecoin_id: "usdt-tether", grade: "B", score: 72, recorded_at: 1_777_760_000 },
+          { stablecoin_id: "usdc-circle", grade: "A", score: 84, recorded_at: 1_777_760_000 },
         ],
       },
     ]);

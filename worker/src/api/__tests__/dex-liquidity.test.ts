@@ -15,8 +15,8 @@ describe("handleDexLiquidity", () => {
     const res = await handleDexLiquidity(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body).toHaveProperty("1");
-    const coin = body["1"] as Record<string, unknown>;
+    expect(body).toHaveProperty("usdt-tether");
+    const coin = body["usdt-tether"] as Record<string, unknown>;
     expect(coin).toHaveProperty("totalTvlUsd");
     expect(coin).toHaveProperty("liquidityScore");
     expect(coin).toHaveProperty("poolCount");
@@ -47,7 +47,7 @@ describe("handleDexLiquidity", () => {
     ]);
     const res = await handleDexLiquidity(db);
     const body = (await res.json()) as Record<string, Record<string, unknown>>;
-    const coin = body["1"];
+    const coin = body["usdt-tether"];
     expect(coin).toHaveProperty("effectiveTvlUsd");
     expect(coin).toHaveProperty("avgPoolStress");
     expect(coin).toHaveProperty("weightedBalanceRatio");
@@ -79,6 +79,6 @@ describe("handleDexLiquidity", () => {
     ]);
     const res = await handleDexLiquidity(db);
     const body = (await res.json()) as Record<string, { methodologyVersion: string }>;
-    expect(body["1"]?.methodologyVersion).toBe("3.0");
+    expect(body["usdt-tether"]?.methodologyVersion).toBe("3.0");
   });
 });

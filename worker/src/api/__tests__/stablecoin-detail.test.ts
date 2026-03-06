@@ -67,7 +67,7 @@ describe("handleStablecoinDetail", () => {
     fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/json");
@@ -91,7 +91,7 @@ describe("handleStablecoinDetail", () => {
     ]);
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
     // Should NOT call fetch when cache is fresh
@@ -107,7 +107,7 @@ describe("handleStablecoinDetail", () => {
     fetchSpy.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(502);
     const body = (await res.json()) as { error: string };
@@ -129,7 +129,7 @@ describe("handleStablecoinDetail", () => {
     fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tokens: unknown[] };
@@ -150,7 +150,7 @@ describe("handleStablecoinDetail", () => {
     fetchSpy.mockRejectedValue(new Error("network timeout"));
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { tokens: unknown[] };
@@ -164,7 +164,7 @@ describe("handleStablecoinDetail", () => {
     fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
 
     const ctx = makeCtx();
-    await handleStablecoinDetail(db, "1", ctx);
+    await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(ctx.waitUntil).toHaveBeenCalled();
   });
@@ -176,10 +176,10 @@ describe("handleStablecoinDetail", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }));
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "gold-xaut", ctx);
+    const res = await handleStablecoinDetail(db, "xaut-tether", ctx);
 
     expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({ error: "Failed to fetch commodity token data" });
+    expect(await res.json()).toEqual({ error: "Invalid upstream data for stablecoin xaut-tether" });
   });
 
   it("logs parse failure context and returns stale cache when detail JSON is invalid", async () => {
@@ -197,7 +197,7 @@ describe("handleStablecoinDetail", () => {
     fetchSpy.mockResolvedValueOnce(new Response("{invalid-json", { status: 200 }));
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, "1", ctx);
+    const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(200);
     expect(errorSpy).toHaveBeenCalledWith(
@@ -206,11 +206,14 @@ describe("handleStablecoinDetail", () => {
     errorSpy.mockRestore();
   });
 
-  it("handles supply_history fallback for cg- prefixed coins", async () => {
-    const cgId = Array.from(TRACKED_META_BY_ID.keys()).find((id) => id.startsWith("cg-"));
-    expect(cgId).toBeTruthy();
+  it("handles supply_history fallback for gecko-only tracked coins", async () => {
+    const geckoOnlyId = Array.from(TRACKED_META_BY_ID.entries()).find(([, meta]) => {
+      const entry = meta as { geckoId?: string | null; llamaId?: string | null };
+      return Boolean(entry.geckoId) && !entry.llamaId;
+    })?.[0];
+    expect(geckoOnlyId).toBeTruthy();
 
-    // cg- prefixed coin with no CoinGecko data returns fallback from D1
+    // Gecko-only coin with no market chart data returns fallback from D1
     const db = mockD1([
       { match: "cache", rows: [] },
       {
@@ -227,7 +230,7 @@ describe("handleStablecoinDetail", () => {
     );
 
     const ctx = makeCtx();
-    const res = await handleStablecoinDetail(db, cgId!, ctx);
+    const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
     expect(res.status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining("/market_chart?vs_currency=usd&days=max"),

@@ -274,8 +274,8 @@ describe("enrichMissingPrices", () => {
 
   it("returns zero counts when no assets are missing prices", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "Tether", symbol: "USDT", price: 1.0, pegType: "peggedUSD", circulating: {} },
-      { id: "2", name: "USD Coin", symbol: "USDC", price: 0.999, pegType: "peggedUSD", circulating: {} },
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1.0, pegType: "peggedUSD", circulating: {} },
+      { id: "usdc-circle", name: "USD Coin", symbol: "USDC", price: 0.999, pegType: "peggedUSD", circulating: {} },
     ];
 
     const stats = await enrichMissingPrices(assets);
@@ -291,7 +291,7 @@ describe("enrichMissingPrices", () => {
   it("enriches via Pass 1 (contract address → DL coins API)", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "1", name: "Tether", symbol: "USDT", price: 0,
+        id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0,
         address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         pegType: "peggedUSD", circulating: {},
       },
@@ -319,7 +319,7 @@ describe("enrichMissingPrices", () => {
   it("enriches via Pass 2 (geckoId → DL coins API)", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "1", name: "Tether", symbol: "USDT", price: 0,
+        id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0,
         geckoId: "tether", pegType: "peggedUSD", circulating: {},
       },
     ];
@@ -346,7 +346,7 @@ describe("enrichMissingPrices", () => {
   it("falls through to Pass 3 (CG direct) when DL returns no price", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "1", name: "Tether", symbol: "USDT", price: 0,
+        id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0,
         geckoId: "tether", pegType: "peggedUSD", circulating: {},
       },
     ];
@@ -374,7 +374,7 @@ describe("enrichMissingPrices", () => {
   it("skips assets with 'wrong' geckoId from Pass 2, routes to Pass 3", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "1", name: "SomeToken", symbol: "TOK", price: 0,
+        id: "usdt-tether", name: "SomeToken", symbol: "TOK", price: 0,
         geckoId: "sometoken-wrong", pegType: "peggedUSD", circulating: {},
       },
     ];
@@ -400,7 +400,7 @@ describe("enrichMissingPrices", () => {
   it("leaves assets unpriced when all APIs return empty data", async () => {
     const assets: PeggedAsset[] = [
       {
-        id: "1", name: "Tether", symbol: "USDT", price: 0,
+        id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0,
         address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         geckoId: "tether", pegType: "peggedUSD", circulating: {},
       },
@@ -440,7 +440,7 @@ describe("fetchDualPrimaryPrices", () => {
 
   it("returns high confidence when DL and CG prices agree within 50bps", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -461,7 +461,7 @@ describe("fetchDualPrimaryPrices", () => {
     const { results, stats } = await fetchDualPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
-    const result = results.get("1")!;
+    const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("high");
     expect(result.source).toBe("defillama+coingecko");
     expect(stats.high).toBe(1);
@@ -470,7 +470,7 @@ describe("fetchDualPrimaryPrices", () => {
 
   it("returns low confidence when DL and CG prices diverge beyond 50bps", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -491,7 +491,7 @@ describe("fetchDualPrimaryPrices", () => {
     const { results, stats } = await fetchDualPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
-    const result = results.get("1")!;
+    const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("low");
     expect(stats.low).toBe(1);
     expect(stats.divergences.length).toBe(1);
@@ -499,7 +499,7 @@ describe("fetchDualPrimaryPrices", () => {
 
   it("does not force closer-to-$1 selection for NAV tokens during divergence", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "OUSG", symbol: "OUSG", geckoId: "ousg", pegType: "peggedUSD", navToken: true, circulating: {} },
+      { id: "usdt-tether", name: "OUSG", symbol: "OUSG", geckoId: "ousg", pegType: "peggedUSD", navToken: true, circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -520,7 +520,7 @@ describe("fetchDualPrimaryPrices", () => {
     const { results, stats } = await fetchDualPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
-    const result = results.get("1")!;
+    const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("low");
     expect(result.source).toBe("defillama");
     expect(result.price).toBe(110);
@@ -529,7 +529,7 @@ describe("fetchDualPrimaryPrices", () => {
 
   it("returns single-source when only one API has data", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
+      { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
@@ -549,7 +549,7 @@ describe("fetchDualPrimaryPrices", () => {
     const { results, stats } = await fetchDualPrimaryPrices(assets, db);
 
     expect(results.size).toBe(1);
-    const result = results.get("1")!;
+    const result = results.get("usdt-tether")!;
     expect(result.confidence).toBe("single-source");
     expect(result.source).toBe("defillama");
     expect(stats.singleSource).toBe(1);
@@ -557,7 +557,7 @@ describe("fetchDualPrimaryPrices", () => {
 
   it("skips assets without geckoId", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "NoGecko", symbol: "NG", pegType: "peggedUSD", circulating: {} },
+      { id: "usdt-tether", name: "NoGecko", symbol: "NG", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async () =>
@@ -573,7 +573,7 @@ describe("fetchDualPrimaryPrices", () => {
 
   it("filters out assets with 'wrong' in geckoId", async () => {
     const assets: PeggedAsset[] = [
-      { id: "1", name: "BadGecko", symbol: "BG", geckoId: "something-wrong", pegType: "peggedUSD", circulating: {} },
+      { id: "usdt-tether", name: "BadGecko", symbol: "BG", geckoId: "something-wrong", pegType: "peggedUSD", circulating: {} },
     ];
 
     vi.stubGlobal("fetch", vi.fn(async () =>

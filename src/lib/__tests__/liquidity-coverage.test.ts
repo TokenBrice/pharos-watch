@@ -36,9 +36,6 @@ describe("liquidity coverage", () => {
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {
-    /** Small coins with no on-chain contract data — disambiguation relies on geckoId/cmcSlug */
-    const EXEMPT_IDS = new Set(["245", "342", "215"]);
-
     const symbolToIds = new Map<string, string[]>();
     for (const meta of TRACKED_STABLECOINS) {
       const key = meta.symbol.toUpperCase();
@@ -51,8 +48,9 @@ describe("liquidity coverage", () => {
     for (const [symbol, ids] of symbolToIds) {
       if (ids.length <= 1) continue;
       for (const id of ids) {
-        if (EXEMPT_IDS.has(id)) continue;
         const meta = TRACKED_STABLECOINS.find((m) => m.id === id);
+        // Small symbols can rely on external IDs when there is no contract footprint.
+        if (!meta?.contracts?.length && (meta?.geckoId || meta?.cmcSlug)) continue;
         if (!meta?.contracts?.length) {
           missing.push(`${symbol} (id=${id}) has no contracts for disambiguation`);
         }

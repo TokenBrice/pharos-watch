@@ -13,14 +13,21 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { SHADOW_STABLECOINS } from "@shared/lib/shadow-stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 
+const USDT_META = REGISTRY_BY_LLAMA_ID.get("1");
+const CANONICAL_USDT_ID = USDT_META?.id ?? "1";
+const GECKO_ONLY_ID = TRACKED_STABLECOINS.find(
+  (stablecoin) => stablecoin.geckoId && !stablecoin.llamaId,
+)?.id;
+
 describe("REGISTRY_BY_ID", () => {
   it("contains all tracked stablecoins", () => {
     expect(REGISTRY_BY_ID.size).toBeGreaterThanOrEqual(TRACKED_STABLECOINS.length);
   });
 
   it("contains shadow stablecoins", () => {
-    expect(REGISTRY_BY_ID.has("3")).toBe(true);
-    expect(REGISTRY_BY_ID.has("iron-finance")).toBe(true);
+    for (const shadow of SHADOW_STABLECOINS) {
+      expect(REGISTRY_BY_ID.has(shadow.id)).toBe(true);
+    }
   });
 
   it("has no duplicate canonical IDs", () => {
@@ -48,22 +55,36 @@ describe("REGISTRY_BY_LLAMA_ID", () => {
 
 describe("resolveStablecoinId", () => {
   it("resolves canonical ID directly", () => {
-    expect(resolveStablecoinId("1")).toEqual({ canonicalId: "1", matchedBy: "canonical" });
+    expect(resolveStablecoinId(CANONICAL_USDT_ID)).toEqual({
+      canonicalId: CANONICAL_USDT_ID,
+      matchedBy: "canonical",
+    });
   });
 
   it("resolves llamaId when allowLegacy is true", () => {
     const resolved = resolveStablecoinId("1", { allowLegacy: true });
 
-    expect(resolved?.canonicalId).toBe("1");
-    expect(["canonical", "llama"]).toContain(resolved?.matchedBy);
+    expect(resolved?.canonicalId).toBe(CANONICAL_USDT_ID);
+    if (CANONICAL_USDT_ID === "1") {
+      expect(resolved?.matchedBy).toBe("canonical");
+      return;
+    }
+    expect(resolved?.matchedBy).toBe("llama");
+  });
+
+  it("returns null for llamaId when allowLegacy is false", () => {
+    if (CANONICAL_USDT_ID === "1") {
+      expect(resolveStablecoinId("1")).toEqual({
+        canonicalId: "1",
+        matchedBy: "canonical",
+      });
+      return;
+    }
+    expect(resolveStablecoinId("1")).toBeNull();
   });
 
   it("returns null for unknown ID", () => {
     expect(resolveStablecoinId("nonexistent-id-99999")).toBeNull();
-  });
-
-  it("returns null for llamaId when allowLegacy is false", () => {
-    expect(resolveStablecoinId("99999", { allowLegacy: false })).toBeNull();
   });
 });
 
@@ -98,11 +119,12 @@ describe("resolveByExternalId", () => {
 
 describe("getLlamaId", () => {
   it("returns llamaId for a tracked stablecoin", () => {
-    expect(getLlamaId("1")).toBe("1");
+    expect(getLlamaId(CANONICAL_USDT_ID)).toBe("1");
   });
 
   it("returns null for CoinGecko-sourced stablecoin", () => {
-    expect(getLlamaId("cg-ustb")).toBeNull();
+    expect(GECKO_ONLY_ID).toBeTruthy();
+    expect(getLlamaId(GECKO_ONLY_ID!)).toBeNull();
   });
 
   it("returns null for non-existent ID", () => {

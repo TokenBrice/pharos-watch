@@ -3,11 +3,11 @@ import { buildStablecoinUrl } from "@/lib/urls";
 
 describe("buildStablecoinUrl", () => {
   it("returns correct path for simple ID", () => {
-    expect(buildStablecoinUrl("1")).toBe("/stablecoin/1/");
+    expect(buildStablecoinUrl("usdt-tether")).toBe("/stablecoin/usdt-tether/");
   });
 
   it("returns correct path for prefixed ID", () => {
-    expect(buildStablecoinUrl("cg-ustb")).toBe("/stablecoin/cg-ustb/");
+    expect(buildStablecoinUrl("ustb-superstate")).toBe("/stablecoin/ustb-superstate/");
   });
 
   it("encodes special characters", () => {
