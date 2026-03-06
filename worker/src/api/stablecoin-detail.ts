@@ -65,7 +65,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     }
   }
 
-  const isCgOnly = id.startsWith("cg-") && !!meta?.geckoId;
+  const isCgOnly = meta?.detailProvider === "coingecko" && !!meta?.geckoId;
   if (isCgOnly) {
     const pegType = `pegged${meta.flags.pegCurrency}`;
 
@@ -88,9 +88,11 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     }
   }
 
+  const dlId = meta?.llamaId ?? id;
+
   try {
     const res = await fetchWithRetry(
-      `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(id)}`,
+      `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
       undefined,
       DETAIL_UPSTREAM_MAX_RETRIES,
       { timeoutMs: DETAIL_UPSTREAM_TIMEOUT_MS },

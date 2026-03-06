@@ -310,8 +310,9 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   for (const meta of processable) {
     // Fetch per-coin detail endpoint (includes gecko_id + supply history)
     let detail: CoinDetail | null = null;
+    const dlId = meta.llamaId ?? meta.id;
     try {
-      const res = await fetch(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(meta.id)}`);
+      const res = await fetch(`${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`);
       if (res.ok) {
         detail = (await res.json()) as CoinDetail;
       }
