@@ -66,15 +66,15 @@ describe("parseStablecoinHistoryQuery", () => {
     expect(await response.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
   });
 
-  it("returns 400 with stable message when stablecoin ID is invalid", async () => {
+  it("returns 404 with stable message when stablecoin ID is unknown", async () => {
     const result = parseStablecoinHistoryQuery(
       new URL("https://x/api/supply-history?stablecoin=DROP TABLE"),
       { defaultDays: 365, minDays: 1, maxDays: 1825 },
     );
     expect(result).toBeInstanceOf(Response);
     const response = result as Response;
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid stablecoin ID" });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
   it("applies endpoint-specific default and bounds for days", () => {

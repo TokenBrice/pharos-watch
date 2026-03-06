@@ -2,8 +2,7 @@ import { type DepegRow, rowToDepegEvent } from "../lib/depeg-helpers";
 import {
   withErrorHandler,
   addFreshnessHeaders,
-  isValidStablecoinId,
-  errorResponse,
+  resolveOrReject,
   parseIntParam,
   jsonResponse,
   getLatestSuccessfulCronTimestamp,
@@ -30,11 +29,12 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   const filterBindings: (string | number)[] = [];
 
   if (stablecoin) {
-    if (!isValidStablecoinId(stablecoin)) {
-      return errorResponse(400, "Invalid stablecoin ID");
+    const resolved = resolveOrReject(stablecoin, `path=${url.pathname}`);
+    if (resolved instanceof Response) {
+      return resolved;
     }
     conditions.push("stablecoin_id = ?");
-    filterBindings.push(stablecoin);
+    filterBindings.push(resolved.canonicalId);
   }
   if (active === "true") {
     conditions.push("ended_at IS NULL");
