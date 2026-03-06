@@ -344,6 +344,14 @@ export async function enrichMissingPrices(
   let pass3Count = 0;
   let passCmcCount = 0;
   let pass4Count = 0;
+  const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
+    if (!db) return;
+    try {
+      await recordOutcome(db, source, success);
+    } catch (err) {
+      console.warn(`[enrich-prices] Failed to record circuit outcome (${source}):`, err);
+    }
+  };
 
   try {
     // ── Pass 1: Contract addresses via DefiLlama coins API ──
@@ -509,7 +517,11 @@ export async function enrichMissingPrices(
     }
 
     // ── Pass 3.5: CoinMarketCap API (fallback for assets with cmcSlug) ──
-    if (cmcApiKey) {
+    const cmcAllowed =
+      cmcApiKey != null && db != null
+        ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.CMC_PRICES)
+        : true;
+    if (cmcApiKey && cmcAllowed) {
       const cmcCandidates = assets
         .map((a, i) => ({ asset: a, index: i }))
         .filter((m) => hasMissingPrice(m.asset) && m.asset.cmcSlug);
@@ -584,15 +596,20 @@ export async function enrichMissingPrices(
                   console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
                 }
               }
+              await safeRecordOutcome(CIRCUIT_SOURCE.CMC_PRICES, true);
             } else {
               console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
+              await safeRecordOutcome(CIRCUIT_SOURCE.CMC_PRICES, false);
             }
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
             console.warn("[enrich] CMC API call failed:", err);
+            await safeRecordOutcome(CIRCUIT_SOURCE.CMC_PRICES, false);
           }
         }
       }
+    } else if (cmcApiKey && !cmcAllowed) {
+      console.warn("[enrich] CoinMarketCap circuit open — skipping pass 3.5");
     }
 
     // ── Pass 4: DexScreener search API (best-effort fallback) ──
@@ -606,56 +623,65 @@ export async function enrichMissingPrices(
       console.warn(`[enrich] ${stillMissing.length} assets still missing prices — capping DexScreener to ${DEXSCREENER_MAX_SEARCHES}`);
     }
 
-    for (const m of stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES)) {
-      try {
-        throwIfAborted(signal);
-        // Rate limit: 200ms between DexScreener calls
-        if (pass4Count > 0 || stillMissing.indexOf(m) > 0) {
-          await sleepWithSignal(200, signal);
-        }
-        const dexTimeout = AbortSignal.timeout(10_000);
-        const dexSignal = signal ? AbortSignal.any([signal, dexTimeout]) : dexTimeout;
-        const res = await fetchWithRetry(
-          `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-          { headers: { "User-Agent": USER_AGENT }, signal: dexSignal }
-        );
-        if (!res) {
-          console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
-          continue;
-        }
-        if (!res.ok) {
-          console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);
-          continue;
-        }
-        const data = (await res.json()) as { pairs?: DexScreenerPair[] };
-        if (!data.pairs || data.pairs.length === 0) continue;
+    const dexscreenerAllowed =
+      db != null ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES) : true;
+    let dexAttempts = 0;
+    let dexSuccessfulCalls = 0;
+    if (dexscreenerAllowed) {
+      for (const m of stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES)) {
+        try {
+          dexAttempts++;
+          // Rate limit: 200ms between DexScreener calls
+          if (pass4Count > 0 || stillMissing.indexOf(m) > 0) {
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          const res = await fetchWithRetry(
+            `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
+            { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
+          );
+          if (!res) {
+            console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
+            continue;
+          }
+          if (!res.ok) {
+            console.warn(`[enrich] DexScreener returned ${res.status} for ${m.asset.symbol}`);
+            continue;
+          }
+          dexSuccessfulCalls++;
+          const data = (await res.json()) as { pairs?: DexScreenerPair[] };
+          if (!data.pairs || data.pairs.length === 0) continue;
 
-        // Filter: matching symbol, has USD price, >$50K liquidity
-        const candidates = data.pairs.filter((p) => {
-          if (p.baseToken.symbol.toUpperCase() !== m.asset.symbol.toUpperCase()) return false;
-          if (!p.priceUsd || !p.liquidity?.usd) return false;
-          if (p.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
-          return true;
-        });
+          // Filter: matching symbol, has USD price, >$50K liquidity
+          const candidates = data.pairs.filter((p) => {
+            if (p.baseToken.symbol.toUpperCase() !== m.asset.symbol.toUpperCase()) return false;
+            if (!p.priceUsd || !p.liquidity?.usd) return false;
+            if (p.liquidity.usd < DEXSCREENER_MIN_LIQUIDITY_USD) return false;
+            return true;
+          });
 
-        if (candidates.length === 0) continue;
+          if (candidates.length === 0) continue;
 
-        // Take price from highest-liquidity pair
-        candidates.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
-        const price = parseFloat(candidates[0].priceUsd);
-        if (isNaN(price) || !isFinite(price) || price <= 0) {
-          console.warn(`[enrich] DexScreener returned unparseable price for ${m.asset.symbol}: "${candidates[0].priceUsd}"`);
-          continue;
+          // Take price from highest-liquidity pair
+          candidates.sort((a, b) => b.liquidity.usd - a.liquidity.usd);
+          const price = parseFloat(candidates[0].priceUsd);
+          if (isNaN(price) || !isFinite(price) || price <= 0) {
+            console.warn(`[enrich] DexScreener returned unparseable price for ${m.asset.symbol}: "${candidates[0].priceUsd}"`);
+            continue;
+          }
+          // Sanity check: peg-type-aware range
+          if (isReasonablePrice(price, m.asset.pegType as string | undefined, fxRates, { navToken: !!m.asset.navToken })) {
+            assets[m.index].price = price;
+            pass4Count++;
+          }
+        } catch (err) {
+          console.warn(`[enrich] DexScreener failed for ${m.asset.symbol}:`, err);
         }
-        // Sanity check: peg-type-aware range
-        if (isReasonablePrice(price, m.asset.pegType as string | undefined, fxRates, { navToken: !!m.asset.navToken })) {
-          assets[m.index].price = price;
-          pass4Count++;
-        }
-      } catch (err) {
-        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-        console.warn(`[enrich] DexScreener failed for ${m.asset.symbol}:`, err);
       }
+      if (dexAttempts > 0) {
+        await safeRecordOutcome(CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
+      }
+    } else if (stillMissing.length > 0) {
+      console.warn("[enrich] DexScreener circuit open — skipping pass 4");
     }
 
     // ── Summary log ──

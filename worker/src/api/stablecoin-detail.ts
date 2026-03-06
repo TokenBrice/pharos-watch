@@ -1,7 +1,8 @@
 import { getCache, setCache } from "../lib/db";
 import { withErrorHandler } from "../lib/api-utils";
-import { DEFILLAMA_BASE } from "../lib/constants";
+import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { recordOutcome, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { fetchCommodityTokens } from "./stablecoin-detail/commodity";
 import { fetchCoinGeckoOnlyTokens } from "./stablecoin-detail/coingecko-only";
@@ -25,6 +26,13 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
 ): Promise<Response> => {
   const cacheKey = `detail:${id}`;
   const cached = await getCache(db, cacheKey);
+  const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
+    try {
+      await recordOutcome(db, source, success);
+    } catch {
+      // Non-blocking for detail endpoint.
+    }
+  };
 
   if (cached) {
     const age = Math.floor(Date.now() / 1000) - cached.updatedAt;
@@ -67,6 +75,11 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
 
   const isCgOnly = meta?.detailProvider === "coingecko" && !!meta?.geckoId;
   if (isCgOnly) {
+    const cgDetailAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS);
+    if (!cgDetailAllowed) {
+      return staleCacheOrError(cached, 503, "CoinGecko detail circuit open");
+    }
+
     const pegType = `pegged${meta.flags.pegCurrency}`;
 
     try {
@@ -75,6 +88,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
         geckoId: meta.geckoId!,
         pegType,
       });
+      await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, tokens.length > 0);
       if (tokens.length === 0) {
         tokens = await fetchSupplyHistoryFallback(db, id, pegType);
       }
@@ -83,12 +97,17 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
       ctx.waitUntil(setCache(db, cacheKey, body));
       return createFreshUpstreamResponse(body);
     } catch (err) {
+      await safeRecordOutcome(CIRCUIT_SOURCE.CG_DETAIL_PLATFORMS, false);
       logUpstreamException("coingecko-detail", id, err);
       return staleCacheOrError(cached, 502, "Failed to fetch CoinGecko data");
     }
   }
 
   const dlId = meta?.llamaId ?? id;
+  const dlDetailAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL);
+  if (!dlDetailAllowed) {
+    return staleCacheOrError(cached, 503, "DefiLlama detail circuit open");
+  }
 
   try {
     const res = await fetchWithRetry(
@@ -99,6 +118,7 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     );
 
     if (!res?.ok) {
+      await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
       logUpstreamFailure("defillama-stablecoin-detail", id, res?.status ?? "no-response");
       return staleCacheOrError(cached, 502, `Failed to fetch stablecoin ${id}`);
     }
@@ -108,13 +128,16 @@ export const handleStablecoinDetail = withErrorHandler("stablecoin-detail", asyn
     try {
       body = normalizeDefiLlamaDetailBody(upstreamBody, meta);
     } catch (err) {
+      await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
       logUpstreamException("defillama-stablecoin-detail-parse", id, err);
       return staleCacheOrError(cached, 502, `Invalid upstream data for stablecoin ${id}`);
     }
 
     ctx.waitUntil(setCache(db, cacheKey, body));
+    await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
     return createFreshUpstreamResponse(body);
   } catch (err) {
+    await safeRecordOutcome(CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
     logUpstreamException("defillama-stablecoin-detail", id, err);
     return staleCacheOrError(cached, 502, `Failed to fetch stablecoin ${id}`);
   }

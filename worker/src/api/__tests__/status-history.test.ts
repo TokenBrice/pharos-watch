@@ -82,4 +82,43 @@ describe("handleStatusHistory", () => {
     expect(body.discrepancy.hasDivergence).toBe(false);
     expect(body.transitions[0]?.transitionType).toBe("recover");
   });
+
+  it("applies from/to transition filters when provided", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "FROM status_state", rows: [], first: null },
+      { match: "FROM status_probe_runs", rows: [], first: null },
+      { match: "FROM status_discrepancy_state", rows: [], first: null },
+      {
+        match: "FROM status_transitions",
+        rows: [{
+          id: 2,
+          scope: "global",
+          previous_status: "healthy",
+          next_status: "degraded",
+          raw_status: "degraded",
+          transition_type: "degrade",
+          reason: "raw-degraded-consecutive-threshold",
+          confidence: 0.9,
+          causes_json: "[]",
+          created_at: now - 60,
+        }],
+      },
+    ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
+
+    const seenSql: string[] = [];
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      seenSql.push(sql);
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    const request = makeApiRequest("/api/status-history?from=2025-01-01T00:00:00Z&to=1735776000", { adminKey: "secret-key" });
+    const res = await handleStatusHistory(db, "secret-key", request);
+    expect(res.status).toBe(200);
+
+    const transitionsSql = seenSql.find((sql) => sql.includes("FROM status_transitions")) ?? "";
+    expect(transitionsSql).toContain("created_at >= ?");
+    expect(transitionsSql).toContain("created_at <= ?");
+  });
 });

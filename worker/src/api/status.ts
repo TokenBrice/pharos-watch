@@ -30,6 +30,7 @@ const STATUS_SEVERITY: Record<StatusLevel, number> = {
 };
 
 interface RawStatusComputation {
+  dbHealthy: boolean;
   availabilityStatus: StatusResponse["availabilityStatus"];
   dataQualityStatus: StatusResponse["dataQualityStatus"];
   rawOverallStatus: StatusLevel;
@@ -38,6 +39,7 @@ interface RawStatusComputation {
   caches: StatusResponse["caches"];
   crons: StatusResponse["crons"];
   dataQuality: StatusResponse["dataQuality"];
+  datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
 }
 
@@ -224,8 +226,18 @@ async function computeRawStatus(
     };
   }
 
-  // 3. Data quality
-  const dataQuality = await getDataQuality(db, now);
+  // 3. DB health sentinel (short-circuits data quality + dataset freshness when unavailable).
+  let dbHealthy = true;
+  try {
+    await db.prepare("SELECT 1").first();
+  } catch (err) {
+    dbHealthy = false;
+    console.error("[status] DB health sentinel failed:", err);
+  }
+
+  // 4. Data quality + dataset freshness
+  const dataQuality = dbHealthy ? await getDataQuality(db, now) : emptyDataQuality();
+  const datasetFreshness = dbHealthy ? await getDatasetFreshness(db) : emptyDatasetFreshness();
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
   const blacklistMissingRatio = dataQuality.blacklistMissingRatio;
@@ -237,13 +249,16 @@ async function computeRawStatus(
   const staleOnchainRatio = trackedOnchainCoins > 0 ? staleOnchainSupply / trackedOnchainCoins : 0;
   const onchainDivergenceRatio = trackedOnchainCoins > 0 ? onchainSupplyDivergences / trackedOnchainCoins : 0;
 
-  // 4. Raw status synthesis
-  const availabilityStatus: StatusResponse["availabilityStatus"] =
+  // 5. Raw status synthesis
+  const baseAvailabilityStatus: StatusResponse["availabilityStatus"] =
     worstCacheRatio > 2 || anyCronError || unhealthyCrons >= 3
       ? "stale"
       : worstCacheRatio > 1.5 || unhealthyCrons > 0
         ? "degraded"
         : "healthy";
+  const availabilityStatus: StatusResponse["availabilityStatus"] = dbHealthy
+    ? baseAvailabilityStatus
+    : maxStatus(baseAvailabilityStatus, "degraded");
 
   const dataQualityStatus: StatusResponse["dataQualityStatus"] =
     missingPriceRatio > 0.4 ||
@@ -265,6 +280,14 @@ async function computeRawStatus(
   const rawOverallStatus = maxStatus(availabilityStatus, dataQualityStatus);
 
   const availabilityCauses: StatusCause[] = [];
+  if (!dbHealthy) {
+    pushCause(availabilityCauses, {
+      code: "db_unhealthy",
+      layer: "availability",
+      severity: "warning",
+      message: "Primary database connectivity check failed; data-quality queries were skipped.",
+    });
+  }
   if (worstCacheRatio > 2) {
     pushCause(availabilityCauses, {
       code: "cache_ratio_stale",
@@ -426,6 +449,7 @@ async function computeRawStatus(
   });
 
   return {
+    dbHealthy,
     availabilityStatus,
     dataQualityStatus,
     rawOverallStatus,
@@ -438,6 +462,7 @@ async function computeRawStatus(
     caches,
     crons,
     dataQuality,
+    datasetFreshness,
     summary: {
       unhealthyCrons,
       degradedCrons: degradedCronRuns,
@@ -477,6 +502,7 @@ export const handleStatus = withErrorHandler(
 
       const body: StatusResponse = {
         timestamp: now,
+        dbHealthy: raw.dbHealthy,
         availabilityStatus: raw.availabilityStatus,
         dataQualityStatus: raw.dataQualityStatus,
         rawOverallStatus: raw.rawOverallStatus,
@@ -495,6 +521,7 @@ export const handleStatus = withErrorHandler(
         caches: raw.caches,
         crons: raw.crons,
         dataQuality: raw.dataQuality,
+        datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,
       };
 
@@ -504,6 +531,103 @@ export const handleStatus = withErrorHandler(
 );
 
 // --- Data quality queries ---
+
+function emptyDataQuality(): DataQuality {
+  return {
+    totalStablecoins: 0,
+    missingPrices: 0,
+    blacklistMissingAmounts: 0,
+    blacklistRecentMissingAmounts: 0,
+    blacklistRecentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
+    blacklistMissingRatio: 0,
+    blacklistTotal: 0,
+    onchainSupplyDivergences: 0,
+    onchainDivergenceRatio: 0,
+    onchainSupplyMonitoring: "unavailable",
+    onchainSupplyLatestAt: null,
+    onchainSupplyTrackedCoins: 0,
+    activeDepegs: 0,
+    staleOnchainSupply: 0,
+    onchainStaleRatio: 0,
+  };
+}
+
+function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
+  return {
+    stablecoins: null,
+    blacklist: null,
+    mintBurn: null,
+    supply: null,
+    yield: null,
+    depegs: null,
+    dews: null,
+    digest: null,
+  };
+}
+
+interface DatasetFreshnessTarget {
+  table: string;
+  column: string;
+  where?: string;
+}
+
+const DATASET_FRESHNESS_TARGETS: Record<keyof StatusResponse["datasetFreshness"], DatasetFreshnessTarget> = {
+  stablecoins: { table: "cache", column: "updated_at", where: "key = 'stablecoins'" },
+  blacklist: { table: "blacklist_events", column: "timestamp" },
+  mintBurn: { table: "mint_burn_events", column: "timestamp" },
+  supply: { table: "supply_history", column: "snapshot_date" },
+  yield: { table: "yield_data", column: "updated_at" },
+  depegs: { table: "depeg_events", column: "started_at" },
+  dews: { table: "stress_signals", column: "computed_at" },
+  digest: { table: "daily_digest", column: "generated_at" },
+};
+
+async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Promise<number | null> {
+  const where = target.where ? ` WHERE ${target.where}` : "";
+  try {
+    // SAFETY: table/column/where values come from DATASET_FRESHNESS_TARGETS (hardcoded, not user input).
+    const row = await db
+      .prepare(`SELECT MAX(${target.column}) as latest FROM ${target.table}${where}`)
+      .first<{ latest: number | null }>();
+    return row?.latest ?? null;
+  } catch (err) {
+    console.error(`[status] Failed dataset freshness query for ${target.table}:`, err);
+    return null;
+  }
+}
+
+async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
+  const [
+    stablecoins,
+    blacklist,
+    mintBurn,
+    supply,
+    yieldTs,
+    depegs,
+    dews,
+    digest,
+  ] = await Promise.all([
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.supply),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.yield),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.depegs),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.dews),
+    getLastUpdate(db, DATASET_FRESHNESS_TARGETS.digest),
+  ]);
+
+  return {
+    stablecoins,
+    blacklist,
+    mintBurn,
+    supply,
+    yield: yieldTs,
+    depegs,
+    dews,
+    digest,
+  };
+}
 
 async function getDataQuality(db: D1Database, now: number): Promise<DataQuality> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });

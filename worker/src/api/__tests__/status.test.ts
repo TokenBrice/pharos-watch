@@ -96,17 +96,24 @@ describe("handleStatus", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       timestamp: number;
+      dbHealthy: boolean;
       overallStatus: string;
       caches: Record<string, unknown>;
       crons: Record<string, unknown>;
       dataQuality: Record<string, unknown>;
+      datasetFreshness: Record<string, number | null>;
     };
 
     expect(body).toHaveProperty("timestamp");
+    expect(body).toHaveProperty("dbHealthy");
     expect(body).toHaveProperty("overallStatus");
     expect(body).toHaveProperty("caches");
     expect(body).toHaveProperty("crons");
     expect(body).toHaveProperty("dataQuality");
+    expect(body).toHaveProperty("datasetFreshness");
+    expect(typeof body.dbHealthy).toBe("boolean");
+    expect(body.datasetFreshness).toHaveProperty("stablecoins");
+    expect(body.datasetFreshness).toHaveProperty("mintBurn");
     expect(["healthy", "degraded", "stale"]).toContain(body.overallStatus);
   });
 
@@ -158,6 +165,47 @@ describe("handleStatus", () => {
     expect(syncStablecoins).toHaveProperty("lastRun");
     expect(syncStablecoins).toHaveProperty("healthy");
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
+  });
+
+  it("marks status degraded and skips data-quality queries when DB sentinel fails", async () => {
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 30)] },
+    ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
+
+    const seenSql: string[] = [];
+    const originalPrepare = db.prepare.bind(db);
+    db.prepare = ((sql: string) => {
+      seenSql.push(sql);
+      if (sql.trim() === "SELECT 1") {
+        return {
+          bind: () => ({
+            all: async () => ({ results: [], success: true, meta: {} }),
+            first: async () => { throw new Error("db down"); },
+            run: async () => ({ success: true, meta: {} }),
+          }),
+          all: async () => ({ results: [], success: true, meta: {} }),
+          first: async () => { throw new Error("db down"); },
+          run: async () => ({ success: true, meta: {} }),
+        } as unknown as D1PreparedStatement;
+      }
+      return originalPrepare(sql);
+    }) as typeof db.prepare;
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      dbHealthy: boolean;
+      rawOverallStatus: string;
+      overallStatus: string;
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.dbHealthy).toBe(false);
+    expect(["degraded", "stale"]).toContain(body.rawOverallStatus);
+    expect(["degraded", "stale"]).toContain(body.overallStatus);
+    expect(seenSql.some((sql) => sql.includes("FROM depeg_events"))).toBe(false);
+    expect(seenSql.some((sql) => sql.includes("FROM onchain_supply"))).toBe(false);
   });
 
   it("keeps cron healthy when latest run is skipped_locked but a fresh ok run exists", async () => {

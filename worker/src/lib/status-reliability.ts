@@ -384,18 +384,31 @@ export async function getStatusStateSnapshot(
   }
 }
 
-export async function listRecentStatusTransitions(db: D1Database, limit = 30): Promise<StatusTransition[]> {
+export async function listRecentStatusTransitions(
+  db: D1Database,
+  limit = 30,
+  range?: { from?: number | null; to?: number | null },
+): Promise<StatusTransition[]> {
   const bounded = Math.max(1, Math.min(200, Math.floor(limit)));
   try {
-    const rows = await db
-      .prepare(
-        `SELECT id, scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at
+    let sql = `SELECT id, scope, previous_status, next_status, raw_status, transition_type, reason, confidence, causes_json, created_at
          FROM status_transitions
-         WHERE scope = ?
-         ORDER BY created_at DESC
-         LIMIT ?`
-      )
-      .bind(STATUS_SCOPE, bounded)
+         WHERE scope = ?`;
+    const binds: unknown[] = [STATUS_SCOPE];
+    if (range?.from != null) {
+      sql += " AND created_at >= ?";
+      binds.push(range.from);
+    }
+    if (range?.to != null) {
+      sql += " AND created_at <= ?";
+      binds.push(range.to);
+    }
+    sql += " ORDER BY created_at DESC LIMIT ?";
+    binds.push(bounded);
+
+    const rows = await db
+      .prepare(sql)
+      .bind(...binds)
       .all<StatusTransitionRow>();
     return (rows.results ?? []).map((row) => ({
       id: row.id,

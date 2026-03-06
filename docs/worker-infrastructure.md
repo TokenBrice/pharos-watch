@@ -319,14 +319,20 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | Source key | Cache key | Used by |
 |-----------|-----------|---------|
 | `DL_STABLECOINS` | `defillama-stablecoins` | `sync-stablecoins` |
+| `DL_STABLECOIN_DETAIL` | `defillama-stablecoin-detail` | `GET /api/stablecoin/:id` (DefiLlama detail upstream) |
 | `DL_COINS` | `defillama-coins` | `enrich-prices` |
 | `DL_YIELDS` | `defillama-yields` | `sync-yield-data`, `sync-dex-liquidity` |
 | `DL_PROTOCOLS` | `defillama-protocols` | `sync-dex-liquidity` |
 | `CG_PRICES` | `coingecko-prices` | `enrich-prices` |
+| `CG_DETAIL_PLATFORMS` | `coingecko-detail-platforms` | `GET /api/stablecoin/:id` (CoinGecko-only detail provider) |
 | `CG_MCAP` | `coingecko-mcap` | `sync-stablecoins` (CG supply fallback) |
+| `CMC_PRICES` | `coinmarketcap-prices` | `enrich-prices` pass 3.5 fallback |
+| `DEXSCREENER_PRICES` | `dexscreener-prices` | `enrich-prices` pass 4 fallback |
 | `TREASURY_RATES` | `treasury-rates` | `fetch-tbill-rate` |
 | `ETHERSCAN` | `etherscan` | `sync-blacklist` |
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
+| `TWITTER_API` | `twitter-api` | `daily-digest` social posting |
+| `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting |
 
 ---
 

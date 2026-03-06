@@ -69,10 +69,16 @@ export default function StatusClient() {
 
 function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
   const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminKey);
-  const { data: healthData, refetch: refetchHealth, dataUpdatedAt: healthUpdatedAt } = useHealth();
+  const {
+    data: healthData,
+    error: healthError,
+    refetch: refetchHealth,
+    dataUpdatedAt: healthUpdatedAt,
+  } = useHealth();
   const {
     data: probes,
     isLoading: probesLoading,
+    error: probesError,
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
   } = useEndpointProbes(adminKey);
@@ -137,6 +143,16 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       {clientDataStale && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
           Status page data is stale on the client ({clientDataAgeSec}s since last refresh). Signals may be outdated.
+        </div>
+      )}
+      {healthError && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+          Health endpoint unavailable: {healthError.message}
+        </div>
+      )}
+      {probesError && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+          Endpoint probe checks unavailable: {probesError.message}
         </div>
       )}
 

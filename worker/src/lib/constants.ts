@@ -102,12 +102,18 @@ export const MIN_LENDING_POOL_TVL_USD = 1_000_000;
 
 export const CIRCUIT_SOURCE = {
   DL_STABLECOINS: "defillama-stablecoins",
+  DL_STABLECOIN_DETAIL: "defillama-stablecoin-detail",
   DL_COINS: "defillama-coins",
   DL_YIELDS: "defillama-yields",
   DL_PROTOCOLS: "defillama-protocols",
   CG_PRICES: "coingecko-prices",
+  CG_DETAIL_PLATFORMS: "coingecko-detail-platforms",
   CG_MCAP: "coingecko-mcap",
+  DEXSCREENER_PRICES: "dexscreener-prices",
+  CMC_PRICES: "coinmarketcap-prices",
   TREASURY_RATES: "treasury-rates",
   ETHERSCAN: "etherscan",
   ALCHEMY: "alchemy",
+  TWITTER_API: "twitter-api",
+  TELEGRAM_API: "telegram-api",
 } as const;

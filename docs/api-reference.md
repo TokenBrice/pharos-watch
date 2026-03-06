@@ -854,7 +854,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 | `mintBurn.freshnessAgeSec` | `number \| null` | Seconds since latest mint/burn event |
 | `mintBurn.majorStaleCount` | `number` | Number of configured major symbols currently stale |
 | `mintBurn.staleMajorSymbols` | `string[]` | Symbol list currently marked stale |
-| `circuits` | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`, `etherscan`, `alchemy`. Empty until first cron run |
+| `circuits` | `Record<string, CircuitRecord>` | Per-source circuit breaker states. Keys include `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api` |
 
 **`CacheStatus`**
 
@@ -1435,6 +1435,7 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 ```json
 {
   "timestamp": 1771856453,
+  "dbHealthy": true,
   "availabilityStatus": "healthy",
   "dataQualityStatus": "healthy",
   "rawOverallStatus": "degraded",
@@ -1504,6 +1505,16 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
     "staleOnchainSupply": 0,
     "onchainStaleRatio": 0
   },
+  "datasetFreshness": {
+    "stablecoins": 1771856400,
+    "blacklist": 1771856200,
+    "mintBurn": 1771856340,
+    "supply": 1771804800,
+    "yield": 1771856320,
+    "depegs": 1771856010,
+    "dews": 1771856400,
+    "digest": 1771804800
+  },
   "summary": {
     "unhealthyCrons": 0,
     "degradedCrons": 1,
@@ -1517,6 +1528,8 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 
 `overallStatus` is the effective (hysteresis-smoothed) status. `rawOverallStatus` is the immediate worst-of availability/data-quality signal.
 
+`dbHealthy=false` means the DB sentinel failed (`SELECT 1`), so status is forced to at least degraded and data-quality/database freshness queries are skipped.
+
 ### `GET /api/status-history`
 
 Machine-readable status timeline endpoint for tooling and incident analysis.
@@ -1528,6 +1541,8 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | `limit` | `integer` | `50` | Number of transitions to return (1–200) |
+| `from` | `integer \| ISO date` | — | Optional lower bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
+| `to` | `integer \| ISO date` | — | Optional upper bound for transition `created_at` (Unix seconds/milliseconds or ISO date) |
 
 **Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`)
 

@@ -31,6 +31,22 @@ const DEFAULT_RECORD: CircuitRecord = {
   openedAt: null,
 };
 
+function isNullableNumber(value: unknown): value is number | null {
+  return value === null || typeof value === "number";
+}
+
+function isCircuitRecord(value: unknown): value is CircuitRecord {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Partial<CircuitRecord>;
+  return (
+    (record.state === "closed" || record.state === "open" || record.state === "half-open") &&
+    typeof record.consecutiveFailures === "number" &&
+    isNullableNumber(record.lastFailureAt) &&
+    isNullableNumber(record.lastSuccessAt) &&
+    isNullableNumber(record.openedAt)
+  );
+}
+
 function cacheKey(source: string): string {
   return `circuit:${source}`;
 }
@@ -39,7 +55,8 @@ export async function getCircuitRecord(db: D1Database, source: string): Promise<
   const cached = await getCache(db, cacheKey(source));
   if (!cached) return { ...DEFAULT_RECORD };
   try {
-    return JSON.parse(cached.value) as CircuitRecord;
+    const parsed = JSON.parse(cached.value);
+    return isCircuitRecord(parsed) ? parsed : { ...DEFAULT_RECORD };
   } catch {
     return { ...DEFAULT_RECORD };
   }
@@ -125,7 +142,10 @@ export async function getCircuitStates(db: D1Database): Promise<Record<string, C
   for (const row of result.results ?? []) {
     const source = row.key.replace("circuit:", "");
     try {
-      states[source] = JSON.parse(row.value) as CircuitRecord;
+      const parsed = JSON.parse(row.value);
+      if (isCircuitRecord(parsed)) {
+        states[source] = parsed;
+      }
     } catch {
       // skip malformed
     }

@@ -1,6 +1,7 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
 import { buildInClause } from "../lib/db";
+import { CIRCUIT_SOURCE } from "../lib/constants";
 import {
   evaluateMintBurnFreshness,
   resolveMintBurnFreshnessConfig,
@@ -27,6 +28,14 @@ interface HealthResponse {
 interface HealthOptions {
   mintBurnConfig?: MintBurnFreshnessConfig;
 }
+
+const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
+  state: "closed",
+  consecutiveFailures: 0,
+  lastFailureAt: null,
+  lastSuccessAt: null,
+  openedAt: null,
+};
 
 export const handleHealth = withErrorHandler("health", async (db: D1Database, options?: HealthOptions): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -113,6 +122,11 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
   let circuits: Record<string, CircuitRecord> = {};
   try {
     circuits = await getCircuitStates(db);
+    for (const source of Object.values(CIRCUIT_SOURCE)) {
+      if (!circuits[source]) {
+        circuits[source] = { ...DEFAULT_CIRCUIT_RECORD };
+      }
+    }
     const hasOpenCircuit = Object.values(circuits).some((c) => c.state === "open");
     if (hasOpenCircuit && worstRatioMut < 1.6) {
       worstRatioMut = 1.6; // degraded

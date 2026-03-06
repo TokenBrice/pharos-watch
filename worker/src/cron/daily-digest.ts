@@ -8,6 +8,8 @@ import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
+import { CIRCUIT_SOURCE } from "../lib/constants";
+import { recordOutcome, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
@@ -567,29 +569,50 @@ export async function generateDailyDigest(
     )
     .bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null)
     .run();
+  const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
+    try {
+      await recordOutcome(db, source, success);
+    } catch {
+      // Non-blocking circuit telemetry.
+    }
+  };
 
   // Post to Twitter if credentials are available
   let tweetStatus = "no-creds";
   if (twitterCreds) {
-    try {
-      await postDigestTweet(digestTitle, digestText, twitterCreds);
-      tweetStatus = "ok";
-    } catch (err) {
-      console.error("[daily-digest] Failed to post tweet (non-fatal):", err);
-      tweetStatus = `failed: ${String(err).slice(0, 100)}`;
+    const twitterAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TWITTER_API);
+    if (!twitterAllowed) {
+      tweetStatus = "skipped: circuit-open";
+    } else {
+      try {
+        await postDigestTweet(digestTitle, digestText, twitterCreds);
+        await safeRecordOutcome(CIRCUIT_SOURCE.TWITTER_API, true);
+        tweetStatus = "ok";
+      } catch (err) {
+        await safeRecordOutcome(CIRCUIT_SOURCE.TWITTER_API, false);
+        console.error("[daily-digest] Failed to post tweet (non-fatal):", err);
+        tweetStatus = `failed: ${String(err).slice(0, 100)}`;
+      }
     }
   }
 
   // Post to Telegram if credentials are available
   let telegramStatus = "no-creds";
   if (telegramCreds) {
-    try {
-      const date = new Date(now * 1000).toISOString().slice(0, 10);
-      await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds);
-      telegramStatus = "ok";
-    } catch (err) {
-      console.error("[daily-digest] Failed to post to Telegram (non-fatal):", err);
-      telegramStatus = `failed: ${String(err).slice(0, 100)}`;
+    const telegramAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TELEGRAM_API);
+    if (!telegramAllowed) {
+      telegramStatus = "skipped: circuit-open";
+    } else {
+      try {
+        const date = new Date(now * 1000).toISOString().slice(0, 10);
+        await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds);
+        await safeRecordOutcome(CIRCUIT_SOURCE.TELEGRAM_API, true);
+        telegramStatus = "ok";
+      } catch (err) {
+        await safeRecordOutcome(CIRCUIT_SOURCE.TELEGRAM_API, false);
+        console.error("[daily-digest] Failed to post to Telegram (non-fatal):", err);
+        telegramStatus = `failed: ${String(err).slice(0, 100)}`;
+      }
     }
   }
 

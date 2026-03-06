@@ -795,8 +795,20 @@ export interface DataQuality {
   onchainStaleRatio: number;
 }
 
+export interface DatasetFreshness {
+  stablecoins: number | null;
+  blacklist: number | null;
+  mintBurn: number | null;
+  supply: number | null;
+  yield: number | null;
+  depegs: number | null;
+  dews: number | null;
+  digest: number | null;
+}
+
 export interface StatusResponse {
   timestamp: number;
+  dbHealthy: boolean;
   availabilityStatus: "healthy" | "degraded" | "stale";
   dataQualityStatus: "healthy" | "degraded" | "stale";
   rawOverallStatus: "healthy" | "degraded" | "stale";
@@ -815,6 +827,7 @@ export interface StatusResponse {
   caches: Record<string, CacheStatus>;
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
+  datasetFreshness: DatasetFreshness;
   summary: {
     unhealthyCrons: number;
     degradedCrons: number;

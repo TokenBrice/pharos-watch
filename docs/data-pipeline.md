@@ -18,7 +18,7 @@ All external data sources are protected by per-source circuit breakers (`worker/
 - **Alerts**: Webhook alert fires on open and close transitions
 - **Health impact**: Any open circuit triggers `degraded` status on `/api/health`
 
-Sources tracked: `defillama-stablecoins`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-mcap`, `treasury-rates`, `etherscan`, `alchemy`.
+Sources tracked: `defillama-stablecoins`, `defillama-stablecoin-detail`, `defillama-coins`, `defillama-yields`, `defillama-protocols`, `coingecko-prices`, `coingecko-detail-platforms`, `coingecko-mcap`, `coinmarketcap-prices`, `dexscreener-prices`, `treasury-rates`, `etherscan`, `alchemy`, `twitter-api`, `telegram-api`.
 
 ### DefiLlama list vs detail API
 
