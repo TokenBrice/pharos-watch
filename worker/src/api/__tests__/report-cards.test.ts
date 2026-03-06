@@ -30,7 +30,7 @@ describe("handleReportCards", () => {
   });
 
   it("returns 200 with cards, methodology, and dependencyGraph", async () => {
-    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makeReportCardsDb([asset]);
     const res = await handleReportCards(db);
     expect(res.status).toBe(200);
@@ -52,7 +52,7 @@ describe("handleReportCards", () => {
   });
 
   it("includes cards with expected dimensions", async () => {
-    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makeReportCardsDb([asset]);
     const res = await handleReportCards(db);
     const body = (await res.json()) as { cards: Array<Record<string, unknown>> };

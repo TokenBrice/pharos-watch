@@ -50,7 +50,7 @@ describe("SafetyScoreHistorySection", () => {
       error: null,
     });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="1" />);
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
     expect(html).toBe("");
   });
 
@@ -61,7 +61,7 @@ describe("SafetyScoreHistorySection", () => {
       error: null,
     });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="1" />);
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
     expect(html).toBe("");
   });
 
@@ -72,7 +72,7 @@ describe("SafetyScoreHistorySection", () => {
       error: new Error("boom"),
     });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="1" />);
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
     expect(html).toBe("");
   });
 
@@ -100,7 +100,7 @@ describe("SafetyScoreHistorySection", () => {
       error: null,
     });
 
-    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="1" />);
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
     expect(html).toContain("Initial grade");
     expect(html).toContain("B -&gt; B+");
   });

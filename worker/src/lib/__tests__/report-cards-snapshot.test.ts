@@ -34,7 +34,7 @@ describe("buildReportCardsSnapshot", () => {
   });
 
   it("returns cards + methodology + dependencyGraph + updatedAt", async () => {
-    const db = makeReportCardsDb([makeAsset({ id: "1", symbol: "USDT" })]);
+    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     const snapshot = await buildReportCardsSnapshot(db);
 
     expect(Array.isArray(snapshot.cards)).toBe(true);
@@ -47,7 +47,7 @@ describe("buildReportCardsSnapshot", () => {
   });
 
   it("matches /api/report-cards response payload", async () => {
-    const db = makeReportCardsDb([makeAsset({ id: "1", symbol: "USDT" })]);
+    const db = makeReportCardsDb([makeAsset({ id: "usdt-tether", symbol: "USDT" })]);
     const snapshot = await buildReportCardsSnapshot(db);
 
     const response = await handleReportCards(db);

@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_META_BY_ID: new Map([
-    ["1", { geckoId: "canonical-usdt", cmcSlug: "tether", flags: { navToken: false } }],
-    ["9", { geckoId: "nav-token", cmcSlug: "nav-token", flags: { navToken: true } }],
+    ["usdt-tether", { geckoId: "canonical-usdt", cmcSlug: "tether", flags: { navToken: false } }],
+    ["nav-token-test", { geckoId: "nav-token", cmcSlug: "nav-token", flags: { navToken: true } }],
   ]),
 }));
 
@@ -17,8 +17,8 @@ import {
 describe("sync-stablecoins stage helpers", () => {
   it("filters malformed assets while preserving structurally valid rows", () => {
     const assets = [
-      { id: "1", name: "USDT", symbol: "USDT", circulating: { peggedUSD: 1 } },
-      { id: "2", name: "Broken", circulating: { peggedUSD: 1 } },
+      { id: "usdt-tether", name: "USDT", symbol: "USDT", circulating: { peggedUSD: 1 } },
+      { id: "usdc-circle", name: "Broken", circulating: { peggedUSD: 1 } },
       { id: null, name: "Broken", symbol: "BRK", circulating: { peggedUSD: 1 } },
     ] as unknown as Array<{
       id: string | null;
@@ -30,14 +30,14 @@ describe("sync-stablecoins stage helpers", () => {
     const { validAssets, droppedMalformedAssets } = filterStructurallyValidAssets(assets as never[]);
 
     expect(validAssets).toHaveLength(1);
-    expect(validAssets[0].id).toBe("1");
+    expect(validAssets[0].id).toBe("usdt-tether");
     expect(droppedMalformedAssets).toBe(2);
   });
 
   it("normalizes chainCirculating peg buckets into numeric totals", () => {
     const assets = [
       {
-        id: "1",
+        id: "usdt-tether",
         chainCirculating: {
           ethereum: {
             current: { peggedUSD: 10, peggedEUR: 15 },
@@ -58,8 +58,8 @@ describe("sync-stablecoins stage helpers", () => {
 
   it("applies curated metadata overrides and address patches", () => {
     const assets = [
-      { id: "1", geckoId: "wrong-id", cmcSlug: undefined, navToken: false },
-      { id: "9", geckoId: undefined, cmcSlug: undefined, navToken: false },
+      { id: "usdt-tether", geckoId: "wrong-id", cmcSlug: undefined, navToken: false },
+      { id: "nav-token-test", geckoId: undefined, cmcSlug: undefined, navToken: false },
       { id: "213", geckoId: undefined, cmcSlug: undefined, navToken: false, address: "" },
     ] as unknown as never[];
 

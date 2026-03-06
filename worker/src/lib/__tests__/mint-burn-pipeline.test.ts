@@ -61,7 +61,7 @@ function makeDb(): D1Database {
 function makeRow(overrides?: Partial<MintBurnRow>): MintBurnRow {
   return {
     id: overrides?.id ?? "id-1",
-    stablecoin_id: overrides?.stablecoin_id ?? "1",
+    stablecoin_id: overrides?.stablecoin_id ?? "usdt-tether",
     symbol: overrides?.symbol ?? "USDT",
     chain_id: overrides?.chain_id ?? "ethereum",
     direction: overrides?.direction ?? "mint",
@@ -114,7 +114,7 @@ describe("mint-burn shared pipeline modules", () => {
           explorerUrl: "https://etherscan.io",
           type: "evm",
         },
-        stablecoinId: "1",
+        stablecoinId: "usdt-tether",
         symbol: "USDT",
         contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         decimals: 6,

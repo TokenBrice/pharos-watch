@@ -239,7 +239,7 @@ const mkPool = (id: string, sym: string, tvl = 1_000_000, stable = true) => ({
 describe("matchAllDlPools", () => {
   it("returns static YIELD_POOL_MAP entry when present", () => {
     const dlPools = [mkPool("uuid-a", "DAI")];
-    const result = matchAllDlPools("5", "DAI", dlPools, { "5": "uuid-a" }, {});
+    const result = matchAllDlPools("dai-makerdao", "DAI", dlPools, { "dai-makerdao": "uuid-a" }, {});
     expect(result).toHaveLength(1);
     expect(result[0].pool).toBe("uuid-a");
   });
@@ -247,9 +247,9 @@ describe("matchAllDlPools", () => {
   it("returns wrapper pool from YIELD_VARIANT_MAP as a second source", () => {
     const dlPools = [mkPool("uuid-a", "DAI"), mkPool("uuid-b", "sDAI", 2_000_000)];
     const result = matchAllDlPools(
-      "5", "DAI", dlPools,
-      { "5": "uuid-a" },
-      { "5": { variantSymbol: "sDAI" } },
+      "dai-makerdao", "DAI", dlPools,
+      { "dai-makerdao": "uuid-a" },
+      { "dai-makerdao": { variantSymbol: "sDAI" } },
     );
     expect(result).toHaveLength(2);
     expect(result.map(p => p.pool)).toContain("uuid-a");
@@ -259,9 +259,9 @@ describe("matchAllDlPools", () => {
   it("deduplicates when YIELD_POOL_MAP and wrapper search return the same pool", () => {
     const dlPools = [mkPool("uuid-a", "sDAI")];
     const result = matchAllDlPools(
-      "5", "DAI", dlPools,
-      { "5": "uuid-a" },
-      { "5": { variantSymbol: "sDAI" } },
+      "dai-makerdao", "DAI", dlPools,
+      { "dai-makerdao": "uuid-a" },
+      { "dai-makerdao": { variantSymbol: "sDAI" } },
     );
     expect(result).toHaveLength(1);
     expect(result[0].pool).toBe("uuid-a");
@@ -282,8 +282,8 @@ describe("matchAllDlPools", () => {
   it("picks highest TVL when multiple wrapper matches exist", () => {
     const dlPools = [mkPool("uuid-a", "sGHO", 100_000), mkPool("uuid-b", "sGHO", 500_000)];
     const result = matchAllDlPools(
-      "118", "GHO", dlPools, {},
-      { "118": { variantSymbol: "sGHO" } },
+      "gho-aave", "GHO", dlPools, {},
+      { "gho-aave": { variantSymbol: "sGHO" } },
     );
     expect(result).toHaveLength(1);
     expect(result[0].pool).toBe("uuid-b"); // highest TVL wins
@@ -291,7 +291,7 @@ describe("matchAllDlPools", () => {
 
   it("filters out multi-exposure pools", () => {
     const lpPool = { ...mkPool("uuid-a", "sDAI"), exposure: "multi" };
-    const result = matchAllDlPools("5", "DAI", [lpPool], {}, { "5": { variantSymbol: "sDAI" } });
+    const result = matchAllDlPools("dai-makerdao", "DAI", [lpPool], {}, { "dai-makerdao": { variantSymbol: "sDAI" } });
     expect(result).toHaveLength(0);
   });
 
@@ -299,8 +299,8 @@ describe("matchAllDlPools", () => {
     // fxSAVE has stablecoin=false in DL but is a valid savings wrapper
     const fxSavePool = mkPool("uuid-fxsave", "FXSAVE", 31_000_000, false);
     const result = matchAllDlPools(
-      "168", "fxUSD", [fxSavePool], {},
-      { "168": { variantSymbol: "fxSAVE" } },
+      "fxusd-f-x-protocol", "fxUSD", [fxSavePool], {},
+      { "fxusd-f-x-protocol": { variantSymbol: "fxSAVE" } },
     );
     expect(result).toHaveLength(1);
     expect(result[0].pool).toBe("uuid-fxsave");

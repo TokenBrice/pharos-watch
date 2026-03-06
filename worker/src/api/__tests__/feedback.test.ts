@@ -21,7 +21,7 @@ function makeFeedbackBody(overrides: Partial<{
     type: overrides.type ?? "bug",
     title: overrides.title ?? "Something is broken",
     description: overrides.description ?? "The price chart is not loading correctly on the dashboard.",
-    pageUrl: overrides.pageUrl ?? "/stablecoin/1",
+    pageUrl: overrides.pageUrl ?? "/stablecoin/usdt-tether",
     stablecoinId: overrides.stablecoinId,
     stablecoinName: overrides.stablecoinName,
     expectedValue: overrides.expectedValue,
@@ -218,7 +218,7 @@ describe("handleFeedback", () => {
       makeRequest(makeFeedbackBody({
         type: "data-correction",
         description: "The circulating supply is wrong by a large margin.",
-        stablecoinId: "1",
+        stablecoinId: "usdt-tether",
         stablecoinName: "Tether",
       })),
       makeEnv()
@@ -299,8 +299,8 @@ describe("handleFeedback", () => {
       makeRequest({
         type: "data-correction",
         description: "The price for this stablecoin is completely wrong.",
-        pageUrl: "/stablecoin/1",
-        stablecoinId: "1",
+        pageUrl: "/stablecoin/usdt-tether",
+        stablecoinId: "usdt-tether",
         // no title field
       }),
       makeEnv()

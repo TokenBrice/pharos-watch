@@ -9,7 +9,7 @@ export function makeAsset(overrides: Partial<{
   chainCirculating: Record<string, { current: Record<string, number> }>;
 }> = {}) {
   return {
-    id: overrides.id ?? "1",
+    id: overrides.id ?? "usdt-tether",
     name: overrides.name ?? "Tether",
     symbol: overrides.symbol ?? "USDT",
     price: overrides.price ?? 1.0,
@@ -30,7 +30,7 @@ export function makeBlacklistRow(overrides: Partial<{
 }> = {}) {
   return {
     id: overrides.id ?? "bl-1",
-    stablecoin: overrides.stablecoin ?? "1",
+    stablecoin: overrides.stablecoin ?? "usdt-tether",
     chain_id: overrides.chain_id ?? "ethereum",
     chain_name: overrides.chain_name ?? "Ethereum",
     event_type: overrides.event_type ?? "blacklist",
@@ -53,7 +53,7 @@ export function makeDepegRow(overrides: Partial<{
 }> = {}) {
   return {
     id: overrides.id ?? 1,
-    stablecoin_id: overrides.stablecoin_id ?? "1",
+    stablecoin_id: overrides.stablecoin_id ?? "usdt-tether",
     symbol: overrides.symbol ?? "USDT",
     peg_type: overrides.peg_type ?? "peggedUSD",
     direction: overrides.direction ?? "below",
@@ -73,7 +73,7 @@ export function makeSupplyRow(overrides: Partial<{
   circulating_usd: number; price: number | null;
 }> = {}) {
   return {
-    stablecoin_id: overrides.stablecoin_id ?? "1",
+    stablecoin_id: overrides.stablecoin_id ?? "usdt-tether",
     snapshot_date: overrides.snapshot_date ?? Math.floor(Date.now() / 1000) - 86400,
     circulating_usd: overrides.circulating_usd ?? 100_000_000,
     price: overrides.price ?? 1.0,
@@ -92,7 +92,7 @@ export function makeMintBurnRow(overrides: Partial<{
   const direction = overrides.direction ?? "mint";
   return {
     id: overrides.id ?? "mb-1",
-    stablecoin_id: overrides.stablecoin_id ?? "1",
+    stablecoin_id: overrides.stablecoin_id ?? "usdt-tether",
     symbol: overrides.symbol ?? "USDT",
     chain_id: overrides.chain_id ?? "ethereum",
     direction,
@@ -124,7 +124,7 @@ export function makeDexLiquidityRow(overrides: Partial<{
   methodology_version: string | null;
 }> = {}) {
   return {
-    stablecoin_id: overrides.stablecoin_id ?? "1",
+    stablecoin_id: overrides.stablecoin_id ?? "usdt-tether",
     total_tvl_usd: overrides.total_tvl_usd ?? 500_000_000,
     total_volume_24h_usd: overrides.total_volume_24h_usd ?? 10_000_000,
     total_volume_7d_usd: overrides.total_volume_7d_usd ?? 70_000_000,

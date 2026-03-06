@@ -31,7 +31,7 @@ describe("useSafetyScoreHistory", () => {
   });
 
   it("uses stablecoin-scoped key and daily polling policy", async () => {
-    useSafetyScoreHistory("1");
+    useSafetyScoreHistory("usdt-tether");
 
     const options = useQueryMock.mock.calls[0][0] as {
       queryKey: unknown[];
@@ -40,13 +40,13 @@ describe("useSafetyScoreHistory", () => {
       queryFn: () => Promise<unknown>;
     };
 
-    expect(options.queryKey).toEqual(["safety-score-history", "1", 3650]);
+    expect(options.queryKey).toEqual(["safety-score-history", "usdt-tether", 3650]);
     expect(options.staleTime).toBe(CRON_24H);
     expect(options.refetchInterval).toBe(2 * CRON_24H);
 
     await options.queryFn();
     expect(apiFetchMock).toHaveBeenCalledWith(
-      "/api/safety-score-history?stablecoin=1&days=3650",
+      "/api/safety-score-history?stablecoin=usdt-tether&days=3650",
       expect.any(Object),
     );
   });

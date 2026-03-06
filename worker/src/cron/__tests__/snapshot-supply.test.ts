@@ -4,8 +4,8 @@ import { mockD1 } from "../../api/__tests__/helpers/mock-d1";
 // Stub psi-eligible to avoid importing the full stablecoins list
 vi.mock("@shared/lib/psi-eligible", () => ({
   PSI_ELIGIBLE_STABLECOINS: [
-    { id: "1", symbol: "USDT" },
-    { id: "2", symbol: "USDC" },
+    { id: "usdt-tether", symbol: "USDT" },
+    { id: "usdc-circle", symbol: "USDC" },
   ],
 }));
 
@@ -38,7 +38,7 @@ describe("snapshotSupply", () => {
   it("returns itemCount 0 when cache is stale (>1200s)", async () => {
     const staleUpdatedAt = Math.floor(Date.now() / 1000) - 1500;
     const cacheValue = JSON.stringify({
-      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([{
       match: "cache",
@@ -53,9 +53,9 @@ describe("snapshotSupply", () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const cacheValue = JSON.stringify({
       peggedAssets: [
-        { id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
-        { id: "2", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
-        { id: "99", price: 1.0, circulating: { peggedUSD: 10_000 } }, // not tracked
+        { id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } },
+        { id: "usdc-circle", price: 0.999, circulating: { peggedUSD: 50_000_000 } },
+        { id: "cash-stabl-fi", price: 1.0, circulating: { peggedUSD: 10_000 } }, // not tracked
       ],
     });
     const db = mockD1([{
@@ -64,7 +64,7 @@ describe("snapshotSupply", () => {
       first: { key: "stablecoins", value: cacheValue, updated_at: freshUpdatedAt },
     }]);
     const result = await snapshotSupply(db);
-    // Should insert 2 rows (IDs "1" and "2" are tracked, "99" is not)
+    // Should insert 2 rows (IDs "usdt-tether" and "usdc-circle" are tracked, "cash-stabl-fi" is not)
     expect(result.itemCount).toBe(2);
   });
 
@@ -72,7 +72,7 @@ describe("snapshotSupply", () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 30;
     const cacheValue = JSON.stringify({
       peggedAssets: [
-        { id: "1", price: 1.0, circulating: { peggedUSD: 0 } },
+        { id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 0 } },
       ],
     });
     const db = mockD1([{

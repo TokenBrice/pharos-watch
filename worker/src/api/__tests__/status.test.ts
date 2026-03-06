@@ -49,7 +49,7 @@ describe("handleStatus", () => {
   it("returns 200 with status body when authorized", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
 
     const db = mockD1([
@@ -192,7 +192,7 @@ describe("handleStatus", () => {
   it("treats fresh degraded cron runs as warning-only (not availability unhealthy)", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const jobs = [
       "sync-stablecoins",
@@ -256,7 +256,7 @@ describe("handleStatus", () => {
   it("marks on-chain monitor unavailable instead of forcing stale data quality", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
@@ -295,7 +295,7 @@ describe("handleStatus", () => {
   it("keeps data quality healthy when blacklist gaps are low-ratio and not recent", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
@@ -328,7 +328,7 @@ describe("handleStatus", () => {
   it("excludes intentional Tron blacklist/unblacklist null amounts from blacklist gap metric", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [{ id: "1", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
+      peggedAssets: [{ id: "usdt-tether", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },

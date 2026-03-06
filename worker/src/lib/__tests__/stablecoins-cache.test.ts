@@ -55,7 +55,7 @@ describe("loadStablecoinsCache", () => {
   });
 
   it("supports legacy array shape fallback when enabled", async () => {
-    const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "1", symbol: "USDT" }]));
+    const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
     const result = await loadStablecoinsCache(db, {
       mode: "strict",
@@ -65,12 +65,12 @@ describe("loadStablecoinsCache", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.payload.peggedAssets).toHaveLength(1);
-      expect(result.payload.peggedAssets[0]?.id).toBe("1");
+      expect(result.payload.peggedAssets[0]?.id).toBe("usdt-tether");
     }
   });
 
   it("rejects legacy array shape in strict mode when disabled", async () => {
-    const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "1" }]));
+    const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether" }]));
 
     const result = await loadStablecoinsCache(db, {
       mode: "strict",

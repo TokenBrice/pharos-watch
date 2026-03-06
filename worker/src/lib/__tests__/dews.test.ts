@@ -59,7 +59,7 @@ describe("getThreatBand", () => {
 
 function baseInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
   return {
-    stablecoinId: "1",
+    stablecoinId: "usdt-tether",
     mcapUsd: 5e9,
     pegType: "peggedUSD",
     // Supply velocity

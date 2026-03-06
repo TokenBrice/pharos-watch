@@ -120,13 +120,13 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
 
   it("uses coinId-linked reserves instead of manual dependencies", () => {
     const meta = makeMeta({
-      dependencies: [{ id: "2", weight: 0.1 }], // stale: only 10% USDC
+      dependencies: [{ id: "usdc-circle", weight: 0.1 }], // stale: only 10% USDC
       reserves: [
-        { name: "USDtb", pct: 90, risk: "low", coinId: "221" },
-        { name: "USDC", pct: 10, risk: "low", coinId: "2" },
+        { name: "USDtb", pct: 90, risk: "low", coinId: "usdtb-ethena" },
+        { name: "USDC", pct: 10, risk: "low", coinId: "usdc-circle" },
       ],
     });
-    const scores = new Map([["221", 85], ["2", 95]]);
+    const scores = new Map([["usdtb-ethena", 85], ["usdc-circle", 95]]);
     const result = scoreDependencyRisk(meta, scores);
     // Blended: 0.9 * 85 + 0.1 * 95 = 86, self-backed = 0
     expect(result.score).toBe(86);
@@ -135,13 +135,13 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
 
   it("falls back to manual dependencies when reserves have no coinId", () => {
     const meta = makeMeta({
-      dependencies: [{ id: "2", weight: 0.5 }],
+      dependencies: [{ id: "usdc-circle", weight: 0.5 }],
       reserves: [
         { name: "U.S. Treasuries", pct: 80, risk: "very-low" },
         { name: "Cash", pct: 20, risk: "very-low" },
       ],
     });
-    const scores = new Map([["2", 90]]);
+    const scores = new Map([["usdc-circle", 90]]);
     const result = scoreDependencyRisk(meta, scores);
     // 50% USDC (90) + 50% self-backed (95 for centralized) = 92.5 → 93
     expect(result.score).toBe(93);
@@ -151,10 +151,10 @@ describe("scoreDependencyRisk — reserve-derived dependencies", () => {
     const meta = makeMeta({
       flags: { governance: "centralized-dependent", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "USDe", pct: 100, risk: "low", coinId: "146", depType: "wrapper" },
+        { name: "USDe", pct: 100, risk: "low", coinId: "usde-ethena", depType: "wrapper" },
       ],
     });
-    const scores = new Map([["146", 80]]);
+    const scores = new Map([["usde-ethena", 80]]);
     const result = scoreDependencyRisk(meta, scores);
     // Wrapper ceiling: 80 - 3 = 77
     expect(result.score).toBe(77);
@@ -230,11 +230,11 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "USDC via PSM", pct: 33, risk: "low", coinId: "2" },
+        { name: "USDC via PSM", pct: 33, risk: "low", coinId: "usdc-circle" },
         { name: "ETH", pct: 67, risk: "medium" },
       ],
     });
-    const blacklistableIds = new Set(["2"]);
+    const blacklistableIds = new Set(["usdc-circle"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe("possible-inherited");
   });
 
@@ -242,11 +242,11 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "USDC buffer", pct: 24, risk: "low", coinId: "2" },
+        { name: "USDC buffer", pct: 24, risk: "low", coinId: "usdc-circle" },
         { name: "ETH", pct: 76, risk: "medium" },
       ],
     });
-    const blacklistableIds = new Set(["2"]);
+    const blacklistableIds = new Set(["usdc-circle"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
@@ -255,10 +255,10 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       canBeBlacklisted: false,
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "USDC", pct: 100, risk: "low", coinId: "2" },
+        { name: "USDC", pct: 100, risk: "low", coinId: "usdc-circle" },
       ],
     });
-    const blacklistableIds = new Set(["2"]);
+    const blacklistableIds = new Set(["usdc-circle"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
@@ -266,11 +266,11 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
-        { name: "sDAI", pct: 50, risk: "low", coinId: "5" },
+        { name: "sDAI", pct: 50, risk: "low", coinId: "dai-makerdao" },
         { name: "ETH", pct: 50, risk: "medium" },
       ],
     });
-    const blacklistableIds = new Set(["2", "1"]);
+    const blacklistableIds = new Set(["usdc-circle", "usdt-tether"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
@@ -282,7 +282,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
         { name: "ETH", pct: 70, risk: "medium" },
       ],
     });
-    const blacklistableIds = new Set(["2"]);
+    const blacklistableIds = new Set(["usdc-circle"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 });

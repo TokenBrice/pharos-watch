@@ -36,7 +36,7 @@ describe("fetchCommodityTokens", () => {
       );
 
     const tokens = await fetchCommodityTokens({
-      stablecoinId: "gold-xaut",
+      stablecoinId: "xaut-tether",
       geckoId: "tether-gold",
       protocolSlug: "tether-gold",
       pegType: "peggedGOLD",
@@ -59,7 +59,7 @@ describe("fetchCommodityTokens", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ market_data: {} }), { status: 200 }));
 
     const tokens = await fetchCommodityTokens({
-      stablecoinId: "gold-xaut",
+      stablecoinId: "xaut-tether",
       geckoId: "tether-gold",
       protocolSlug: "tether-gold",
       pegType: "peggedGOLD",

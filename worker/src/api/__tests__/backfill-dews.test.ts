@@ -24,7 +24,7 @@ describe("handleBackfillDEWS", () => {
         match: "FROM depeg_events",
         rows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             started_at: startedAt,
             ended_at: startedAt + 7200,
             peak_deviation_bps: -150,
@@ -34,22 +34,22 @@ describe("handleBackfillDEWS", () => {
       {
         match: "FROM supply_history",
         rows: [
-          { stablecoin_id: "1", snapshot_date: day, circulating_usd: 100_000_000 },
-          { stablecoin_id: "1", snapshot_date: day - 86400, circulating_usd: 99_500_000 },
-          { stablecoin_id: "1", snapshot_date: day - 7 * 86400, circulating_usd: 98_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day, circulating_usd: 100_000_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day - 86400, circulating_usd: 99_500_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: day - 7 * 86400, circulating_usd: 98_000_000 },
         ],
       },
       {
         match: "FROM dex_liquidity_history",
         rows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             snapshot_date: day,
             liquidity_score: 81,
             total_tvl_usd: 2_200_000,
           },
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             snapshot_date: day - 7 * 86400,
             liquidity_score: 77,
             total_tvl_usd: 2_000_000,
@@ -69,7 +69,7 @@ describe("handleBackfillDEWS", () => {
     expect(response.status).toBe(200);
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
-        stablecoinId: "1",
+        stablecoinId: "usdt-tether",
         circulatingCurrent: 100_000_000,
         circulatingPrevDay: 99_500_000,
         circulatingPrevWeek: 98_000_000,

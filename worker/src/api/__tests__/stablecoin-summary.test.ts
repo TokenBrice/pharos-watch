@@ -6,7 +6,7 @@ function makeStablecoinsCacheValue() {
   return JSON.stringify({
     peggedAssets: [
       {
-        id: "1",
+        id: "usdt-tether",
         name: "Tether",
         symbol: "USDT",
         geckoId: "tether",
@@ -30,7 +30,7 @@ function makeStablecoinsCacheValue() {
 describe("handleStablecoinSummary", () => {
   it("returns 503 when stablecoins cache is missing", async () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
-    const res = await handleStablecoinSummary(db, "1");
+    const res = await handleStablecoinSummary(db, "usdt-tether");
 
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "Data not yet available" });
@@ -41,7 +41,7 @@ describe("handleStablecoinSummary", () => {
     const db = mockD1([
       { match: "cache", rows: [], first: { value: "{", updated_at: now } },
     ]);
-    const res = await handleStablecoinSummary(db, "1");
+    const res = await handleStablecoinSummary(db, "usdt-tether");
 
     expect(res.status).toBe(503);
     expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
@@ -63,7 +63,7 @@ describe("handleStablecoinSummary", () => {
     const db = mockD1([
       { match: "cache", rows: [], first: { value: makeStablecoinsCacheValue(), updated_at: now - 42 } },
     ]);
-    const res = await handleStablecoinSummary(db, "1");
+    const res = await handleStablecoinSummary(db, "usdt-tether");
     const body = await res.json() as {
       id: string;
       symbol: string;
@@ -75,7 +75,7 @@ describe("handleStablecoinSummary", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=60, max-age=10");
     expect(res.headers.get("X-Data-Age")).toBeTruthy();
-    expect(body.id).toBe("1");
+    expect(body.id).toBe("usdt-tether");
     expect(body.symbol).toBe("USDT");
     expect(body.supplyUsd.current).toBe(100);
     expect(body.supplyUsd.change1d).toBe(10);
