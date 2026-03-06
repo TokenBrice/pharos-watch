@@ -1,5 +1,6 @@
 import { buildPaginatedQuery, getCache } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
+import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import type { CacheStatus } from "@shared/types";
 import type { ZodType } from "zod";
 
@@ -115,9 +116,26 @@ export function safeParse<T>(json: string | null | undefined, fallback: T): T {
   try { return JSON.parse(json) as T; } catch { return fallback; }
 }
 
-/** Validates a stablecoin ID: numeric DefiLlama IDs or prefixed commodity/CG IDs */
+/** Validates a stablecoin ID against the registry (canonical + allowed legacy IDs). */
 export function isValidStablecoinId(id: string): boolean {
-  return /^\d+$/.test(id) || /^(?:gold|silver|cg)-/.test(id);
+  return resolveStablecoinId(id, { allowLegacy: true }) !== null;
+}
+
+/**
+ * Resolve any accepted stablecoin ID to canonical form.
+ * Returns a 404 response when unknown so handlers can early-return consistently.
+ */
+export function resolveOrReject(id: string, context: string): { canonicalId: string } | Response {
+  const resolved = resolveStablecoinId(id, { allowLegacy: true });
+  if (!resolved) {
+    return errorResponse(404, "Unknown stablecoin");
+  }
+  if (resolved.matchedBy !== "canonical") {
+    console.log(
+      `[legacy-id] context=${context} input=${id} resolved=${resolved.canonicalId} matchedBy=${resolved.matchedBy}`,
+    );
+  }
+  return { canonicalId: resolved.canonicalId };
 }
 
 // --- Shared response builders ---
@@ -195,8 +213,9 @@ export function parseStablecoinHistoryQuery(
     return errorResponse(400, "Missing ?stablecoin= parameter");
   }
 
-  if (!isValidStablecoinId(stablecoinId)) {
-    return errorResponse(400, "Invalid stablecoin ID");
+  const resolved = resolveOrReject(stablecoinId, `path=${url.pathname}`);
+  if (resolved instanceof Response) {
+    return resolved;
   }
 
   const days = parseIntParam(
@@ -207,7 +226,7 @@ export function parseStablecoinHistoryQuery(
   );
   const cutoff = Math.floor(Date.now() / 1000) - days * 86_400;
 
-  return { stablecoinId, days, cutoff };
+  return { stablecoinId: resolved.canonicalId, days, cutoff };
 }
 
 interface StablecoinHistoryContext<TRow, THistory> {

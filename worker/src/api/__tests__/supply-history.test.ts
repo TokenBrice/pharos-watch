@@ -32,11 +32,11 @@ describe("handleSupplyHistory", () => {
     expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
   });
 
-  it("returns 400 for invalid stablecoin ID", async () => {
+  it("returns 404 for unknown stablecoin ID", async () => {
     const db = mockD1([]);
     const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=<script>"));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid stablecoin ID" });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
   it("maps snake_case columns to camelCase", async () => {

@@ -52,10 +52,10 @@ describe("handleDepegEvents", () => {
     expect(body.total).toBe(0);
   });
 
-  it("rejects invalid stablecoin ID with 400", async () => {
+  it("rejects unknown stablecoin ID with 404", async () => {
     const db = mockD1([]);
     const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=<script>"));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   it("includes X-Data-Age header", async () => {

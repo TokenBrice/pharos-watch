@@ -92,19 +92,19 @@ describe("handleStressSignals contract tests", () => {
     expect(body.history[0]).toHaveProperty("methodologyVersion");
   });
 
-  it("rejects invalid stablecoin ID with 400", async () => {
+  it("rejects unknown stablecoin ID with 404", async () => {
     const db = mockD1();
     const url = new URL("https://x/api/stress-signals?stablecoin=../etc/passwd");
     const res = await handleStressSignals(db, url);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toContain("Invalid");
+    expect(body.error).toContain("Unknown");
   });
 
   it("rejects untracked stablecoin ID with 404", async () => {
     const db = mockD1();
-    const url = new URL("https://x/api/stress-signals?stablecoin=999999999&days=7");
+    const url = new URL("https://x/api/stress-signals?stablecoin=3&days=7");
     const res = await handleStressSignals(db, url);
 
     expect(res.status).toBe(404);

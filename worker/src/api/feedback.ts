@@ -1,7 +1,8 @@
 // worker/src/api/feedback.ts
 
 import { getCache } from "../lib/db";
-import { isValidStablecoinId, errorResponse, jsonResponse } from "../lib/api-utils";
+import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -292,9 +293,22 @@ export async function handleFeedback(
     return errorResponse(400, "Invalid pageUrl");
   }
 
-  // Validate stablecoinId if provided
-  if (fb.stablecoinId && !isValidStablecoinId(fb.stablecoinId)) {
-    fb.stablecoinId = undefined; // strip invalid ID, don't reject (may still be useful feedback)
+  let canonicalStablecoinId: string | undefined;
+
+  // Validate stablecoinId if provided (strip invalid IDs, preserve original submitted value in payload).
+  if (fb.stablecoinId) {
+    const resolved = resolveStablecoinId(fb.stablecoinId, { allowLegacy: true });
+    if (!resolved) {
+      fb.stablecoinId = undefined;
+    } else {
+      canonicalStablecoinId = resolved.canonicalId;
+      if (resolved.matchedBy !== "canonical") {
+        const path = new URL(request.url).pathname;
+        console.log(
+          `[legacy-id] context=path=${path} input=${fb.stablecoinId} resolved=${resolved.canonicalId} matchedBy=${resolved.matchedBy}`,
+        );
+      }
+    }
   }
 
   // Rate limiting
@@ -334,8 +348,8 @@ export async function handleFeedback(
       let verificationBlock: string | undefined;
       let verifiedLabel: "verified: confirmed" | "verified: unconfirmed" | "verified: pending" = "verified: pending";
 
-      if (fb.type === "data-correction" && fb.stablecoinId) {
-        const result = await verifyDataCorrection(db, fb.stablecoinId);
+      if (fb.type === "data-correction" && canonicalStablecoinId) {
+        const result = await verifyDataCorrection(db, canonicalStablecoinId);
         verificationBlock = result.block;
         verifiedLabel = result.verifiedLabel;
       }

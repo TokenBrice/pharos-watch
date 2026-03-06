@@ -10,7 +10,11 @@ All responses are `Content-Type: application/json`. CORS headers are added to ev
 
 ## Stablecoin IDs
 
-Most endpoints use the Pharos stablecoin ID, which comes in three forms:
+Most endpoints use the Pharos stablecoin ID. IDs are resolved through the shared stablecoin-ID registry, so handlers always execute with canonical IDs even if a legacy alias is submitted.
+
+During migration windows, API endpoints may temporarily accept both canonical IDs and legacy aliases (`allowLegacy: true` in resolver calls). Unknown IDs return `404`.
+
+Canonical IDs currently appear in these forms:
 
 | Form | Example | Source |
 |------|---------|--------|
@@ -69,9 +73,9 @@ All error responses use `{ "error": "message" }` JSON format.
 
 | Status | Meaning | When |
 |--------|---------|------|
-| 400 | Bad Request | Invalid query parameter (unknown stablecoin ID, invalid enum value) |
+| 400 | Bad Request | Invalid query parameter syntax (missing required parameter, invalid enum value, malformed numeric input) |
 | 401 | Unauthorized | Admin endpoint called without valid `X-Admin-Key` header |
-| 404 | Not Found | Valid ID format but resource doesn't exist (e.g., unknown stablecoin in detail endpoint) |
+| 404 | Not Found | Unknown stablecoin ID or missing resource |
 | 429 | Too Many Requests | Rate limit exceeded (feedback endpoint) |
 | 500 | Internal Server Error | Unhandled exception (caught by `withErrorHandler`) |
 | 502 | Bad Gateway | Upstream (DefiLlama / CoinGecko) fetch failed |

@@ -1,7 +1,7 @@
 import {
   withErrorHandler,
   addFreshnessHeaders,
-  isValidStablecoinId,
+  resolveOrReject,
   errorResponse,
   parseIntParam,
   jsonResponse,
@@ -40,13 +40,15 @@ export const handleMintBurnEvents = withErrorHandler(
   async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
 
-    const stablecoin = params.get("stablecoin");
-    if (!stablecoin) {
+    const stablecoinInput = params.get("stablecoin");
+    if (!stablecoinInput) {
       return errorResponse(400, "Missing required parameter: stablecoin");
     }
-    if (!isValidStablecoinId(stablecoin)) {
-      return errorResponse(400, "Invalid stablecoin ID");
+    const resolved = resolveOrReject(stablecoinInput, `path=${url.pathname}`);
+    if (resolved instanceof Response) {
+      return resolved;
     }
+    const stablecoinId = resolved.canonicalId;
 
     const direction = params.get("direction");
     if (direction && !VALID_DIRECTIONS.has(direction)) {
@@ -68,7 +70,7 @@ export const handleMintBurnEvents = withErrorHandler(
 
     // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?", "chain_id = ?"];
-    const filterBindings: (string | number)[] = [stablecoin, ETHEREUM_CHAIN_ID];
+    const filterBindings: (string | number)[] = [stablecoinId, ETHEREUM_CHAIN_ID];
 
     if (direction) {
       conditions.push("direction = ?");

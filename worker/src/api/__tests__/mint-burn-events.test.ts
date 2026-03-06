@@ -46,10 +46,10 @@ describe("handleMintBurnEvents", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 for invalid stablecoin ID", async () => {
+  it("returns 404 for unknown stablecoin ID", async () => {
     const db = mockD1([]);
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=<script>"));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
   });
 
   it("rejects invalid direction with 400", async () => {

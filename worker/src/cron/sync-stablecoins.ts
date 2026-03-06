@@ -1,6 +1,7 @@
 import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { enrichMissingPrices, hasMissingPrice, isReasonablePrice, fetchDualPrimaryPrices } from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
@@ -353,6 +354,15 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   // for current/prev values — flatten to plain numbers so the frontend schema
   // and components can consume them directly.
   normalizeChainCirculating(llamaData.peggedAssets);
+
+  // Remap DefiLlama numeric IDs to canonical IDs as early as possible.
+  // Unmapped assets keep their original IDs and are filtered downstream.
+  for (const asset of llamaData.peggedAssets) {
+    const mapped = REGISTRY_BY_LLAMA_ID.get(String(asset.id));
+    if (mapped) {
+      asset.id = mapped.id;
+    }
+  }
 
   if (goldTokens.length || silverTokens.length || fiatCgTokens.length) {
     llamaData.peggedAssets = [...llamaData.peggedAssets, ...goldTokens, ...silverTokens, ...fiatCgTokens];

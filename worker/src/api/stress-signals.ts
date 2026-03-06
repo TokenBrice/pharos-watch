@@ -1,6 +1,6 @@
 import {
   withErrorHandler,
-  isValidStablecoinId,
+  resolveOrReject,
   addFreshnessHeaders,
   errorResponse,
   parseIntParam,
@@ -25,10 +25,13 @@ export const handleStressSignals = withErrorHandler(
     const days = parseIntParam(url.searchParams.get("days"), 30, 1, 365);
 
     if (stablecoinId) {
-      if (!isValidStablecoinId(stablecoinId)) {
-        return errorResponse(400, "Invalid stablecoin ID");
+      const resolved = resolveOrReject(stablecoinId, `path=${url.pathname}`);
+      if (resolved instanceof Response) {
+        return resolved;
       }
-      if (!TRACKED_IDS.has(stablecoinId)) {
+      const canonicalId = resolved.canonicalId;
+
+      if (!TRACKED_IDS.has(canonicalId)) {
         return errorResponse(404, "Stablecoin not tracked");
       }
       // Single coin: latest + daily history
@@ -39,7 +42,7 @@ export const handleStressSignals = withErrorHandler(
            WHERE stablecoin_id = ?
            ORDER BY computed_at DESC LIMIT 1`,
         )
-        .bind(stablecoinId)
+        .bind(canonicalId)
         .first<{
           score: number;
           band: string;
@@ -55,7 +58,7 @@ export const handleStressSignals = withErrorHandler(
            WHERE stablecoin_id = ? AND snapshot_date >= ?
            ORDER BY snapshot_date ASC`,
         )
-        .bind(stablecoinId, cutoff)
+        .bind(canonicalId, cutoff)
         .all<{
           snapshot_date: number;
           score: number;

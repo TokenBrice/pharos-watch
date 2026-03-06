@@ -27,13 +27,13 @@ describe("handleSafetyScoreHistory", () => {
     expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
   });
 
-  it("returns 400 for invalid stablecoin ID", async () => {
+  it("returns 404 for unknown stablecoin ID", async () => {
     const res = await handleSafetyScoreHistory(
       mockD1([]),
       new URL("https://x/api/safety-score-history?stablecoin=DROP TABLE"),
     );
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Invalid stablecoin ID" });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
   it("returns 200 with history rows mapped to camelCase", async () => {

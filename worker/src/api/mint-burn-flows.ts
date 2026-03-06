@@ -1,5 +1,5 @@
 import { getCache, setCache } from "../lib/db";
-import { withErrorHandler, addFreshnessHeaders, isValidStablecoinId, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
+import { withErrorHandler, addFreshnessHeaders, resolveOrReject, errorResponse, parseIntParam, jsonResponse } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { MINT_BURN_CONFIGS, SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 import {
@@ -210,10 +210,11 @@ export const handleMintBurnFlows = withErrorHandler(
     const hours = parseIntParam(params.get("hours"), 24, 1, 720);
 
     if (stablecoinParam) {
-      if (!isValidStablecoinId(stablecoinParam)) {
-        return errorResponse(400, "Invalid stablecoin ID");
+      const resolved = resolveOrReject(stablecoinParam, `path=${url.pathname}`);
+      if (resolved instanceof Response) {
+        return resolved;
       }
-      return handlePerCoin(db, stablecoinParam, hours);
+      return handlePerCoin(db, resolved.canonicalId, hours);
     }
     return handleAggregate(db, hours);
   },
