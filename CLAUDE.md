@@ -144,3 +144,4 @@ Read these when working on related code:
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling (4 triggers, 17 jobs), edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
+- **`docs/process/cmcs-large-implementation-preparation.md`** — Preparation process for large multi-phase projects executed via cmcs: research → design → implementation plan → execution handover → tickets. **Read before planning any task that touches 10+ files or spans multiple worktrees.**

@@ -16,7 +16,7 @@ Small tasks (single ticket, one worktree, no deployment risk) don't need this â€
 
 ## Project Folder Structure
 
-All artifacts live in `docs/plans/<project-name>/`:
+All artifacts live in `docs/plans/<date>-<project-name>/`:
 
 ```
 docs/plans/<project-name>/
