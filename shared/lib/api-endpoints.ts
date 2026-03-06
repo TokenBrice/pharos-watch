@@ -45,7 +45,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/stablecoin/1",
+    path: "/api/stablecoin/usdt-tether",
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,
@@ -53,7 +53,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     probeGroup: "public",
   },
   {
-    path: "/api/stablecoin-summary/1",
+    path: "/api/stablecoin-summary/usdt-tether",
     methods: ["GET"],
     adminRequired: false,
     mutatingAdmin: false,

@@ -61,8 +61,8 @@ type StaticRouteHandler = (context: RouteContext) => Promise<Response>;
 
 const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   ["/api/stablecoins", ({ db }) => handleStablecoins(db)],
-  ["/api/stablecoin/1", ({ db, ctx }) => handleStablecoinDetail(db, "usdt-tether", ctx)],
-  ["/api/stablecoin-summary/1", ({ db }) => handleStablecoinSummary(db, "usdt-tether")],
+  ["/api/stablecoin/usdt-tether", ({ db, ctx }) => handleStablecoinDetail(db, "usdt-tether", ctx)],
+  ["/api/stablecoin-summary/usdt-tether", ({ db }) => handleStablecoinSummary(db, "usdt-tether")],
   ["/api/stablecoin-charts", ({ db }) => handleStablecoinCharts(db)],
   ["/api/blacklist", ({ db, url }) => handleBlacklist(db, url)],
   ["/api/depeg-events", ({ db, url }) => handleDepegEvents(db, url)],

@@ -11,8 +11,8 @@ describe("api endpoint registry", () => {
   it("keeps probe path groups stable", () => {
     expect(getProbePaths("public")).toEqual([
       "/api/stablecoins",
-      "/api/stablecoin/1",
-      "/api/stablecoin-summary/1",
+      "/api/stablecoin/usdt-tether",
+      "/api/stablecoin-summary/usdt-tether",
       "/api/stablecoin-charts",
       "/api/peg-summary",
       "/api/health",

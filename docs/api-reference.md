@@ -10,18 +10,15 @@ All responses are `Content-Type: application/json`. CORS headers are added to ev
 
 ## Stablecoin IDs
 
-Most endpoints use the Pharos stablecoin ID. IDs are resolved through the shared stablecoin-ID registry, so handlers always execute with canonical IDs even if a legacy alias is submitted.
+Most endpoints use the Pharos stablecoin ID. IDs follow the canonical **ticker-issuer** format: lowercase ticker, hyphen, lowercase issuer name (e.g., `"usdt-tether"`, `"usdc-circle"`, `"paxg-paxos"`).
 
-During migration windows, API endpoints may temporarily accept both canonical IDs and legacy aliases (`allowLegacy: true` in resolver calls). Unknown IDs return `404`.
+IDs are resolved through the shared stablecoin-ID registry, so handlers always execute with canonical IDs. Legacy aliases (numeric DefiLlama IDs, `cg-*`, `gold-*`, `silver-*` prefixes) are still accepted during the transition period via `allowLegacy: true` in resolver calls, but should not be used for new integrations. Unknown IDs return `404`.
 
-Canonical IDs currently appear in these forms:
-
-| Form | Example | Source |
-|------|---------|--------|
-| Numeric string | `"1"` (USDT), `"122"` (GYEN) | DefiLlama numeric ID |
-| `gold-*` prefix | `"gold-paxg"` | Commodity (gold) token |
-| `silver-*` prefix | `"silver-kag"` | Commodity (silver) token |
-| `cg-*` prefix | `"cg-xyz"` | CoinGecko-only token |
+| Form | Example | Notes |
+|------|---------|-------|
+| Canonical (ticker-issuer) | `"usdt-tether"`, `"usdc-circle"`, `"paxg-paxos"` | **Use this format** |
+| Legacy numeric | `"1"` (USDT), `"2"` (USDC) | Deprecated — resolved to canonical via registry |
+| Legacy prefixed | `"cg-ustb"`, `"gold-xaut"`, `"silver-kag"` | Deprecated — resolved to canonical via registry |
 
 ---
 

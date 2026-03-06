@@ -82,47 +82,47 @@ const COMPARISON_PRESETS = [
   {
     title: "The Big Four",
     description: "The four largest USD stablecoins by market cap",
-    coins: ["usdt", "usdc", "usds", "usde"],
+    coins: ["usdt-tether", "usdc-circle", "usds-sky", "usde-ethena"],
   },
   {
     title: "DeFi Natives",
     description: "Decentralized, crypto-backed stablecoins",
-    coins: ["dai", "lusd", "bold"],
+    coins: ["dai-makerdao", "lusd-liquity", "bold-liquity"],
   },
   {
     title: "Gold Pegs",
     description: "Tokenized gold stablecoins",
-    coins: ["paxg", "xaut", "kau"],
+    coins: ["paxg-paxos", "xaut-tether", "kau-kinesis"],
   },
   {
     title: "Euro Stablecoins",
     description: "EUR-pegged stablecoins",
-    coins: ["eurs", "eura", "eure"],
+    coins: ["eurs-stasis", "eura-angle", "eure-monerium"],
   },
   {
     title: "Tokenized Treasuries",
     description: "NAV-priced tokens backed by U.S. Treasury bills",
-    coins: ["usyc", "usdy", "tbill", "buidl"],
+    coins: ["usyc-hashnote", "usdy-ondo-finance", "tbill-openeden", "buidl-blackrock"],
   },
   {
     title: "Protocol Stablecoins",
     description: "Native stablecoins issued by major DeFi protocols",
-    coins: ["gho", "crvusd", "frax"],
+    coins: ["gho-aave", "crvusd-curve", "frax-frax"],
   },
   {
     title: "Institutional RWA",
     description: "Tokenized real-world assets from institutional issuers",
-    coins: ["buidl", "m", "usd0"],
+    coins: ["buidl-blackrock", "m-m0", "usd0-usual"],
   },
   {
     title: "Emerging Currency Pegs",
     description: "Stablecoins pegged to emerging market fiat currencies",
-    coins: ["brz", "zarp"],
+    coins: ["brz-transfero", "zarp-zarp"],
   },
   {
     title: "Non-USD Majors",
     description: "Stablecoins pegged to developed-market non-USD currencies",
-    coins: ["xsgd", "gyen", "zchf"],
+    coins: ["xsgd-straitsx", "gyen-gyen", "zchf-frankencoin"],
   },
 ];
 
