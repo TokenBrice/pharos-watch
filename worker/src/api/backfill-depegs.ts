@@ -41,9 +41,9 @@ const PEG_TO_FX: Record<string, string> = {
 
 /** Maps coin ID → frankfurter currency code for OTHER-pegged coins */
 const OTHER_COIN_FX: Record<string, string> = {
-  "289": "SGD",  // XSGD
-  "122": "JPY",  // GYEN
-  "165": "AUD",  // AUDD
+  "xsgd-straitsx": "SGD",  // XSGD
+  "gyen-gyen": "JPY",  // GYEN
+  "audd-novatti": "AUD",  // AUDD
 };
 
 /** Commodity peg currencies that need spot price history */
@@ -431,7 +431,7 @@ interface SupplySnapshot {
  */
 const CG_ABOVE_PEG_EXCLUSIONS: { coinId: string; from: number; to: number; maxPrice: number }[] = [
   // USDT Jul-Aug 2018: CG reports $1.05-$1.50 from illiquid exchange aggregation
-  { coinId: "1", from: 1531000000, to: 1534000000, maxPrice: 1.02 },
+  { coinId: "usdt-tether", from: 1531000000, to: 1534000000, maxPrice: 1.02 },
 ];
 
 /** Returns null when neither CG nor DL has price data (caller should preserve existing events). */

@@ -13,10 +13,10 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 
 // Map blacklist symbol → stablecoin IDs
 const BLACKLIST_SYMBOL_TO_IDS: Record<string, string[]> = {
-  USDC: ["5"],
-  USDT: ["1"],
-  PAXG: ["49"],
-  XAUT: ["87"],
+  USDC: ["usdc-circle"],
+  USDT: ["usdt-tether"],
+  PAXG: ["paxg-paxos"],
+  XAUT: ["xaut-tether"],
 };
 
 const BLACKLIST_ID_TO_SYMBOL = new Map<string, string>();

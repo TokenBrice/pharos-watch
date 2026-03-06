@@ -6,7 +6,7 @@ import { sumPegBuckets } from "./supply";
  * DGLD's CoinGecko price is ~2× gold spot (likely a data error), which
  * poisons the median used as peg reference for all gold tokens.
  */
-export const COMMODITY_MEDIAN_EXCLUDES = new Set(["gold-dgld"]);
+export const COMMODITY_MEDIAN_EXCLUDES = new Set(["dgld-gold-token-sa"]);
 
 export type PegRateSource = "median" | "fallback";
 

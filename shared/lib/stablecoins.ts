@@ -40,7 +40,7 @@ const other = (id: string, name: string, symbol: string, backing: StablecoinMeta
 
 /**
  * Tracked stablecoins by market cap (DefiLlama + CoinGecko).
- * IDs are DefiLlama numeric IDs (string).
+ * IDs use canonical ticker-issuer format.
  *
  * Classification flags:
  *   backing:      rwa-backed | crypto-backed | algorithmic
@@ -51,7 +51,7 @@ const other = (id: string, name: string, symbol: string, backing: StablecoinMeta
  */
 export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 1-10 ────────────────────────────────────────────────────────
-  usd("1", "Tether", "USDT", "rwa-backed", "centralized", {
+  usd("usdt-tether", "Tether", "USDT", "rwa-backed", "centralized", {
     llamaId: "1",
     detailProvider: "defillama",
     geckoId: "tether",
@@ -113,7 +113,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other Investments", pct: 1, risk: "medium" },
     ],
   }),
-  usd("2", "USD Coin", "USDC", "rwa-backed", "centralized", {
+  usd("usdc-circle", "USD Coin", "USDC", "rwa-backed", "centralized", {
     llamaId: "2",
     detailProvider: "defillama",
     geckoId: "usd-coin",
@@ -186,7 +186,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash Deposits", pct: 7, risk: "very-low" },
     ],
   }),
-  usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
+  usd("usde-ethena", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
     llamaId: "146",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -234,12 +234,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "cex",
     reserves: [
-      { name: "Liquid Stables (USDtb / USDC / USDT)", pct: 76, risk: "low", coinId: "221" },
+      { name: "Liquid Stables (USDtb / USDC / USDT)", pct: 76, risk: "low", coinId: "usdtb-ethena" },
       { name: "BTC (delta-neutral)", pct: 16, risk: "medium" },
       { name: "ETH / ETH LSTs (delta-neutral)", pct: 8, risk: "medium" },
     ],
   }),
-  usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
+  usd("usds-sky", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
     llamaId: "209",
     detailProvider: "defillama",
     geckoId: "usds",
@@ -268,12 +268,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
-      { name: "USDC via PSM", pct: 30, risk: "low", coinId: "2", depType: "mechanism" },
+      { name: "USDC via PSM", pct: 30, risk: "low", coinId: "usdc-circle", depType: "mechanism" },
       { name: "ETH / wstETH", pct: 20, risk: "low" },
       { name: "Other Vaults", pct: 10, risk: "high" },
     ],
   }),
-  usd("262", "World Liberty Financial USD", "USD1", "rwa-backed", "centralized", {
+  usd("usd1-world-liberty-financial", "World Liberty Financial USD", "USD1", "rwa-backed", "centralized", {
     llamaId: "262",
     detailProvider: "defillama",
     geckoId: "usd1-wlfi",
@@ -304,7 +304,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash Deposits", pct: 15, risk: "very-low" },
     ],
   }),
-  usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
+  usd("dai-makerdao", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
     llamaId: "5",
     detailProvider: "defillama",
     geckoId: "dai",
@@ -338,13 +338,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "RWA (U.S. Treasuries)", pct: 40, risk: "low" },
-      { name: "USDC via PSM", pct: 33, risk: "low", coinId: "2", depType: "mechanism" },
+      { name: "USDC via PSM", pct: 33, risk: "low", coinId: "usdc-circle", depType: "mechanism" },
       { name: "ETH / wstETH", pct: 20, risk: "low" },
       { name: "WBTC", pct: 5, risk: "medium" },
       { name: "Other Vaults", pct: 2, risk: "high" },
     ],
   }),
-  usd("120", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
+  usd("pyusd-paypal", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
     llamaId: "120",
     detailProvider: "defillama",
     geckoId: "paypal-usd",
@@ -372,7 +372,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash Deposits", pct: 3, risk: "very-low" },
     ],
   }),
-  usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
+  usd("usdf-falcon", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
     llamaId: "246",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -398,13 +398,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Falcon Finance transparency dashboard + DWF Labs research (Sep 2025). Approximate from published $ amounts.
       { name: "BTC (delta-neutral)", pct: 45, risk: "medium" },
-      { name: "Stablecoins (USDC/USDT)", pct: 30, risk: "low", coinId: "2" },
+      { name: "Stablecoins (USDC/USDT)", pct: 30, risk: "low", coinId: "usdc-circle" },
       { name: "Altcoins (DOGE, FET, TRX, TON)", pct: 15, risk: "high" },
       { name: "ETH (delta-neutral)", pct: 5, risk: "medium" },
       { name: "Tokenized Treasuries (USTB)", pct: 5, risk: "low" },
     ],
   }),
-  usd("237", "Hashnote USYC", "USYC", "rwa-backed", "centralized", {
+  usd("usyc-hashnote", "Hashnote USYC", "USYC", "rwa-backed", "centralized", {
     llamaId: "237",
     detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
@@ -429,7 +429,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Reverse Repo Agreements", pct: 20, risk: "very-low" },
     ],
   }),
-  usd("286", "Global Dollar", "USDG", "rwa-backed", "centralized", {
+  usd("usdg-paxos", "Global Dollar", "USDG", "rwa-backed", "centralized", {
     llamaId: "286",
     detailProvider: "defillama",
     geckoId: "global-dollar",
@@ -457,7 +457,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Rank 11-20 ───────────────────────────────────────────────────────
-  usd("250", "Ripple USD", "RLUSD", "rwa-backed", "centralized", {
+  usd("rlusd-ripple", "Ripple USD", "RLUSD", "rwa-backed", "centralized", {
     llamaId: "250",
     detailProvider: "defillama",
     geckoId: "ripple-usd",
@@ -480,7 +480,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash Deposits", pct: 28, risk: "very-low" },
     ],
   }),
-  usd("129", "Ondo US Dollar Yield", "USDY", "rwa-backed", "centralized", {
+  usd("usdy-ondo-finance", "Ondo US Dollar Yield", "USDY", "rwa-backed", "centralized", {
     llamaId: "129",
     detailProvider: "defillama",
     geckoId: "ondo-us-dollar-yield",
@@ -517,7 +517,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Bank Demand Deposits", pct: 5, risk: "very-low" },
     ],
   }),
-  usd("173", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
+  usd("buidl-blackrock", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
     llamaId: "173",
     detailProvider: "defillama",
     yieldBearing: true, rwa: true,
@@ -549,7 +549,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash", pct: 10, risk: "very-low" },
     ],
   }),
-  usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
+  usd("usdd-tron-dao-reserve", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
     llamaId: "14",
     detailProvider: "defillama",
     geckoId: "usdd",
@@ -577,13 +577,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Messari Jan 2026, Stablewatch late 2025. Confidence: Medium
       { name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 75, risk: "medium" },
-      { name: "USDT (PSM vaults)", pct: 16, risk: "low", coinId: "1" },
+      { name: "USDT (PSM vaults)", pct: 16, risk: "low", coinId: "usdt-tether" },
       { name: "TRX", pct: 7, risk: "high" },
-      { name: "USDT (direct vaults)", pct: 1, risk: "high", coinId: "1" },
+      { name: "USDT (direct vaults)", pct: 1, risk: "high", coinId: "usdt-tether" },
       { name: "sTRX (direct vaults)", pct: 1, risk: "high" },
     ],
   }),
-  usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
+  usd("usdtb-ethena", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
     llamaId: "221",
     detailProvider: "defillama",
     rwa: true,
@@ -605,11 +605,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Ethena docs, The Block, CoinDesk Mar 2025. Confidence: High
-      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 90, risk: "low", coinId: "173" },
-      { name: "USDC (redemption reserve)", pct: 10, risk: "low", coinId: "2" },
+      { name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 90, risk: "low", coinId: "buidl-blackrock" },
+      { name: "USDC (redemption reserve)", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("213", "M by M0", "M", "rwa-backed", "centralized", {
+  usd("m-m0", "M by M0", "M", "rwa-backed", "centralized", {
     llamaId: "213",
     detailProvider: "defillama",
     rwa: true,
@@ -638,7 +638,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Short-term U.S. Treasury Bills (30-90 day)", pct: 100, risk: "very-low" },
     ],
   }),
-  usd("336", "United Stables", "U", "rwa-backed", "centralized", {
+  usd("u-united-stables", "United Stables", "U", "rwa-backed", "centralized", {
     llamaId: "336",
     detailProvider: "defillama",
     geckoId: "united-stables",
@@ -656,13 +656,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: GlobeNewsWire Dec 2025 launch announcement. Confidence: Low
-      { name: "USDC", pct: 35, risk: "low", coinId: "2" },
-      { name: "USDT", pct: 35, risk: "low", coinId: "1" },
+      { name: "USDC", pct: 35, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT", pct: 35, risk: "low", coinId: "usdt-tether" },
       { name: "USD1 (WLFI stablecoin)", pct: 15, risk: "medium" },
       { name: "Fiat USD / U.S. Treasury Bills", pct: 15, risk: "very-low" },
     ],
   }),
-  usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
+  usd("usdai-usd-ai", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
     llamaId: "309",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -685,12 +685,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: The Defiant Feb 19 2026 (DefiLlama breakdown), USD.AI Dec 18 2025 PYUSD integration. Confidence: Medium
-      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 56, risk: "low", coinId: "213" },
-      { name: "PYUSD (PayPal USD)", pct: 43, risk: "medium", coinId: "120" },
+      { name: "wM / U.S. Treasury Bills (via M0 Protocol)", pct: 56, risk: "low", coinId: "m-m0" },
+      { name: "PYUSD (PayPal USD)", pct: 43, risk: "medium", coinId: "pyusd-paypal" },
       { name: "GPU-collateralized loans (NVIDIA hardware)", pct: 1, risk: "high" },
     ],
   }),
-  usd("195", "Usual USD", "USD0", "rwa-backed", "centralized-dependent", {
+  usd("usd0-usual", "Usual USD", "USD0", "rwa-backed", "centralized-dependent", {
     llamaId: "195",
     detailProvider: "defillama",
     rwa: true,
@@ -712,15 +712,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Usual docs, RWA.xyz, ChainArgos Feb 2026. Confidence: Medium
-      { name: "Hashnote USYC (tokenized T-bills/reverse repos)", pct: 65, risk: "low", coinId: "237" },
-      { name: "M by M^0 (tokenized T-bills)", pct: 15, risk: "low", coinId: "213" },
-      { name: "USDtb by Ethena (BUIDL + USDC)", pct: 10, risk: "low", coinId: "221" },
-      { name: "BlackRock BUIDL", pct: 5, risk: "low", coinId: "173" },
-      { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low", coinId: "cg-ousg" },
-      { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "2" },
+      { name: "Hashnote USYC (tokenized T-bills/reverse repos)", pct: 65, risk: "low", coinId: "usyc-hashnote" },
+      { name: "M by M^0 (tokenized T-bills)", pct: 15, risk: "low", coinId: "m-m0" },
+      { name: "USDtb by Ethena (BUIDL + USDC)", pct: 10, risk: "low", coinId: "usdtb-ethena" },
+      { name: "BlackRock BUIDL", pct: 5, risk: "low", coinId: "buidl-blackrock" },
+      { name: "OUSG by Ondo (tokenized T-bills)", pct: 3, risk: "low", coinId: "ousg-ondo-finance" },
+      { name: "USDC (Circle)", pct: 2, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
+  usd("gho-aave", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
     llamaId: "118",
     detailProvider: "defillama",
     geckoId: "gho",
@@ -750,16 +750,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Aave V3 Ethereum market data, Eco.com GHO guide, Chaos Labs risk dashboard
       { name: "wstETH", pct: 34, risk: "low" },
-      { name: "sDAI", pct: 18, risk: "low", coinId: "5" },
+      { name: "sDAI", pct: 18, risk: "low", coinId: "dai-makerdao" },
       { name: "WETH", pct: 16, risk: "medium" },
       { name: "WBTC", pct: 14, risk: "medium" },
-      { name: "USDC / USDT (GSM)", pct: 13, risk: "low", coinId: "2" },
+      { name: "USDC / USDT (GSM)", pct: 13, risk: "low", coinId: "usdc-circle" },
       { name: "Other Aave V3 Collateral", pct: 5, risk: "high" },
     ],
   }),
 
   // ── Rank 21-30 ───────────────────────────────────────────────────────
-  other("258", "A7A5", "A7A5", "rwa-backed", "centralized", "RUB", {
+  other("a7a5-old-vector", "A7A5", "A7A5", "rwa-backed", "centralized", "RUB", {
     llamaId: "258",
     detailProvider: "defillama",
     geckoId: "a7a5",
@@ -780,7 +780,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Russian ruble deposits at Promsvyazbank (sanctioned)", pct: 100, risk: "very-high" },
     ],
   }),
-  usd("7", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
+  usd("tusd-trueusd", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
     llamaId: "7",
     detailProvider: "defillama",
     geckoId: "true-usd",
@@ -808,7 +808,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash at depository institutions", pct: 1, risk: "very-low" },
     ],
   }),
-  usd("119", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
+  usd("fdusd-first-digital", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
     llamaId: "119",
     detailProvider: "defillama",
     geckoId: "first-digital-usd",
@@ -837,7 +837,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Overnight Reverse Repos", pct: 2, risk: "very-low" },
     ],
   }),
-  usd("296", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
+  usd("cusd-cap", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
     llamaId: "296",
     detailProvider: "defillama",
     geckoId: "cap-usd",
@@ -855,15 +855,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Cap docs, Aave blog, blocmates Jan 2026. Confidence: Low
-      { name: "USDC (Circle)", pct: 35, risk: "low", coinId: "2" },
-      { name: "USDT (Tether)", pct: 25, risk: "low", coinId: "1" },
-      { name: "BUIDL (BlackRock tokenized MMF)", pct: 20, risk: "low", coinId: "173" },
+      { name: "USDC (Circle)", pct: 35, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT (Tether)", pct: 25, risk: "low", coinId: "usdt-tether" },
+      { name: "BUIDL (BlackRock tokenized MMF)", pct: 20, risk: "low", coinId: "buidl-blackrock" },
       { name: "BENJI (Franklin Templeton fund)", pct: 10, risk: "low" },
-      { name: "pyUSD (PayPal)", pct: 10, risk: "low", coinId: "120" },
+      { name: "pyUSD (PayPal)", pct: 10, risk: "low", coinId: "pyusd-paypal" },
     ],
   }),
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
-  eur("50", "EURC", "EURC", "rwa-backed", "centralized", {
+  eur("eurc-circle", "EURC", "EURC", "rwa-backed", "centralized", {
     llamaId: "50",
     detailProvider: "defillama",
     geckoId: "euro-coin",
@@ -891,7 +891,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other Bank Deposits (EUR)", pct: 1, risk: "very-low" },
     ],
   }),
-  usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
+  usd("usr-resolv", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
     llamaId: "197",
     detailProvider: "defillama",
     geckoId: "resolv-usr",
@@ -922,10 +922,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH + wstETH (delta-neutral via short perps)", pct: 55, risk: "medium" },
       { name: "BTC (delta-neutral via short perps)", pct: 20, risk: "medium" },
       { name: "RLP insurance layer (surplus ETH + BTC)", pct: 15, risk: "medium" },
-      { name: "USD stablecoins (USDC/USDT)", pct: 10, risk: "low", coinId: "2" },
+      { name: "USD stablecoins (USDC/USDT)", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
+  usd("ylds-figure", "YLDS", "YLDS", "rwa-backed", "centralized", {
     llamaId: "272",
     detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
@@ -948,16 +948,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       // Source: Figure Certificate Co. prospectus (SEC), KPMG Q1 2025. Confidence: High
       { name: "Overnight Treasury repo agreements (UMB Bank)", pct: 86, risk: "very-low" },
       { name: "Money market funds", pct: 13, risk: "very-low" },
-      { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low", coinId: "2" },
+      { name: "Digital assets (USDC + USDT, operational)", pct: 1, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
+  usd("crvusd-curve", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
     llamaId: "110",
     detailProvider: "defillama",
     geckoId: "crvusd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "nav-appreciation" },
-    dependencies: [{ id: "1", weight: 0.10 }, { id: "2", weight: 0.10 }, { id: "120", weight: 0.10 }, { id: "235", weight: 0.10 }],
+    dependencies: [{ id: "usdt-tether", weight: 0.10 }, { id: "usdc-circle", weight: 0.10 }, { id: "pyusd-paypal", weight: 0.10 }, { id: "frxusd-frax", weight: 0.10 }],
     deploymentModel: "canonical-bridge",
     collateral: "WETH, wBTC, wstETH, sfrxETH, and tBTC deposited as collateral; LLAMMA (Lending-Liquidating AMM) performs soft liquidations by gradually converting collateral to crvUSD as prices fall",
     pegMechanism: "Peg Stability Reserve (PegKeeper) contracts deposit or withdraw pre-minted crvUSD into Curve pools paired with USDC, USDT, PYUSD, and frxUSD to restore the peg; borrow rate adjusts dynamically — rising when crvUSD trades below $1 to incentivize repayments",
@@ -990,7 +990,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH", pct: 8, risk: "very-low" },
     ],
   }),
-  usd("310", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
+  usd("usx-solstice", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
     llamaId: "310",
     detailProvider: "defillama",
     geckoId: "usx",
@@ -1010,13 +1010,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       // Source: Solstice docs, StablecoinInsider Sep-Dec 2025. Confidence: Medium
-      { name: "USDC", pct: 55, risk: "low", coinId: "2", depType: "wrapper" },
-      { name: "USDT", pct: 45, risk: "low", coinId: "1", depType: "wrapper" },
+      { name: "USDC", pct: 55, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "USDT", pct: 45, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
     ],
   }),
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
-  usd("220", "Avalon USDa", "USDA", "crypto-backed", "centralized-dependent", {
+  usd("usda-avalon", "Avalon USDa", "USDA", "crypto-backed", "centralized-dependent", {
     llamaId: "220",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -1043,12 +1043,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Avalon docs, Decrypt, Wu Blockchain late 2024-2025. Confidence: Low
       { name: "FBTC (tokenized BTC via Cobo custody)", pct: 45, risk: "medium" },
-      { name: "USDT (1:1 minted deposits)", pct: 40, risk: "low", coinId: "1" },
+      { name: "USDT (1:1 minted deposits)", pct: 40, risk: "low", coinId: "usdt-tether" },
       { name: "BTC LSTs (SolvBTC, LBTC, pumpBTC, etc.)", pct: 15, risk: "high" },
     ],
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
-  usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
+  usd("frax-frax", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
     llamaId: "6",
     detailProvider: "defillama",
     geckoId: "frax",
@@ -1080,12 +1080,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: LlamaRisk Jul 2025, Chaos Labs, Frax docs. Confidence: Medium
       { name: "USTB (Superstate tokenized T-bills)", pct: 50, risk: "low" },
-      { name: "BUIDL (BlackRock tokenized T-bills/cash/repos)", pct: 42, risk: "low", coinId: "173" },
+      { name: "BUIDL (BlackRock tokenized T-bills/cash/repos)", pct: 42, risk: "low", coinId: "buidl-blackrock" },
       { name: "USCC (Superstate crypto arbitrage)", pct: 3, risk: "medium" },
       { name: "Other tokenized assets (WTGXX, AUSD, JTRSY)", pct: 5, risk: "low" },
     ],
   }),
-  usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
+  usd("dola-inverse-finance", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
     llamaId: "15",
     detailProvider: "defillama",
     geckoId: "dola-usd",
@@ -1113,15 +1113,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       // Source: Inverse Finance transparency, DefiLlama Feb 2026. Confidence: Medium
       { name: "wstETH (Lido)", pct: 35, risk: "low" },
-      { name: "sUSDe / PT-sUSDe (Ethena)", pct: 15, risk: "medium", coinId: "146" },
+      { name: "sUSDe / PT-sUSDe (Ethena)", pct: 15, risk: "medium", coinId: "usde-ethena" },
       { name: "cbBTC (Coinbase wrapped Bitcoin)", pct: 12, risk: "medium" },
       { name: "WETH", pct: 10, risk: "medium" },
-      { name: "USDS in PSM (peg backstop)", pct: 8, risk: "low", coinId: "209", depType: "mechanism" },
+      { name: "USDS in PSM (peg backstop)", pct: 8, risk: "low", coinId: "usds-sky", depType: "mechanism" },
       { name: "LP tokens (Curve, cvxCRV, st-yCRV)", pct: 8, risk: "high" },
-      { name: "Other (sFRAX, INV, st-yETH)", pct: 12, risk: "very-high", coinId: "6" },
+      { name: "Other (sFRAX, INV, st-yETH)", pct: 12, risk: "very-high", coinId: "frax-frax" },
     ],
   }),
-  usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
+  usd("ausd-agora", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
     llamaId: "205",
     detailProvider: "defillama",
     geckoId: "agora-dollar",
@@ -1157,7 +1157,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash (USD deposits at State Street)", pct: 15, risk: "very-low" },
     ],
   }),
-  usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
+  usd("iusd-infinifi", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "298",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -1176,14 +1176,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       // Source: Nansen, Blockworks, 0xmedia Jun-Dec 2025. Confidence: Medium
-      { name: "Ethena sUSDe (yield-bearing staked USDe)", pct: 30, risk: "medium", coinId: "146" },
-      { name: "Pendle PT-sUSDe (fixed-term Ethena yield)", pct: 25, risk: "medium", coinId: "146" },
-      { name: "Aave USDC (liquid money market)", pct: 20, risk: "low", coinId: "2", depType: "wrapper" },
-      { name: "USDC reserve buffer (liquid)", pct: 15, risk: "low", coinId: "2", depType: "wrapper" },
-      { name: "Fluid / Euler USDC (money markets)", pct: 10, risk: "low", coinId: "2", depType: "wrapper" },
+      { name: "Ethena sUSDe (yield-bearing staked USDe)", pct: 30, risk: "medium", coinId: "usde-ethena" },
+      { name: "Pendle PT-sUSDe (fixed-term Ethena yield)", pct: 25, risk: "medium", coinId: "usde-ethena" },
+      { name: "Aave USDC (liquid money market)", pct: 20, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "USDC reserve buffer (liquid)", pct: 15, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "Fluid / Euler USDC (money markets)", pct: 10, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
     ],
   }),
-  usd("219", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
+  usd("usdf-astherus", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
     llamaId: "219",
     detailProvider: "defillama",
     geckoId: "astherus-usdf",
@@ -1201,17 +1201,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "cex",
     reserves: [
       // Source: Aster docs, Coin Bureau, IQ.wiki 2025. Confidence: High
-      { name: "USDT (held in Ceffu custody)", pct: 50, risk: "low", coinId: "1", depType: "wrapper" },
+      { name: "USDT (held in Ceffu custody)", pct: 50, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
       { name: "Spot crypto (BTC/ETH, delta-hedged via perp shorts)", pct: 25, risk: "high" },
       { name: "Perpetual short positions margin (Binance via MirrorX)", pct: 25, risk: "high" },
     ],
   }),
   // FLEXUSD (id 21) removed — CoinFLEX exchange bankruptcy June 2022 (see cemetery)
-  usd("252", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
+  usd("dusd-standx", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "252",
     detailProvider: "defillama",
     geckoId: "standx-dusd",
-    dependencies: [{ id: "1", weight: 0.5 }, { id: "2", weight: 0.5 }],
+    dependencies: [{ id: "usdt-tether", weight: 0.5 }, { id: "usdc-circle", weight: 0.5 }],
     deploymentModel: "native-multichain",
     collateral: "USDT/USDC deposits converted to hedged crypto positions (BTC, ETH, SOL) via Ceffu",
     pegMechanism: "Delta-neutral hedging on centralized exchanges; 1:1 USDT/USDC redemption",
@@ -1232,7 +1232,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Stability reserve fund (stablecoins, multisig)", pct: 5, risk: "medium" },
     ],
   }),
-  usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
+  usd("satusd-river", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
     llamaId: "218",
     detailProvider: "defillama",
     geckoId: "satoshi-stablecoin",
@@ -1266,7 +1266,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Rank 41-50 ───────────────────────────────────────────────────────
-  other("249", "Brazilian Digital", "BRZ", "rwa-backed", "centralized", "BRL", {
+  other("brz-transfero", "Brazilian Digital", "BRZ", "rwa-backed", "centralized", "BRL", {
     llamaId: "249",
     detailProvider: "defillama",
     geckoId: "brz",
@@ -1289,7 +1289,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "solana", address: "FtgGSFADXBtroxq8VCausXRr2of47QBf5AS1NtZCu4GD", decimals: 4 },
     ],
   }),
-  usd("306", "Gate USD", "GUSD", "rwa-backed", "centralized", {
+  usd("gusd-gate", "Gate USD", "GUSD", "rwa-backed", "centralized", {
     llamaId: "306",
     detailProvider: "defillama",
     geckoId: "gusd",
@@ -1308,11 +1308,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "Short-term U.S. Treasury bonds", pct: 70, risk: "very-low" },
-      { name: "USDT/USDC deposits (minting collateral)", pct: 25, risk: "low", coinId: "1" },
+      { name: "USDT/USDC deposits (minting collateral)", pct: 25, risk: "low", coinId: "usdt-tether" },
       { name: "Yield instruments (unspecified)", pct: 5, risk: "high" },
     ],
   }),
-  usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
+  usd("frxusd-frax", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
     llamaId: "235",
     detailProvider: "defillama",
     geckoId: "frax-usd",
@@ -1356,14 +1356,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "xlayer",        address: "0x80eede496655fb9047dd39d9f418d5483ed600df", decimals: 18 },
     ],
     reserves: [
-      { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low", coinId: "173" },
+      { name: "BlackRock BUIDL (U.S. Treasuries/repos via Securitize)", pct: 55, risk: "low", coinId: "buidl-blackrock" },
       { name: "Superstate USTB (tokenized T-bills)", pct: 20, risk: "low" },
-      { name: "Circle USDC", pct: 10, risk: "low", coinId: "2" },
+      { name: "Circle USDC", pct: 10, risk: "low", coinId: "usdc-circle" },
       { name: "Superstate USCC (U.S. government securities + crypto carry)", pct: 5, risk: "medium" },
       { name: "Other custodians (AUSD, JTRSY, WTGXX, USDB)", pct: 10, risk: "low" },
     ],
   }),
-  usd("340", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
+  usd("rwausdi-multipli", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
     llamaId: "340",
     detailProvider: "defillama",
     deploymentModel: "native-multichain",
@@ -1383,13 +1383,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xA39986F96B80d04e8d7AeAaF47175F47C23FD0f4", decimals: 6 },
     ],
     reserves: [
-      { name: "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)", pct: 50, risk: "low", coinId: "173" },
+      { name: "Tokenized U.S. Treasury products (BUIDL, USDY, OUSG, etc.)", pct: 50, risk: "low", coinId: "buidl-blackrock" },
       { name: "Treasury-backed stablecoins (100+ aggregated)", pct: 25, risk: "medium" },
       { name: "Tokenized gold assets (10+ aggregated)", pct: 15, risk: "medium" },
       { name: "Market-neutral fund units (Nomura, Fasanara, Edge Capital)", pct: 10, risk: "high" },
     ],
   }),
-  usd("271", "Avant USD", "avUSD", "rwa-backed", "centralized", {
+  usd("avusd-avant", "Avant USD", "avUSD", "rwa-backed", "centralized", {
     llamaId: "271",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -1410,11 +1410,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0xf4c13d631450de6b12a19829e37c8e2826891dc4", decimals: 18 },
     ],
     reserves: [
-      { name: "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)", pct: 95, risk: "medium", coinId: "2" },
+      { name: "USDC (1:1 backing, deployed into delta-neutral strategies via 0xPartners)", pct: 95, risk: "medium", coinId: "usdc-circle" },
       { name: "Reserve fund (loss absorption buffer)", pct: 5, risk: "medium" },
     ],
   }),
-  usd("341", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
+  usd("pusd-pleasing", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
     llamaId: "341",
     detailProvider: "defillama",
     geckoId: "pleasing-usd",
@@ -1431,11 +1431,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "apechain", address: "0x764387ae46fc504b0682bc1ad31963250007e58e", decimals: 18 },
     ],
     reserves: [
-      { name: "USDT deposits (1:1 minting collateral)", pct: 90, risk: "low", coinId: "1", depType: "wrapper" },
+      { name: "USDT deposits (1:1 minting collateral)", pct: 90, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
       { name: "Tokenized gold exposure (PGOLD interoperability)", pct: 10, risk: "medium" },
     ],
   }),
-  usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
+  usd("reusd-re-protocol", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "339",
     detailProvider: "defillama",
     yieldBearing: true, navToken: true,
@@ -1461,12 +1461,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     reserves: [
-      { name: "Delta-neutral ETH basis trade positions (via sUSDe/USDe)", pct: 50, risk: "high", coinId: "146" },
+      { name: "Delta-neutral ETH basis trade positions (via sUSDe/USDe)", pct: 50, risk: "high", coinId: "usde-ethena" },
       { name: "Short-duration U.S. Treasury bills", pct: 30, risk: "very-low" },
-      { name: "USDC reserves (instant redemption buffer)", pct: 20, risk: "low", coinId: "2" },
+      { name: "USDC reserves (instant redemption buffer)", pct: 20, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized", {
+  usd("pmusd-precious-metals", "pmUSD", "pmUSD", "rwa-backed", "centralized", {
     llamaId: "332",
     detailProvider: "defillama",
     geckoId: "precious-metals-usd",
@@ -1485,7 +1485,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ION.au tokenized gold (I-ON Digital, Chainlink PoR attested)", pct: 100, risk: "medium" },
     ],
   }),
-  usd("202", "Anzen USDz", "USDz", "rwa-backed", "centralized", {
+  usd("usdz-anzen", "Anzen USDz", "USDz", "rwa-backed", "centralized", {
     llamaId: "202",
     detailProvider: "defillama",
     rwa: true,
@@ -1511,7 +1511,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash and cash equivalents", pct: 5, risk: "very-low" },
     ],
   }),
-  usd("316", "CASH", "CASH", "rwa-backed", "centralized", {
+  usd("cash-phantom", "CASH", "CASH", "rwa-backed", "centralized", {
     llamaId: "316",
     detailProvider: "defillama",
     geckoId: "cash-4",
@@ -1530,12 +1530,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Reverse repos (overnight, UST-collateralized)", pct: 15, risk: "very-low" },
       { name: "U.S. government money-market funds", pct: 15, risk: "very-low" },
       { name: "Bank deposit accounts", pct: 10, risk: "very-low" },
-      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 10, risk: "low", coinId: "173" },
+      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 10, risk: "low", coinId: "buidl-blackrock" },
     ],
   }),
 
   // ── Rank 51-60 ───────────────────────────────────────────────────────
-  usd("284", "MNEE USD", "MNEE", "rwa-backed", "centralized", {
+  usd("mnee-mnee", "MNEE USD", "MNEE", "rwa-backed", "centralized", {
     llamaId: "284",
     detailProvider: "defillama",
     geckoId: "mnee-usd-stablecoin",
@@ -1556,7 +1556,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USD cash at qualified custodian", pct: 15, risk: "very-low" },
     ],
   }),
-  usd("257", "OpenEden TBILL", "TBILL", "rwa-backed", "centralized", {
+  usd("tbill-openeden", "OpenEden TBILL", "TBILL", "rwa-backed", "centralized", {
     llamaId: "257",
     detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
@@ -1582,11 +1582,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USD cash buffer", pct: 5, risk: "very-low" },
     ],
   }),
-  other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
+  other("fpi-frax", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
     llamaId: "66",
     detailProvider: "defillama",
     geckoId: "frax-price-index",
-    dependencies: [{ id: "6", weight: 1.0, type: "wrapper" }],
+    dependencies: [{ id: "frax-frax", weight: 1.0, type: "wrapper" }],
     navToken: true,
     governanceQuality: "wrapper",
     collateralQuality: "rwa",
@@ -1602,13 +1602,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x5ca135cb8527d76e932f34b5145575f9d8cbe08e", decimals: 18 },
     ],
   }),
-  usd("283", "Unitas", "USDU", "crypto-backed", "centralized-dependent", {
+  usd("usdu-unitas", "Unitas", "USDU", "crypto-backed", "centralized-dependent", {
     llamaId: "283",
     detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Unitas savings (sUSDu)", yieldType: "governance-set" },
     geckoId: "usdu",
-    dependencies: [{ id: "2", weight: 0.8 }],
+    dependencies: [{ id: "usdc-circle", weight: 0.8 }],
     deploymentModel: "native-multichain",
     collateralQuality: "exotic",
     custodyModel: "institutional",
@@ -1631,7 +1631,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   // DEUSD removed — collapsed Nov 2025 when Stream Finance failed
-  usd("321", "USDH Stablecoin", "USDH", "rwa-backed", "centralized", {
+  usd("usdh-native-markets", "USDH Stablecoin", "USDH", "rwa-backed", "centralized", {
     llamaId: "321",
     detailProvider: "defillama",
     geckoId: "usdh-2",
@@ -1653,10 +1653,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash deposits (JP Morgan, Lead Bank)", pct: 20, risk: "very-low" },
       { name: "Repo agreements (UST-collateralized)", pct: 10, risk: "very-low" },
       { name: "Treasury-focused funds (BlackRock TTTXX)", pct: 10, risk: "very-low" },
-      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 20, risk: "low", coinId: "173" },
+      { name: "Tokenized treasuries (BUIDL, USTB)", pct: 20, risk: "low", coinId: "buidl-blackrock" },
     ],
   }),
-  usd("79", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
+  usd("lisusd-lista", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "79",
     detailProvider: "defillama",
     geckoId: "helio-protocol-hay",
@@ -1678,10 +1678,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "slisBNB (Lista BNB LST)", pct: 25, risk: "high" },
       { name: "ETH / wBETH (Binance ETH LST)", pct: 15, risk: "medium" },
       { name: "BTCB (Binance-wrapped BTC)", pct: 10, risk: "medium" },
-      { name: "USDT / USDC / FDUSD (via PSM)", pct: 15, risk: "low", coinId: "1" },
+      { name: "USDT / USDC / FDUSD (via PSM)", pct: 15, risk: "low", coinId: "usdt-tether" },
     ],
   }),
-  usd("241", "OpenDollar USDO", "USDO", "rwa-backed", "centralized", {
+  usd("usdo-openeden", "OpenDollar USDO", "USDO", "rwa-backed", "centralized", {
     llamaId: "241",
     detailProvider: "defillama",
     geckoId: "openeden-open-dollar",
@@ -1702,12 +1702,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "OpenEden TBILL tokens (tokenized U.S. T-bills)", pct: 70, risk: "low" },
-      { name: "BlackRock BUIDL (tokenized money market fund)", pct: 15, risk: "low", coinId: "173" },
+      { name: "BlackRock BUIDL (tokenized money market fund)", pct: 15, risk: "low", coinId: "buidl-blackrock" },
       { name: "Franklin Templeton BENJI (tokenized govt money fund)", pct: 5, risk: "low" },
-      { name: "USDC cash buffer", pct: 10, risk: "low", coinId: "2" },
+      { name: "USDC cash buffer", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("166", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
+  usd("cgusd-cygnus-finance", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
     llamaId: "166",
     detailProvider: "defillama",
     geckoId: "cygnus-finance-global-usd",
@@ -1723,13 +1723,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "Short-term U.S. Treasury bills (off-chain)", pct: 80, risk: "very-low" },
-      { name: "On-chain stablecoins (USDC/USDT)", pct: 15, risk: "low", coinId: "2" },
+      { name: "On-chain stablecoins (USDC/USDT)", pct: 15, risk: "low", coinId: "usdc-circle" },
       { name: "Accrued interest", pct: 5, risk: "very-low" },
     ],
   }),
 
   // ── Rank 61-70 ───────────────────────────────────────────────────────
-  eur("254", "EUR CoinVertible", "EURCV", "rwa-backed", "centralized", {
+  eur("eurcv-societe-generale-forge", "EUR CoinVertible", "EURCV", "rwa-backed", "centralized", {
     llamaId: "254",
     detailProvider: "defillama",
     geckoId: "societe-generale-forge-eurcv",
@@ -1753,7 +1753,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   // USP (id 97) removed — Platypus exploited in 2023, protocol defunct (see cemetery)
-  eur("147", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
+  eur("aeur-anchored-coins", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
     llamaId: "147",
     detailProvider: "defillama",
     geckoId: "anchored-coins-eur",
@@ -1778,7 +1778,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   // BUSD (id 4) removed — regulatory shutdown Feb 2023 (see cemetery)
-  usd("275", "Quantoz USDQ", "USDQ", "rwa-backed", "centralized", {
+  usd("usdq-quantoz", "Quantoz USDQ", "USDQ", "rwa-backed", "centralized", {
     llamaId: "275",
     detailProvider: "defillama",
     geckoId: "quantoz-usdq",
@@ -1804,7 +1804,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash deposits at Tier 1 European banks", pct: 31, risk: "very-low" },
     ],
   }),
-  usd("256", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
+  usd("reusd-resupply", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "256",
     detailProvider: "defillama",
     geckoId: "resupply-usd",
@@ -1821,11 +1821,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 },
     ],
     reserves: [
-      { name: "Curve Lend vault shares (crvUSD lending positions)", pct: 60, risk: "high", coinId: "110" },
-      { name: "Fraxlend vault shares (frxUSD lending positions)", pct: 40, risk: "high", coinId: "235" },
+      { name: "Curve Lend vault shares (crvUSD lending positions)", pct: 60, risk: "high", coinId: "crvusd-curve" },
+      { name: "Fraxlend vault shares (frxUSD lending positions)", pct: 40, risk: "high", coinId: "frxusd-frax" },
     ],
   }),
-  eur("325", "Eurite", "EURI", "rwa-backed", "centralized", {
+  eur("euri-banking-circle", "Eurite", "EURI", "rwa-backed", "centralized", {
     llamaId: "325",
     detailProvider: "defillama",
     geckoId: "eurite",
@@ -1847,7 +1847,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Low-risk liquid assets (EU government securities)", pct: 30, risk: "very-low" },
     ],
   }),
-  usd("19", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
+  usd("gusd-gemini", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
     llamaId: "19",
     detailProvider: "defillama",
     geckoId: "gemini-dollar",
@@ -1869,7 +1869,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash deposits (State Street, Western Alliance Bank)", pct: 38, risk: "very-low" },
     ],
   }),
-  usd("11", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
+  usd("usdp-paxos", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
     llamaId: "11",
     detailProvider: "defillama",
     geckoId: "paxos-standard",
@@ -1894,7 +1894,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash in FDIC-insured bank accounts", pct: 20, risk: "very-low" },
     ],
   }),
-  usd("263", "Hex Trust USDX", "USDX", "rwa-backed", "centralized", {
+  usd("usdx-hex-trust", "Hex Trust USDX", "USDX", "rwa-backed", "centralized", {
     llamaId: "263",
     detailProvider: "defillama",
     geckoId: "hex-trust-usdx",
@@ -1917,7 +1917,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Rank 71-80 ───────────────────────────────────────────────────────
-  usd("290", "StraitsX XUSD", "XUSD", "rwa-backed", "centralized", {
+  usd("xusd-straitsx", "StraitsX XUSD", "XUSD", "rwa-backed", "centralized", {
     llamaId: "290",
     detailProvider: "defillama",
     geckoId: "straitsx-xusd",
@@ -1939,7 +1939,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Short-term U.S. / MAS government securities", pct: 50, risk: "very-low" },
     ],
   }),
-  usd("313", "Metamask USD", "MUSD", "rwa-backed", "centralized", {
+  usd("musd-metamask", "Metamask USD", "MUSD", "rwa-backed", "centralized", {
     llamaId: "313",
     detailProvider: "defillama",
     geckoId: "metamask-usd",
@@ -1962,7 +1962,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash in bankruptcy-remote custody", pct: 15, risk: "very-low" },
     ],
   }),
-  usd("255", "Aegis YUSD", "YUSD", "crypto-backed", "centralized", {
+  usd("yusd-aegis", "Aegis YUSD", "YUSD", "crypto-backed", "centralized", {
     llamaId: "255",
     detailProvider: "defillama",
     geckoId: "aegis-yusd",
@@ -1990,7 +1990,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BTC-margined perpetual futures (short positions)", pct: 50, risk: "high" },
     ],
   }),
-  usd("22", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
+  usd("susd-synthetix", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "22",
     detailProvider: "defillama",
     geckoId: "nusd",
@@ -2012,7 +2012,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     reserves: [
       { name: "SNX (via legacy V2 420 pool, 200% C-ratio)", pct: 50, risk: "very-high" },
-      { name: "USDC / stataUSDC (V3 Base pool collateral)", pct: 25, risk: "low", coinId: "2" },
+      { name: "USDC / stataUSDC (V3 Base pool collateral)", pct: 25, risk: "low", coinId: "usdc-circle" },
       { name: "ETH and LSTs (V3 multi-collateral)", pct: 15, risk: "low" },
       { name: "Protocol treasury buybacks / SLP vault activity", pct: 10, risk: "high" },
     ],
@@ -2020,7 +2020,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { type: "warning", title: "Prolonged depeg", message: "sUSD has been trading at ~$0.83-0.85 since the SIP-420 C-ratio reduction in late 2024. Peg restoration is targeted for mid-2026 via the V3 transition and SLP vault strategy." },
     ],
   }),
-  usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
+  usd("bold-liquity", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
     llamaId: "269",
     detailProvider: "defillama",
     governanceQuality: "immutable-code",
@@ -2049,7 +2049,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "rETH (Rocket Pool)", pct: 20, risk: "low" },
     ],
   }),
-  usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "decentralized", {
+  usd("hyusd-hylo", "Hylo HYUSD", "HYUSD", "crypto-backed", "decentralized", {
     llamaId: "302",
     detailProvider: "defillama",
     geckoId: "hylo-usd",
@@ -2070,7 +2070,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other Solana LSTs (mSOL, bSOL, JupSOL)", pct: 10, risk: "high" },
     ],
   }),
-  usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
+  usd("lusd-liquity", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
     llamaId: "8",
     detailProvider: "defillama",
     governanceQuality: "immutable-code",
@@ -2095,7 +2095,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH", pct: 100, risk: "very-low" },
     ],
   }),
-  usd("168", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
+  usd("fxusd-f-x-protocol", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
     llamaId: "168",
     detailProvider: "defillama",
     geckoId: "f-x-protocol-fxusd",
@@ -2117,7 +2117,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "WBTC", pct: 25, risk: "medium" },
     ],
   }),
-  usd("282", "Noble Dollar", "USDN", "rwa-backed", "centralized", {
+  usd("usdn-noble", "Noble Dollar", "USDN", "rwa-backed", "centralized", {
     llamaId: "282",
     detailProvider: "defillama",
     geckoId: "noble-dollar-usdn",
@@ -2139,7 +2139,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Rank 81-90 ───────────────────────────────────────────────────────
-  usd("10", "Magic Internet Money", "MIM", "crypto-backed", "centralized-dependent", {
+  usd("mim-abracadabra", "Magic Internet Money", "MIM", "crypto-backed", "centralized-dependent", {
     llamaId: "10",
     detailProvider: "defillama",
     geckoId: "magic-internet-money",
@@ -2167,14 +2167,14 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     },
     collateralQuality: "exotic",
     reserves: [
-      { name: "Yield-bearing tokens (yvWETH, yvUSDC, yvUSDT, yvDAI)", pct: 35, risk: "high", coinId: "2" },
+      { name: "Yield-bearing tokens (yvWETH, yvUSDC, yvUSDT, yvDAI)", pct: 35, risk: "high", coinId: "usdc-circle" },
       { name: "wstETH / stETH", pct: 20, risk: "low" },
       { name: "WBTC / WETH", pct: 15, risk: "medium" },
       { name: "GM tokens (GMX V2 LP)", pct: 15, risk: "very-high" },
       { name: "Other exotic collateral (xSUSHI, Super OETH, etc.)", pct: 15, risk: "very-high" },
     ],
   }),
-  usd("307", "USD CoinVertible", "USDCV", "rwa-backed", "centralized", {
+  usd("usdcv-societe-generale-forge", "USD CoinVertible", "USDCV", "rwa-backed", "centralized", {
     llamaId: "307",
     detailProvider: "defillama",
     geckoId: "usd-coinvertible",
@@ -2196,7 +2196,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USD cash deposits at BNY Mellon (segregated)", pct: 100, risk: "very-low" },
     ],
   }),
-  usd("231", "Honey", "HONEY", "crypto-backed", "centralized-dependent", {
+  usd("honey-berachain", "Honey", "HONEY", "crypto-backed", "centralized-dependent", {
     llamaId: "231",
     detailProvider: "defillama",
     geckoId: "honey-3",
@@ -2214,13 +2214,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "berachain", address: "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce", decimals: 18 },
     ],
     reserves: [
-      { name: "USDC (Circle)", pct: 40, risk: "low", coinId: "2" },
-      { name: "USDT0 (Tether via LayerZero)", pct: 25, risk: "low", coinId: "1" },
-      { name: "pyUSD / BYUSD (PayPal)", pct: 20, risk: "low", coinId: "120" },
-      { name: "USDe (Ethena)", pct: 15, risk: "high", coinId: "146" },
+      { name: "USDC (Circle)", pct: 40, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT0 (Tether via LayerZero)", pct: 25, risk: "low", coinId: "usdt-tether" },
+      { name: "pyUSD / BYUSD (PayPal)", pct: 20, risk: "low", coinId: "pyusd-paypal" },
+      { name: "USDe (Ethena)", pct: 15, risk: "high", coinId: "usde-ethena" },
     ],
   }),
-  other("226", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
+  other("zchf-frankencoin", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
     llamaId: "226",
     detailProvider: "defillama",
     geckoId: "frankencoin",
@@ -2248,7 +2248,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Other (CRV, GNO, governance tokens)", pct: 5, risk: "very-high" },
     ],
   }),
-  usd("172", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
+  usd("usdb-blast", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
     llamaId: "172",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -2267,12 +2267,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "blast", address: "0x4300000000000000000000000000000000000003", decimals: 18 },
     ],
     reserves: [
-      { name: "DAI / sDAI (via MakerDAO DSR)", pct: 60, risk: "low", coinId: "5" },
-      { name: "USDC (bridged)", pct: 25, risk: "low", coinId: "2" },
-      { name: "USDT (bridged)", pct: 15, risk: "low", coinId: "1" },
+      { name: "DAI / sDAI (via MakerDAO DSR)", pct: 60, risk: "low", coinId: "dai-makerdao" },
+      { name: "USDC (bridged)", pct: 25, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT (bridged)", pct: 15, risk: "low", coinId: "usdt-tether" },
     ],
   }),
-  usd("225", "Zoth ZeUSD", "ZeUSD", "rwa-backed", "centralized", {
+  usd("zeusd-zoth", "Zoth ZeUSD", "ZeUSD", "rwa-backed", "centralized", {
     llamaId: "225",
     detailProvider: "defillama",
     rwa: true,
@@ -2292,12 +2292,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "manta", address: "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761", decimals: 6 },
     ],
     reserves: [
-      { name: "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)", pct: 70, risk: "low", coinId: "237" },
-      { name: "USD0++ (Usual)", pct: 15, risk: "medium", coinId: "195" },
-      { name: "Wrapped M (M0 tokenized T-bills)", pct: 15, risk: "medium", coinId: "213" },
+      { name: "Tokenized U.S. T-Bills & MMFs (USYC, STBT, TBILL, ZTLN-P)", pct: 70, risk: "low", coinId: "usyc-hashnote" },
+      { name: "USD0++ (Usual)", pct: 15, risk: "medium", coinId: "usd0-usual" },
+      { name: "Wrapped M (M0 tokenized T-bills)", pct: 15, risk: "medium", coinId: "m-m0" },
     ],
   }),
-  eur("101", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
+  eur("eure-monerium", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
     llamaId: "101",
     detailProvider: "defillama",
     geckoId: "monerium-eur-money-2",
@@ -2325,7 +2325,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "EUR bank deposits (Arion Bank, LHV Bank)", pct: 30, risk: "very-low" },
     ],
   }),
-  usd("230", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
+  usd("usn-noon", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
     llamaId: "230",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -2347,13 +2347,13 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "sophon", address: "0x0469d9d1de0ee58fa1153ef00836b9bbcb84c0b6", decimals: 18 },
     ],
     reserves: [
-      { name: "USDC/USDT (1:1 backing)", pct: 40, risk: "low", coinId: "2" },
+      { name: "USDC/USDT (1:1 backing)", pct: 40, risk: "low", coinId: "usdc-circle" },
       { name: "U.S. Treasury Bills", pct: 30, risk: "very-low" },
       { name: "Delta-neutral funding rate arbitrage positions", pct: 20, risk: "high" },
       { name: "CLOs & Private Credit Funds", pct: 10, risk: "high" },
     ],
   }),
-  usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
+  usd("gyd-gyroscope", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
     llamaId: "185",
     detailProvider: "defillama",
     geckoId: "gyroscope-gyd",
@@ -2371,17 +2371,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
-      { name: "sDAI (DAI Savings Rate)", pct: 40, risk: "low", coinId: "5" },
-      { name: "USDC (via Aave/Flux)", pct: 30, risk: "low", coinId: "2" },
-      { name: "LUSD (AMM strategies)", pct: 15, risk: "medium", coinId: "8" },
-      { name: "crvUSD (AMM strategies)", pct: 15, risk: "medium", coinId: "110" },
+      { name: "sDAI (DAI Savings Rate)", pct: 40, risk: "low", coinId: "dai-makerdao" },
+      { name: "USDC (via Aave/Flux)", pct: 30, risk: "low", coinId: "usdc-circle" },
+      { name: "LUSD (AMM strategies)", pct: 15, risk: "medium", coinId: "lusd-liquity" },
+      { name: "crvUSD (AMM strategies)", pct: 15, risk: "medium", coinId: "crvusd-curve" },
     ],
   }),
-  usd("329", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
+  usd("nect-beraborrow", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
     llamaId: "329",
     detailProvider: "defillama",
     geckoId: "nectar",
-    dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
+    dependencies: [{ id: "usdt-tether", weight: 0.05 }, { id: "usdc-circle", weight: 0.05 }],
     collateral: "Berachain-native assets: WBERA, iBGT, pumpBTC, solvBTC, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
     pegMechanism: "Overcollateralized CDP with redemption for collateral at $1 face value (Liquity-style); operates on Berachain (not Ethereum or a Stage 1 L2)",
     links: [
@@ -2405,7 +2405,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Rank 91-100 ──────────────────────────────────────────────────────
-  usd("106", "Electronic USD", "EUSD", "crypto-backed", "centralized-dependent", {
+  usd("eusd-electronic-usd", "Electronic USD", "EUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "106",
     detailProvider: "defillama",
     geckoId: "electronic-usd",
@@ -2425,12 +2425,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview" },
     collateralQuality: "exotic",
     reserves: [
-      { name: "Compound V3 USDC (cUSDCv3)", pct: 33, risk: "low", coinId: "2" },
-      { name: "Aave V3 USDC (aUSDCv3)", pct: 33, risk: "low", coinId: "2" },
-      { name: "Compound V3 USDT (cUSDTv3)", pct: 34, risk: "low", coinId: "1" },
+      { name: "Compound V3 USDC (cUSDCv3)", pct: 33, risk: "low", coinId: "usdc-circle" },
+      { name: "Aave V3 USDC (aUSDCv3)", pct: 33, risk: "low", coinId: "usdc-circle" },
+      { name: "Compound V3 USDT (cUSDTv3)", pct: 34, risk: "low", coinId: "usdt-tether" },
     ],
   }),
-  usd("154", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
+  usd("buck-bucket-protocol", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
     llamaId: "154",
     detailProvider: "defillama",
     geckoId: "bucket-protocol-buck-stablecoin",
@@ -2448,16 +2448,16 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "SUI (native token CDPs)", pct: 45, risk: "high" },
-      { name: "USDC/USDT (via PSM)", pct: 25, risk: "low", coinId: "2" },
+      { name: "USDC/USDT (via PSM)", pct: 25, risk: "low", coinId: "usdc-circle" },
       { name: "BTC (wrapped, via CDPs)", pct: 15, risk: "medium" },
       { name: "ETH & LSTs (via CDPs)", pct: 15, risk: "low" },
     ],
   }),
-  eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
+  eur("eura-angle", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
     llamaId: "55",
     detailProvider: "defillama",
     geckoId: "ageur",
-    dependencies: [{ id: "2", weight: 0.30 }],
+    dependencies: [{ id: "usdc-circle", weight: 0.30 }],
     deploymentModel: "third-party-bridge",
     collateral: "Overcollateralized basket of Euro-denominated RWAs (tokenized T-bills and government/corporate bonds via Backed Finance: bC3M, bERNX, bIB01), EURC, and crypto assets (wETH, wBTC) managed via the Transmuter module",
     pegMechanism: "Transmuter module enables 1:1 slippage-free swaps between EURA and whitelisted Euro collateral assets; dynamic fees and circuit breakers rebalance reserves; over-collateralization from Borrowing Module CDPs provides additional buffer",
@@ -2486,7 +2486,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "bHIGH (BlackRock Euro High Yield Corp Bonds ETF, tokenized)", pct: 5, risk: "medium" },
     ],
   }),
-  usd("303", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
+  usd("meusd-mezo", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
     llamaId: "303",
     detailProvider: "defillama",
     geckoId: "mezo-usd",
@@ -2508,7 +2508,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Bitcoin (BTC) — native and wrapped variants (tBTC, WBTC, SolvBTC, cbBTC)", pct: 100, risk: "medium" },
     ],
   }),
-  usd("305", "XSY UTY", "UTY", "crypto-backed", "centralized-dependent", {
+  usd("uty-xsy", "XSY UTY", "UTY", "crypto-backed", "centralized-dependent", {
     llamaId: "305",
     detailProvider: "defillama",
     geckoId: "unity-2",
@@ -2526,12 +2526,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "cex",
     reserves: [
-      { name: "USDC deposits (initial user deposits)", pct: 30, risk: "low", coinId: "2", depType: "wrapper" },
+      { name: "USDC deposits (initial user deposits)", pct: 30, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
       { name: "Long AVAX spot positions", pct: 35, risk: "high" },
       { name: "Short AVAX perpetual futures (delta-neutral hedge)", pct: 35, risk: "high" },
     ],
   }),
-  eur("51", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
+  eur("eurs-stasis", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
     llamaId: "51",
     detailProvider: "defillama",
     geckoId: "stasis-eurs",
@@ -2553,7 +2553,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // USD+ (id 46) removed — protocol abandoned 2025 (see cemetery)
   // FUSD removed — Fantom USD de-pegged 2022, zombie stablecoin (see cemetery)
-  usd("326", "Metronome Synth USD", "MSUSD", "crypto-backed", "centralized-dependent", {
+  usd("msusd-metronome", "Metronome Synth USD", "MSUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "326",
     detailProvider: "defillama",
     geckoId: "metronome-synth-usd",
@@ -2573,15 +2573,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
-      { name: "USDC", pct: 30, risk: "low", coinId: "2" },
-      { name: "DAI", pct: 20, risk: "low", coinId: "5" },
-      { name: "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)", pct: 25, risk: "high", coinId: "2" },
+      { name: "USDC", pct: 30, risk: "low", coinId: "usdc-circle" },
+      { name: "DAI", pct: 20, risk: "low", coinId: "dai-makerdao" },
+      { name: "Vesper yield tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH)", pct: 25, risk: "high", coinId: "usdc-circle" },
       { name: "ETH / WBTC / sfrxETH", pct: 20, risk: "medium" },
-      { name: "FRAX / vaFRAX (inactive)", pct: 5, risk: "high", coinId: "6" },
+      { name: "FRAX / vaFRAX (inactive)", pct: 5, risk: "high", coinId: "frax-frax" },
     ],
   }),
   // ── Additional tracked ─────────────────────────────────────────────
-  usd("346", "Neutrl USD", "NUSD", "crypto-backed", "centralized-dependent", {
+  usd("nusd-neutrl", "Neutrl USD", "NUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "346",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -2602,11 +2602,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     proofOfReserves: { type: "real-time", url: "https://accountable.neutrl.fi/", provider: "Accountable" },
     reserves: [
       { name: "Delta-neutral basis/funding trades (perp futures)", pct: 60, risk: "high" },
-      { name: "Liquid stablecoin reserves (USDC, USDT, USDS, USDe)", pct: 20, risk: "low", coinId: "2" },
+      { name: "Liquid stablecoin reserves (USDC, USDT, USDS, USDe)", pct: 20, risk: "low", coinId: "usdc-circle" },
       { name: "Hedged OTC locked-token positions (via STIX)", pct: 20, risk: "high" },
     ],
   }),
-  usd("344", "Yuzu USD", "YZUSD", "crypto-backed", "centralized-dependent", {
+  usd("yzusd-yuzu", "Yuzu USD", "YZUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "344",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -2630,10 +2630,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Pendle PT/LP positions (leveraged DeFi yield)", pct: 50, risk: "high" },
       { name: "Euler/Morpho lending positions", pct: 20, risk: "high" },
       { name: "Other DeFi strategies (Equilibria, Penpie, AutoFinance, TermFinance)", pct: 20, risk: "high" },
-      { name: "USDT0 / stablecoin liquidity buffer", pct: 10, risk: "low", coinId: "1", depType: "wrapper" },
+      { name: "USDT0 / stablecoin liquidity buffer", pct: 10, risk: "low", coinId: "usdt-tether", depType: "wrapper" },
     ],
   }),
-  usd("335", "JupUSD", "JUPUSD", "rwa-backed", "centralized-dependent", {
+  usd("jupusd-jupiter", "JupUSD", "JUPUSD", "rwa-backed", "centralized-dependent", {
     llamaId: "335",
     detailProvider: "defillama",
     rwa: true,
@@ -2651,11 +2651,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "solana", address: "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD", decimals: 6 },
     ],
     reserves: [
-      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low", coinId: "221" },
-      { name: "USDC liquidity buffer", pct: 10, risk: "low", coinId: "2" },
+      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries)", pct: 90, risk: "low", coinId: "usdtb-ethena" },
+      { name: "USDC liquidity buffer", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("342", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
+  usd("usdm-mega", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
     llamaId: "342",
     detailProvider: "defillama",
     rwa: true, geckoId: "megausd",
@@ -2671,11 +2671,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "megaeth", address: "0xFAfDdbb3FC7688494971a79cc65DCa3EF82079E7", decimals: 18 },
     ],
     reserves: [
-      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)", pct: 90, risk: "low", coinId: "221" },
-      { name: "Liquid stablecoins (USDC/USDT) for redemptions", pct: 10, risk: "low", coinId: "2" },
+      { name: "USDtb (BlackRock BUIDL tokenized U.S. Treasuries via Securitize)", pct: 90, risk: "low", coinId: "usdtb-ethena" },
+      { name: "Liquid stablecoins (USDC/USDT) for redemptions", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("343", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
+  usd("usat-tether", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
     llamaId: "343",
     detailProvider: "defillama",
     geckoId: "usa",
@@ -2694,7 +2694,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash deposits", pct: 20, risk: "very-low" },
     ],
   }),
-  usd("24", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
+  usd("cusd-celo", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
     llamaId: "24",
     detailProvider: "defillama",
     geckoId: "celo-dollar",
@@ -2715,17 +2715,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
-      { name: "sUSDS (Sky/Maker yield-bearing stablecoin)", pct: 56, risk: "low", coinId: "209" },
+      { name: "sUSDS (Sky/Maker yield-bearing stablecoin)", pct: 56, risk: "low", coinId: "usds-sky" },
       { name: "EURC (Circle euro stablecoin)", pct: 22, risk: "low" },
       { name: "CELO (native token)", pct: 12, risk: "high" },
       { name: "USDGLO (Glo Dollar)", pct: 4, risk: "low" },
       { name: "stETH (Lido staked ETH)", pct: 2, risk: "low" },
-      { name: "USDC", pct: 1, risk: "low", coinId: "2" },
-      { name: "USDT", pct: 1, risk: "low", coinId: "1" },
+      { name: "USDC", pct: 1, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT", pct: 1, risk: "low", coinId: "usdt-tether" },
       { name: "ETH", pct: 1, risk: "very-low" },
     ],
   }),
-  usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "decentralized", {
+  usd("alusd-alchemix", "Alchemix USD", "ALUSD", "crypto-backed", "decentralized", {
     llamaId: "20",
     detailProvider: "defillama",
     geckoId: "alchemix-usd",
@@ -2747,12 +2747,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     reserves: [
-      { name: "DAI (in Yearn/Aave yield strategies)", pct: 35, risk: "medium", coinId: "5" },
-      { name: "USDC (in Yearn/Aave yield strategies)", pct: 35, risk: "medium", coinId: "2" },
-      { name: "USDT (in Yearn/Aave yield strategies)", pct: 30, risk: "medium", coinId: "1" },
+      { name: "DAI (in Yearn/Aave yield strategies)", pct: 35, risk: "medium", coinId: "dai-makerdao" },
+      { name: "USDC (in Yearn/Aave yield strategies)", pct: 35, risk: "medium", coinId: "usdc-circle" },
+      { name: "USDT (in Yearn/Aave yield strategies)", pct: 30, risk: "medium", coinId: "usdt-tether" },
     ],
   }),
-  usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "decentralized", {
+  usd("feusd-felix", "Felix feUSD", "FEUSD", "crypto-backed", "decentralized", {
     llamaId: "251",
     detailProvider: "defillama",
     geckoId: "felix-feusd",
@@ -2776,7 +2776,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "SOL (bridged)", pct: 10, risk: "high" },
     ],
   }),
-  usd("348", "Fidelity Digital Dollar", "FIDD", "rwa-backed", "centralized", {
+  usd("fidd-fidelity", "Fidelity Digital Dollar", "FIDD", "rwa-backed", "centralized", {
     llamaId: "348",
     detailProvider: "defillama",
     geckoId: "fidelity-digital-dollar",
@@ -2797,7 +2797,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash and cash equivalents", pct: 20, risk: "very-low" },
     ],
   }),
-  usd("347", "USDGO", "USDGO", "rwa-backed", "centralized", {
+  usd("usdgo-osl", "USDGO", "USDGO", "rwa-backed", "centralized", {
     llamaId: "347",
     detailProvider: "defillama",
     geckoId: "usdgo",
@@ -2816,7 +2816,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash and cash equivalents", pct: 20, risk: "very-low" },
     ],
   }),
-  usd("297", "Main Street USD", "MSUSD", "crypto-backed", "centralized-dependent", {
+  usd("msusd-main-street", "Main Street USD", "MSUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "297",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -2835,10 +2835,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "cex",
     reserves: [
-      { name: "USDC (1:1 backing)", pct: 100, risk: "low", coinId: "2", depType: "wrapper" },
+      { name: "USDC (1:1 backing)", pct: 100, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
     ],
   }),
-  usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
+  usd("usdm-moneta", "Moneta", "USDM", "rwa-backed", "centralized", {
     llamaId: "215",
     detailProvider: "defillama",
     geckoId: "usdm-2",
@@ -2859,7 +2859,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Money market funds (Fidelity / Amundi)", pct: 60, risk: "very-low" },
     ],
   }),
-  usd("312", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
+  usd("hollar-hydrated", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
     llamaId: "312",
     detailProvider: "defillama",
     geckoId: "hydrated-dollar",
@@ -2881,11 +2881,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "ETH", pct: 15, risk: "very-low" },
       { name: "vDOT (liquid staked DOT)", pct: 15, risk: "high" },
       { name: "WBTC / tBTC", pct: 10, risk: "medium" },
-      { name: "USDT / USDC (stablecoins)", pct: 15, risk: "low", coinId: "1" },
+      { name: "USDT / USDC (stablecoins)", pct: 15, risk: "low", coinId: "usdt-tether" },
       { name: "GIGADOT / GIGAETH", pct: 5, risk: "very-high" },
     ],
   }),
-  usd("245", "Anzens USDA", "USDA", "rwa-backed", "centralized", {
+  usd("usda-anzens", "Anzens USDA", "USDA", "rwa-backed", "centralized", {
     llamaId: "245",
     detailProvider: "defillama",
     geckoId: "anzens-usda",
@@ -2901,7 +2901,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "U.S. Treasury securities", pct: 40, risk: "very-low" },
     ],
   }),
-  usd("75", "Youves uUSD", "UUSD", "crypto-backed", "centralized-dependent", {
+  usd("uusd-youves", "Youves uUSD", "UUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "75",
     detailProvider: "defillama",
     geckoId: "youves-uusd",
@@ -2919,12 +2919,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
       { name: "XTZ (Tezos)", pct: 60, risk: "high" },
-      { name: "USDt (Tether on Tezos)", pct: 20, risk: "low", coinId: "1" },
+      { name: "USDt (Tether on Tezos)", pct: 20, risk: "low", coinId: "usdt-tether" },
       { name: "tzBTC (wrapped Bitcoin)", pct: 10, risk: "medium" },
       { name: "SIRS (XTZ/tzBTC LP tokens)", pct: 10, risk: "high" },
     ],
   }),
-  usd("327", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
+  usd("aznd-mu-digital", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
     llamaId: "327",
     detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
@@ -2950,7 +2950,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Private credit / direct lending", pct: 20, risk: "high" },
     ],
   }),
-  usd("266", "Plume USD", "pUSD", "rwa-backed", "centralized", {
+  usd("pusd-plume", "Plume USD", "pUSD", "rwa-backed", "centralized", {
     llamaId: "266",
     detailProvider: "defillama",
     geckoId: "plume-usd",
@@ -2968,10 +2968,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     custodyModel: "onchain",
     reserves: [
-      { name: "USDC (via Nucleus BoringVault)", pct: 100, risk: "medium", coinId: "2" },
+      { name: "USDC (via Nucleus BoringVault)", pct: 100, risk: "medium", coinId: "usdc-circle" },
     ],
   }),
-  usd("234", "Worldwide USD", "WUSD", "rwa-backed", "centralized", {
+  usd("wusd-worldwide", "Worldwide USD", "WUSD", "rwa-backed", "centralized", {
     llamaId: "234",
     detailProvider: "defillama",
     geckoId: "worldwide-usd",
@@ -2995,7 +2995,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Basel III liquidity buffer (6% of non-cash)", pct: 5, risk: "low" },
     ],
   }),
-  usd("324", "Brale SBC", "SBC", "rwa-backed", "centralized", {
+  usd("sbc-brale", "Brale SBC", "SBC", "rwa-backed", "centralized", {
     llamaId: "324",
     detailProvider: "defillama",
     deploymentModel: "third-party-bridge",
@@ -3025,7 +3025,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Short-duration U.S. Treasury securities", pct: 50, risk: "very-low" },
     ],
   }),
-  usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
+  usd("ousd-origin-protocol", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
     llamaId: "23",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -3045,11 +3045,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     reserves: [
-      { name: "USDC (via Morpho/Yearn vault)", pct: 65, risk: "medium", coinId: "2", depType: "wrapper" },
-      { name: "USDC (via Curve AMO LP)", pct: 35, risk: "medium", coinId: "2", depType: "wrapper" },
+      { name: "USDC (via Morpho/Yearn vault)", pct: 65, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "USDC (via Curve AMO LP)", pct: 35, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ],
   }),
-  usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
+  usd("btcusd-btcfi", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
     llamaId: "183",
     detailProvider: "defillama",
     geckoId: "bitcoin-usd-btcfi",
@@ -3071,7 +3071,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "BTC / WBTC / BTCB / cbBTC (overcollateralized CDP vaults)", pct: 100, risk: "medium" },
     ],
   }),
-  usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
+  usd("usp-pikudao", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
     llamaId: "331",
     detailProvider: "defillama",
     yieldBearing: true, navToken: true,
@@ -3092,10 +3092,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       { name: "BMMF Turkey FX arbitrage (Balsa Technologies, delta-neutral TRY/USD)", pct: 50, risk: "very-high" },
       { name: "DeFi protocols (Giza, Almanak, USD.AI, Ethena, Aave, Cap)", pct: 40, risk: "high" },
-      { name: "Cash stablecoins (USDC/USDT buffer)", pct: 10, risk: "low", coinId: "2" },
+      { name: "Cash stablecoins (USDC/USDT buffer)", pct: 10, risk: "low", coinId: "usdc-circle" },
     ],
   }),
-  usd("240", "StablR USD", "USDR", "rwa-backed", "centralized", {
+  usd("usdr-stablr", "StablR USD", "USDR", "rwa-backed", "centralized", {
     llamaId: "240",
     detailProvider: "defillama",
     geckoId: "stablr-usd",
@@ -3114,7 +3114,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash and short-term government bonds (EU financial institutions)", pct: 100, risk: "very-low" },
     ],
   }),
-  usd("304", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
+  usd("usdu-usdu-finance", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
     llamaId: "304",
     detailProvider: "defillama",
     collateral: "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
@@ -3129,7 +3129,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     collateralQuality: "exotic",
     reserves: [
-      { name: "Curve USDC/USDU LP tokens", pct: 35, risk: "medium", coinId: "2", depType: "mechanism" },
+      { name: "Curve USDC/USDU LP tokens", pct: 35, risk: "medium", coinId: "usdc-circle", depType: "mechanism" },
       { name: "TermMax fixed-rate lending vault shares", pct: 35, risk: "high" },
       { name: "Morpho USDU Core vault shares", pct: 30, risk: "medium" },
     ],
@@ -3139,7 +3139,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Tokenized treasury / RWA fund tokens ──────────────────────────
-  usd("cg-ustb", "Superstate USTB", "USTB", "rwa-backed", "centralized", {
+  usd("ustb-superstate", "Superstate USTB", "USTB", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
     geckoId: "superstate-short-duration-us-government-securities-fund-ustb",
     yieldBearing: true, rwa: true, navToken: true,
@@ -3165,7 +3165,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Short-term U.S. Treasury Bills and government agency securities (WAM ~28 days)", pct: 100, risk: "very-low" },
     ],
   }),
-  usd("cg-ousg", "Ondo OUSG", "OUSG", "rwa-backed", "centralized", {
+  usd("ousg-ondo-finance", "Ondo OUSG", "OUSG", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
     geckoId: "ousg",
     yieldBearing: true, rwa: true, navToken: true,
@@ -3191,12 +3191,12 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     deploymentModel: "third-party-bridge",
     reserves: [
       // Source: Ondo Finance docs + Arbitrum STEP application. Migrated from SHV ETF to BUIDL in March 2024.
-      { name: "BlackRock BUIDL (U.S. T-bills, cash, repos)", pct: 85, risk: "low", coinId: "173" },
+      { name: "BlackRock BUIDL (U.S. T-bills, cash, repos)", pct: 85, risk: "low", coinId: "buidl-blackrock" },
       { name: "BlackRock FedFund (TFDXX)", pct: 12, risk: "very-low" },
-      { name: "USDC liquidity buffer", pct: 3, risk: "very-low", coinId: "2" },
+      { name: "USDC liquidity buffer", pct: 3, risk: "very-low", coinId: "usdc-circle" },
     ],
   }),
-  usd("cg-mtbill", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
+  usd("mtbill-midas", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
     geckoId: "midas-mtbill",
     yieldBearing: true, rwa: true, navToken: true,
@@ -3226,7 +3226,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "USD cash buffer", pct: 3, risk: "very-low" },
     ],
   }),
-  usd("cg-dinari-usd", "Dinari USD+", "USD+", "rwa-backed", "centralized", {
+  usd("usd-dinari", "Dinari USD+", "USD+", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
     geckoId: "dinari-usd",
     yieldBearing: true, rwa: true,
@@ -3253,7 +3253,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
 
-  usd("cg-wrapped-savings-rusd", "Wrapped Savings rUSD", "wsrUSD", "rwa-backed", "centralized-dependent", {
+  usd("wsrusd-reservoir", "Wrapped Savings rUSD", "wsrUSD", "rwa-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "wrapped-savings-rusd",
     yieldBearing: true, rwa: true, navToken: true,
@@ -3290,7 +3290,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Additional non-USD pegs ────────────────────────────────────────
-  other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
+  other("xsgd-straitsx", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
     llamaId: "289",
     detailProvider: "defillama",
     geckoId: "xsgd",
@@ -3310,7 +3310,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base",     address: "0x0a4c9cb2778ab3302996a34befcf9a8bc288c33b", decimals: 6 },
     ],
   }),
-  other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
+  other("gyen-gyen", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
     llamaId: "122",
     detailProvider: "defillama",
     geckoId: "gyen",
@@ -3328,7 +3328,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "arbitrum", address: "0x589d35656641d6ab57a545f08cf473ecd9b6d5f7", decimals: 6 },
     ],
   }),
-  other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
+  other("audd-novatti", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
     llamaId: "165",
     detailProvider: "defillama",
     geckoId: "novatti-australian-digital-dollar",
@@ -3348,7 +3348,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "stellar", address: "AUDD-GDC7X2MXTYSAKUUGAIQ7J7RPEIM7GXSAIWFYWWH4GLNFECQVJJLB2EEU", decimals: 7 },
     ],
   }),
-  other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
+  other("jpyc-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
     detailProvider: "coingecko",
     geckoId: "jpycoin",
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
@@ -3368,7 +3368,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
   // commodityOunces: troy ounces per token (used for peg deviation normalization)
-  other("gold-xaut", "Tether Gold", "XAUT", "rwa-backed", "centralized", "GOLD", {
+  other("xaut-tether", "Tether Gold", "XAUT", "rwa-backed", "centralized", "GOLD", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "tether-gold", protocolSlug: "tether-gold",
     collateral: "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
@@ -3388,7 +3388,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Physical gold bars (LBMA Good Delivery, Swiss vaults)", pct: 100, risk: "very-low" },
     ],
   }),
-  other("gold-paxg", "PAX Gold", "PAXG", "rwa-backed", "centralized", "GOLD", {
+  other("paxg-paxos", "PAX Gold", "PAXG", "rwa-backed", "centralized", "GOLD", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "pax-gold", protocolSlug: "paxos-gold",
     collateral: "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
@@ -3408,7 +3408,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Physical gold bars (LBMA Good Delivery, Brink's London vaults)", pct: 100, risk: "very-low" },
     ],
   }),
-  other("gold-kau", "Kinesis Gold", "KAU", "rwa-backed", "centralized", "GOLD", {
+  other("kau-kinesis", "Kinesis Gold", "KAU", "rwa-backed", "centralized", "GOLD", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "kinesis-gold",
     collateral: "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
@@ -3423,7 +3423,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Physical gold bullion (LBMA-approved, ABX/Brink's/Loomis vaults)", pct: 100, risk: "very-low" },
     ],
   }),
-  other("gold-xaum", "Matrixdock Gold", "XAUm", "rwa-backed", "centralized", "GOLD", {
+  other("xaum-matrixdock", "Matrixdock Gold", "XAUm", "rwa-backed", "centralized", "GOLD", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "matrixdock-gold",
     collateral: "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
@@ -3444,7 +3444,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   // gold-vro (VeraOne VRO) removed — too small, unreliable supply data
-  other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
+  other("cgo-comtech", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "comtech-gold",
     collateral: "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
@@ -3459,7 +3459,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Physical gold (24K 999.9, Transguard vaults UAE)", pct: 100, risk: "very-low" },
     ],
   }),
-  other("gold-dgld", "DGLD Tokenized Gold", "DGLD", "rwa-backed", "centralized", "GOLD", {
+  other("dgld-gold-token-sa", "DGLD Tokenized Gold", "DGLD", "rwa-backed", "centralized", "GOLD", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "gold-token-sa-dgld-tokenized-gold",
     collateral: "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
@@ -3480,7 +3480,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Silver-Pegged (data via DefiLlama coins API) ──────────────────────
-  other("silver-kag", "Kinesis Silver", "KAG", "rwa-backed", "centralized", "SILVER", {
+  other("kag-kinesis", "Kinesis Silver", "KAG", "rwa-backed", "centralized", "SILVER", {
     detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "kinesis-silver", // 1 troy ounce per token
     collateral: "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
@@ -3502,7 +3502,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional EUR-pegged ────────────────────────────────────────────
   // EURT removed — discontinued by Tether
-  eur("52", "Celo Euro", "CEUR", "algorithmic", "centralized-dependent", {
+  eur("ceur-celo", "Celo Euro", "CEUR", "algorithmic", "centralized-dependent", {
     llamaId: "52",
     detailProvider: "defillama",
     geckoId: "celo-euro",
@@ -3521,20 +3521,20 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
     reserves: [
-      { name: "sUSDS (Sky savings USDS)", pct: 56, risk: "low", coinId: "209" },
+      { name: "sUSDS (Sky savings USDS)", pct: 56, risk: "low", coinId: "usds-sky" },
       { name: "EURC (Circle euro stablecoin)", pct: 22, risk: "low" },
       { name: "CELO", pct: 12, risk: "high" },
       { name: "USDGLO (Glo Dollar)", pct: 4, risk: "low" },
       { name: "stETH (Lido staked ETH)", pct: 2, risk: "low" },
-      { name: "USDC", pct: 2, risk: "low", coinId: "2" },
-      { name: "USDT", pct: 1, risk: "low", coinId: "1" },
+      { name: "USDC", pct: 2, risk: "low", coinId: "usdc-circle" },
+      { name: "USDT", pct: 1, risk: "low", coinId: "usdt-tether" },
       { name: "ETH", pct: 1, risk: "very-low" },
     ],
   }),
   // PAR (id 56) removed — abandoned by Mimo Protocol, pivoted to KUMA (see cemetery)
   // IBEUR removed — liquidity drain Dec 2023 (see cemetery)
   // EUROe (id 98) removed — acquired by Paxos, wound down May 2025 (see cemetery)
-  eur("158", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
+  eur("veur-vnx", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
     llamaId: "158",
     detailProvider: "defillama",
     geckoId: "vnx-euro",
@@ -3564,7 +3564,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Euro cash and cash equivalents (bank/custody accounts)", pct: 100, risk: "very-low" },
     ],
   }),
-  eur("239", "StablR Euro", "EURR", "rwa-backed", "centralized", {
+  eur("eurr-stablr", "StablR Euro", "EURR", "rwa-backed", "centralized", {
     llamaId: "239",
     detailProvider: "defillama",
     geckoId: "stablr-euro",
@@ -3583,7 +3583,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Fiat reserves (euro cash at regulated financial institutions)", pct: 100, risk: "very-low" },
     ],
   }),
-  eur("247", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
+  eur("europ-schuman", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
     llamaId: "247",
     detailProvider: "defillama",
     geckoId: "schuman-europ",
@@ -3609,7 +3609,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Additional reserve fund", pct: 2, risk: "low" },
     ],
   }),
-  eur("cg-eurq", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {
+  eur("eurq-quantoz", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {
     detailProvider: "coingecko",
     geckoId: "quantoz-eurq",
     collateral: "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
@@ -3628,7 +3628,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Cash deposits (Tier 1 European banks)", pct: 32, risk: "very-low" },
     ],
   }),
-  eur("319", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
+  eur("eurau-allunity", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
     llamaId: "319",
     detailProvider: "defillama",
     geckoId: "allunity-eur",
@@ -3653,7 +3653,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { name: "Euro bank deposits (CRR credit institutions, EU)", pct: 100, risk: "very-low" },
     ],
   }),
-  eur("cg-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
+  eur("deuro-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
     detailProvider: "coingecko",
     geckoId: "decentralized-euro",
     deploymentModel: "canonical-bridge",
@@ -3675,15 +3675,15 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     reserves: [
       { name: "WBTC / cbBTC / kBTC (wrapped Bitcoin variants)", pct: 40, risk: "medium" },
       { name: "WETH (wrapped Ether)", pct: 25, risk: "medium" },
-      { name: "USDC (stablecoins)", pct: 7.5, risk: "low", coinId: "2" },
-      { name: "DAI (stablecoins)", pct: 7.5, risk: "low", coinId: "5" },
+      { name: "USDC (stablecoins)", pct: 7.5, risk: "low", coinId: "usdc-circle" },
+      { name: "DAI (stablecoins)", pct: 7.5, risk: "low", coinId: "dai-makerdao" },
       { name: "XAUT (tokenized gold)", pct: 10, risk: "medium" },
       { name: "UNI / ZCHF (governance / other)", pct: 10, risk: "very-high" },
     ],
   }),
 
   // ── Additional CHF-pegged ────────────────────────────────────────────
-  other("157", "VNX Swiss Franc", "VCHF", "rwa-backed", "centralized", "CHF", {
+  other("vchf-vnx", "VNX Swiss Franc", "VCHF", "rwa-backed", "centralized", "CHF", {
     llamaId: "157",
     detailProvider: "defillama",
     geckoId: "vnx-swiss-franc",
@@ -3705,7 +3705,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── GBP-pegged ───────────────────────────────────────────────────────
-  other("292", "VNX British Pound", "VGBP", "rwa-backed", "centralized", "GBP", {
+  other("vgbp-vnx", "VNX British Pound", "VGBP", "rwa-backed", "centralized", "GBP", {
     llamaId: "292",
     detailProvider: "defillama",
     geckoId: "vnx-british-pound",
@@ -3722,7 +3722,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "celo",     address: "0x7ae4265ecfc1f31bc0e112dfcfe3d78e01f4bb7f", decimals: 18 },
     ],
   }),
-  other("317", "Tokenised GBP", "tGBP", "rwa-backed", "centralized", "GBP", {
+  other("tgbp-tokenised", "Tokenised GBP", "tGBP", "rwa-backed", "centralized", "GBP", {
     llamaId: "317",
     detailProvider: "defillama",
     geckoId: "tokenised-gbp",
@@ -3744,7 +3744,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── Additional non-USD/non-EUR pegs ──────────────────────────────────
-  other("cg-zarp", "ZARP Stablecoin", "ZARP", "rwa-backed", "centralized", "ZAR", {
+  other("zarp-zarp", "ZARP Stablecoin", "ZARP", "rwa-backed", "centralized", "ZAR", {
     detailProvider: "coingecko",
     geckoId: "zarp-stablecoin",
     collateral: "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
@@ -3763,11 +3763,11 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "polygon",  address: "0xb755506531786c8ac63b756bab1ac387bacb0c04", decimals: 18 },
     ],
   }),
-  other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
+  other("isc-international-stable-currency", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
     llamaId: "186",
     detailProvider: "defillama",
     geckoId: "international-stable-currency",
-    dependencies: [{ id: "2", weight: 0.20 }],
+    dependencies: [{ id: "usdc-circle", weight: 0.20 }],
     navToken: true,
     collateral: "Basket of real-world assets (gold, bonds, T-bills, equity, cash)",
     pegMechanism: "RWA-indexed basket tracking purchasing power; price appreciates over time",
@@ -3783,7 +3783,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   // ── CAD / CNY / PHP / MXN / UAH / ARS pegs ───────────────────────────
-  other("145", "CAD Coin", "CADC", "rwa-backed", "centralized", "CAD", {
+  other("cadc-cad-coin", "CAD Coin", "CADC", "rwa-backed", "centralized", "CAD", {
     llamaId: "145",
     detailProvider: "defillama",
     geckoId: "cad-coin",
@@ -3803,7 +3803,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "base",     address: "0x043eb4b75d0805c43d7c834902e335621983cf03", decimals: 18 },
     ],
   }),
-  other("299", "PHT Stablecoin", "PHT", "crypto-backed", "centralized-dependent", "PHP", {
+  other("pht-pht", "PHT Stablecoin", "PHT", "crypto-backed", "centralized-dependent", "PHP", {
     llamaId: "299",
     detailProvider: "defillama",
     geckoId: "pht-stablecoin",
@@ -3822,10 +3822,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     collateralQuality: "exotic",
     custodyModel: "institutional",
     reserves: [
-      { name: "apcxUSDT (custodial 1:1 USDT wrapper)", pct: 100, risk: "high", coinId: "1", depType: "wrapper" },
+      { name: "apcxUSDT (custodial 1:1 USDT wrapper)", pct: 100, risk: "high", coinId: "usdt-tether", depType: "wrapper" },
     ],
   }),
-  usd("cg-syrupusdc", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
+  usd("syrupusdc-maple", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "syrupusdc",
     deploymentModel: "third-party-bridge",
@@ -3847,10 +3847,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "onchain",
     reserves: [
       // syrupUSDC holds USDC-denominated loan receivables; BTC/ETH/crypto is collateral securing those loans, not the underlying asset
-      { name: "USDC (deployed as overcollateralized institutional loans)", pct: 100, risk: "medium", coinId: "2", depType: "wrapper" },
+      { name: "USDC (deployed as overcollateralized institutional loans)", pct: 100, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
     ],
   }),
-  usd("cg-syrupusdt", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
+  usd("syrupusdt-maple", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "syrupusdt",
     governanceQuality: "wrapper",
@@ -3869,10 +3869,10 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "onchain",
     reserves: [
       // syrupUSDT holds USDT-denominated loan receivables; BTC/ETH/crypto is collateral securing those loans, not the underlying asset
-      { name: "USDT (deployed as overcollateralized institutional loans)", pct: 100, risk: "medium", coinId: "1", depType: "wrapper" },
+      { name: "USDT (deployed as overcollateralized institutional loans)", pct: 100, risk: "medium", coinId: "usdt-tether", depType: "wrapper" },
     ],
   }),
-  usd("cg-yousd", "Yield Optimizer USD", "yoUSD", "crypto-backed", "centralized-dependent", {
+  usd("yousd-yield-optimizer", "Yield Optimizer USD", "yoUSD", "crypto-backed", "centralized-dependent", {
     detailProvider: "coingecko",
     geckoId: "yield-optimizer-usd",
     yieldBearing: true, navToken: true,
@@ -3892,17 +3892,17 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     governanceQuality: "single-entity",
     reserves: [
       // Snapshot: 2026-02-28. Allocation rebalances dynamically across 50+ pools.
-      { name: "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)", pct: 39, risk: "medium", coinId: "2", depType: "wrapper" },
+      { name: "Morpho vaults (Ethereum, Base, Arbitrum, Unichain)", pct: 39, risk: "medium", coinId: "usdc-circle", depType: "wrapper" },
       { name: "Auto Finance (autoUSD, baseUSD)", pct: 21, risk: "high" },
-      { name: "Aave markets (sGHO)", pct: 4.5, risk: "medium", coinId: "118" },
-      { name: "Aave markets (RLUSD)", pct: 4.5, risk: "medium", coinId: "250" },
+      { name: "Aave markets (sGHO)", pct: 4.5, risk: "medium", coinId: "gho-aave" },
+      { name: "Aave markets (RLUSD)", pct: 4.5, risk: "medium", coinId: "rlusd-ripple" },
       { name: "InfiniFi liUSD (1-week lock)", pct: 8, risk: "high" },
-      { name: "Liquid USDC buffer (undeployed)", pct: 7, risk: "low", coinId: "2", depType: "wrapper" },
-      { name: "Avantis avUSDC (perpetuals collateral)", pct: 6, risk: "high", coinId: "2", depType: "wrapper" },
+      { name: "Liquid USDC buffer (undeployed)", pct: 7, risk: "low", coinId: "usdc-circle", depType: "wrapper" },
+      { name: "Avantis avUSDC (perpetuals collateral)", pct: 6, risk: "high", coinId: "usdc-circle", depType: "wrapper" },
       { name: "Other DeFi (Fluid, Resolv RLP, Euler, Revert Lend)", pct: 10, risk: "high" },
     ],
   }),
-  usd("353", "GAIB AID", "AID", "rwa-backed", "centralized", {
+  usd("aid-gaib", "GAIB AID", "AID", "rwa-backed", "centralized", {
     llamaId: "353",
     detailProvider: "defillama",
     yieldBearing: true,
@@ -3926,7 +3926,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     custodyModel: "institutional",
     governanceQuality: "single-entity",
   }),
-  usd("354", "apxUSD", "apxUSD", "rwa-backed", "centralized", {
+  usd("apxusd-apyx", "apxUSD", "apxUSD", "rwa-backed", "centralized", {
     llamaId: "354",
     detailProvider: "defillama",
     rwa: true,
