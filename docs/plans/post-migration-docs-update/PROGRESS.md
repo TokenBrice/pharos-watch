@@ -4,22 +4,22 @@
 
 ## Current State
 
-**Active phase:** Phase 1 — not started
-**Next action:** Create worktree, copy tickets, run cmcs
+**Active phase:** Complete
+**Next action:** None
 
 ## Phase Checklist
 
 ### Phase 1: Documentation Update
-- [ ] Worktree `post-migration-docs` created
-- [ ] Tickets copied
-- [ ] cmcs run started
-- [ ] cmcs run completed (N/5 tickets, K failures)
-- [ ] Review checklist passed
-- [ ] Merged to main
-- [ ] Worktree cleaned up
+- [x] Worktree `post-migration-docs` created
+- [x] Tickets copied
+- [x] cmcs run started
+- [x] cmcs run completed (5/5 tickets, 0 failures)
+- [x] Review checklist passed (build + grep checks all pass)
+- [x] Merged to main (commit 92ac29b0)
+- [x] Worktree cleaned up
 
 ## Incident Log
 
 Record any failures, retries, or unexpected events here:
 
-(empty — no incidents yet)
+(empty — no incidents)
