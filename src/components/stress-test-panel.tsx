@@ -170,16 +170,17 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
         {/* Impact table */}
         {stressTest.impacts.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm" aria-label="Stress test results">
+              <caption className="sr-only">Stress test results</caption>
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="pb-2 pr-3 font-medium">Coin</th>
-                  <th className="pb-2 pr-3 font-medium hidden sm:table-cell">
+                  <th scope="col" className="pb-2 pr-3 font-medium">Coin</th>
+                  <th scope="col" className="pb-2 pr-3 font-medium hidden sm:table-cell">
                     Mkt Cap
                   </th>
-                  <th className="pb-2 pr-3 font-medium">Before</th>
-                  <th className="pb-2 pr-3 font-medium">After</th>
-                  <th className="pb-2 font-medium">Delta</th>
+                  <th scope="col" className="pb-2 pr-3 font-medium">Before</th>
+                  <th scope="col" className="pb-2 pr-3 font-medium">After</th>
+                  <th scope="col" className="pb-2 font-medium">Delta</th>
                 </tr>
               </thead>
               <tbody>
@@ -187,7 +188,7 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
                   const mcap = mcapMap.get(impact.coinId);
                   return (
                     <tr key={impact.coinId} className="border-b last:border-0">
-                      <td className="py-2 pr-3">
+                      <th scope="row" className="py-2 pr-3 text-left font-normal">
                         <div className="flex items-center gap-2">
                           <StablecoinLogo
                             src={logos?.[impact.coinId]}
@@ -197,9 +198,9 @@ export function StressTestPanel({ stressTest, mcapMap, logos }: StressTestPanelP
                           <span className="truncate font-medium">{impact.name}</span>
                           <span className="text-xs text-muted-foreground hidden sm:inline">
                             {impact.symbol}
-                          </span>
+                            </span>
                         </div>
-                      </td>
+                      </th>
                       <td className="py-2 pr-3 text-muted-foreground hidden sm:table-cell">
                         {mcap != null ? formatCurrency(mcap) : ""}
                       </td>

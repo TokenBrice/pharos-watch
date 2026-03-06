@@ -82,6 +82,18 @@ export function DigestArchiveClient() {
     );
   }
 
+  if (error) {
+    return (
+      <QueryErrorNotice
+        error={error}
+        hasData={!!data?.digests?.length}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
+    );
+  }
+
   if (!data || data.digests.length === 0) {
     return (
       <p className="text-sm text-muted-foreground py-8">
@@ -92,13 +104,6 @@ export function DigestArchiveClient() {
 
   return (
     <div>
-      <QueryErrorNotice
-        error={error}
-        hasData={!!data?.digests?.length}
-        onRetry={() => {
-          void refetch();
-        }}
-      />
       <StaleDataBanner
         queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length }]}
       />

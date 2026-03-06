@@ -2,6 +2,7 @@
 
 import { GradeBadge } from "@/components/grade-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useSafetyScoreHistory } from "@/hooks/use-safety-score-history";
 import type { SafetyScoreHistoryPoint } from "@shared/types";
 
@@ -32,7 +33,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
   }
 
   if (error) {
-    return null;
+    return <QueryErrorNotice error={error} />;
   }
 
   const history = data ?? [];

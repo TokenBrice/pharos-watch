@@ -137,6 +137,7 @@ export function FeedbackModal({
               {(["bug", "data-correction", "feature-request"] as FeedbackType[]).map((t) => (
                 <button
                   key={t}
+                  aria-pressed={type === t}
                   onClick={() => setType(t)}
                   className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors ${
                     type === t

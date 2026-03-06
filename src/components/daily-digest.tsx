@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/use-daily-digest";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 
 function formatMasthead(ts: number): string {
   return new Date(ts * 1000).toLocaleDateString("en-US", {
@@ -16,9 +17,12 @@ function formatMasthead(ts: number): string {
 const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 
 export function DailyDigest({ showArchiveLink = true }: { showArchiveLink?: boolean }) {
-  const { data, isLoading } = useDailyDigest();
+  const { data, isLoading, error, refetch } = useDailyDigest();
 
-  if (!isLoading && (!data || !data.digest)) return null;
+  if (!isLoading && !data) {
+    if (error) return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
+    return null;
+  }
 
   if (isLoading) {
     return (

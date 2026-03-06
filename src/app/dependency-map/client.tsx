@@ -7,12 +7,16 @@ import { useLogos } from "@/hooks/use-logos";
 import { ContagionGraph } from "@/components/contagion-graph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { sumPegBuckets } from "@shared/lib/supply";
 
 export function DependencyMapClient() {
-  const { data: reportData, isLoading: isLoadingCards } = useReportCards();
-  const { data: stablecoinsData, isLoading: isLoadingCoins } = useStablecoins();
+  const reportCardsQuery = useReportCards();
+  const stablecoinsQuery = useStablecoins();
+  const { data: reportData, isLoading: isLoadingCards, error: reportCardsError, refetch: refetchReportCards } = reportCardsQuery;
+  const { data: stablecoinsData, isLoading: isLoadingCoins, error: stablecoinsError, refetch: refetchStablecoins } = stablecoinsQuery;
   const { data: logos } = useLogos();
+  const primaryError = reportCardsError ?? stablecoinsError;
 
   const mcapMap = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) return new Map<string, number>();
@@ -31,6 +35,21 @@ export function DependencyMapClient() {
           <Skeleton className="h-[520px] w-full rounded-lg" />
         </CardContent>
       </Card>
+    );
+  }
+
+  if (primaryError) {
+    return (
+      <QueryErrorNotice
+        error={primaryError}
+        hasData={!!reportData?.cards?.length || !!stablecoinsData?.peggedAssets?.length}
+        onRetry={() => {
+          void Promise.all([
+            reportCardsError ? refetchReportCards() : Promise.resolve(),
+            stablecoinsError ? refetchStablecoins() : Promise.resolve(),
+          ]);
+        }}
+      />
     );
   }
 

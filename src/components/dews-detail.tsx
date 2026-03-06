@@ -19,6 +19,7 @@ import {
 } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 
 const SIGNAL_META: Record<
   string,
@@ -69,7 +70,7 @@ interface DEWSDetailProps {
 }
 
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
-  const { data, isLoading } = useStressSignalDetail(stablecoinId);
+  const { data, isLoading, error, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
 
   const chartData = useMemo(() => {
@@ -92,6 +93,10 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         </CardContent>
       </Card>
     );
+  }
+
+  if (error) {
+    return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
   }
 
   if (!data?.current) {

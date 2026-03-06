@@ -18,28 +18,30 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         <CardTitle className="text-base">Cache Freshness</CardTitle>
       </CardHeader>
       <CardContent>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b text-left text-muted-foreground">
-              <th className="pb-2 font-medium">Cache Key</th>
-              <th className="pb-2 font-medium">Age</th>
-              <th className="pb-2 font-medium">Max Age</th>
-              <th className="pb-2 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map(([key, cache]) => (
-              <tr key={key} className="border-b last:border-0">
-                <td className="py-2 font-mono text-xs">{key}</td>
-                <td className="py-2">{cache.ageSeconds != null ? formatAge(cache.ageSeconds) : "—"}</td>
-                <td className="py-2">{formatAge(cache.maxAge)}</td>
-                <td className="py-2">
-                  <div className={`h-2.5 w-2.5 rounded-full ${cache.healthy ? "bg-green-500" : "bg-red-500"}`} />
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th scope="col" className="pb-2 font-medium">Cache Key</th>
+                <th scope="col" className="pb-2 font-medium">Age</th>
+                <th scope="col" className="pb-2 font-medium">Max Age</th>
+                <th scope="col" className="pb-2 font-medium">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {sorted.map(([key, cache]) => (
+                <tr key={key} className="border-b last:border-0">
+                  <td className="py-2 font-mono text-xs">{key}</td>
+                  <td className="py-2">{cache.ageSeconds != null ? formatAge(cache.ageSeconds) : "—"}</td>
+                  <td className="py-2">{formatAge(cache.maxAge)}</td>
+                  <td className="py-2">
+                    <div className={`h-2.5 w-2.5 rounded-full ${cache.healthy ? "bg-green-500" : "bg-red-500"}`} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );

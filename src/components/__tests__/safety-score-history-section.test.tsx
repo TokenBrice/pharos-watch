@@ -65,7 +65,7 @@ describe("SafetyScoreHistorySection", () => {
     expect(html).toBe("");
   });
 
-  it("does not render when query errors", () => {
+  it("renders error banner when query errors", () => {
     useSafetyScoreHistoryMock.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -73,7 +73,8 @@ describe("SafetyScoreHistorySection", () => {
     });
 
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
-    expect(html).toBe("");
+    expect(html).toContain("Failed to load data");
+    expect(html).toContain("boom");
   });
 
   it("renders seed and transition summaries", () => {

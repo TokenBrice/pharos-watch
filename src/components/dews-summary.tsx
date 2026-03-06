@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignals } from "@/hooks/use-stress-signals";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
@@ -511,7 +512,7 @@ interface DEWSSummaryProps {
 }
 
 export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummaryProps) {
-  const { data, isLoading } = useStressSignals();
+  const { data, isLoading, error } = useStressSignals();
   const router = useRouter();
 
   if (isLoading) {
@@ -527,6 +528,10 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
         </CardContent>
       </Card>
     );
+  }
+
+  if (error) {
+    return <QueryErrorNotice error={error} />;
   }
 
   if (!data?.signals || Object.keys(data.signals).length === 0) return null;

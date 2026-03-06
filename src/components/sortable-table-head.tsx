@@ -12,6 +12,7 @@ interface SortableTableHeadProps<T extends string = string> {
   className?: string;
   title?: string;
   children?: React.ReactNode;
+  scope?: "col";
 }
 
 export function SortableTableHead<T extends string = string>({
@@ -25,9 +26,11 @@ export function SortableTableHead<T extends string = string>({
   className = "",
   title,
   children,
+  scope = "col",
 }: SortableTableHeadProps<T>) {
   return (
     <TableHead
+      scope={scope}
       className={`cursor-pointer hover:bg-muted/50 transition-colors ${className}`}
       onClick={() => toggleSort(sortKey)}
       aria-sort={getAriaSortValue(sortKey)}

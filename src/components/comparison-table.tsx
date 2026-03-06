@@ -208,56 +208,57 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
       {/* Desktop: side-by-side table */}
       <div className="hidden sm:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[80px]">Metric</TableHead>
-              {coins.map((coin) => (
-                <TableHead key={coin.id} className="text-center min-w-[120px]">
-                  <div className="flex flex-col items-center gap-1">
-                    <StablecoinLogo
-                      src={logos?.[coin.id]}
-                      name={coin.name}
-                      size={28}
-                    />
-                    <span className="text-xs font-semibold">{coin.symbol}</span>
-                    <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
-                    {detailErrors?.[coin.id] && (
-                      <span className="text-xs text-destructive">Chart data unavailable</span>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {/* Price */}
-            <TableRow>
-              <TableCell className="font-medium">Price</TableCell>
-              {coins.map((coin, i) => (
-                <TableCell
-                  key={coin.id}
-                  className={`text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}
-                >
-                  {rowData.prices[i]}
-                </TableCell>
-              ))}
-            </TableRow>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col" className="min-w-[80px]">Metric</TableHead>
+                {coins.map((coin) => (
+                <TableHead scope="col" key={coin.id} className="text-center min-w-[120px]">
+                    <div className="flex flex-col items-center gap-1">
+                      <StablecoinLogo
+                        src={logos?.[coin.id]}
+                        name={coin.name}
+                        size={28}
+                      />
+                      <span className="text-xs font-semibold">{coin.symbol}</span>
+                      <span className="text-xs text-muted-foreground font-normal">{coin.name}</span>
+                      {detailErrors?.[coin.id] && (
+                        <span className="text-xs text-destructive">Chart data unavailable</span>
+                      )}
+                    </div>
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Price */}
+              <TableRow>
+                <TableCell className="font-medium">Price</TableCell>
+                {coins.map((coin, i) => (
+                  <TableCell
+                    key={coin.id}
+                    className={`text-center font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}
+                  >
+                    {rowData.prices[i]}
+                  </TableCell>
+                ))}
+              </TableRow>
 
-            {/* Peg Score */}
-            <TableRow>
-              <TableCell className="font-medium">Peg Score</TableCell>
-              {coins.map((coin, i) => (
-                <TableCell
-                  key={coin.id}
-                  className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
-                >
-                  {rowData.pegScores[i] != null
-                    ? `${rowData.pegScores[i]!.toFixed(1)}/10`
-                    : "N/A"}
-                </TableCell>
-              ))}
-            </TableRow>
+              {/* Peg Score */}
+              <TableRow>
+                <TableCell className="font-medium">Peg Score</TableCell>
+                {coins.map((coin, i) => (
+                  <TableCell
+                    key={coin.id}
+                    className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
+                  >
+                    {rowData.pegScores[i] != null
+                      ? `${rowData.pegScores[i]!.toFixed(1)}/10`
+                      : "N/A"}
+                  </TableCell>
+                ))}
+              </TableRow>
 
             {/* Market Cap */}
             <TableRow>
@@ -348,6 +349,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
             </TableRow>
           </TableBody>
         </Table>
+        </div>
       </div>
     </>
   );

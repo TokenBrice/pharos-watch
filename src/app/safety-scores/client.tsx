@@ -300,6 +300,7 @@ export function ReportCardsClient() {
         {/* Grade filter buttons */}
         <div className="flex flex-wrap items-center gap-1">
           <button
+            aria-pressed={gradeFilter === "all"}
             onClick={() => { trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: "all" }); setGradeFilter("all"); }}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               gradeFilter === "all"
@@ -318,6 +319,7 @@ export function ReportCardsClient() {
             return (
               <button
                 key={range}
+                aria-pressed={isActive}
                 onClick={() => { trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: range }); setGradeFilter(range); }}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   isActive
@@ -340,6 +342,7 @@ export function ReportCardsClient() {
           {SORT_OPTIONS.map((opt) => (
             <button
               key={opt.key}
+              aria-pressed={sortKey === opt.key}
               onClick={() => { trackEvent("sort_changed", { page: "safety-scores", sort_by: opt.key }); setSortKey(opt.key); }}
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
                 sortKey === opt.key

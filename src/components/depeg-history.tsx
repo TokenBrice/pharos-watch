@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { formatDuration, formatNativePrice, formatEventDate, formatBps } from "@shared/lib/format";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
@@ -29,7 +30,7 @@ function sortEvents(events: DepegEvent[]): DepegEvent[] {
 }
 
 export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData = true }: { stablecoinId: string; earliestTrackingDate?: string | null; hasPriceData?: boolean }) {
-  const { data, isLoading } = useDepegEvents(stablecoinId);
+  const { data, isLoading, error, refetch } = useDepegEvents(stablecoinId);
   const meta = TRACKED_STABLECOINS.find((s) => s.id === stablecoinId);
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
 
@@ -37,8 +38,12 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
     return <Skeleton className="h-40" />;
   }
 
+  if (error) {
+    return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
+  }
+
   const events = data?.events;
-  if (!events || events.length === 0) {
+  if (!error && (!events || events.length === 0)) {
     const noData = !hasPriceData;
     return (
       <Card className={`rounded-xl ${noData ? "" : "border-l-[3px] border-l-emerald-500"}`}>
@@ -58,8 +63,8 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
     );
   }
 
-  const sorted = sortEvents(events);
-  const metrics = computePegStability(events, earliestTrackingDate ?? null);
+  const sorted = sortEvents(events!);
+  const metrics = computePegStability(events!, earliestTrackingDate ?? null);
 
   return (
     <Card className="rounded-xl">

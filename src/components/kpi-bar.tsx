@@ -9,6 +9,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useStressSignals } from "@/hooks/use-stress-signals";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
@@ -155,11 +156,15 @@ function KpiMiniTile({
 }
 
 export function KpiBar() {
-  const { data: psiData, isLoading: psiLoading } = useStabilityIndex();
-  const { data: stablecoinsData, isLoading: stablecoinsLoading } = useStablecoins();
+  const psiQuery = useStabilityIndex();
+  const stablecoinsQuery = useStablecoins();
+  const { data: psiData, isLoading: psiLoading } = psiQuery;
+  const { data: stablecoinsData, isLoading: stablecoinsLoading } = stablecoinsQuery;
   const { data: pegData, isLoading: pegLoading } = usePegSummary();
   const { data: dexData, isLoading: dexLoading } = useDexLiquidity();
   const { data: stressData } = useStressSignals();
+  const primaryError = stablecoinsQuery.error || psiQuery.error;
+  const hasPrimaryData = !!psiData || !!stablecoinsData;
 
   const {
     totalMcap,
@@ -224,6 +229,23 @@ export function KpiBar() {
   const psiScore = psiScoreNum !== null ? psiScoreNum.toFixed(1) : "—";
   const psiBand = psiCurrent ? psiCurrent.avg24hBand ?? psiCurrent.band : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
+  const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
+  const hasPsiData = !!psiCurrent;
+  const hasDexData = !!dexData;
+  const summary = pegData?.summary;
+  const hasSummary = !!summary;
+  const psiScoreDisplay = hasPsiData ? psiScore : "—";
+  const psiBandDisplay = hasPsiData ? psiBand : "";
+  const mcapDisplay = hasStablecoinsData ? formatCurrency(totalMcap, 1) : "—";
+  const mcapChange24Display = hasStablecoinsData ? `${mcapChange24hPct >= 0 ? "+" : ""}${mcapChange24hPct.toFixed(2)}%` : "—";
+  const mcapChange7Display = hasStablecoinsData ? `${mcapChange7dPct >= 0 ? "+" : ""}${mcapChange7dPct.toFixed(2)}%` : "—";
+  const mcapColorClass = hasStablecoinsData ? trendTextClass(mcapChange24hPct) : "text-muted-foreground";
+  const mcap7ColorClass = hasStablecoinsData ? trendTextClass(mcapChange7dPct) : "text-muted-foreground";
+  const pegStatusDisplay = hasSummary ? `${summary.coinsAtPeg}/${summary.totalTracked}` : "—";
+  const usdtShareDisplay = hasStablecoinsData ? `${usdtUsdcSharePct.toFixed(1)}%` : "—";
+  const dexVolDisplay = hasDexData ? formatCurrency(totalVol24h, 1) : "—";
+  const dexDeltaDisplay = hasDexData ? `${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}%` : "—";
+  const turnoverDisplay = hasStablecoinsData && hasDexData && totalMcap > 0 ? `${turnoverPct.toFixed(2)}%` : "—";
 
   const { psiDaysInBand, psiDelta24h, psiDelta7d } = useMemo(() => {
     if (!psiBand || !psiData?.history || psiScoreNum === null) {
@@ -283,17 +305,6 @@ export function KpiBar() {
     );
   }
 
-  const summary = pegData?.summary;
-  const coinsAtPeg = summary?.coinsAtPeg ?? 0;
-  const totalTracked = summary?.totalTracked ?? 0;
-
-  const sign24h = mcapChange24hPct >= 0 ? "+" : "";
-  const sign7d = mcapChange7dPct >= 0 ? "+" : "";
-  const change24h = `${sign24h}${mcapChange24hPct.toFixed(2)}%`;
-  const change7d = `${sign7d}${mcapChange7dPct.toFixed(2)}%`;
-
-  const volDeltaValue = `${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}%`;
-
   const psiDelta24hValue = psiDelta24h !== null ? `${psiDelta24h >= 0 ? "+" : ""}${psiDelta24h.toFixed(1)}` : null;
   const psiDelta7dValue = psiDelta7d !== null ? `${psiDelta7d >= 0 ? "+" : ""}${psiDelta7d.toFixed(1)}` : null;
 
@@ -308,15 +319,27 @@ export function KpiBar() {
         <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
       </div>
 
+      {primaryError && (
+        <div className="px-3 pt-3">
+          <QueryErrorNotice
+            error={primaryError}
+            hasData={hasPrimaryData}
+            onRetry={() => {
+              void Promise.all([psiQuery.refetch(), stablecoinsQuery.refetch()]);
+            }}
+          />
+        </div>
+      )}
+
       <div className="px-3 py-3 sm:hidden">
         <div className="grid grid-cols-2 gap-2">
           <KpiMiniTile
             label="PSI"
-            value={psiScore}
-            valueClassName={psiColorClass}
+            value={psiScoreDisplay}
+            valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
             metaPrimary={
-              psiBand
-                ? <span className={psiColorClass || "text-muted-foreground"}>{psiBand} for {psiDaysInBand}d</span>
+              hasPsiData
+                ? <span className={psiColorClass || "text-muted-foreground"}>{psiBandDisplay} for {psiDaysInBand}d</span>
                 : <span className="text-muted-foreground">—</span>
             }
             metaSecondary={
@@ -333,13 +356,13 @@ export function KpiBar() {
           />
           <KpiMiniTile
             label="Mcap"
-            value={formatCurrency(totalMcap, 1)}
-            metaPrimary={<span className={trendTextClass(mcapChange24hPct)}>24h {change24h}</span>}
-            metaSecondary={<span className={trendTextClass(mcapChange7dPct)}>7d {change7d}</span>}
+            value={mcapDisplay}
+            metaPrimary={<span className={mcapColorClass}>24h {mcapChange24Display}</span>}
+            metaSecondary={<span className={mcap7ColorClass}>7d {mcapChange7Display}</span>}
           />
           <KpiMiniTile
             label="Peg"
-            value={`${coinsAtPeg}/${totalTracked}`}
+            value={pegStatusDisplay}
             metaSecondary={
               dewsBandCounts ? (
                 <>
@@ -376,9 +399,9 @@ export function KpiBar() {
           />
           <KpiMiniTile
             label="DEX Vol"
-            value={formatCurrency(totalVol24h, 1)}
-            metaPrimary={<span className={trendTextClass(volVs7dAvgPct)}>vs 7d avg {volDeltaValue}</span>}
-            metaSecondary={<span className="text-muted-foreground">Turnover {turnoverPct.toFixed(2)}%</span>}
+            value={dexVolDisplay}
+            metaPrimary={<span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>vs 7d avg {dexDeltaDisplay}</span>}
+            metaSecondary={<span className="text-muted-foreground">Turnover {turnoverDisplay}</span>}
           />
         </div>
       </div>
@@ -386,12 +409,14 @@ export function KpiBar() {
       <div className="hidden sm:grid grid-cols-2 xl:grid-cols-4 divide-x divide-border/50">
         <KpiCell
           label="Pharos Stability Index"
-          value={psiScore}
-          valueClassName={psiColorClass}
+          value={psiScoreDisplay}
+          valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
           sublabel={
             <>
-              {psiBand && (
-                <InfoChip label="Band" value={`${psiBand} for ${psiDaysInBand}d`} />
+              {hasPsiData ? (
+                <InfoChip label="Band" value={`${psiBandDisplay} for ${psiDaysInBand}d`} />
+              ) : (
+                <span className="text-muted-foreground">—</span>
               )}
               {psiDelta24h !== null && (
                 <TrendChip
@@ -406,18 +431,22 @@ export function KpiBar() {
 
         <KpiCell
           label="Total Stablecoin Mcap"
-          value={formatCurrency(totalMcap, 1)}
+          value={mcapDisplay}
           sublabel={
             <>
-              <TrendChip label="24h" value={change24h} direction={trendDirection(mcapChange24hPct)} />
-              <InfoChip label="USDT+USDC share" value={`${usdtUsdcSharePct.toFixed(1)}%`} tone={usdtUsdcSharePct >= 65 ? "warning" : "neutral"} />
+              <TrendChip label="24h" value={mcapChange24Display} direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"} />
+              <InfoChip
+                label="USDT+USDC share"
+                value={usdtShareDisplay}
+                tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"}
+              />
             </>
           }
         />
 
         <KpiCell
           label="Peg Status"
-          value={`${coinsAtPeg} / ${totalTracked}`}
+          value={pegStatusDisplay}
           sublabel={
             <>
               <span className="pharos-kicker">DEWS:</span>
@@ -432,11 +461,11 @@ export function KpiBar() {
 
         <KpiCell
           label="Tracked 24H DEX Vol"
-          value={formatCurrency(totalVol24h, 1)}
+          value={dexVolDisplay}
           sublabel={
             <>
-              <TrendChip label="vs 7d avg" value={volDeltaValue} direction={trendDirection(volVs7dAvgPct)} />
-              <InfoChip label="Turnover" value={`${turnoverPct.toFixed(2)}%`} />
+              <TrendChip label="vs 7d avg" value={dexDeltaDisplay} direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"} />
+              <InfoChip label="Turnover" value={turnoverDisplay} />
             </>
           }
         />

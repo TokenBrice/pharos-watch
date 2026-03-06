@@ -112,7 +112,7 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
     );
   }
 
-  if (!data) return null;
+  if (!data) return <div className="p-8 text-center text-muted-foreground">Loading status data...</div>;
 
   return (
     <div className="space-y-6">

@@ -8,6 +8,7 @@ import {
   TableBody,
   TableCell,
   TableHead,
+  TableCaption,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
@@ -195,10 +196,11 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
         className="scroll-shadow max-h-[50vh] overflow-auto sm:max-h-[70vh]"
       >
         <table className="w-full caption-bottom text-sm">
+          <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
               {isVisible("rank") && (
-                <TableHead className="w-[50px] text-right">#</TableHead>
+                <TableHead scope="col" className="w-[50px] text-right">#</TableHead>
               )}
               {isVisible("name") && (
                 <SortableTableHead
@@ -315,13 +317,13 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                 />
               )}
               {isVisible("backing") && (
-                <TableHead className="hidden md:table-cell text-center" title="Collateral backing type">Backing</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell text-center" title="Collateral backing type">Backing</TableHead>
               )}
               {isVisible("type") && (
-                <TableHead className="hidden md:table-cell text-center" title="Stablecoin mechanism type">Type</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell text-center" title="Stablecoin mechanism type">Type</TableHead>
               )}
               {isVisible("flags") && (
-                <TableHead className="hidden md:table-cell text-center">Flags</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell text-center">Flags</TableHead>
               )}
             </TableRow>
           </TableHeader>
