@@ -1,7 +1,7 @@
 ---
 title: "Harden API input validation and security boundaries"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex"
 reasoning_effort: "high"
 done: false
 ---

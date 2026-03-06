@@ -1,7 +1,7 @@
 ---
 title: "Eliminate dynamic SQL interpolation patterns"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex"
 reasoning_effort: "high"
 done: false
 ---

@@ -1,7 +1,7 @@
 ---
 title: "Improve test infrastructure: mock-d1 fidelity and fixture alignment"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.1-codex-mini"
 reasoning_effort: "high"
 done: false
 ---

@@ -1,7 +1,7 @@
 ---
 title: "Fix documentation drift and config issues"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.1-codex-mini"
 reasoning_effort: "medium"
 done: false
 ---

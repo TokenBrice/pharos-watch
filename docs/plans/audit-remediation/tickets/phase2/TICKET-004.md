@@ -1,7 +1,7 @@
 ---
 title: "Fix worker error propagation and admin response headers"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex-spark"
 reasoning_effort: "high"
 done: false
 ---

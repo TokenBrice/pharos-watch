@@ -1,7 +1,7 @@
 ---
 title: "Add frontend and shared library tests"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex-spark"
 reasoning_effort: "high"
 done: false
 ---

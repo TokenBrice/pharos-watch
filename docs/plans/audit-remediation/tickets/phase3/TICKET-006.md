@@ -1,7 +1,7 @@
 ---
 title: "Harden cron job reliability: silent-success, timeouts, atomicity"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex"
 reasoning_effort: "high"
 done: false
 ---

@@ -1,7 +1,7 @@
 ---
 title: "Add missing worker tests: cron, auth, API assertions"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex"
 reasoning_effort: "high"
 done: false
 ---

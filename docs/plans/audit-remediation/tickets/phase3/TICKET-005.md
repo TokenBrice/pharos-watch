@@ -1,7 +1,7 @@
 ---
 title: "Fix status probe fidelity and alert escalation"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex"
 reasoning_effort: "high"
 done: false
 ---

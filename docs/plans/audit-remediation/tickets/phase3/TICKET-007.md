@@ -1,7 +1,7 @@
 ---
 title: "Expand status API: DB health, dataset freshness, history, indexes"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex"
 reasoning_effort: "high"
 done: false
 ---

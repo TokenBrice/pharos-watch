@@ -1,7 +1,7 @@
 ---
 title: "Fix SEO metadata gaps and accessibility semantics"
 agent: "codex"
-model: "o4-mini"
+model: "gpt-5.3-codex-spark"
 reasoning_effort: "high"
 done: false
 ---
