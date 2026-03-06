@@ -1,5 +1,6 @@
 import { withErrorHandler, buildCacheStatuses, type CacheStatus, jsonResponse } from "../lib/api-utils";
 import { getCircuitStates, type CircuitRecord } from "../lib/circuit-breaker";
+import { buildInClause } from "../lib/db";
 import {
   evaluateMintBurnFreshness,
   resolveMintBurnFreshnessConfig,
@@ -50,6 +51,7 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
     staleMajorSymbols: [],
   };
   try {
+    const majorSymbolInClause = buildInClause(mintBurnConfig.majorSymbols);
     const [counts, latestEvent, latestHourly, majorRows] = await Promise.all([
       db
       .prepare(
@@ -68,10 +70,10 @@ export const handleHealth = withErrorHandler("health", async (db: D1Database, op
       .prepare(
         `SELECT symbol, MAX(timestamp) as latest
          FROM mint_burn_events
-         WHERE symbol IN (${mintBurnConfig.majorSymbols.map(() => "?").join(",")})
+         WHERE symbol IN (${majorSymbolInClause.sql})
          GROUP BY symbol`,
       )
-      .bind(...mintBurnConfig.majorSymbols)
+      .bind(...majorSymbolInClause.binds)
       .all<{ symbol: string; latest: number | null }>(),
     ]);
     if (counts) {

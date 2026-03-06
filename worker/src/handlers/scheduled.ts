@@ -1,4 +1,4 @@
-import { logCronRun, getCache, setCache, runCronWithLease, type CronResult } from "../lib/db";
+import { logCronRun, getCache, setCache, runCronWithLease, buildInClause, type CronResult } from "../lib/db";
 import { syncStablecoins } from "../cron/sync-stablecoins";
 import { syncStablecoinCharts } from "../cron/sync-stablecoin-charts";
 import { syncBlacklist } from "../cron/sync-blacklist";
@@ -191,15 +191,16 @@ export async function handleScheduledEvent(
           try {
             const symbols = mintBurnFreshnessConfig.majorSymbols;
             if (symbols.length === 0) return;
+            const symbolInClause = buildInClause(symbols);
             const now = Math.floor(Date.now() / 1000);
             const rows = await db
               .prepare(
                 `SELECT symbol, MAX(timestamp) as latest_ts
                    FROM mint_burn_events
-                   WHERE symbol IN (${symbols.map(() => "?").join(",")})
+                   WHERE symbol IN (${symbolInClause.sql})
                    GROUP BY symbol`,
               )
-              .bind(...symbols)
+              .bind(...symbolInClause.binds)
               .all<{ symbol: string; latest_ts: number | null }>();
 
             const latestBySymbol = new Map<string, number | null>();

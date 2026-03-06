@@ -33,6 +33,18 @@ export function buildPaginatedQuery(opts: {
   return { where, limitClause, offsetClause, paginationBindings };
 }
 
+/**
+ * Build a safe SQL IN-clause with parameterized placeholders.
+ * Returns the SQL fragment (e.g. "?,?,?") and the bind values.
+ */
+export function buildInClause(values: readonly unknown[]): { sql: string; binds: unknown[] } {
+  if (values.length === 0) throw new Error("buildInClause: empty array");
+  return {
+    sql: new Array(values.length).fill("?").join(","),
+    binds: [...values],
+  };
+}
+
 export async function getCache(db: D1Database, key: string): Promise<{ value: string; updatedAt: number } | null> {
   const row = await db
     .prepare("SELECT value, updated_at FROM cache WHERE key = ?")

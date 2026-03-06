@@ -1,7 +1,7 @@
 // worker/src/cron/sync-yield-data.ts
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, setCache, batchExecute } from "../lib/db";
+import { getCache, setCache, batchExecute, buildInClause } from "../lib/db";
 import {
   USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
   PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE, MIN_SAFETY_SCORE_FOR_YIELD,
@@ -212,13 +212,13 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     );
   const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
   if (tier1CandidateIds.length > 0) {
-    const placeholders = tier1CandidateIds.map(() => "?").join(",");
+    const tier1InClause = buildInClause(tier1CandidateIds);
     const rows = await db.prepare(
       `SELECT stablecoin_id, exchange_rate, recorded_at
        FROM yield_history
-       WHERE stablecoin_id IN (${placeholders}) AND recorded_at <= ?
+       WHERE stablecoin_id IN (${tier1InClause.sql}) AND recorded_at <= ?
        ORDER BY stablecoin_id ASC, recorded_at DESC`,
-    ).bind(...tier1CandidateIds, sevenDaysAgoSec).all<{
+    ).bind(...tier1InClause.binds, sevenDaysAgoSec).all<{
       stablecoin_id: string;
       exchange_rate: number | null;
       recorded_at: number;
@@ -449,14 +449,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   const historyById = new Map<string, Array<{ apy: number; recorded_at: number; source_tvl_usd: number | null }>>();
   const prevTvlMap = new Map<string, number | null>();
   if (resolvedIds.length > 0) {
-    const placeholders = resolvedIds.map(() => "?").join(",");
+    const resolvedIdInClause = buildInClause(resolvedIds);
     const [historyRows, prevTvlRows] = await Promise.all([
       db.prepare(
         `SELECT stablecoin_id, apy, recorded_at, source_tvl_usd
          FROM yield_history
-         WHERE stablecoin_id IN (${placeholders}) AND recorded_at >= ?
+         WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
          ORDER BY stablecoin_id ASC, recorded_at ASC`,
-      ).bind(...resolvedIds, startSec - 30 * 86400).all<{
+      ).bind(...resolvedIdInClause.binds, startSec - 30 * 86400).all<{
         stablecoin_id: string;
         apy: number;
         recorded_at: number;
@@ -465,9 +465,9 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       db.prepare(
         `SELECT stablecoin_id, source_tvl_usd, recorded_at
          FROM yield_history
-         WHERE stablecoin_id IN (${placeholders}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
+         WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
          ORDER BY stablecoin_id ASC, recorded_at DESC`,
-      ).bind(...resolvedIds, sevenDaysAgoSec).all<{
+      ).bind(...resolvedIdInClause.binds, sevenDaysAgoSec).all<{
         stablecoin_id: string;
         source_tvl_usd: number | null;
         recorded_at: number;

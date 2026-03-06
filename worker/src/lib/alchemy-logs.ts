@@ -1,6 +1,7 @@
 import { ALCHEMY_CHAINS } from "./chain-rpcs";
 import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
+import { buildInClause } from "./db";
 
 // --- Types ---
 
@@ -384,15 +385,16 @@ export async function resolveBlockTimestamps(
     const cutoff = nowSec - maxAgeSec;
     for (let i = 0; i < unresolved.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
       const batchBlocks = unresolved.slice(i, i + TIMESTAMP_CACHE_READ_CHUNK);
+      const blockInClause = buildInClause(batchBlocks);
       const rows = await persistentCache.db
         .prepare(
           `SELECT block_number, timestamp
            FROM block_timestamp_cache
            WHERE chain_id = ?
              AND updated_at >= ?
-             AND block_number IN (${batchBlocks.map(() => "?").join(",")})`,
+             AND block_number IN (${blockInClause.sql})`,
         )
-        .bind(persistentCache.chainId, cutoff, ...batchBlocks)
+        .bind(persistentCache.chainId, cutoff, ...blockInClause.binds)
         .all<{ block_number: number; timestamp: number }>();
 
       for (const row of rows.results ?? []) {

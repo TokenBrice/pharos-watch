@@ -5,7 +5,7 @@
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { batchExecute } from "../lib/db";
+import { batchExecute, buildInClause } from "../lib/db";
 import type { CronResult } from "../lib/db";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput, PoolEntry } from "../lib/dews";
@@ -26,6 +26,10 @@ for (const [sym, ids] of Object.entries(BLACKLIST_SYMBOL_TO_IDS)) {
 
 const BOOTSTRAP_GRACE_SEC = 24 * 3600;
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
+const DEWS_TABLES = new Set([
+  "stress_signals",
+  "stress_signal_history",
+]);
 
 interface SourceFailure {
   source: string;
@@ -48,10 +52,13 @@ function chunkArray<T>(values: T[], chunkSize: number): T[][] {
 
 async function deleteOrphansForTable(
   db: D1Database,
-  table: "stress_signals" | "stress_signal_history",
+  table: string,
   eligibleIds: Set<string>,
 ): Promise<number> {
+  if (!DEWS_TABLES.has(table)) throw new Error(`Invalid DEWS table: ${table}`);
+
   const existingIds = await db
+    // SAFETY: validated against DEWS_TABLES allowlist above.
     .prepare(`SELECT DISTINCT stablecoin_id FROM ${table}`)
     .all<{ stablecoin_id: string }>();
   const orphanIds = (existingIds.results ?? [])
@@ -62,10 +69,11 @@ async function deleteOrphansForTable(
 
   let deleted = 0;
   for (const idChunk of chunkArray(orphanIds, D1_SAFE_SQL_IN_CHUNK_SIZE)) {
-    const placeholders = idChunk.map(() => "?").join(", ");
+    const inClause = buildInClause(idChunk);
     const result = await db
-      .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${placeholders})`)
-      .bind(...idChunk)
+      // SAFETY: validated against DEWS_TABLES allowlist above.
+      .prepare(`DELETE FROM ${table} WHERE stablecoin_id IN (${inClause.sql})`)
+      .bind(...inClause.binds)
       .run();
     deleted += result.meta?.changes ?? 0;
   }

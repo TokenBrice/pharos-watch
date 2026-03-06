@@ -1,5 +1,6 @@
 import { withErrorHandler, buildCacheStatuses, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
+import { buildInClause } from "../lib/db";
 import {
   buildDiscrepancy,
   getDiscrepancyStreak,
@@ -140,14 +141,15 @@ async function computeRawStatus(
 
   // 2. Cron run history (batch query)
   const cronJobs = Object.keys(CRON_INTERVALS);
+  const cronJobInClause = buildInClause(cronJobs);
   const cronRows = await db
     .prepare(
       `SELECT job, started_at, duration_ms, status, error, item_count, metadata
        FROM cron_runs
-       WHERE job IN (${cronJobs.map(() => "?").join(",")})
+       WHERE job IN (${cronJobInClause.sql})
        ORDER BY started_at DESC`
     )
-    .bind(...cronJobs)
+    .bind(...cronJobInClause.binds)
     .all<{
       job: string;
       started_at: number;

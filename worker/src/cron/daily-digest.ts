@@ -3,7 +3,7 @@ import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { TRACKED_IDS } from "@shared/lib/stablecoins";
 import { formatCurrency } from "@shared/lib/format";
 import { scoreToGrade } from "@shared/lib/report-cards";
-import type { CronResult } from "../lib/db";
+import { buildInClause, type CronResult } from "../lib/db";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
 import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
@@ -337,13 +337,13 @@ export async function generateDailyDigest(
     if (top10.length > 0) {
       const yesterday = todayTs - SECONDS.ONE_DAY;
       const weekAgo = todayTs - 7 * SECONDS.ONE_DAY;
+      const top10IdInClause = buildInClause(top10.map((coin) => coin.id));
       // Query supply snapshots for today, yesterday, and 7 days ago
-      const placeholders = top10.map(() => "?").join(",");
       const supplyRows = await db
         .prepare(
-          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${placeholders}) AND snapshot_date IN (?, ?, ?)`,
+          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${top10IdInClause.sql}) AND snapshot_date IN (?, ?, ?)`,
         )
-        .bind(...top10.map((c) => c.id), todayTs, yesterday, weekAgo)
+        .bind(...top10IdInClause.binds, todayTs, yesterday, weekAgo)
         .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number }>();
 
       const snapMap = new Map<string, Map<number, number>>();

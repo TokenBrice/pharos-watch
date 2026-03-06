@@ -1,4 +1,4 @@
-import { buildPaginatedQuery, getCache } from "./db";
+import { buildInClause, buildPaginatedQuery, getCache } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import type { CacheStatus } from "@shared/types";
@@ -37,6 +37,25 @@ const TABLE_FRESHNESS_QUERIES: Record<string, string> = {
   "dews":          "SELECT (? - MAX(computed_at)) as age FROM stress_signals",
 };
 
+const PAGINATED_TABLES = new Set([
+  "blacklist_events",
+  "mint_burn_events",
+  "depeg_events",
+]);
+
+const PAGINATED_ORDER_COLS = new Set([
+  "timestamp",
+  "block_number",
+  "created_at",
+  "detected_at",
+  "started_at",
+]);
+
+const PAGINATED_ORDER_DIRECTIONS = new Set([
+  "ASC",
+  "DESC",
+]);
+
 /**
  * Queries the cache table and evaluates freshness for every key in
  * CACHE_FRESHNESS_THRESHOLDS. Used by both /health and /status endpoints.
@@ -52,10 +71,14 @@ export async function buildCacheStatuses(
   const cacheOnlyKeys = Object.keys(CACHE_FRESHNESS_THRESHOLDS).filter(
     (k) => !(k in TABLE_FRESHNESS_QUERIES),
   );
-  const cacheRows = await db
-    .prepare(`SELECT key, updated_at FROM cache WHERE key IN (${cacheOnlyKeys.map(() => '?').join(',')})`)
-    .bind(...cacheOnlyKeys)
-    .all<{ key: string; updated_at: number }>();
+  let cacheRows: { results?: Array<{ key: string; updated_at: number }> } = { results: [] };
+  if (cacheOnlyKeys.length > 0) {
+    const inClause = buildInClause(cacheOnlyKeys);
+    cacheRows = await db
+      .prepare(`SELECT key, updated_at FROM cache WHERE key IN (${inClause.sql})`)
+      .bind(...inClause.binds)
+      .all<{ key: string; updated_at: number }>();
+  }
   const cacheMap = new Map((cacheRows.results ?? []).map(r => [r.key, r.updated_at]));
 
   const caches: Record<string, CacheStatus> = {};
@@ -294,14 +317,26 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   db: D1Database,
   config: PaginatedEventQueryConfig<TRow, TEvent>,
 ): Promise<{ events: TEvent[]; total: number }> {
+  if (!PAGINATED_TABLES.has(config.tableName)) throw new Error(`Invalid table: ${config.tableName}`);
+
+  const normalizedOrderBy = config.orderBy.trim().replace(/\s+/g, " ");
+  const [orderColumn, orderDirection, ...extraOrderTokens] = normalizedOrderBy.split(" ");
+  if (!PAGINATED_ORDER_COLS.has(orderColumn)) throw new Error(`Invalid orderBy column: ${orderColumn}`);
+  if (extraOrderTokens.length > 0) throw new Error(`Invalid orderBy: ${config.orderBy}`);
+  if (orderDirection && !PAGINATED_ORDER_DIRECTIONS.has(orderDirection)) {
+    throw new Error(`Invalid orderBy direction: ${orderDirection}`);
+  }
+
   const { where, limitClause, offsetClause, paginationBindings } = buildPaginatedQuery({
     conditions: config.conditions,
     limit: config.limit,
     offset: config.offset,
   });
 
-  const dataSql = `SELECT * FROM ${config.tableName}${where} ORDER BY ${config.orderBy}${limitClause}${offsetClause}`;
+  // SAFETY: validated against PAGINATED_TABLES and PAGINATED_ORDER_COLS allowlists above.
+  const dataSql = `SELECT * FROM ${config.tableName}${where} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
   const [countBatch, dataBatch] = await db.batch([
+    // SAFETY: validated against PAGINATED_TABLES allowlist above.
     db.prepare(`SELECT COUNT(*) as total FROM ${config.tableName}${where}`).bind(...config.filterBindings),
     db.prepare(dataSql).bind(...config.filterBindings, ...paginationBindings),
   ]);

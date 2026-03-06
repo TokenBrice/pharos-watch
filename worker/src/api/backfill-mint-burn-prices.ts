@@ -10,7 +10,8 @@ export const handleBackfillMintBurnPrices = withErrorHandler(
 
     // 1. Load current prices
     const priceCache = await getPriceCache(db);
-    const needsRepairWhere = "(amount_usd IS NULL OR price_used IS NULL OR price_timestamp IS NULL OR price_source IS NULL)";
+    // SAFETY: needsRepairWhere is a compile-time constant, not derived from user input.
+    const needsRepairWhere = "(amount_usd IS NULL OR price_used IS NULL OR price_timestamp IS NULL OR price_source IS NULL)" as const;
 
     // 2. Find distinct stablecoin_ids with incomplete valuation/audit fields
     const nullRows = await db
