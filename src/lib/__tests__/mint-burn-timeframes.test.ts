@@ -16,7 +16,7 @@ describe("getMintBurnSummaryTimeframe", () => {
   });
 
   it("uses 30d/90d windows for USDT override", () => {
-    expect(getMintBurnSummaryTimeframe("1")).toEqual({
+    expect(getMintBurnSummaryTimeframe("usdt-tether")).toEqual({
       shortHours: 720,
       longHours: 2160,
       shortLabel: "30d",

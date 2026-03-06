@@ -20,7 +20,7 @@ describe("handleStressSignals contract tests", () => {
         match: "stress_signals",
         rows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             score: 12,
             band: "CALM",
             signals_json: signalsJson,
@@ -45,7 +45,7 @@ describe("handleStressSignals contract tests", () => {
     expect(body).toHaveProperty("signals");
     expect(body).toHaveProperty("updatedAt");
     expect(body).toHaveProperty("methodology");
-    expect(body.signals["1"]).toHaveProperty("methodologyVersion");
+    expect(body.signals["usdt-tether"]).toHaveProperty("methodologyVersion");
   });
 
   it("single-coin mode returns shape matching StressSignalDetailResponseSchema", async () => {
@@ -118,14 +118,14 @@ describe("handleStressSignals contract tests", () => {
         match: "stress_signals",
         rows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             score: 12,
             band: "CALM",
             signals_json: signalsJson,
             computed_at: nowSec,
           },
           {
-            stablecoin_id: "2",
+            stablecoin_id: "usdc-circle",
             score: 40,
             band: "WATCH",
             signals_json: "{invalid-json",
@@ -141,8 +141,8 @@ describe("handleStressSignals contract tests", () => {
       signals: Record<string, unknown>;
       malformedRows: number;
     };
-    expect(body.signals).toHaveProperty("1");
-    expect(body.signals).not.toHaveProperty("2");
+    expect(body.signals).toHaveProperty("usdt-tether");
+    expect(body.signals).not.toHaveProperty("usdc-circle");
     expect(body.malformedRows).toBe(1);
   });
 
@@ -152,7 +152,7 @@ describe("handleStressSignals contract tests", () => {
         match: "stress_signals",
         rows: [
           {
-            stablecoin_id: "1",
+            stablecoin_id: "usdt-tether",
             score: 12,
             band: "CALM",
             signals_json: signalsJson,
@@ -174,7 +174,7 @@ describe("handleStressSignals contract tests", () => {
     const body = (await res.json()) as {
       signals: Record<string, unknown>;
     };
-    expect(body.signals).toHaveProperty("1");
+    expect(body.signals).toHaveProperty("usdt-tether");
     expect(body.signals).not.toHaveProperty("999999999");
   });
 });

@@ -179,7 +179,7 @@ describe("handleStablecoinDetail", () => {
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx);
 
     expect(res.status).toBe(502);
-    expect(await res.json()).toEqual({ error: "Invalid upstream data for stablecoin xaut-tether" });
+    expect(await res.json()).toEqual({ error: "Failed to fetch commodity token data" });
   });
 
   it("logs parse failure context and returns stale cache when detail JSON is invalid", async () => {

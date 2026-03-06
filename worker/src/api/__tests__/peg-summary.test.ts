@@ -35,7 +35,7 @@ function makePegSummaryDbWithDexPrice(
       match: "dex_prices",
       rows: [
         {
-          stablecoin_id: "1",
+          stablecoin_id: "usdt-tether",
           dex_price_usd: 1.0002,
           deviation_from_primary_bps: 2,
           source_pool_count: 4,
@@ -56,7 +56,7 @@ describe("handlePegSummary", () => {
   });
 
   it("returns 200 with coins and summary", async () => {
-    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makePegSummaryDb([asset]);
     const res = await handlePegSummary(db);
     expect(res.status).toBe(200);
@@ -87,24 +87,24 @@ describe("handlePegSummary", () => {
   });
 
   it("keeps dexPriceCheck for data fresh enough for UI display", async () => {
-    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
       coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
     };
-    const coin = body.coins.find((c) => c.id === "1");
+    const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin?.dexPriceCheck).toBeTruthy();
   });
 
   it("hides dexPriceCheck when data is too stale for UI display", async () => {
-    const asset = makeAsset({ id: "1", symbol: "USDT" });
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makePegSummaryDbWithDexPrice([asset], nowSec - 7200);
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
       coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
     };
-    const coin = body.coins.find((c) => c.id === "1");
+    const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin?.dexPriceCheck).toBeUndefined();
   });
 });

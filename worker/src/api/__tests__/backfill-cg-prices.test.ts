@@ -84,9 +84,9 @@ describe("handleBackfillCgPrices", () => {
     const snapshotDate = Math.floor(1_700_000_000 / 86400) * 86400;
     const res = await handleBackfillCgPrices(
       makeDb([{ snapshot_date: snapshotDate, price: null, circulating_usd: 100_000_000 }]),
-      makeApiUrl("/api/backfill-cg-prices?stablecoin=1"),
+      makeApiUrl("/api/backfill-cg-prices?stablecoin=usdt-tether"),
       "secret",
-      makeApiRequest("/api/backfill-cg-prices?stablecoin=1", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-cg-prices?stablecoin=usdt-tether", { adminKey: "secret" }),
     );
 
     expect(res.status).toBe(200);

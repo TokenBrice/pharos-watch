@@ -6,7 +6,7 @@ vi.mock("../../lib/stablecoins-cache", () => ({
     payload: {
       peggedAssets: [
         {
-          id: "1",
+          id: "usdt-tether",
           name: "Tether USD",
           symbol: "USDT",
           geckoId: "tether",
@@ -39,7 +39,7 @@ function makeDb(opts: { dewsUnavailable?: boolean } = {}): D1Database {
         return {
           results: [
             {
-              stablecoin_id: "1",
+              stablecoin_id: "usdt-tether",
               peg_reference: 1,
               started_at: Math.floor(Date.now() / 1000) - 3600,
             },
@@ -51,7 +51,7 @@ function makeDb(opts: { dewsUnavailable?: boolean } = {}): D1Database {
           throw new Error("no such table: stress_signals");
         }
         return {
-          results: [{ stablecoin_id: "1", score: 72, band: "WARNING" }] as T[],
+          results: [{ stablecoin_id: "usdt-tether", score: 72, band: "WARNING" }] as T[],
         };
       }
       return { results: [] as T[] };
@@ -85,7 +85,7 @@ describe("computeAndStoreStabilityIndex", () => {
       payload: {
         peggedAssets: [
           {
-            id: "1",
+            id: "usdt-tether",
             name: "Tether USD",
             symbol: "USDT",
             geckoId: "tether",

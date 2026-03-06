@@ -15,7 +15,7 @@ type CoinCase = {
   detection: MintBurnBridgeDetectionConfig;
 };
 
-const CCIP_CASE_IDS = ["2", "241", "262", "271", "226"] as const;
+const CCIP_CASE_IDS = ["usdc-circle", "zchf-frankencoin", "usd1-world-liberty-financial", "avusd-avant", "usdo-openeden"] as const;
 
 function loadCoinCase(stablecoinId: string): CoinCase {
   const config = MINT_BURN_CONFIGS.find(

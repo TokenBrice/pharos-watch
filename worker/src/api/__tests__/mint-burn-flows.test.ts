@@ -13,7 +13,7 @@ import {
 describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
   it("per-coin response does NOT have a coins array", async () => {
     const perCoinResponse = {
-      stablecoinId: "1",
+      stablecoinId: "usdt-tether",
       symbol: "USDT",
       mintVolumeUsd: 1000,
       burnVolumeUsd: 500,
@@ -32,7 +32,7 @@ describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
   it("aggregate response DOES have a coins array", async () => {
     const aggregateResponse = {
       gauge: { score: 0, band: "NEUTRAL", intensitySemantics: "signed-v2", flightToQuality: false, flightIntensity: 0, trackedCoins: 4, trackedMcapUsd: 1e11 },
-      coins: [{ stablecoinId: "1", symbol: "USDT", flowIntensity: 0, netFlow24hUsd: 100, mintVolume24hUsd: 200, burnVolume24hUsd: 100, mintCount24h: 5, burnCount24h: 3, netFlow7dUsd: 500, largestEvent24h: null }],
+      coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", flowIntensity: 0, netFlow24hUsd: 100, mintVolume24hUsd: 200, burnVolume24hUsd: 100, mintCount24h: 5, burnCount24h: 3, netFlow7dUsd: 500, largestEvent24h: null }],
       hourly: [],
       updatedAt: 1000,
     };
@@ -52,7 +52,7 @@ describe("handleMintBurnFlows contract tests", () => {
   const nowSec = Math.floor(Date.now() / 1000);
 
   const hourlyRow = {
-    stablecoin_id: "1",
+    stablecoin_id: "usdt-tether",
     chain_id: "ethereum",
     hour_ts: nowSec - 3600,
     mint_count: 5,
@@ -63,7 +63,7 @@ describe("handleMintBurnFlows contract tests", () => {
   };
 
   const stablecoinsCache = JSON.stringify({
-    peggedAssets: [{ id: "1", circulating: { peggedUSD: 100000000000 } }],
+    peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100000000000 } }],
   });
 
   const db = mockD1([
@@ -127,17 +127,17 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoHour = Math.floor((now - 10 * 86400) / 3600) * 3600;
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const sparseCache = JSON.stringify({
-      peggedAssets: [{ id: "1", circulating: { peggedUSD: 100000000000 } }],
+      peggedAssets: [{ id: "usdt-tether", circulating: { peggedUSD: 100000000000 } }],
     });
 
     const sparseDb = mockD1([
       {
         match: "SUM(net_flow_usd) as daily_net",
-        rows: [{ stablecoin_id: "1", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 }],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
-        rows: [{ stablecoin_id: "1", first_hour_ts: tenDaysAgoHour }],
+        rows: [{ stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour }],
       },
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
@@ -145,7 +145,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
-        rows: [{ stablecoin_id: "1", net_flow_usd: 1_000_000 }],
+        rows: [{ stablecoin_id: "usdt-tether", net_flow_usd: 1_000_000 }],
       },
       { match: "mint_burn_events", rows: [] },
       {
@@ -159,7 +159,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.status).toBe(200);
 
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
-    const usdt = body.coins.find((coin) => coin.stablecoinId === "1");
+    const usdt = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
 
     expect(usdt).toBeDefined();
     expect(usdt?.flowIntensity).toBeNull();
@@ -172,8 +172,8 @@ describe("handleMintBurnFlows contract tests", () => {
     const tenDaysAgoDay = Math.floor(tenDaysAgoHour / 86400) * 86400;
     const mixedCache = JSON.stringify({
       peggedAssets: [
-        { id: "1", circulating: { peggedUSD: 100_000_000_000 } },
-        { id: "2", circulating: { peggedUSD: 50_000_000_000 } },
+        { id: "usdt-tether", circulating: { peggedUSD: 100_000_000_000 } },
+        { id: "usdc-circle", circulating: { peggedUSD: 50_000_000_000 } },
       ],
     });
 
@@ -182,7 +182,7 @@ describe("handleMintBurnFlows contract tests", () => {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
           {
-            stablecoin_id: "2",
+            stablecoin_id: "usdc-circle",
             chain_id: "ethereum",
             hour_ts: now - 3600,
             mint_count: 7,
@@ -196,22 +196,22 @@ describe("handleMintBurnFlows contract tests", () => {
       {
         match: "SUM(net_flow_usd) as net_flow_usd",
         rows: [
-          { stablecoin_id: "1", net_flow_usd: 0 },
-          { stablecoin_id: "2", net_flow_usd: 60_000_000 },
+          { stablecoin_id: "usdt-tether", net_flow_usd: 0 },
+          { stablecoin_id: "usdc-circle", net_flow_usd: 60_000_000 },
         ],
       },
       {
         match: "SUM(net_flow_usd) as daily_net",
         rows: [
-          { stablecoin_id: "1", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 },
-          { stablecoin_id: "2", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 200_000_000 },
+          { stablecoin_id: "usdt-tether", day_ts: tenDaysAgoDay, daily_net: 1_000_000, daily_abs: 1_000_000 },
+          { stablecoin_id: "usdc-circle", day_ts: tenDaysAgoDay, daily_net: 0, daily_abs: 200_000_000 },
         ],
       },
       {
         match: "MIN(hour_ts) as first_hour_ts",
         rows: [
-          { stablecoin_id: "1", first_hour_ts: tenDaysAgoHour },
-          { stablecoin_id: "2", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdt-tether", first_hour_ts: tenDaysAgoHour },
+          { stablecoin_id: "usdc-circle", first_hour_ts: tenDaysAgoHour },
         ],
       },
       { match: "mint_burn_events", rows: [] },
@@ -226,8 +226,8 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(res.status).toBe(200);
 
     const body = MintBurnFlowsResponseSchema.parse(await res.json());
-    const noActivityCoin = body.coins.find((coin) => coin.stablecoinId === "1");
-    const activeCoin = body.coins.find((coin) => coin.stablecoinId === "2");
+    const noActivityCoin = body.coins.find((coin) => coin.stablecoinId === "usdt-tether");
+    const activeCoin = body.coins.find((coin) => coin.stablecoinId === "usdc-circle");
 
     expect(noActivityCoin?.flowIntensity).toBeNull();
     expect(activeCoin?.flowIntensity).toBe(100);

@@ -22,6 +22,7 @@ vi.mock("@shared/lib/stablecoins", () => {
       name: "Tether",
       symbol: "USDT",
       geckoId: "tether",
+      llamaId: "1",
       detailProvider: "defillama",
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
@@ -30,6 +31,7 @@ vi.mock("@shared/lib/stablecoins", () => {
       name: "USD Coin",
       symbol: "USDC",
       geckoId: "usd-coin",
+      llamaId: "2",
       detailProvider: "defillama",
       flags: { pegCurrency: "USD", backing: "fiat-backed", yieldBearing: false, navToken: false, governance: "centralized" },
     },
@@ -463,7 +465,7 @@ describe("syncStablecoins", () => {
       (call) => call[2] === "sync-stablecoins:stablecoins"
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
-    const normalized = payload?.peggedAssets.find((a) => a.id === "3");
+    const normalized = payload?.peggedAssets.find((a) => a.id === "ust-terra");
     expect(normalized).toBeDefined();
     expect(normalized?.geckoId).toBe("coin-three");
     expect("gecko_id" in (normalized ?? {})).toBe(false);
@@ -521,9 +523,9 @@ describe("syncStablecoins", () => {
       {
         match: "supply_history",
         rows: [
-          { stablecoin_id: "1", snapshot_date: utcMidnight(1), circulating_usd: 900_000 },
-          { stablecoin_id: "1", snapshot_date: utcMidnight(7), circulating_usd: 890_000 },
-          { stablecoin_id: "1", snapshot_date: utcMidnight(30), circulating_usd: 880_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: utcMidnight(1), circulating_usd: 900_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: utcMidnight(7), circulating_usd: 890_000 },
+          { stablecoin_id: "usdt-tether", snapshot_date: utcMidnight(30), circulating_usd: 880_000 },
         ],
       },
       { match: "cache", rows: [] },
@@ -546,7 +548,7 @@ describe("syncStablecoins", () => {
       (call) => call[2] === "sync-stablecoins:stablecoins"
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
-    const normalized = payload?.peggedAssets.find((a) => a.id === "1");
+    const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
     expect(normalized?.circulatingPrevDay).toEqual({ peggedUSD: 900_000 });
     expect(normalized?.circulatingPrevWeek).toEqual({ peggedUSD: 890_000 });
     expect(normalized?.circulatingPrevMonth).toEqual({ peggedUSD: 880_000 });
@@ -561,7 +563,7 @@ describe("syncStablecoins", () => {
     const db = mockD1([
       {
         match: "SELECT asset_id, price, updated_at FROM price_cache",
-        rows: [{ asset_id: "1", price: 0.999, updated_at: nowSec - 60 }],
+        rows: [{ asset_id: "usdt-tether", price: 0.999, updated_at: nowSec - 60 }],
       },
       { match: "cache", rows: [] },
       { match: "supply_history", rows: [] },
@@ -584,7 +586,7 @@ describe("syncStablecoins", () => {
       (call) => call[2] === "sync-stablecoins:stablecoins"
     );
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
-    const normalized = payload?.peggedAssets.find((a) => a.id === "1");
+    const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
     expect(normalized?.price).toBe(0.999);
   });
 });

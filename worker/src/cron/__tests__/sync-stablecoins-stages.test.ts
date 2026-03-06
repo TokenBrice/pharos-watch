@@ -60,7 +60,7 @@ describe("sync-stablecoins stage helpers", () => {
     const assets = [
       { id: "usdt-tether", geckoId: "wrong-id", cmcSlug: undefined, navToken: false },
       { id: "nav-token-test", geckoId: undefined, cmcSlug: undefined, navToken: false },
-      { id: "213", geckoId: undefined, cmcSlug: undefined, navToken: false, address: "" },
+      { id: "m-m0", geckoId: undefined, cmcSlug: undefined, navToken: false, address: "" },
     ] as unknown as never[];
 
     applyTrackedAssetOverrides(assets);

@@ -84,9 +84,9 @@ describe("handleBackfillSupplyHistory", () => {
 
     const res = await handleBackfillSupplyHistory(
       makeDb(),
-      makeApiUrl("/api/backfill-supply-history?stablecoin=1"),
+      makeApiUrl("/api/backfill-supply-history?stablecoin=usdt-tether"),
       "secret",
-      makeApiRequest("/api/backfill-supply-history?stablecoin=1", { adminKey: "secret" }),
+      makeApiRequest("/api/backfill-supply-history?stablecoin=usdt-tether", { adminKey: "secret" }),
     );
 
     expect(res.status).toBe(200);
