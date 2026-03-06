@@ -353,7 +353,8 @@ const DEFAULT_CRON_TIMEOUT_MS = 5 * 60_000;
 export async function logCronRun(
   db: D1Database,
   job: string,
-  fn: (signal: AbortSignal) => Promise<CronResult | void>
+  fn: (signal: AbortSignal) => Promise<CronResult | void>,
+  alertFn?: (title: string, message: string) => Promise<unknown> | void,
 ): Promise<CronResult | void> {
   const startMs = Date.now();
   const startSec = Math.floor(startMs / 1000);
@@ -374,6 +375,7 @@ export async function logCronRun(
       fn(ac.signal),
       timeoutPromise,
     ]);
+    const resultStatus = resolvedResult?.status ?? "ok";
     await runWithOverloadRetry(() =>
       db
         .prepare(
@@ -383,12 +385,17 @@ export async function logCronRun(
           job,
           startSec,
           Date.now() - startMs,
-          resolvedResult?.status ?? "ok",
+          resultStatus,
           resolvedResult?.itemCount ?? null,
           resolvedResult?.metadata ?? null
         )
         .run()
     );
+    if (resultStatus === "error" && alertFn) {
+      await Promise.resolve(
+        alertFn(`Cron ${job} returned error status`, resolvedResult?.metadata ?? ""),
+      ).catch(() => {});
+    }
   } catch (e) {
     try {
       await runWithOverloadRetry(() =>
@@ -403,7 +410,10 @@ export async function logCronRun(
       console.error(`[db] Failed to log cron error for ${job}:`, logErr);
     }
     // Alert on cron failure (non-blocking)
-    sendAlert(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`).catch(() => {});
+    const emitFailureAlert = alertFn ? alertFn : sendAlert;
+    void Promise.resolve(
+      emitFailureAlert(`Cron failure: ${job}`, `Error: ${String(e).slice(0, 500)}`),
+    ).catch(() => {});
     throw e;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);

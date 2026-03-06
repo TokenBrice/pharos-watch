@@ -559,12 +559,14 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
   // Detect depeg events from current price data
-  const depegErrors: string[] = [];
+  let depegErrors = 0;
+  const depegErrorReasons: string[] = [];
   try {
     await detectDepegEvents(db, llamaData.peggedAssets, llamaData.fxFallbackRates);
   } catch (err) {
     console.error("[sync-stablecoins] Depeg detection failed:", err);
-    depegErrors.push(`detection: ${String(err).slice(0, 200)}`);
+    depegErrors += 1;
+    depegErrorReasons.push(`detection: ${String(err).slice(0, 200)}`);
   }
 
   // Confirm or expire pending depeg events for >$1B coins
@@ -572,10 +574,16 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     await confirmPendingDepegs(db, llamaData.peggedAssets, llamaData.fxFallbackRates);
   } catch (err) {
     console.error("[sync-stablecoins] Pending depeg confirmation failed:", err);
-    depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
+    depegErrors += 1;
+    depegErrorReasons.push(`confirmation: ${String(err).slice(0, 200)}`);
   }
 
   // Build metadata for cron_runs observability
+  let status: CronResult["status"] = "ok";
+  if (depegErrors > 0) {
+    status = "degraded";
+  }
+
   const finalMissing = llamaData.peggedAssets.filter(hasMissingPrice).length;
   const metadata: Record<string, unknown> = {
     rowsRead: rawAssetCount,
@@ -591,7 +599,11 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     missingPrices: finalMissing,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
-  if (depegErrors.length > 0) metadata.depegErrors = depegErrors;
+  if (depegErrors > 0) {
+    metadata.depegErrorCount = depegErrors;
+    metadata.depegErrors = depegErrorReasons;
+    metadata.depegErrorReasons = depegErrorReasons;
+  }
 
-  return { itemCount: llamaData.peggedAssets.length, metadata: JSON.stringify(metadata) };
+  return { itemCount: llamaData.peggedAssets.length, status, metadata: JSON.stringify(metadata) };
 }

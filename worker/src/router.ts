@@ -36,7 +36,7 @@ import { handleFeedback, type FeedbackEnv } from "./api/feedback";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { requireAdmin } from "./lib/auth";
 import { generateDailyDigest } from "./cron/daily-digest";
-import { getRouterHandledPaths, validateEndpointMethod } from "@shared/lib/api-endpoints";
+import { getEndpointDefinition, getRouterHandledPaths, validateEndpointMethod } from "@shared/lib/api-endpoints";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
@@ -134,7 +134,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   )],
   ["/api/stress-signals", ({ db, url }) => handleStressSignals(db, url)],
   ["/api/backfill-dews", ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request)],
-  ["/api/feedback", ({ db, request, feedbackEnv }) => {
+  ["/api/feedback", withErrorHandler("feedback", ({ db, request, feedbackEnv }) => {
     if (!request) {
       return Promise.resolve(new Response(JSON.stringify({ error: "Bad request" }), {
         status: 400,
@@ -142,7 +142,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
       }));
     }
     return handleFeedback(db, request, feedbackEnv ?? {});
-  }],
+  })],
   ["/api/trigger-digest", withErrorHandler("route-trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
@@ -211,6 +211,15 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   })],
 ]);
 
+function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
+  if (request?.method !== "GET") return response;
+  const endpoint = getEndpointDefinition(path);
+  if (!endpoint?.adminRequired) return response;
+  if (response.headers.get("Cache-Control") === "no-store") return response;
+  response.headers.set("Cache-Control", "no-store");
+  return response;
+}
+
 export const ROUTER_STATIC_PATHS = getRouterHandledPaths();
 
 const ROUTER_STATIC_PATH_SET = new Set<string>(ROUTER_STATIC_PATHS);
@@ -266,7 +275,7 @@ export function route(
       anthropicApiKey,
       twitterCreds,
       telegramCreds,
-    });
+    }).then((response) => addAdminGetNoStoreHeader(path, request, response));
   }
 
   // /api/stablecoin-summary/:id — resolve to canonical ID before handler lookup

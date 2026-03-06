@@ -111,7 +111,7 @@ export async function handleScheduledEvent(
       }
 
       return { ...result, metadata };
-    });
+    }, sendAlert);
 
   switch (cron) {
     case CRON_SCHEDULES.quarterHourly: {
