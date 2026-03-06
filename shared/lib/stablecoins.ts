@@ -2,6 +2,8 @@ import type { StablecoinMeta } from "../types";
 
 // Helper to reduce boilerplate
 interface StablecoinOpts {
+  llamaId?: string;
+  detailProvider?: "defillama" | "coingecko" | "commodity";
   yieldBearing?: boolean;
   rwa?: boolean;
   navToken?: boolean;
@@ -30,7 +32,7 @@ interface StablecoinOpts {
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -50,6 +52,8 @@ const other = (id: string, name: string, symbol: string, backing: StablecoinMeta
 export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Rank 1-10 ────────────────────────────────────────────────────────
   usd("1", "Tether", "USDT", "rwa-backed", "centralized", {
+    llamaId: "1",
+    detailProvider: "defillama",
     geckoId: "tether",
     deploymentModel: "native-multichain",
     collateral: "U.S. Treasury bills and repurchase agreements (~92%), secured loans, gold, Bitcoin, and other investments; quarterly attestations by BDO Italia",
@@ -110,6 +114,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("2", "USD Coin", "USDC", "rwa-backed", "centralized", {
+    llamaId: "2",
+    detailProvider: "defillama",
     geckoId: "usd-coin",
     deploymentModel: "native-multichain",
     collateral: "Cash and cash equivalents held in the Circle Reserve Fund (SEC-registered 2a-7 government money market fund), managed by BlackRock and custodied at BNY Mellon; assets include short-dated U.S. Treasuries, overnight Treasury repos, and cash",
@@ -181,6 +187,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("146", "Ethena USDe", "USDe", "crypto-backed", "centralized-dependent", {
+    llamaId: "146",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Ethena staking (sUSDe)", yieldType: "lending-vault" },
     geckoId: "ethena-usde",
@@ -232,6 +240,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("209", "Sky Dollar", "USDS", "crypto-backed", "centralized-dependent", {
+    llamaId: "209",
+    detailProvider: "defillama",
     geckoId: "usds",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Sky Savings Rate (sUSDS)", yieldType: "governance-set" },
@@ -264,6 +274,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("262", "World Liberty Financial USD", "USD1", "rwa-backed", "centralized", {
+    llamaId: "262",
+    detailProvider: "defillama",
     geckoId: "usd1-wlfi",
     deploymentModel: "third-party-bridge",
     collateral: "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held by BitGo Trust Company",
@@ -293,6 +305,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("5", "Dai", "DAI", "crypto-backed", "centralized-dependent", {
+    llamaId: "5",
+    detailProvider: "defillama",
     geckoId: "dai",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Dai Savings Rate (sDAI)", yieldType: "governance-set" },
@@ -331,6 +345,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("120", "PayPal USD", "PYUSD", "rwa-backed", "centralized", {
+    llamaId: "120",
+    detailProvider: "defillama",
     geckoId: "paypal-usd",
     deploymentModel: "third-party-bridge",
     collateral: "U.S. dollar deposits, U.S. Treasury securities, and reverse repurchase agreements",
@@ -357,6 +373,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("246", "Falcon USD", "USDf", "crypto-backed", "centralized-dependent", {
+    llamaId: "246",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Falcon Finance savings (sUSDf)", yieldType: "lending-vault" },
     geckoId: "falcon-finance",
@@ -387,6 +405,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("237", "Hashnote USYC", "USYC", "rwa-backed", "centralized", {
+    llamaId: "237",
+    detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Hashnote T-bill fund", yieldType: "nav-appreciation" },
     geckoId: "hashnote-usyc",
@@ -410,6 +430,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("286", "Global Dollar", "USDG", "rwa-backed", "centralized", {
+    llamaId: "286",
+    detailProvider: "defillama",
     geckoId: "global-dollar",
     deploymentModel: "native-multichain",
     collateral: "U.S. dollar deposits, short-duration U.S. government securities, and other high-quality liquid assets held in segregated custodial accounts at DBS Bank and Standard Chartered",
@@ -436,6 +458,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 11-20 ───────────────────────────────────────────────────────
   usd("250", "Ripple USD", "RLUSD", "rwa-backed", "centralized", {
+    llamaId: "250",
+    detailProvider: "defillama",
     geckoId: "ripple-usd",
     collateral: "U.S. dollar deposits, cash equivalents, and short-term U.S. government Treasuries held in segregated accounts",
     pegMechanism: "Direct 1:1 redemption through Ripple",
@@ -457,6 +481,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("129", "Ondo US Dollar Yield", "USDY", "rwa-backed", "centralized", {
+    llamaId: "129",
+    detailProvider: "defillama",
     geckoId: "ondo-us-dollar-yield",
     deploymentModel: "third-party-bridge",
     yieldBearing: true, rwa: true, navToken: true,
@@ -492,6 +518,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("173", "BlackRock USD", "BUIDL", "rwa-backed", "centralized", {
+    llamaId: "173",
+    detailProvider: "defillama",
     yieldBearing: true, rwa: true,
     yieldConfig: { yieldSource: "BlackRock T-bill fund", yieldType: "nav-appreciation" },
     geckoId: "blackrock-usd-institutional-digital-liquidity-fund",
@@ -522,6 +550,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("14", "USDD", "USDD", "crypto-backed", "centralized-dependent", {
+    llamaId: "14",
+    detailProvider: "defillama",
     geckoId: "usdd",
     deploymentModel: "native-multichain",
     collateral: "Over-collateralized by TRX, sTRX, and USDT locked in CDP vaults; Bitcoin removed from reserves in August 2024",
@@ -554,6 +584,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("221", "Ethena USDtb", "USDTB", "rwa-backed", "centralized", {
+    llamaId: "221",
+    detailProvider: "defillama",
     rwa: true,
     geckoId: "usdtb",
     deploymentModel: "third-party-bridge",
@@ -578,6 +610,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("213", "M by M0", "M", "rwa-backed", "centralized", {
+    llamaId: "213",
+    detailProvider: "defillama",
     rwa: true,
     geckoId: "m",
     deploymentModel: "third-party-bridge",
@@ -605,6 +639,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("336", "United Stables", "U", "rwa-backed", "centralized", {
+    llamaId: "336",
+    detailProvider: "defillama",
     geckoId: "united-stables",
     deploymentModel: "native-multichain",
     collateral: "Fiat USD, USDC, USDT, and USD1 held in segregated custody via Wallets Trust Limited (Bermuda trustee); fiat reserves with accredited banking institutions, digital assets with licensed custodians",
@@ -627,6 +663,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("309", "USD.AI", "USDai", "rwa-backed", "centralized-dependent", {
+    llamaId: "309",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "USD.AI savings (sUSDai)", yieldType: "lending-vault" },
     geckoId: "usdai",
@@ -653,6 +691,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("195", "Usual USD", "USD0", "rwa-backed", "centralized-dependent", {
+    llamaId: "195",
+    detailProvider: "defillama",
     rwa: true,
     geckoId: "usual-usd",
     deploymentModel: "third-party-bridge",
@@ -681,6 +721,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("118", "GHO", "GHO", "crypto-backed", "centralized-dependent", {
+    llamaId: "118",
+    detailProvider: "defillama",
     geckoId: "gho",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Aave Safety Module (sGHO)", yieldType: "governance-set" },
@@ -718,6 +760,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 21-30 ───────────────────────────────────────────────────────
   other("258", "A7A5", "A7A5", "rwa-backed", "centralized", "RUB", {
+    llamaId: "258",
+    detailProvider: "defillama",
     geckoId: "a7a5",
     collateral: "Russian ruble (RUB) deposits held 1:1 at Promsvyazbank (PSB), a Russian state-owned bank; reserves audited quarterly by an independent Kyrgyz auditing firm",
     pegMechanism: "Fiat-backed 1:1 peg to the Russian ruble; mint via KYC-verified authorized partners depositing RUB; redeem by returning A7A5 for equivalent RUB; issuer (Old Vector LLC) distributes 50% of reserve interest to holders as additional A7A5",
@@ -737,6 +781,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("7", "TrueUSD", "TUSD", "rwa-backed", "centralized", {
+    llamaId: "7",
+    detailProvider: "defillama",
     geckoId: "true-usd",
     deploymentModel: "native-multichain",
     collateral: "U.S. dollars held in segregated accounts at regulated financial institutions, attested daily by Moore Hong Kong",
@@ -763,6 +809,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("119", "First Digital USD", "FDUSD", "rwa-backed", "centralized", {
+    llamaId: "119",
+    detailProvider: "defillama",
     geckoId: "first-digital-usd",
     deploymentModel: "native-multichain",
     collateral: "Cash, U.S. Treasury bills, bank deposits, and overnight reverse repos held in fully segregated custodial accounts",
@@ -790,6 +838,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("296", "Cap cUSD", "CUSD", "rwa-backed", "centralized-dependent", {
+    llamaId: "296",
+    detailProvider: "defillama",
     geckoId: "cap-usd",
     governanceQuality: "wrapper",
     collateral: "Basket of regulated stablecoins: USDC, USDT, pyUSD, BUIDL, and BENJI (max 40% each)",
@@ -814,6 +864,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // USDN (id 12) removed — algorithmic death spiral Apr 2022 (see cemetery)
   eur("50", "EURC", "EURC", "rwa-backed", "centralized", {
+    llamaId: "50",
+    detailProvider: "defillama",
     geckoId: "euro-coin",
     deploymentModel: "native-multichain",
     collateral: "Euro-denominated cash and short-term euro government securities held in segregated, bankruptcy-remote accounts at regulated financial institutions in the EEA",
@@ -840,6 +892,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("197", "Resolv USD", "USR", "crypto-backed", "centralized-dependent", {
+    llamaId: "197",
+    detailProvider: "defillama",
     geckoId: "resolv-usr",
     deploymentModel: "third-party-bridge",
     collateral: "ETH, wstETH (Lido), LBTC, and weETH held on-chain via Fireblocks; yield from liquid staking rewards and perpetual futures funding rates",
@@ -872,6 +926,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("272", "YLDS", "YLDS", "rwa-backed", "centralized", {
+    llamaId: "272",
+    detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Figure yield fund", yieldType: "nav-appreciation" },
     geckoId: "ylds",
@@ -896,6 +952,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("110", "crvUSD", "crvUSD", "crypto-backed", "decentralized", {
+    llamaId: "110",
+    detailProvider: "defillama",
     geckoId: "crvusd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Curve Savings (scrvUSD)", yieldType: "nav-appreciation" },
@@ -933,6 +991,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("310", "Solstice USX", "USX", "crypto-backed", "centralized-dependent", {
+    llamaId: "310",
+    detailProvider: "defillama",
     geckoId: "usx",
     governanceQuality: "wrapper",
     collateral: "USDC and USDT deposited 1:1; plans to expand to SOL, ETH, and BTC collateral",
@@ -957,6 +1017,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 31-40 ───────────────────────────────────────────────────────
   usd("220", "Avalon USDa", "USDA", "crypto-backed", "centralized-dependent", {
+    llamaId: "220",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Avalon savings (sUSDa)", yieldType: "lending-vault" },
     geckoId: "usda-2",
@@ -987,6 +1049,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // Binance Peg BUSD (id 153) removed — BUSD discontinued (see cemetery)
   usd("6", "Frax", "FRAX", "rwa-backed", "centralized-dependent", {
+    llamaId: "6",
+    detailProvider: "defillama",
     geckoId: "frax",
     deploymentModel: "third-party-bridge",
     governanceQuality: "dao-governance",
@@ -1022,6 +1086,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("15", "Dola", "DOLA", "crypto-backed", "centralized-dependent", {
+    llamaId: "15",
+    detailProvider: "defillama",
     geckoId: "dola-usd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Inverse Finance Savings (sDOLA)", yieldType: "nav-appreciation" },
@@ -1056,6 +1122,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("205", "Agora Dollar", "AUSD", "rwa-backed", "centralized", {
+    llamaId: "205",
+    detailProvider: "defillama",
     geckoId: "agora-dollar",
     deploymentModel: "third-party-bridge",
     collateral: "Cash (USD deposits), short-dated U.S. Treasury bills, and overnight reverse repurchase agreements; managed by VanEck in a bankruptcy-remote Delaware Statutory Trust custodied by State Street",
@@ -1090,6 +1158,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("298", "infiniFi USD", "IUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "298",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "infiniFi savings (siUSD)", yieldType: "lending-vault" },
     geckoId: "infinifi-usd",
@@ -1114,6 +1184,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("219", "Astherus", "USDF", "crypto-backed", "centralized-dependent", {
+    llamaId: "219",
+    detailProvider: "defillama",
     geckoId: "astherus-usdf",
     collateral: "USDT held by custodian Ceffu; deployed in delta-neutral strategies (long spot + short perpetuals) executed via Ceffu MirrorX on Binance",
     pegMechanism: "1:1 USDT mint/redeem; yield from funding rate arbitrage via delta-neutral positions on Binance through Ceffu MirrorX",
@@ -1136,6 +1208,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // FLEXUSD (id 21) removed — CoinFLEX exchange bankruptcy June 2022 (see cemetery)
   usd("252", "StandX DUSD", "DUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "252",
+    detailProvider: "defillama",
     geckoId: "standx-dusd",
     dependencies: [{ id: "1", weight: 0.5 }, { id: "2", weight: 0.5 }],
     deploymentModel: "native-multichain",
@@ -1159,6 +1233,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("218", "River Stablecoin", "satUSD", "crypto-backed", "decentralized", {
+    llamaId: "218",
+    detailProvider: "defillama",
     geckoId: "satoshi-stablecoin",
     tags: ["Liquity v1 fork"],
     chainTier: "unproven",
@@ -1191,6 +1267,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 41-50 ───────────────────────────────────────────────────────
   other("249", "Brazilian Digital", "BRZ", "rwa-backed", "centralized", "BRL", {
+    llamaId: "249",
+    detailProvider: "defillama",
     geckoId: "brz",
     collateral: "Brazilian real (BRL) cash reserves held at a financial institution authorized by the Central Bank of Brazil",
     pegMechanism: "1:1 mint and redemption at Transfero for BRL; KYC verification required; redemption incurs a 1% fee in Brazil",
@@ -1212,6 +1290,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("306", "Gate USD", "GUSD", "rwa-backed", "centralized", {
+    llamaId: "306",
+    detailProvider: "defillama",
     geckoId: "gusd",
     collateralQuality: "exotic",
     custodyModel: "cex",
@@ -1233,6 +1313,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("235", "Frax USD", "FRXUSD", "rwa-backed", "centralized-dependent", {
+    llamaId: "235",
+    detailProvider: "defillama",
     geckoId: "frax-usd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Frax Staking (sfrxUSD)", yieldType: "nav-appreciation" },
@@ -1282,6 +1364,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("340", "rwaUSDi", "rwaUSDi", "crypto-backed", "centralized-dependent", {
+    llamaId: "340",
+    detailProvider: "defillama",
     deploymentModel: "native-multichain",
     rwa: true,
     collateralQuality: "rwa",
@@ -1306,6 +1390,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("271", "Avant USD", "avUSD", "rwa-backed", "centralized", {
+    llamaId: "271",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Avant savings (savUSD)", yieldType: "lending-vault" },
     geckoId: "avant-usd",
@@ -1329,6 +1415,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("341", "Pleasing USD", "PUSD", "rwa-backed", "centralized-dependent", {
+    llamaId: "341",
+    detailProvider: "defillama",
     geckoId: "pleasing-usd",
     collateral: "USDT deposits held by Pleasing International; ecosystem interoperability with tokenized gold (PGOLD)",
     pegMechanism: "1:1 mint and redemption against USDT through the Pleasing Golden platform",
@@ -1348,6 +1436,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("339", "Re Protocol reUSD", "reUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "339",
+    detailProvider: "defillama",
     yieldBearing: true, navToken: true,
     yieldConfig: { yieldSource: "Re Protocol vault", yieldType: "nav-appreciation" },
     geckoId: "re-protocol-reusd",
@@ -1377,6 +1467,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("332", "pmUSD", "pmUSD", "rwa-backed", "centralized", {
+    llamaId: "332",
+    detailProvider: "defillama",
     geckoId: "precious-metals-usd",
     collateral: "ION.au tokenized gold (issued by I-ON Digital Corp) deposited as collateral into RAAC's RWf(x) overcollateralized lending protocol",
     pegMechanism: "Overcollateralized CDP: users deposit ION.au (tokenized gold) as collateral and mint pmUSD; Chainlink proof-of-reserves feeds attest to gold holdings in real time; Instruxi provides third-party reserve attestation",
@@ -1394,6 +1486,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("202", "Anzen USDz", "USDz", "rwa-backed", "centralized", {
+    llamaId: "202",
+    detailProvider: "defillama",
     rwa: true,
     geckoId: "anzen-usdz",
     deploymentModel: "third-party-bridge",
@@ -1418,6 +1512,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("316", "CASH", "CASH", "rwa-backed", "centralized", {
+    llamaId: "316",
+    detailProvider: "defillama",
     geckoId: "cash-4",
     collateral: "U.S. Treasury bills (≤3 months maturity), reverse repurchase agreements backed by U.S. Treasuries, U.S. government money-market funds, deposit accounts, and tokenized equivalents held in segregated bankruptcy-remote accounts",
     pegMechanism: "Direct 1:1 redemption via Bridge Building Inc. (BBI) with reserves held in bankruptcy-remote custodial accounts",
@@ -1440,6 +1536,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 51-60 ───────────────────────────────────────────────────────
   usd("284", "MNEE USD", "MNEE", "rwa-backed", "centralized", {
+    llamaId: "284",
+    detailProvider: "defillama",
     geckoId: "mnee-usd-stablecoin",
     collateral: "U.S. Treasury bills (≤90-day duration) and USD cash held by a qualified custodian, invested in accordance with NYDFS permissible investment rules",
     pegMechanism: "Fiat-backed 1:1 with USD; tokens minted upon deposit of USD and burned upon redemption; reserves held at qualified custodian compliant with NYDFS permissible investment standards",
@@ -1459,6 +1557,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("257", "OpenEden TBILL", "TBILL", "rwa-backed", "centralized", {
+    llamaId: "257",
+    detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "OpenEden T-bill vault", yieldType: "nav-appreciation" },
     geckoId: "openeden-tbill",
@@ -1483,6 +1583,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("66", "Frax Price Index", "FPI", "algorithmic", "centralized-dependent", "VAR", {
+    llamaId: "66",
+    detailProvider: "defillama",
     geckoId: "frax-price-index",
     dependencies: [{ id: "6", weight: 1.0, type: "wrapper" }],
     navToken: true,
@@ -1501,6 +1603,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("283", "Unitas", "USDU", "crypto-backed", "centralized-dependent", {
+    llamaId: "283",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Unitas savings (sUSDu)", yieldType: "governance-set" },
     geckoId: "usdu",
@@ -1528,6 +1632,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // DEUSD removed — collapsed Nov 2025 when Stream Finance failed
   usd("321", "USDH Stablecoin", "USDH", "rwa-backed", "centralized", {
+    llamaId: "321",
+    detailProvider: "defillama",
     geckoId: "usdh-2",
     contracts: [
       { chain: "hyperevm", address: "0x111111a1a0667d36bd57c0a9f569b98057111111", decimals: 6 },
@@ -1551,6 +1657,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("79", "Lista USD", "LISUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "79",
+    detailProvider: "defillama",
     geckoId: "helio-protocol-hay",
     chainTier: "established-alt-l1",
     collateralQuality: "alt-lst-bridged-or-mixed",
@@ -1574,6 +1682,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("241", "OpenDollar USDO", "USDO", "rwa-backed", "centralized", {
+    llamaId: "241",
+    detailProvider: "defillama",
     geckoId: "openeden-open-dollar",
     deploymentModel: "third-party-bridge",
     collateral: "U.S. Treasury bills via tokenized TBILL and BUIDL tokens held in a bankruptcy-remote segregated account; 100% collateralization ratio maintained",
@@ -1598,6 +1708,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("166", "Cygnus Finance Global USD", "cgUSD", "rwa-backed", "centralized", {
+    llamaId: "166",
+    detailProvider: "defillama",
     geckoId: "cygnus-finance-global-usd",
     collateral: "Short-term U.S. Treasury bills held off-chain, supplemented by on-chain stablecoins (USDC/USDT); supply rebases daily on New York banking days to match portfolio net asset value including accrued interest",
     pegMechanism: "Daily rebase on NYC banking days aligning total supply with portfolio NAV; 1:1 USDC redemption via two-step withdrawal (request + claim, 5–7 day settlement); Transmuter enables instant 1:1 conversion between cgUSD and USDC; Elixir AMO manages on-chain liquidity",
@@ -1618,6 +1730,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 61-70 ───────────────────────────────────────────────────────
   eur("254", "EUR CoinVertible", "EURCV", "rwa-backed", "centralized", {
+    llamaId: "254",
+    detailProvider: "defillama",
     geckoId: "societe-generale-forge-eurcv",
     deploymentModel: "native-multichain",
     collateral: "Euro-denominated cash deposits and high-quality securities held in a segregated fiduciary estate at Societe Generale, with daily public disclosure of reserve composition",
@@ -1640,6 +1754,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // USP (id 97) removed — Platypus exploited in 2023, protocol defunct (see cemetery)
   eur("147", "Anchored Coins AEUR", "AEUR", "rwa-backed", "centralized", {
+    llamaId: "147",
+    detailProvider: "defillama",
     geckoId: "anchored-coins-eur",
     deploymentModel: "native-multichain",
     collateral: "Euro reserves held 1:1 at Swissquote Bank SA (FINMA-licensed Swiss bank)",
@@ -1663,6 +1779,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // BUSD (id 4) removed — regulatory shutdown Feb 2023 (see cemetery)
   usd("275", "Quantoz USDQ", "USDQ", "rwa-backed", "centralized", {
+    llamaId: "275",
+    detailProvider: "defillama",
     geckoId: "quantoz-usdq",
     deploymentModel: "third-party-bridge",
     collateral: "U.S. dollar deposits and government bonds (Netherlands, Germany, US) held in segregated, bankruptcy-remote accounts at Tier 1 European banks by Stichting Quantoz, supervised by DNB; reserves maintained at ≥102% of circulating supply per MiCAR requirements",
@@ -1687,6 +1805,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("256", "Resupply USD", "REUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "256",
+    detailProvider: "defillama",
     geckoId: "resupply-usd",
     collateralQuality: "exotic",
     collateral: "crvUSD and frxUSD lending vault tokens from Curve Lend and Fraxlend",
@@ -1706,6 +1826,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("325", "Eurite", "EURI", "rwa-backed", "centralized", {
+    llamaId: "325",
+    detailProvider: "defillama",
     geckoId: "eurite",
     deploymentModel: "native-multichain",
     collateral: "Euro cash and low-risk liquid assets held in segregated fiduciary accounts, bankruptcy-remote from Banking Circle S.A.",
@@ -1726,6 +1848,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("19", "Gemini Dollar", "GUSD", "rwa-backed", "centralized", {
+    llamaId: "19",
+    detailProvider: "defillama",
     geckoId: "gemini-dollar",
     collateral: "Cash deposits at State Street and Western Alliance Bank, U.S. Treasury bills (maturities ≤3 months), and government money market funds, held in segregated accounts for the benefit of GUSD holders",
     pegMechanism: "Direct 1:1 redemption through Gemini",
@@ -1746,6 +1870,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("11", "Pax Dollar", "USDP", "rwa-backed", "centralized", {
+    llamaId: "11",
+    detailProvider: "defillama",
     geckoId: "paxos-standard",
     deploymentModel: "native-multichain",
     collateral: "Cash in FDIC-insured bank accounts and U.S. Treasury bills (including overnight reverse repos and T-bill money market funds) held in segregated, bankruptcy-remote accounts",
@@ -1769,6 +1895,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("263", "Hex Trust USDX", "USDX", "rwa-backed", "centralized", {
+    llamaId: "263",
+    detailProvider: "defillama",
     geckoId: "hex-trust-usdx",
     collateral: "Cash and cash equivalents, primarily 1–3 month U.S. Treasury bills held at global tier-1 financial institutions",
     pegMechanism: "Direct 1:1 redemption through Hex Trust",
@@ -1790,6 +1918,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 71-80 ───────────────────────────────────────────────────────
   usd("290", "StraitsX XUSD", "XUSD", "rwa-backed", "centralized", {
+    llamaId: "290",
+    detailProvider: "defillama",
     geckoId: "straitsx-xusd",
     deploymentModel: "native-multichain",
     collateral: "Cash, cash equivalents, and short-term U.S. government securities held at regulated financial institutions (DBS, Standard Chartered, UOB), segregated from corporate assets in custody accounts maintained with MAS-licensed custodians",
@@ -1810,6 +1940,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("313", "Metamask USD", "MUSD", "rwa-backed", "centralized", {
+    llamaId: "313",
+    detailProvider: "defillama",
     geckoId: "metamask-usd",
     deploymentModel: "third-party-bridge",
     collateral: "Cash and short-term U.S. Treasury securities held in bankruptcy-remote custody, issued by Bridge (a Stripe company) using the M0 protocol",
@@ -1831,6 +1963,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("255", "Aegis YUSD", "YUSD", "crypto-backed", "centralized", {
+    llamaId: "255",
+    detailProvider: "defillama",
     geckoId: "aegis-yusd",
     deploymentModel: "third-party-bridge",
     yieldBearing: true,
@@ -1857,6 +1991,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("22", "sUSD", "SUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "22",
+    detailProvider: "defillama",
     geckoId: "nusd",
     deploymentModel: "third-party-bridge",
     collateral: "SNX, ETH, and USDC/stataUSDC via Synthetix V3; direct SNX minting deprecated in 2025; sUSD now backed primarily by delta-neutral basis-trade vaults and protocol treasury activity",
@@ -1885,6 +2021,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("269", "Liquity BOLD", "BOLD", "crypto-backed", "decentralized", {
+    llamaId: "269",
+    detailProvider: "defillama",
     governanceQuality: "immutable-code",
     deploymentModel: "third-party-bridge",
     geckoId: "liquity-bold-2",
@@ -1912,6 +2050,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("302", "Hylo HYUSD", "HYUSD", "crypto-backed", "decentralized", {
+    llamaId: "302",
+    detailProvider: "defillama",
     geckoId: "hylo-usd",
     collateral: "Diversified basket of Solana LSTs (mSOL, jitoSOL, bSOL, JupSOL)",
     pegMechanism: "Overcollateralization (150%+) with companion leveraged token (xSOL) absorbing SOL volatility; operates on Solana (not Ethereum or a Stage 1 L2)",
@@ -1931,6 +2071,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("8", "Liquity USD", "LUSD", "crypto-backed", "decentralized", {
+    llamaId: "8",
+    detailProvider: "defillama",
     governanceQuality: "immutable-code",
     geckoId: "liquity-usd",
     deploymentModel: "canonical-bridge",
@@ -1954,6 +2096,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("168", "fxUSD", "fxUSD", "crypto-backed", "decentralized", {
+    llamaId: "168",
+    detailProvider: "defillama",
     geckoId: "f-x-protocol-fxusd",
     yieldBearing: true,
     yieldConfig: { yieldSource: "f(x) Protocol Stability Pool", yieldType: "governance-set" },
@@ -1974,6 +2118,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("282", "Noble Dollar", "USDN", "rwa-backed", "centralized", {
+    llamaId: "282",
+    detailProvider: "defillama",
     geckoId: "noble-dollar-usdn",
     collateral: "Short-term U.S. Treasury Bills held in bankruptcy-remote SPVs via M0 Protocol; over 100% collateral coverage maintained by M0 Minters (including Superstate and MXON); collateral verified daily on-chain",
     pegMechanism: "Rebasing yield-bearing stablecoin; USDN is collateralized by M0's $M token on Ethereum via M0's Portal bridge (Wormhole NTT); the Noble chain module tracks each holder's principal against the latest rebasing multiplier from M0 on Ethereum, accruing T-bill yield directly to USDN balances; users mint/redeem via USDC through the Noble Express app",
@@ -1994,6 +2140,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 81-90 ───────────────────────────────────────────────────────
   usd("10", "Magic Internet Money", "MIM", "crypto-backed", "centralized-dependent", {
+    llamaId: "10",
+    detailProvider: "defillama",
     geckoId: "magic-internet-money",
     deploymentModel: "third-party-bridge",
     collateral: "Interest-bearing tokens (yvWETH, yvUSDC, yvDAI, yvUSDT, xSUSHI, stETH, WBTC, WETH) deposited as collateral into Abracadabra cauldrons (isolated lending markets)",
@@ -2027,6 +2175,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("307", "USD CoinVertible", "USDCV", "rwa-backed", "centralized", {
+    llamaId: "307",
+    detailProvider: "defillama",
     geckoId: "usd-coinvertible",
     deploymentModel: "native-multichain",
     collateral: "U.S. dollar cash deposits and high-quality liquid assets held 1:1 in segregated accounts at Bank of New York Mellon (BNY), managed by independent fiduciaries and bankruptcy-remote from SG-FORGE; daily public disclosure of reserve composition",
@@ -2047,6 +2197,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("231", "Honey", "HONEY", "crypto-backed", "centralized-dependent", {
+    llamaId: "231",
+    detailProvider: "defillama",
     geckoId: "honey-3",
     collateralQuality: "alt-lst-bridged-or-mixed",
     collateral: "1:1 basket of USDC, USDT0, pyUSD, and USDe on Berachain",
@@ -2069,6 +2221,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("226", "Frankencoin", "ZCHF", "crypto-backed", "decentralized", "CHF", {
+    llamaId: "226",
+    detailProvider: "defillama",
     geckoId: "frankencoin",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Frankencoin Savings", yieldType: "governance-set" },
@@ -2095,6 +2249,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("172", "USDB Blast", "USDB", "crypto-backed", "centralized-dependent", {
+    llamaId: "172",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Blast native yield", yieldType: "governance-set" },
     geckoId: "usdb",
@@ -2117,6 +2273,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("225", "Zoth ZeUSD", "ZeUSD", "rwa-backed", "centralized", {
+    llamaId: "225",
+    detailProvider: "defillama",
     rwa: true,
     geckoId: "zeusd",
     collateral: "U.S. Treasury bills, ETFs, money market funds, and reverse repos (off-chain), and tokenized on-chain RWAs (e.g., Hashnote USYC, Matrixdock STBT, OpenEden TBILL); held in smart contract escrow vaults or traditional/omnibus escrow accounts",
@@ -2140,6 +2298,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("101", "Monerium EUR emoney", "EURE", "rwa-backed", "centralized", {
+    llamaId: "101",
+    detailProvider: "defillama",
     geckoId: "monerium-eur-money-2",
     deploymentModel: "native-multichain",
     collateral: "Euro deposits held in segregated accounts with credit institutions and high-quality liquid assets (HQLA) denominated in EUR, separated from Monerium's own funds; over 100% backing maintained as required under MiCA",
@@ -2166,6 +2326,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("230", "Noon USN", "USN", "crypto-backed", "centralized-dependent", {
+    llamaId: "230",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Noon savings (sUSN)", yieldType: "governance-set" },
     geckoId: "noon-usn",
@@ -2192,6 +2354,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("185", "Gyroscope GYD", "GYD", "crypto-backed", "centralized-dependent", {
+    llamaId: "185",
+    detailProvider: "defillama",
     geckoId: "gyroscope-gyd",
     deploymentModel: "canonical-bridge",
     collateral: "Diversified reserve of sDAI, USDC, LUSD, and crvUSD in yield-generating vaults",
@@ -2214,6 +2378,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("329", "Nectar", "NECT", "crypto-backed", "centralized-dependent", {
+    llamaId: "329",
+    detailProvider: "defillama",
     geckoId: "nectar",
     dependencies: [{ id: "1", weight: 0.05 }, { id: "2", weight: 0.05 }],
     collateral: "Berachain-native assets: WBERA, iBGT, pumpBTC, solvBTC, uniBTC, beraETH, Stakestone ETH, WETH, ylstETH, rsETH, and Kodiak Island LP pairs (WBTC-HONEY, WETH-HONEY, WETH-WBTC)",
@@ -2240,6 +2406,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Rank 91-100 ──────────────────────────────────────────────────────
   usd("106", "Electronic USD", "EUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "106",
+    detailProvider: "defillama",
     geckoId: "electronic-usd",
     deploymentModel: "native-multichain",
     collateral: "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
@@ -2263,6 +2431,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("154", "Bucket Protocol BUCK", "BUCK", "crypto-backed", "centralized-dependent", {
+    llamaId: "154",
+    detailProvider: "defillama",
     geckoId: "bucket-protocol-buck-stablecoin",
     collateral: "SUI, BTC, ETH, and LSTs via CDPs; USDC/USDT via Peg Stability Module",
     pegMechanism: "Overcollateralized CDPs with per-asset minimum collateral ratios (e.g. 110% for SUI); hard peg via direct BUCK redemption for collateral with dynamic redemption fee; soft peg via PSM enabling 1:1 swaps with USDC/USDT; liquidations via Tank module",
@@ -2284,6 +2454,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("55", "EURA", "EURA", "crypto-backed", "centralized-dependent", {
+    llamaId: "55",
+    detailProvider: "defillama",
     geckoId: "ageur",
     dependencies: [{ id: "2", weight: 0.30 }],
     deploymentModel: "third-party-bridge",
@@ -2315,6 +2487,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("303", "Mezo USD", "meUSD", "crypto-backed", "decentralized", {
+    llamaId: "303",
+    detailProvider: "defillama",
     geckoId: "mezo-usd",
     tags: ["Liquity v1 fork"],
     collateral: "Bitcoin only; minimum 110% collateral ratio",
@@ -2335,6 +2509,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("305", "XSY UTY", "UTY", "crypto-backed", "centralized-dependent", {
+    llamaId: "305",
+    detailProvider: "defillama",
     geckoId: "unity-2",
     collateral: "USDC deposits hedged via delta-neutral pairing of long AVAX spot positions with short perpetual futures; yield generated from perpetual contract funding rates; custody via Ceffu & Copper Clearloop",
     pegMechanism: "Users deposit USDC to mint UTY at 1:1; XSY maintains peg by delta-neutral hedging with long AVAX spot and short perpetual futures positions; users redeem UTY back to USDC after a 7-day unbonding period",
@@ -2356,6 +2532,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("51", "Stasis Euro", "EURS", "rwa-backed", "centralized", {
+    llamaId: "51",
+    detailProvider: "defillama",
     geckoId: "stasis-eurs",
     deploymentModel: "native-multichain",
     collateral: "100% liquid euro balances held at licensed European financial institutions (EXT LTD, XNT LTD, UAB NexPay), including Central Bank accounts",
@@ -2376,6 +2554,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // USD+ (id 46) removed — protocol abandoned 2025 (see cemetery)
   // FUSD removed — Fantom USD de-pegged 2022, zombie stablecoin (see cemetery)
   usd("326", "Metronome Synth USD", "MSUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "326",
+    detailProvider: "defillama",
     geckoId: "metronome-synth-usd",
     deploymentModel: "third-party-bridge",
     collateral: "USDC, DAI, ETH, WBTC, sfrxETH, and Vesper Finance yield-bearing tokens (vaUSDC, vaETH, vaSTETH, vaRETH, vaCBETH); FRAX and vaFRAX accepted but currently inactive; collateral factors range 75–85%",
@@ -2402,6 +2582,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // ── Additional tracked ─────────────────────────────────────────────
   usd("346", "Neutrl USD", "NUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "346",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Neutrl savings (sNUSD)", yieldType: "lending-vault" },
     geckoId: "nusd-2",
@@ -2425,6 +2607,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("344", "Yuzu USD", "YZUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "344",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Yuzu savings (syzUSD)", yieldType: "lending-vault" },
     geckoId: "yuzu-usd",
@@ -2450,6 +2634,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("335", "JupUSD", "JUPUSD", "rwa-backed", "centralized-dependent", {
+    llamaId: "335",
+    detailProvider: "defillama",
     rwa: true,
     geckoId: "jupusd",
     cmcSlug: "jupusd",
@@ -2470,6 +2656,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("342", "MegaUSD", "USDM", "rwa-backed", "centralized-dependent", {
+    llamaId: "342",
+    detailProvider: "defillama",
     rwa: true, geckoId: "megausd",
     collateral: "~90% USDtb (BlackRock BUIDL tokenized Treasuries via Securitize) with liquid stablecoins for redemptions",
     pegMechanism: "Issued on Ethena's USDtb rails; reserve yield funds MegaETH sequencer costs",
@@ -2488,6 +2676,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("343", "Tether USA-T", "USAT", "rwa-backed", "centralized", {
+    llamaId: "343",
+    detailProvider: "defillama",
     geckoId: "usa",
     collateral: "U.S. Treasury bills and cash deposits held by Cantor Fitzgerald as reserve custodian; issued 1:1 by Anchorage Digital Bank, N.A. under GENIUS Act federal regulation",
     pegMechanism: "Direct 1:1 redemption through Tether/Anchorage Digital Bank",
@@ -2505,6 +2695,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("24", "Celo Dollar", "cUSD", "algorithmic", "centralized-dependent", {
+    llamaId: "24",
+    detailProvider: "defillama",
     geckoId: "celo-dollar",
     deploymentModel: "third-party-bridge",
     collateral: "Mento reserve holding sUSDS (~57%), EURC (~23%), CELO (~11%), and smaller positions in USDGLO, stETH, USDT, USDC, and ETH; overcollateralized at ~1.36×",
@@ -2534,6 +2726,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("20", "Alchemix USD", "ALUSD", "crypto-backed", "decentralized", {
+    llamaId: "20",
+    detailProvider: "defillama",
     geckoId: "alchemix-usd",
     deploymentModel: "third-party-bridge",
     collateral: "DAI, USDC, and USDT deposited into yield strategies (Yearn, Aave) via Alchemix CDPs; yield automatically repays debt",
@@ -2559,6 +2753,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("251", "Felix feUSD", "FEUSD", "crypto-backed", "decentralized", {
+    llamaId: "251",
+    detailProvider: "defillama",
     geckoId: "felix-feusd",
     tags: ["Liquity v2 fork"],
     collateral: "HYPE, kHYPE, wstHYPE, UBTC (feUBTC), ETH, and SOL via overcollateralized CDPs on Hyperliquid (Liquity V2 fork)",
@@ -2581,6 +2777,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("348", "Fidelity Digital Dollar", "FIDD", "rwa-backed", "centralized", {
+    llamaId: "348",
+    detailProvider: "defillama",
     geckoId: "fidelity-digital-dollar",
     collateral: "Cash, U.S. Treasury securities, and cash equivalents held at The Bank of New York Mellon",
     pegMechanism: "Direct 1:1 redemption through Fidelity Digital Assets platforms",
@@ -2600,6 +2798,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("347", "USDGO", "USDGO", "rwa-backed", "centralized", {
+    llamaId: "347",
+    detailProvider: "defillama",
     geckoId: "usdgo",
     collateral: "U.S. Treasuries and high-quality liquid assets held by Anchorage Digital Bank",
     pegMechanism: "1:1 USD redemption through Anchorage Digital Bank under U.S. federal oversight",
@@ -2617,6 +2817,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("297", "Main Street USD", "MSUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "297",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Main Street savings (msY)", yieldType: "lending-vault" },
     geckoId: "main-street-usd",
@@ -2637,6 +2839,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("215", "Moneta", "USDM", "rwa-backed", "centralized", {
+    llamaId: "215",
+    detailProvider: "defillama",
     geckoId: "usdm-2",
     collateral: "USD bank deposits and money market funds managed by Fidelity and Western Asset Management (Moneta/USA issuance) and Sparebanken Norge / Amundi USD MM fund (NBX/EEA issuance), held in segregated reserve accounts",
     pegMechanism: "Direct 1:1 redemption through Moneta (USA) or NBX (EEA); KYC required; Charli3 oracle verifies reserve backing on-chain before each mint on Cardano",
@@ -2656,6 +2860,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("312", "Hydrated Dollar", "HOLLAR", "crypto-backed", "centralized-dependent", {
+    llamaId: "312",
+    detailProvider: "defillama",
     geckoId: "hydrated-dollar",
     collateral: "Overcollateralized by DOT, ETH, vDOT, WBTC, tBTC, USDT, USDC, and giga-token variants (GIGADOT, GIGAETH) on the Hydration appchain; built on Aave v3-forked code",
     pegMechanism: "Overcollateralized CDP with automated partial liquidations per block; peg stabilized by the HOLLAR Stability Module (HSM), which enables direct stablecoin swaps near $1 and deploys received stablecoins into yield strategies",
@@ -2680,6 +2886,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("245", "Anzens USDA", "USDA", "rwa-backed", "centralized", {
+    llamaId: "245",
+    detailProvider: "defillama",
     geckoId: "anzens-usda",
     collateral: "USD and dollar-equivalent reserves including U.S. Treasuries, held in segregated accounts custodied by BitGo Trust (Qualified Custodian)",
     pegMechanism: "Direct 1:1 USD redemption through Anzens via KYC-verified bank transfers; minting and burning available to retail and institutional users in eligible U.S. states",
@@ -2694,6 +2902,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("75", "Youves uUSD", "UUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "75",
+    detailProvider: "defillama",
     geckoId: "youves-uusd",
     collateral: "Overcollateralized by XTZ, tzBTC, USDt, or SIRS (tez/tzBTC LP); target ratios vary by collateral (200% for XTZ, 115% for stablecoins); 300% applied only to legacy v1/v2 vaults",
     pegMechanism: "Overcollateralized CDP on Tezos with variable collateral ratios; liquidations triggered at emergency ratio with 12.5% reward; savings pool provides additional peg stability",
@@ -2715,6 +2925,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("327", "Mu Digital AZND", "AZND", "rwa-backed", "centralized", {
+    llamaId: "327",
+    detailProvider: "defillama",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Mu Digital AUD yield fund", yieldType: "nav-appreciation" },
     geckoId: "mu-digital-aznd",
@@ -2739,6 +2951,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("266", "Plume USD", "pUSD", "rwa-backed", "centralized", {
+    llamaId: "266",
+    detailProvider: "defillama",
     geckoId: "plume-usd",
     deploymentModel: "native-multichain",
     collateral: "1:1 backed by USDC and USDT deposited into a Nucleus BoringVault; USD1 and AUSD also approved as collateral",
@@ -2758,6 +2972,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("234", "Worldwide USD", "WUSD", "rwa-backed", "centralized", {
+    llamaId: "234",
+    detailProvider: "defillama",
     geckoId: "worldwide-usd",
     deploymentModel: "native-multichain",
     collateral: "Cash, cash equivalents, and short-term U.S. Treasury bills held in segregated accounts; Basel III-inspired 6% liquidity buffer maintained on non-cash reserves",
@@ -2780,6 +2996,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("324", "Brale SBC", "SBC", "rwa-backed", "centralized", {
+    llamaId: "324",
+    detailProvider: "defillama",
     deploymentModel: "third-party-bridge",
     collateral: "Cash, cash equivalents, and short-duration U.S. Treasuries held in segregated accounts at regulated financial institutions",
     pegMechanism: "Direct 1:1 redemption through Brale (registered MSB and licensed U.S. money transmitter)",
@@ -2808,6 +3026,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("23", "Origin Dollar", "OUSD", "crypto-backed", "centralized-dependent", {
+    llamaId: "23",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "Origin lending + DeFi strategies", yieldType: "rebase" },
     geckoId: "origin-dollar",
@@ -2830,6 +3050,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("183", "Bitcoin USD", "BtcUSD", "crypto-backed", "decentralized", {
+    llamaId: "183",
+    detailProvider: "defillama",
     geckoId: "bitcoin-usd-btcfi",
     tags: ["Liquity v1 fork"],
     collateral: "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
@@ -2850,6 +3072,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("331", "PikuDAO USP", "USP", "crypto-backed", "centralized-dependent", {
+    llamaId: "331",
+    detailProvider: "defillama",
     yieldBearing: true, navToken: true,
     yieldConfig: { yieldSource: "PikuDAO lending vault", yieldType: "lending-vault" },
     geckoId: "usp-yield-optimized-stablecoin",
@@ -2872,6 +3096,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("240", "StablR USD", "USDR", "rwa-backed", "centralized", {
+    llamaId: "240",
+    detailProvider: "defillama",
     geckoId: "stablr-usd",
     collateral: "Cash and short-term government bonds held with regulated European financial institutions",
     pegMechanism: "Direct 1:1 redemption through StablR (MFSA-supervised EMI)",
@@ -2889,6 +3115,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("304", "USDU Finance", "USDU", "crypto-backed", "centralized-dependent", {
+    llamaId: "304",
+    detailProvider: "defillama",
     collateral: "Modular adapter system: Curve, Morpho, and TermMax vault assets as on-chain backing",
     pegMechanism: "Protocol-minted via DAO-approved adapters; convertible to USDC via Curve pools",
     links: [
@@ -2912,6 +3140,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Tokenized treasury / RWA fund tokens ──────────────────────────
   usd("cg-ustb", "Superstate USTB", "USTB", "rwa-backed", "centralized", {
+    detailProvider: "coingecko",
     geckoId: "superstate-short-duration-us-government-securities-fund-ustb",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Superstate T-bill fund", yieldType: "nav-appreciation" },
@@ -2937,6 +3166,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("cg-ousg", "Ondo OUSG", "OUSG", "rwa-backed", "centralized", {
+    detailProvider: "coingecko",
     geckoId: "ousg",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Ondo Finance T-bill fund", yieldType: "nav-appreciation" },
@@ -2967,6 +3197,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("cg-mtbill", "Midas mTBILL", "mTBILL", "rwa-backed", "centralized", {
+    detailProvider: "coingecko",
     geckoId: "midas-mtbill",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Midas T-bill fund", yieldType: "nav-appreciation" },
@@ -2996,6 +3227,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("cg-dinari-usd", "Dinari USD+", "USD+", "rwa-backed", "centralized", {
+    detailProvider: "coingecko",
     geckoId: "dinari-usd",
     yieldBearing: true, rwa: true,
     yieldConfig: { yieldSource: "Short-term U.S. Treasury bills", yieldType: "rebase" },
@@ -3022,6 +3254,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
 
   usd("cg-wrapped-savings-rusd", "Wrapped Savings rUSD", "wsrUSD", "rwa-backed", "centralized-dependent", {
+    detailProvider: "coingecko",
     geckoId: "wrapped-savings-rusd",
     yieldBearing: true, rwa: true, navToken: true,
     yieldConfig: { yieldSource: "Reservoir savings vault (srUSD)", yieldType: "nav-appreciation" },
@@ -3058,6 +3291,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional non-USD pegs ────────────────────────────────────────
   other("289", "StraitsX XSGD", "XSGD", "rwa-backed", "centralized", "SGD", {
+    llamaId: "289",
+    detailProvider: "defillama",
     geckoId: "xsgd",
     collateral: "Singapore dollar cash reserves held at Tier-1 banking institutions DBS and Standard Chartered, fully backed 1:1",
     pegMechanism: "Direct 1:1 redemption for SGD through StraitsX (MAS-licensed Major Payment Institution); independent attestation reports issued twice monthly",
@@ -3076,6 +3311,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("122", "GYEN", "GYEN", "rwa-backed", "centralized", "JPY", {
+    llamaId: "122",
+    detailProvider: "defillama",
     geckoId: "gyen",
     collateral: "Japanese yen reserves held in FDIC-insured financial institutions, government money-market funds, or U.S. Treasury bills (≤3 months to maturity) per NYDFS guidelines",
     pegMechanism: "Direct 1:1 redemption for JPY through GMO Trust (NYDFS-chartered trust company)",
@@ -3092,6 +3329,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("165", "AUDD", "AUDD", "rwa-backed", "centralized", "AUD", {
+    llamaId: "165",
+    detailProvider: "defillama",
     geckoId: "novatti-australian-digital-dollar",
     collateral: "Australian dollar cash and cash equivalents, including Treasury bills and notes, held in segregated accounts at Australian Authorised Deposit-taking Institutions by AUDC Pty Ltd",
     pegMechanism: "Direct 1:1 redemption for AUD through AUDC Pty Ltd (AFSL No. 700123, Novatti subsidiary), with monthly independent reserve attestations by William Buck",
@@ -3110,6 +3349,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("cg-jpyc", "JPY Coin", "JPYC", "rwa-backed", "centralized", "JPY", {
+    detailProvider: "coingecko",
     geckoId: "jpycoin",
     collateral: "Japanese yen deposits and Japanese government bonds (100% backed)",
     pegMechanism: "Direct 1:1 redemption for JPY through JPYC Inc. via the JPYC EX platform; issuance and redemption via bank transfer after KYC; JPYC Inc. holds a Type II Funds Transfer Service Provider license under Japan's Payment Services Act",
@@ -3129,6 +3369,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
   // commodityOunces: troy ounces per token (used for peg deviation normalization)
   other("gold-xaut", "Tether Gold", "XAUT", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "tether-gold", protocolSlug: "tether-gold",
     collateral: "LBMA Good Delivery gold bars held in Swiss vaults by an undisclosed Swiss custodian; each token represents one fine troy ounce",
     pegMechanism: "Direct 1:1 redemption for physical gold through TG Commodities, S.A. de C.V.; minimum 430 XAUt for a full bar; physical delivery to Switzerland only. Supply figures include XAUt0 (omnichain variant via LayerZero lock-and-mint) deployed on TON, Solana, Arbitrum, and other chains",
@@ -3148,6 +3389,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-paxg", "PAX Gold", "PAXG", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "pax-gold", protocolSlug: "paxos-gold",
     collateral: "LBMA Good Delivery physical gold bars allocated in Brink's London vaults; each token represents one fine troy ounce; insured against theft and loss; bankruptcy-remote custody under Paxos Trust Company",
     pegMechanism: "Direct 1:1 redemption through Paxos Trust Company for physical gold bars or cash equivalent; monthly independent attestation by KPMG LLP under AICPA standards confirms full backing",
@@ -3167,6 +3409,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-kau", "Kinesis Gold", "KAU", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "kinesis-gold",
     collateral: "LBMA-approved physical gold bullion (1 KAU = 1 gram, 999.9 fineness), held in fully allocated, insured vaults globally via ABX (Allocated Bullion Exchange)",
     pegMechanism: "Direct redemption for physical gold through Kinesis; yield via transaction fee sharing",
@@ -3181,6 +3424,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-xaum", "Matrixdock Gold", "XAUm", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "matrixdock-gold",
     collateral: "LBMA-certified 99.99% pure gold bars stored in Brink's and Malca-Amit vaults in Singapore and Hong Kong",
     pegMechanism: "Direct redemption for physical gold through Matrixdock; minimum 32.148 XAUm (1 kg bar) for physical delivery; available to KYC-verified accredited investors in Singapore and Hong Kong",
@@ -3201,6 +3445,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   }),
   // gold-vro (VeraOne VRO) removed — too small, unreliable supply data
   other("gold-cgo", "Comtech Gold", "CGO", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1 / 31.1035, geckoId: "comtech-gold",
     collateral: "Physical gold (999.9 fineness, 24-carat) stored in insured, segregated vaults with Transguard (Emirates Group) in the UAE; each bar registered on DMCC Tradeflow with unique ID and refiner certificates; 1 CGO = 1 gram of gold",
     pegMechanism: "Direct redemption for physical gold coins via the ComTech Gold app; minimum physical delivery is 10 grams (in 1-gram multiples); gold movements endorsed and approved by DMCC",
@@ -3215,6 +3460,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("gold-dgld", "DGLD Tokenized Gold", "DGLD", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "gold-token-sa-dgld-tokenized-gold",
     collateral: "LBMA Good Delivery PAMP® gold bars allocated in insured Swiss vaults operated by MKS PAMP SA (1 DGLD = 1 troy ounce)",
     pegMechanism: "Direct 1:1 redemption for physical PAMP® gold through Gold Token SA; minimum 1 gram, no custody or transfer fees",
@@ -3235,6 +3481,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Silver-Pegged (data via DefiLlama coins API) ──────────────────────
   other("silver-kag", "Kinesis Silver", "KAG", "rwa-backed", "centralized", "SILVER", {
+    detailProvider: "commodity",
     rwa: true, commodityOunces: 1, geckoId: "kinesis-silver", // 1 troy ounce per token
     collateral: "Investment-grade physical silver bullion (1 KAG = 1 troy ounce)",
     pegMechanism: "Direct redemption for physical silver through Kinesis; yield via transaction fee sharing",
@@ -3256,6 +3503,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // ── Additional EUR-pegged ────────────────────────────────────────────
   // EURT removed — discontinued by Tether
   eur("52", "Celo Euro", "CEUR", "algorithmic", "centralized-dependent", {
+    llamaId: "52",
+    detailProvider: "defillama",
     geckoId: "celo-euro",
     collateral: "Mento Reserve holding sUSDS, EURC, CELO, stETH, USDT, USDC, and ETH; overcollateralized at 136%+ with 100% stable-asset backing mandate",
     pegMechanism: "Virtual AMM (BiPoolManager) pools on Celo enable arbitrageurs to mint/burn EURm against reserve assets at oracle-enforced EUR rates; trading limits enforced by on-chain circuit breaker",
@@ -3286,6 +3535,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
   // IBEUR removed — liquidity drain Dec 2023 (see cemetery)
   // EUROe (id 98) removed — acquired by Paxos, wound down May 2025 (see cemetery)
   eur("158", "VNX EURO", "VEUR", "rwa-backed", "centralized", {
+    llamaId: "158",
+    detailProvider: "defillama",
     geckoId: "vnx-euro",
     deploymentModel: "native-multichain",
     collateral: "Fiat reserves (euro-denominated cash and cash equivalents) held in bank/custody accounts of VNX Commodities AG",
@@ -3314,6 +3565,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("239", "StablR Euro", "EURR", "rwa-backed", "centralized", {
+    llamaId: "239",
+    detailProvider: "defillama",
     geckoId: "stablr-euro",
     collateral: "Cash and cash equivalents held in segregated accounts at European financial institutions",
     pegMechanism: "Direct 1:1 redemption through StablR",
@@ -3331,6 +3584,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("247", "Schuman EUROP", "EUROP", "rwa-backed", "centralized", {
+    llamaId: "247",
+    detailProvider: "defillama",
     geckoId: "schuman-europ",
     deploymentModel: "native-multichain",
     collateral: "Euro cash and cash equivalents held at EU banks including Société Générale, with an additional 2% reserve fund",
@@ -3355,6 +3610,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("cg-eurq", "Quantoz EURQ", "EURQ", "rwa-backed", "centralized", {
+    detailProvider: "coingecko",
     geckoId: "quantoz-eurq",
     collateral: "Euro-denominated reserves in bank accounts and liquid euro bonds (102% reserve ratio)",
     pegMechanism: "Direct 1:1 redemption through Quantoz Payments",
@@ -3373,6 +3629,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("319", "AllUnity EUR", "EURAU", "rwa-backed", "centralized", {
+    llamaId: "319",
+    detailProvider: "defillama",
     geckoId: "allunity-eur",
     deploymentModel: "third-party-bridge",
     collateral: "Euro-denominated reserves held at CRR credit institutions within the EU, under a multi-bank full reserve model; not used for lending or investment",
@@ -3396,6 +3654,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   eur("cg-deuro", "Decentralized Euro", "DEURO", "crypto-backed", "decentralized", {
+    detailProvider: "coingecko",
     geckoId: "decentralized-euro",
     deploymentModel: "canonical-bridge",
     collateral: "BTC, ETH, and other crypto assets in oracle-free overcollateralized positions",
@@ -3425,6 +3684,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional CHF-pegged ────────────────────────────────────────────
   other("157", "VNX Swiss Franc", "VCHF", "rwa-backed", "centralized", "CHF", {
+    llamaId: "157",
+    detailProvider: "defillama",
     geckoId: "vnx-swiss-franc",
     collateral: "CHF held 1:1 in bank and custody accounts of VNX Commodities AG in Switzerland and Liechtenstein, independently audited by Areva General Auditing and Trust Company Limited",
     pegMechanism: "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent CHF value",
@@ -3445,6 +3706,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── GBP-pegged ───────────────────────────────────────────────────────
   other("292", "VNX British Pound", "VGBP", "rwa-backed", "centralized", "GBP", {
+    llamaId: "292",
+    detailProvider: "defillama",
     geckoId: "vnx-british-pound",
     collateral: "GBP deposits held in bank accounts in Switzerland and Liechtenstein, confirmed 1:1 by Areva General Auditing and Trust Company Limited (December 2024)",
     pegMechanism: "Direct 1:1 redemption through VNX Commodities AG; tokens minted on demand for verified customers depositing equivalent GBP value",
@@ -3460,6 +3723,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("317", "Tokenised GBP", "tGBP", "rwa-backed", "centralized", "GBP", {
+    llamaId: "317",
+    detailProvider: "defillama",
     geckoId: "tokenised-gbp",
     collateral: "Cash and short-term UK government bonds (zero-coupon gilts) held in a segregated account at a UK-regulated financial institution, custodied by Enumis Limited",
     pegMechanism: "Direct 1:1 redemption through BCP Technologies Ltd; clients deposit GBP off-chain and receive minted tGBP on-chain; redemption burns tokens and triggers fiat withdrawal",
@@ -3480,6 +3745,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── Additional non-USD/non-EUR pegs ──────────────────────────────────
   other("cg-zarp", "ZARP Stablecoin", "ZARP", "rwa-backed", "centralized", "ZAR", {
+    detailProvider: "coingecko",
     geckoId: "zarp-stablecoin",
     collateral: "South African rand cash reserves held 1:1 in a treasury managed by Old Mutual Wealth, independently audited by Kempen Audit",
     pegMechanism: "Mint/burn 1:1 with ZAR through ZARP Stablecoin (Pty) Ltd issuing partners; reserves may not be used for any purpose other than redemption",
@@ -3498,6 +3764,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("186", "International Stable Currency", "ISC", "rwa-backed", "centralized-dependent", "VAR", {
+    llamaId: "186",
+    detailProvider: "defillama",
     geckoId: "international-stable-currency",
     dependencies: [{ id: "2", weight: 0.20 }],
     navToken: true,
@@ -3516,6 +3784,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
 
   // ── CAD / CNY / PHP / MXN / UAH / ARS pegs ───────────────────────────
   other("145", "CAD Coin", "CADC", "rwa-backed", "centralized", "CAD", {
+    llamaId: "145",
+    detailProvider: "defillama",
     geckoId: "cad-coin",
     collateral: "Canadian dollars and cash equivalents (liquid securities with original maturity ≤ 90 days) held 1:1 in a segregated account at a Canadian financial institution, in trust for CADC holders",
     pegMechanism: "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
@@ -3534,6 +3804,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   other("299", "PHT Stablecoin", "PHT", "crypto-backed", "centralized-dependent", "PHP", {
+    llamaId: "299",
+    detailProvider: "defillama",
     geckoId: "pht-stablecoin",
     collateral: "apcxUSDT (1:1 USDT-backed custodial token) in overcollateralized CDP vaults; future phases to add USDC, USDT, and other approved stablecoins as collateral types",
     pegMechanism: "Overcollateralized CDP vaults (MakerDAO MCD fork): users deposit apcxUSDT as collateral to mint PHT; undercollateralized vaults liquidated via Dutch auction; Chainlink PHP/USD oracle; LayerZero OFT for cross-chain bridging",
@@ -3554,6 +3826,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("cg-syrupusdc", "Maple syrupUSDC", "syrupUSDC", "rwa-backed", "centralized-dependent", {
+    detailProvider: "coingecko",
     geckoId: "syrupusdc",
     deploymentModel: "third-party-bridge",
     governanceQuality: "wrapper",
@@ -3578,6 +3851,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("cg-syrupusdt", "Maple syrupUSDT", "syrupUSDT", "rwa-backed", "centralized-dependent", {
+    detailProvider: "coingecko",
     geckoId: "syrupusdt",
     governanceQuality: "wrapper",
     yieldBearing: true, navToken: true,
@@ -3599,6 +3873,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("cg-yousd", "Yield Optimizer USD", "yoUSD", "crypto-backed", "centralized-dependent", {
+    detailProvider: "coingecko",
     geckoId: "yield-optimizer-usd",
     yieldBearing: true, navToken: true,
     yieldConfig: { yieldSource: "Yield Optimizer strategies", yieldType: "nav-appreciation" },
@@ -3628,6 +3903,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("353", "GAIB AID", "AID", "rwa-backed", "centralized", {
+    llamaId: "353",
+    detailProvider: "defillama",
     yieldBearing: true,
     yieldConfig: { yieldSource: "GAIB savings (sAID)", yieldType: "lending-vault" },
     geckoId: "gaib-aid",
@@ -3650,6 +3927,8 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     governanceQuality: "single-entity",
   }),
   usd("354", "apxUSD", "apxUSD", "rwa-backed", "centralized", {
+    llamaId: "354",
+    detailProvider: "defillama",
     rwa: true,
     collateral: "Preferred shares issued by Digital Asset Treasuries (DATs) — publicly traded preferred equity from companies holding digital assets (e.g., Strategy STRC); variable-rate instruments designed to trade near par value",
     pegMechanism: "1:1 collateral deposit and redemption through the Apyx protocol; Protocol-Owned Liquidity (POL) provides a stability buffer during market stress",
