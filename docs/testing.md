@@ -11,6 +11,7 @@ npm test              # Run all tests once (CI mode)
 npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
 npm run check:worker-boundary # Enforce worker/src import boundary (no src/lib/* imports)
+npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
 npm test -- --coverage # Run tests with V8 coverage report
 npm run test:critical-contracts # Critical endpoint contract suite
@@ -30,6 +31,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 1. `validate` (runs before any deployment):
    - `npm run lint`
    - `npm run check:worker-boundary`
+   - `npm run check:migrations`
    - `npm test`
    - `npm run coverage:critical`
    - `cd worker && npx tsc --noEmit`
@@ -51,6 +53,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
    - Validates homepage data render (with a single timeout retry) and checks for sustained horizontal overflow at `390x844` on critical routes (multi-sample + one retry)
 
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
+
+`npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
 
 ## Test Setup
 

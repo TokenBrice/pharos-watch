@@ -176,7 +176,7 @@ FrozenAddressWiped(address indexed)
 
 ### blacklist_events table
 
-**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`
+**Migrations:** `0001_initial.sql`, `0028_blacklist_indexes.sql`, `0037_blacklist_methodology_version.sql`, `0049_audit_blacklist_index.sql`
 
 ```sql
 CREATE TABLE blacklist_events (
@@ -199,6 +199,7 @@ CREATE INDEX idx_be_timestamp ON blacklist_events(timestamp DESC);
 CREATE INDEX idx_be_stablecoin ON blacklist_events(stablecoin);
 CREATE INDEX idx_be_chain_name ON blacklist_events(chain_name);
 CREATE INDEX idx_be_event_type ON blacklist_events(event_type);
+CREATE INDEX idx_blacklist_events_chain_ts ON blacklist_events(chain_name, timestamp DESC);
 ```
 
 **Row ID format:** `{chainId}-{txHash}-{logIndex}` -- ensures uniqueness via `INSERT OR IGNORE`.

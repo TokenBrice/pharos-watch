@@ -81,9 +81,9 @@ Most routes use:
 
 ### Home Dashboard (Special)
 
-Home has no large feature `h1` hero title. Instead it uses a top logotype strip:
+Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top logotype strip for the visible masthead:
 
-- `h1`: `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground`
+- Logotype label: `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground`
 - Snapshot shell: `pharos-card-shell` + `pharos-kicker`
 
 ### Stablecoin Detail (Special)
@@ -111,7 +111,7 @@ Digest entries use:
 |---|---|
 | Standard page title | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]` |
 | Digest article title | `text-3xl font-extrabold tracking-tighter` |
-| Home logotype title | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]` |
+| Home logotype label | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]` |
 | Primary section heading | `leading-none font-semibold` |
 | Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight` |
 | Table/section kicker | `text-[11px] font-semibold uppercase tracking-[0.13em] text-muted-foreground` |

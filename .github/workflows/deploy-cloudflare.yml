@@ -19,6 +19,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run check:worker-boundary
+      - run: npm run check:migrations
       - run: npm test
       - run: npm run coverage:critical
         env:

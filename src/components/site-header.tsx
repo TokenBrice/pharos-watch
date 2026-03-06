@@ -72,9 +72,9 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
           priority
         />
         <div className="min-w-0">
-          <h1 className="text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">
+          <p className="text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">
             Pharos
-          </h1>
+          </p>
           <p className="mt-0.5 text-xs tracking-[0.01em] text-muted-foreground/85">
             Stablecoin intelligence: watching every peg.
           </p>
