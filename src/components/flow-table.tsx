@@ -19,6 +19,7 @@ import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { MintBurnCoinFlow } from "@shared/types";
 
@@ -228,7 +229,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
             return (
               <InteractiveTableRow
                 key={coin.stablecoinId}
-                onActivate={() => router.push(`/stablecoin/${coin.stablecoinId}`)}
+                onActivate={() => router.push(buildStablecoinUrl(coin.stablecoinId))}
                 onHover={() => prefetch(coin.stablecoinId)}
               >
                 <TableCell>

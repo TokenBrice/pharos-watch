@@ -10,6 +10,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 export function YieldClient() {
   const { data, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
@@ -18,7 +19,7 @@ export function YieldClient() {
 
   const handleNavigate = useCallback(
     (id: string) => {
-      router.push(`/stablecoin/${id}`);
+      router.push(buildStablecoinUrl(id));
     },
     [router],
   );

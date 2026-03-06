@@ -23,6 +23,7 @@ import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, Report
 import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { DeviationIcon } from "@/components/severity-icon";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
@@ -343,9 +344,9 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   key={coin.id}
                   className="group cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                   style={{ height: ROW_HEIGHT }}
-                  onClick={() => router.push(`/stablecoin/${coin.id}`)}
+                  onClick={() => router.push(buildStablecoinUrl(coin.id))}
                   onMouseEnter={() => prefetch(coin.id)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/stablecoin/${coin.id}`); } }}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(buildStablecoinUrl(coin.id)); } }}
                   tabIndex={0}
                 >
                   {isVisible("rank") && (
@@ -356,7 +357,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {isVisible("name") && (
                     <TableCell>
                       <Link
-                        href={`/stablecoin/${coin.id}`}
+                        href={buildStablecoinUrl(coin.id)}
                         className="pharos-focus-ring flex items-center gap-2 rounded-sm font-medium hover:underline"
                         onClick={(e) => e.stopPropagation()}
                         onMouseEnter={() => prefetch(coin.id)}

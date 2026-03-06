@@ -20,6 +20,7 @@ import type { LiquidityStatsData } from "@/components/liquidity-stats";
 import type { PegCurrency } from "@shared/types";
 import { DEX_GLOBAL_KEY } from "@shared/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { buildStablecoinUrl } from "@/lib/urls";
 
 const PEG_FILTERS: { value: PegCurrency | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -111,7 +112,7 @@ export function LiquidityClient() {
   }, [liquidityMap]);
 
   const handleRowClick = useCallback((id: string) => {
-    router.push(`/stablecoin/${id}`);
+    router.push(buildStablecoinUrl(id));
   }, [router]);
   const handleRetry = useCallback(() => {
     void refetch();

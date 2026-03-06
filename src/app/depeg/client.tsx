@@ -22,6 +22,7 @@ import { DEWSAlertFeed } from "@/components/dews-alert-feed";
 import { PegHeatmap } from "@/components/peg-heatmap";
 import { DepegFeed } from "@/components/depeg-feed";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import type { DepegTrackerRow } from "@/components/depeg-tracker-table";
 
@@ -109,7 +110,7 @@ export function DepegClient() {
   );
 
   const handleRowClick = useCallback((id: string) => {
-    router.push(`/stablecoin/${id}`);
+    router.push(buildStablecoinUrl(id));
   }, [router]);
   const globalError = pegError ?? dewsError ?? eventsError;
   const handleRetry = useCallback(() => {

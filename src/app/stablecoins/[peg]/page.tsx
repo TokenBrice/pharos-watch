@@ -12,6 +12,7 @@ import {
   PEG_LABELS_SHORT,
   pegCoinCount,
 } from "@/lib/peg-landing";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { PegLandingClient } from "./client";
 
 export function generateStaticParams() {
@@ -80,7 +81,7 @@ export default async function PegLandingPage({
                 "@type": "ListItem",
                 position: i + 1,
                 name: `${coin.name} (${coin.symbol})`,
-                url: `https://pharos.watch/stablecoin/${coin.id}/`,
+                url: `https://pharos.watch${buildStablecoinUrl(coin.id)}`,
               })),
             }),
           }}
@@ -100,7 +101,7 @@ export default async function PegLandingPage({
             {coins.map((coin) => (
               <Link
                 key={coin.id}
-                href={`/stablecoin/${coin.id}/`}
+                href={buildStablecoinUrl(coin.id)}
                 className="inline-flex items-center rounded-full border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent transition-colors"
               >
                 {coin.name} ({coin.symbol})

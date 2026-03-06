@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { formatNativePrice, formatPegDeviation } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
@@ -84,7 +85,7 @@ function BiggestDepegs({
           {depegs.map((d) => (
             <Link
               key={d.id}
-              href={`/stablecoin/${d.id}`}
+              href={buildStablecoinUrl(d.id)}
               className={ROW_LINK_CLASS}
             >
               <div className="flex items-center gap-1.5 min-w-0">
@@ -177,7 +178,7 @@ function FastestMovers({
             {growers.map((g) => (
               <Link
                 key={g.id}
-                href={`/stablecoin/${g.id}`}
+                href={buildStablecoinUrl(g.id)}
                 className={`${ROW_LINK_CLASS} gap-1`}
               >
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -205,7 +206,7 @@ function FastestMovers({
             {shrinkers.map((s) => (
               <Link
                 key={s.id}
-                href={`/stablecoin/${s.id}`}
+                href={buildStablecoinUrl(s.id)}
                 className={`${ROW_LINK_CLASS} gap-1`}
               >
                 <div className="flex items-center gap-1.5 min-w-0">

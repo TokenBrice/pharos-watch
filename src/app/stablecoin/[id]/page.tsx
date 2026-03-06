@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import StablecoinDetailClient from "./client";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -35,12 +36,12 @@ export async function generateMetadata({
     title: `${coin.name} (${coin.symbol}): Stablecoin Analytics`,
     description: desc,
     alternates: {
-      canonical: `/stablecoin/${id}/`,
+      canonical: buildStablecoinUrl(id),
     },
     openGraph: {
       title: `${coin.name} (${coin.symbol}): Stablecoin Analytics`,
       description: desc,
-      url: `/stablecoin/${id}/`,
+      url: buildStablecoinUrl(id),
     },
   };
 }
@@ -105,7 +106,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
                 {related.map((r) => (
                   <Link
                     key={r.id}
-                    href={`/stablecoin/${r.id}/`}
+                    href={buildStablecoinUrl(r.id)}
                     className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent transition-colors"
                   >
                     <StablecoinLogo src={typedLogos[r.id]} name={r.name} size={20} />
@@ -115,7 +116,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
               </div>
             </section>
           )}
-          <BreadcrumbJsonLd name={`${coin.name} (${coin.symbol})`} path={`/stablecoin/${id}/`} />
+          <BreadcrumbJsonLd name={`${coin.name} (${coin.symbol})`} path={buildStablecoinUrl(id)} />
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
@@ -124,7 +125,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
                 "@type": "Dataset",
                 name: `${coin.name} Stablecoin Analytics`,
                 description: `Live analytics for ${coin.name} (${coin.symbol}). ${GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoin, ${BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing}, pegged to ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}. Price, market cap, supply trends, chain distribution, peg score, and depeg history.`,
-                url: `https://pharos.watch/stablecoin/${id}/`,
+                url: `https://pharos.watch${buildStablecoinUrl(id)}`,
                 creator: {
                   "@type": "Organization",
                   name: "Pharos",
