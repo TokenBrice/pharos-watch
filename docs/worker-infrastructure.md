@@ -23,7 +23,7 @@ enabled = true
 invocation_logs = true
 ```
 
-- `cpu_ms = 5000`: hard cap per invocation to limit runaway CPU cost.
+- `cpu_ms = 5000`: hard cap on CPU time per invocation (not wall-clock runtime). This is independent from in-app wall-clock cron timeouts in `logCronRun()`.
 - `observability.enabled`: enables Worker traces.
 - `head_sampling_rate = 0.1`: samples 10% of traces.
 - `observability.logs.enabled` + `invocation_logs = true`: enables Workers Logs in dashboard.
@@ -216,7 +216,7 @@ crons = [
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
-**Dependencies:** `snapshot-supply` retry, stability index, and DEWS all wait for `syncStablecoins()` to complete (`stablecoinsSync.then(...)`).
+**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` run only after a successful `sync-stablecoins`.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -236,7 +236,7 @@ crons = [
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | `docs/dex-liquidity.md` |
 | `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/yield-intelligence.md` |
 
-**Connection budget:** Both jobs run concurrently via separate `ctx.waitUntil()` calls and share the Workers 6-connection limit. `sync-dex-liquidity` consumes its DeFiLlama response bodies before starting the Curve batch (releasing 2 connections) so the Curve batch uses only 4, leaving 2 connections for `sync-yield-data`'s concurrent fetches. When adding fetch-heavy work to this slot, audit the combined connection count across all jobs.
+**Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency.
 
 ### Trigger 4: `0 8 * * *` (daily at 08:00 UTC)
 

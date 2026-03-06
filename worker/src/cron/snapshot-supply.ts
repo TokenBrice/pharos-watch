@@ -4,17 +4,33 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import type { CronResult } from "../lib/db";
 
 export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Promise<CronResult> {
+  if (_signal?.aborted) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "aborted" }),
+    };
+  }
+
   const cached = await getCache(db, "stablecoins");
   if (!cached) {
     console.error("[snapshot-supply] No stablecoins cache found");
-    return { itemCount: 0 };
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "cache_missing" }),
+    };
   }
 
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
   const cacheAge = Math.floor(Date.now() / 1000) - cached.updatedAt;
   if (cacheAge > 1200) {
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>1200s), skipping snapshot`);
-    return { itemCount: 0 };
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "cache_stale", cacheAgeSec: cacheAge }),
+    };
   }
   if (cacheAge > 600) {
     console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>600s), proceeding with degraded freshness`);
@@ -25,7 +41,11 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
   };
   if (!data.peggedAssets) {
     console.error("[snapshot-supply] No peggedAssets in cache");
-    return { itemCount: 0 };
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "cache_payload_missing_pegged_assets" }),
+    };
   }
 
   const trackedIds = new Set(PSI_ELIGIBLE_STABLECOINS.map((s) => s.id));
@@ -64,6 +84,14 @@ export async function snapshotSupply(db: D1Database, _signal?: AbortSignal): Pro
 
   if (stmts.length > 0) {
     await batchExecute(db, stmts);
+  }
+
+  if (stmts.length === 0) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "all_coins_zero_supply" }),
+    };
   }
 
   console.log(`[snapshot-supply] Inserted ${stmts.length} rows for date ${new Date(snapshotDate * 1000).toISOString().slice(0, 10)}`);

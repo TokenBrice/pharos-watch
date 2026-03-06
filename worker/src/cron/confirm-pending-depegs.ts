@@ -10,6 +10,7 @@ import { batchExecute } from "../lib/db";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
+import { throwIfAborted } from "../lib/abort";
 import type { PegAssetBase } from "@shared/types";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 
@@ -42,7 +43,9 @@ export async function confirmPendingDepegs(
   db: D1Database,
   assets: PegAssetBase[],
   fxFallbackRates?: Record<string, number>,
+  signal?: AbortSignal,
 ): Promise<void> {
+  throwIfAborted(signal);
   const pending = await db
     .prepare("SELECT * FROM depeg_pending")
     .all<PendingRow>();
@@ -60,6 +63,7 @@ export async function confirmPendingDepegs(
   // Load DEX prices
   let dexPrices = new Map<string, { dex_price_usd: number; updated_at: number }>();
   try {
+    throwIfAborted(signal);
     const dexResult = await db
       .prepare("SELECT stablecoin_id, dex_price_usd, updated_at FROM dex_prices")
       .all<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>();
@@ -72,6 +76,7 @@ export async function confirmPendingDepegs(
   }
 
   // Check for existing open events to avoid duplicates
+  throwIfAborted(signal);
   const openEvents = await db
     .prepare("SELECT stablecoin_id FROM depeg_events WHERE ended_at IS NULL")
     .all<{ stablecoin_id: string }>();
@@ -81,6 +86,7 @@ export async function confirmPendingDepegs(
   const stmts: D1PreparedStatement[] = [];
 
   for (const row of rows) {
+    throwIfAborted(signal);
     // Guard: peg_reference is used as divisor below — skip if zero/negative
     if (!row.peg_reference || row.peg_reference <= 0) {
       stmts.push(db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id));
@@ -136,7 +142,10 @@ export async function confirmPendingDepegs(
       try {
         const cgRes = await fetchWithRetry(
           cgUrl(`/simple/price?ids=${geckoId}&vs_currencies=usd`),
-          { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) },
+          {
+            headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+            signal,
+          },
           1, // single retry
         );
         if (cgRes?.ok) {
@@ -152,6 +161,7 @@ export async function confirmPendingDepegs(
           }
         }
       } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
         console.warn(`[depeg-confirm] CG fetch failed for ${row.symbol}:`, err);
       }
     }
@@ -215,6 +225,7 @@ export async function confirmPendingDepegs(
 
   // Execute all collected mutations atomically
   if (stmts.length > 0) {
+    throwIfAborted(signal);
     await batchExecute(db, stmts);
     console.log(`[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
   }

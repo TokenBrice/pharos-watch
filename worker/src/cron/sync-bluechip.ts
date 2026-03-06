@@ -1,6 +1,6 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
 import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
-import { getCache, setCacheIfNewer } from "../lib/db";
+import { getCache, setCacheIfNewer, type CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { USER_AGENT } from "../lib/constants";
 
@@ -38,7 +38,7 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
   return smidge;
 }
 
-export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promise<void> {
+export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   // Check cache freshness
@@ -47,7 +47,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
     const ageSec = Date.now() / 1000 - cached.updatedAt;
     if (ageSec < STALE_HOURS * 3600) {
       console.log("[bluechip] Cache still fresh, skipping");
-      return;
+      return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
     }
   }
 
@@ -102,9 +102,14 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
 
   if (count === 0) {
     console.warn("[bluechip] No ratings fetched, preserving cache");
-    return;
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "upstream-no-ratings" }),
+    };
   }
 
   await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec);
   console.log(`[bluechip] Cache updated with ${count} ratings`);
+  return { itemCount: count, metadata: JSON.stringify({ ratingsFetched: count }) };
 }

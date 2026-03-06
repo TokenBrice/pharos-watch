@@ -20,7 +20,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
 
 1. Fetch the cached "stablecoins" payload from the D1 cache table
 2. Verify cache freshness:
-   - Cache age > 1200 seconds (20 min): **skip entire snapshot** (return `itemCount: 0`)
+   - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse cached JSON, extract the `peggedAssets` array
 4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 150 entries: 148 tracked + 2 shadow)
@@ -37,7 +37,8 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Build `INSERT OR REPLACE` statement
 7. Data quality check: warn if fewer than 80% of expected coins have valid data
 8. Execute all statements via `batchExecute()` (batch size = 100, D1 limit)
-9. Log item count and date
+9. If zero rows were prepared, return cron `status: "degraded"` with `reason: "all_coins_zero_supply"`
+10. Log item count and date
 
 ---
 
@@ -225,9 +226,10 @@ Fetches individual supply histories for each selected coin. Side-by-side compari
 
 | Condition | Behavior |
 |-----------|----------|
-| `getCache()` returns `null` | Skip snapshot |
-| Cache > 20 min old | Skip snapshot |
-| No `peggedAssets` in payload | Skip snapshot |
+| `getCache()` returns `null` | Return degraded (`reason: "cache_missing"`) |
+| Cache > 20 min old | Return degraded (`reason: "cache_stale"`) |
+| No `peggedAssets` in payload | Return degraded (`reason: "cache_payload_missing_pegged_assets"`) |
+| 0 prepared rows (all tracked coins missing/zero supply) | Return degraded (`reason: "all_coins_zero_supply"`) |
 | < 80% of tracked coins have valid data | Log warning, continue |
 | `batchExecute()` exception | Propagate to `logCronRun` error handler |
 

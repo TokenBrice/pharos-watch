@@ -7,6 +7,8 @@ routes = [
 # ]
 
 [limits]
+# cpu_ms = total CPU milliseconds per invocation (not wall-clock time).
+# logCronRun() timeouts are wall-clock and independent from this CPU budget.
 cpu_ms = 5000
 
 [observability]

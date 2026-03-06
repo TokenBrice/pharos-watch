@@ -24,6 +24,12 @@ import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-t
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
 
+type SyncBlacklistResult = {
+  itemCount: number;
+  metadata: string;
+  status: "ok" | "degraded" | "error";
+};
+
 // Safety margin when advancing sync state to chain head (prevents permanent event loss
 // if block explorer indexing lags behind chain tip). 15 minutes in seconds/ms.
 const INDEXING_SAFETY_SEC = 900;
@@ -607,7 +613,7 @@ export async function syncBlacklist(
   drpcApiKey: string | null,
   externalEtherscanRL?: RateLimitedFetch,
   signal?: AbortSignal,
-): Promise<{ itemCount: number; metadata: string }> {
+): Promise<SyncBlacklistResult> {
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
   const budget = createBudget(900);
@@ -716,7 +722,11 @@ export async function syncBlacklist(
   }
 
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
+  const status: SyncBlacklistResult["status"] = apiErrors > 0
+    ? (apiErrors > CONTRACT_CONFIGS.length / 2 ? "error" : "degraded")
+    : "ok";
   return {
+    status,
     itemCount: totalNewEvents,
     metadata: JSON.stringify({
       contractsSkipped,

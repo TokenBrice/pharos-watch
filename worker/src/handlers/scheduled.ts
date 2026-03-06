@@ -115,27 +115,47 @@ export async function handleScheduledEvent(
 
   switch (cron) {
     case CRON_SCHEDULES.quarterHourly: {
-      const stablecoinsSync = runLeasedCron("sync-stablecoins", (signal) => syncStablecoins(db, env.CMC_API_KEY, signal));
-      ctx.waitUntil(stablecoinsSync);
-      // Retry daily supply snapshots throughout the day so a stale-cache skip at 08:00
-      // cannot permanently leave a missing date.
-      ctx.waitUntil(stablecoinsSync.then(() =>
-        runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal))
-      ));
-      ctx.waitUntil(runLeasedCron("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal)));
-      ctx.waitUntil(runLeasedCron("sync-fx-rates", (signal) => syncFxRates(db, signal)));
-      // PSI depends on stablecoins cache + depeg_events — run after sync completes
-      ctx.waitUntil(stablecoinsSync.then(() =>
-        runLeasedCron("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal))
-      ));
-      // DEWS depends on stablecoins cache + dex data — run after sync
-      ctx.waitUntil(stablecoinsSync.then(() =>
-        runLeasedCron("compute-dews", (signal) => computeAndStoreDEWS(db, signal))
-      ));
-      // Status system self-check: persists hysteresis state and probes critical endpoints.
-      ctx.waitUntil(runLeasedCron("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, env.SELF_URL, signal)));
-      // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
       ctx.waitUntil((async () => {
+        const runQuarterHourlyJob = async (
+          job: string,
+          fn: (signal: AbortSignal) => Promise<CronResult | void>,
+        ): Promise<boolean> => {
+          try {
+            await runLeasedCron(job, fn);
+            return true;
+          } catch (err) {
+            console.error(`[cron] ${job} failed in quarter-hour slot:`, err);
+            return false;
+          }
+        };
+
+        // All jobs in this trigger share one Workers 6-connection fetch pool.
+        // Run sequentially in-slot to avoid cross-job connection spikes.
+        const stablecoinsOk = await runQuarterHourlyJob(
+          "sync-stablecoins",
+          (signal) => syncStablecoins(db, env.CMC_API_KEY, signal),
+        );
+
+        if (stablecoinsOk) {
+          // Retry daily supply snapshots throughout the day so a stale-cache skip at 08:00
+          // cannot permanently leave a missing date.
+          await runQuarterHourlyJob("snapshot-supply", (signal) => snapshotSupply(db, signal));
+        }
+
+        await runQuarterHourlyJob("sync-stablecoin-charts", (signal) => syncStablecoinCharts(db, signal));
+        await runQuarterHourlyJob("sync-fx-rates", (signal) => syncFxRates(db, signal));
+
+        if (stablecoinsOk) {
+          // PSI depends on stablecoins cache + depeg_events — run after sync completes
+          await runQuarterHourlyJob("stability-index", (signal) => computeAndStoreStabilityIndex(db, signal));
+          // DEWS depends on stablecoins cache + dex data — run after sync
+          await runQuarterHourlyJob("compute-dews", (signal) => computeAndStoreDEWS(db, signal));
+        }
+
+        // Status system self-check: persists hysteresis state and probes critical endpoints.
+        await runQuarterHourlyJob("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, env.SELF_URL, signal));
+
+        // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         try {
           const cached = await getCache(db, "stablecoins");
           if (cached) {
@@ -144,7 +164,9 @@ export async function handleScheduledEvent(
               await sendAlert("Data stale", `Stablecoins cache is ${Math.round(age / 60)}min old (expected <20min)`);
             }
           }
-        } catch { /* non-blocking */ }
+        } catch {
+          /* non-blocking */
+        }
       })());
       break;
     }

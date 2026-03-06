@@ -585,8 +585,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   }
 
   // 7. Batch write
-  if (yieldDataStmts.length > 0) await batchExecute(db, yieldDataStmts);
-  if (historyStmts.length > 0) await batchExecute(db, historyStmts);
+  const writeStmts = [...yieldDataStmts, ...historyStmts];
+  if (writeStmts.length > 0) await batchExecute(db, writeStmts);
 
   // 7b. Purge stale alt-source rows: non-best rows not written in this run
   // (e.g., a wrapper pool disappeared from DL). Primary rows are always re-written.

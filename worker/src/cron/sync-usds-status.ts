@@ -1,5 +1,5 @@
 import { ETHERSCAN_V2_BASE } from "../lib/constants";
-import { getCache, setCacheIfNewer } from "../lib/db";
+import { getCache, setCacheIfNewer, type CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 
 const CACHE_KEY = "usds-status";
@@ -76,7 +76,7 @@ export async function syncUsdsStatus(
   db: D1Database,
   etherscanApiKey: string | null,
   signal?: AbortSignal,
-): Promise<{ itemCount: number } | void> {
+): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   // Check if cache is still fresh
@@ -85,14 +85,18 @@ export async function syncUsdsStatus(
     const age = Date.now() / 1000 - cached.updatedAt;
     if (age < STALE_HOURS * 3600) {
       console.log("[usds-status] Cache still fresh, skipping");
-      return;
+      return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
     }
   }
 
   const implAddress = await readImplementationSlot(etherscanApiKey, signal);
   if (!implAddress) {
     console.warn("[usds-status] Failed to read implementation slot");
-    return;
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "implementation-slot-unavailable" }),
+    };
   }
 
   let freezeActive = false;
@@ -101,7 +105,11 @@ export async function syncUsdsStatus(
     const probeResult = await probeFreeze(implAddress, etherscanApiKey, signal);
     if (probeResult === null) {
       console.warn("[usds-status] Probe failed, preserving cached status");
-      return;
+      return {
+        status: "degraded",
+        itemCount: 0,
+        metadata: JSON.stringify({ reason: "freeze-probe-failed", implementationAddress: implAddress }),
+      };
     }
     freezeActive = probeResult;
     console.log(`[usds-status] Implementation changed to ${implAddress}, freeze active: ${freezeActive}`);
@@ -117,5 +125,8 @@ export async function syncUsdsStatus(
 
   await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(status), syncStartSec);
   console.log("[usds-status] Cache updated");
-  return { itemCount: 1 };
+  return {
+    itemCount: 1,
+    metadata: JSON.stringify({ implementationAddress: implAddress, freezeActive }),
+  };
 }

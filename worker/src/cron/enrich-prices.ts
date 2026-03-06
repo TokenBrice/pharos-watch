@@ -2,6 +2,7 @@ import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOU
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
+import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
 
 export interface DefiLlamaCoinPrice {
@@ -154,7 +155,9 @@ export interface DualPriceStats {
 export async function fetchDualPrimaryPrices(
   assets: PeggedAsset[],
   db: D1Database,
+  signal?: AbortSignal,
 ): Promise<{ results: Map<string, DualPriceResult>; stats: DualPriceStats }> {
+  throwIfAborted(signal);
   const results = new Map<string, DualPriceResult>();
   const stats: DualPriceStats = { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] };
 
@@ -187,7 +190,10 @@ export async function fetchDualPrimaryPrices(
         try {
           // DL coins API accepts coingecko:id format, no batch limit
           const coinIds = geckoIds.map((id) => `coingecko:${id}`).join(",");
-          const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+          const res = await fetchWithRetry(
+            `${DEFILLAMA_COINS}/prices/current/${coinIds}`,
+            signal ? { signal } : undefined,
+          );
           if (res?.ok) {
             const data = (await res.json()) as { coins: Record<string, { price: number }> };
             for (const [key, val] of Object.entries(data.coins)) {
@@ -202,6 +208,7 @@ export async function fetchDualPrimaryPrices(
             await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
           }
         } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[dual-primary] DL coins API failed:", err);
           await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
         }
@@ -215,11 +222,15 @@ export async function fetchDualPrimaryPrices(
         try {
           // CG /simple/price supports up to 250 IDs per call
           for (let i = 0; i < geckoIds.length; i += BATCH_SIZE) {
+            throwIfAborted(signal);
             const batch = geckoIds.slice(i, i + BATCH_SIZE);
             const ids = batch.join(",");
             const res = await fetchWithRetry(
               cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`),
-              { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) },
+              {
+                headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+                signal,
+              },
             );
             if (res?.ok) {
               const data = (await res.json()) as Record<string, { usd?: number }>;
@@ -234,6 +245,7 @@ export async function fetchDualPrimaryPrices(
           }
           await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, true);
         } catch (err) {
+          if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
           console.warn("[dual-primary] CG price API failed:", err);
           await recordOutcome(db, CIRCUIT_SOURCE.CG_PRICES, false);
         }
@@ -242,6 +254,7 @@ export async function fetchDualPrimaryPrices(
   }
 
   await Promise.all(fetches);
+  throwIfAborted(signal);
 
   // Cross-validate per asset
   const DIVERGENCE_THRESHOLD_BPS = 50;
@@ -308,7 +321,9 @@ export async function enrichMissingPrices(
   assets: PeggedAsset[],
   cmcApiKey?: string,
   db?: D1Database,
+  signal?: AbortSignal,
 ): Promise<EnrichmentStats> {
+  throwIfAborted(signal);
   const totalMissing = assets.filter(hasMissingPrice).length;
   if (totalMissing === 0) return { totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0 };
 
@@ -340,8 +355,12 @@ export async function enrichMissingPrices(
     }
 
     if (withAddress.length > 0) {
+      throwIfAborted(signal);
       const coinIds = withAddress.map((m) => m.coinId).join(",");
-      const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+      const res = await fetchWithRetry(
+        `${DEFILLAMA_COINS}/prices/current/${coinIds}`,
+        signal ? { signal } : undefined,
+      );
       if (res && res.ok) {
         let data: { coins: Record<string, DefiLlamaCoinPrice> };
         try {
@@ -382,8 +401,12 @@ export async function enrichMissingPrices(
       }
 
       if (altLookups.length > 0) {
+        throwIfAborted(signal);
         const coinIds = altLookups.map((m) => m.coinId).join(",");
-        const res = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${coinIds}`);
+        const res = await fetchWithRetry(
+          `${DEFILLAMA_COINS}/prices/current/${coinIds}`,
+          signal ? { signal } : undefined,
+        );
         if (res && res.ok) {
           let data: { coins: Record<string, DefiLlamaCoinPrice> };
           try {
@@ -425,8 +448,12 @@ export async function enrichMissingPrices(
 
     const afterPass2: { index: number; geckoId: string }[] = [];
     if (geckoPass.length > 0) {
+      throwIfAborted(signal);
       const geckoIds = geckoPass.map((m) => `coingecko:${m.geckoId}`).join(",");
-      const geckoRes = await fetchWithRetry(`${DEFILLAMA_COINS}/prices/current/${geckoIds}`);
+      const geckoRes = await fetchWithRetry(
+        `${DEFILLAMA_COINS}/prices/current/${geckoIds}`,
+        signal ? { signal } : undefined,
+      );
       if (geckoRes && geckoRes.ok) {
         let geckoData: { coins: Record<string, DefiLlamaCoinPrice> };
         try {
@@ -453,10 +480,14 @@ export async function enrichMissingPrices(
 
     // ── Pass 3: CoinGecko direct API ──
     if (afterPass2.length > 0) {
+      throwIfAborted(signal);
       const ids = afterPass2.map((m) => m.geckoId).join(",");
       const cgRes = await fetchWithRetry(
         cgUrl(`/simple/price?ids=${ids}&vs_currencies=usd`),
-        { headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }) }
+        {
+          headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+          signal,
+        },
       );
       if (cgRes && cgRes.ok) {
         let cgData: Record<string, { usd?: number }>;
@@ -502,6 +533,8 @@ export async function enrichMissingPrices(
         if (shouldCall) {
           try {
             const slugs = cmcCandidates.map((m) => m.asset.cmcSlug!).join(",");
+            const cmcTimeout = AbortSignal.timeout(10_000);
+            const cmcSignal = signal ? AbortSignal.any([signal, cmcTimeout]) : cmcTimeout;
             const cmcRes = await fetchWithRetry(
               `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?slug=${slugs}`,
               {
@@ -510,7 +543,7 @@ export async function enrichMissingPrices(
                   "Accept": "application/json",
                   "User-Agent": USER_AGENT,
                 },
-                signal: AbortSignal.timeout(10_000),
+                signal: cmcSignal,
               }
             );
 
@@ -555,6 +588,7 @@ export async function enrichMissingPrices(
               console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
             }
           } catch (err) {
+            if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
             console.warn("[enrich] CMC API call failed:", err);
           }
         }
@@ -574,13 +608,16 @@ export async function enrichMissingPrices(
 
     for (const m of stillMissing.slice(0, DEXSCREENER_MAX_SEARCHES)) {
       try {
+        throwIfAborted(signal);
         // Rate limit: 200ms between DexScreener calls
         if (pass4Count > 0 || stillMissing.indexOf(m) > 0) {
-          await new Promise((r) => setTimeout(r, 200));
+          await sleepWithSignal(200, signal);
         }
+        const dexTimeout = AbortSignal.timeout(10_000);
+        const dexSignal = signal ? AbortSignal.any([signal, dexTimeout]) : dexTimeout;
         const res = await fetchWithRetry(
           `https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(m.asset.symbol)}`,
-          { headers: { "User-Agent": USER_AGENT }, signal: AbortSignal.timeout(10_000) }
+          { headers: { "User-Agent": USER_AGENT }, signal: dexSignal }
         );
         if (!res) {
           console.warn(`[enrich] DexScreener returned no response for ${m.asset.symbol}`);
@@ -616,6 +653,7 @@ export async function enrichMissingPrices(
           pass4Count++;
         }
       } catch (err) {
+        if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
         console.warn(`[enrich] DexScreener failed for ${m.asset.symbol}:`, err);
       }
     }
@@ -637,6 +675,7 @@ export async function enrichMissingPrices(
     }
     return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, passCmc: passCmcCount, pass4: pass4Count, finalMissing };
   } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     console.warn("[sync-stablecoins] Price enrichment failed:", err);
     return { totalMissing, pass1: pass1Count, pass1b: pass1bCount, pass2: pass2Count, pass3: pass3Count, passCmc: passCmcCount, pass4: pass4Count, finalMissing: totalMissing };
   }

@@ -1,4 +1,4 @@
-import { getCache, setCacheIfNewer } from "../lib/db";
+import { getCache, setCacheIfNewer, type CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { DEFILLAMA_BASE } from "../lib/constants";
 
@@ -56,13 +56,17 @@ function downsample(data: RawChartPoint[]): DownsampledPoint[] {
   return result;
 }
 
-export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal): Promise<void> {
+export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const res = await fetchWithRetry(`${DEFILLAMA_BASE}/stablecoincharts/all`, signal ? { signal } : undefined);
 
   if (!res || !res.ok) {
     console.error(`[sync-charts] DefiLlama API error: ${res?.status ?? "no response"}`);
-    return;
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "DL API unavailable", apiStatus: res?.status ?? null }),
+    };
   }
 
   let raw: RawChartPoint[];
@@ -70,22 +74,30 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
     raw = (await res.json()) as RawChartPoint[];
   } catch {
     console.error(`[sync-charts] Failed to parse JSON from DefiLlama charts API: ${res.status}`);
-    return;
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "DL API invalid JSON", apiStatus: res.status }),
+    };
   }
 
   if (!Array.isArray(raw) || raw.length < 100) {
     console.error(`[sync-charts] Unexpected data length (${raw?.length}), skipping cache write`);
-    return;
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason: "DL API payload too small", rawLength: raw?.length ?? 0 }),
+    };
   }
 
   // Fix corrupted totalCirculatingUSD values (e.g. DefiLlama RUB bug Feb 2026)
   // by validating implied FX rates against known bounds and recomputing from
   // totalCirculating * cached FX rate when out of range.
   const fxCache = await getCache(db, "fx-rates");
+  let fixes = 0;
   if (fxCache) {
     try {
       const fxRates = JSON.parse(fxCache.value) as Record<string, number>;
-      let fixes = 0;
       for (const point of raw) {
         const circ = point.totalCirculating;
         const usd = point.totalCirculatingUSD;
@@ -115,4 +127,8 @@ export async function syncStablecoinCharts(db: D1Database, signal?: AbortSignal)
 
   await setCacheIfNewer(db, "stablecoin-charts", JSON.stringify(downsampled), syncStartSec);
   console.log(`[sync-charts] Cached ${downsampled.length} points (from ${raw.length} raw)`);
+  return {
+    itemCount: downsampled.length,
+    metadata: JSON.stringify({ rawPoints: raw.length, downsampledPoints: downsampled.length, fxFixes: fixes }),
+  };
 }

@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { getCache } from "../../lib/db";
+import { throwIfAborted } from "../../lib/abort";
 import type { PeggedAsset } from "../enrich-prices";
 
 const CHAIN_CIRCULATING_KEYS = ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"];
@@ -77,7 +78,9 @@ interface SupplyHistoryRow {
 export async function fillMissingSupplyHistory(
   db: D1Database,
   assets: PeggedAsset[],
+  signal?: AbortSignal,
 ): Promise<number> {
+  throwIfAborted(signal);
   const nowMs = Date.now();
   const utcMidnight = (daysAgo: number): number => {
     const date = new Date(nowMs);
@@ -89,6 +92,7 @@ export async function fillMissingSupplyHistory(
   const date7d = utcMidnight(7);
   const date30d = utcMidnight(30);
 
+  throwIfAborted(signal);
   const historyRows = await db
     .prepare("SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE snapshot_date IN (?, ?, ?)")
     .bind(date1d, date7d, date30d)
@@ -109,6 +113,7 @@ export async function fillMissingSupplyHistory(
 
   let fillCount = 0;
   for (const asset of assets) {
+    throwIfAborted(signal);
     const historical = historyById.get(String(asset.id));
     if (!historical) continue;
 
@@ -177,7 +182,9 @@ export function computePriceStalenessSummary(
 export async function detectPriceStaleness(
   db: D1Database,
   currentAssets: PeggedAsset[],
+  signal?: AbortSignal,
 ): Promise<PriceStalenessSummary | null> {
+  throwIfAborted(signal);
   const previousCache = await getCache(db, "stablecoins");
   if (!previousCache) return null;
 

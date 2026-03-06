@@ -1,6 +1,7 @@
 import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
+import { throwIfAborted } from "../lib/abort";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
@@ -9,7 +10,13 @@ import { sumPegBuckets } from "@shared/lib/supply";
 
 // --- Depeg event detection ---
 
-export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], fxFallbackRates?: Record<string, number>): Promise<void> {
+export async function detectDepegEvents(
+  db: D1Database,
+  assets: PegAssetBase[],
+  fxFallbackRates?: Record<string, number>,
+  signal?: AbortSignal,
+): Promise<void> {
+  throwIfAborted(signal);
   const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
   const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
@@ -25,6 +32,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     updated_at: number;
   }>();
   try {
+    throwIfAborted(signal);
     const dexPriceResult = await db
       .prepare("SELECT * FROM dex_prices")
       .all<{
@@ -45,6 +53,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
   }
 
   // Load all open events in one query
+  throwIfAborted(signal);
   const openResult = await db
     .prepare("SELECT * FROM depeg_events WHERE ended_at IS NULL")
     .all<DepegRow>();
@@ -87,6 +96,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     openEvents.set(coinId, keeper);
   }
   if (mergeStmts.length > 0) {
+    throwIfAborted(signal);
     await batchExecute(db, mergeStmts);
     console.log(`[depeg] Merged duplicate open events, ${mergeStmts.length} DB ops`);
   }
@@ -100,6 +110,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
   const stmts: D1PreparedStatement[] = [];
 
   for (const asset of assets) {
+    throwIfAborted(signal);
     const meta = metaById.get(asset.id);
     if (!meta) continue; // not tracked
     if (meta.flags.navToken) continue; // skip NAV tokens
@@ -234,6 +245,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
 
   // Execute main loop statements before orphan cleanup
   if (stmts.length > 0) {
+    throwIfAborted(signal);
     await batchExecute(db, stmts);
     console.log(`[depeg] Wrote ${stmts.length} depeg event updates`);
   }
@@ -241,6 +253,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
   // Close orphaned open events: events that remain open but were not
   // processed during this run (e.g., coin removed from tracked list,
   // or skipped by detection logic due to missing price/low supply)
+  throwIfAborted(signal);
   const orphanResult = await db
     .prepare("SELECT id, stablecoin_id, started_at FROM depeg_events WHERE ended_at IS NULL")
     .all<{ id: number; stablecoin_id: string; started_at: number }>();
@@ -262,6 +275,7 @@ export async function detectDepegEvents(db: D1Database, assets: PegAssetBase[], 
     console.log(`[depeg] Closing orphan event for ${row.stablecoin_id} (id=${row.id})`);
   }
   if (orphanStmts.length > 0) {
+    throwIfAborted(signal);
     await batchExecute(db, orphanStmts);
     console.log(`[depeg] Closed ${orphanStmts.length} orphaned depeg events`);
   }
