@@ -14,7 +14,7 @@ Replaces all internal stablecoin identifiers from legacy formats (`"1"`, `"cg-us
 ## File inventory
 
 ```
-docs/plans/ticker-issue-migration/
+docs/plans/historical/ticker-issue-migration/
   MIGRATION-PROGRESS.md                           ← CURRENT STATE (read this first after compaction)
   execution-handover.md                           ← THIS FILE (commands + orchestrator protocol)
   2026-03-05-ticker-issuer-migration-design.md   ← Full design (read if you need "why" context)
@@ -44,7 +44,7 @@ worktrees/
 # Create worktree and copy tickets
 /home/ahirice/.local/bin/cmcs worktree create id-migration-foundation
 # Copy tickets into the worktree
-cp docs/plans/ticker-issue-migration/tickets/phase1-foundation/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-*.md \
    worktrees/id-migration-foundation/.cmcs/tickets/
 
 # Run Codex
@@ -92,11 +92,11 @@ cd worker && npx wrangler deploy && cd ..
 /home/ahirice/.local/bin/cmcs worktree create id-migration-router-sync
 
 # Copy tickets
-cp docs/plans/ticker-issue-migration/tickets/phase2-worker-providers/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase2-worker-providers/TICKET-*.md \
    worktrees/id-migration-worker-providers/.cmcs/tickets/
-cp docs/plans/ticker-issue-migration/tickets/phase2-frontend-urls/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase2-frontend-urls/TICKET-*.md \
    worktrees/id-migration-frontend-urls/.cmcs/tickets/
-cp docs/plans/ticker-issue-migration/tickets/phase2-router-sync/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase2-router-sync/TICKET-*.md \
    worktrees/id-migration-router-sync/.cmcs/tickets/
 
 # Run all 3 in parallel
@@ -165,11 +165,11 @@ fi
 /home/ahirice/.local/bin/cmcs worktree create id-migration-frontend-compat
 
 # Copy tickets (exclude the runbook from cmcs — it's for humans)
-cp docs/plans/ticker-issue-migration/tickets/phase3-master-switchover/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase3-master-switchover/TICKET-*.md \
    worktrees/id-migration-master-switchover/.cmcs/tickets/
-cp docs/plans/ticker-issue-migration/tickets/phase3-test-fixtures/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase3-test-fixtures/TICKET-*.md \
    worktrees/id-migration-test-fixtures/.cmcs/tickets/
-cp docs/plans/ticker-issue-migration/tickets/phase3-frontend-compat/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase3-frontend-compat/TICKET-*.md \
    worktrees/id-migration-frontend-compat/.cmcs/tickets/
 
 # Copy mapping table into each Phase 3 worktree (Codex runs from worktree cwd,
@@ -240,7 +240,7 @@ The D1 migration and Phase 3 code deploy are coordinated in a ~5-8 minute mainte
 
 ```bash
 /home/ahirice/.local/bin/cmcs worktree create id-migration-cleanup
-cp docs/plans/ticker-issue-migration/tickets/phase4-cleanup/TICKET-*.md \
+cp docs/plans/historical/ticker-issue-migration/tickets/phase4-cleanup/TICKET-*.md \
    worktrees/id-migration-cleanup/.cmcs/tickets/
 /home/ahirice/.local/bin/cmcs run worktrees/id-migration-cleanup
 ```
@@ -432,8 +432,8 @@ grep 'stablecoinId:' worker/src/lib/mint-burn-contracts.ts | head -5
 ### After context compaction
 
 If you're a fresh session continuing this migration:
-1. Read `docs/plans/ticker-issue-migration/MIGRATION-PROGRESS.md` — it has the current state
-2. Read `docs/plans/ticker-issue-migration/execution-handover.md` — it has all commands
+1. Read `docs/plans/historical/ticker-issue-migration/MIGRATION-PROGRESS.md` — it has the current state
+2. Read `docs/plans/historical/ticker-issue-migration/execution-handover.md` — it has all commands
 3. Pick up from wherever the progress tracker says we are
 
 ## Worktree path convention

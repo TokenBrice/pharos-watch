@@ -29,7 +29,7 @@ Update all active documentation to reflect the canonical `ticker-issuer` ID syst
 | `docs/runbooks/mint-burn-ingestion.md` | Low | Lines 15-19: old numeric IDs for CCIP configs |
 
 **Out of scope:**
-- `docs/plans/ticker-issue-migration/` — historical migration docs, left as-is
+- `docs/plans/historical/ticker-issue-migration/` — historical migration docs, left as-is
 - `docs/research/` — historical audit logs, left as-is
 - `docs/plans/future/` — speculative designs, left as-is
 - Code changes (scripts, source) — separate task

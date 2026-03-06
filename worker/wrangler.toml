@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true }
-# ]
+]
 
 [limits]
 # cpu_ms = total CPU milliseconds per invocation (not wall-clock time).

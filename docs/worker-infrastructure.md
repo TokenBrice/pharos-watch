@@ -59,6 +59,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TWITTER_ACCESS_TOKEN_SECRET` | string | No | Digest → Twitter (access token secret) |
 | `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram |
 | `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
+| `MAINTENANCE_MODE` | `string?` | No | Optional. When set to any truthy value, the worker returns 503 for all non-admin requests. Used as a kill switch. |
 | `MINT_BURN_DISABLED_IDS` | string | No | Mint/burn runtime disable list by stablecoin ID (CSV) |
 | `MINT_BURN_DISABLED_SYMBOLS` | string | No | Mint/burn runtime disable list by symbol (CSV) |
 | `MINT_BURN_MAJOR_SYMBOLS` | string | No | Mint/burn health-check major symbols override (CSV) |

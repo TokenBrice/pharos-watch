@@ -45,10 +45,10 @@ Most remaining findings are medium/low quality and maintainability gaps, but the
 None
 
 #### High
-- [DOC-001] **Ticker-Migration Runbook Paths Point To Removed Directory** — The handover still uses `docs/plans/ticker-issue-migration/...` in inventory/copy commands, but the repo path is `docs/plans/historical/ticker-issue-migration/...`; command blocks fail as written. File/Component: `docs/plans/historical/ticker-issue-migration/execution-handover.md` (references `docs/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-001.md`). Effort: `[~1h]`
+- [DOC-001] **Ticker-Migration Runbook Paths Point To Removed Directory** — The handover still uses `docs/plans/historical/ticker-issue-migration/...` in inventory/copy commands, but the repo path is `docs/plans/historical/ticker-issue-migration/...`; command blocks fail as written. File/Component: `docs/plans/historical/ticker-issue-migration/execution-handover.md` (references `docs/plans/historical/ticker-issue-migration/tickets/phase1-foundation/TICKET-001.md`). Effort: `[~1h]`
 
 #### Medium
-- [DOC-002] **Broken Cross-Reference In cmcs Preparation Guide** — The “Reference Implementation” link points to non-existent `../plans/ticker-issue-migration/` instead of `../plans/historical/ticker-issue-migration/`. File/Component: `docs/process/cmcs-large-implementation-preparation.md`. Effort: `[~30m]`
+- [DOC-002] **Broken Cross-Reference In cmcs Preparation Guide** — The “Reference Implementation” link points to `../plans/historical/ticker-issue-migration/` instead of the legacy location. File/Component: `docs/process/cmcs-large-implementation-preparation.md`. Effort: `[~30m]`
 - [DOC-003] **Worker Env Table Missing Active Binding** — Docs omit `MAINTENANCE_MODE` from the env table even though it is typed and actively used for maintenance `503` responses. File/Component: `docs/worker-infrastructure.md` (code: `worker/src/lib/env.ts`, `worker/src/handlers/http.ts`). Effort: `[~30m]`
 
 #### Low

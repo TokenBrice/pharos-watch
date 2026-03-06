@@ -16,11 +16,11 @@ Fix 5 findings: stale migration runbook paths, broken cmcs guide cross-reference
 
 In `docs/plans/historical/ticker-issue-migration/execution-handover.md`:
 
-The file references `docs/plans/ticker-issue-migration/...` in command blocks, but the correct path is `docs/plans/historical/ticker-issue-migration/...`.
+The file references `docs/plans/historical/ticker-issue-migration/...` in command blocks, but the correct path is `docs/plans/historical/ticker-issue-migration/...`.
 
 Find and replace all occurrences:
 ```
-docs/plans/ticker-issue-migration/ → docs/plans/historical/ticker-issue-migration/
+docs/plans/historical/ticker-issue-migration/ → docs/plans/historical/ticker-issue-migration/
 ```
 
 Use a global find-and-replace within this file. Verify no other files reference the old path.
@@ -86,7 +86,7 @@ Then rename the second file (the one that should run after the first) to the nex
 
 1. `npm run lint` passes (markdown lint if configured)
 2. `cd worker && npx tsc --noEmit` passes (in case wrangler.toml affects type generation)
-3. No references to `docs/plans/ticker-issue-migration/` (without `historical/`) remain: `grep -rn "plans/ticker-issue-migration/" docs/`
+3. No references to the legacy migration-path base remain in `docs/` (i.e., only `docs/plans/historical/ticker-issue-migration/...` should remain).
 4. `MAINTENANCE_MODE` appears in the env bindings table in `docs/worker-infrastructure.md`
 5. `worker/wrangler.toml` is valid TOML (test with: `python3 -c "import tomllib; tomllib.load(open('worker/wrangler.toml', 'rb'))"` or equivalent)
 6. No duplicate migration numbers: `ls worker/migrations/ | sed 's/_.*//' | sort | uniq -d` should be empty

@@ -398,7 +398,7 @@ Before considering preparation complete (all verification passes done), verify:
 
 ## Reference Implementation
 
-The [ticker-issuer ID migration](../plans/ticker-issue-migration/) is the canonical example of this process:
+The [ticker-issuer ID migration](../plans/historical/ticker-issue-migration/) is the canonical example of this process:
 
 - 4 research worktrees producing DESIGN-* artifacts
 - 4 phases, 8 worktrees, 19 tickets
