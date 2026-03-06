@@ -6,7 +6,7 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. Currently 40 yield-bearing coins, plus automatic lending pool discovery for non-yield-bearing stablecoins rated C- or above (safety score >= 50). `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. Currently 40 yield-bearing coins, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -23,7 +23,7 @@ Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` 
 | `lp-receipt` | LP Receipt | LP position wrapped as stablecoin |
 | `nav-appreciation` | NAV | Token price appreciates as backing grows |
 | `governance-set` | Gov. Set | Yield rate set by governance vote |
-| `lending-opportunity` | Lending Opp. | Auto-discovered best lending market for non-yield-bearing coins |
+| `lending-opportunity` | Lending Opp. | Auto-discovered best lending market from the curated allowlist |
 
 Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`), both typed as `Record<YieldType, ...>` so adding a new variant without updating the maps is a compile error.
 
@@ -31,7 +31,7 @@ Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE
 
 ## Three-Tier APY Resolution
 
-The sync cron resolves APY for each coin using a priority-ordered strategy. The first successful tier wins; subsequent tiers are skipped.
+The sync cron resolves APY for each coin using a priority-ordered strategy. Tier 1 runs first, Tier 2 still runs afterward to collect additional DeFiLlama source rows, and Tier 3 runs only when neither Tier 1 nor Tier 2 produced any source.
 
 ### Tier 1: On-Chain Exchange Rates
 
@@ -58,7 +58,7 @@ Currently configured for sUSDe only (contract `0x9D39...7497`, selector `0x07a2d
 apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 ```
 
-Falls through to Tier 2 if no previous exchange rate exists yet (first sync).
+Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 contributes no row and Tier 2 becomes the first fallback.
 
 ### Tier 2: DeFiLlama Yields API (Multi-Source)
 
@@ -101,7 +101,7 @@ APY, base/reward split, pool TVL, and pool UUID are all taken directly from the 
 
 ### Tier 3: Price-Derived APY
 
-For `navToken` coins only. Derives APY from 30-day price appreciation in the existing `supply_history` table.
+For `navToken` coins and explicit `PRICE_DERIVED_FALLBACK_IDS`. Derives APY from 30-day price appreciation in the existing `supply_history` table.
 
 ```
 apy = ((price_now / price_30d_ago) ^ (365.25 / 30) - 1) * 100
@@ -111,7 +111,7 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 
 ### Automatic Lending Pool Discovery (Wave 2)
 
-For stablecoins **not** flagged `yieldBearing` but rated C- or above (safety score >= 50), the sync cron automatically discovers the best lending pool from a curated protocol allowlist.
+For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), the sync cron can append the best lending pool from a curated protocol allowlist. This runs after the base three-tier resolution, so yield-bearing coins can also receive an additional `defillama-auto` source row when a distinct lending market passes filters.
 
 **Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/cron/yield-config.ts`):
 
@@ -276,12 +276,12 @@ CREATE TABLE yield_history (
 
 **Execution flow:**
 
-1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true`
+1. Filter `TRACKED_STABLECOINS` where `flags.yieldBearing === true` for the base three-tier resolution, then evaluate auto-discovery across all eligible tracked non-gold/silver coins
 2. Fetch DeFiLlama pools (`https://yields.llama.fi/pools`) — circuit-breaker protected
 3. Fetch on-chain exchange rates via `eth_call` for `ON_CHAIN_RATE_CONFIGS` entries
 4. Read cached risk-free rate from D1
 5. Compute safety scores via shared helper `computeSafetyScoresSnapshot(db, { includeNavTokens: true, outputMode: "map" })`; classify safety input as degraded when coverage is empty or below the minimum ratio
-6. Resolve APY for each coin (Tier 1 → 2 → 3, potentially multiple sources per coin)
+6. Resolve APY for each yield-bearing coin (Tier 1 → 2 → 3, potentially multiple sources per coin), then append auto-discovered lending rows for any remaining eligible tracked coins
 7. Determine `is_best` per coin: source with highest `currentApy` wins
 8. Batch preload `yield_history` datasets (7d previous exchange rates, previous TVL rows, and 30d APY history), group in memory, then compute trailing averages and PYS without per-coin query loops
 9. NaN/Infinity guard: clamp PYS, variance, and stability to finite values before DB write

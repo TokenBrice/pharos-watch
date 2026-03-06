@@ -249,7 +249,7 @@ src/                              # Next.js frontend (static export)
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
 │   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring + derived view model
-│   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 10 data hooks)
+│   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 18 data hooks)
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
@@ -304,7 +304,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (51 total)
+├── migrations/                   # D1 SQL migrations (53 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/

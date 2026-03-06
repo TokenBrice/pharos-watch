@@ -9,6 +9,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | Script | Purpose | Inputs | Output / Side Effects |
 |--------|---------|--------|------------------------|
 | `scripts/sync-digests.ts` | Fetch digest archive before frontend build | `https://api.pharos.watch/api/digest-archive` | Writes `data/digests.json` |
+| `scripts/generate-redirects.ts` | Regenerate Cloudflare Pages redirects for legacy stablecoin IDs before frontend build | Existing `public/_redirects` + embedded ID mapping tables | Idempotently updates `public/_redirects` |
 | `scripts/check-seo-static.mjs` | Validate static-export SEO/meta/link integrity | `out/` build output | Fails non-zero on SEO/crawlability issues |
 | `scripts/smoke-api.mjs` | HTTP smoke checks for strict API contract paths | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS` | Exits non-zero on shape/range/status failures |
 | `scripts/smoke-ui.mjs` | Browser smoke check for live homepage data state + mobile overflow regression routes | `--url`, `--skip-overflow`, `SMOKE_UI_URL`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on tracked mobile routes |
@@ -22,9 +23,10 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 
 ## CI-Critical Scripts
 
-These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`):
+These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`) directly, or indirectly through `npm run build`:
 
 - `sync-digests.ts` before `npm run build`
+- `generate-redirects.ts` via the `prebuild` hook that runs automatically before `npm run build`
 - `check-seo-static.mjs` via `npm run seo:check`
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`

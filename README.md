@@ -121,7 +121,7 @@ worker/                           Cloudflare Worker (API + cron jobs)
 │   ├── cron/                     Scheduled data sync (sync-stablecoins, enrich-prices, detect-depegs, sync-dex-liquidity, etc.)
 │   ├── api/                      REST endpoint handlers (stablecoin/detail/history/status/admin)
 │   └── lib/                      D1 helpers, shared constants, depeg types, API error handler, circuit breaker
-└── migrations/                   D1 SQL migrations (50 total)
+└── migrations/                   D1 SQL migrations (53 total)
 ```
 
 ## Infrastructure
@@ -178,7 +178,7 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`:
 
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
-For mint/burn ingestion diagnostics and recovery, see `docs/runbooks/mint-burn-ingestion.md`.
+For mint/burn ingestion diagnostics and recovery, see `agents/runbooks/mint-burn-ingestion.md`.
 
 1. **Validate gate:** `npm run lint` → `npm run check:worker-boundary` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`

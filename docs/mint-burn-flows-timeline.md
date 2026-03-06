@@ -1,6 +1,16 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.2` (2026-03-01 -> 2026-03-04).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.3` (2026-03-01 -> 2026-03-04).
+
+---
+
+## v4.3 - NR gating for no-activity flow windows (Mar 4, 2026)
+
+**Commit:** `unreleased`
+
+- Coins with no mint/burn activity in the active 24h window now publish `null` Flow Intensity (`NR`) instead of a synthetic neutral value
+- Bank Run Gauge excludes those NR windows from the market-cap-weighted composite
+- Frontend flow-intensity UI now renders NR explicitly for null windows
 
 ---
 

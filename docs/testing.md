@@ -459,6 +459,7 @@ describe("syncFxRates", () => {
 
 Schema validation in hooks is done via `useApiQuery(..., { schema })`. Current schema-validated response paths include:
 - `StablecoinListResponseSchema`
+- `DepegEventsResponseSchema`
 - `PegSummaryResponseSchema`
 - `DexLiquidityMapSchema`
 - `StabilityIndexResponseSchema`

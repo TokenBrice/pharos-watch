@@ -13,7 +13,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.2`
+- **Current methodology version:** `v4.3`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
 
@@ -28,7 +28,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 - **File:** `worker/src/cron/sync-mint-burn.ts`
 - **Registration:** cron declared in `worker/wrangler.toml`, executed via `worker/src/handlers/scheduled.ts`
 - **Returns:** `{ itemCount, status, metadata }` where `itemCount = rowsInserted` (not parsed rows)
-- **Operator runbook:** `docs/runbooks/mint-burn-ingestion.md`
+- **Operator runbook:** `agents/runbooks/mint-burn-ingestion.md`
 
 ---
 
