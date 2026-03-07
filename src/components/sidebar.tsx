@@ -86,6 +86,7 @@ function SidebarNavItem({ item, expanded, isActive }: { item: NavItem; expanded:
     <Link
       href={item.href}
       title={expanded ? undefined : item.label}
+      aria-label={item.label}
       aria-current={isActive ? "page" : undefined}
       className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] transition-[background-color,border-color,color,box-shadow] duration-200 ${
         expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
@@ -119,6 +120,7 @@ function ThemeSidebarItem({ expanded }: { expanded: boolean }) {
         setTheme(next);
       }}
       title={expanded ? undefined : label}
+      aria-label={label}
       className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
         expanded ? "w-full mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
       }`}
@@ -177,6 +179,7 @@ export function Sidebar() {
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
         title={expanded ? undefined : "Search (Ctrl+K)"}
+        aria-label="Search (Ctrl+K)"
         className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
           expanded ? "mx-2 mt-1 px-3 py-2.5" : "mx-auto mt-1 px-0 py-2 justify-center w-10"
         }`}
@@ -231,6 +234,7 @@ export function Sidebar() {
         <button
           onClick={togglePin}
           title={pinned ? "Unpin sidebar" : "Pin sidebar open"}
+          aria-label={pinned ? "Unpin sidebar" : "Pin sidebar open"}
           className={`pharos-focus-ring flex items-center gap-3 rounded-md border-l-[3px] border-l-transparent text-muted-foreground transition-[background-color,border-color,color,box-shadow] duration-200 hover:border-l-border/80 hover:bg-muted/45 hover:text-foreground ${
             expanded ? "mx-2 px-3 py-2.5" : "mx-auto px-0 py-2 justify-center w-10"
           }`}

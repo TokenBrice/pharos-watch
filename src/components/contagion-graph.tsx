@@ -232,6 +232,10 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
+  const prefersReducedMotion = typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
+
   // Prepare graph data
   const { nodes, links } = useMemo(() => {
     const cardMap = new Map(cards.map((c) => [c.id, c]));
@@ -675,6 +679,62 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
 
+  // Keyboard navigation for graph nodes
+  const handleNodeKeyDown = useCallback((e: React.KeyboardEvent, nodeId: string) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (focusMode === "neighborhood") {
+        setSelectedNeighborhoodId(nodeId);
+      }
+      setHoveredId((prev) => (prev === nodeId ? null : nodeId));
+      return;
+    }
+
+    if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    e.preventDefault();
+
+    // Find connected nodes via links
+    const connectedIds = new Set<string>();
+    for (const link of links) {
+      const srcId = typeof link.source === "string" ? link.source : (link.source as GraphNode).id;
+      const tgtId = typeof link.target === "string" ? link.target : (link.target as GraphNode).id;
+      if (srcId === nodeId) connectedIds.add(tgtId);
+      if (tgtId === nodeId) connectedIds.add(srcId);
+    }
+
+    if (connectedIds.size === 0) return;
+
+    const currentPos = positions.get(nodeId);
+    if (!currentPos) return;
+
+    // Find the best neighbor in the arrow key direction
+    let bestId: string | null = null;
+    let bestScore = -Infinity;
+
+    for (const cId of connectedIds) {
+      const cPos = positions.get(cId);
+      if (!cPos) continue;
+      const dx = cPos.x - currentPos.x;
+      const dy = cPos.y - currentPos.y;
+      let score = 0;
+      switch (e.key) {
+        case "ArrowRight": score = dx; break;
+        case "ArrowLeft": score = -dx; break;
+        case "ArrowDown": score = dy; break;
+        case "ArrowUp": score = -dy; break;
+      }
+      if (score > 0 && score > bestScore) {
+        bestScore = score;
+        bestId = cId;
+      }
+    }
+
+    if (bestId) {
+      const target = svgRef.current?.querySelector(`[data-node-id="${bestId}"]`) as HTMLElement | null;
+      target?.focus();
+    }
+  }, [focusMode, links, positions, setSelectedNeighborhoodId]);
+
   const neighborhoodFocusId = focusMode === "neighborhood"
     ? (selectedNeighborhoodId ?? hubIdsByScore[0] ?? nodes[0]?.id ?? null)
     : null;
@@ -940,10 +1000,17 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               return (
                 <g
                   key={node.id}
+                  tabIndex={0}
+                  data-node-id={node.id}
+                  role="button"
+                  aria-label={`${node.symbol} — Grade ${node.grade}, market cap $${node.mcap > 1e9 ? `${(node.mcap / 1e9).toFixed(1)}B` : node.mcap > 1e6 ? `${(node.mcap / 1e6).toFixed(0)}M` : `${(node.mcap / 1e3).toFixed(0)}K`}`}
                   style={{ cursor: focusMode === "neighborhood" ? "pointer" : "grab" }}
                   onMouseDown={(e) => handleMouseDown(e, node.id)}
                   onMouseEnter={() => { setHoveredId(node.id); setHoveredEdge(null); }}
                   onMouseLeave={() => setHoveredId(null)}
+                  onFocus={() => { setHoveredId(node.id); setHoveredEdge(null); }}
+                  onBlur={() => setHoveredId(null)}
+                  onKeyDown={(e) => handleNodeKeyDown(e, node.id)}
                   onClick={() => {
                     if (dragId) return;
                     if (focusMode === "neighborhood") {

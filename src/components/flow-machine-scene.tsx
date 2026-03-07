@@ -247,7 +247,12 @@ function PrinterMachine({ size, intensity, stress, accentHex }: PrinterMachinePr
   const isMini = size === "mini";
   const dims = isMini ? MINI_PRINTER_DIMS : FULL_PRINTER_DIMS;
 
-  const power = clamp(intensity, 0.08, 1);
+  const prefersReducedMotion = typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
+  const effectiveIntensity = prefersReducedMotion ? 0 : intensity;
+
+  const power = clamp(effectiveIntensity, 0.08, 1);
   const stressFactor = clamp(stress, 0, 1);
   const easedPower = Math.pow(power, isMini ? 1.35 : 1.45);
   const surgeBoost = !isMini && power > 0.72 ? Math.pow((power - 0.72) / 0.28, 1.15) : 0;
@@ -575,7 +580,13 @@ interface ShredderMachineProps {
 function ShredderMachine({ size, intensity }: ShredderMachineProps) {
   const isMini = size === "mini";
   const dims = isMini ? MINI_SHREDDER_DIMS : FULL_SHREDDER_DIMS;
-  const power = clamp(intensity, 0.08, 1);
+
+  const prefersReducedMotion = typeof window !== "undefined"
+    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    : false;
+  const effectiveIntensity = prefersReducedMotion ? 0 : intensity;
+
+  const power = clamp(effectiveIntensity, 0.08, 1);
 
   const billCount = clamp(
     Math.round((isMini ? 4 : 6) + power * (isMini ? 10 : 16)),

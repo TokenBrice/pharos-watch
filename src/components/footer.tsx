@@ -7,15 +7,15 @@ export function Footer() {
       <div className="container mx-auto px-4 space-y-5">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-            <Link href="/" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Dashboard</Link>
-            <Link href="/stability-index" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Stability Index</Link>
-            <Link href="/safety-scores" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Safety Scores</Link>
-            <Link href="/blacklist" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Blacklist Tracker</Link>
-            <Link href="/liquidity" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Liquidity</Link>
-            <Link href="/cemetery" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Cemetery</Link>
-            <Link href="/methodology" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Methodology</Link>
-            <Link href="/about" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">About</Link>
-            <Link href="/privacy" className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground">Privacy</Link>
+            <Link href="/" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Dashboard</Link>
+            <Link href="/stability-index" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Stability Index</Link>
+            <Link href="/safety-scores" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Safety Scores</Link>
+            <Link href="/blacklist" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Blacklist Tracker</Link>
+            <Link href="/liquidity" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Liquidity</Link>
+            <Link href="/cemetery" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Cemetery</Link>
+            <Link href="/methodology" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Methodology</Link>
+            <Link href="/about" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">About</Link>
+            <Link href="/privacy" className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground">Privacy</Link>
           </nav>
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 text-xs text-muted-foreground">
             <a href="https://x.com/PharosWatch" target="_blank" rel="noopener noreferrer" className="pharos-focus-ring rounded-full border border-transparent p-1.5 hover:border-border/60 hover:bg-muted/40 hover:text-foreground" aria-label="Pharos on X/Twitter">
@@ -41,7 +41,7 @@ export function Footer() {
               <Link
                 key={cat.href}
                 href={cat.href}
-                className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground"
+                className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground"
               >
                 {cat.label}
               </Link>
@@ -54,13 +54,13 @@ export function Footer() {
             <Link
               key={cat.href}
               href={cat.href}
-              className="pharos-focus-ring rounded-md px-1.5 py-1 hover:text-foreground"
+              className="pharos-focus-ring min-h-11 inline-flex items-center sm:min-h-0 rounded-md px-1.5 py-1 hover:text-foreground"
             >
               {cat.label}
             </Link>
           ))}
         </nav>
-        <p className="text-center text-xs text-muted-foreground/60">
+        <p className="text-center text-xs text-muted-foreground">
           Not financial advice. Data is provided as-is for informational purposes only.
         </p>
       </div>

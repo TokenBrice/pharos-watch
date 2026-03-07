@@ -178,7 +178,7 @@ export function ScoreChart({
           <CardTitle as="h2" className="min-w-0">Pharos Stability Index History</CardTitle>
           <CardAction className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
             <TimeRangeButtons options={options} value={range} onChange={(r) => { trackEvent("time_range_changed", { page: "stability-index-score", range: r }); setRange(r); }} />
-            <Button variant="ghost" size="icon-sm" className="shrink-0" onClick={handlePngExport} title="Save chart as PNG">
+            <Button variant="ghost" size="icon-sm" className="shrink-0" onClick={handlePngExport} title="Save chart as PNG" aria-label="Save chart as PNG">
               <Camera className="h-4 w-4" />
             </Button>
           </CardAction>

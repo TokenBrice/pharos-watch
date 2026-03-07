@@ -152,7 +152,7 @@ export function HeroCard({
                 </p>
                 <button
                   onClick={onOpenFeedback}
-                  className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 sm:min-h-0"
                 >
                   <Flag className="h-3 w-3" />
                   Report data issue

@@ -41,7 +41,7 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
       : "border-destructive/50 bg-destructive/10 text-destructive";
 
   return (
-    <div className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${toneClass}`}>
+    <div role="status" aria-live="polite" className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${toneClass}`}>
       <p className="font-medium">{title}</p>
       <p className="mt-1">{message}</p>
       {onRetry && (

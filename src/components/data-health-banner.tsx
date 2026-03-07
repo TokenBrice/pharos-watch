@@ -55,7 +55,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
   }
 
   return (
-    <div className={`rounded-lg border px-4 py-2.5 text-sm leading-relaxed shadow-sm ${STATE_STYLES[merged.state]}`}>
+    <div role="status" aria-live="polite" className={`rounded-lg border px-4 py-2.5 text-sm leading-relaxed shadow-sm ${STATE_STYLES[merged.state]}`}>
       {message}
     </div>
   );
