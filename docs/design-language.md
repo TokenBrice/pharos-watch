@@ -42,11 +42,11 @@ Public pages use this shell:
   <div className="hidden md:block shrink-0 transition-all duration-200 w-[220px]" />
 
   <div className="flex-1 flex flex-col min-w-0">
-    <main id="main-content" className="flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
+    <main id="main-content" className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">
       {/* route content */}
     </main>
 
-    <footer className="border-t border-border/70 bg-muted/10 py-6" />
+    <footer className="border-t border-border/70 bg-muted/10 py-8 sm:py-10" />
   </div>
 </div>
 ```
@@ -55,11 +55,14 @@ Public pages use this shell:
 
 - Desktop sidebar width: `220px`
 - Mobile header height: `h-14`
+- Mobile utility dock: fixed bottom-right dock on `<640px` with shared feedback + scroll-to-top placement
+- Main content and footer reserve bottom safe space via `pharos-mobile-utility-safe` + `--mobile-utility-safe-offset`
 - Main container padding:
   - Mobile: `px-4`
   - Vertical rhythm: `py-6` (`md:py-7`)
   - Desktop (`lg`): `px-6`
-- Footer nav is muted text with hover promotion to foreground.
+- Footer now prioritizes a short list of core routes, keeps category browsing secondary, drops duplicate tagline text beside socials, and lets intro/legal copy breathe across wider lines.
+- The footer intro block is not width-capped inside its header row; on larger screens it expands to fill the available column beside the social icons.
 
 ---
 
@@ -77,14 +80,16 @@ Most routes use:
 ### Longform Pages
 
 - Privacy: `mx-auto w-full space-y-6 max-w-2xl`
-- Methodology: `mx-auto w-full max-w-6xl space-y-8`
+- Methodology: `mx-auto w-full max-w-[76rem] space-y-8`
+- Digest archive: `mx-auto max-w-4xl`
+- Digest detail shell: `mx-auto max-w-4xl`, with editorial body copy constrained to `max-w-[68ch]`
 
 ### Home Dashboard (Special)
 
-Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top logotype strip for the visible masthead:
+Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top fold composed of:
 
-- Logotype label: `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground`
-- Snapshot shell: `pharos-card-shell` + `pharos-kicker`
+- Desktop masthead strip: `pharos-card-shell hidden lg:flex ... px-5 py-5`
+- Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
 
 ### Stablecoin Detail (Special)
 
@@ -99,7 +104,9 @@ This is intentionally denser than standard feature pages.
 Digest entries use:
 
 - `h1`: `text-3xl font-extrabold tracking-tighter`
-- Editorial prose: `text-[1.15rem] leading-relaxed text-foreground/90 italic` with Georgia/Times serif fallback.
+- Executive summary card ahead of body copy
+- Editorial prose constrained to `max-w-[68ch]`
+- Homepage digest preview switches to a split desktop layout so the title block and italic executive-summary paragraph can use the full container width; dedicated digest pages keep the `max-w-[68ch]` editorial measure.
 
 ---
 
@@ -107,24 +114,24 @@ Digest entries use:
 
 ### Heading Scale
 
-| Role | Live class pattern |
-|---|---|
-| Standard page title | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]` |
-| Digest article title | `text-3xl font-extrabold tracking-tighter` |
-| Home logotype label | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]` |
-| Primary section heading | `leading-none font-semibold` |
-| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight` |
-| Table/section kicker | `text-[11px] font-semibold uppercase tracking-[0.13em] text-muted-foreground` |
-| Subsection heading | `text-foreground font-medium` |
+| Role                      | Live class pattern                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------- |
+| Standard page title       | `min-w-0 text-3xl sm:text-4xl font-extrabold tracking-tight leading-[1.08]`                  |
+| Digest article title      | `text-3xl font-extrabold tracking-tighter`                                                   |
+| Home logotype label       | `text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em]`                         |
+| Primary section heading   | `leading-none font-semibold`                                                                 |
+| Secondary section heading | `text-lg font-semibold` or `text-lg font-semibold tracking-tight`                            |
+| Table/section kicker      | `text-[12px] sm:text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground` |
+| Subsection heading        | `text-foreground font-medium`                                                                |
 
 ### Body + Supporting Text
 
-| Role | Live class pattern |
-|---|---|
-| Standard body copy | `text-sm text-muted-foreground` |
-| Small metadata | `text-xs text-muted-foreground` |
-| Card micro-labels | `text-xs uppercase tracking-wide` |
-| Footer disclaimer | `text-center text-xs text-muted-foreground/60` |
+| Role               | Live class pattern                             |
+| ------------------ | ---------------------------------------------- |
+| Standard body copy | `text-sm text-muted-foreground`                |
+| Small metadata     | `text-xs text-muted-foreground`                |
+| Card micro-labels  | `text-xs uppercase tracking-wide`              |
+| Footer disclaimer  | `text-center text-xs text-muted-foreground/60` |
 
 ### Numeric Language
 
@@ -148,12 +155,23 @@ Numbers are consistently mono/tabular where precision matters:
 
 - KPI grid (dense analytics): `grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-5`
 - Home feature grid: `grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5`
-- Home snapshot desktop partition: `hidden sm:grid grid-cols-2 xl:grid-cols-4 divide-x divide-border/50`
+- Home snapshot desktop partition: `hidden lg:grid grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50`
 
 ### Chip/Pill Layout
 
 - Chips are frequently wrapped in `flex flex-wrap gap-2`
 - Category links and peg links prioritize `rounded-full` micro-surfaces.
+
+### Onboarding / Access Surfaces
+
+First-run compare, portfolio, and gated status states now share a structured onboarding surface:
+
+- Large rounded shell with dark gradient backdrop
+- `pharos-kicker` eyebrow + one decisive title
+- 3 step explainer cards
+- CTA row using rounded-full buttons
+- Preview panel shell on the right at desktop, stacked on mobile
+- Optional footnote/support panel at the bottom of the text column
 
 ---
 
@@ -212,8 +230,17 @@ Navigation active state uses `border-l-frost-blue`.
 Homepage explore cards use:
 
 ```tsx
-className="pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent p-4"
+className =
+  "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent p-4";
 ```
+
+### Logo Containers
+
+Tracked token logos now render inside a shared neutral container:
+
+- `rounded-full border border-border/60 bg-background/80`
+- subtle inset highlight
+- image shrunk slightly inside the wrapper so transparent/low-quality upstream assets do not collapse into the page background
 
 ---
 
@@ -223,13 +250,15 @@ className="pharos-card-shell pharos-focus-ring pharos-interactive-card group fle
 
 - **Mature**: emerald badge (`bg-emerald-500/15 ... border-emerald-500/30`)
 - **Experimental**: amber badge (`bg-amber-500/15 ... border-amber-500/30`)
+- **Testing in Prod**: orange badge (`bg-orange-500/15 ... border-orange-500/30`)
 - Status text should follow light/dark pairing (`text-*-700 dark:text-*-400`) instead of fixed `text-*-300/400` tones.
+- Badge copy is now terse (`Mature`, `Experimental`, `Testing in Prod`) instead of repeating “Feature Status”.
 
 ### Version Badge
 
 Secondary version pill:
 
-- `bg-muted/50 text-muted-foreground border-border/60`
+- `bg-background/35 text-muted-foreground border-border/60`
 
 ### Micro Chips
 
@@ -250,6 +279,13 @@ Common chip form:
 
 - Standard header: `[&_tr]:border-b bg-muted/80`
 - Sticky directory header (peg pages): `[&_tr]:border-b bg-muted/80 sticky top-0 z-10 backdrop-blur-sm`
+
+### Mobile Directory Table Handling
+
+- Toolbar becomes a vertical stack on mobile instead of a cramped inline row
+- `Columns` and `Export CSV` go full-width on mobile
+- Table keeps a deliberate horizontal-scroll affordance via helper copy and `min-w-[820px]`
+- Bottom spacing is preserved so the mobile utility dock never sits on the last visible rows
 
 ### Sortable Head Pattern
 
@@ -275,6 +311,7 @@ Interactive rows use:
 
 - Height: `h-[250px] sm:h-[350px]`
 - Recharts container keeps `min-width: 0; min-height: 0`
+- Chart-heavy home modules now reserve height through matching skeletons or client-ready mount guards before `ResponsiveContainer` renders
 
 ### Axis + Grid (Observed)
 
@@ -295,6 +332,8 @@ Common chart skeletons:
 
 - `rounded-lg bg-muted/30 animate-pulse relative overflow-hidden h-[250px] sm:h-[350px] w-full`
 - `bg-accent animate-pulse h-[250px] sm:h-[350px] w-full rounded-xl`
+- Blacklist hero chart uses `h-[220px] sm:h-[280px]`
+- Yield scatter plot uses `h-[240px] sm:h-[340px]` inside a bordered chart stage
 
 ---
 
@@ -352,12 +391,13 @@ Used with copy like: `Some data is not yet available (...)`.
   - Larger grid splits and extra table columns
 - `xl`:
   - Additional dense table columns
-  - Home KPI grid expands to 4 panels in snapshot module
+  - Home KPI grid keeps the wide five-panel snapshot module intact
 
 ### Mobile-Specific UX
 
 - Category browse collapses into `details` (`sm:hidden`)
 - `--table-header-top: 56px` is set on mobile for sticky header offset alignment
+- Bottom utility controls are consolidated into one dock on mobile instead of separate floating widgets
 
 ---
 
