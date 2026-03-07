@@ -11,11 +11,14 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { YieldLeaderboard } from "@/components/yield-leaderboard";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
 
 export function YieldClient() {
   const { data, isLoading, error, dataUpdatedAt, refetch } = useYieldRankings();
   const { data: logos } = useLogos();
   const router = useRouter();
+
+  const rankings = useMemo(() => dedupeYieldRankings(data?.rankings ?? []), [data?.rankings]);
 
   const handleNavigate = useCallback(
     (id: string) => {
@@ -27,7 +30,7 @@ export function YieldClient() {
   // Compute summary stats from rankings
   const stats = useMemo(() => {
     if (!data) return null;
-    const { rankings, riskFreeRate } = data;
+    const { riskFreeRate } = data;
     if (rankings.length === 0) return { avgApy: 0, riskFreeRate, bestPys: null };
 
     // Weighted average APY (weighted by TVL where available)
@@ -42,9 +45,7 @@ export function YieldClient() {
       }
       unweightedApySum += r.apy30d;
     }
-    const avgApy = tvlSum > 0
-      ? weightedApySum / tvlSum
-      : unweightedApySum / rankings.length;
+    const avgApy = tvlSum > 0 ? weightedApySum / tvlSum : unweightedApySum / rankings.length;
 
     // Best risk-adjusted (highest PYS)
     let bestPys: { name: string; symbol: string; score: number } | null = null;
@@ -55,7 +56,7 @@ export function YieldClient() {
     }
 
     return { avgApy, riskFreeRate, bestPys };
-  }, [data]);
+  }, [data, rankings]);
 
   if (isLoading) {
     return (
@@ -63,8 +64,12 @@ export function YieldClient() {
         <div className="grid grid-cols-1 gap-3 sm:gap-5 sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="rounded-xl">
-              <CardHeader className="pb-1"><Skeleton className="h-3 w-24" /></CardHeader>
-              <CardContent><Skeleton className="h-8 w-32" /></CardContent>
+              <CardHeader className="pb-1">
+                <Skeleton className="h-3 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-32" />
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -83,9 +88,7 @@ export function YieldClient() {
           void refetch();
         }}
       />
-      <StaleDataBanner
-        queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data }]}
-      />
+      <StaleDataBanner queries={[{ preset: "yieldRankings", dataUpdatedAt, error, hasData: !!data }]} />
 
       {/* Summary stat cards */}
       {stats && (
@@ -95,9 +98,7 @@ export function YieldClient() {
               <span className="text-xs text-muted-foreground">Average Yield (TVL-weighted)</span>
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">
-                {stats.avgApy.toFixed(2)}%
-              </span>
+              <span className="text-2xl font-bold font-mono tabular-nums">{stats.avgApy.toFixed(2)}%</span>
             </CardContent>
           </Card>
           <Card className="rounded-xl">
@@ -105,9 +106,7 @@ export function YieldClient() {
               <span className="text-xs text-muted-foreground">Risk-Free Rate (T-Bill)</span>
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold font-mono tabular-nums">
-                {stats.riskFreeRate.toFixed(2)}%
-              </span>
+              <span className="text-2xl font-bold font-mono tabular-nums">{stats.riskFreeRate.toFixed(2)}%</span>
             </CardContent>
           </Card>
           <Card className="rounded-xl">
@@ -131,16 +130,17 @@ export function YieldClient() {
       )}
 
       {/* Scatter plot */}
-      {data && data.rankings.length > 0 && (
+      {data && rankings.length > 0 && (
         <section aria-labelledby="scatter-heading">
           <div className="space-y-2">
-            <h2 id="scatter-heading" className="text-xl font-semibold">Yield vs Safety</h2>
-            <p className="text-sm text-muted-foreground">
-              Each dot is a stablecoin. Click to view details.
-            </p>
+            <h2 id="scatter-heading" className="text-xl font-semibold">
+              Yield vs Safety
+            </h2>
+            <p className="text-sm text-muted-foreground">Each logo marks a stablecoin. Click to view details.</p>
             <YieldScatterPlot
-              rankings={data.rankings}
+              rankings={rankings}
               riskFreeRate={data.riskFreeRate}
+              logos={logos}
               onDotClick={handleNavigate}
             />
           </div>
@@ -151,22 +151,19 @@ export function YieldClient() {
       {data && (
         <section aria-labelledby="leaderboard-heading">
           <div className="space-y-3">
-            <h2 id="leaderboard-heading" className="text-xl font-semibold">Yield Leaderboard</h2>
-            <YieldLeaderboard
-              rankings={data.rankings}
-              logos={logos}
-              onRowClick={handleNavigate}
-            />
+            <h2 id="leaderboard-heading" className="text-xl font-semibold">
+              Yield Leaderboard
+            </h2>
+            <YieldLeaderboard rankings={rankings} logos={logos} onRowClick={handleNavigate} />
           </div>
         </section>
       )}
 
       {/* Disclaimer */}
       <p className="text-xs text-muted-foreground leading-relaxed">
-        The Pharos Yield Score (PYS) is for informational purposes only and does not constitute
-        financial advice. APY figures are sourced from DeFiLlama and may fluctuate. Past yields
-        do not guarantee future returns. Always do your own research before allocating capital
-        to any stablecoin.
+        The Pharos Yield Score (PYS) is for informational purposes only and does not constitute financial advice. APY
+        figures are sourced from DeFiLlama and may fluctuate. Past yields do not guarantee future returns. Always do
+        your own research before allocating capital to any stablecoin.
       </p>
     </div>
   );

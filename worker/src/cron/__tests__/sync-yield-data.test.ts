@@ -241,6 +241,43 @@ describe("syncYieldData", () => {
     expect(setCache).toHaveBeenCalled();
   });
 
+  it("purges stale yield rows for refreshed coins after writing the current source set", async () => {
+    const db = makeDb();
+
+    mockFetch([
+      {
+        match: "yields.llama.fi",
+        body: {
+          data: [
+            {
+              pool: "pool-sdai-1",
+              chain: "Ethereum",
+              project: "maker",
+              symbol: "sDAI",
+              tvlUsd: 1_000_000_000,
+              apy: 5.2,
+              apyBase: 5.2,
+              apyReward: null,
+              apyMean30d: 5.1,
+              stablecoin: true,
+              exposure: "single",
+              underlyingTokens: null,
+            },
+          ],
+        },
+      },
+    ]);
+
+    await syncYieldData(db);
+
+    const deleteCall = db
+      .getHistory()
+      .find((entry) => entry.sql.includes("DELETE FROM yield_data") && entry.sql.includes("stablecoin_id IN"));
+
+    expect(deleteCall).toBeDefined();
+    expect(deleteCall?.binds[0]).toBe("100");
+  });
+
   it("uses cached DL pools from DEX sync when available", async () => {
     const db = makeDb();
 
@@ -278,7 +315,7 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBe(1);
     // Should NOT have fetched from yields.llama.fi since cached pools were available
     const yieldCalls = fetchSpy.mock.calls.filter(
-      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi")
+      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi"),
     );
     expect(yieldCalls.length).toBe(0);
   });
@@ -362,9 +399,7 @@ describe("syncYieldData", () => {
     vi.mocked(getCache).mockResolvedValue(null);
 
     // DL yields API returns 500
-    mockFetch([
-      { match: "yields.llama.fi", body: { error: "Internal Server Error" }, status: 500 },
-    ]);
+    mockFetch([{ match: "yields.llama.fi", body: { error: "Internal Server Error" }, status: 500 }]);
 
     const result = await syncYieldData(db);
 
@@ -372,11 +407,7 @@ describe("syncYieldData", () => {
     // The function might resolve 0 if sDAI couldn't be matched (no DL pools available)
     expect(result.itemCount).toBeDefined();
     // recordOutcome should have been called with failure
-    expect(recordOutcome).toHaveBeenCalledWith(
-      expect.anything(),
-      "defillama-yields",
-      false,
-    );
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
   it("skips DL yields fetch when circuit breaker is open", async () => {
@@ -392,7 +423,7 @@ describe("syncYieldData", () => {
     expect(result.itemCount).toBeDefined();
     // No DL yields fetch should have been attempted
     const yieldCalls = fetchSpy.mock.calls.filter(
-      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi")
+      (call: unknown[]) => typeof call[0] === "string" && (call[0] as string).includes("yields.llama.fi"),
     );
     expect(yieldCalls.length).toBe(0);
   });
@@ -443,9 +474,10 @@ describe("syncYieldData", () => {
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     mockFetch([]);
 
-    vi
-      .spyOn(safetyScoresModule, "computeSafetyScoresSnapshot")
-      .mockResolvedValueOnce({ mode: "map", scores: new Map() } as never);
+    vi.spyOn(safetyScoresModule, "computeSafetyScoresSnapshot").mockResolvedValueOnce({
+      mode: "map",
+      scores: new Map(),
+    } as never);
 
     const result = await syncYieldData(db);
 

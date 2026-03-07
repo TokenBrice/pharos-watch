@@ -3,21 +3,35 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { getCache, setCache, batchExecute, buildInClause } from "../lib/db";
 import {
-  USER_AGENT, CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK,
-  PYS_SCALING_FACTOR, DEFAULT_SAFETY_SCORE, MIN_SAFETY_SCORE_FOR_YIELD,
-  MIN_LENDING_POOL_APY, MIN_LENDING_POOL_TVL_USD,
+  USER_AGENT,
+  CIRCUIT_SOURCE,
+  RISK_FREE_RATE_FALLBACK,
+  PYS_SCALING_FACTOR,
+  DEFAULT_SAFETY_SCORE,
+  MIN_SAFETY_SCORE_FOR_YIELD,
+  MIN_LENDING_POOL_APY,
+  MIN_LENDING_POOL_TVL_USD,
 } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getChainRpc } from "../lib/chain-rpcs";
 import {
-  computeApyFromRate, computeApyFromPrice, computePYS,
-  computeYieldStability, computeApyVarianceScore,
-  detectWarningSignals, findBestLendingPool, matchAllDlPools,
+  computeApyFromRate,
+  computeApyFromPrice,
+  computePYS,
+  computeYieldStability,
+  computeApyVarianceScore,
+  detectWarningSignals,
+  findBestLendingPool,
+  matchAllDlPools,
 } from "./yield-helpers";
 import {
-  YIELD_VARIANT_MAP, YIELD_POOL_MAP, ON_CHAIN_RATE_CONFIGS,
-  LENDING_PROTOCOL_ALLOWLIST, PRICE_DERIVED_FALLBACK_IDS,
-  AUTO_LENDING_POOL_MAP, AUTO_LENDING_SAFETY_BYPASS_IDS,
+  YIELD_VARIANT_MAP,
+  YIELD_POOL_MAP,
+  ON_CHAIN_RATE_CONFIGS,
+  LENDING_PROTOCOL_ALLOWLIST,
+  PRICE_DERIVED_FALLBACK_IDS,
+  AUTO_LENDING_POOL_MAP,
+  AUTO_LENDING_SAFETY_BYPASS_IDS,
 } from "./yield-config";
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
 import type { CronResult } from "../lib/db";
@@ -50,9 +64,9 @@ interface ResolvedYield {
   sourceTvlUsd: number | null;
   dataSource: "onchain" | "defillama" | "defillama-auto" | "price-derived";
   exchangeRate: number | null;
-  sourceKey: string;           // DL pool UUID or "price-derived"
-  yieldSource?: string;        // label override for variant wrapper rows
-  yieldType?: string;          // type override for variant wrapper rows
+  sourceKey: string; // DL pool UUID or "price-derived"
+  yieldSource?: string; // label override for variant wrapper rows
+  yieldType?: string; // type override for variant wrapper rows
 }
 
 // -- Tier 1: On-chain exchange rates -----------------------------------------
@@ -82,7 +96,7 @@ async function fetchOnChainRates(signal?: AbortSignal): Promise<Map<string, { ra
       });
 
       if (!res?.ok) continue;
-      const body = await res.json() as { result?: string };
+      const body = (await res.json()) as { result?: string };
       if (!body.result || body.result === "0x") continue;
 
       const raw = BigInt(body.result);
@@ -98,21 +112,24 @@ async function fetchOnChainRates(signal?: AbortSignal): Promise<Map<string, { ra
 
 // -- Tier 3: Price-derived APY -----------------------------------------------
 
-async function getPriceDerivedApy(
-  db: D1Database,
-  stablecoinId: string,
-): Promise<number | null> {
+async function getPriceDerivedApy(db: D1Database, stablecoinId: string): Promise<number | null> {
   const now = Math.floor(Date.now() / 1000);
   const thirtyDaysAgo = now - 30 * 86400;
 
   // Get most recent and ~30d-ago prices from supply_history
   const [recentRow, oldRow] = await Promise.all([
-    db.prepare(
-      "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1"
-    ).bind(stablecoinId).first<{ price: number }>(),
-    db.prepare(
-      "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL AND snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 1"
-    ).bind(stablecoinId, thirtyDaysAgo).first<{ price: number }>(),
+    db
+      .prepare(
+        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+      )
+      .bind(stablecoinId)
+      .first<{ price: number }>(),
+    db
+      .prepare(
+        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL AND snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 1",
+      )
+      .bind(stablecoinId, thirtyDaysAgo)
+      .first<{ price: number }>(),
   ]);
 
   if (!recentRow?.price || !oldRow?.price || oldRow.price <= 0) return null;
@@ -143,14 +160,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   }
 
   // Fall back to direct fetch if no cache available
-  if (dlPools.length === 0 && await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS)) {
+  if (dlPools.length === 0 && (await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS))) {
     try {
       const res = await fetchWithRetry(DL_YIELDS_URL, {
         headers: { "User-Agent": USER_AGENT },
         signal,
       });
       if (res?.ok) {
-        const body = await res.json() as { data: DlPool[] };
+        const body = (await res.json()) as { data: DlPool[] };
         dlPools = (body.data ?? []).filter((p) => p.stablecoin);
         await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
       } else {
@@ -176,10 +193,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     outputMode: "map",
   });
   const safetyScores = safetySnapshot.scores;
-  const safetyCoverageRatio =
-    TRACKED_STABLECOINS.length > 0 ? safetyScores.size / TRACKED_STABLECOINS.length : 1;
-  const safetySnapshotDegraded =
-    safetyScores.size === 0 || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
+  const safetyCoverageRatio = TRACKED_STABLECOINS.length > 0 ? safetyScores.size / TRACKED_STABLECOINS.length : 1;
+  const safetySnapshotDegraded = safetyScores.size === 0 || safetyCoverageRatio < MIN_SAFETY_SCORE_COVERAGE_RATIO;
 
   if (safetySnapshotDegraded) {
     console.warn(
@@ -193,10 +208,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     scoresObj[id] = val;
   }
   if (!safetySnapshotDegraded) {
-    await setCache(db, "report_card_cache", JSON.stringify({
-      scores: scoresObj,
-      updatedAt: startSec,
-    }));
+    await setCache(
+      db,
+      "report_card_cache",
+      JSON.stringify({
+        scores: scoresObj,
+        updatedAt: startSec,
+      }),
+    );
   } else {
     console.warn("[sync-yield-data] Skipped report_card_cache write due to degraded safety snapshot");
   }
@@ -206,23 +225,23 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   const tier1PrevRates = new Map<string, number | null>();
   const tier1CandidateIds = yieldCoins
     .map((meta) => meta.id)
-    .filter((id) =>
-      ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id) &&
-      onChainRates.has(id),
-    );
+    .filter((id) => ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id) && onChainRates.has(id));
   const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
   if (tier1CandidateIds.length > 0) {
     const tier1InClause = buildInClause(tier1CandidateIds);
-    const rows = await db.prepare(
-      `SELECT stablecoin_id, exchange_rate, recorded_at
+    const rows = await db
+      .prepare(
+        `SELECT stablecoin_id, exchange_rate, recorded_at
        FROM yield_history
        WHERE stablecoin_id IN (${tier1InClause.sql}) AND recorded_at <= ?
        ORDER BY stablecoin_id ASC, recorded_at DESC`,
-    ).bind(...tier1InClause.binds, sevenDaysAgoSec).all<{
-      stablecoin_id: string;
-      exchange_rate: number | null;
-      recorded_at: number;
-    }>();
+      )
+      .bind(...tier1InClause.binds, sevenDaysAgoSec)
+      .all<{
+        stablecoin_id: string;
+        exchange_rate: number | null;
+        recorded_at: number;
+      }>();
     for (const row of rows.results ?? []) {
       if (!tier1PrevRateRows.has(row.stablecoin_id)) {
         tier1PrevRateRows.set(row.stablecoin_id, {
@@ -251,11 +270,16 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
         // Populate sourcePool from YIELD_POOL_MAP so source_key is a stable UUID.
         const nativePoolId = YIELD_POOL_MAP[id] ?? null;
         resolved.push({
-          id, symbol,
+          id,
+          symbol,
           yield: {
-            currentApy: apy, apyBase: apy, apyReward: null,
-            sourcePool: nativePoolId, sourceTvlUsd: null,
-            dataSource: "onchain", exchangeRate: rate,
+            currentApy: apy,
+            apyBase: apy,
+            apyReward: null,
+            sourcePool: nativePoolId,
+            sourceTvlUsd: null,
+            dataSource: "onchain",
+            exchangeRate: rate,
             sourceKey: nativePoolId ?? "price-derived",
           },
         });
@@ -268,14 +292,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     // Tier 2: DeFiLlama pool matching — collect ALL sources for this coin
     {
       const alreadyResolvedKeys = new Set(
-        resolved.filter(r => r.id === id && r.yield != null).map(r => r.yield!.sourceKey)
+        resolved.filter((r) => r.id === id && r.yield != null).map((r) => r.yield!.sourceKey),
       );
       const dlSources = matchAllDlPools(id, symbol, dlPools, YIELD_POOL_MAP, YIELD_VARIANT_MAP);
       for (const dlPool of dlSources) {
         if (alreadyResolvedKeys.has(dlPool.pool)) continue; // Tier 1 already handled this source
         if (dlPool.apy == null || dlPool.apy < 0) continue;
 
-        const fullPool = dlPools.find(p => p.pool === dlPool.pool)!;
+        const fullPool = dlPools.find((p) => p.pool === dlPool.pool)!;
         const variant = YIELD_VARIANT_MAP[id];
         // Use variant label/type if this pool was found via YIELD_VARIANT_MAP and not the primary pool map
         const isVariantPool = variant != null && dlPool.pool !== YIELD_POOL_MAP[id];
@@ -283,11 +307,16 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
         const yieldTypeOverride = isVariantPool ? variant.yieldType : undefined;
 
         resolved.push({
-          id, symbol,
+          id,
+          symbol,
           yield: {
-            currentApy: fullPool.apy, apyBase: fullPool.apyBase, apyReward: fullPool.apyReward,
-            sourcePool: fullPool.pool, sourceTvlUsd: fullPool.tvlUsd,
-            dataSource: "defillama", exchangeRate: null,
+            currentApy: fullPool.apy,
+            apyBase: fullPool.apyBase,
+            apyReward: fullPool.apyReward,
+            sourcePool: fullPool.pool,
+            sourceTvlUsd: fullPool.tvlUsd,
+            dataSource: "defillama",
+            exchangeRate: null,
             sourceKey: fullPool.pool,
             yieldSource: yieldSourceOverride,
             yieldType: yieldTypeOverride,
@@ -305,7 +334,8 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       const apy = await getPriceDerivedApy(db, id);
       if (apy != null) {
         resolved.push({
-          id, symbol,
+          id,
+          symbol,
           yield: {
             currentApy: apy,
             apyBase: apy,
@@ -343,17 +373,16 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
       if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
 
-      const eligible = (
+      const eligible =
         pool.exposure === "single" &&
         pool.stablecoin &&
         LENDING_PROTOCOL_ALLOWLIST.has(pool.project) &&
         pool.apy >= MIN_LENDING_POOL_APY &&
-        pool.tvlUsd >= MIN_LENDING_POOL_TVL_USD
-      );
+        pool.tvlUsd >= MIN_LENDING_POOL_TVL_USD;
       if (!eligible) continue;
 
       // Skip if this exact pool UUID is already resolved for this coin
-      if (resolved.some(r => r.id === stablecoinId && r.yield?.sourceKey === poolId)) continue;
+      if (resolved.some((r) => r.id === stablecoinId && r.yield?.sourceKey === poolId)) continue;
 
       const meta = TRACKED_STABLECOINS.find((m) => m.id === stablecoinId);
       if (!meta) continue;
@@ -362,9 +391,13 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
         id: meta.id,
         symbol: meta.symbol,
         yield: {
-          currentApy: pool.apy, apyBase: pool.apyBase, apyReward: pool.apyReward,
-          sourcePool: pool.pool, sourceTvlUsd: pool.tvlUsd,
-          dataSource: "defillama-auto", exchangeRate: null,
+          currentApy: pool.apy,
+          apyBase: pool.apyBase,
+          apyReward: pool.apyReward,
+          sourcePool: pool.pool,
+          sourceTvlUsd: pool.tvlUsd,
+          dataSource: "defillama-auto",
+          exchangeRate: null,
           sourceKey: pool.pool,
         },
       });
@@ -374,11 +407,12 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     }
 
     // Dynamic discovery: all coins with safety >= threshold, no auto-discovered pool yet
-    const lendingCandidates = TRACKED_STABLECOINS.filter((m) =>
-      !autoDiscoveredIds.has(m.id) &&
-      m.flags.pegCurrency !== "GOLD" &&
-      m.flags.pegCurrency !== "SILVER" &&
-      (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD
+    const lendingCandidates = TRACKED_STABLECOINS.filter(
+      (m) =>
+        !autoDiscoveredIds.has(m.id) &&
+        m.flags.pegCurrency !== "GOLD" &&
+        m.flags.pegCurrency !== "SILVER" &&
+        (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
     );
 
     for (const meta of lendingCandidates) {
@@ -390,15 +424,19 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       if (!pool) continue;
 
       // Skip if this pool UUID is already in resolved for this coin
-      if (resolved.some(r => r.id === meta.id && r.yield?.sourceKey === pool.pool)) continue;
+      if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === pool.pool)) continue;
 
       resolved.push({
         id: meta.id,
         symbol: meta.symbol,
         yield: {
-          currentApy: pool.apy, apyBase: pool.apyBase, apyReward: pool.apyReward,
-          sourcePool: pool.pool, sourceTvlUsd: pool.tvlUsd,
-          dataSource: "defillama-auto", exchangeRate: null,
+          currentApy: pool.apy,
+          apyBase: pool.apyBase,
+          apyReward: pool.apyReward,
+          sourcePool: pool.pool,
+          sourceTvlUsd: pool.tvlUsd,
+          dataSource: "defillama-auto",
+          exchangeRate: null,
           sourceKey: pool.pool,
         },
       });
@@ -406,7 +444,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       autoCount++;
     }
     console.log(
-      `[sync-yield-data] Auto-discovery: ${autoCount} lending pools (${deterministicCount} deterministic, ${autoCount - deterministicCount} dynamic)`
+      `[sync-yield-data] Auto-discovery: ${autoCount} lending pools (${deterministicCount} deterministic, ${autoCount - deterministicCount} dynamic)`,
     );
   }
 
@@ -435,43 +473,46 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     .filter((r) => r.yield != null)
     .map((r) => r.yield!.currentApy)
     .sort((a, b) => a - b);
-  const medianApy = resolvedApys.length > 0
-    ? resolvedApys.length % 2 === 1
-      ? resolvedApys[Math.floor(resolvedApys.length / 2)]
-      : (resolvedApys[resolvedApys.length / 2 - 1] + resolvedApys[resolvedApys.length / 2]) / 2
-    : 0;
+  const medianApy =
+    resolvedApys.length > 0
+      ? resolvedApys.length % 2 === 1
+        ? resolvedApys[Math.floor(resolvedApys.length / 2)]
+        : (resolvedApys[resolvedApys.length / 2 - 1] + resolvedApys[resolvedApys.length / 2]) / 2
+      : 0;
 
-  const resolvedIds = [...new Set(
-    resolved
-      .filter((entry) => entry.yield != null)
-      .map((entry) => entry.id),
-  )];
+  const resolvedIds = [...new Set(resolved.filter((entry) => entry.yield != null).map((entry) => entry.id))];
   const historyById = new Map<string, Array<{ apy: number; recorded_at: number; source_tvl_usd: number | null }>>();
   const prevTvlMap = new Map<string, number | null>();
   if (resolvedIds.length > 0) {
     const resolvedIdInClause = buildInClause(resolvedIds);
     const [historyRows, prevTvlRows] = await Promise.all([
-      db.prepare(
-        `SELECT stablecoin_id, apy, recorded_at, source_tvl_usd
+      db
+        .prepare(
+          `SELECT stablecoin_id, apy, recorded_at, source_tvl_usd
          FROM yield_history
          WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at >= ?
          ORDER BY stablecoin_id ASC, recorded_at ASC`,
-      ).bind(...resolvedIdInClause.binds, startSec - 30 * 86400).all<{
-        stablecoin_id: string;
-        apy: number;
-        recorded_at: number;
-        source_tvl_usd: number | null;
-      }>(),
-      db.prepare(
-        `SELECT stablecoin_id, source_tvl_usd, recorded_at
+        )
+        .bind(...resolvedIdInClause.binds, startSec - 30 * 86400)
+        .all<{
+          stablecoin_id: string;
+          apy: number;
+          recorded_at: number;
+          source_tvl_usd: number | null;
+        }>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id, source_tvl_usd, recorded_at
          FROM yield_history
          WHERE stablecoin_id IN (${resolvedIdInClause.sql}) AND recorded_at <= ? AND source_tvl_usd IS NOT NULL
          ORDER BY stablecoin_id ASC, recorded_at DESC`,
-      ).bind(...resolvedIdInClause.binds, sevenDaysAgoSec).all<{
-        stablecoin_id: string;
-        source_tvl_usd: number | null;
-        recorded_at: number;
-      }>(),
+        )
+        .bind(...resolvedIdInClause.binds, sevenDaysAgoSec)
+        .all<{
+          stablecoin_id: string;
+          source_tvl_usd: number | null;
+          recorded_at: number;
+        }>(),
     ]);
     for (const row of historyRows.results ?? []) {
       const list = historyById.get(row.stablecoin_id) ?? [];
@@ -491,12 +532,14 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     const meta = TRACKED_STABLECOINS.find((m) => m.id === id)!;
     const yieldConfig = meta.yieldConfig;
     // Variant wrapper rows carry their own yieldSource/yieldType overrides
-    const yieldSource = y.yieldSource
-      ?? yieldConfig?.yieldSource
-      ?? (y.dataSource === "defillama-auto" ? "Best lending rate" : "Unknown");
-    const yieldType = y.yieldType
-      ?? yieldConfig?.yieldType
-      ?? (y.dataSource === "defillama-auto" ? "lending-opportunity" : "nav-appreciation");
+    const yieldSource =
+      y.yieldSource ??
+      yieldConfig?.yieldSource ??
+      (y.dataSource === "defillama-auto" ? "Best lending rate" : "Unknown");
+    const yieldType =
+      y.yieldType ??
+      yieldConfig?.yieldType ??
+      (y.dataSource === "defillama-auto" ? "lending-opportunity" : "nav-appreciation");
 
     // is_best: 1 for the source with highest currentApy per coin, 0 for alternatives
     const isBest = bestSourceKeyByCoin.get(id) === y.sourceKey ? 1 : 0;
@@ -506,18 +549,15 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     const samples = histRows.map((row) => row.apy);
     samples.push(y.currentApy);
 
-    const apy7dSamples = histRows
-      .filter((row) => row.recorded_at >= sevenDaysAgoSec)
-      .map((row) => row.apy);
+    const apy7dSamples = histRows.filter((row) => row.recorded_at >= sevenDaysAgoSec).map((row) => row.apy);
     apy7dSamples.push(y.currentApy);
     const apy7d = apy7dSamples.reduce((s, v) => s + v, 0) / apy7dSamples.length;
     const apy30d = samples.reduce((s, v) => s + v, 0) / samples.length;
 
     const apyVarianceScore = computeApyVarianceScore(samples);
     const yieldStability = computeYieldStability(samples);
-    const stdDev30d = samples.length >= 2
-      ? Math.sqrt(samples.reduce((s, v) => s + (v - apy30d) ** 2, 0) / samples.length)
-      : null;
+    const stdDev30d =
+      samples.length >= 2 ? Math.sqrt(samples.reduce((s, v) => s + (v - apy30d) ** 2, 0) / samples.length) : null;
     const apyMin30d = samples.length > 0 ? samples.reduce((m, v) => Math.min(m, v), Infinity) : null;
     const apyMax30d = samples.length > 0 ? samples.reduce((m, v) => Math.max(m, v), -Infinity) : null;
 
@@ -528,7 +568,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
     // PYS
     const pys = computePYS({ apy30d, safetyScore, apyVarianceScore, scalingFactor: PYS_SCALING_FACTOR });
-    const yieldToRisk = (101 - safetyScore) > 0 ? apy30d / (101 - safetyScore) : null;
+    const yieldToRisk = 101 - safetyScore > 0 ? apy30d / (101 - safetyScore) : null;
     const excessYield = apy30d - riskFreeRate;
 
     // Belt-and-suspenders: guard against NaN/Infinity reaching D1
@@ -553,30 +593,56 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
     // Upsert yield_data
     yieldDataStmts.push(
-      db.prepare(
-        `INSERT OR REPLACE INTO yield_data (
+      db
+        .prepare(
+          `INSERT OR REPLACE INTO yield_data (
           stablecoin_id, source_key, symbol, current_apy, apy_base, apy_reward, apy_7d, apy_30d,
           yield_source, yield_type, source_pool, source_tvl_usd, data_source,
           safety_score, safety_grade, pharos_yield_score, yield_to_risk, excess_yield, yield_stability,
           apy_variance_30d, /* note: column stores standard deviation, not variance */
           apy_min_30d, apy_max_30d, exchange_rate, exchange_rate_prev, warning_signals, is_best, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ).bind(
-        id, y.sourceKey, symbol, y.currentApy, y.apyBase, y.apyReward, apy7d, apy30d,
-        yieldSource, yieldType,
-        y.sourcePool, y.sourceTvlUsd, y.dataSource,
-        safetyScore, safetyGrade, safePys, yieldToRisk, excessYield, safeStability,
-        safeVariance30d, apyMin30d, apyMax30d, y.exchangeRate, prevExchangeRate, warningSignalsJson, isBest, startSec,
-      )
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(
+          id,
+          y.sourceKey,
+          symbol,
+          y.currentApy,
+          y.apyBase,
+          y.apyReward,
+          apy7d,
+          apy30d,
+          yieldSource,
+          yieldType,
+          y.sourcePool,
+          y.sourceTvlUsd,
+          y.dataSource,
+          safetyScore,
+          safetyGrade,
+          safePys,
+          yieldToRisk,
+          excessYield,
+          safeStability,
+          safeVariance30d,
+          apyMin30d,
+          apyMax30d,
+          y.exchangeRate,
+          prevExchangeRate,
+          warningSignalsJson,
+          isBest,
+          startSec,
+        ),
     );
 
     // Insert yield_history point (only for the best source per coin)
     if (isBest === 1 && !historyWrittenForCoin.has(id)) {
       historyStmts.push(
-        db.prepare(
-          `INSERT OR IGNORE INTO yield_history (stablecoin_id, recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, data_source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(id, startSec, y.currentApy, y.apyBase, y.apyReward, y.exchangeRate, y.sourceTvlUsd, y.dataSource)
+        db
+          .prepare(
+            `INSERT OR IGNORE INTO yield_history (stablecoin_id, recorded_at, apy, apy_base, apy_reward, exchange_rate, source_tvl_usd, data_source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(id, startSec, y.currentApy, y.apyBase, y.apyReward, y.exchangeRate, y.sourceTvlUsd, y.dataSource),
       );
       historyWrittenForCoin.add(id);
     }
@@ -588,21 +654,43 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   const writeStmts = [...yieldDataStmts, ...historyStmts];
   if (writeStmts.length > 0) await batchExecute(db, writeStmts);
 
-  // 7b. Purge stale alt-source rows: non-best rows not written in this run
-  // (e.g., a wrapper pool disappeared from DL). Primary rows are always re-written.
-  await db.prepare("DELETE FROM yield_data WHERE is_best = 0 AND updated_at < ?").bind(startSec).run();
+  // 7b. Purge stale rows for coins refreshed in this run so old primary sources
+  // cannot linger beside the new winner when a coin's best source changes.
+  if (resolvedIds.length > 0) {
+    const staleRowInClause = buildInClause(resolvedIds);
+    await db
+      .prepare(
+        `DELETE FROM yield_data
+       WHERE stablecoin_id IN (${staleRowInClause.sql}) AND updated_at < ?`,
+      )
+      .bind(...staleRowInClause.binds, startSec)
+      .run();
+  }
 
   // 8. Prune old history (>365 days)
   const pruneCutoff = startSec - 365 * 86400;
   await db.prepare("DELETE FROM yield_history WHERE recorded_at < ?").bind(pruneCutoff).run();
 
   // 9. Cache the rankings response for fast API reads
-  const rankingsData = await db.prepare("SELECT * FROM yield_data WHERE is_best = 1 ORDER BY pharos_yield_score DESC").all();
+  const rankingsData = await db
+    .prepare("SELECT * FROM yield_data WHERE is_best = 1 ORDER BY pharos_yield_score DESC")
+    .all();
 
   // Fetch alt sources for coins with multiple yield sources
-  const altSourcesData = await db.prepare(
-    "SELECT stablecoin_id, source_key, current_apy, apy_30d, yield_source, yield_type, source_tvl_usd, data_source FROM yield_data WHERE is_best = 0"
-  ).all<{ stablecoin_id: string; source_key: string; current_apy: number; apy_30d: number; yield_source: string; yield_type: string; source_tvl_usd: number | null; data_source: string }>();
+  const altSourcesData = await db
+    .prepare(
+      "SELECT stablecoin_id, source_key, current_apy, apy_30d, yield_source, yield_type, source_tvl_usd, data_source FROM yield_data WHERE is_best = 0",
+    )
+    .all<{
+      stablecoin_id: string;
+      source_key: string;
+      current_apy: number;
+      apy_30d: number;
+      yield_source: string;
+      yield_type: string;
+      source_tvl_usd: number | null;
+      data_source: string;
+    }>();
   const altSourcesByCoin = new Map<string, AltYieldSource[]>();
   for (const row of altSourcesData.results ?? []) {
     const alts = altSourcesByCoin.get(row.stablecoin_id) ?? [];
@@ -619,7 +707,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   }
 
   const rankingsPayload = {
-    rankings: (rankingsData.results ?? []).map((row) => ({
+    rankings: dedupeLatestBestRows(rankingsData.results ?? []).map((row) => ({
       ...rowToRanking(row),
       altSources: altSourcesByCoin.get(row.stablecoin_id as string) ?? [],
     })),
@@ -698,6 +786,36 @@ function rowToRanking(row: Record<string, unknown>) {
     warningSignals: parseWarningSignals(row.warning_signals),
     altSources: [] as AltYieldSource[],
   };
+}
+
+function dedupeLatestBestRows(rows: Record<string, unknown>[]) {
+  const deduped = new Map<string, Record<string, unknown>>();
+
+  for (const row of rows) {
+    const stablecoinId = String(row.stablecoin_id);
+    const current = deduped.get(stablecoinId);
+    if (!current) {
+      deduped.set(stablecoinId, row);
+      continue;
+    }
+
+    const rowUpdatedAt = typeof row.updated_at === "number" ? row.updated_at : Number.NEGATIVE_INFINITY;
+    const currentUpdatedAt = typeof current.updated_at === "number" ? current.updated_at : Number.NEGATIVE_INFINITY;
+    if (rowUpdatedAt !== currentUpdatedAt) {
+      if (rowUpdatedAt > currentUpdatedAt) {
+        deduped.set(stablecoinId, row);
+      }
+      continue;
+    }
+
+    const rowCurrentApy = typeof row.current_apy === "number" ? row.current_apy : Number.NEGATIVE_INFINITY;
+    const currentApy = typeof current.current_apy === "number" ? current.current_apy : Number.NEGATIVE_INFINITY;
+    if (rowCurrentApy > currentApy) {
+      deduped.set(stablecoinId, row);
+    }
+  }
+
+  return [...deduped.values()];
 }
 
 function parseWarningSignals(raw: unknown): string[] {
