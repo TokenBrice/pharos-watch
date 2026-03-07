@@ -1,6 +1,6 @@
 # Design Language Reference (Live Baseline)
 
-This document reflects the deployed UI on [pharos.watch](https://pharos.watch) and was re-verified on **March 5, 2026**.
+This document reflects the deployed UI on [pharos.watch](https://pharos.watch) and was re-verified on **March 7, 2026**.
 
 Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md).
 
@@ -90,6 +90,7 @@ Home keeps a single `sr-only` page `h1` for semantics and uses a non-heading top
 
 - Desktop masthead strip: `pharos-card-shell hidden lg:flex ... px-5 py-5`
 - Snapshot shell: PSI-dominant first card + four supporting desktop KPI panels; mobile and tablet collapse to a 2x2 compact tile grid that includes net mint/burn flow
+- Snapshot PSI lead card hides the `Live market health`, `24h`, and `7d` pills from the desktop switch (`lg`, `1024px`) through `1599px` to protect the score/band lockup; outside that band it keeps the full desktop treatment
 
 ### Stablecoin Detail (Special)
 

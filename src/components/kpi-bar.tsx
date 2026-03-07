@@ -187,7 +187,7 @@ function PrimarySnapshotCard({
             {band || "No current PSI band"}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5 min-[1024px]:max-[1599px]:hidden">
           <span
             className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
           >
