@@ -179,11 +179,11 @@ Possible values per channel: `"no-creds"`, `"ok"`, `"failed: <truncated error>"`
 The latest digest is presented in a broadsheet newspaper style:
 - **Masthead:** "PHAROS DAILY DIGEST" centered in small-caps with the full date below, bordered by horizontal rules
 - **Headline:** Digest title in large serif font (Georgia)
-- **Body:** Extended text paragraphs in serif italic
+- **Body:** Extended text paragraphs in serif italic. On the homepage, only the first editorial paragraph is shown as a teaser; the paragraph is preserved whole and never character-clamped mid-sentence. The `/digest/` archive broadsheet shows the full editorial body.
 
-The `text` field (tweet-sized copy) is **never rendered on the website** — it exists solely for Twitter distribution. Only `title` and `extended` appear on the site.
+The `text` field remains the short distribution summary used for metadata and digest detail intros. The shared broadsheet renderer prefers `extended`, and falls back to `text` only if `extended` is unavailable.
 
-Used in two places: the homepage (with "Read all previous recaps" link) and the `/digest/` archive page (without the link, since the wire table follows).
+Used in two places: the homepage (title + first editorial paragraph + "Read today's full digest" link) and the `/digest/` archive page (full broadsheet body, without the link since the wire table follows).
 
 ### Archive page
 
@@ -206,7 +206,7 @@ The wire table shows each digest as a compact row: **date** (monospace, e.g. "27
 **Component:** `src/components/digest-snapshot.tsx`
 **Hook:** `src/hooks/use-digest-snapshot.ts` → `GET /api/digest-snapshot?date={date}`
 
-Each detail page shows the full digest text plus 8 contextual data cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
+Each detail page shows the short summary intro (`text`) followed by every extended editorial paragraph plus 8 contextual data cards (Market Snapshot, Stability Index, Supply Mover, Active Depegs, Blacklist Activity, Safety Scores, Supply Velocity, Resolved Depegs). Includes JSON-LD Article structured data and prev/next navigation.
 
 ---
 

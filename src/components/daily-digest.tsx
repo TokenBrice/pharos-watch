@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDailyDigest } from "@/hooks/use-daily-digest";
+import { getDigestBodyParagraphs } from "@/lib/digest";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 
 function formatMasthead(ts: number): string {
@@ -16,8 +17,20 @@ function formatMasthead(ts: number): string {
 
 const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 
-export function DailyDigest({ showArchiveLink = true }: { showArchiveLink?: boolean }) {
+interface DailyDigestProps {
+  variant?: "preview" | "full";
+  showCta?: boolean;
+}
+
+export function DailyDigest({ variant = "full", showCta }: DailyDigestProps) {
   const { data, isLoading, error, refetch } = useDailyDigest();
+  const paragraphs = getDigestBodyParagraphs({
+    digest: data?.digest,
+    digestExtended: data?.digestExtended,
+  });
+  const visibleParagraphs = variant === "preview" ? paragraphs.slice(0, 1) : paragraphs;
+  const shouldShowCta = showCta ?? (variant === "preview");
+  const ctaLabel = variant === "preview" ? "Read today's full digest" : "Read all previous recaps";
 
   if (!isLoading && !data) {
     if (error) return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
@@ -56,7 +69,7 @@ export function DailyDigest({ showArchiveLink = true }: { showArchiveLink?: bool
           {data?.digestTitle || "Signal & Noise"}
         </h2>
 
-        {data?.digestExtended && data.digestExtended.split("\n\n").map((para, i) => (
+        {visibleParagraphs.map((para, i) => (
           <p
             key={i}
             className="text-[1.1rem] leading-relaxed text-foreground/90 italic"
@@ -66,12 +79,12 @@ export function DailyDigest({ showArchiveLink = true }: { showArchiveLink?: bool
           </p>
         ))}
 
-        {showArchiveLink && (
+        {shouldShowCta && (
           <Link
             href="/digest/"
             className="inline-block mt-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
           >
-            Read all previous recaps &rarr;
+            {ctaLabel} &rarr;
           </Link>
         )}
       </div>

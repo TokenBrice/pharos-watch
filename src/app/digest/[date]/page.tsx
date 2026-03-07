@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
+import { splitDigestParagraphs } from "@/lib/digest";
 import digests from "../../../../data/digests.json";
 
 interface DigestEntry {
@@ -67,6 +68,7 @@ export default async function DigestDetailPage({
   if (!digest) notFound();
 
   const formatted = formatDate(digest.date);
+  const extendedParagraphs = splitDigestParagraphs(digest.extended);
 
   // Find prev/next digests
   const idx = allDigests.findIndex((d) => d.date === digest.date);
@@ -126,7 +128,7 @@ export default async function DigestDetailPage({
         >
           {digest.text}
         </p>
-        {digest.extended && digest.extended.split("\n\n").map((para, i) => (
+        {extendedParagraphs.map((para, i) => (
           <p
             key={i}
             className="text-[1.15rem] leading-relaxed text-foreground/90 italic mt-4"

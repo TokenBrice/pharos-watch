@@ -103,12 +103,29 @@ export function HomepageClient() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="digest">
-        <DailyDigest />
+        <DailyDigest variant="preview" />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="table">
         <section>
-          <div className="space-y-2.5 mb-6">
+          <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
+          <FilterBar {...filters} />
+          <div className="mt-6">
+            <StablecoinTable
+              data={data?.peggedAssets}
+              isLoading={isLoading}
+              activeFilters={filters.activeFilters}
+              logos={logos}
+              pegRates={pegRates}
+              searchQuery={filters.searchQuery}
+              pegScores={pegScores}
+              dexLiquidity={dexLiquidity ?? undefined}
+              reportCards={reportCardMap}
+              onClearSearch={() => filters.setSearchQuery("")}
+              onClearFilters={filters.clearAll}
+            />
+          </div>
+          <div className="mt-8 space-y-2.5">
             <h2 className="pharos-kicker">
               Browse By Peg
             </h2>
@@ -127,23 +144,6 @@ export function HomepageClient() {
                 );
               })}
             </div>
-          </div>
-          <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground">Key Stablecoin Data</h2>
-          <FilterBar {...filters} />
-          <div className="mt-6">
-            <StablecoinTable
-              data={data?.peggedAssets}
-              isLoading={isLoading}
-              activeFilters={filters.activeFilters}
-              logos={logos}
-              pegRates={pegRates}
-              searchQuery={filters.searchQuery}
-              pegScores={pegScores}
-              dexLiquidity={dexLiquidity ?? undefined}
-              reportCards={reportCardMap}
-              onClearSearch={() => filters.setSearchQuery("")}
-              onClearFilters={filters.clearAll}
-            />
           </div>
         </section>
       </SectionErrorBoundary>
