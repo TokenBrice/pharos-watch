@@ -51,8 +51,9 @@ Primary files:
 - Query param `coins` accepts:
   - canonical ticker-issuer IDs (primary format, e.g. `usdt-tether`)
   - lowercase symbols (legacy fallback)
+  - legacy stablecoin IDs that resolve through `resolveStablecoinId(..., { allowLegacy: true })`
 
-Selected state is normalized to IDs to avoid duplicate-symbol collisions.
+Selected state is normalized back to canonical IDs in the URL to avoid duplicate-symbol collisions and preserve shareable links.
 
 ### Data dependencies
 

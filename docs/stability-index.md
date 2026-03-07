@@ -77,7 +77,7 @@ A coin may have multiple overlapping depeg events (e.g., one event opened at 100
 The cron captures a per-coin breakdown in `input_snapshot.contributors`:
 
 ```json
-[{ "id": "258", "symbol": "A7A5", "bps": -9871, "mcapUsd": 507000000, "ageDays": 61.2, "factor": 0.74 }]
+[{ "id": "a7a5-old-vector", "symbol": "A7A5", "bps": -9871, "mcapUsd": 507000000, "ageDays": 61.2, "factor": 0.74 }]
 ```
 
 The API surfaces this array in `current.contributors` (not in history). The frontend renders it as a "Top Contributors" table showing each coin's deviation, market cap, age, depreciation factor, and severity/breadth cost.

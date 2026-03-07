@@ -136,23 +136,31 @@ interface SupplyMethodConfig {
 
 | Token | ID | Method | Reason |
 |-------|----|--------|--------|
-| USDT | `1` | `totalSupply-minus-addresses` | Subtracts Tether Treasury on Ethereum |
-| USDC | `2` | `totalSupply-minus-addresses` | Subtracts Circle Reserve on Ethereum |
-| PYUSD | `120` | `exclude` | Significant Solana supply not coverable on-chain --- use DefiLlama |
-| crvUSD | `110` | `exclude` | `totalSupply()` includes pre-minted lending capacity |
-| MIM | `10` | `exclude` | `totalSupply()` includes unborrowed MIM across 45+ Cauldron contracts |
+| USDT | `usdt-tether` | `totalSupply-minus-addresses` | Subtracts Tether Treasury on Ethereum |
+| USDC | `usdc-circle` | `totalSupply-minus-addresses` | Subtracts Circle Reserve on Ethereum |
+| PYUSD | `pyusd-paypal` | `exclude` | Significant Solana supply not coverable on-chain --- use DefiLlama |
+| crvUSD | `crvusd-curve` | `exclude` | `totalSupply()` includes pre-minted lending capacity |
+| MIM | `mim-abracadabra` | `exclude` | `totalSupply()` includes unborrowed MIM across 45+ Cauldron contracts |
 
 ### Known decimal exceptions
 
-Not all tokens use the standard 18 decimals:
+Do not assume `18` decimals, or even one fixed decimal count per token across all chains. The authoritative source is `contracts[].decimals` in `shared/lib/stablecoins.ts`.
 
-| Decimals | Tokens |
-|----------|--------|
-| 2 | GUSD, EURS, IDRT |
+Current examples:
+
+| Decimals | Example tokens |
+|----------|----------------|
+| 0 | EURCV, USDQ |
+| 2 | EURCV, EURS, GUSD, USDCV |
 | 4 | BRZ |
-| 6 | USDC, USDT (EVM) |
-| 8 | VRO |
-| 9 | KAG |
+| 5 | USDC |
+| 6 | USDC, USDT, PYUSD, RLUSD, FDUSD, XAUT, XSGD |
+| 7 | AUDD, EURC, EURCV, EURS, PYUSD, USDC, USDY |
+| 8 | VEUR |
+| 9 | BUCK, FRXUSD, KAG, SBC, USDe, VCHF, VEUR, wsrUSD |
+| 12 | UUSD |
+| 13 | VEUR |
+| 24 | cUSD |
 
 ---
 
@@ -162,7 +170,7 @@ Not all tokens use the standard 18 decimals:
 
 | Param | Required | Default | Constraints |
 |-------|----------|---------|-------------|
-| `stablecoin` | Yes | --- | DefiLlama ID |
+| `stablecoin` | Yes | --- | Canonical Pharos stablecoin ID (legacy aliases are resolved) |
 | `days` | No | 365 | Min 1, max 1825 (5 years) |
 
 ```sql
@@ -185,10 +193,9 @@ For CoinGecko-only coins (ID starts with `cg-`), commodity tokens (gold/silver),
 Admin endpoint (requires `X-Admin-Key`). Backfills `supply_history` from:
 
 - **Commodity tokens:** CoinGecko `market_chart`
-- **CG-only coins:** CoinGecko `market_chart`
 - **Regular coins:** DefiLlama detail API
 
-Handles non-USD peg price conversion by fetching historical prices. Batch processing with configurable batch size.
+Other CoinGecko-only non-commodity tokens are skipped because the current backfill path has no historical supply source for them. Non-USD regular coins fetch historical prices for native-to-USD conversion. Batch processing uses `stablecoin`, `batch`, and `batchSize`.
 
 ---
 

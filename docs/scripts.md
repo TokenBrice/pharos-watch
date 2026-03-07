@@ -14,6 +14,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/smoke-api.mjs` | HTTP smoke checks for strict API contract paths | `--base-url`, `--timeout-ms`, `--retry-count`, `--retry-delay-ms`, or `SMOKE_API_BASE` / `API_BASE_URL`, optional `SMOKE_API_TIMEOUT_MS`, `SMOKE_API_RETRY_COUNT`, `SMOKE_API_RETRY_DELAY_MS` | Exits non-zero on shape/range/status failures |
 | `scripts/smoke-ui.mjs` | Browser smoke check for live homepage data state + mobile overflow regression routes | `--url`, `--skip-overflow`, `SMOKE_UI_URL`, optional `SMOKE_UI_WAIT_TIMEOUT_MS`, `SMOKE_UI_RETRY_COUNT`, `SMOKE_UI_RETRY_DELAY_MS`, `SMOKE_UI_OVERFLOW_ROUTES`, `SMOKE_UI_OVERFLOW_WAIT_MS`, `SMOKE_UI_OVERFLOW_SETTLE_SAMPLES`, `SMOKE_UI_OVERFLOW_SAMPLE_INTERVAL_MS`, `SMOKE_UI_STYLE_READY_TIMEOUT_MS` | Exits non-zero on homepage outage/empty state or sustained horizontal overflow on tracked mobile routes |
 | `scripts/check-worker-import-boundary.mjs` | Enforce worker import boundary (`worker/src/**` must not import `src/lib/*`) | Worker source tree (`worker/src/**`) | Exits non-zero with offending import locations |
+| `scripts/check-worker-migrations.mjs` | Replay every worker SQL migration against a throwaway SQLite database | `worker/migrations/*.sql`, Node 22+ `node:sqlite` or local `sqlite3` fallback | Exits non-zero on invalid migration SQL / ordering issues |
 | `scripts/check-critical-coverage.mjs` | Enforce line coverage floor for critical files | `coverage/lcov.info`, `CRITICAL_COVERAGE_THRESHOLD` | Exits non-zero if critical files are below threshold |
 | `scripts/test-merge-gate.mjs` | Delta-aware local gate for merged worktree changes | Local git diff + npm scripts | Runs targeted lint/test/coverage/type-check commands |
 | `scripts/update-critical-coverage-baseline.mjs` | Refresh `.ci/critical-coverage-baseline.json` from current report | `coverage/lcov.info` | Updates baseline coverage ratchet file |
@@ -31,6 +32,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 - `smoke-api.mjs` via `npm run test:smoke-api`
 - `smoke-ui.mjs` via `npm run test:smoke-ui`
 - `check-worker-import-boundary.mjs` via `npm run check:worker-boundary`
+- `check-worker-migrations.mjs` via `npm run check:migrations`
 - `check-critical-coverage.mjs` via `npm run coverage:critical`
 
 ## Operational Notes
@@ -40,7 +42,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 - Reads `ADMIN_KEY` from environment first; falls back to `worker/.dev.vars`.
 - Defaults `WORKER_URL` to `https://api.pharos.watch`.
 - Uses `POST` requests (admin mutating endpoint contract).
-- Backfills only configured gold IDs in the script (`xaut-tether`, `paxg-paxos`, etc.).
+- Backfills the tracked gold stablecoins configured in the script (`xaut-tether`, `paxg-paxos`, `kau-kinesis`, `xaum-matrixdock`, `cgo-comtech`, `dgld-gold-token-sa`).
 
 ### `fetch-logos.ts`
 

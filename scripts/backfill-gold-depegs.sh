@@ -17,13 +17,12 @@ if [[ -z "${ADMIN_KEY:-}" ]]; then
 fi
 
 GOLD_COINS=(
-  "gold-xaut"
-  "gold-paxg"
-  "gold-kau"
-  "gold-xaum"
-  "gold-vro"
-  "gold-cgo"
-  "gold-dgld"
+  "xaut-tether"
+  "paxg-paxos"
+  "kau-kinesis"
+  "xaum-matrixdock"
+  "cgo-comtech"
+  "dgld-gold-token-sa"
 )
 
 echo "Backfilling gold depeg events against: $WORKER_URL"

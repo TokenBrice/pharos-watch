@@ -339,7 +339,7 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
 {
   "rankings": [
     {
-      "id": "146",
+      "id": "usde-ethena",
       "symbol": "USDe",
       "name": "Ethena USDe",
       "currentApy": 12.4,

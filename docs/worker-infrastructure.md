@@ -164,14 +164,15 @@ This baseline is enough to catch most abuse, regression, or cache-efficiency pro
 
 ### Router-Dispatched Status Actions
 
-Status page manual/admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`):
+Status page manual/admin actions are dispatched through `worker/src/router.ts` using shared endpoint definitions (`shared/lib/api-endpoints.ts`). Examples:
 
 | Endpoint | Auth | Description |
 |----------|------|-------------|
 | `POST /api/trigger-digest` | `X-Admin-Key` | Force-regenerates digest with `force=true`, posts to Twitter + Telegram |
 | `POST /api/reset-blacklist-sync` | `X-Admin-Key` | Rolls back sync state: EVM −50,000 blocks, Tron −7 days |
 | `GET /api/debug-sync-state` | `X-Admin-Key` | Returns all `blacklist_sync_state` rows |
-| `POST /api/feedback` | Public | Feedback intake endpoint (rate-limited + GitHub routing) |
+
+Additional backfill/audit actions are defined in the same registry and surfaced dynamically on `/status`. `POST /api/feedback` is router-dispatched too, but it is not part of the status action registry.
 
 ### Backfill Query Helper
 
@@ -380,7 +381,7 @@ CREATE TABLE IF NOT EXISTS cache (
 | `stablecoin-charts` | `syncStablecoinCharts` | Downsampled chart points |
 | `fx-rates` | `syncFxRates` | FX rates (EUR, GBP, etc.) |
 | `usds-status` | `syncUsdsStatus` | Freeze capability + implementation address |
-| `bluechip-ratings` | `syncBluechip` | Ratings map keyed by DefiLlama ID |
+| `bluechip-ratings` | `syncBluechip` | Ratings map keyed by canonical Pharos ID |
 | `yield-rankings` | `syncYieldData` | Pre-computed yield rankings + PYS scores |
 | `risk_free_rate` | `fetchTbillRate` | Current T-bill rate for PYS computation |
 
@@ -539,7 +540,7 @@ The three crons below were previously only listed by filename in `docs/architect
    - `dateOfRating`, `dateLastChange`
    - `smidge`: 6 category summaries (stability, management, implementation, decentralization, governance, externals) — HTML stripped via regex
 4. If zero ratings fetched: preserve existing cache, don't overwrite
-5. Store `Record<string, BluechipRating>` (keyed by DefiLlama ID) via `setCacheIfNewer()`
+5. Store `Record<string, BluechipRating>` (keyed by canonical Pharos ID) via `setCacheIfNewer()`
 
 **Tracked coins:** USDC, USDT, DAI, LUSD, BOLD, PYUSD, PAXG, XAUT, GUSD, USDP, EURC, FDUSD, FRAX, GHO, TUSD, RLUSD, XSGD.
 
@@ -631,7 +632,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/blacklist-gaps.ts` | Shared blacklist gap query helper (Tron null-amount exclusion + recent window) |
 | `worker/src/lib/chain-rpcs.ts` | Chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
 | `worker/src/lib/coingecko.ts` | CoinGecko init: free/pro URL switching, auth headers |
-| `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → DefiLlama ID mapping (17 coins) |
+| `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → canonical Pharos ID mapping (17 coins) |
 | `worker/src/lib/mint-burn-health-config.ts` | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator |
 | `worker/src/lib/dex-liquidity.ts` | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`) |
 | `worker/src/lib/psi-recompute.ts` | Shared historical PSI day-input builder used by audit/backfill admin APIs |

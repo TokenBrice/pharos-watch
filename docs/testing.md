@@ -146,7 +146,7 @@ Example:
 ```ts
 import { makeBlacklistRow } from "./helpers/fixtures";
 
-const row = makeBlacklistRow({ stablecoin: "2", event_type: "freeze" });
+const row = makeBlacklistRow({ stablecoin: "USDC", event_type: "freeze" });
 ```
 
 ### Shared Auth Helpers (`worker/src/api/__tests__/helpers/auth.ts`)

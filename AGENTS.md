@@ -65,10 +65,15 @@ Read these when working on related code:
 - **`docs/dex-liquidity.md`** — Liquidity score algorithm, quality multipliers
 - **`docs/stability-index.md`** — PSI formula, components, condition bands, calibration
 - **`docs/report-cards.md`** — Grading dimensions, weights, thresholds, dependency propagation, portfolio analyzer, stress test
+- **`docs/methodology-page.md`** — `/methodology` page section-to-source mapping and update contract
 - **`docs/data-pipeline.md`** — Price enrichment, data integrity guardrails, blacklist sync
+- **`docs/data-flow-map.md`** — End-to-end external source → cron → D1 → API → hook → page map
+- **`docs/cemetery-and-compare.md`** — Cemetery dataset + compare-page URL/data contracts
+- **`docs/dependency-map.md`** — Dependency graph data model, contagion rendering, interaction model
 - **`docs/design-tokens.md`** — 3-layer design token architecture (primitives, semantic, component tokens)
 - **`docs/design-language.md`** — Typography, spacing, cards, tables, charts, interactive states, loading/error patterns
 - **`docs/testing.md`** — Test & lint setup, conventions, CI pipeline, adding new tests
+- **`docs/deployment-process.md`** — Deploy workflow, worktree merge flow, merge gate behavior
 - **`docs/feedback-pipeline.md`** — Feedback widget, POST /api/feedback, rate limiting, auto-verification, GitHub routing, env vars
 - **`docs/digest-pipeline.md`** — Daily digest generation, LLM call, D1 storage, Twitter + Telegram distribution, API endpoints, frontend, SSG pipeline
 - **`docs/depeg-detection.md`** — Two-stage depeg detection, thresholds, confirmation flow, event lifecycle, peg score formula
@@ -79,4 +84,6 @@ Read these when working on related code:
 - **`docs/dews.md`** — DEWS formula, 8 sub-signals, threat bands, normalization, API endpoint
 - **`docs/report-cards-timeline.md`** — Report card history tracking, grade change persistence, timeline UI
 - **`docs/worker-infrastructure.md`** — Env interface, cron scheduling, edge cache, CORS, admin auth, alert system, undocumented cron details (charts, USDS, bluechip)
+- **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
+- **`docs/scripts.md`** — Operational and CI helper scripts in `scripts/`
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**

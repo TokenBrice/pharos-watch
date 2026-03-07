@@ -6,7 +6,7 @@ This document defines the production deploy flow and the required local gate for
 
 ## Core Rules
 
-1. Production deploys are triggered only by pushing `main`.
+1. Code deploys normally ship from pushes to `main`; the workflow also supports a daily scheduled rebuild and manual `workflow_dispatch`.
 2. Heavy feature/refactor work must be done in a dedicated worktree branch.
 3. After merging a worktree branch into local `main`, run the merge gate before pushing.
 

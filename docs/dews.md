@@ -166,7 +166,7 @@ Score = `min(100, sum of active signal points)`.
 ```json
 {
   "signals": {
-    "1": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
+    "usdt-tether": { "score": 5, "band": "CALM", "signals": { ... }, "computedAt": 1740000000 },
     ...
   },
   "updatedAt": 1740000000

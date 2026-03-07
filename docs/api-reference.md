@@ -201,7 +201,7 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 
 ```json
 {
-  "id": "1",
+  "id": "usdt-tether",
   "name": "Tether",
   "symbol": "USDT",
   "pegType": "peggedUSD",
@@ -511,8 +511,8 @@ Safety ratings from [bluechip.org](https://bluechip.org) for covered stablecoins
 
 ```json
 {
-  "1": BluechipRating,
-  "5": BluechipRating
+  "usdt-tether": BluechipRating,
+  "usdc-circle": BluechipRating
 }
 ```
 
@@ -551,8 +551,8 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 
 ```json
 {
-  "1": DexLiquidityData,
-  "5": DexLiquidityData
+  "usdt-tether": DexLiquidityData,
+  "usdc-circle": DexLiquidityData
 }
 ```
 
@@ -785,7 +785,7 @@ Contextual data snapshot for a specific digest date — includes the digest's in
   "date": "2026-02-27",
   "inputData": { "totalMcapUsd": 230000000000, "mcap7dDelta": 0.012, ... },
   "prevInputData": { ... },
-  "depegEvents": [{ "stablecoinId": "42", "symbol": "FOO", "direction": "below", "peakDeviationBps": 150, ... }],
+  "depegEvents": [{ "stablecoinId": "usdt-tether", "symbol": "USDT", "direction": "below", "peakDeviationBps": 150, ... }],
   "blacklistEvents": [{ "stablecoin": "USDT", "chainName": "Ethereum", "eventType": "blacklist", ... }]
 }
 ```
@@ -941,7 +941,7 @@ Stablecoin risk grade cards with dimension-level scores. Output includes 5 dimen
 {
   "cards": [ReportCard, ...],
   "dependencyGraph": {
-    "edges": [{ "from": "2", "to": "5" }, ...]
+    "edges": [{ "from": "usde-ethena", "to": "usdc-circle" }, ...]
   },
   "methodology": {
     "version": "5.5",
@@ -1218,7 +1218,7 @@ Returns per-chain breakdown and hourly timeseries for a single coin. Returns `40
 
 ```json
 {
-  "stablecoinId": "1",
+  "stablecoinId": "usdt-tether",
   "symbol": "USDT",
   "mintVolumeUsd": 50000000,
   "burnVolumeUsd": 30000000,
@@ -1311,7 +1311,7 @@ Aggregate responses are filtered to tracked stablecoin IDs only, even if stale r
 ```json
 {
   "signals": {
-    "1": {
+    "usdt-tether": {
       "score": 5,
       "band": "CALM",
       "signals": {
@@ -1395,7 +1395,7 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
   "title": "Optional short title",
   "description": "Required, 10-2000 characters",
   "expectedValue": "Optional expected behavior/value",
-  "stablecoinId": "Optional stablecoin id",
+  "stablecoinId": "Optional canonical stablecoin id",
   "stablecoinName": "Optional stablecoin name",
   "pageUrl": "/stablecoin/usdt-tether",
   "pegValue": "Optional UI value snapshot",
@@ -1613,8 +1613,8 @@ Backfills `amount_usd` for all mint-burn events with NULL values using current p
 {
   "totalUpdated": 15000,
   "coins": [
-    { "id": "1", "updated": 49 },
-    { "id": "2", "updated": 15119 }
+    { "id": "usdt-tether", "updated": 49 },
+    { "id": "usdc-circle", "updated": 15119 }
   ]
 }
 ```

@@ -94,12 +94,12 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 
 ### Why gold-api.com?
 
-The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events. gold-api.com requires no API key or rate limiting.
+The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API) silently returns empty data, producing garbage peg references and phantom trillion-BPS depegs in backfilled events. gold-api.com requires no API key, and the worker only performs two live spot requests per 15-minute sync run.
 
 ### Live Sync (sync-fx-rates.ts)
 
 - **Endpoint**: `GET https://api.gold-api.com/price/XAU` (gold), `GET https://api.gold-api.com/price/XAG` (silver)
-- **Rate limiting**: None — no API key required, fetched every 15-minute cron run.
+- **Request volume**: 2 requests per 15-minute cron run (gold + silver), with no repo-level rate limiter.
 - **Validation**: Same `isValidRate()` bounds + delta checks as FX rates (gold: $500-$10,000/oz, silver: $5-$500/oz, max 20% change from previous value).
 - **Fallback**: If the gold-api.com live fetch fails, previously cached rates are used. The peer median serves as a last-resort reference if no cached rates exist.
 
@@ -112,7 +112,7 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 
 ### Budget
 
-The live `/price/` endpoint requires no API key and has no documented rate limit — it is called every 15-minute sync run (2 requests: gold + silver), ~5,760/month. Backfills source commodity history from CoinGecko market-chart data (via existing CoinGecko integration), so there is no separate gold-api.com historical-request budget.
+The live `/price/` endpoint requires no API key and is called every 15-minute sync run (2 requests: gold + silver), ~5,760/month. Backfills source commodity history from CoinGecko market-chart data (via existing CoinGecko integration), so there is no separate gold-api.com historical-request budget.
 
 ## Stability Index (PSI) Computation
 

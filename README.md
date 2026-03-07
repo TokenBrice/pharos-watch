@@ -175,12 +175,12 @@ The data pipeline includes multiple guardrails designed for research-grade accur
 
 ## Deployment
 
-Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`:
+Automated via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`) on push to `main`, the daily scheduled rebuild, or manual `workflow_dispatch`:
 
 For the full operator runbook (including worktree merge flow and pre-push merge gate), see `docs/deployment-process.md`.
 For mint/burn ingestion diagnostics and recovery, see `agents/runbooks/mint-burn-ingestion.md`.
 
-1. **Validate gate:** `npm run lint` → `npm run check:worker-boundary` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
+1. **Validate gate:** `npm run lint` → `npm run check:worker-boundary` → `npm run check:migrations` → `npm test` → `npm run coverage:critical` → `cd worker && npx tsc --noEmit`
 2. **Worker deploy:** `npm ci` → `cd worker && npm ci` → `d1 migrations apply` → `wrangler deploy`
 3. **API smoke gate:** `npm run test:smoke-api` against `SMOKE_API_BASE_URL` (or `API_BASE_URL` fallback)
 4. **Pages deploy:** `npm ci` → `npx tsx scripts/sync-digests.ts` → `npm run build` → `npm run seo:check` → `wrangler pages deploy out`

@@ -1,10 +1,10 @@
 # Worker & API Limits
 
-Reference for every hard constraint that matters during feature development. When designing a new feature, check here first — many of these limits are already near saturation.
+Reference for repo-relevant operational limits. The code-backed source of truth here is the cited cron schedules, throttle constants, and handler behavior; third-party quota/pricing notes should be re-verified against vendor docs before making spend-sensitive changes.
 
 ---
 
-## Cloudflare Workers (Paid — $5/mo)
+## Cloudflare Workers
 
 The entire backend runs on a single Cloudflare Worker script.
 
@@ -24,9 +24,9 @@ The entire backend runs on a single Cloudflare Worker script.
 
 ---
 
-## Cloudflare D1 (Paid — included with Workers Paid)
+## Cloudflare D1
 
-One D1 database (`pharos-db`). All persistent state lives here.
+One D1 database (`stablecoin-db`). All persistent state lives here.
 
 | Resource | Free tier | Workers Paid |
 |---|---|---|
@@ -43,7 +43,7 @@ One D1 database (`pharos-db`). All persistent state lives here.
 
 ---
 
-## CoinGecko (Analyst Plan — ~$129/mo)
+## CoinGecko
 
 Primary source for token prices, market caps, and DEX pool discovery.
 
@@ -63,7 +63,7 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 ---
 
-## GeckoTerminal (Free — standalone API)
+## GeckoTerminal
 
 Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
@@ -78,7 +78,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
 ---
 
-## DexScreener (Free — no API key)
+## DexScreener
 
 Third fallback for DEX pool data.
 
@@ -94,7 +94,7 @@ Third fallback for DEX pool data.
 
 ---
 
-## DefiLlama (Free — no API key)
+## DefiLlama
 
 Primary source for TVL, supply data, and protocol metadata. No documented hard rate limit.
 
@@ -112,7 +112,7 @@ Primary source for TVL, supply data, and protocol metadata. No documented hard r
 
 ---
 
-## Etherscan V2 (Free API Key)
+## Etherscan V2
 
 Used for blacklist event fetching and on-chain balance lookups. Mint/burn flows have been migrated to Alchemy.
 
@@ -130,7 +130,7 @@ Used for blacklist event fetching and on-chain balance lookups. Mint/burn flows 
 
 ---
 
-## TronGrid (Free API Key)
+## TronGrid
 
 Used for USDT-Tron blacklist event fetching.
 
@@ -143,7 +143,7 @@ Used for USDT-Tron blacklist event fetching.
 
 ---
 
-## Alchemy (PAYG Plan)
+## Alchemy
 
 Primary RPC provider for mint/burn ingestion and shared chain-RPC utilities (Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, Tron).
 
@@ -172,7 +172,7 @@ Steady-state: ~35 getLogs + 4 blockNumbers + ~30 batch timestamp lookups per run
 
 ---
 
-## dRPC (Free Plan)
+## dRPC
 
 Primary RPC for Gnosis, Fantom, and Celo (chains not supported well by Alchemy free).
 
@@ -199,7 +199,7 @@ Used for Uniswap V3 subgraph queries (pool discovery on Ethereum, Base, Arbitrum
 
 ---
 
-## Anthropic Claude API (Pay-as-you-go)
+## Anthropic Claude API
 
 Used exclusively for daily digest generation — one call per day.
 
@@ -216,7 +216,7 @@ Used exclusively for daily digest generation — one call per day.
 
 ---
 
-## Twitter / X API (Free Tier)
+## Twitter / X API
 
 Used to post the daily digest as a tweet.
 
@@ -232,7 +232,7 @@ Used to post the daily digest as a tweet.
 
 ---
 
-## Telegram Bot API (Free)
+## Telegram Bot API
 
 Used to post the daily digest to a channel.
 
@@ -247,7 +247,7 @@ Used to post the daily digest to a channel.
 
 ---
 
-## GitHub API (PAT — Free)
+## GitHub API
 
 Used by the feedback widget to route submissions as GitHub issues or discussions.
 
@@ -262,7 +262,7 @@ Used by the feedback widget to route submissions as GitHub issues or discussions
 
 ---
 
-## Frankfurter (Free — ECB FX Rates)
+## Frankfurter
 
 Used for FX rate sync (EUR, GBP, JPY, IDR, and 10+ other currencies against USD).
 
@@ -278,7 +278,7 @@ Used for FX rate sync (EUR, GBP, JPY, IDR, and 10+ other currencies against USD)
 
 ---
 
-## gold-api.com (Free)
+## gold-api.com
 
 Used for XAU (gold) and XAG (silver) spot prices.
 
@@ -290,7 +290,7 @@ Used for XAU (gold) and XAG (silver) spot prices.
 
 ---
 
-## CoinMarketCap (Basic — Free)
+## CoinMarketCap
 
 Fallback price source for non-USD fiat and commodity tokens when DefiLlama has no price.
 
@@ -305,7 +305,7 @@ Fallback price source for non-USD fiat and commodity tokens when DefiLlama has n
 
 ---
 
-## Currency API / fawazahmed0 (Free CDN)
+## Currency API / fawazahmed0
 
 Fallback for FX rates when Frankfurter is unavailable.
 
