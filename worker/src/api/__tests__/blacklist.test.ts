@@ -138,6 +138,18 @@ describe("handleBlacklist", () => {
     expect(res.status).toBe(200);
   });
 
+  it("normalizes stablecoin filters before binding", async () => {
+    let dataBinds: unknown[] = [];
+    const db = makeDbWithDataBindCapture((args) => {
+      dataBinds = args;
+    });
+
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
+    expect(res.status).toBe(200);
+    expect(dataBinds).toContain("EURC");
+    expect(dataBinds).not.toContain("eurc");
+  });
+
   it("rejects invalid chain parameter with 400", async () => {
     const db = mockD1([]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chain=InvalidChain"));

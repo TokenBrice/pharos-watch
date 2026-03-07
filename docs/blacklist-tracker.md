@@ -307,9 +307,9 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 
 | Param        | Type   | Default | Description                                                          |
 | ------------ | ------ | ------- | -------------------------------------------------------------------- |
-| `limit`      | number | 0 (all) | Max results (0-5000)                                                 |
+| `limit`      | number | 1000    | Max results (1-1000; `0` maps to default `1000`)                     |
 | `offset`     | number | 0       | Pagination offset                                                    |
-| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`)              |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"EURC"`, `"PAXG"`, `"XAUT"`)    |
 | `chain`      | string | --      | Filter by `chain_name`                                               |
 | `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 

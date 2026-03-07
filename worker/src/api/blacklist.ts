@@ -17,11 +17,16 @@ import {
   getBlacklistTrackerMethodologyVersionAt,
   toBlacklistTrackerMethodologyVersionLabel,
 } from "@shared/lib/blacklist-tracker-version";
-import { BLACKLIST_STABLECOINS } from "@shared/types";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin } from "@shared/types";
 
-const VALID_STABLECOINS = new Set(BLACKLIST_STABLECOINS);
+const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const VALID_CHAIN_NAMES = new Set(Object.values(CHAIN_META).map((m) => m.name));
 const VALID_EVENT_TYPES = new Set(["blacklist", "unblacklist", "destroy"]);
+
+function isBlacklistStablecoin(value: string): value is BlacklistStablecoin {
+  return VALID_STABLECOINS.has(value as BlacklistStablecoin);
+}
+
 type BlacklistRow = {
   id: string;
   stablecoin: string;
@@ -58,7 +63,7 @@ export const handleBlacklist = withErrorHandler("blacklist", async (db: D1Databa
 
   if (stablecoin) {
     const normalized = stablecoin.toUpperCase();
-    if (!VALID_STABLECOINS.has(normalized)) {
+    if (!isBlacklistStablecoin(normalized)) {
       return errorResponse(400, "Invalid stablecoin parameter");
     }
     conditions.push("stablecoin = ?");

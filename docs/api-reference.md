@@ -272,7 +272,7 @@ Aggregate historical supply chart data across all stablecoins, broken down by pe
 
 ### `GET /api/blacklist`
 
-Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. Sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
+Freeze, blacklist, and token-destruction events for USDC, USDT, EURC, PAXG, and XAUT. Sourced from on-chain logs via Etherscan, Tron, and EVM RPCs.
 
 **Cache:** realtime
 
@@ -280,7 +280,7 @@ Freeze, blacklist, and token-destruction events for USDC, USDT, PAXG, and XAUT. 
 
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
-| `stablecoin` | `string` | — | Filter by token symbol: `USDC`, `USDT`, `PAXG`, `XAUT` |
+| `stablecoin` | `string` | — | Filter by token symbol: `USDC`, `USDT`, `EURC`, `PAXG`, `XAUT` |
 | `chain` | `string` | — | Filter by chain name (e.g. `Ethereum`, `Tron`) |
 | `eventType` | `string` | — | Filter by type: `blacklist`, `unblacklist`, `destroy` |
 | `limit` | `integer` | `1000` | Max results (1–1000; `0` maps to default `1000`) |
