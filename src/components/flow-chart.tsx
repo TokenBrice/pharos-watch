@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
+import { DAY_HOURS, HOUR_MS, HOUR_SECONDS } from "@/lib/constants";
 
 interface FlowChartProps {
   hourly: MintBurnHourlyBucket[];
@@ -39,7 +40,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     const endHour = sorted[sorted.length - 1].hourTs;
 
     const filled: ChartDatum[] = [];
-    for (let hourTs = startHour; hourTs <= endHour; hourTs += 3600) {
+    for (let hourTs = startHour; hourTs <= endHour; hourTs += HOUR_SECONDS) {
       const bucket = byHour.get(hourTs);
       filled.push({
         ts: hourTs * 1000,
@@ -53,7 +54,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
 
   const rangeHours = useMemo(() => {
     if (chartData.length < 2) return 0;
-    return (chartData[chartData.length - 1].ts - chartData[0].ts) / 3_600_000;
+    return (chartData[chartData.length - 1].ts - chartData[0].ts) / HOUR_MS;
   }, [chartData]);
 
   const formatXAxisTick = useCallback((ts: number) => {
@@ -61,7 +62,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     if (rangeHours <= 48) {
       return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
     }
-    if (rangeHours <= 8 * 24) {
+    if (rangeHours <= 8 * DAY_HOURS) {
       return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", hour12: true });
     }
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });

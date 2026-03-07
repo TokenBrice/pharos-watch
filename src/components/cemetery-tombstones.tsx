@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@shared/lib/format";
 import type { DeadStablecoin, CauseOfDeath } from "@shared/types";
+import { YEAR_MS } from "@/lib/constants";
 
 /**
  * Visual note: This component uses hardcoded dark-palette colors (slate, rgba shadows)
@@ -142,7 +143,7 @@ function getDeathAgeYears(deathDate: string): number {
   const [year, month] = deathDate.split("-").map(Number);
   const deathMs = new Date(year, (month || 1) - 1).getTime();
   const nowMs = Date.now();
-  return (nowMs - deathMs) / (365.25 * 24 * 60 * 60 * 1000);
+  return (nowMs - deathMs) / YEAR_MS;
 }
 
 function getWeathering(deathDate: string): { brightness: number; mossIntensity: number } {

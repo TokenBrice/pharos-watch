@@ -1,10 +1,9 @@
 import { derivePegRates, getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
 import { TIER_BORDER, getScoreTier } from "./severity-colors";
 import type { DexLiquidityData, PegAssetBase, StablecoinMeta } from "@shared/types";
+import { NINETY_DAYS_MS, WEEK_MS } from "./constants";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const NINETY_DAYS_MS = 90 * DAY_MS;
-const NINETY_DAY_TOLERANCE_MS = 7 * DAY_MS;
+const NINETY_DAY_TOLERANCE_MS = WEEK_MS;
 
 export interface SupplyHistoryEntry {
   date: number;

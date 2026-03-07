@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { HOUR_SECONDS } from "@/lib/constants";
 
 interface DataQualityCardsProps {
   dq: {
@@ -37,7 +38,7 @@ export function DataQualityCards({ dq }: DataQualityCardsProps) {
     {
       label: "Blacklist Gaps",
       value: dq.blacklistMissingAmounts,
-      detail: `${dq.blacklistRecentMissingAmounts} in last ${Math.round(dq.blacklistRecentWindowSec / 3600)}h`,
+      detail: `${dq.blacklistRecentMissingAmounts} in last ${Math.round(dq.blacklistRecentWindowSec / HOUR_SECONDS)}h`,
       severity: dq.blacklistMissingRatio >= 0.02
         ? "red"
         : dq.blacklistRecentMissingAmounts > 0 || dq.blacklistMissingRatio >= 0.005

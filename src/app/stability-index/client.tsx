@@ -29,6 +29,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { useLogos } from "@/hooks/use-logos";
 import { ScoreChart, BAND_ZONES, PSI_EVENTS } from "@/components/psi-history-chart";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { THREE_DAYS_MS } from "@/lib/constants";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -75,8 +76,8 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
               })()
             : d.toLocaleDateString("en-US", opts);
           // Find the worst (lowest) score within the event window
-          const rangeEnd = evt.dateEnd ?? evt.date + 3 * 86400000;
-          const SLACK = 3 * 86400000;
+          const rangeEnd = evt.dateEnd ?? evt.date + THREE_DAYS_MS;
+          const SLACK = THREE_DAYS_MS;
           const nearby = data.filter((p) => p.ts >= evt.date - SLACK && p.ts <= rangeEnd + SLACK);
           const worst = nearby.length > 0
             ? nearby.reduce((w, p) => (p.score < w.score ? p : w))

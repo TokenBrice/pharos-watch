@@ -1,16 +1,20 @@
+import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "@/lib/constants";
+
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
 export function formatAge(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-  return `${Math.floor(seconds / 86400)}d`;
+  if (seconds < SECONDS_PER_MINUTE) return `${seconds}s`;
+  if (seconds < HOUR_SECONDS) return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`;
+  if (seconds < DAY_SECONDS) {
+    return `${Math.floor(seconds / HOUR_SECONDS)}h ${Math.floor((seconds % HOUR_SECONDS) / SECONDS_PER_MINUTE)}m`;
+  }
+  return `${Math.floor(seconds / DAY_SECONDS)}d`;
 }
 
 export function formatInterval(seconds: number): string {
-  if (seconds < 3600) return `${seconds / 60}min`;
-  return `${seconds / 3600}h`;
+  if (seconds < HOUR_SECONDS) return `${seconds / SECONDS_PER_MINUTE}min`;
+  return `${seconds / HOUR_SECONDS}h`;
 }

@@ -52,12 +52,3 @@ export const RECHARTS_TOOLTIP_STYLES = {
   labelStyle: { color: "var(--color-foreground)", fontFamily: "var(--font-sans)" },
   itemStyle: { color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)" },
 } as const;
-
-export const PSI_BAND_COLORS = {
-  BEDROCK:  TOKEN.green,
-  STEADY:   TOKEN.teal,
-  TREMOR:   TOKEN.yellow,
-  FRACTURE: TOKEN.orange,
-  CRISIS:   TOKEN.red,
-  MELTDOWN: TOKEN.darkRed,
-} as const;
