@@ -8,8 +8,9 @@ import {
   scoreDependencyRisk,
   computeOverallGrade,
   NO_LIQUIDITY_PENALTY,
+  scorePegStability,
 } from "@shared/lib/report-cards";
-import type { ReportCardDimension } from "@shared/types";
+import type { ReportCardDimension, PegSummaryCoin } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types";
 
 // Minimal meta helper
@@ -28,6 +29,29 @@ function makeMeta(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
     flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: false },
     ...overrides,
   } as StablecoinMeta;
+}
+
+function makePeg(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
+  return {
+    id: "test",
+    symbol: "TST",
+    name: "Test Coin",
+    pegType: "peggedUSD",
+    pegCurrency: "USD",
+    governance: "centralized",
+    currentDeviationBps: 5,
+    pegScore: 90,
+    pegPct: 99,
+    severityScore: 95,
+    spreadPenalty: 0,
+    eventCount: 1,
+    worstDeviationBps: -200,
+    activeDepeg: false,
+    lastEventAt: 1700000000,
+    trackingSpanDays: 365,
+    methodologyVersion: "v1",
+    ...overrides,
+  };
 }
 
 describe("scoreResilience — blacklist sub-factor", () => {
@@ -284,5 +308,122 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     });
     const blacklistableIds = new Set(["usdc-circle"]);
     expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
+  });
+});
+
+describe("scorePegStability", () => {
+  // --- NR cases ---
+
+  it("returns NR for NAV tokens", () => {
+    const meta = makeMeta({ flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: true } });
+    const result = scorePegStability(makePeg({ pegScore: 95 }), meta);
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+    expect(result.detail).toContain("NAV token");
+  });
+
+  it("returns NR when peg is undefined", () => {
+    const result = scorePegStability(undefined, makeMeta());
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+  });
+
+  it("returns NR when pegScore is null", () => {
+    const result = scorePegStability(makePeg({ pegScore: null }), makeMeta());
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+  });
+
+  it("returns NR when no price data and no events", () => {
+    const result = scorePegStability(
+      makePeg({ currentDeviationBps: null, eventCount: 0, pegScore: 80 }),
+      makeMeta(),
+    );
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+    expect(result.detail).toContain("No price data");
+  });
+
+  // --- Score clamping ---
+
+  it("clamps score to 0-100 range", () => {
+    const over = scorePegStability(makePeg({ pegScore: 110 }), makeMeta());
+    expect(over.score).toBe(100);
+
+    const under = scorePegStability(makePeg({ pegScore: -5 }), makeMeta());
+    expect(under.score).toBe(0);
+  });
+
+  it("rounds pegScore to nearest integer", () => {
+    const result = scorePegStability(makePeg({ pegScore: 87.6 }), makeMeta());
+    expect(result.score).toBe(88);
+  });
+
+  // --- Active depeg cap ---
+
+  it("caps score at 65 during active depeg", () => {
+    const result = scorePegStability(
+      makePeg({ pegScore: 90, activeDepeg: true }),
+      makeMeta(),
+    );
+    expect(result.score).toBe(65);
+    expect(result.detail).toContain("active depeg");
+    expect(result.detail).toContain("capped at C");
+  });
+
+  it("does not raise score to 65 when pegScore is already below 65 during active depeg", () => {
+    const result = scorePegStability(
+      makePeg({ pegScore: 40, activeDepeg: true }),
+      makeMeta(),
+    );
+    expect(result.score).toBe(40);
+  });
+
+  // --- Grade mapping ---
+
+  it("maps score to correct grade via scoreToGrade", () => {
+    const high = scorePegStability(makePeg({ pegScore: 95 }), makeMeta());
+    expect(high.grade).toBe("A+");
+
+    const mid = scorePegStability(makePeg({ pegScore: 72 }), makeMeta());
+    expect(mid.grade).toBe("B");
+
+    const low = scorePegStability(makePeg({ pegScore: 30 }), makeMeta());
+    expect(low.grade).toBe("F");
+  });
+
+  // --- Detail string ---
+
+  it("includes event count in detail", () => {
+    const single = scorePegStability(makePeg({ eventCount: 1 }), makeMeta());
+    expect(single.detail).toContain("1 depeg event");
+    expect(single.detail).not.toContain("events");
+
+    const multi = scorePegStability(makePeg({ eventCount: 3 }), makeMeta());
+    expect(multi.detail).toContain("3 depeg events");
+  });
+
+  it("includes worst deviation when present", () => {
+    const result = scorePegStability(makePeg({ worstDeviationBps: -500 }), makeMeta());
+    expect(result.detail).toContain("-500 bps");
+  });
+
+  it("notes 'No depeg events' when eventCount is 0 but has price data", () => {
+    const result = scorePegStability(
+      makePeg({ eventCount: 0, currentDeviationBps: 5, worstDeviationBps: null }),
+      makeMeta(),
+    );
+    expect(result.detail).toContain("No depeg events");
+  });
+
+  it("appends yield-bearing annotation when flag is set", () => {
+    const meta = makeMeta({ flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: true, rwa: true, navToken: false } });
+    const result = scorePegStability(makePeg(), meta);
+    expect(result.detail).toContain("yield-bearing");
+  });
+
+  it("does not append yield-bearing annotation when flag is false", () => {
+    const result = scorePegStability(makePeg(), makeMeta());
+    expect(result.detail).not.toContain("yield-bearing");
   });
 });
