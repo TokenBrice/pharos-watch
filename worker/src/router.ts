@@ -225,6 +225,28 @@ for (const path of ROUTER_STATIC_PATHS) {
   }
 }
 
+function matchDynamicRoute(
+  path: string,
+  pattern: RegExp,
+  handler: (db: D1Database, canonicalId: string, ctx: ExecutionContext) => Promise<Response>,
+  db: D1Database,
+  ctx: ExecutionContext,
+): Promise<Response> | null {
+  const match = path.match(pattern);
+  if (!match) return null;
+  let id: string;
+  try {
+    id = decodeURIComponent(match[1]);
+  } catch {
+    return Promise.resolve(errorResponse(400, "Malformed URI"));
+  }
+  const resolved = resolveOrReject(id, `path=${path}`);
+  if (resolved instanceof Response) {
+    return Promise.resolve(resolved);
+  }
+  return handler(db, resolved.canonicalId, ctx);
+}
+
 export function route(
   url: URL,
   db: D1Database,
@@ -263,39 +285,23 @@ export function route(
     }).then((response) => addAdminGetNoStoreHeader(path, request, response));
   }
 
-  // /api/stablecoin-summary/:id — resolve to canonical ID before handler lookup
-  const summaryMatch = path.match(/^\/api\/stablecoin-summary\/(.+)$/);
-  if (summaryMatch) {
-    let id: string;
-    try {
-      id = decodeURIComponent(summaryMatch[1]);
-    } catch {
-      return Promise.resolve(errorResponse(400, "Malformed URI"));
-    }
-    const resolved = resolveOrReject(id, `path=${url.pathname}`);
-    if (resolved instanceof Response) {
-      return Promise.resolve(resolved);
-    }
-    const canonicalId = resolved.canonicalId;
-    return handleStablecoinSummary(db, canonicalId);
-  }
+  const summaryResult = matchDynamicRoute(
+    path,
+    /^\/api\/stablecoin-summary\/(.+)$/,
+    (db, id) => handleStablecoinSummary(db, id),
+    db,
+    ctx,
+  );
+  if (summaryResult) return summaryResult;
 
-  // /api/stablecoin/:id — resolve to canonical ID before handler lookup
-  const detailMatch = path.match(/^\/api\/stablecoin\/(.+)$/);
-  if (detailMatch) {
-    let id: string;
-    try {
-      id = decodeURIComponent(detailMatch[1]);
-    } catch {
-      return Promise.resolve(errorResponse(400, "Malformed URI"));
-    }
-    const resolved = resolveOrReject(id, `path=${url.pathname}`);
-    if (resolved instanceof Response) {
-      return Promise.resolve(resolved);
-    }
-    const canonicalId = resolved.canonicalId;
-    return handleStablecoinDetail(db, canonicalId, ctx);
-  }
+  const detailResult = matchDynamicRoute(
+    path,
+    /^\/api\/stablecoin\/(.+)$/,
+    (db, id, ctx) => handleStablecoinDetail(db, id, ctx),
+    db,
+    ctx,
+  );
+  if (detailResult) return detailResult;
 
   return null;
 }
