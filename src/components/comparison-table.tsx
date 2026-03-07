@@ -1,12 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import type { StablecoinData, StablecoinMeta, BluechipGrade } from "@shared/types";
+import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
-import { GRADE_ORDER } from "@/lib/bluechip";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
+
+const SAFETY_GRADE_ORDER: Record<ReportCardGrade, number> = {
+  "A+": 12, A: 11, "A-": 10,
+  "B+": 9,  B: 8,  "B-": 7,
+  "C+": 6,  C: 5,  "C-": 4,
+  D: 3, F: 2, NR: 1,
+};
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
   Table,
@@ -25,7 +31,7 @@ interface ComparisonCoin {
   meta: StablecoinMeta;
   pegScore: number | null;
   liquidityScore: number | null;
-  bluechipGrade: BluechipGrade | null;
+  safetyGrade: ReportCardGrade | null;
 }
 
 interface ComparisonTableProps {
@@ -72,14 +78,14 @@ function bestHighestIndex(values: (number | null)[]): number | null {
   return bestIdx;
 }
 
-/** Find index of coin with best bluechip grade (highest GRADE_ORDER value). */
-function bestGradeIndex(grades: (BluechipGrade | null)[]): number | null {
+/** Find index of coin with best safety grade (highest SAFETY_GRADE_ORDER value). */
+function bestGradeIndex(grades: (ReportCardGrade | null)[]): number | null {
   let bestIdx: number | null = null;
   let bestOrder = -1;
   for (let i = 0; i < grades.length; i++) {
     const g = grades[i];
     if (g == null) continue;
-    const order = GRADE_ORDER[g] ?? 0;
+    const order = SAFETY_GRADE_ORDER[g] ?? 0;
     if (order > bestOrder) {
       bestOrder = order;
       bestIdx = i;
@@ -121,14 +127,14 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
 
     const pegCurrencies = coins.map(({ meta }) => meta.flags.pegCurrency);
 
-    const bluechipGrades = coins.map((c) => c.bluechipGrade);
+    const safetyGrades = coins.map((c) => c.safetyGrade);
 
     // Best indices
     const bestPrice = bestPriceIndex(coins, pegRates);
     const bestPegScore = bestHighestIndex(pegScores);
 
     const bestLiquidity = bestHighestIndex(liquidityScores);
-    const bestGrade = bestGradeIndex(bluechipGrades);
+    const bestGrade = bestGradeIndex(safetyGrades);
 
     return {
       prices,
@@ -139,7 +145,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
       governanceLabels,
       backingLabels,
       pegCurrencies,
-      bluechipGrades,
+      safetyGrades,
       bestPrice,
       bestPegScore,
 
@@ -177,7 +183,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
               <dt className="text-muted-foreground">Peg Score</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
-                {rowData.pegScores[i] != null ? `${rowData.pegScores[i]!.toFixed(1)}/10` : "N/A"}
+                {rowData.pegScores[i] != null ? `${rowData.pegScores[i]!.toFixed(1)}` : "N/A"}
               </dd>
               <dt className="text-muted-foreground">Market Cap</dt>
               <dd className="text-right font-mono tabular-nums">{formatCurrency(rowData.marketCaps[i])}</dd>
@@ -189,7 +195,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               </dd>
               <dt className="text-muted-foreground">Liquidity</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
-                {rowData.liquidityScores[i] != null ? `${rowData.liquidityScores[i]!.toFixed(1)}/10` : "N/A"}
+                {rowData.liquidityScores[i] != null ? `${rowData.liquidityScores[i]!.toFixed(1)}` : "N/A"}
               </dd>
               <dt className="text-muted-foreground">Governance</dt>
               <dd className="text-right">{rowData.governanceLabels[i]}</dd>
@@ -197,9 +203,9 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className="text-right">{rowData.backingLabels[i]}</dd>
               <dt className="text-muted-foreground">Peg</dt>
               <dd className="text-right">{rowData.pegCurrencies[i]}</dd>
-              <dt className="text-muted-foreground">Bluechip Rating</dt>
+              <dt className="text-muted-foreground">Safety Rating</dt>
               <dd className={`text-right ${i === rowData.bestGrade ? BEST_CLASS : ""}`}>
-                {rowData.bluechipGrades[i] ?? "N/A"}
+                {rowData.safetyGrades[i] ?? "N/A"}
               </dd>
             </dl>
           </div>
@@ -254,7 +260,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                     className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
                   >
                     {rowData.pegScores[i] != null
-                      ? `${rowData.pegScores[i]!.toFixed(1)}/10`
+                      ? `${rowData.pegScores[i]!.toFixed(1)}`
                       : "N/A"}
                   </TableCell>
                 ))}
@@ -299,7 +305,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                   className={`text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}
                 >
                   {rowData.liquidityScores[i] != null
-                    ? `${rowData.liquidityScores[i]!.toFixed(1)}/10`
+                    ? `${rowData.liquidityScores[i]!.toFixed(1)}`
                     : "N/A"}
                 </TableCell>
               ))}
@@ -335,15 +341,15 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               ))}
             </TableRow>
 
-            {/* Bluechip Rating */}
+            {/* Safety Rating */}
             <TableRow>
-              <TableCell className="font-medium">Bluechip Rating</TableCell>
+              <TableCell className="font-medium">Safety Rating</TableCell>
               {coins.map((coin, i) => (
                 <TableCell
                   key={coin.id}
                   className={`text-center ${i === rowData.bestGrade ? BEST_CLASS : ""}`}
                 >
-                  {rowData.bluechipGrades[i] ?? "N/A"}
+                  {rowData.safetyGrades[i] ?? "N/A"}
                 </TableCell>
               ))}
             </TableRow>

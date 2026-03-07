@@ -25,7 +25,7 @@ export interface ShareCoinData {
   governance: string;
   backing: string;
   pegCurrency: string;
-  bluechipRating: string | null;
+  safetyRating: string | null;
   logoImg: HTMLImageElement | null;
 }
 
@@ -72,7 +72,7 @@ const FOOTER_H = 50;
 
 /** Compute the number of stat rows for a coin (8 base + 1 if has rating). */
 function statRowCount(coin: ShareCoinData): number {
-  return coin.bluechipRating ? 9 : 8;
+  return coin.safetyRating ? 9 : 8;
 }
 
 /** Draw a single coin card at (x, y) with the given width and height. */
@@ -151,8 +151,8 @@ function drawCoinCard(
     ["Backing", coin.backing, WHITE],
     ["Peg", coin.pegCurrency, WHITE],
   ];
-  if (coin.bluechipRating) {
-    stats.push(["Bluechip", coin.bluechipRating, CREAM]);
+  if (coin.safetyRating) {
+    stats.push(["Safety", coin.safetyRating, CREAM]);
   }
 
   const labelX = x + CARD_PAD;

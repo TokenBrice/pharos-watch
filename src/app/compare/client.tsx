@@ -277,7 +277,7 @@ export function CompareClient() {
         if (!data || !meta) return null;
         const pegCoin = pegSummary?.coins?.find((c) => c.id === id);
         const dexCoin = dexData?.[id];
-        const bluechipGrade = bluechipData?.[id]?.grade ?? null;
+        const safetyGrade = cardMap.get(id)?.overallGrade ?? null;
         return {
           id,
           symbol: data.symbol,
@@ -286,11 +286,11 @@ export function CompareClient() {
           meta,
           pegScore: pegCoin?.pegScore ?? null,
           liquidityScore: dexCoin?.liquidityScore ?? null,
-          bluechipGrade,
+          safetyGrade,
         };
       })
       .filter((c): c is NonNullable<typeof c> => c !== null);
-  }, [selectedIds, listData, pegSummary, dexData, bluechipData]);
+  }, [selectedIds, listData, pegSummary, dexData, cardMap]);
 
   // Build supply chart series
   const supplySeries = useMemo(() => {
@@ -378,14 +378,14 @@ export function CompareClient() {
         name: coin.name,
         price: formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, pegRef),
         marketCap: formatCurrency(cap),
-        pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}/10` : "N/A",
+        pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}` : "N/A",
         weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "N/A",
         weeklyChangePositive: weeklyPct != null ? weeklyPct >= 0 : true,
-        liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}/10` : "N/A",
+        liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}` : "N/A",
         governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
         backing: BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing,
         pegCurrency: coin.meta.flags.pegCurrency,
-        bluechipRating: coin.bluechipGrade,
+        safetyRating: coin.safetyGrade,
         logoImg: logoImgs[i],
       };
     });
