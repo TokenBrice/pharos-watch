@@ -158,10 +158,10 @@ function getHeadline(
     return "Net burn day with steady pressure";
   }
   if (direction === "burning" && pressureState === "worsening") {
-    return "Broad burns with worsening pressure";
+    return "Net burn day with worsening pressure";
   }
   if (direction === "minting" && pressureState === "improving") {
-    return "Broad minting with rising pressure";
+    return "Net mint day with improving pressure";
   }
   if (direction === "minting" && pressureState === "stable") {
     return "Net mint day with steady pressure";
