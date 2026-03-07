@@ -1,15 +1,18 @@
-import { handleStablecoins } from "./api/stablecoins";
+import {
+  handleBluechipRatings,
+  handleStablecoinCharts,
+  handleStablecoins,
+  handleUsdsStatus,
+  handleYieldRankings,
+} from "./api/cache-handlers";
 import { handleStablecoinDetail } from "./api/stablecoin-detail";
 import { handleStablecoinSummary } from "./api/stablecoin-summary";
-import { handleStablecoinCharts } from "./api/stablecoin-charts";
 import { handleBlacklist } from "./api/blacklist";
 import { handleDepegEvents } from "./api/depeg-events";
 import { handleBackfillDepegs } from "./api/backfill-depegs";
 import { handleBackfillSupplyHistory } from "./api/backfill-supply-history";
 import { handlePegSummary } from "./api/peg-summary";
 import { handleHealth } from "./api/health";
-import { handleUsdsStatus } from "./api/usds-status";
-import { handleBluechipRatings } from "./api/bluechip";
 import { handleDexLiquidity } from "./api/dex-liquidity";
 import { handleDexLiquidityHistory } from "./api/dex-liquidity-history";
 import { handleSupplyHistory } from "./api/supply-history";
@@ -23,7 +26,6 @@ import { handleBackfillStabilityIndex } from "./api/backfill-stability-index";
 import { handleAuditDepegHistory } from "./api/audit-depeg-history";
 import { handleBackfillCgPrices } from "./api/backfill-cg-prices";
 import { handleReportCards } from "./api/report-cards";
-import { handleYieldRankings } from "./api/yield-rankings";
 import { handleYieldHistory } from "./api/yield-history";
 import { handleSafetyScoreHistory } from "./api/safety-score-history";
 import { handleMintBurnFlows } from "./api/mint-burn-flows";
