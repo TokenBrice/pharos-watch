@@ -139,11 +139,6 @@ export function safeParse<T>(json: string | null | undefined, fallback: T): T {
   try { return JSON.parse(json) as T; } catch { return fallback; }
 }
 
-/** Validates a stablecoin ID against the registry (canonical + allowed legacy IDs). */
-export function isValidStablecoinId(id: string): boolean {
-  return resolveStablecoinId(id, { allowLegacy: true }) !== null;
-}
-
 /**
  * Resolve any accepted stablecoin ID to canonical form.
  * Returns a 404 response when unknown so handlers can early-return consistently.
