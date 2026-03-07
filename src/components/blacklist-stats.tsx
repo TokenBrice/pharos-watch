@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { extractGoldPrices, computeBlacklistStats } from "@/lib/blacklist-helpers";
@@ -45,74 +46,42 @@ export function BlacklistStats({ events, isLoading }: BlacklistStatsProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-6 animate-in fade-in duration-300">
-      <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            USDC Blacklisted
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.usdcBlacklisted ?? 0}</p>
-          <p className="text-xs text-muted-foreground">unique addresses</p>
-        </CardContent>
-      </Card>
-      <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            USDT Blacklisted
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.usdtBlacklisted ?? 0}</p>
-          <p className="text-xs text-muted-foreground">unique addresses</p>
-        </CardContent>
-      </Card>
-      <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            EURC Blacklisted
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.eurcBlacklisted ?? 0}</p>
-          <p className="text-xs text-muted-foreground">unique addresses</p>
-        </CardContent>
-      </Card>
-      <Card className="rounded-xl border-l-[3px] border-l-yellow-500">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Gold Frozen
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.goldBlacklisted ?? 0}</p>
-          <p className="text-xs text-muted-foreground">PAXG / XAUT addresses</p>
-        </CardContent>
-      </Card>
-      <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Total Destroyed Funds
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-extrabold font-mono tabular-nums">
-            {stats ? formatCurrency(stats.destroyedTotal) : "$0"}
-          </p>
-          <p className="text-xs text-muted-foreground">seized &amp; burned (USD value)</p>
-        </CardContent>
-      </Card>
-      <Card className="rounded-xl border-l-[3px] border-l-red-500">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Recent Events
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-2xl font-extrabold font-mono tabular-nums">{stats?.recentCount ?? 0}</p>
-          <p className="text-xs text-muted-foreground">last 30 days</p>
-        </CardContent>
-      </Card>
+      <MetricStatCard
+        borderColorClass="border-l-blue-500"
+        title="USDC Blacklisted"
+        value={stats?.usdcBlacklisted ?? 0}
+        subtext="unique addresses"
+      />
+      <MetricStatCard
+        borderColorClass="border-l-cyan-500"
+        title="USDT Blacklisted"
+        value={stats?.usdtBlacklisted ?? 0}
+        subtext="unique addresses"
+      />
+      <MetricStatCard
+        borderColorClass="border-l-emerald-500"
+        title="EURC Blacklisted"
+        value={stats?.eurcBlacklisted ?? 0}
+        subtext="unique addresses"
+      />
+      <MetricStatCard
+        borderColorClass="border-l-yellow-500"
+        title="Gold Frozen"
+        value={stats?.goldBlacklisted ?? 0}
+        subtext="PAXG / XAUT addresses"
+      />
+      <MetricStatCard
+        borderColorClass="border-l-amber-500"
+        title="Total Destroyed Funds"
+        value={stats ? formatCurrency(stats.destroyedTotal) : "$0"}
+        subtext="seized & burned (USD value)"
+      />
+      <MetricStatCard
+        borderColorClass="border-l-red-500"
+        title="Recent Events"
+        value={stats?.recentCount ?? 0}
+        subtext="last 30 days"
+      />
     </div>
   );
 }

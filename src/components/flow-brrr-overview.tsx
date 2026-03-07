@@ -14,6 +14,14 @@ import type {
   MintBurnGauge,
   MintBurnHourlyBucket,
 } from "@shared/types";
+import {
+  buildFlowOverviewDescription,
+  buildFlowOverviewHeadline,
+  getFlowDirectionUi,
+  getFlowPressureUi,
+  type FlowDirectionUi,
+  type FlowPressureUi,
+} from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
 import {
   getNetFlowDirection24h,
@@ -29,21 +37,6 @@ interface FlowBrrrOverviewProps {
   weeklyHourly?: MintBurnHourlyBucket[];
   isLoading?: boolean;
   className?: string;
-}
-
-interface DirectionUi {
-  label: string;
-  badgeClass: string;
-  accentHex: string;
-  sceneMode: "printer" | "shredder";
-  sceneTitle: string;
-}
-
-interface PressureUi {
-  label: string;
-  badgeClass: string;
-  headlineClass: string;
-  panelClass: string;
 }
 
 interface FlowSnapshot {
@@ -63,8 +56,8 @@ interface FlowSnapshot {
   has24hActivity: boolean;
   netDirection: NetFlowDirection24h;
   pressureState: PressureShiftState;
-  directionUi: DirectionUi;
-  pressureUi: PressureUi;
+  directionUi: FlowDirectionUi;
+  pressureUi: FlowPressureUi;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -78,120 +71,6 @@ function formatSignedCurrency(value: number): string {
 function formatMaybeCurrency(value: number | null): string {
   if (value === null) return "\u2014";
   return formatCurrency(value);
-}
-
-const DIRECTION_UI: Record<NetFlowDirection24h, DirectionUi> = {
-  minting: {
-    label: "Net minting",
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    accentHex: "#22c55e",
-    sceneMode: "printer",
-    sceneTitle: "Mint Desk",
-  },
-  burning: {
-    label: "Net burning",
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    accentHex: "#ef4444",
-    sceneMode: "shredder",
-    sceneTitle: "Burn Desk",
-  },
-  flat: {
-    label: "Flat net flow",
-    badgeClass: "border-border/70 bg-muted/40 text-foreground",
-    accentHex: "#6b7280",
-    sceneMode: "printer",
-    sceneTitle: "Flow Desk",
-  },
-  inactive: {
-    label: "No activity",
-    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
-    accentHex: "#6b7280",
-    sceneMode: "printer",
-    sceneTitle: "Flow Desk",
-  },
-};
-
-const PRESSURE_UI: Record<PressureShiftState, PressureUi> = {
-  improving: {
-    label: "Pressure improving",
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    headlineClass: "text-emerald-700 dark:text-emerald-300",
-    panelClass:
-      "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
-  },
-  stable: {
-    label: "Pressure stable",
-    badgeClass: "border-border/70 bg-muted/40 text-foreground",
-    headlineClass: "text-foreground",
-    panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
-  },
-  worsening: {
-    label: "Pressure worsening",
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    headlineClass: "text-red-700 dark:text-red-300",
-    panelClass:
-      "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
-  },
-  nr: {
-    label: "Pressure NR",
-    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
-    headlineClass: "text-muted-foreground",
-    panelClass: "border-border/60 bg-background/35",
-  },
-};
-
-function getHeadline(
-  direction: NetFlowDirection24h,
-  pressureState: PressureShiftState,
-): string {
-  if (direction === "inactive") {
-    return "No aggregate mint/burn activity";
-  }
-  if (direction === "burning" && pressureState === "improving") {
-    return "Net burn day, but market pressure is easing";
-  }
-  if (direction === "burning" && pressureState === "stable") {
-    return "Net burn day with steady pressure";
-  }
-  if (direction === "burning" && pressureState === "worsening") {
-    return "Net burn day with worsening pressure";
-  }
-  if (direction === "minting" && pressureState === "improving") {
-    return "Net mint day with improving pressure";
-  }
-  if (direction === "minting" && pressureState === "stable") {
-    return "Net mint day with steady pressure";
-  }
-  if (direction === "minting" && pressureState === "worsening") {
-    return "Minting, but softer than the 30D pace";
-  }
-  if (pressureState === "improving") {
-    return "Balanced net flow, but pressure is improving";
-  }
-  if (pressureState === "stable") {
-    return "Balanced net flow, neutral market pressure";
-  }
-  if (pressureState === "worsening") {
-    return "Balanced net flow, but pressure is weakening";
-  }
-  return "Balanced net flow while the gauge recalibrates";
-}
-
-function getDescription(
-  direction: NetFlowDirection24h,
-  pressureState: PressureShiftState,
-): string {
-  if (direction === "inactive") {
-    return "No aggregate mint or burn events were recorded in the active 24-hour window.";
-  }
-  if (pressureState === "nr") {
-    return "Net flow answers what the market is doing now; pressure shift is NR until enough history is available.";
-  }
-  return "Net flow tells you what the market is doing right now. The Bank Run Gauge tells you how unusual that pressure is versus the recent 30-day norm.";
 }
 
 function buildSnapshot(
@@ -251,14 +130,14 @@ function buildSnapshot(
     trackedCoins: gauge?.trackedCoins ?? coins.length,
     topMint,
     topBurn,
-    headline: getHeadline(netDirection, pressureState),
-    description: getDescription(netDirection, pressureState),
+    headline: buildFlowOverviewHeadline(netDirection, pressureState),
+    description: buildFlowOverviewDescription(netDirection, pressureState),
     leverPct,
     has24hActivity,
     netDirection,
     pressureState,
-    directionUi: DIRECTION_UI[netDirection],
-    pressureUi: PRESSURE_UI[pressureState],
+    directionUi: getFlowDirectionUi(netDirection, "overview"),
+    pressureUi: getFlowPressureUi(pressureState, "overview"),
   };
 }
 
