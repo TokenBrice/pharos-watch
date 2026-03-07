@@ -232,9 +232,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const prevTierByIdRef = useRef<Map<string, HubTier>>(new Map());
 
-  const prefersReducedMotion = typeof window !== "undefined"
-    ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    : false;
+
 
   // Prepare graph data
   const { nodes, links } = useMemo(() => {

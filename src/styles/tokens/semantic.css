@@ -117,6 +117,10 @@
   --sidebar-border:    var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
 
+  /* ── Component: Sidebar Dimensions ───────────────────────────── */
+  --sidebar-width-expanded: 220px;
+  --sidebar-width-collapsed: 56px;
+
   /* ── Motion ───────────────────────────────────────────────────── */
   --motion-duration-fast: 160ms;
   --motion-duration-base: 220ms;
@@ -161,12 +165,12 @@
   --chart-tertiary:  var(--p-teal-400);
   --chart-negative:  var(--p-red-400);
   --psi-band-opacity: 0.06;
-  --dews-radar-spoke:              rgba(255, 255, 255, 0.12);
-  --dews-radar-calm-boundary:      rgba(255, 255, 255, 0.16);
+  --dews-radar-spoke:              oklch(1 0 0 / 0.12);
+  --dews-radar-calm-boundary:      oklch(1 0 0 / 0.16);
   --dews-radar-band-ring-opacity:  0.25;
   --dews-radar-outer-ring-opacity: 0.35;
-  --dews-radar-calm-dot-bloom:     rgba(255, 255, 255, 0.06);
-  --dews-radar-calm-dot-core:      rgba(255, 255, 255, 0.28);
+  --dews-radar-calm-dot-bloom:     oklch(1 0 0 / 0.06);
+  --dews-radar-calm-dot-core:      oklch(1 0 0 / 0.28);
 
   /* ── Component: Card ──────────────────────────────────────────── */
   --card-bg:         var(--surface-overlay);
@@ -184,6 +188,10 @@
   --sidebar-bg:        var(--surface-overlay);
   --sidebar-border:    var(--border-default);
   --sidebar-item-hover: var(--interactive-hover);
+
+  /* ── Component: Sidebar Dimensions ───────────────────────────── */
+  --sidebar-width-expanded: 220px;
+  --sidebar-width-collapsed: 56px;
 
   /* ── Motion ───────────────────────────────────────────────────── */
   --motion-duration-fast: 160ms;

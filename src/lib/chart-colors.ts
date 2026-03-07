@@ -31,11 +31,13 @@ export const CHART_PALETTE = [
 ];
 
 /** Primary chart accent colors — import these instead of hardcoding hex values */
-export const CHART_BLUE  = TOKEN.blue;
-export const CHART_GREEN = TOKEN.green;
-export const CHART_TEAL  = TOKEN.teal;
-export const CHART_RED   = TOKEN.red;
-export const CHART_SLATE = TOKEN.slate;
+export const CHART_BLUE   = TOKEN.blue;
+export const CHART_GREEN  = TOKEN.green;
+export const CHART_ORANGE = TOKEN.orange;
+export const CHART_CYAN   = TOKEN.cyan;
+export const CHART_TEAL   = TOKEN.teal;
+export const CHART_RED    = TOKEN.red;
+export const CHART_SLATE  = TOKEN.slate;
 
 /** Standard responsive chart container height */
 export const CHART_HEIGHT = "h-[250px] sm:h-[350px]";

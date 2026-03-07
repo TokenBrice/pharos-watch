@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, CHART_ORANGE, CHART_BLUE, CHART_CYAN, CHART_GREEN } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
@@ -33,10 +33,10 @@ import { buildStablecoinUrl } from "@/lib/urls";
 /* ─── Constants ─────────────────────────────────────────────────── */
 
 const COMPONENT_COLORS = {
-  severity: "#f97316",
-  breadth: "#3b82f6",
-  stressBreadth: "#06b6d4",
-  trend: "#22c55e",
+  severity: CHART_ORANGE,
+  breadth: CHART_BLUE,
+  stressBreadth: CHART_CYAN,
+  trend: CHART_GREEN,
 };
 
 const COMPONENT_LEGEND = [
@@ -450,7 +450,7 @@ function Methodology({
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 tabular-nums">0 &ndash; 19</td>
-                  <td className="py-2 pr-4 font-medium text-red-800">MELTDOWN</td>
+                  <td className="py-2 pr-4 font-medium text-red-800 dark:text-red-300">MELTDOWN</td>
                   <td className="py-2">Systemic failure across stablecoin markets</td>
                 </tr>
               </tbody>

@@ -473,7 +473,7 @@ export function PortfolioClient() {
                     ))}
                   </div>
                   {exposureToShow.some((e) => !e.isCollateral && e.pct > 80) && (
-                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-600 dark:text-amber-400">
+                    <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 dark:border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                       <span>
                         High concentration: a single upstream stablecoin accounts for over 80% of
