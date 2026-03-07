@@ -1,6 +1,6 @@
 "use client";
 
-import { type CSSProperties } from "react";
+import { type CSSProperties, useMemo } from "react";
 import { Banknote, Printer, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -309,9 +309,48 @@ function PrinterMachine({ size, intensity, stress, accentHex }: PrinterMachinePr
     "--crank-wobble": crankWobble,
   };
 
-  const spreadPattern = power < 0.45
+  const spreadPattern = useMemo(() => power < 0.45
     ? [-0.45, -0.28, -0.12, 0, 0.12, 0.28, 0.45]
-    : [-1, -0.82, -0.64, -0.46, -0.28, -0.1, 0, 0.1, 0.28, 0.46, 0.64, 0.82, 1];
+    : [-1, -0.82, -0.64, -0.46, -0.28, -0.1, 0, 0.1, 0.28, 0.46, 0.64, 0.82, 1],
+  [power]);
+
+  const sheets = useMemo(() => {
+    return Array.from({ length: sheetCount }).map((_, i) => {
+      const seed = Math.abs(Math.sin((i + 1) * 12.9898) * 43758.5453);
+      const chaos = seed - Math.floor(seed);
+      const dxJitter = Math.round((chaos - 0.5) * (6 + power * 28 + surgeBoost * 18));
+      const dyJitter = Math.round((chaos - 0.5) * (8 + power * 16));
+      const rot = -28 + (i % 8) * 8 + Math.round((chaos - 0.5) * (12 + surgeBoost * 14));
+      const dx = Math.round(spreadPattern[i % spreadPattern.length] * spreadX) + dxJitter;
+      const dy = riseBase + (i % 8) * riseStep + dyJitter;
+      const misfeed = !isMini && stressFactor > 0.02 && i % (stressFactor > 0.33 ? 4 : 6) === 0;
+      const misfeedDrop = `${(22 + stressFactor * 56 + (i % 3) * 12).toFixed(0)}px`;
+      const misfeedDx = `${Math.round((chaos - 0.5) * 44)}px`;
+      const style: CssVarStyle = {
+        left: calcOffset(dims.emissionOffset),
+        top: `${dims.outputTop}px`,
+        width: `${dims.noteW}px`,
+        height: `${dims.noteH}px`,
+        animationDuration: `${(baseDuration + (i % 6) * durationStep).toFixed(2)}s`,
+        animationDelay: `${(-i * delayStep).toFixed(2)}s`,
+        "--paper-dx": `${dx}px`,
+        "--paper-dy": `${dy}px`,
+        "--note-rot": `${rot}deg`,
+        "--misfeed-drop": misfeedDrop,
+        "--misfeed-dx": misfeedDx,
+        "--misfeed-rot": `${Math.round(rot * 0.45)}deg`,
+      };
+
+      return {
+        key: i,
+        className: cn(
+          "pointer-events-none absolute flex -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
+          misfeed ? "fm-paper-misfeed" : "fm-paper-fly",
+        ),
+        style,
+      };
+    });
+  }, [sheetCount, power, surgeBoost, stressFactor, dims, isMini, baseDuration, durationStep, delayStep, spreadPattern, spreadX, riseBase, riseStep]);
 
   return (
     <div className={dims.areaClass}>
@@ -396,45 +435,15 @@ function PrinterMachine({ size, intensity, stress, accentHex }: PrinterMachinePr
         style={{ top: `${dims.sheetTop}px`, width: `${dims.sheetW}px`, height: `${dims.sheetH}px` }}
       />
 
-      {Array.from({ length: sheetCount }).map((_, i) => {
-        const seed = Math.abs(Math.sin((i + 1) * 12.9898) * 43758.5453);
-        const chaos = seed - Math.floor(seed);
-        const dxJitter = Math.round((chaos - 0.5) * (6 + power * 28 + surgeBoost * 18));
-        const dyJitter = Math.round((chaos - 0.5) * (8 + power * 16));
-        const rot = -28 + (i % 8) * 8 + Math.round((chaos - 0.5) * (12 + surgeBoost * 14));
-        const dx = Math.round(spreadPattern[i % spreadPattern.length] * spreadX) + dxJitter;
-        const dy = riseBase + (i % 8) * riseStep + dyJitter;
-        const misfeed = !isMini && stressFactor > 0.02 && i % (stressFactor > 0.33 ? 4 : 6) === 0;
-        const misfeedDrop = `${(22 + stressFactor * 56 + (i % 3) * 12).toFixed(0)}px`;
-        const misfeedDx = `${Math.round((chaos - 0.5) * 44)}px`;
-        const style: CssVarStyle = {
-          left: calcOffset(dims.emissionOffset),
-          top: `${dims.outputTop}px`,
-          width: `${dims.noteW}px`,
-          height: `${dims.noteH}px`,
-          animationDuration: `${(baseDuration + (i % 6) * durationStep).toFixed(2)}s`,
-          animationDelay: `${(-i * delayStep).toFixed(2)}s`,
-          "--paper-dx": `${dx}px`,
-          "--paper-dy": `${dy}px`,
-          "--note-rot": `${rot}deg`,
-          "--misfeed-drop": misfeedDrop,
-          "--misfeed-dx": misfeedDx,
-          "--misfeed-rot": `${Math.round(rot * 0.45)}deg`,
-        };
-
-        return (
+      {sheets.map((sheet) => (
           <div
-            key={i}
-            className={cn(
-              "pointer-events-none absolute flex -translate-x-1/2 items-center justify-center rounded-sm border border-emerald-500/45 bg-emerald-300/75 text-emerald-950",
-              misfeed ? "fm-paper-misfeed" : "fm-paper-fly",
-            )}
-            style={style}
+            key={sheet.key}
+            className={sheet.className}
+            style={sheet.style}
           >
             <Banknote className={cn(isMini ? "h-2.5 w-2.5" : "h-3 w-3")} />
           </div>
-        );
-      })}
+        ))}
 
       <style jsx>{`
         .fm-paper-fly {
@@ -638,33 +647,57 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
     0.72,
   ];
 
+  const bills = useMemo(() => {
+    return Array.from({ length: billCount }).map((_, i) => {
+      const seed = Math.abs(Math.sin((i + 1) * 17.113) * 43758.5453);
+      const chaos = seed - Math.floor(seed);
+      const dx = Math.round(billPattern[i % billPattern.length] * billSpread) + Math.round((chaos - 0.5) * 2);
+      const drop = billEntryDrop + (i % 3) * (isMini ? 1 : 2) + Math.round((chaos - 0.5) * 2);
+      const rot = -3 + (chaos - 0.5) * 8;
+      const style: CssVarStyle = {
+        left: billCenterX,
+        top: `${dims.billSpawnTop}px`,
+        width: `${dims.billW}px`,
+        height: `${dims.billH}px`,
+        animationDuration: `${(billDuration + (i % 4) * 0.05).toFixed(2)}s`,
+        animationDelay: `${(-i * billDelayStep).toFixed(2)}s`,
+        "--bill-dx": `${dx}px`,
+        "--bill-drop": `${drop}px`,
+        "--bill-rot": `${rot.toFixed(2)}deg`,
+      };
+      return { key: `bill-${i}`, style };
+    });
+  }, [billCount, billSpread, billEntryDrop, isMini, billCenterX, dims, billDuration, billDelayStep]);
+
+  const strips = useMemo(() => {
+    return Array.from({ length: stripCount }).map((_, i) => {
+      const seed = Math.abs(Math.sin((i + 1) * 29.477) * 43758.5453);
+      const chaos = seed - Math.floor(seed);
+      const dx = Math.round(stripPattern[i % stripPattern.length] * stripSpread) + Math.round((chaos - 0.5) * 4);
+      const drop = stripDrop + (i % 4) * (isMini ? 5 : 6) + Math.round((chaos - 0.5) * 10);
+      const style: CssVarStyle = {
+        left: "50%",
+        top: "0px",
+        width: `${dims.stripW}px`,
+        height: `${dims.stripH}px`,
+        animationDuration: `${(stripDuration + (i % 5) * 0.04).toFixed(2)}s`,
+        animationDelay: `${(-i * stripDelayStep).toFixed(2)}s`,
+        "--strip-dx": `${dx}px`,
+        "--strip-drop": `${drop}px`,
+      };
+      return { key: `strip-${i}`, style };
+    });
+  }, [stripCount, stripSpread, stripDrop, isMini, dims, stripDuration, stripDelayStep]);
+
   return (
     <div className={dims.areaClass}>
-      {Array.from({ length: billCount }).map((_, i) => {
-        const seed = Math.abs(Math.sin((i + 1) * 17.113) * 43758.5453);
-        const chaos = seed - Math.floor(seed);
-        const dx = Math.round(billPattern[i % billPattern.length] * billSpread) + Math.round((chaos - 0.5) * 2);
-        const drop = billEntryDrop + (i % 3) * (isMini ? 1 : 2) + Math.round((chaos - 0.5) * 2);
-        const rot = -3 + (chaos - 0.5) * 8;
-        const style: CssVarStyle = {
-          left: billCenterX,
-          top: `${dims.billSpawnTop}px`,
-          width: `${dims.billW}px`,
-          height: `${dims.billH}px`,
-          animationDuration: `${(billDuration + (i % 4) * 0.05).toFixed(2)}s`,
-          animationDelay: `${(-i * billDelayStep).toFixed(2)}s`,
-          "--bill-dx": `${dx}px`,
-          "--bill-drop": `${drop}px`,
-          "--bill-rot": `${rot.toFixed(2)}deg`,
-        };
-        return (
-          <div key={`bill-${i}`} className="pointer-events-none absolute z-10 rounded-sm border border-red-500/50 bg-red-300/85 text-red-950 sh-bill-feed" style={style}>
-            <div className="flex h-full w-full items-center justify-center">
-              <Banknote className={cn(isMini ? "h-2.5 w-2.5" : "h-3 w-3")} />
-            </div>
+      {bills.map((bill) => (
+        <div key={bill.key} className="pointer-events-none absolute z-10 rounded-sm border border-red-500/50 bg-red-300/85 text-red-950 sh-bill-feed" style={bill.style}>
+          <div className="flex h-full w-full items-center justify-center">
+            <Banknote className={cn(isMini ? "h-2.5 w-2.5" : "h-3 w-3")} />
           </div>
-        );
-      })}
+        </div>
+      ))}
 
       <div
         className="pointer-events-none absolute z-30 -translate-x-1/2 sh-machine-vibe"
@@ -743,23 +776,9 @@ function ShredderMachine({ size, intensity }: ShredderMachineProps) {
           height: `${stripMaskHeight}px`,
         }}
       >
-        {Array.from({ length: stripCount }).map((_, i) => {
-          const seed = Math.abs(Math.sin((i + 1) * 29.477) * 43758.5453);
-          const chaos = seed - Math.floor(seed);
-          const dx = Math.round(stripPattern[i % stripPattern.length] * stripSpread) + Math.round((chaos - 0.5) * 4);
-          const drop = stripDrop + (i % 4) * (isMini ? 5 : 6) + Math.round((chaos - 0.5) * 10);
-          const style: CssVarStyle = {
-            left: "50%",
-            top: "0px",
-            width: `${dims.stripW}px`,
-            height: `${dims.stripH}px`,
-            animationDuration: `${(stripDuration + (i % 5) * 0.04).toFixed(2)}s`,
-            animationDelay: `${(-i * stripDelayStep).toFixed(2)}s`,
-            "--strip-dx": `${dx}px`,
-            "--strip-drop": `${drop}px`,
-          };
-          return <span key={`strip-${i}`} className="pointer-events-none absolute rounded-sm border border-red-400/45 bg-red-300/80 sh-strip-fall" style={style} />;
-        })}
+        {strips.map((strip) => (
+          <span key={strip.key} className="pointer-events-none absolute rounded-sm border border-red-400/45 bg-red-300/80 sh-strip-fall" style={strip.style} />
+        ))}
       </div>
 
       <style jsx>{`
