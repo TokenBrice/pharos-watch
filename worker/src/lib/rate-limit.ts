@@ -1,3 +1,5 @@
+import { errorResponse } from "./api-utils";
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
@@ -34,13 +36,9 @@ export function checkRateLimit(
 
   entry.count++;
   if (entry.count > limit) {
-    return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-      status: 429,
-      headers: {
-        "Content-Type": "application/json",
-        "Retry-After": String(Math.max(1, Math.ceil((entry.resetAt - now) / 1000))),
-      },
-    });
+    const resp = errorResponse(429, "Rate limit exceeded");
+    resp.headers.set("Retry-After", String(Math.max(1, Math.ceil((entry.resetAt - now) / 1000))));
+    return resp;
   }
 
   return null;

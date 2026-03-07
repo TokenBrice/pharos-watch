@@ -1,3 +1,5 @@
+import { errorResponse } from "./api-utils";
+
 /** Timing-safe string comparison for admin key validation.
  *  Hashes both inputs first so the comparison never leaks length. */
 export async function timingSafeEqual(a: string, b: string): Promise<boolean> {
@@ -17,19 +19,13 @@ export async function requireAdmin(request: Request | undefined, adminKey: strin
   let provided = adminHeader;
   if (!provided && authHeader) {
     if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(401, "Unauthorized");
     }
     provided = authHeader.slice("Bearer ".length).trim();
   }
 
   if (!adminKey || !provided || !(await timingSafeEqual(provided, adminKey))) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse(401, "Unauthorized");
   }
   return null;
 }

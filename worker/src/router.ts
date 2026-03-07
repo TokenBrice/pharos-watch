@@ -41,7 +41,7 @@ import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 
-import { resolveOrReject, withErrorHandler } from "./lib/api-utils";
+import { resolveOrReject, withErrorHandler, errorResponse } from "./lib/api-utils";
 
 interface RouteContext {
   url: URL;
@@ -136,10 +136,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
   ["/api/backfill-dews", ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request)],
   ["/api/feedback", withErrorHandler("feedback", ({ db, request, feedbackEnv }) => {
     if (!request) {
-      return Promise.resolve(new Response(JSON.stringify({ error: "Bad request" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      }));
+      return Promise.resolve(errorResponse(400, "Bad request"));
     }
     return handleFeedback(db, request, feedbackEnv ?? {});
   })],
@@ -147,10 +144,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     if (!request) {
-      return new Response(JSON.stringify({ error: "Bad request" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(400, "Bad request");
     }
 
     return runIdempotentAdminAction(
@@ -175,10 +169,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     if (!request) {
-      return new Response(JSON.stringify({ error: "Bad request" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse(400, "Bad request");
     }
 
     return runIdempotentAdminAction(
@@ -250,15 +241,9 @@ export function route(
   const path = url.pathname;
   const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
   if (methodValidation) {
-    return Promise.resolve(
-      new Response(JSON.stringify({ error: methodValidation.message }), {
-        status: 405,
-        headers: {
-          "Content-Type": "application/json",
-          "Allow": methodValidation.allowedMethods.join(", "),
-        },
-      }),
-    );
+    const resp = errorResponse(405, methodValidation.message);
+    resp.headers.set("Allow", methodValidation.allowedMethods.join(", "));
+    return Promise.resolve(resp);
   }
 
   const staticHandler = STATIC_ROUTE_HANDLERS.get(path);
@@ -285,12 +270,7 @@ export function route(
     try {
       id = decodeURIComponent(summaryMatch[1]);
     } catch {
-      return Promise.resolve(
-        new Response(JSON.stringify({ error: "Malformed URI" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
+      return Promise.resolve(errorResponse(400, "Malformed URI"));
     }
     const resolved = resolveOrReject(id, `path=${url.pathname}`);
     if (resolved instanceof Response) {
@@ -307,12 +287,7 @@ export function route(
     try {
       id = decodeURIComponent(detailMatch[1]);
     } catch {
-      return Promise.resolve(
-        new Response(JSON.stringify({ error: "Malformed URI" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
+      return Promise.resolve(errorResponse(400, "Malformed URI"));
     }
     const resolved = resolveOrReject(id, `path=${url.pathname}`);
     if (resolved instanceof Response) {

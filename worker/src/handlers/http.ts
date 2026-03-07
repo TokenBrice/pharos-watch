@@ -4,6 +4,7 @@ import { initChainRpcs } from "../lib/chain-rpcs";
 import { initCoinGecko } from "../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkRateLimit } from "../lib/rate-limit";
+import { errorResponse } from "../lib/api-utils";
 import { isCacheBypassPath } from "@shared/lib/api-endpoints";
 import type { Env } from "../lib/env";
 
@@ -134,10 +135,7 @@ export async function handleHttpRequest(
 
   if (!response) {
     return addCorsHeaders(
-      new Response(JSON.stringify({ error: "Not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      }),
+      errorResponse(404, "Not found"),
       origin
     );
   }
