@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
 import {
   PROTOCOL_COLORS,
@@ -178,17 +179,13 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
     <>
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
-        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Total DEX TVL
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">
-              {formatCurrency(stats.totalTvl)}
-            </div>
-            <p className="text-sm text-muted-foreground">
+        <MetricStatCard
+          borderColorClass="border-l-blue-500"
+          title="Total DEX TVL"
+          value={formatCurrency(stats.totalTvl)}
+          valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+          subtext={
+            <>
               Across all tracked stablecoins
               {stats.agg7dChange != null && (
                 <span
@@ -198,77 +195,61 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
                   {Math.abs(stats.agg7dChange).toFixed(1)}% 7d
                 </span>
               )}
-            </p>
-          </CardContent>
-        </Card>
+            </>
+          }
+          subtextClassName="text-sm text-muted-foreground"
+        />
 
-        <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              24h DEX Volume
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">
-              {formatCurrency(stats.totalVol)}
-            </div>
-            <p className="text-sm text-muted-foreground">Trading volume today</p>
-          </CardContent>
-        </Card>
+        <MetricStatCard
+          borderColorClass="border-l-emerald-500"
+          title="24h DEX Volume"
+          value={formatCurrency(stats.totalVol)}
+          valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+          subtext="Trading volume today"
+          subtextClassName="text-sm text-muted-foreground"
+        />
 
-        <Card className="rounded-xl border-l-[3px] border-l-amber-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Avg Liq Score
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-extrabold font-mono tabular-nums tracking-tight ${getScoreColor(stats.avgScore)}`}
-            >
+        <MetricStatCard
+          borderColorClass="border-l-amber-500"
+          title="Avg Liq Score"
+          value={
+            <>
               {stats.avgScore}
               <span className="text-lg text-muted-foreground">/100</span>
-            </div>
-            <p className="text-sm text-muted-foreground">Mean score of active coins</p>
-          </CardContent>
-        </Card>
+            </>
+          }
+          valueClassName={`text-2xl font-extrabold font-mono tabular-nums tracking-tight ${getScoreColor(stats.avgScore)}`}
+          subtext="Mean score of active coins"
+          subtextClassName="text-sm text-muted-foreground"
+        />
 
-        <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Active on DEX
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.withLiquidity}</div>
-            <p className="text-sm text-muted-foreground">of {stats.totalTracked} tracked stablecoins</p>
-          </CardContent>
-        </Card>
+        <MetricStatCard
+          borderColorClass="border-l-violet-500"
+          title="Active on DEX"
+          value={stats.withLiquidity}
+          valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+          subtext={`of ${stats.totalTracked} tracked stablecoins`}
+          subtextClassName="text-sm text-muted-foreground"
+        />
         {stats.avgBalance != null && (
-          <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Avg Pool Balance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.avgBalance}%</div>
-              <p className="text-sm text-muted-foreground">TVL-weighted average</p>
-            </CardContent>
-          </Card>
+          <MetricStatCard
+            borderColorClass="border-l-cyan-500"
+            title="Avg Pool Balance"
+            value={`${stats.avgBalance}%`}
+            valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+            subtext="TVL-weighted average"
+            subtextClassName="text-sm text-muted-foreground"
+          />
         )}
         {stats.avgOrganic != null && (
-          <Card className="rounded-xl border-l-[3px] border-l-pink-500">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Organic Liquidity
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.avgOrganic}%</div>
-              <p className="text-sm text-muted-foreground">Fee-based vs incentivized</p>
-            </CardContent>
-          </Card>
+          <MetricStatCard
+            borderColorClass="border-l-pink-500"
+            title="Organic Liquidity"
+            value={`${stats.avgOrganic}%`}
+            valueClassName="text-2xl font-extrabold font-mono tabular-nums tracking-tight"
+            subtext="Fee-based vs incentivized"
+            subtextClassName="text-sm text-muted-foreground"
+          />
         )}
       </div>
 

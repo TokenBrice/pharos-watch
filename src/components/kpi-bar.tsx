@@ -156,6 +156,18 @@ function KpiMiniTile({
   );
 }
 
+interface KpiMetricDefinition {
+  key: string;
+  mobileLabel: string;
+  desktopLabel: string;
+  value: React.ReactNode;
+  mobileMetaPrimary?: React.ReactNode;
+  mobileMetaSecondary?: React.ReactNode;
+  desktopSublabel?: React.ReactNode;
+  mobileValueClassName?: string;
+  desktopValueClassName?: string;
+}
+
 function PrimarySnapshotCard({
   value,
   band,
@@ -413,6 +425,63 @@ export function KpiBar() {
   const allDewsCalm = dewsBandCounts
     ? dewsBandCounts.danger === 0 && dewsBandCounts.warning === 0 && dewsBandCounts.alert === 0
     : false;
+  const mobileDewsMeta = dewsBandCounts ? (
+    <>
+      <span className="text-foreground">DEWS:</span>
+      {dewsBandCounts.danger > 0 && <><span className="text-muted-foreground"> · </span><span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span></>}
+      {dewsBandCounts.warning > 0 && <><span className="text-muted-foreground"> · </span><span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span></>}
+      {dewsBandCounts.alert > 0 && <><span className="text-muted-foreground"> · </span><span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span></>}
+      {allDewsCalm && <><span className="text-muted-foreground"> · </span><span className="text-muted-foreground">all calm</span></>}
+    </>
+  ) : <span className="text-muted-foreground">no DEWS</span>;
+
+  const desktopDewsSublabel = (
+    <>
+      <span className="pharos-kicker">DEWS:</span>
+      {dewsBandCounts?.danger ? <DewsBandChip band="DANGER" count={dewsBandCounts.danger} /> : null}
+      {dewsBandCounts?.warning ? <DewsBandChip band="WARNING" count={dewsBandCounts.warning} /> : null}
+      {dewsBandCounts?.alert ? <DewsBandChip band="ALERT" count={dewsBandCounts.alert} /> : null}
+      {dewsBandCounts ? (allDewsCalm ? <span className="text-[11px] text-muted-foreground">all calm</span> : null) : <span className="text-[11px] text-muted-foreground">no data</span>}
+    </>
+  );
+
+  const metricDefinitions: KpiMetricDefinition[] = [
+    {
+      key: "mcap",
+      mobileLabel: "Mcap",
+      desktopLabel: "Total Stablecoin Mcap",
+      value: mcapDisplay,
+      mobileMetaPrimary: <span className={mcapColorClass}>24h {mcapChange24Display}</span>,
+      mobileMetaSecondary: <span className={mcap7ColorClass}>7d {mcapChange7Display}</span>,
+      desktopSublabel: <>
+        <TrendChip label="24h" value={mcapChange24Display} direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"} />
+        <InfoChip label="USDT+USDC share" value={usdtShareDisplay} tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"} />
+      </>,
+    },
+    { key: "peg", mobileLabel: "Peg", desktopLabel: "Peg Status", value: pegStatusDisplay, mobileMetaSecondary: mobileDewsMeta, desktopSublabel: desktopDewsSublabel },
+    {
+      key: "dex-vol",
+      mobileLabel: "DEX Vol",
+      desktopLabel: "Tracked 24H DEX Vol",
+      value: dexVolDisplay,
+      mobileMetaPrimary: <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>vs 7d avg {dexDeltaDisplay}</span>,
+      mobileMetaSecondary: <span className="text-muted-foreground">Turnover {turnoverDisplay}</span>,
+      desktopSublabel: <>
+        <TrendChip label="vs 7d avg" value={dexDeltaDisplay} direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"} />
+        <InfoChip label="Turnover" value={turnoverDisplay} />
+      </>,
+    },
+    {
+      key: "net-flow",
+      mobileLabel: "Net Flow",
+      desktopLabel: "Net Mint/Burn Flow",
+      value: netFlow24Display,
+      mobileMetaPrimary: <span className={netFlow7Class}>7d {netFlow7Display}</span>,
+      desktopSublabel: <InfoChip label="7d total" value={netFlow7Display} tone={netFlow7Tone} />,
+      mobileValueClassName: netFlow24Class,
+      desktopValueClassName: netFlow24Class,
+    },
+  ];
 
   return (
     <Card className="pharos-card-shell overflow-hidden p-0">
@@ -442,65 +511,16 @@ export function KpiBar() {
           valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
         />
         <div className="grid grid-cols-2 gap-2">
-          <KpiMiniTile
-            label="Mcap"
-            value={mcapDisplay}
-            metaPrimary={<span className={mcapColorClass}>24h {mcapChange24Display}</span>}
-            metaSecondary={<span className={mcap7ColorClass}>7d {mcapChange7Display}</span>}
-          />
-          <KpiMiniTile
-            label="Peg"
-            value={pegStatusDisplay}
-            metaSecondary={
-              dewsBandCounts ? (
-                <>
-                  <span className="text-foreground">DEWS:</span>
-                  {dewsBandCounts.danger > 0 && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className="text-red-700 dark:text-red-400">Critical {dewsBandCounts.danger}</span>
-                    </>
-                  )}
-                  {dewsBandCounts.warning > 0 && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className="text-amber-700 dark:text-amber-400">Warning {dewsBandCounts.warning}</span>
-                    </>
-                  )}
-                  {dewsBandCounts.alert > 0 && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className="text-amber-700 dark:text-amber-400">Alert {dewsBandCounts.alert}</span>
-                    </>
-                  )}
-                  {allDewsCalm && (
-                    <>
-                      <span className="text-muted-foreground"> · </span>
-                      <span className="text-muted-foreground">all calm</span>
-                    </>
-                  )}
-                </>
-              ) : (
-                <span className="text-muted-foreground">no DEWS</span>
-              )
-            }
-          />
-          <KpiMiniTile
-            label="DEX Vol"
-            value={dexVolDisplay}
-            metaPrimary={
-              <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
-                vs 7d avg {dexDeltaDisplay}
-              </span>
-            }
-            metaSecondary={<span className="text-muted-foreground">Turnover {turnoverDisplay}</span>}
-          />
-          <KpiMiniTile
-            label="Net Flow"
-            value={netFlow24Display}
-            valueClassName={netFlow24Class}
-            metaPrimary={<span className={netFlow7Class}>7d {netFlow7Display}</span>}
-          />
+          {metricDefinitions.map((metric) => (
+            <KpiMiniTile
+              key={metric.key}
+              label={metric.mobileLabel}
+              value={metric.value}
+              metaPrimary={metric.mobileMetaPrimary}
+              metaSecondary={metric.mobileMetaSecondary}
+              valueClassName={metric.mobileValueClassName}
+            />
+          ))}
         </div>
       </div>
 
@@ -515,72 +535,15 @@ export function KpiBar() {
           />
         </div>
 
-        <KpiCell
-          label="Total Stablecoin Mcap"
-          value={mcapDisplay}
-          valueClassName="text-lg"
-          sublabel={
-            <>
-              <TrendChip
-                label="24h"
-                value={mcapChange24Display}
-                direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"}
-              />
-              <InfoChip
-                label="USDT+USDC share"
-                value={usdtShareDisplay}
-                tone={hasStablecoinsData && usdtUsdcSharePct >= 65 ? "warning" : "neutral"}
-              />
-            </>
-          }
-        />
-
-        <KpiCell
-          label="Peg Status"
-          value={pegStatusDisplay}
-          valueClassName="text-lg"
-          sublabel={
-            <>
-              <span className="pharos-kicker">DEWS:</span>
-              {dewsBandCounts && dewsBandCounts.danger > 0 && (
-                <DewsBandChip band="DANGER" count={dewsBandCounts.danger} />
-              )}
-              {dewsBandCounts && dewsBandCounts.warning > 0 && (
-                <DewsBandChip band="WARNING" count={dewsBandCounts.warning} />
-              )}
-              {dewsBandCounts && dewsBandCounts.alert > 0 && <DewsBandChip band="ALERT" count={dewsBandCounts.alert} />}
-              {dewsBandCounts && allDewsCalm && <span className="text-[11px] text-muted-foreground">all calm</span>}
-              {!dewsBandCounts && <span className="text-[11px] text-muted-foreground">no data</span>}
-            </>
-          }
-        />
-
-        <KpiCell
-          label="Tracked 24H DEX Vol"
-          value={dexVolDisplay}
-          valueClassName="text-lg"
-          sublabel={
-            <>
-              <TrendChip
-                label="vs 7d avg"
-                value={dexDeltaDisplay}
-                direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"}
-              />
-              <InfoChip label="Turnover" value={turnoverDisplay} />
-            </>
-          }
-        />
-
-        <KpiCell
-          label="Net Mint/Burn Flow"
-          value={netFlow24Display}
-          valueClassName={`text-lg ${netFlow24Class}`}
-          sublabel={
-            <>
-              <InfoChip label="7d total" value={netFlow7Display} tone={netFlow7Tone} />
-            </>
-          }
-        />
+        {metricDefinitions.map((metric) => (
+          <KpiCell
+            key={metric.key}
+            label={metric.desktopLabel}
+            value={metric.value}
+            valueClassName={`text-lg${metric.desktopValueClassName ? ` ${metric.desktopValueClassName}` : ""}`}
+            sublabel={metric.desktopSublabel}
+          />
+        ))}
       </div>
     </Card>
   );

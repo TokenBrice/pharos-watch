@@ -25,6 +25,11 @@ import {
   getMintBurnSummaryTimeframe,
   getNetFlowForHours,
 } from "@/lib/mint-burn-timeframes";
+import {
+  buildFlowSummaryNarrative,
+  getFlowDirectionUi,
+  getFlowPressureUi,
+} from "@/lib/flow-signal-ui";
 import { cn } from "@/lib/utils";
 import type { MintBurnCoinFlow } from "@shared/types";
 import {
@@ -65,144 +70,6 @@ function resolvePressureScore(coin: MintBurnCoinFlow): number | null {
 
 function resolvePressureState(coin: MintBurnCoinFlow): PressureShiftState {
   return coin.pressureShiftState ?? getPressureShiftState(resolvePressureScore(coin));
-}
-
-const NET_SIGNAL_UI: Record<
-  NetFlowDirection24h,
-  {
-    label: string;
-    badgeClass: string;
-    valueClass: string;
-    accentHex: string;
-    helper: string;
-    sceneMode: "printer" | "shredder";
-    sceneTitle: string;
-  }
-> = {
-  minting: {
-    label: "Minting",
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    valueClass: "text-emerald-700 dark:text-emerald-400",
-    accentHex: "#22c55e",
-    helper: "Net issuance dominates the last 24 hours.",
-    sceneMode: "printer",
-    sceneTitle: "Printer",
-  },
-  burning: {
-    label: "Burning",
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    valueClass: "text-red-700 dark:text-red-400",
-    accentHex: "#ef4444",
-    helper: "Net redemptions dominate the last 24 hours.",
-    sceneMode: "shredder",
-    sceneTitle: "Shredder",
-  },
-  flat: {
-    label: "Flat",
-    badgeClass:
-      "border-border/70 bg-muted/40 text-foreground",
-    valueClass: "text-foreground",
-    accentHex: "#6b7280",
-    helper: "Mints and burns offset each other in the active window.",
-    sceneMode: "printer",
-    sceneTitle: "Flow Desk",
-  },
-  inactive: {
-    label: "No activity",
-    badgeClass:
-      "border-border/70 bg-muted/40 text-muted-foreground",
-    valueClass: "text-muted-foreground",
-    accentHex: "#6b7280",
-    helper: "No mint or burn events were recorded in the active window.",
-    sceneMode: "printer",
-    sceneTitle: "Flow Desk",
-  },
-};
-
-const PRESSURE_SIGNAL_UI: Record<
-  PressureShiftState,
-  {
-    label: string;
-    badgeClass: string;
-    valueClass: string;
-    helper: string;
-  }
-> = {
-  improving: {
-    label: "Improving",
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    valueClass: "text-emerald-700 dark:text-emerald-400",
-    helper: "Current pressure is lighter than this coin's recent norm.",
-  },
-  stable: {
-    label: "Stable vs 30D",
-    badgeClass:
-      "border-border/70 bg-muted/40 text-foreground",
-    valueClass: "text-foreground",
-    helper: "Current pressure is close to the 30-day baseline.",
-  },
-  worsening: {
-    label: "Worsening",
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    valueClass: "text-red-700 dark:text-red-400",
-    helper: "Current pressure is harsher than the recent baseline.",
-  },
-  nr: {
-    label: "NR",
-    badgeClass:
-      "border-border/70 bg-muted/40 text-muted-foreground",
-    valueClass: "text-muted-foreground",
-    helper: "Needs at least 7 tracked days plus current activity.",
-  },
-};
-
-function buildNarrative(
-  direction: NetFlowDirection24h,
-  pressureState: PressureShiftState,
-): string {
-  if (direction === "inactive") {
-    return "No current activity; pressure shift is NR.";
-  }
-
-  if (pressureState === "nr") {
-    if (direction === "burning") {
-      return "Burning now; pressure shift is NR until enough history accumulates.";
-    }
-    if (direction === "minting") {
-      return "Minting now; pressure shift is NR until enough history accumulates.";
-    }
-    return "Flows are flat; pressure shift is NR until enough history accumulates.";
-  }
-
-  if (direction === "burning" && pressureState === "improving") {
-    return "Burning, but pressure is easing versus its baseline.";
-  }
-  if (direction === "burning" && pressureState === "stable") {
-    return "Burning at roughly its usual redemption pace.";
-  }
-  if (direction === "burning" && pressureState === "worsening") {
-    return "Burning, with pressure worsening versus the baseline.";
-  }
-  if (direction === "minting" && pressureState === "improving") {
-    return "Minting, with issuance running stronger than its usual pace.";
-  }
-  if (direction === "minting" && pressureState === "stable") {
-    return "Minting at roughly its usual 30D issuance pace.";
-  }
-  if (direction === "minting" && pressureState === "worsening") {
-    return "Minting, but weaker than its usual 30D issuance pace.";
-  }
-  if (pressureState === "improving") {
-    return "Flows are flat, but pressure is stronger than the baseline.";
-  }
-  if (pressureState === "stable") {
-    return "Flows are flat and close to the baseline.";
-  }
-  return "Flows are flat, but pressure is weaker than the baseline.";
 }
 
 function getBaselineCaption(
@@ -317,8 +184,8 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const pressureDisplay = pressureScore != null
     ? getPressureShiftDisplay(pressureScore)
     : null;
-  const netSignal = NET_SIGNAL_UI[netDirection];
-  const pressureSignal = PRESSURE_SIGNAL_UI[pressureState];
+  const netSignal = getFlowDirectionUi(netDirection, "summary");
+  const pressureSignal = getFlowPressureUi(pressureState, "summary");
   const baselineCaption = getBaselineCaption(
     coin.baselineDailyNetUsd,
     coin.baselineDataDays,
@@ -434,7 +301,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
 
             <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
               <p className="text-sm text-foreground">
-                {buildNarrative(netDirection, pressureState)}
+                {buildFlowSummaryNarrative(netDirection, pressureState)}
               </p>
               {baselineCaption ? (
                 <p className="mt-1 text-xs text-muted-foreground">

@@ -1,8 +1,9 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MetricStatCard } from "@/components/metric-stat-card";
 import { useUsdsStatus } from "@/hooks/use-usds-status";
 
 function formatLastChecked(timestamp: number): string {
@@ -67,35 +68,31 @@ export function UsdsStatusCard() {
   if (!status) return null;
 
   return (
-    <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-      <CardHeader className="pb-1">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            USDS Blacklist Status
-          </CardTitle>
-          {status.freezeActive ? (
-            <Badge variant="destructive" className="text-xs">Active</Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs">Not Active</Badge>
-          )}
+    <MetricStatCard
+      borderColorClass="border-l-violet-500"
+      title="USDS Blacklist Status"
+      headerRight={
+        status.freezeActive ? (
+          <Badge variant="destructive" className="text-xs">Active</Badge>
+        ) : (
+          <Badge variant="secondary" className="text-xs">Not Active</Badge>
+        )
+      }
+    >
+      <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left sm:gap-4">
+        <UsdsLogo
+          active={status.freezeActive}
+          className={`size-10 sm:size-12 shrink-0 ${status.freezeActive ? "" : "opacity-60 saturate-50"}`}
+        />
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            Sky (ex-MakerDAO) can enable blacklist-related features via a governance vote
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Last checked: {formatLastChecked(status.lastChecked)}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center text-center gap-2 sm:flex-row sm:text-left sm:gap-4">
-          <UsdsLogo
-            active={status.freezeActive}
-            className={`size-10 sm:size-12 shrink-0 ${status.freezeActive ? "" : "opacity-60 saturate-50"}`}
-          />
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">
-              Sky (ex-MakerDAO) can enable blacklist-related features via a governance vote
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Last checked: {formatLastChecked(status.lastChecked)}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </MetricStatCard>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MetricStatCard } from "@/components/metric-stat-card";
 import { formatCurrency } from "@shared/lib/format";
 import { PEG_CHART_COLORS as PEG_META } from "@shared/lib/classification";
 import { getCirculatingRaw, computeGovernanceBreakdown } from "@shared/lib/supply";
@@ -120,11 +121,11 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        <Card className="rounded-xl border-l-[3px] border-l-blue-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Safety Score</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        <MetricStatCard
+          borderColorClass="border-l-blue-500"
+          title="By Safety Score"
+          contentClassName="space-y-2"
+        >
             {stats.gradeTotal > 0 ? (
               <>
                 <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
@@ -156,13 +157,12 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
             ) : (
               <p className="text-xs text-muted-foreground">Loading scores…</p>
             )}
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border-l-[3px] border-l-yellow-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Governance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        </MetricStatCard>
+        <MetricStatCard
+          borderColorClass="border-l-yellow-500"
+          title="By Governance"
+          contentClassName="space-y-2"
+        >
             <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
               <div className="h-full bg-yellow-500" style={{ width: `${stats.cefiPct}%` }} />
               <div className="h-full bg-orange-500" style={{ width: `${stats.depPct}%` }} />
@@ -186,13 +186,16 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl border-l-[3px] border-l-sky-500">
-          <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Collateral <span className="normal-case font-normal">(USDT &amp; USDC excluded)</span></CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
+        </MetricStatCard>
+        <MetricStatCard
+          borderColorClass="border-l-sky-500"
+          title={
+            <>
+              By Collateral <span className="normal-case font-normal">(USDT &amp; USDC excluded)</span>
+            </>
+          }
+          contentClassName="space-y-2"
+        >
             {stats.collateralTotal > 0 ? (
               <>
                 <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
@@ -225,14 +228,13 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
             ) : (
               <p className="text-xs text-muted-foreground">Loading…</p>
             )}
-          </CardContent>
-        </Card>
+        </MetricStatCard>
         {stats.altTotal > 0 && (
-          <Card className="rounded-xl border-l-[3px] border-l-violet-500">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Peg (USD excluded)</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+          <MetricStatCard
+            borderColorClass="border-l-violet-500"
+            title="By Peg (USD excluded)"
+            contentClassName="space-y-2"
+          >
               <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
                 {stats.altPegs.map(([peg, mcap]) => {
                   const pct = (mcap / stats.altTotal) * 100;
@@ -259,8 +261,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
                   );
                 })}
               </div>
-            </CardContent>
-          </Card>
+          </MetricStatCard>
         )}
       </div>
     </div>
