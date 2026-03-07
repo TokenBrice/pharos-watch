@@ -41,8 +41,8 @@ import {
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
 
-const ROW_HEIGHT = 37;
-const OVERSCAN = 10;
+const ROW_HEIGHT = 40;
+const OVERSCAN = 12;
 
 interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
