@@ -1,4 +1,4 @@
-import { ALCHEMY_CHAINS } from "./chain-rpcs";
+import { ALCHEMY_CHAINS } from "./chain-registry";
 import type { SubrequestBudget, TopicFilter } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { buildInClause } from "./db";

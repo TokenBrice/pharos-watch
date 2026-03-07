@@ -246,7 +246,7 @@ All cron runs are logged to the `cron_runs` table (7-day retention).
 
 ## Chain RPC Configuration
 
-**File:** `worker/src/lib/chain-rpcs.ts`
+**File:** `worker/src/lib/chain-registry.ts`
 
 Not used by the snapshot cron but available for future on-chain supply fetching.
 
@@ -281,7 +281,7 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `worker/src/api/stablecoin-detail.ts` | Detail API with `supply_history` fallback for CG-only/commodity coins |
 | `worker/src/api/backfill-supply-history.ts` | Admin backfill endpoint |
 | `worker/src/lib/db.ts` | `batchExecute()`, `getCache()`, `logCronRun()` |
-| `worker/src/lib/chain-rpcs.ts` | Chain RPC configs (future on-chain supply) |
+| `worker/src/lib/chain-registry.ts` | Unified chain mappings + chain RPC configs (future on-chain supply) |
 | `worker/migrations/0015_supply_history.sql` | `supply_history` table |
 | `worker/migrations/0013_onchain_supply.sql` | `onchain_supply` table (per-chain cache) |
 | `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |

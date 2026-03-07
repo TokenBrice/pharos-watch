@@ -336,7 +336,7 @@ Returns `null` if < 30 days tracking.
 | `worker/src/cron/detect-depegs.ts` | Stage 1: detection, peak tracking, DEX cross-validation, orphan cleanup |
 | `worker/src/cron/confirm-pending-depegs.ts` | Stage 2: multi-source confirmation for large coins |
 | `worker/src/cron/sync-stablecoins.ts` | Parent cron that calls both stages after price enrichment |
-| `worker/src/lib/depeg-helpers.ts` | `DepegRow` type, `rowToDepegEvent()` converter |
+| `worker/src/lib/depeg-helpers.ts` | `DepegRow` type, `rowToDepegEvent()`, `loadDexPriceMap()`, `buildInsertDepegEventStmt()` |
 | `worker/src/api/depeg-events.ts` | `GET /api/depeg-events` handler |
 | `worker/migrations/0006_depeg_events.sql` | Initial `depeg_events` table |
 | `worker/migrations/0008_depeg_dedup.sql` | Uniqueness + open events indexes |

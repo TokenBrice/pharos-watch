@@ -13,7 +13,7 @@ import {
   MIN_LENDING_POOL_TVL_USD,
 } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { getChainRpc } from "../lib/chain-rpcs";
+import { getChainRpc } from "../lib/chain-registry";
 import { cgHeaders, cgUrl } from "../lib/coingecko";
 import {
   computeApyFromRate,

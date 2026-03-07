@@ -8,7 +8,7 @@ vi.mock("../abort", () => ({
   sleepWithSignal: vi.fn(async () => undefined),
 }));
 
-import { RATE_LIMITS } from "../rate-limits";
+import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal } from "../abort";
 import { fetchWithRetry } from "../fetch-retry";
 import {
@@ -27,7 +27,7 @@ describe("coingecko-onchain", () => {
     vi.clearAllMocks();
   });
 
-  it("tracks API-key availability and rate-limits only after the first request", async () => {
+  it("tracks API-key availability and rate-limit only after the first request", async () => {
     initOnchainAvailability("cg-key");
     expect(isOnchainAvailable()).toBe(true);
     initOnchainAvailability(undefined);

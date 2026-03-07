@@ -59,6 +59,15 @@ cmcs worktree create research-<aspect>
 # Output: a DESIGN-* artifact in the worktree root
 ```
 
+When launching multiple research agents in parallel, use a single shell call with `&` backgrounding (Claude Code throttles concurrent Bash tool calls, causing staggered starts if dispatched separately):
+
+```bash
+cmcs run worktrees/research-frontend 2>&1 &
+cmcs run worktrees/research-worker 2>&1 &
+cmcs run worktrees/research-shared 2>&1 &
+wait
+```
+
 Research worktrees are **read-only explorations** — they don't modify production code. They persist as reference material throughout the project.
 
 ### When to skip research
@@ -222,7 +231,7 @@ Record any failures, retries, or unexpected events here:
 ---
 title: "Short imperative description"
 agent: "codex"
-model: "gpt-5.3-codex"
+model: "gpt-5.4"
 reasoning_effort: "medium"
 done: false
 ---
@@ -262,11 +271,12 @@ One sentence describing the outcome.
 
 | Model | Use When | Examples |
 |-------|----------|---------|
-| `gpt-5.3-codex` | Complex multi-file refactors, architectural changes, writing new test suites from scratch, subtle semantic reasoning | SQL safety refactors, cron reliability hardening, new test files |
-| `gpt-5.3-codex-spark` | Repetitive pattern application across many files, medium complexity, well-defined changes | Applying the same error-handling fix to 10 components, SEO metadata additions |
-| `gpt-5.1-codex-mini` | Mechanical/rote changes, string replacements, fixture alignment, docs path fixes | Updating stale paths, adding missing fields to fixtures, config typo fixes |
+| `gpt-5.4` | Ambiguous/architectural tickets needing reasoning + coding. Default when unsure. | Designing new abstractions, cross-concern refactors, tickets with unclear edge cases |
+| `gpt-5.3-codex` | Well-scoped coding with clear specs. Best cost/performance for standard work. | Implementing a defined API endpoint, adding test suites, file-by-file migrations |
+| `gpt-5.3-codex-spark` | Mechanical/rote: renames, string replacements, config fixes, boilerplate. | Updating stale paths, SEO metadata additions, fixture alignment |
+| `gpt-5.1-codex-max` | Marathon tickets: 10+ files, sustained coherence, huge refactors. | Full-module refactors, large-scale type migrations, codebase-wide pattern changes |
 
-  When unsure, prefer `gpt-5.3-codex` (the default) — over-provisioning wastes tokens but under-provisioning produces bad output. Never use models not in the available list (check `cmcs model list` or ask).
+  When unsure, prefer `gpt-5.4` — over-provisioning wastes tokens but under-provisioning produces bad output. Never use models not in the available list (check `cmcs model list` or ask).
 
 ### Special ticket types
 

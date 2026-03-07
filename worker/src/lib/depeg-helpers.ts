@@ -17,6 +17,43 @@ export interface DepegRow {
   source: string;
 }
 
+export async function loadDexPriceMap(db: D1Database): Promise<Map<string, number>> {
+  try {
+    const dexResult = await db
+      .prepare("SELECT stablecoin_id, dex_price_usd FROM dex_prices")
+      .all<{ stablecoin_id: string; dex_price_usd: number }>();
+    return new Map((dexResult.results ?? []).map((row) => [row.stablecoin_id, row.dex_price_usd]));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("no such table")) {
+      console.error("[depeg-helpers] Unexpected error loading dex_prices:", msg);
+    }
+    return new Map<string, number>();
+  }
+}
+
+export function buildInsertDepegEventStmt(
+  db: D1Database,
+  event: DepegEvent,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`,
+    )
+    .bind(
+      event.stablecoinId,
+      event.symbol,
+      event.pegType,
+      event.direction,
+      event.peakDeviationBps,
+      event.startedAt,
+      event.startPrice,
+      event.peakPrice ?? event.startPrice,
+      event.pegReference,
+    );
+}
+
 const VALID_DIRECTIONS = new Set(["above", "below"]);
 const VALID_SOURCES = new Set(["live", "backfill"]);
 

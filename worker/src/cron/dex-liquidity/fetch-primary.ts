@@ -7,7 +7,7 @@ import {
   fetchCgTokensBatch, onchainRateLimit,
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_REVERSE } from "../../lib/chain-registry";
-import { RATE_LIMITS } from "../../lib/rate-limits";
+import { RATE_LIMITS } from "../../lib/rate-limit";
 import { GT_API_BASE, isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type {

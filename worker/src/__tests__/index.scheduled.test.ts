@@ -69,7 +69,7 @@ vi.mock("../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 
-vi.mock("../lib/chain-rpcs", () => ({ initChainRpcs: vi.fn() }));
+vi.mock("../lib/chain-registry", () => ({ initChainRpcs: vi.fn() }));
 vi.mock("../lib/coingecko", async (importOriginal) => {
   const original = await importOriginal<typeof import("../lib/coingecko")>();
   return { ...original, initCoinGecko: vi.fn() };
