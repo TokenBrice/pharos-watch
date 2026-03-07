@@ -13,28 +13,29 @@ import type { StablecoinData } from "@shared/types";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
-const SKELETON_DEPEG_INDICES = Array.from({ length: 4 }, (_, i) => i);
+const SKELETON_DEPEG_INDICES = Array.from({ length: 6 }, (_, i) => i);
 const SKELETON_MOVER_INDICES = Array.from({ length: 3 }, (_, i) => i);
 
 const SUPPLY_FLOOR = 1_000_000;
 
 /**
  * Responsive visibility classes per item index.
- * Index 0-1: always visible.
- * Index 2: visible from sm+.
- * Index 3: visible from lg+ (depegs only — movers cap at 3).
+ * Depegs: 4 on mobile (2×2), 6 on lg+ (2×3).
+ * Movers: 2 per group on mobile, 3 per group on lg+.
  */
 const DEPEG_VIS: Record<number, string> = {
   0: "flex",
   1: "flex",
-  2: "hidden sm:flex",
-  3: "hidden lg:flex",
+  2: "flex",
+  3: "flex",
+  4: "hidden lg:flex",
+  5: "hidden lg:flex",
 };
 
 const MOVER_VIS: Record<number, string> = {
   0: "flex",
   1: "flex",
-  2: "hidden sm:flex",
+  2: "hidden lg:flex",
 };
 
 /* ─── Types ─────────────────────────────────────────────────────── */
@@ -52,7 +53,7 @@ interface DepegItem {
   bps: number;
 }
 
-interface MoverEntry {
+interface MoverItem {
   id: string;
   symbol: string;
   name: string;
@@ -83,15 +84,15 @@ function useDepegs(data: StablecoinData[] | undefined, pegRates: Record<string, 
     }
 
     entries.sort((a, b) => Math.abs(b.bps) - Math.abs(a.bps));
-    return entries.slice(0, 4);
+    return entries.slice(0, 6);
   }, [data, pegRates]);
 }
 
 function useMovers(data: StablecoinData[] | undefined) {
   return useMemo(() => {
-    if (!data) return { growers: [] as MoverEntry[], shrinkers: [] as MoverEntry[] };
+    if (!data) return { growers: [] as MoverItem[], shrinkers: [] as MoverItem[] };
 
-    const entries: MoverEntry[] = [];
+    const entries: MoverItem[] = [];
 
     for (const coin of data) {
       if (!TRACKED_IDS.has(coin.id)) continue;
@@ -153,52 +154,29 @@ function DepegEntry({
   );
 }
 
-function MoverPairRow({
-  grower,
-  shrinker,
+function MoverEntry({
+  entry,
   logos,
   visClass,
 }: {
-  grower: MoverEntry | undefined;
-  shrinker: MoverEntry | undefined;
+  entry: MoverItem;
   logos?: Record<string, string>;
   visClass: string;
 }) {
+  const isGrower = entry.pctChange >= 0;
   return (
-    <div className={`${visClass} grid grid-cols-2 gap-x-3`}>
-      {grower ? (
-        <Link
-          href={buildStablecoinUrl(grower.id)}
-          className="pharos-focus-ring group flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40"
-        >
-          <StablecoinLogo src={logos?.[grower.id]} name={grower.name} size={16} />
-          <span className="truncate text-xs font-medium group-hover:underline group-focus-visible:underline">
-            {grower.symbol}
-          </span>
-          <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400 ml-auto flex-shrink-0">
-            +{grower.pctChange.toFixed(1)}%
-          </span>
-        </Link>
-      ) : (
-        <div />
-      )}
-      {shrinker ? (
-        <Link
-          href={buildStablecoinUrl(shrinker.id)}
-          className="pharos-focus-ring group flex items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40"
-        >
-          <StablecoinLogo src={logos?.[shrinker.id]} name={shrinker.name} size={16} />
-          <span className="truncate text-xs font-medium group-hover:underline group-focus-visible:underline">
-            {shrinker.symbol}
-          </span>
-          <span className="text-xs font-mono font-semibold text-red-700 dark:text-red-400 ml-auto flex-shrink-0">
-            {shrinker.pctChange.toFixed(1)}%
-          </span>
-        </Link>
-      ) : (
-        <div />
-      )}
-    </div>
+    <Link
+      href={buildStablecoinUrl(entry.id)}
+      className={`${visClass} pharos-focus-ring group items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40`}
+    >
+      <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={16} />
+      <span className="truncate text-xs font-medium group-hover:underline group-focus-visible:underline">
+        {entry.symbol}
+      </span>
+      <span className={`text-xs font-mono font-semibold ml-auto flex-shrink-0 ${isGrower ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
+        {isGrower ? "+" : ""}{entry.pctChange.toFixed(1)}%
+      </span>
+    </Link>
   );
 }
 
@@ -210,21 +188,23 @@ function MarketSignalsSkeleton() {
       {/* Depegs skeleton */}
       <div className="flex-1 p-4 space-y-2.5">
         <Skeleton className="h-2.5 w-24" />
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
           {SKELETON_DEPEG_INDICES.map((i) => (
-            <Skeleton key={i} className="h-5 w-full" />
+            <Skeleton key={i} className={`h-5 w-full ${i >= 4 ? "hidden lg:block" : ""}`} />
           ))}
         </div>
       </div>
       {/* Movers skeleton */}
       <div className="flex-1 p-4 space-y-2.5">
         <Skeleton className="h-2.5 w-20" />
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
           {SKELETON_MOVER_INDICES.map((i) => (
-            <div key={i} className="grid grid-cols-2 gap-3">
-              <Skeleton className="h-5 w-full" />
-              <Skeleton className="h-5 w-full" />
-            </div>
+            <Skeleton key={i} className="h-5 w-full" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+          {SKELETON_MOVER_INDICES.map((i) => (
+            <Skeleton key={i} className="h-5 w-full" />
           ))}
         </div>
       </div>
@@ -240,8 +220,6 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
 
   if (!data) return <MarketSignalsSkeleton />;
 
-  const moverPairCount = Math.max(growers.length, shrinkers.length);
-
   return (
     <div className="pharos-card-shell flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40 animate-in fade-in duration-300">
       {/* ── Depegs zone ── */}
@@ -250,7 +228,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
         {depegs.length === 0 ? (
           <p className="text-xs text-muted-foreground">All on-peg</p>
         ) : (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
             {depegs.map((d, i) => (
               <DepegEntry
                 key={d.id}
@@ -266,19 +244,34 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
       {/* ── Movers zone ── */}
       <div className="flex-1 p-4">
         <h2 className="pharos-kicker mb-2.5">Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span></h2>
-        {moverPairCount === 0 ? (
+        {growers.length === 0 && shrinkers.length === 0 ? (
           <p className="text-xs text-muted-foreground">No significant moves</p>
         ) : (
           <div className="space-y-1">
-            {Array.from({ length: moverPairCount }).map((_, i) => (
-              <MoverPairRow
-                key={i}
-                grower={growers[i]}
-                shrinker={shrinkers[i]}
-                logos={logos}
-                visClass={MOVER_VIS[i] ?? "hidden"}
-              />
-            ))}
+            {growers.length > 0 && (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+                {growers.map((g, i) => (
+                  <MoverEntry
+                    key={g.id}
+                    entry={g}
+                    logos={logos}
+                    visClass={MOVER_VIS[i] ?? "hidden"}
+                  />
+                ))}
+              </div>
+            )}
+            {shrinkers.length > 0 && (
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+                {shrinkers.map((s, i) => (
+                  <MoverEntry
+                    key={s.id}
+                    entry={s}
+                    logos={logos}
+                    visClass={MOVER_VIS[i] ?? "hidden"}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
