@@ -48,7 +48,7 @@
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
-│   ├── page.tsx                  # Homepage: server-rendered SEO link hubs + interactive dashboard client
+│   ├── page.tsx                  # Homepage: hero, KPI summary, and interactive dashboard client
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
@@ -461,4 +461,4 @@ data/
   - `/compare/`
   - `/portfolio/`
   - `/status/`
-- Crawlable server-rendered link hubs now live on the homepage, digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
+- Crawlable server-rendered link hubs now live on the digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.
