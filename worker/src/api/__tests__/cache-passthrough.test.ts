@@ -4,11 +4,13 @@
  */
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "./helpers/mock-d1";
-import { handleStablecoins } from "../stablecoins";
-import { handleStablecoinCharts } from "../stablecoin-charts";
-import { handleUsdsStatus } from "../usds-status";
-import { handleBluechipRatings } from "../bluechip";
-import { handleYieldRankings } from "../yield-rankings";
+import {
+  handleStablecoins,
+  handleStablecoinCharts,
+  handleUsdsStatus,
+  handleBluechipRatings,
+  handleYieldRankings,
+} from "../cache-handlers";
 
 function makeCacheDb(key: string, value: unknown, updatedAt: number) {
   const jsonValue = typeof value === "string" ? value : JSON.stringify(value);
