@@ -13,7 +13,7 @@ export interface CronJobDefinition {
   schedule: CronScheduleExpression;
 }
 
-export const CRON_JOB_DEFINITIONS: readonly CronJobDefinition[] = [
+const CRON_JOB_DEFINITIONS: readonly CronJobDefinition[] = [
   { job: "sync-stablecoins", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
   { job: "sync-stablecoin-charts", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
   { job: "sync-fx-rates", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },

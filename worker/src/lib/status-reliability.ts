@@ -9,9 +9,9 @@ import type {
 
 export type StatusLevel = "healthy" | "degraded" | "stale";
 
-export const STATUS_SCOPE = "global" as const;
+const STATUS_SCOPE = "global" as const;
 
-export const STATUS_HYSTERESIS = {
+const STATUS_HYSTERESIS = {
   escalateToDegraded: 2,
   escalateToStale: 1,
   recoverToDegraded: 2,
@@ -23,7 +23,7 @@ export const STATUS_HYSTERESIS = {
 export const STATUS_SYSTEM_FRESHNESS_SEC = 1800;
 export const STATUS_DISCREPANCY_ALERT_STREAK = 2;
 export const STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC = 1800;
-export const STATUS_DISCREPANCY_MAX_PROBE_AGE_SEC = 1800;
+const STATUS_DISCREPANCY_MAX_PROBE_AGE_SEC = 1800;
 
 interface StatusStateRow {
   scope: string;

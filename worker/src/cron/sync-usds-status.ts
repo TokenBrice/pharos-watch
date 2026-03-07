@@ -46,7 +46,7 @@ async function readImplementationSlot(apiKey: string | null, signal?: AbortSigna
   }
 }
 
-async function probeFreeze(implAddress: string, apiKey: string | null, signal?: AbortSignal): Promise<boolean | null> {
+async function probeFreeze(apiKey: string | null, signal?: AbortSignal): Promise<boolean | null> {
   // Call isBlocked(address(0)) on the proxy — if the implementation has the function
   // it will return data; otherwise it will revert (empty result or error)
   const data = IS_BLOCKED_SELECTOR + "0".repeat(64);
@@ -89,8 +89,8 @@ export async function syncUsdsStatus(
     }
   }
 
-  const implAddress = await readImplementationSlot(etherscanApiKey, signal);
-  if (!implAddress) {
+  const implementationAddress = await readImplementationSlot(etherscanApiKey, signal);
+  if (!implementationAddress) {
     console.warn("[usds-status] Failed to read implementation slot");
     return {
       status: "degraded",
@@ -100,26 +100,26 @@ export async function syncUsdsStatus(
   }
 
   let freezeActive = false;
-  if (implAddress !== NO_FREEZE_IMPL) {
+  if (implementationAddress !== NO_FREEZE_IMPL) {
     // Implementation changed — probe for freeze function
-    const probeResult = await probeFreeze(implAddress, etherscanApiKey, signal);
+    const probeResult = await probeFreeze(etherscanApiKey, signal);
     if (probeResult === null) {
       console.warn("[usds-status] Probe failed, preserving cached status");
       return {
         status: "degraded",
         itemCount: 0,
-        metadata: JSON.stringify({ reason: "freeze-probe-failed", implementationAddress: implAddress }),
+        metadata: JSON.stringify({ reason: "freeze-probe-failed", implementationAddress }),
       };
     }
     freezeActive = probeResult;
-    console.log(`[usds-status] Implementation changed to ${implAddress}, freeze active: ${freezeActive}`);
+    console.log(`[usds-status] Implementation changed to ${implementationAddress}, freeze active: ${freezeActive}`);
   } else {
     console.log("[usds-status] Implementation unchanged, no freeze");
   }
 
   const status: UsdsStatus = {
     freezeActive,
-    implementationAddress: implAddress,
+    implementationAddress,
     lastChecked: Math.floor(Date.now() / 1000),
   };
 
@@ -127,6 +127,6 @@ export async function syncUsdsStatus(
   console.log("[usds-status] Cache updated");
   return {
     itemCount: 1,
-    metadata: JSON.stringify({ implementationAddress: implAddress, freezeActive }),
+    metadata: JSON.stringify({ implementationAddress, freezeActive }),
   };
 }

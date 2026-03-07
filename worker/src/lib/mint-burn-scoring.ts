@@ -60,7 +60,7 @@ export interface GaugeBand {
   color: string;
 }
 
-export const GAUGE_BANDS: GaugeBand[] = [
+const GAUGE_BANDS: GaugeBand[] = [
   { min: -100, max: -70, label: "CRISIS", color: "red" },
   { min: -70, max: -40, label: "STRESS", color: "orange" },
   { min: -40, max: -10, label: "CAUTIOUS", color: "amber" },

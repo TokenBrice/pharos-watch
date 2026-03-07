@@ -34,7 +34,7 @@ export const GT_DEX_QUALITY: [string, number][] = [
 ];
 
 /** Well-known USD-pegged tokens used as reference prices in Uni V3 pool observations */
-export const USD_REFERENCE_SYMBOLS = new Set([
+const USD_REFERENCE_SYMBOLS = new Set([
   "USDC", "USDT", "DAI", "BUSD", "TUSD", "USDP", "GUSD", "LUSD", "FRAX",
 ]);
 

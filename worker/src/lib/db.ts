@@ -160,7 +160,7 @@ export class CronLeaseLostError extends Error {
   }
 }
 
-export class CronTimeoutError extends Error {
+class CronTimeoutError extends Error {
   constructor(job: string, timeoutMs: number) {
     super(`Cron job "${job}" timed out after ${Math.round(timeoutMs / 1000)}s`);
     this.name = "CronTimeoutError";

@@ -12,7 +12,7 @@ function escapeHtml(text: string): string {
 }
 
 /** Build the full Telegram message for a digest. */
-export function buildTelegramMessage(title: string, extended: string, date: string): string {
+function buildTelegramMessage(title: string, extended: string, date: string): string {
   return `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(extended)}\n\n<a href="https://pharos.watch/digest/${date}">Read on Pharos →</a>`;
 }
 

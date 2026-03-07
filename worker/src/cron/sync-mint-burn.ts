@@ -34,13 +34,9 @@ import {
 } from "../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
 
-// Safety margin when advancing sync state to chain head (prevents permanent event loss
-// if block explorer indexing lags behind chain tip). 15 minutes in seconds.
-const INDEXING_SAFETY_SEC = 900;
-
 const ETHEREUM_CHAIN_ID = "ethereum";
-const ETHEREUM_BLOCK_TIME_SEC = 12;
-const ETHEREUM_SCAN_RANGE = 50_000;
+const MAX_SCAN_RANGE = 50_000;
+const EVM_SAFETY_MARGIN_BLOCKS = 75; // Math.ceil(900s indexing safety / 12s block time)
 
 const MINT_BURN_JOB = "sync-mint-burn";
 const GLOBAL_BUDGET_LIMIT = 200;
@@ -79,14 +75,6 @@ interface MintBurnConfigSummary {
 interface MintBurnRunStateRow {
   nextConfigIndex: number;
   degradedStreak: number;
-}
-
-function getMaxScanRange(): number {
-  return ETHEREUM_SCAN_RANGE;
-}
-
-function evmSafetyMarginBlocks(): number {
-  return Math.ceil(INDEXING_SAFETY_SEC / ETHEREUM_BLOCK_TIME_SEC);
 }
 
 function configKey(config: MintBurnContractConfig): string {
@@ -249,7 +237,6 @@ export async function syncMintBurn(
     const metadata = JSON.stringify({
       rowsRead: 0,
       rowsParsed: 0,
-      rowsWritten: 0,
       rowsInserted: 0,
       rowsIgnored: 0,
       rowsDropped: 0,
@@ -414,7 +401,7 @@ export async function syncMintBurn(
     summary.attempted = true;
     contractsProcessed++;
 
-    const maxRange = getMaxScanRange();
+    const maxRange = MAX_SCAN_RANGE;
     const scanTo = Math.min(fromBlock + maxRange - 1, chainHead);
     summary.scanFrom = fromBlock;
     summary.scanTo = scanTo;
@@ -550,7 +537,7 @@ export async function syncMintBurn(
       } else {
         // Full success and no events found: advance to end of scanned range,
         // preserving a safety margin near chain head.
-        const safetyBlocks = evmSafetyMarginBlocks();
+        const safetyBlocks = EVM_SAFETY_MARGIN_BLOCKS;
         newLastBlock = Math.max(
           fromBlock - 1,
           Math.min(scanTo, chainHead - safetyBlocks),
@@ -625,7 +612,6 @@ export async function syncMintBurn(
   const metadata = JSON.stringify({
     rowsRead,
     rowsParsed,
-    rowsWritten: rowsInserted,
     rowsInserted,
     rowsIgnored,
     rowsDropped,
