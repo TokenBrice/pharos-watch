@@ -98,30 +98,6 @@ export function HomepageClient() {
         ]}
       />
 
-      <section className="pharos-card-shell lg:hidden overflow-x-clip p-4">
-        <div className="space-y-2 min-w-0">
-          <p className="text-sm font-semibold tracking-tight text-foreground">Pharos Stablecoin Radar</p>
-          <p className="text-xs leading-relaxed text-muted-foreground break-words">
-            Live coverage for {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg families.
-            Start with PSI for market-wide risk, then drill into depegs, blacklist events, or liquidity depth.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/stability-index/"
-              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-700 dark:text-cyan-400 shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-cyan-500/60 hover:bg-cyan-500/20 whitespace-normal"
-            >
-              Open Stability Index
-            </Link>
-            <Link
-              href="/depeg/"
-              className="pharos-focus-ring inline-flex max-w-full min-h-11 items-center rounded-md border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground whitespace-normal"
-            >
-              View Depeg Tracker
-            </Link>
-          </div>
-        </div>
-      </section>
-
       <SectionErrorBoundary name="highlights">
         <MarketHighlights data={data?.peggedAssets} logos={logos} pegRates={pegRates} />
       </SectionErrorBoundary>
