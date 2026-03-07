@@ -224,7 +224,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
     <div className="pharos-card-shell flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40 animate-in fade-in duration-300">
       {/* ── Depegs zone ── */}
       <div className="flex-1 p-4">
-        <h2 className="pharos-kicker mb-2.5">Biggest Depegs</h2>
+        <h2 className="pharos-kicker mb-2.5 text-center">Biggest Depegs</h2>
         {depegs.length === 0 ? (
           <p className="text-xs text-muted-foreground">All on-peg</p>
         ) : (
@@ -243,7 +243,7 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
 
       {/* ── Movers zone ── */}
       <div className="flex-1 p-4">
-        <h2 className="pharos-kicker mb-2.5">Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span></h2>
+        <h2 className="pharos-kicker mb-2.5 text-center">Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span></h2>
         {growers.length === 0 && shrinkers.length === 0 ? (
           <p className="text-xs text-muted-foreground">No significant moves</p>
         ) : (
