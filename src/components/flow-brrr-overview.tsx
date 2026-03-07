@@ -524,5 +524,3 @@ export function FlowBrrrOverview({
     </div>
   );
 }
-
-export type { FlowBrrrOverviewProps };

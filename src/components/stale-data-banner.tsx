@@ -9,7 +9,7 @@ import type { ApiMeta } from "@/lib/api";
  * Compatibility wrapper around DataHealthBanner.
  * Prefer using `preset` to keep label/stale-time semantics centralized.
  */
-export interface StaleQuery {
+interface StaleQuery {
   preset?: keyof typeof DATA_HEALTH_PRESETS;
   label?: string;
   /** Timestamp in ms (from TanStack Query's dataUpdatedAt), 0 if never fetched */

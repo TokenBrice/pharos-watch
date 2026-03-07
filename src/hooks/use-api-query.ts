@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { apiFetch, apiFetchWithMeta, type ApiMeta } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 export {
   CRON_1MIN,
   CRON_15MIN,
@@ -108,25 +108,3 @@ export function useApiQuery<T>(
  * Meta-aware variant of useApiQuery — returns { data, meta } where meta
  * contains freshness info (updatedAt, ageSeconds, status).
  */
-export function useApiQueryWithMeta<T>(
-  key: readonly unknown[],
-  path: string,
-  cronInterval: number,
-  opts?: ApiQueryOptions<T>,
-): UseQueryResult<{ data: T; meta: ApiMeta | null }, Error> {
-  return usePollingQuery(
-    key,
-    () => {
-      if (opts?.fetchInit) {
-        return apiFetchWithMeta<T>(path, opts.schema, opts.fetchInit);
-      }
-      return apiFetchWithMeta<T>(path, opts?.schema);
-    },
-    cronInterval,
-    {
-      enabled: opts?.enabled,
-      retry: opts?.retry,
-      retryDelay: opts?.retryDelay,
-    },
-  );
-}

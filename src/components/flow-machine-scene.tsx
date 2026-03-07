@@ -12,10 +12,10 @@ import { cn } from "@/lib/utils";
 
 type CssVarStyle = CSSProperties & Record<`--${string}`, string | number>;
 
-export type FlowMachineSceneMode = "printer" | "shredder";
-export type FlowMachineSceneSize = "mini" | "full";
+type FlowMachineSceneMode = "printer" | "shredder";
+type FlowMachineSceneSize = "mini" | "full";
 
-export interface FlowMachineSceneProps {
+interface FlowMachineSceneProps {
   size: FlowMachineSceneSize;
   mode: FlowMachineSceneMode;
   intensity: number;

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 
 type FeedbackType = "bug" | "data-correction" | "feature-request";
 
-export interface FeedbackModalProps {
+interface FeedbackModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: FeedbackType;

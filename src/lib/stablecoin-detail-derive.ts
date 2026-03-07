@@ -37,7 +37,7 @@ export function deriveSupplyFromMarketCap(
   return typeof priceUsd === "number" && priceUsd > 0 ? marketCapUsd / priceUsd : marketCapUsd;
 }
 
-export function hasPositivePegReference(pegReference: number): boolean {
+function hasPositivePegReference(pegReference: number): boolean {
   return Number.isFinite(pegReference) && pegReference > 0;
 }
 

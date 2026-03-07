@@ -17,7 +17,7 @@ import {
   createLucideIcon,
 } from "lucide-react";
 
-export const LighthouseIcon = createLucideIcon("lighthouse", [
+const LighthouseIcon = createLucideIcon("lighthouse", [
   ["path", { d: "M10 22V8l2-6 2 6v14", key: "tower" }],
   ["path", { d: "M7 22h10", key: "base" }],
   ["path", { d: "M9 12h6", key: "band1" }],

@@ -15,20 +15,6 @@ export function getPressureShiftDisplay(intensity: number): number {
   return rounded === 0 ? 0 : rounded;
 }
 
-export function getPressureShiftMagnitude(signedIntensity: number): number {
-  return Math.min(100, Math.abs(signedIntensity));
-}
-
-/** @deprecated Prefer getPressureShiftDisplay(). */
-export function getFlowIntensityDisplay(intensity: number): number {
-  return getPressureShiftDisplay(intensity);
-}
-
-/** @deprecated Prefer getPressureShiftMagnitude(). */
-export function getFlowIntensityMagnitude(signedIntensity: number): number {
-  return getPressureShiftMagnitude(signedIntensity);
-}
-
 /**
  * Compatibility normalizer:
  * Applies to both the canonical `pressureShiftScore` field and the deprecated
