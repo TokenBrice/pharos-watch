@@ -20,6 +20,7 @@ import {
   getEvmBlockNumber,
 } from "../lib/evm-logs";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
+import { fetchWithRetry } from "../lib/fetch-retry";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
@@ -101,8 +102,11 @@ async function fetchEvmBalanceAtTag(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-      if (!res.ok) { await res.body?.cancel(); return null; }
+      const res = await fetchWithRetry(
+        `${ETHERSCAN_V2_BASE}?${params}`,
+        signal ? { signal } : undefined,
+      );
+      if (!res) return null;
       return res.json() as Promise<{ result?: string; error?: unknown }>;
     });
 
@@ -151,7 +155,7 @@ async function fetchBalanceViaDrpc(
 
   try {
     budget.count++;
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}`,
       {
         method: "POST",
@@ -165,7 +169,7 @@ async function fetchBalanceViaDrpc(
         signal,
       }
     );
-    if (!res.ok) { await res.body?.cancel(); return null; }
+    if (!res) return null;
     const json = (await res.json()) as { result?: string; error?: unknown };
 
     if (!json?.result || json.error || !json.result.startsWith("0x") || json.result.length < 4) {
@@ -365,12 +369,8 @@ async function fetchTronEventsIncremental(
 
       budget.count++;
       const json: TronEventsResponse | null = await rateLimit(async () => {
-        const res = await fetch(url!, { headers, signal });
-        if (!res.ok) {
-          console.warn(`[blacklist] Tron API error: ${res.status}`);
-          await res.body?.cancel();
-          return null;
-        }
+        const res = await fetchWithRetry(url!, { headers, signal });
+        if (!res) return null;
         return res.json() as Promise<TronEventsResponse>;
       });
 
@@ -476,8 +476,11 @@ async function fetchDestroyAmountFromLog(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-      if (!res.ok) { await res.body?.cancel(); return null; }
+      const res = await fetchWithRetry(
+        `${ETHERSCAN_V2_BASE}?${params}`,
+        signal ? { signal } : undefined,
+      );
+      if (!res) return null;
       return res.json() as Promise<{ result?: { logs?: EtherscanLogEntry[] } }>;
     });
 

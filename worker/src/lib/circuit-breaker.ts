@@ -133,6 +133,15 @@ export async function recordOutcome(db: D1Database, source: string, success: boo
   await setCache(db, cacheKey(source), JSON.stringify(record));
 }
 
+/** Non-blocking circuit telemetry write for best-effort callers. */
+export async function recordOutcomeSafe(db: D1Database, source: string, success: boolean): Promise<void> {
+  try {
+    await recordOutcome(db, source, success);
+  } catch (err) {
+    console.warn(`[circuit-breaker] Failed to record outcome (${source}):`, err);
+  }
+}
+
 /** Read all known circuit states for health/status endpoints */
 export async function getCircuitStates(db: D1Database): Promise<Record<string, CircuitRecord>> {
   const result = await db

@@ -9,7 +9,7 @@ import { postDigestToTelegram, type TelegramCreds } from "../lib/telegram";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { SECONDS } from "../lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
-import { recordOutcome, shouldAttemptFetch } from "../lib/circuit-breaker";
+import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
@@ -569,13 +569,6 @@ export async function generateDailyDigest(
     )
     .bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null)
     .run();
-  const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
-    try {
-      await recordOutcome(db, source, success);
-    } catch {
-      // Non-blocking circuit telemetry.
-    }
-  };
 
   // Post to Twitter if credentials are available
   let tweetStatus = "no-creds";
@@ -586,10 +579,10 @@ export async function generateDailyDigest(
     } else {
       try {
         await postDigestTweet(digestTitle, digestText, twitterCreds);
-        await safeRecordOutcome(CIRCUIT_SOURCE.TWITTER_API, true);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TWITTER_API, true);
         tweetStatus = "ok";
       } catch (err) {
-        await safeRecordOutcome(CIRCUIT_SOURCE.TWITTER_API, false);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TWITTER_API, false);
         console.error("[daily-digest] Failed to post tweet (non-fatal):", err);
         tweetStatus = `failed: ${String(err).slice(0, 100)}`;
       }
@@ -606,10 +599,10 @@ export async function generateDailyDigest(
       try {
         const date = new Date(now * 1000).toISOString().slice(0, 10);
         await postDigestToTelegram(digestTitle, digestExtended, date, telegramCreds);
-        await safeRecordOutcome(CIRCUIT_SOURCE.TELEGRAM_API, true);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, true);
         telegramStatus = "ok";
       } catch (err) {
-        await safeRecordOutcome(CIRCUIT_SOURCE.TELEGRAM_API, false);
+        await recordOutcomeSafe(db, CIRCUIT_SOURCE.TELEGRAM_API, false);
         console.error("[daily-digest] Failed to post to Telegram (non-fatal):", err);
         telegramStatus = `failed: ${String(err).slice(0, 100)}`;
       }

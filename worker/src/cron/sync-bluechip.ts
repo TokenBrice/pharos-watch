@@ -1,6 +1,6 @@
 import { BLUECHIP_SLUG_MAP } from "../lib/bluechip-slugs";
 import type { BluechipGrade, BluechipRating, BluechipSmidge } from "@shared/types";
-import { getCache, setCacheIfNewer, type CronResult } from "../lib/db";
+import { shouldSkipFreshCache, setCacheIfNewer, type CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { USER_AGENT } from "../lib/constants";
 
@@ -41,14 +41,9 @@ function extractSmidge(coin: Record<string, unknown>): BluechipSmidge {
 export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
-  // Check cache freshness
-  const cached = await getCache(db, CACHE_KEY);
-  if (cached) {
-    const ageSec = Date.now() / 1000 - cached.updatedAt;
-    if (ageSec < STALE_HOURS * 3600) {
-      console.log("[bluechip] Cache still fresh, skipping");
-      return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
-    }
+  if (await shouldSkipFreshCache(db, CACHE_KEY, STALE_HOURS * 3600)) {
+    console.log("[bluechip] Cache still fresh, skipping");
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
   }
 
   const entries = Object.entries(BLUECHIP_SLUG_MAP);

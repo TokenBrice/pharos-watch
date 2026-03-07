@@ -1,8 +1,9 @@
 import { DEFILLAMA_COINS, USER_AGENT, DEXSCREENER_MIN_LIQUIDITY_USD, CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
-import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { sleepWithSignal, throwIfAborted } from "../lib/abort";
+import { shouldAttemptFetch, recordOutcome, recordOutcomeSafe } from "../lib/circuit-breaker";
+import { getCache, setCache } from "../lib/db";
+import { throwIfAborted } from "../lib/abort";
 import type { PriceConfidence } from "@shared/types";
 
 export interface DefiLlamaCoinPrice {
@@ -331,7 +332,7 @@ export async function enrichMissingPrices(
   let fxRates: Record<string, number> | undefined;
   if (db) {
     try {
-      const fxCache = await db.prepare("SELECT value FROM cache WHERE key = 'fx-rates'").first<{ value: string }>();
+      const fxCache = await getCache(db, "fx-rates");
       if (fxCache) fxRates = JSON.parse(fxCache.value);
     } catch (e) {
       console.warn("[enrich-prices] Failed to load FX rates for price bounds:", e);
@@ -344,14 +345,6 @@ export async function enrichMissingPrices(
   let pass3Count = 0;
   let passCmcCount = 0;
   let pass4Count = 0;
-  const safeRecordOutcome = async (source: string, success: boolean): Promise<void> => {
-    if (!db) return;
-    try {
-      await recordOutcome(db, source, success);
-    } catch (err) {
-      console.warn(`[enrich-prices] Failed to record circuit outcome (${source}):`, err);
-    }
-  };
 
   try {
     // ── Pass 1: Contract addresses via DefiLlama coins API ──
@@ -531,10 +524,8 @@ export async function enrichMissingPrices(
         let shouldCall = true;
         if (db) {
           try {
-            const row = await db
-              .prepare("SELECT updated_at FROM cache WHERE key = 'cmc_last_fetch'")
-              .first<{ updated_at: number }>();
-            if (row && (Math.floor(Date.now() / 1000) - row.updated_at) < 3600) {
+            const row = await getCache(db, "cmc_last_fetch");
+            if (row && (Math.floor(Date.now() / 1000) - row.updatedAt) < 3600) {
               shouldCall = false;
             }
           } catch (e) {
@@ -588,23 +579,20 @@ export async function enrichMissingPrices(
               // Update rate-limit timestamp
               if (db) {
                 try {
-                  await db
-                    .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES ('cmc_last_fetch', '1', ?)")
-                    .bind(Math.floor(Date.now() / 1000))
-                    .run();
+                  await setCache(db, "cmc_last_fetch", "1");
                 } catch (e) {
                   console.warn("[enrich-prices] Failed to update CMC rate-limit timestamp:", e);
                 }
               }
-              await safeRecordOutcome(CIRCUIT_SOURCE.CMC_PRICES, true);
+              if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, true);
             } else {
               console.warn(`[enrich] CMC API returned ${cmcRes?.status ?? "no response"}`);
-              await safeRecordOutcome(CIRCUIT_SOURCE.CMC_PRICES, false);
+              if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
             }
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
             console.warn("[enrich] CMC API call failed:", err);
-            await safeRecordOutcome(CIRCUIT_SOURCE.CMC_PRICES, false);
+            if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.CMC_PRICES, false);
           }
         }
       }
@@ -678,7 +666,7 @@ export async function enrichMissingPrices(
         }
       }
       if (dexAttempts > 0) {
-        await safeRecordOutcome(CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
+        if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DEXSCREENER_PRICES, dexSuccessfulCalls > 0);
       }
     } else if (stillMissing.length > 0) {
       console.warn("[enrich] DexScreener circuit open — skipping pass 4");

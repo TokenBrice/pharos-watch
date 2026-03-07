@@ -29,6 +29,7 @@ vi.mock("../../lib/telegram", () => ({
 vi.mock("../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => {}),
+  recordOutcomeSafe: vi.fn(async () => {}),
 }));
 
 import { generateDailyDigest } from "../daily-digest";

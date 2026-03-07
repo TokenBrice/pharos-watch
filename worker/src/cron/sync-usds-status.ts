@@ -1,5 +1,5 @@
 import { ETHERSCAN_V2_BASE } from "../lib/constants";
-import { getCache, setCacheIfNewer, type CronResult } from "../lib/db";
+import { shouldSkipFreshCache, setCacheIfNewer, type CronResult } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 
 const CACHE_KEY = "usds-status";
@@ -79,14 +79,9 @@ export async function syncUsdsStatus(
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
 
-  // Check if cache is still fresh
-  const cached = await getCache(db, CACHE_KEY);
-  if (cached) {
-    const age = Date.now() / 1000 - cached.updatedAt;
-    if (age < STALE_HOURS * 3600) {
-      console.log("[usds-status] Cache still fresh, skipping");
-      return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
-    }
+  if (await shouldSkipFreshCache(db, CACHE_KEY, STALE_HOURS * 3600)) {
+    console.log("[usds-status] Cache still fresh, skipping");
+    return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
   }
 
   const implementationAddress = await readImplementationSlot(etherscanApiKey, signal);

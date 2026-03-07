@@ -61,6 +61,12 @@ export async function setCache(db: D1Database, key: string, value: string): Prom
     .run();
 }
 
+export async function shouldSkipFreshCache(db: D1Database, key: string, maxAgeSec: number): Promise<boolean> {
+  const cached = await getCache(db, key);
+  if (!cached) return false;
+  return (Date.now() / 1000) - cached.updatedAt < maxAgeSec;
+}
+
 /**
  * Compare-and-swap cache write: only updates if the existing row is older than `syncStartSec`.
  * Prevents a slow cron run from overwriting a newer run's data.
