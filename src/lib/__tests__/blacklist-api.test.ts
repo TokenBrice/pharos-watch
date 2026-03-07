@@ -32,6 +32,7 @@ function jsonResponse(body: BlacklistResponse): Response {
 
 describe("fetchAllBlacklistEvents", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -94,5 +95,88 @@ describe("fetchAllBlacklistEvents", () => {
 
     expect(result.events).toHaveLength(BLACKLIST_API_PAGE_SIZE + 1);
     expect(result.events.filter((event) => event.id === overlapping.id)).toHaveLength(1);
+  });
+
+  it("retries transient 429 responses for follow-up pages", async () => {
+    vi.useFakeTimers();
+
+    const firstPageEvents = Array.from({ length: BLACKLIST_API_PAGE_SIZE }, (_, index) => makeEvent(index));
+    const body1: BlacklistResponse = {
+      events: firstPageEvents,
+      total: BLACKLIST_API_PAGE_SIZE + 2,
+    };
+    const body2: BlacklistResponse = {
+      events: [makeEvent(BLACKLIST_API_PAGE_SIZE), makeEvent(BLACKLIST_API_PAGE_SIZE + 1)],
+      total: BLACKLIST_API_PAGE_SIZE + 2,
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse(body1))
+      .mockResolvedValueOnce(new Response("rate limited", { status: 429 }))
+      .mockResolvedValueOnce(jsonResponse(body2));
+
+    const resultPromise = fetchAllBlacklistEvents();
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.events).toHaveLength(BLACKLIST_API_PAGE_SIZE + 2);
+  });
+
+  it("hydrates remaining pages in small batches instead of one large burst", async () => {
+    const firstPageEvents = Array.from({ length: BLACKLIST_API_PAGE_SIZE }, (_, index) => makeEvent(index));
+    const firstPage: BlacklistResponse = {
+      events: firstPageEvents,
+      total: BLACKLIST_API_PAGE_SIZE * 5,
+    };
+
+    const pageBodies = new Map<number, BlacklistResponse>([
+      [BLACKLIST_API_PAGE_SIZE, { events: [makeEvent(BLACKLIST_API_PAGE_SIZE)], total: firstPage.total }],
+      [BLACKLIST_API_PAGE_SIZE * 2, { events: [makeEvent(BLACKLIST_API_PAGE_SIZE * 2)], total: firstPage.total }],
+      [BLACKLIST_API_PAGE_SIZE * 3, { events: [makeEvent(BLACKLIST_API_PAGE_SIZE * 3)], total: firstPage.total }],
+      [BLACKLIST_API_PAGE_SIZE * 4, { events: [makeEvent(BLACKLIST_API_PAGE_SIZE * 4)], total: firstPage.total }],
+    ]);
+
+    let activeRequests = 0;
+    let maxConcurrentRequests = 0;
+    const pendingResolvers = new Map<number, () => void>();
+
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = new URL(String(input), "https://pharos.watch");
+      const offset = Number(url.searchParams.get("offset") ?? "0");
+      if (offset === 0) {
+        return Promise.resolve(jsonResponse(firstPage));
+      }
+
+      activeRequests += 1;
+      maxConcurrentRequests = Math.max(maxConcurrentRequests, activeRequests);
+
+      return new Promise<Response>((resolve) => {
+        pendingResolvers.set(offset, () => {
+          activeRequests -= 1;
+          resolve(jsonResponse(pageBodies.get(offset)!));
+        });
+      });
+    });
+
+    const resultPromise = fetchAllBlacklistEvents();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(maxConcurrentRequests).toBe(3);
+    expect(pendingResolvers.has(BLACKLIST_API_PAGE_SIZE * 4)).toBe(false);
+
+    pendingResolvers.get(BLACKLIST_API_PAGE_SIZE)?.();
+    pendingResolvers.get(BLACKLIST_API_PAGE_SIZE * 2)?.();
+    pendingResolvers.get(BLACKLIST_API_PAGE_SIZE * 3)?.();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(pendingResolvers.has(BLACKLIST_API_PAGE_SIZE * 4)).toBe(true);
+    expect(maxConcurrentRequests).toBe(3);
+
+    pendingResolvers.get(BLACKLIST_API_PAGE_SIZE * 4)?.();
+
+    const result = await resultPromise;
+    expect(result.events).toHaveLength(BLACKLIST_API_PAGE_SIZE + 4);
   });
 });

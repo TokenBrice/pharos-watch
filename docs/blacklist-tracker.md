@@ -365,7 +365,7 @@ Both admin endpoints are routed in `worker/src/router.ts` and executed via `work
 **Endpoint:** `GET /api/blacklist` (hydrated client-side via paginated 1000-row requests until `total` is reached)
 **Cache:** `staleTime: 20 min`, `refetchInterval: 40 min`
 
-The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, reads `total`, and requests the remaining offsets in parallel. This keeps the public API cap at 1000 rows while restoring the full multi-year dataset that powers the blacklist chart, summary cards, and client-side table filters.
+The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, reads `total`, and then hydrates the remaining offsets in small client-side batches (3 requests at a time) with retry/backoff for `429` and transient upstream errors. This keeps the public API cap at 1000 rows while avoiding bursty request fan-out that can blank the page when one follow-up page is rate-limited.
 
 ### Page: /blacklist
 

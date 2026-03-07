@@ -73,7 +73,7 @@ The sync pipeline includes multiple layers of validation to prevent bad data fro
 11. **OFFSET/LIMIT safety**: SQL queries use `LIMIT -1` when offset > 0 but no limit is set (bare OFFSET is invalid SQLite). Values are parameterized, not interpolated
 12. **Freshness header**: `/api/stablecoins` returns `X-Data-Age` (seconds since last cache write)
 13. **Timing-safe admin auth**: Admin endpoints (`/api/status`, `/api/backfill-depegs`) hash both keys with SHA-256 before `crypto.subtle.timingSafeEqual()`, preventing both timing side-channel attacks and length-leak attacks
-14. **Pagination defaults**: `/api/depeg-events` defaults `limit` to 100 and caps at 1000; `/api/blacklist` defaults `limit` to 1000, caps at 1000, and treats `limit=0` as "use default". The blacklist frontend hook (`src/lib/blacklist-api.ts`) hydrates additional pages when it needs the full history for charting and summary stats.
+14. **Pagination defaults**: `/api/depeg-events` defaults `limit` to 100 and caps at 1000; `/api/blacklist` defaults `limit` to 1000, caps at 1000, and treats `limit=0` as "use default". The blacklist frontend hook (`src/lib/blacklist-api.ts`) hydrates additional pages in 3-request batches with retry/backoff when it needs the full history for charting and summary stats.
 15. **Unbounded query guard**: `/api/peg-summary` bounds via the 4-year `started_at >` filter on the depeg_events query
 16. **Cache-empty 503**: `/api/peg-summary` returns HTTP 503 (not 200) when cache is empty, signaling data unavailability
 17. **Orphan depeg cleanup**: `detectDepegEvents()` closes open depeg events whose stablecoin was not processed during the current run (removed from tracked list, failed validation, etc.)
