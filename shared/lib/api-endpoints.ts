@@ -429,7 +429,6 @@ const CACHE_BYPASS_PATHS = new Set<string>(
 const ROUTER_HANDLED_PATHS = ENDPOINT_DEFINITIONS
   .filter((endpoint) => endpoint.routerHandled !== false)
   .map((endpoint) => endpoint.path);
-const ROUTER_HANDLED_PATH_SET = new Set<string>(ROUTER_HANDLED_PATHS);
 
 export function isMutatingAdminPath(path: string): boolean {
   return MUTATING_ADMIN_PATHS.has(path);
@@ -441,10 +440,6 @@ export function isCacheBypassPath(path: string): boolean {
 
 export function getRouterHandledPaths(): readonly string[] {
   return ROUTER_HANDLED_PATHS;
-}
-
-export function isRouterHandledPath(path: string): boolean {
-  return ROUTER_HANDLED_PATH_SET.has(path);
 }
 
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {

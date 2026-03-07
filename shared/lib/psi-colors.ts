@@ -2,13 +2,6 @@
 
 export type ConditionBand = "BEDROCK" | "STEADY" | "TREMOR" | "FRACTURE" | "CRISIS" | "MELTDOWN";
 
-const CONDITION_BANDS = new Set<string>(["BEDROCK", "STEADY", "TREMOR", "FRACTURE", "CRISIS", "MELTDOWN"]);
-
-/** Type guard for ConditionBand — returns true when the string is a valid band. */
-export function isConditionBand(s: string): s is ConditionBand {
-  return CONDITION_BANDS.has(s);
-}
-
 /** Hex colors for each PSI condition band. */
 export const PSI_HEX_COLORS: Record<ConditionBand, string> = {
   BEDROCK: "#22c55e",

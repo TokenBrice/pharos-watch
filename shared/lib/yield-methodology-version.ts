@@ -1,7 +1,5 @@
 import {
   createMethodologyVersion,
-  toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "./methodology-version";
 
 const yieldMethodology = createMethodologyVersion({
@@ -163,22 +161,11 @@ const yieldMethodology = createMethodologyVersion({
   ],
 });
 
-/** Canonical Yield Intelligence methodology version (no "v" prefix). */
-export const YIELD_METHODOLOGY_VERSION = yieldMethodology.currentVersion;
-
 /** Display-ready Yield Intelligence methodology version (with "v" prefix). */
 export const YIELD_METHODOLOGY_VERSION_LABEL = yieldMethodology.versionLabel;
 
 /** Public changelog route for Yield Intelligence methodology history. */
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = yieldMethodology.changelogPath;
 
-/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
-export type YieldMethodologyChangelogEntry = MethodologyChangelogEntry;
-
 /** Reconstructed changelog data. */
 export const YIELD_METHODOLOGY_CHANGELOG = yieldMethodology.changelog;
-
-/** Resolve Yield Intelligence methodology version active at a given Unix timestamp (seconds). */
-export const getYieldMethodologyVersionAt = yieldMethodology.getVersionAt;
-
-export const toYieldMethodologyVersionLabel = toMethodologyVersionLabel;

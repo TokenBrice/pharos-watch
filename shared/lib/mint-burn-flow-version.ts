@@ -1,7 +1,5 @@
 import {
   createMethodologyVersion,
-  toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "./methodology-version";
 
 const mintBurnFlow = createMethodologyVersion({
@@ -179,22 +177,11 @@ const mintBurnFlow = createMethodologyVersion({
   ],
 });
 
-/** Canonical Mint/Burn Flow methodology version (no "v" prefix). */
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION = mintBurnFlow.currentVersion;
-
 /** Display-ready Mint/Burn Flow methodology version (with "v" prefix). */
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = mintBurnFlow.versionLabel;
 
 /** Public changelog route for Mint/Burn Flow methodology history. */
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = mintBurnFlow.changelogPath;
 
-/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
-export type MintBurnFlowMethodologyChangelogEntry = MethodologyChangelogEntry;
-
 /** Reconstructed changelog data. */
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG = mintBurnFlow.changelog;
-
-/** Resolve Mint/Burn Flow methodology version active at a given Unix timestamp (seconds). */
-export const getMintBurnFlowMethodologyVersionAt = mintBurnFlow.getVersionAt;
-
-export const toMintBurnFlowMethodologyVersionLabel = toMethodologyVersionLabel;

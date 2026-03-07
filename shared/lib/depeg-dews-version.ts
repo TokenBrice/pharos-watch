@@ -1,7 +1,6 @@
 import {
   createMethodologyVersion,
   toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
@@ -214,9 +213,6 @@ export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = depegDews.versionLabel;
 
 /** Public changelog route for Depeg Tracker + DEWS methodology history. */
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = depegDews.changelogPath;
-
-/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
-export type DepegDewsMethodologyChangelogEntry = MethodologyChangelogEntry;
 
 /** Reconstructed changelog data. */
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG = depegDews.changelog;
