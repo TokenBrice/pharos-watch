@@ -190,8 +190,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `reserve-templates.test.ts` | `shared/lib/reserve-templates.ts` | Reserve composition templates, `getReserves()`, `deriveDependencies()` |
 | `reserve-coinid-validation.test.ts` | `shared/lib/reserve-templates.ts` | Reserve slice `coinId` references match tracked stablecoin IDs |
 | `liquidity-coverage.test.ts` | `src/lib/dex-constants.ts` | DEX pool configs cover all stablecoins with DEX presence |
-| `api-endpoints.test.ts` | `shared/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags |
-| `strict-path-drift.test.ts` | `shared/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage (`shared/lib/strict-contract-paths.json`) |
+| `api-endpoints.test.ts` | `shared/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags, strict contract path uniqueness, smoke assertion alignment |
 | `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
 | `severity-colors.test.ts` | `src/lib/severity-colors.ts` | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers |
 
@@ -294,8 +293,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `yield-helpers.test.ts` | `yield-helpers.ts` | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool` |
 | `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for RUB/UAH/ARS |
 | `sync-yield-data.test.ts` | `sync-yield-data.ts` | Yield ranking sync, validation guard, fallback behavior and ranking parity |
-| `dex-liquidity-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | `parsePoolSymbols`, `classifyPoolType`, `getQualityMultiplier` |
-| `dex-liquidity-pool-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | Composite symbol parsing, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
+| `dex-liquidity-pool-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | Symbol parsing, pool classification, quality multipliers, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
 | `dex-liquidity-process-pools.test.ts` | `dex-liquidity/process-pools.ts` | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation |
 | `dex-liquidity-scoring.test.ts` | `dex-liquidity/scoring.ts` | Pool filtering/scaling, per-coin/global aggregate recomputation, depth-stability persistence, DEX price median persistence |
 | `confirm-pending-depegs.test.ts` | `confirm-pending-depegs.ts` | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation |
