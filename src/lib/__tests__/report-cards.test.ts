@@ -10,6 +10,7 @@ import {
   NO_LIQUIDITY_PENALTY,
   scorePegStability,
   scoreLiquidity,
+  chainInfraScore,
 } from "@shared/lib/report-cards";
 import type { ReportCardDimension, PegSummaryCoin } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types";
@@ -499,5 +500,56 @@ describe("scoreLiquidity", () => {
   it("does not include concentration warning when HHI is null", () => {
     const result = scoreLiquidity({ liquidityScore: 70, concentrationHhi: null, poolCount: 3, chainCount: 2 });
     expect(result.detail).not.toContain("concentration");
+  });
+});
+
+describe("chainInfraScore", () => {
+  // --- Exact milestone values ---
+
+  it("returns 100 for ethereum + single-chain", () => {
+    expect(chainInfraScore("ethereum", "single-chain")).toBe(100);
+  });
+
+  it("returns 85 for ethereum + canonical-bridge", () => {
+    expect(chainInfraScore("ethereum", "canonical-bridge")).toBe(85);
+  });
+
+  it("returns 60 for ethereum + third-party-bridge", () => {
+    expect(chainInfraScore("ethereum", "third-party-bridge")).toBe(60);
+  });
+
+  it("returns 40 for ethereum + native-multichain", () => {
+    expect(chainInfraScore("ethereum", "native-multichain")).toBe(40);
+  });
+
+  it("returns 66 for stage1-l2 + single-chain", () => {
+    expect(chainInfraScore("stage1-l2", "single-chain")).toBe(66);
+  });
+
+  it("returns 56 for stage1-l2 + canonical-bridge", () => {
+    // 66 * 0.85 = 56.1, rounded to 56
+    expect(chainInfraScore("stage1-l2", "canonical-bridge")).toBe(56);
+  });
+
+  it("returns 26 for stage1-l2 + native-multichain", () => {
+    // 66 * 0.40 = 26.4, rounded to 26
+    expect(chainInfraScore("stage1-l2", "native-multichain")).toBe(26);
+  });
+
+  it("returns 20 for established-alt-l1 + single-chain", () => {
+    expect(chainInfraScore("established-alt-l1", "single-chain")).toBe(20);
+  });
+
+  it("returns 0 for unproven + any deployment model", () => {
+    expect(chainInfraScore("unproven", "single-chain")).toBe(0);
+    expect(chainInfraScore("unproven", "canonical-bridge")).toBe(0);
+    expect(chainInfraScore("unproven", "native-multichain")).toBe(0);
+  });
+
+  // --- Rounding ---
+
+  it("rounds to nearest integer (stage1-l2 + third-party-bridge)", () => {
+    // 66 * 0.60 = 39.6, rounded to 40
+    expect(chainInfraScore("stage1-l2", "third-party-bridge")).toBe(40);
   });
 });
