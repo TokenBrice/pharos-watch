@@ -18,7 +18,7 @@ const route = createMethodologyChangelogRoute({
   ),
   accentClass: "border-l-rose-500",
   entries: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG,
-  selectImpact: (entry) => entry.trackingImpact,
+  selectImpact: (entry) => entry.impact,
 });
 
 export const metadata = route.metadata;

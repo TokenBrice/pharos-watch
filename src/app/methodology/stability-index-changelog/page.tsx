@@ -18,7 +18,7 @@ const route = createMethodologyChangelogRoute({
   ),
   accentClass: "border-l-cyan-500",
   entries: PSI_METHODOLOGY_CHANGELOG,
-  selectImpact: (entry) => entry.scoreImpact,
+  selectImpact: (entry) => entry.impact,
 });
 
 export const metadata = route.metadata;

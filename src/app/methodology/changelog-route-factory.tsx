@@ -11,6 +11,7 @@ interface MethodologyChangelogSourceEntry {
   version: string;
   title: string;
   date: string;
+  effectiveAt: number;
   summary: string;
   commits: readonly string[];
   reconstructed: boolean;

@@ -18,7 +18,7 @@ const route = createMethodologyChangelogRoute({
   ),
   accentClass: "border-l-violet-500",
   entries: YIELD_METHODOLOGY_CHANGELOG,
-  selectImpact: (entry) => entry.methodologyImpact,
+  selectImpact: (entry) => entry.impact,
 });
 
 export const metadata = route.metadata;

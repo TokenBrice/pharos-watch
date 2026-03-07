@@ -5,6 +5,7 @@ interface ChangelogSourceEntry {
   version: string;
   title: string;
   date: string;
+  effectiveAt: number;
   summary: string;
   commits: readonly string[];
   reconstructed: boolean;
@@ -46,6 +47,7 @@ export function mapMethodologyChangelogEntries<T extends ChangelogSourceEntry>(
     version: entry.version,
     title: entry.title,
     date: entry.date,
+    effectiveAt: entry.effectiveAt,
     summary: entry.summary,
     impact: selectImpact(entry),
     commits: entry.commits,
