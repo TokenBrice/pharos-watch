@@ -283,19 +283,18 @@ function HistoryStats({ history }: { history: HistoryPoint[] }) {
   if (!items) return null;
 
   return (
-    <>
-      <div className="h-10 w-px bg-border" />
+    <div className="grid grid-cols-4 gap-x-4 gap-y-2">
       {items.map((item) => {
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
-          <div key={item.label} className="flex flex-col items-center gap-0.5">
+          <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
-            <span className={`text-lg font-extrabold tabular-nums ${color}`}>{item.value}</span>
-            <span className={`text-xs ${item.sub ? "text-muted-foreground" : "invisible"}`}>{item.sub || "\u00A0"}</span>
+            <span className={`text-lg font-extrabold tabular-nums leading-none ${color}`}>{item.value}</span>
+            {item.sub ? <span className="text-[11px] leading-tight text-muted-foreground">{item.sub}</span> : null}
           </div>
         );
       })}
-    </>
+    </div>
   );
 }
 
@@ -304,14 +303,14 @@ function HistoryStatsMobile({ history }: { history: HistoryPoint[] }) {
   if (!items) return null;
 
   return (
-    <div className="lg:hidden grid grid-cols-4 gap-3 w-full border-t pt-4">
+    <div className="grid w-full grid-cols-4 gap-x-3 gap-y-2 border-t border-border/60 pt-3 lg:hidden">
       {items.map((item) => {
         const color = PSI_BAND_CLASSES[item.band as ConditionBand] ?? "text-foreground";
         return (
-          <div key={item.label} className="flex flex-col items-center gap-0.5">
+          <div key={item.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
             <span className="text-xs text-muted-foreground whitespace-nowrap">{item.label}</span>
-            <span className={`text-base font-bold tabular-nums ${color}`}>{item.value}</span>
-            <span className={`text-xs ${item.sub ? "text-muted-foreground" : "invisible"}`}>{item.sub || "\u00A0"}</span>
+            <span className={`text-base font-bold tabular-nums leading-none ${color}`}>{item.value}</span>
+            {item.sub ? <span className="text-[11px] leading-tight text-muted-foreground">{item.sub}</span> : null}
           </div>
         );
       })}
@@ -662,21 +661,24 @@ export function StabilityIndexClient() {
         queries={[{ preset: "stabilityIndex", dataUpdatedAt, error, hasData: !!data?.current }]}
       />
       {/* Hero — score + components + history stats in one card */}
-      <Card className="rounded-xl">
-        <CardContent className="flex flex-col lg:flex-row items-center gap-4 lg:gap-6 py-6" aria-live="polite">
+      <Card className="rounded-xl py-0">
+        <CardContent
+          className="grid gap-3 py-4 sm:gap-4 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-5"
+          aria-live="polite"
+        >
           {/* Score + delta */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-            <PsiLighthouse band={displayBand} color={hexColor} size={72} />
-            <div className="flex flex-col items-center sm:items-start gap-0.5">
-              <div className="flex items-baseline gap-2">
-                <span className={`text-4xl font-extrabold font-mono tabular-nums ${colorClass}`}>
+          <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 lg:justify-start">
+            <PsiLighthouse band={displayBand} color={hexColor} size={60} />
+            <div className="flex min-w-0 flex-col items-center gap-1 lg:items-start">
+              <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 lg:justify-start">
+                <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
                   {displayScore.toFixed(1)}
                 </span>
-                <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
+                <span className={`text-base font-bold uppercase tracking-wide sm:text-lg ${colorClass}`}>
                   {displayBand}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:justify-start">
                 {delta !== null && (
                   <span className={`font-medium tabular-nums ${delta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
                     {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs yesterday
@@ -687,19 +689,18 @@ export function StabilityIndexClient() {
             </div>
           </div>
           {/* Component breakdown — fills the middle */}
-          <div className="hidden lg:flex flex-1 items-center justify-center gap-5">
-            <div className="h-10 w-px bg-border" />
+          <div className="hidden lg:grid lg:min-w-0 lg:grid-cols-4 lg:gap-x-5 lg:border-l lg:border-border/60 lg:pl-5">
             {COMPONENT_DETAIL.map((c) => (
-              <div key={c.label} className="flex flex-col items-center gap-0.5">
+              <div key={c.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
                 <span className="text-xs text-muted-foreground">{c.label}</span>
-                <span className="text-lg font-extrabold tabular-nums" style={{ color: c.color }}>
+                <span className="text-lg font-extrabold tabular-nums leading-none" style={{ color: c.color }}>
                   {c.sign}{(components[c.key] ?? 0).toFixed(1)}
                 </span>
               </div>
             ))}
           </div>
           {/* History stats — right edge */}
-          <div className="hidden lg:flex items-center gap-5">
+          <div className="hidden lg:block lg:min-w-[18rem] lg:border-l lg:border-border/60 lg:pl-5">
             <HistoryStats history={data.history} />
           </div>
           {/* History stats — mobile only */}
