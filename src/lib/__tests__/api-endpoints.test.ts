@@ -6,6 +6,8 @@ import {
   isMutatingAdminPath,
   validateEndpointMethod,
 } from "@shared/lib/api-endpoints";
+import { STRICT_CONTRACT_PATHS_LIST } from "@shared/lib/strict-contract-paths";
+import { ENDPOINT_ASSERTIONS, assertPathCoverage } from "../../../scripts/smoke-api.mjs";
 
 describe("api endpoint registry", () => {
   it("keeps probe path groups stable", () => {
@@ -187,5 +189,13 @@ describe("api endpoint registry", () => {
         method: "GET",
       },
     ]);
+  });
+
+  it("keeps strict contract path list unique", () => {
+    expect(new Set(STRICT_CONTRACT_PATHS_LIST).size).toBe(STRICT_CONTRACT_PATHS_LIST.length);
+  });
+
+  it("keeps smoke endpoint assertions aligned with strict contract paths", () => {
+    expect(() => assertPathCoverage(STRICT_CONTRACT_PATHS_LIST, ENDPOINT_ASSERTIONS)).not.toThrow();
   });
 });
