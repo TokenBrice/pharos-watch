@@ -362,8 +362,10 @@ Both admin endpoints are routed in `worker/src/router.ts` and executed via `work
 ### Hook
 
 **File:** `src/hooks/use-blacklist-events.ts`
-**Endpoint:** `GET /api/blacklist` (all events)
+**Endpoint:** `GET /api/blacklist` (hydrated client-side via paginated 1000-row requests until `total` is reached)
 **Cache:** `staleTime: 20 min`, `refetchInterval: 40 min`
+
+The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, reads `total`, and requests the remaining offsets in parallel. This keeps the public API cap at 1000 rows while restoring the full multi-year dataset that powers the blacklist chart, summary cards, and client-side table filters.
 
 ### Page: /blacklist
 
