@@ -9,6 +9,7 @@ import {
   computeOverallGrade,
   NO_LIQUIDITY_PENALTY,
   scorePegStability,
+  scoreLiquidity,
 } from "@shared/lib/report-cards";
 import type { ReportCardDimension, PegSummaryCoin } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types";
@@ -425,5 +426,78 @@ describe("scorePegStability", () => {
   it("does not append yield-bearing annotation when flag is false", () => {
     const result = scorePegStability(makePeg(), makeMeta());
     expect(result.detail).not.toContain("yield-bearing");
+  });
+});
+
+describe("scoreLiquidity", () => {
+  // --- NR case ---
+
+  it("returns NR when liq is undefined", () => {
+    const result = scoreLiquidity(undefined);
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+    expect(result.detail).toBe("No DEX liquidity data");
+  });
+
+  it("returns NR when liquidityScore is null", () => {
+    const result = scoreLiquidity({ liquidityScore: null, concentrationHhi: null, poolCount: 0, chainCount: 0 });
+    expect(result.grade).toBe("NR");
+    expect(result.score).toBeNull();
+  });
+
+  // --- Score clamping ---
+
+  it("clamps score to 0-100 range", () => {
+    const over = scoreLiquidity({ liquidityScore: 105, concentrationHhi: 0.2, poolCount: 5, chainCount: 2 });
+    expect(over.score).toBe(100);
+
+    const under = scoreLiquidity({ liquidityScore: -3, concentrationHhi: 0.2, poolCount: 1, chainCount: 1 });
+    expect(under.score).toBe(0);
+  });
+
+  it("rounds to nearest integer", () => {
+    const result = scoreLiquidity({ liquidityScore: 74.6, concentrationHhi: 0.3, poolCount: 3, chainCount: 1 });
+    expect(result.score).toBe(75);
+    expect(result.grade).toBe("B+");
+  });
+
+  // --- Grade mapping ---
+
+  it("maps high score to A+ grade", () => {
+    const result = scoreLiquidity({ liquidityScore: 92, concentrationHhi: 0.1, poolCount: 20, chainCount: 5 });
+    expect(result.grade).toBe("A+");
+  });
+
+  it("maps low score to F grade", () => {
+    const result = scoreLiquidity({ liquidityScore: 15, concentrationHhi: 0.8, poolCount: 1, chainCount: 1 });
+    expect(result.grade).toBe("F");
+  });
+
+  // --- Detail string ---
+
+  it("includes pool and chain counts with correct pluralization", () => {
+    const single = scoreLiquidity({ liquidityScore: 80, concentrationHhi: 0.2, poolCount: 1, chainCount: 1 });
+    expect(single.detail).toContain("1 pool across 1 chain");
+
+    const multi = scoreLiquidity({ liquidityScore: 80, concentrationHhi: 0.2, poolCount: 12, chainCount: 3 });
+    expect(multi.detail).toContain("12 pools across 3 chains");
+  });
+
+  // --- HHI concentration warning ---
+
+  it("includes concentration warning when HHI > 0.5", () => {
+    const result = scoreLiquidity({ liquidityScore: 70, concentrationHhi: 0.75, poolCount: 3, chainCount: 1 });
+    expect(result.detail).toContain("high concentration");
+    expect(result.detail).toContain("HHI: 0.75");
+  });
+
+  it("does not include concentration warning when HHI <= 0.5", () => {
+    const result = scoreLiquidity({ liquidityScore: 70, concentrationHhi: 0.5, poolCount: 3, chainCount: 2 });
+    expect(result.detail).not.toContain("concentration");
+  });
+
+  it("does not include concentration warning when HHI is null", () => {
+    const result = scoreLiquidity({ liquidityScore: 70, concentrationHhi: null, poolCount: 3, chainCount: 2 });
+    expect(result.detail).not.toContain("concentration");
   });
 });
