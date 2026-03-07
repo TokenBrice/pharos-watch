@@ -26,7 +26,27 @@ interface LiquidityStatsProps {
   liquidityMap: Record<string, DexLiquidityData>;
 }
 
-const MAX_VISIBLE_PROTOCOLS = 10;
+const MAX_PROTOCOL_LEGEND_ITEMS = 10;
+const MAX_VISIBLE_PROTOCOLS = MAX_PROTOCOL_LEGEND_ITEMS - 1;
+
+export function buildProtocolBreakdown(protocolTvl: Record<string, number>) {
+  const sorted = Object.entries(protocolTvl).sort((a, b) => b[1] - a[1]) as [string, number][];
+  const total = sorted.reduce((sum, [, tvl]) => sum + tvl, 0);
+
+  // Cap the legend at 10 items total: top 9 protocols plus grouped remainder.
+  const visible = sorted.slice(0, MAX_VISIBLE_PROTOCOLS);
+  const otherTvl = sorted.slice(MAX_VISIBLE_PROTOCOLS).reduce((sum, [, tvl]) => sum + tvl, 0);
+  const displayEntries: [string, number][] = otherTvl > 0 ? [...visible, ["_other", otherTvl]] : visible;
+
+  const colorMap: Record<string, string> = { _other: "bg-muted-foreground" };
+  let idx = 0;
+  for (const [protocol] of displayEntries) {
+    if (protocol === "_other") continue;
+    colorMap[protocol] = PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[idx++ % EXTRA_COLORS.length];
+  }
+
+  return { displayEntries, colorMap, total };
+}
 
 function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> }) {
   const chainTotals = useMemo(() => {
@@ -87,28 +107,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
   // Use global deduped row to avoid double-counting multi-stablecoin pools
   const { displayEntries, colorMap, total } = useMemo(() => {
     const globalData = data[DEX_GLOBAL_KEY];
-    const totals: Record<string, number> = globalData?.protocolTvl ? { ...globalData.protocolTvl } : {};
-    const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]) as [string, number][];
-    const t = sorted.reduce((sum, [, v]) => sum + v, 0);
-
-    // Top N protocols shown individually, rest grouped into "Other"
-    const visible = sorted.slice(0, MAX_VISIBLE_PROTOCOLS);
-    const otherTvl = sorted
-      .slice(MAX_VISIBLE_PROTOCOLS)
-      .reduce((sum, [, v]) => sum + v, 0);
-    const entries: [string, number][] = otherTvl > 0
-      ? [...visible, ["_other", otherTvl]]
-      : visible;
-
-    // Pre-compute colors: hardcoded for known, rotating palette for the rest
-    const map: Record<string, string> = { _other: "bg-muted-foreground" };
-    let idx = 0;
-    for (const [protocol] of entries) {
-      if (protocol === "_other") continue;
-      map[protocol] = PROTOCOL_COLORS[protocol] ?? EXTRA_COLORS[idx++ % EXTRA_COLORS.length];
-    }
-
-    return { displayEntries: entries, colorMap: map, total: t };
+    return buildProtocolBreakdown(globalData?.protocolTvl ?? {});
   }, [data]);
 
   if (total === 0) return null;

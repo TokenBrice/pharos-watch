@@ -129,6 +129,7 @@ A sentinel row with `stablecoin_id = '__global__'` stores cross-stablecoin aggre
 The `__global__` row contains deduped `total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `pool_count`, `chain_count`, `protocol_tvl_json`, and `chain_tvl_json`. Score-related fields (`liquidity_score`, `concentration_hhi`, etc.) are NULL.
 
 The frontend reads `__global__` for overview stats (total DEX TVL, 24h volume, protocol/chain breakdown bars) instead of naively summing per-stablecoin values. The constant `DEX_GLOBAL_KEY` (`shared/types/index.ts`) provides the key.
+The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries total: the top 9 protocols render individually, and the remainder is grouped into `Other`.
 
 ### Additional Liquidity Metrics
 
