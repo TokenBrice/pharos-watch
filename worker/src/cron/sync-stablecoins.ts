@@ -613,8 +613,8 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   console.log(`[sync-stablecoins] Cached ${llamaData.peggedAssets.length} assets`);
 
   // Detect depeg events from current price data
-  let depegErrors = 0;
-  const depegErrorReasons: string[] = [];
+  let depegErrorCount = 0;
+  const depegErrors: string[] = [];
   try {
     const depegDetectAbort = returnIfAborted(signal, "depeg-detection");
     if (depegDetectAbort) return depegDetectAbort;
@@ -622,8 +622,8 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, "depeg-detection");
     console.error("[sync-stablecoins] Depeg detection failed:", err);
-    depegErrors += 1;
-    depegErrorReasons.push(`detection: ${String(err).slice(0, 200)}`);
+    depegErrorCount += 1;
+    depegErrors.push(`detection: ${String(err).slice(0, 200)}`);
   }
 
   // Confirm or expire pending depeg events for >$1B coins
@@ -634,13 +634,13 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, "depeg-confirmation");
     console.error("[sync-stablecoins] Pending depeg confirmation failed:", err);
-    depegErrors += 1;
-    depegErrorReasons.push(`confirmation: ${String(err).slice(0, 200)}`);
+    depegErrorCount += 1;
+    depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
   }
 
   // Build metadata for cron_runs observability
   let status: CronResult["status"] = "ok";
-  if (depegErrors > 0) {
+  if (depegErrorCount > 0) {
     status = "degraded";
   }
 
@@ -659,10 +659,9 @@ export async function syncStablecoins(db: D1Database, cmcApiKey?: string, signal
     missingPrices: finalMissing,
   };
   if (stalenessWarning) metadata.stalenessWarning = true;
-  if (depegErrors > 0) {
-    metadata.depegErrorCount = depegErrors;
-    metadata.depegErrors = depegErrorReasons;
-    metadata.depegErrorReasons = depegErrorReasons;
+  if (depegErrorCount > 0) {
+    metadata.depegErrorCount = depegErrorCount;
+    metadata.depegErrors = depegErrors;
   }
 
   return { itemCount: llamaData.peggedAssets.length, status, metadata: JSON.stringify(metadata) };

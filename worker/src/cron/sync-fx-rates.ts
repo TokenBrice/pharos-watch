@@ -179,15 +179,9 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
 
     // Fallback: RUB if secondary API also failed — use last-cached rate from D1, else hardcoded constant
     if (!rates["peggedRUB"]) {
-      const cached = await getCache(db, "fx-rates");
-      if (cached) {
-        try {
-          const prev = JSON.parse(cached.value) as Record<string, number>;
-          if (typeof prev["peggedRUB"] === "number" && prev["peggedRUB"] > 0) {
-            rates["peggedRUB"] = prev["peggedRUB"];
-            console.log(`[sync-fx-rates] Using cached RUB rate: ${rates["peggedRUB"]}`);
-          }
-        } catch { /* ignore parse errors */ }
+      if (typeof prevRates["peggedRUB"] === "number" && prevRates["peggedRUB"] > 0) {
+        rates["peggedRUB"] = prevRates["peggedRUB"];
+        console.log(`[sync-fx-rates] Using cached RUB rate: ${rates["peggedRUB"]}`);
       }
       if (!rates["peggedRUB"]) {
         rates["peggedRUB"] = RUB_FALLBACK;

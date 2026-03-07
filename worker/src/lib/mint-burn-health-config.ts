@@ -1,4 +1,4 @@
-export const MINT_BURN_MAJOR_SYMBOLS = [
+const MINT_BURN_MAJOR_SYMBOLS = [
   "USDT",
   "USDC",
   "DAI",
@@ -9,9 +9,9 @@ export const MINT_BURN_MAJOR_SYMBOLS = [
   "reUSD",
 ] as const;
 
-export const MINT_BURN_STALE_WARN_SEC = 6 * 3600;
-export const MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
-export const MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
+const MINT_BURN_STALE_WARN_SEC = 6 * 3600;
+const MINT_BURN_STALE_CRIT_SEC = 24 * 3600;
+const MINT_BURN_ALERT_COOLDOWN_SEC = 3600;
 
 export interface MintBurnFreshnessConfig {
   majorSymbols: string[];

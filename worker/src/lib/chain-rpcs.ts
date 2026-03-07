@@ -47,7 +47,7 @@ const PUBLIC_RPCS: Record<string, string> = {
  * Build chain RPC configs using Alchemy/dRPC as primary when API keys are available,
  * falling back to public RPCs. Public RPCs become fallbacks when a keyed provider is used.
  */
-export function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): ChainRpcConfig[] {
+function buildChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): ChainRpcConfig[] {
   const configs: ChainRpcConfig[] = [];
 
   // Alchemy-supported chains (7 chains)
@@ -133,4 +133,3 @@ export function initChainRpcs(alchemyApiKey?: string, drpcApiKey?: string): void
 export function getChainRpc(chainId: string): ChainRpcConfig | undefined {
   return chainRpcs.find((c) => c.chainId === chainId);
 }
-

@@ -420,10 +420,8 @@ async function enrichRowBalances(
   rows: BlacklistRow[],
   config: ContractEventConfig,
   etherscanApiKey: string | null,
-  trongridApiKey: string | null,
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
-  tronLimiter: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -510,10 +508,8 @@ async function fetchDestroyAmountFromLog(
 async function backfillAmounts(
   db: D1Database,
   etherscanApiKey: string | null,
-  trongridApiKey: string | null,
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
-  tronLimiter: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
 ): Promise<void> {
@@ -633,7 +629,7 @@ export async function syncBlacklist(
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
   try {
-    await backfillAmounts(db, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget, signal);
+    await backfillAmounts(db, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal);
   } catch (err) {
     console.warn("[sync-blacklist] Backfill failed:", err);
   }
@@ -660,7 +656,7 @@ export async function syncBlacklist(
         result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget, signal);
 
         await enrichRowBalances(
-          result.rows, config, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget, signal
+          result.rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
         );
         await insertRows(db, result.rows);
 
@@ -678,7 +674,7 @@ export async function syncBlacklist(
         result = await fetchEvmEventsIncremental(config, etherscanApiKey, fromBlock, etherscanLimiter, budget, signal);
 
         await enrichRowBalances(
-          result.rows, config, etherscanApiKey, trongridApiKey, drpcApiKey, etherscanLimiter, tronLimiter, budget, signal
+          result.rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
         );
         await insertRows(db, result.rows);
 

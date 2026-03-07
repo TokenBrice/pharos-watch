@@ -9,7 +9,7 @@ interface ChainEntry {
   geckoTerminal?: string;
 }
 
-export const CHAIN_REGISTRY: Record<string, ChainEntry> = {
+const CHAIN_REGISTRY: Record<string, ChainEntry> = {
   ethereum:   { coingecko: "eth",          dexscreener: "ethereum",   geckoTerminal: "eth" },
   base:       { coingecko: "base",         dexscreener: "base",       geckoTerminal: "base" },
   arbitrum:   { coingecko: "arbitrum",     dexscreener: "arbitrum",   geckoTerminal: "arbitrum" },
