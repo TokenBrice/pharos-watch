@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import {
   Activity,
   ArrowLeftRight,
@@ -125,11 +126,15 @@ export function FeatureHighlights() {
     <section>
       <h2 className="mb-4 text-xl font-semibold tracking-tight">Explore</h2>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-        {selected.map((f) => (
+        {selected.map((f, i) => (
           <Link
             key={f.href}
             href={f.href}
-            className={`pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent ${f.borderClass} p-4`}
+            className={cn(
+              "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent p-4",
+              f.borderClass,
+              i < 2 && "col-span-2 lg:col-span-1",
+            )}
           >
             <span className="flex items-center gap-1.5 text-sm font-semibold tracking-tight text-foreground">
               <f.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
