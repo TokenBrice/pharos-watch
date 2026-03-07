@@ -1,9 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useSort } from "@/hooks/use-sort";
-
-type SortDirection = "asc" | "desc";
+import { useSort, type SortDirection } from "@/hooks/use-sort";
 
 export interface TableSortState<K extends string> {
   key: K;

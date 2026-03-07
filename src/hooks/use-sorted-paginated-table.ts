@@ -1,9 +1,8 @@
 "use client";
 
+import { type SortDirection } from "@/hooks/use-sort";
 import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 import { useTablePagination } from "@/hooks/use-table-pagination";
-
-type SortDirection = "asc" | "desc";
 
 interface UseSortedPaginatedTableOptions<T, K extends string> {
   defaultKey: K;
