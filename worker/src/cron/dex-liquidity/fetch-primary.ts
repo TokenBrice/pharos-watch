@@ -25,6 +25,7 @@ import {
   normalizeProtocol, getActiveChainMap, getActiveChainReverse, getTrackedContracts,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
+import { fetchSubgraphEntities, mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
 export async function fetchDataSources(graphApiKey: string | null, db: D1Database, signal?: AbortSignal): Promise<DataSources | null> {
@@ -282,6 +283,31 @@ export async function buildCurveLookups(
   return { curvePoolMap, priceObservations };
 }
 
+type UniV3SubgraphPool = {
+  id: string;
+  token0: { id: string; symbol: string };
+  token1: { id: string; symbol: string };
+  feeTier: string;
+  totalValueLockedUSD: string;
+  volumeUSD: string;
+  token0Price: string;
+  token1Price: string;
+  totalValueLockedToken0: string;
+  totalValueLockedToken1: string;
+};
+
+type AerodromeSubgraphPair = {
+  id: string;
+  token0: { id: string; symbol: string };
+  token1: { id: string; symbol: string };
+  reserve0: string;
+  reserve1: string;
+  reserveUSD: string;
+  token0Price: string;
+  token1Price: string;
+  isStable: boolean;
+};
+
 /** Fetch Uniswap V3 subgraph data for fee tier enrichment + price observations. Mutates addressToId with learned addresses. */
 export async function fetchUniV3Data(
   graphApiKey: string | null,
@@ -299,56 +325,32 @@ export async function fetchUniV3Data(
   }
 
   for (const [chain, subgraphId] of Object.entries(UNIV3_SUBGRAPHS)) {
-    try {
-      const url = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
-      const res = await fetchWithRetry(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({ query: UNIV3_POOL_QUERY }),
-        signal,
-      });
-      if (!res?.ok) {
-        console.warn(`[dex-liquidity] Uni V3 subgraph failed for ${chain}: ${res?.status}`);
-        continue;
-      }
-      const json = (await res.json()) as {
-        data?: {
-          pools?: {
-            id: string;
-            token0: { id: string; symbol: string };
-            token1: { id: string; symbol: string };
-            feeTier: string;
-            totalValueLockedUSD: string;
-            volumeUSD: string;
-            token0Price: string;
-            token1Price: string;
-            totalValueLockedToken0: string;
-            totalValueLockedToken1: string;
-          }[];
-        };
-        errors?: { message: string }[];
-      };
-      if (json.errors?.length) {
-        console.warn(`[dex-liquidity] Uni V3 subgraph GraphQL errors for ${chain}:`, json.errors.map((e) => e.message).join("; "));
-        if (!json.data?.pools?.length) continue;
-      }
-      const subPools = json.data?.pools ?? [];
-      let priceObsCount = 0;
-      for (const p of subPools) {
-        const feeTier = parseInt(p.feeTier, 10);
-        if (isNaN(feeTier)) continue;
-        const tvl = parseFloat(p.totalValueLockedUSD);
+    const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
+    const { entityCount, observationCount, observations, shouldLogIndex } = await fetchSubgraphEntities<UniV3SubgraphPool>({
+      subgraphUrl,
+      sourceLabel: "Uni V3 subgraph",
+      chain,
+      buildQuery: () => UNIV3_POOL_QUERY,
+      signal,
+      extractEntities: (data) => (data as { pools?: UniV3SubgraphPool[] } | undefined)?.pools,
+      mapEntity: (pool) => {
+        const feeTier = parseInt(pool.feeTier, 10);
+        if (isNaN(feeTier)) return [];
+        const tvl = parseFloat(pool.totalValueLockedUSD);
+
         // Address-based lookup
-        uniV3PoolFees.set(`${chain}:${p.id.toLowerCase()}`, feeTier);
+        uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
+
         // Symbol-based fallback (keep lowest fee tier per pair = most optimized for stables)
-        const syms = [normalizeDexSymbol(p.token0.symbol), normalizeDexSymbol(p.token1.symbol)].sort().join(":");
+        const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
         const symKey = `${chain}:${syms}`;
         const existing = uniV3SymbolFees.get(symKey);
         if (existing == null || feeTier < existing) {
           uniV3SymbolFees.set(symKey, feeTier);
         }
+
         // Learn addresses for disambiguation from Uni V3 token data
-        for (const tok of [p.token0, p.token1]) {
+        for (const tok of [pool.token0, pool.token1]) {
           const sym = normalizeDexSymbol(tok.symbol);
           const ids = symbolToIds.get(sym);
           if (ids?.length === 1 && tok.id) {
@@ -356,58 +358,50 @@ export async function fetchUniV3Data(
           }
         }
 
-        // --- Price observations from Uni V3 pools ---
         // Only for pools with TVL >= $50K
-        if (isNaN(tvl) || tvl < 50_000) continue;
+        if (isNaN(tvl) || tvl < 50_000) return [];
 
-        const token0Price = parseFloat(p.token0Price); // token0 per token1
-        const token1Price = parseFloat(p.token1Price); // token1 per token0
-        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) continue;
+        const token0Price = parseFloat(pool.token0Price); // token0 per token1
+        const token1Price = parseFloat(pool.token1Price); // token1 per token0
+        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
 
-        const sym0 = normalizeDexSymbol(p.token0.symbol);
-        const sym1 = normalizeDexSymbol(p.token1.symbol);
-        const isRef0 = isUsdReferenceSymbol(p.token0.symbol);
-        const isRef1 = isUsdReferenceSymbol(p.token1.symbol);
+        const sym0 = normalizeDexSymbol(pool.token0.symbol);
+        const sym1 = normalizeDexSymbol(pool.token1.symbol);
+        const isRef0 = isUsdReferenceSymbol(pool.token0.symbol);
+        const isRef1 = isUsdReferenceSymbol(pool.token1.symbol);
+        if (!isRef0 && !isRef1) return [];
 
-        // If neither side is a known USD reference, skip (can't derive USD price reliably)
-        if (!isRef0 && !isRef1) continue;
-
-        // Derive USD prices: if token1 is a USD ref (~$1), token0's USD price ≈ token1Price (units of token1 per token0) × $1
-        // token0Price = how many token0 you get per token1
-        // token1Price = how many token1 you get per token0
-        // So: token0 USD price = token1Price × $1 (when token1 is USD ref)
-        //     token1 USD price = token0Price × $1 (when token0 is USD ref)
-        const pairs: { symbol: string; address: string; usdPrice: number }[] = [];
+        const pricedTokens: { symbol: string; address: string; usdPrice: number }[] = [];
         if (isRef1) {
-          // token1 is a USD reference, so token0's price = token1Price × ~$1
-          pairs.push({ symbol: sym0, address: p.token0.id, usdPrice: token1Price });
+          pricedTokens.push({ symbol: sym0, address: pool.token0.id, usdPrice: token1Price });
         }
         if (isRef0) {
-          // token0 is a USD reference, so token1's price = token0Price × ~$1
-          pairs.push({ symbol: sym1, address: p.token1.id, usdPrice: token0Price });
+          pricedTokens.push({ symbol: sym1, address: pool.token1.id, usdPrice: token0Price });
         }
 
-        for (const { symbol, address, usdPrice } of pairs) {
-          // Resolve to tracked stablecoin ID
+        const mapped: SubgraphPriceObservation[] = [];
+        for (const { symbol, address, usdPrice } of pricedTokens) {
           let resolvedIds: string[] | undefined;
           const addrId = addressToId.get(address.toLowerCase());
           if (addrId) resolvedIds = [addrId];
           if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
           if (!resolvedIds) continue;
 
-          for (const id of resolvedIds) {
-            if (!isPlausibleDexObservationPrice(id, usdPrice)) continue;
-            const obs = uniV3PriceObs.get(id) ?? [];
-            obs.push({ price: usdPrice, tvl, chain, protocol: "uniswap-v3" });
-            uniV3PriceObs.set(id, obs);
-            priceObsCount++;
+          for (const stablecoinId of resolvedIds) {
+            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice)) continue;
+            mapped.push({
+              stablecoinId,
+              obs: { price: usdPrice, tvl, chain, protocol: "uniswap-v3" },
+            });
           }
         }
-      }
-      console.log(`[dex-liquidity] Indexed ${subPools.length} Uni V3 pools from ${chain} subgraph (${priceObsCount} price obs)`);
-    } catch (err) {
-      if (signal?.aborted) throw err;
-      console.warn(`[dex-liquidity] Uni V3 subgraph error for ${chain}:`, err);
+        return mapped;
+      },
+    });
+
+    mergePriceObservations(uniV3PriceObs, observations);
+    if (shouldLogIndex) {
+      console.log(`[dex-liquidity] Indexed ${entityCount} Uni V3 pools from ${chain} subgraph (${observationCount} price obs)`);
     }
   }
 
@@ -428,43 +422,17 @@ export async function fetchAerodromeData(
   if (!graphApiKey) return { aerodromePriceObs: priceObs, aerodromeIsStable: isStableMap };
 
   for (const [chain, subgraphId] of Object.entries(AERODROME_SUBGRAPHS)) {
-    try {
-      const url = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
-      const res = await fetchWithRetry(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
-        body: JSON.stringify({ query: AERODROME_PAIR_QUERY }),
-        signal,
-      });
-      if (!res?.ok) {
-        console.warn(`[dex-liquidity] Aerodrome subgraph failed for ${chain}: ${res?.status}`);
-        continue;
-      }
-      const json = (await res.json()) as {
-        data?: {
-          pairs?: {
-            id: string;
-            token0: { id: string; symbol: string };
-            token1: { id: string; symbol: string };
-            reserve0: string;
-            reserve1: string;
-            reserveUSD: string;
-            token0Price: string;
-            token1Price: string;
-            isStable: boolean;
-          }[];
-        };
-        errors?: { message: string }[];
-      };
-      if (json.errors?.length) {
-        console.warn(`[dex-liquidity] Aerodrome subgraph GraphQL errors for ${chain}:`, json.errors.map((e) => e.message).join("; "));
-        if (!json.data?.pairs?.length) continue;
-      }
-      const pairs = json.data?.pairs ?? [];
-      let obsCount = 0;
-      for (const pair of pairs) {
+    const subgraphUrl = `https://gateway.thegraph.com/api/${graphApiKey}/subgraphs/id/${subgraphId}`;
+    const { entityCount, observationCount, observations, shouldLogIndex } = await fetchSubgraphEntities<AerodromeSubgraphPair>({
+      subgraphUrl,
+      sourceLabel: "Aerodrome subgraph",
+      chain,
+      buildQuery: () => AERODROME_PAIR_QUERY,
+      signal,
+      extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
+      mapEntity: (pair) => {
         const reserveUSD = parseFloat(pair.reserveUSD);
-        if (isNaN(reserveUSD) || reserveUSD < 50_000) continue;
+        if (isNaN(reserveUSD) || reserveUSD < 50_000) return [];
 
         // Store isStable flag for pool type refinement in processPoolMetrics
         isStableMap.set(`${chain}:${pair.id.toLowerCase()}`, pair.isStable);
@@ -474,15 +442,11 @@ export async function fetchAerodromeData(
         const reserve1 = parseFloat(pair.reserve1);
         const token0Price = parseFloat(pair.token0Price); // token0 per token1
         const token1Price = parseFloat(pair.token1Price); // token1 per token0
-        if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) continue;
-        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) continue;
+        if (isNaN(reserve0) || isNaN(reserve1) || reserve0 <= 0 || reserve1 <= 0) return [];
+        if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) return [];
 
-        // Approximate USD values: each reserve is half of reserveUSD in a balanced pool
-        // More precisely: reserveUSD = reserve0 × price0_usd + reserve1 × price1_usd
-        // We can infer: price0_usd = token1Price × price1_usd, and reserveUSD = reserve0 × token1Price × price1_usd + reserve1 × price1_usd
-        // => price1_usd = reserveUSD / (reserve0 × token1Price + reserve1)
         const denom = reserve0 * token1Price + reserve1;
-        if (denom <= 0) continue;
+        if (denom <= 0) return [];
         const price1Usd = reserveUSD / denom;
         const price0Usd = token1Price * price1Usd;
         const reserve0Usd = reserve0 * price0Usd;
@@ -492,36 +456,38 @@ export async function fetchAerodromeData(
         const minReserve = Math.min(reserve0Usd, reserve1Usd);
         const maxReserve = Math.max(reserve0Usd, reserve1Usd);
         const balanceRatio = maxReserve > 0 ? minReserve / maxReserve : 0;
-        if (balanceRatio < 0.3) continue;
+        if (balanceRatio < 0.3) return [];
 
         const sym0 = normalizeDexSymbol(pair.token0.symbol);
         const sym1 = normalizeDexSymbol(pair.token1.symbol);
-
-        // Extract price observations for tracked stablecoins
-        const tokens = [
+        const pricedTokens = [
           { symbol: sym0, address: pair.token0.id, usdPrice: price0Usd },
           { symbol: sym1, address: pair.token1.id, usdPrice: price1Usd },
         ];
-        for (const { symbol, address, usdPrice } of tokens) {
+
+        const mapped: SubgraphPriceObservation[] = [];
+        for (const { symbol, address, usdPrice } of pricedTokens) {
           let resolvedIds: string[] | undefined;
           const addrId = addressToId.get(address.toLowerCase());
           if (addrId) resolvedIds = [addrId];
           if (!resolvedIds) resolvedIds = symbolToIds.get(symbol);
           if (!resolvedIds) continue;
 
-          for (const id of resolvedIds) {
-            if (!isPlausibleDexObservationPrice(id, usdPrice)) continue;
-            const obs = priceObs.get(id) ?? [];
-            obs.push({ price: usdPrice, tvl: reserveUSD, chain, protocol: "aerodrome" });
-            priceObs.set(id, obs);
-            obsCount++;
+          for (const stablecoinId of resolvedIds) {
+            if (!isPlausibleDexObservationPrice(stablecoinId, usdPrice)) continue;
+            mapped.push({
+              stablecoinId,
+              obs: { price: usdPrice, tvl: reserveUSD, chain, protocol: "aerodrome" },
+            });
           }
         }
-      }
-      console.log(`[dex-liquidity] Indexed ${pairs.length} Aerodrome pairs from ${chain} subgraph (${obsCount} price obs)`);
-    } catch (err) {
-      if (signal?.aborted) throw err;
-      console.warn(`[dex-liquidity] Aerodrome subgraph error for ${chain}:`, err);
+        return mapped;
+      },
+    });
+
+    mergePriceObservations(priceObs, observations);
+    if (shouldLogIndex) {
+      console.log(`[dex-liquidity] Indexed ${entityCount} Aerodrome pairs from ${chain} subgraph (${observationCount} price obs)`);
     }
   }
 
