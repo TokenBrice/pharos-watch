@@ -16,24 +16,63 @@ import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
-import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
-import { getFlowIntensityDisplay, getFlowIntensityMagnitude } from "@/lib/flow-intensity";
+import {
+  useSortedTableRows,
+  type TableSortState,
+} from "@/hooks/use-sorted-table-rows";
+import {
+  formatCurrency,
+  getNetColor,
+  getNetPrefix,
+} from "@shared/lib/format";
+import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { MintBurnCoinFlow } from "@shared/types";
+import {
+  getPressureShiftState,
+  type PressureShiftState,
+} from "@shared/lib/mint-burn-signals";
+import { cn } from "@/lib/utils";
 
 interface FlowTableProps {
   coins: MintBurnCoinFlow[];
   isLoading: boolean;
 }
 
-type SortKey = "net24h" | "mint24h" | "burn24h" | "net7d" | "net30d" | "net90d" | "largest" | "fis";
+type SortKey =
+  | "net24h"
+  | "mint24h"
+  | "burn24h"
+  | "net7d"
+  | "net30d"
+  | "net90d"
+  | "largest"
+  | "pressure";
+
+function getPressureScore(coin: MintBurnCoinFlow): number | null {
+  return coin.pressureShiftScore ?? coin.flowIntensity;
+}
+
+function getPressureState(coin: MintBurnCoinFlow): PressureShiftState {
+  return coin.pressureShiftState ?? getPressureShiftState(getPressureScore(coin));
+}
+
+const PRESSURE_VALUE_CLASS: Record<PressureShiftState, string> = {
+  improving: "text-emerald-700 dark:text-emerald-400",
+  stable: "text-foreground",
+  worsening: "text-red-700 dark:text-red-400",
+  nr: "text-muted-foreground",
+};
 
 export function FlowTable({ coins, isLoading }: FlowTableProps) {
   const router = useRouter();
   const compareRows = useCallback(
-    (a: MintBurnCoinFlow, b: MintBurnCoinFlow, sort: TableSortState<SortKey>): number => {
+    (
+      a: MintBurnCoinFlow,
+      b: MintBurnCoinFlow,
+      sort: TableSortState<SortKey>,
+    ): number => {
       let aVal: number;
       let bVal: number;
       switch (sort.key) {
@@ -65,59 +104,102 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           aVal = a.largestEvent24h?.amountUsd ?? 0;
           bVal = b.largestEvent24h?.amountUsd ?? 0;
           break;
-        case "fis":
-          if (a.flowIntensity === null && b.flowIntensity === null) return 0;
-          if (a.flowIntensity === null) return 1;
-          if (b.flowIntensity === null) return -1;
-          aVal = a.flowIntensity;
-          bVal = b.flowIntensity;
+        case "pressure": {
+          const aPressure = getPressureScore(a);
+          const bPressure = getPressureScore(b);
+          if (aPressure === null && bPressure === null) return 0;
+          if (aPressure === null) return 1;
+          if (bPressure === null) return -1;
+          aVal = aPressure;
+          bVal = bPressure;
           break;
+        }
         default:
           aVal = Math.abs(a.netFlow24hUsd);
           bVal = Math.abs(b.netFlow24hUsd);
       }
       return sort.direction === "asc" ? aVal - bVal : bVal - aVal;
     },
-    []
+    [],
   );
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown, sortedRows: sorted } =
-    useSortedTableRows<MintBurnCoinFlow, SortKey>(
-      coins,
-      { defaultKey: "fis", defaultDirection: "desc" },
-      compareRows
-    );
+
+  const {
+    sortKey,
+    sortDirection,
+    toggleSort,
+    getAriaSortValue,
+    handleSortKeyDown,
+    sortedRows: sorted,
+  } = useSortedTableRows<MintBurnCoinFlow, SortKey>(
+    coins,
+    { defaultKey: "net24h", defaultDirection: "desc" },
+    compareRows,
+  );
   const { data: logos } = useLogos();
   const prefetch = usePrefetchStablecoin();
 
   if (isLoading) {
     return (
-      <div className="rounded-xl border overflow-x-auto scroll-shadow">
+      <div className="scroll-shadow overflow-x-auto rounded-xl border">
         <Table>
           <TableHeader className="bg-muted/80">
             <TableRow>
               <TableHead>Coin</TableHead>
-              <TableHead className="text-right">Flow Intensity</TableHead>
+              <TableHead className="text-right">Pressure vs 30D</TableHead>
               <TableHead className="text-right">Net 24h</TableHead>
-              <TableHead className="hidden sm:table-cell text-right">Minted 24h</TableHead>
-              <TableHead className="hidden sm:table-cell text-right">Burned 24h</TableHead>
-              <TableHead className="hidden md:table-cell text-right">Net 7d</TableHead>
-              <TableHead className="hidden lg:table-cell text-right">Net 30d</TableHead>
-              <TableHead className="hidden xl:table-cell text-right">Net 90d</TableHead>
-              <TableHead className="hidden xl:table-cell text-right">Largest Event</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">
+                Minted 24h
+              </TableHead>
+              <TableHead className="hidden text-right sm:table-cell">
+                Burned 24h
+              </TableHead>
+              <TableHead className="hidden text-right md:table-cell">
+                Net 7d
+              </TableHead>
+              <TableHead className="hidden text-right lg:table-cell">
+                Net 30d
+              </TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
+                Net 90d
+              </TableHead>
+              <TableHead className="hidden text-right xl:table-cell">
+                Largest Event
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-4 w-12" /></div></TableCell>
-                <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden sm:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden sm:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden md:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden lg:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden xl:table-cell text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
-                <TableCell className="hidden xl:table-cell text-right"><Skeleton className="ml-auto h-4 w-20" /></TableCell>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-6 w-6 rounded-full" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-10 w-24" />
+                </TableCell>
+                <TableCell className="text-right">
+                  <Skeleton className="ml-auto h-8 w-20" />
+                </TableCell>
+                <TableCell className="hidden text-right sm:table-cell">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell className="hidden text-right sm:table-cell">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell className="hidden text-right md:table-cell">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell className="hidden text-right lg:table-cell">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell className="hidden text-right xl:table-cell">
+                  <Skeleton className="ml-auto h-4 w-16" />
+                </TableCell>
+                <TableCell className="hidden text-right xl:table-cell">
+                  <Skeleton className="ml-auto h-4 w-20" />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -127,16 +209,16 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
   }
 
   return (
-    <div className="rounded-xl border overflow-x-auto scroll-shadow">
+    <div className="scroll-shadow overflow-x-auto rounded-xl border">
       <Table>
         <TableHeader className="bg-muted/80">
           <TableRow>
             <TableHead>Coin</TableHead>
             <SortableTableHead
-              sortKey="fis"
+              sortKey="pressure"
               currentSortKey={sortKey}
               sortDirection={sortDirection}
-              label="Flow Intensity"
+              label="Pressure vs 30D"
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
@@ -160,7 +242,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden sm:table-cell text-right"
+              className="hidden text-right sm:table-cell"
             />
             <SortableTableHead
               sortKey="burn24h"
@@ -170,7 +252,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden sm:table-cell text-right"
+              className="hidden text-right sm:table-cell"
             />
             <SortableTableHead
               sortKey="net7d"
@@ -180,7 +262,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden md:table-cell text-right"
+              className="hidden text-right md:table-cell"
             />
             <SortableTableHead
               sortKey="net30d"
@@ -190,7 +272,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden lg:table-cell text-right"
+              className="hidden text-right lg:table-cell"
             />
             <SortableTableHead
               sortKey="net90d"
@@ -200,7 +282,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden xl:table-cell text-right"
+              className="hidden text-right xl:table-cell"
             />
             <SortableTableHead
               sortKey="largest"
@@ -210,7 +292,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               toggleSort={toggleSort}
               getAriaSortValue={getAriaSortValue}
               handleSortKeyDown={handleSortKeyDown}
-              className="hidden xl:table-cell text-right"
+              className="hidden text-right xl:table-cell"
             />
           </TableRow>
         </TableHeader>
@@ -218,14 +300,11 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           {sorted.map((coin) => {
             const meta = TRACKED_META_BY_ID.get(coin.stablecoinId);
             const name = meta?.name ?? coin.symbol;
-            const intensityDisplay = coin.flowIntensity != null
-              ? getFlowIntensityDisplay(coin.flowIntensity)
+            const pressureScore = getPressureScore(coin);
+            const pressureState = getPressureState(coin);
+            const pressureDisplay = pressureScore != null
+              ? getPressureShiftDisplay(pressureScore)
               : null;
-            const intensityMagnitude = intensityDisplay != null
-              ? getFlowIntensityMagnitude(intensityDisplay)
-              : 0;
-            const isNegativeIntensity = (intensityDisplay ?? 0) < 0;
-
             return (
               <InteractiveTableRow
                 key={coin.stablecoinId}
@@ -234,69 +313,72 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
               >
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <StablecoinLogo src={logos?.[coin.stablecoinId]} name={name} size={24} />
+                    <StablecoinLogo
+                      src={logos?.[coin.stablecoinId]}
+                      name={name}
+                      size={24}
+                    />
                     <span className="font-medium">{coin.symbol}</span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
-                  {coin.flowIntensity != null ? (
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="hidden sm:flex h-2 w-16 overflow-hidden rounded-full bg-muted">
-                        <div className="relative h-full w-1/2 border-r border-border/70">
-                          {isNegativeIntensity && intensityMagnitude > 0 && (
-                            <div
-                              className="absolute right-0 top-0 h-full bg-red-500"
-                              style={{ width: `${intensityMagnitude}%` }}
-                            />
-                          )}
-                        </div>
-                        <div className="relative h-full w-1/2">
-                          {!isNegativeIntensity && intensityMagnitude > 0 && (
-                            <div
-                              className="absolute left-0 top-0 h-full bg-blue-500"
-                              style={{ width: `${intensityMagnitude}%` }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      <span className={`font-mono tabular-nums text-sm ${getNetColor(intensityDisplay ?? 0)}`}>
-                        {getNetPrefix(intensityDisplay ?? 0)}{intensityDisplay}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="font-mono text-xs text-muted-foreground">NR</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right font-mono tabular-nums">
-                  <span className={getNetColor(coin.netFlow24hUsd)}>
-                    {getNetPrefix(coin.netFlow24hUsd)}{formatCurrency(coin.netFlow24hUsd)}
+                  <span
+                    className={cn(
+                      "font-mono tabular-nums text-sm font-semibold",
+                      PRESSURE_VALUE_CLASS[pressureState],
+                    )}
+                  >
+                    {pressureDisplay != null
+                      ? `${getNetPrefix(pressureDisplay)}${pressureDisplay}`
+                      : "NR"}
                   </span>
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">
+                <TableCell className="text-right">
+                  <span
+                    className={cn(
+                      "font-mono tabular-nums text-sm font-semibold",
+                      getNetColor(coin.netFlow24hUsd),
+                    )}
+                  >
+                    {getNetPrefix(coin.netFlow24hUsd)}
+                    {formatCurrency(coin.netFlow24hUsd)}
+                  </span>
+                </TableCell>
+                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">
                   {formatCurrency(coin.mintVolume24hUsd)}
                 </TableCell>
-                <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">
+                <TableCell className="hidden text-right font-mono tabular-nums sm:table-cell">
                   {formatCurrency(coin.burnVolume24hUsd)}
                 </TableCell>
-                <TableCell className="hidden md:table-cell text-right font-mono tabular-nums">
+                <TableCell className="hidden text-right font-mono tabular-nums md:table-cell">
                   <span className={getNetColor(coin.netFlow7dUsd)}>
-                    {getNetPrefix(coin.netFlow7dUsd)}{formatCurrency(coin.netFlow7dUsd)}
+                    {getNetPrefix(coin.netFlow7dUsd)}
+                    {formatCurrency(coin.netFlow7dUsd)}
                   </span>
                 </TableCell>
-                <TableCell className="hidden lg:table-cell text-right font-mono tabular-nums">
+                <TableCell className="hidden text-right font-mono tabular-nums lg:table-cell">
                   <span className={getNetColor(coin.netFlow30dUsd)}>
-                    {getNetPrefix(coin.netFlow30dUsd)}{formatCurrency(coin.netFlow30dUsd)}
+                    {getNetPrefix(coin.netFlow30dUsd)}
+                    {formatCurrency(coin.netFlow30dUsd)}
                   </span>
                 </TableCell>
-                <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
+                <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
                   <span className={getNetColor(coin.netFlow90dUsd)}>
-                    {getNetPrefix(coin.netFlow90dUsd)}{formatCurrency(coin.netFlow90dUsd)}
+                    {getNetPrefix(coin.netFlow90dUsd)}
+                    {formatCurrency(coin.netFlow90dUsd)}
                   </span>
                 </TableCell>
-                <TableCell className="hidden xl:table-cell text-right font-mono tabular-nums">
+                <TableCell className="hidden text-right font-mono tabular-nums xl:table-cell">
                   {coin.largestEvent24h ? (
-                    <span className={coin.largestEvent24h.direction === "mint" ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}>
-                      {coin.largestEvent24h.direction === "mint" ? "+" : "-"}{formatCurrency(coin.largestEvent24h.amountUsd)}
+                    <span
+                      className={
+                        coin.largestEvent24h.direction === "mint"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-red-700 dark:text-red-400"
+                      }
+                    >
+                      {coin.largestEvent24h.direction === "mint" ? "+" : "-"}
+                      {formatCurrency(coin.largestEvent24h.amountUsd)}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">&mdash;</span>
@@ -307,7 +389,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           })}
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+              <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
                 No flow data available
               </TableCell>
             </TableRow>

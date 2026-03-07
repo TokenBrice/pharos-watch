@@ -1,6 +1,6 @@
 # Mint/Burn Flow Tracker
 
-On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, computes per-coin Flow Intensity Scores, a market-cap-weighted Bank Run Gauge, and flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
+On-chain mint and burn event tracker for stablecoins on **Ethereum** via Alchemy JSON-RPC. Detects Transfer events (and USDT-specific Issue/Redeem events), aggregates them into hourly flow buckets, exposes per-coin raw `Net Flow` plus baseline-relative `Pressure Shift vs 30D`, computes a market-cap-weighted Bank Run Gauge, and flags flight-to-quality signals. Runs every 20 minutes, incrementally scanning from the last processed block.
 
 Operational freshness configuration is shared via `worker/src/lib/mint-burn-health-config.ts`:
 - major-symbol baseline (`USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`)
@@ -13,7 +13,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.3`
+- **Current methodology version:** `v4.4`
 - **Public changelog page:** `/methodology/mint-burn-flow-changelog/`
 - **Internal reconstructed timeline:** `docs/mint-burn-flows-timeline.md`
 
@@ -39,11 +39,11 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 | `dustThreshold` | 10,000 default (token-native); 10 for gold tokens | Events below this amount are discarded |
 | `INDEXING_SAFETY_SEC` | 900 (15 min) | Safety margin when advancing sync state to chain head |
 | `ETHEREUM_BLOCK_TIME_SEC` | 12 sec | Approximate Ethereum block time (yields ~75-block safety margin) |
-| `DENOM_SCALE` | 0.3 | FIS denominator = 30% of baseline daily absolute flow |
-| `DENOM_FLOOR` | $1,000,000 | Minimum FIS denominator |
-| `Z_MULTIPLIER` | 50 | Z-score amplification in FIS formula |
-| Flow intensity clamp range | -100 to +100 | Signed Flow Intensity Score output range |
-| `MIN_DATA_DAYS` | 7 | Days of history required before FIS returns a value |
+| `DENOM_SCALE` | 0.3 | Pressure-shift denominator = 30% of baseline daily absolute flow |
+| `DENOM_FLOOR` | $1,000,000 | Minimum pressure-shift denominator |
+| `Z_MULTIPLIER` | 50 | Z-score amplification in the pressure-shift formula |
+| Pressure-shift clamp range | -100 to +100 | Signed baseline-relative score output range |
+| `MIN_DATA_DAYS` | 7 | Days of history required before pressure shift returns a value |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
 | `ETHEREUM_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
@@ -213,19 +213,44 @@ Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import
 
 **File:** `worker/src/lib/mint-burn-scoring.ts`
 
-### Flow Intensity Score (FIS)
+### Pressure Shift vs 30D (Flow Intensity Formula)
 
-Per-coin score measuring how unusual current flows are relative to the 30-day baseline. Runs server-side in the `/api/mint-burn-flows` aggregate handler.
+The underlying scoring formula is unchanged, but the product now exposes it as the baseline-relative `Pressure Shift vs 30D` signal. Runs server-side in the `/api/mint-burn-flows` aggregate handler.
 
 ```
 denominator = max(baselineDailyAbs * 0.3, $1M)
 z = (currentDailyNet - baselineDailyNet) / denominator
-intensity = clamp(-100, 100, z * 50)
+pressureShift = clamp(-100, 100, z * 50)
 ```
 
 - **Input:** 24h net flow, 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
 - **Output:** -100 to +100 score, or `null` (NR) if fewer than 7 days of history or if the coin has no 24h mint/burn activity.
-- Score of 0 = current flow matches baseline. Negative values = net burns above baseline. Positive values = net mints above baseline.
+- Score of 0 = current flow matches baseline. Negative values = pressure is worse than baseline. Positive values = pressure is improving versus baseline.
+
+### Two-Signal Interpretation Model
+
+Per-coin UI and API now answer two different questions explicitly:
+
+1. **Net Flow 24h** — current direction and magnitude from raw mint-minus-burn totals
+   - `minting`: `netFlow24hUsd > 0`
+   - `burning`: `netFlow24hUsd < 0`
+   - `flat`: `netFlow24hUsd = 0` with activity
+   - `inactive`: no 24h activity
+2. **Pressure Shift vs 30D** — how unusual current pressure is versus the coin's own baseline
+   - `improving`: score `> 10`
+   - `stable`: score between `-10` and `+10`
+   - `worsening`: score `< -10`
+   - `nr`: insufficient history or no current activity
+
+Invariant: minting vs burning semantics now always come from raw net flow, never from score sign.
+
+### Shared Signal Helper
+
+`shared/lib/mint-burn-signals.ts` centralizes interpretation logic used by worker responses and frontend fallbacks:
+
+- `getNetFlowDirection24h()`
+- `getPressureShiftState()`
+- `getCoinFlowCompositeState()`
 
 ### Gauge Bands
 
@@ -243,7 +268,7 @@ Boundary convention: each band is `[min, max)`. The last band includes +100.
 
 ### Bank Run Gauge (Composite)
 
-Market-cap-weighted average of individual FIS scores:
+Market-cap-weighted average of individual pressure-shift scores:
 
 ```
 gauge_score = Σ(intensity_i * mcap_i) / Σ(mcap_i)
@@ -339,7 +364,7 @@ Two modes depending on whether `stablecoin` is provided.
 Returns:
 
 - `gauge` — composite Bank Run Gauge: `{ score, band, flightToQuality, flightIntensity, trackedCoins, trackedMcapUsd }`
-- `coins[]` — per-coin summaries: FIS, net 24h/7d, mint/burn volumes, largest event
+- `coins[]` — per-coin summaries: raw net flow, canonical `pressureShiftScore`, derived interpretation fields, baseline context, and largest event
 - `hourly[]` — aggregate hourly timeseries: `{ hourTs, netFlowUsd, mintVolumeUsd, burnVolumeUsd }`
 - `updatedAt` — Unix seconds of latest hourly bucket
 
@@ -412,8 +437,8 @@ Controlled ingestion backfill by explicit config/range/chunk.
 **Layout:** `src/app/flows/layout.tsx`
 
 Three sections:
-1. **Bank Run Gauge** — hero semicircle gauge with needle, band label, flight-to-quality badge
-2. **Per-Coin Flows** — sortable table with FIS bar, net 24h/7d, mint/burn volumes, largest event
+1. **Hero Overview** — net-direction hero with the baseline-relative Bank Run Gauge, a literal 24h Minting Pressure gauge, and flight-to-quality badge
+2. **Per-Coin Flows** — sortable table with `Pressure vs 30D`, net 24h/7d, mint/burn volumes, largest event
 3. **Aggregate Flows** — Recharts composed chart (mint area, burn area, net flow line) with 24h/7d/30d toggle
 
 ### Hooks
@@ -432,16 +457,17 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 | Component | File | Description |
 |-----------|------|-------------|
-| `GAUGE_BANDS` | `src/components/flow-gauge.tsx` | Shared Flow Intensity band config map (label, hex, Tailwind text/bg classes) consumed by flow summary UI |
+| `GAUGE_BANDS` | `src/components/flow-gauge.tsx` | Shared Bank Run Gauge band config map (label, hex, Tailwind text/bg classes) consumed by flow summary UI |
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
-| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, fis. Responsive column hiding |
+| `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, pressure. Responsive column hiding |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
-| `HomepageFlowOverview` | `src/components/homepage-flow-overview.tsx` | Homepage snapshot wrapper: pulls 24h/7d aggregate flow data and renders the same printer/shredder scene used on `/flows` |
-| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: FIS, net 24h/7d, mint/burn volumes |
+| `MintingPressureGauge` | `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge used by both the aggregate overview and stablecoin detail summary cards |
+| `HomepageFlowOverview` | `src/components/homepage-flow-overview.tsx` | Homepage snapshot wrapper: pulls 24h/7d aggregate flow data and renders the same net-direction hero used on `/flows`, including the Bank Run Gauge (pressure vs 30D) and the literal 24h Minting Pressure gauge |
+| `FlowSummaryCard` | `src/components/flow-summary-card.tsx` | Summary card for stablecoin detail pages: explicit `Net 24h`, `Pressure Shift vs 30D`, and a literal `Minting Pressure (24h)` gauge |
 
 ### Dashboard Integration
 
-`FlowSummaryCard` (`src/components/flow-summary-card.tsx`) imports `GAUGE_BANDS` to keep Flow Intensity label/color semantics consistent with worker gauge band scoring.
+`FlowSummaryCard` (`src/components/flow-summary-card.tsx`) now keys machine visuals from raw `netFlow24hUsd` and also renders the same literal `Minting Pressure (24h)` gauge used in the aggregate overview, while Bank Run Gauge band labels remain available for baseline-relative pressure semantics.
 
 ---
 
@@ -450,9 +476,9 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 | Condition | Behavior |
 |-----------|----------|
 | Price unavailable at sync time | `amount_usd` stored as NULL; backfillable via admin endpoint |
-| Fewer than 7 days of flow history | FIS returns `null`; coin excluded from gauge weighting |
-| No 24h mint/burn activity in a sparse window | FIS returns `null` (NR) for that window; coin excluded from gauge weighting |
-| All coins have null FIS | Gauge score returns `null`; frontend shows "Calibrating" state |
+| Fewer than 7 days of flow history | Pressure shift returns `null`; coin excluded from gauge weighting |
+| No 24h mint/burn activity in a sparse window | Pressure shift returns `null` (NR) for that window; coin excluded from gauge weighting |
+| All coins have null pressure shift | Gauge score returns `null`; frontend shows "Calibrating" state |
 | Alchemy API error for a config | `apiErrors` incremented; sync state NOT advanced (retried next cycle) |
 | Incomplete timestamp resolution | `configError = true`; sync state not advanced, retried next cycle |
 | Subrequest budget exhausted | Remaining configs skipped; picked up in next cron cycle |
@@ -475,14 +501,15 @@ An Alchemy outage does not block blacklist sync, and vice versa. Each circuit br
 ## Testing
 
 **Files:**
-- `worker/src/lib/__tests__/mint-burn-scoring.test.ts` — FIS, gauge bands, composite gauge, flight-to-quality
+- `worker/src/lib/__tests__/mint-burn-scoring.test.ts` — pressure-shift formula, gauge bands, composite gauge, flight-to-quality
 - `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` — shared parse/classification/persistence/sync-state behavior parity
 - `worker/src/cron/__tests__/sync-mint-burn.test.ts` — cron ingestion orchestration and degraded-mode handling
 - `worker/src/api/__tests__/backfill-mint-burn.test.ts` — admin backfill chunking, `done/nextFromBlock`, and sync-state progression
-- `worker/src/api/__tests__/mint-burn-flows.test.ts` — API response shape validation (aggregate vs per-coin)
+- `worker/src/api/__tests__/mint-burn-flows.test.ts` — API response shape validation plus burning/improving regression coverage
+- `shared/lib/__tests__/mint-burn-signals.test.ts` — shared direction/pressure/composite interpretation coverage
 
 **Coverage:**
-- FIS: null for < 7 days, neutral at baseline, clamping at 0/100, floor denominator
+- Pressure shift: null for < 7 days, neutral at baseline, clamping at 0/100, floor denominator
 - Gauge bands: correct band for all score ranges
 - Composite gauge: mcap-weighted average, skips null, returns null when all null
 - Flight-to-quality: $100M activation, intensity formula, edge cases
@@ -514,7 +541,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
 | `worker/src/lib/mint-burn-contracts.ts` | Contract configs, event definitions, safe haven IDs |
-| `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: FIS, gauge, flight-to-quality |
+| `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |
 | `worker/src/api/mint-burn-flows.ts` | API handler: aggregate + per-coin flow data |
 | `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |
 | `worker/src/api/backfill-mint-burn.ts` | Admin endpoint: controlled event ingestion backfill |
@@ -523,11 +550,13 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page |
 | `src/app/flows/layout.tsx` | Page metadata/layout |
-| `src/components/flow-gauge.tsx` | Shared Flow Intensity band config map |
+| `src/components/flow-gauge.tsx` | Shared Bank Run Gauge band config map |
 | `src/components/flow-chart.tsx` | Recharts flow chart |
 | `src/components/flow-table.tsx` | Sortable per-coin table |
 | `src/components/flow-event-feed.tsx` | Paginated event table |
+| `src/components/minting-pressure-gauge.tsx` | Shared literal 24h mint-vs-burn gauge |
 | `src/components/flow-summary-card.tsx` | Summary card for detail pages |
+| `shared/lib/mint-burn-signals.ts` | Shared net-direction + pressure-state interpretation helpers |
 | `shared/types/index.ts` | TypeScript types + Zod schemas |
 | `worker/src/lib/__tests__/mint-burn-scoring.test.ts` | Scoring unit tests |
 | `worker/src/lib/__tests__/mint-burn-pipeline.test.ts` | Shared ingestion pipeline tests |

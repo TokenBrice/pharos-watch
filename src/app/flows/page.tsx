@@ -86,11 +86,10 @@ function FlowsPageInner() {
           Real-time minting and redemption flows for tracked stablecoins.
         </p>
         <p className="text-sm text-muted-foreground">
-          When more stablecoins are being burned than minted, it signals
-          redemption pressure &mdash; a potential early warning for bank-run
-          dynamics. The Bank Run Gauge aggregates this activity into a single
-          score, while the per-coin table and flow chart let you drill into
-          individual assets.
+          Net flow tells you whether tokens are being minted or burned right
+          now. Pressure Shift vs 30D tells you whether today&apos;s activity is
+          stronger or weaker than each coin&apos;s recent norm, and the Bank Run
+          Gauge aggregates that baseline-relative pressure across the market.
         </p>
       </div>
 
@@ -125,8 +124,7 @@ function FlowsPageInner() {
         ]}
       />
 
-      {/* Section 1: Experimental meme-style overview */}
-      <section aria-label="BRRRR overview">
+      <section aria-label="Mint/burn overview">
         <FlowBrrrOverview
           gauge={gauge ?? null}
           coins={coins}

@@ -4,14 +4,14 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 export const metadata: Metadata = {
   title: "Mint/Burn Flows",
   description:
-    "Real-time minting and redemption flows for tracked stablecoins. Bank Run Gauge, per-coin flow table, and aggregate flow charts.",
+    "Real-time minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.",
   alternates: {
     canonical: "/flows/",
   },
   openGraph: {
     title: "Mint/Burn Flows",
     description:
-      "Real-time minting and redemption flows for tracked stablecoins. Bank Run Gauge, per-coin flow table, and aggregate flow charts.",
+      "Real-time minting and redemption flows for tracked stablecoins. Net flow direction, pressure-vs-baseline signals, and the Bank Run Gauge.",
     url: "/flows/",
     images: [{ url: "https://pharos.watch/og-flows.png", width: 1200, height: 630 }],
   },
@@ -40,7 +40,7 @@ export default function FlowsLayout({
                 name: "What is the Bank Run Gauge?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The Bank Run Gauge is a market-cap-weighted composite of individual Flow Intensity Scores across all tracked stablecoins, aggregated into a signed -100 to +100 score. A score below -10 indicates elevated redemption pressure across the market, while a score above +10 reflects net minting demand. It returns null only when all tracked coins lack sufficient flow history.",
+                  text: "The Bank Run Gauge is a market-cap-weighted composite of each tracked stablecoin's pressure shift versus its own 30-day baseline. It is a signed -100 to +100 pressure signal, not a literal mint-versus-burn direction meter. Scores below -10 indicate worsening redemption pressure across the market, while scores above +10 indicate improving issuance pressure versus baseline. It returns null only when all tracked coins lack sufficient history or current activity.",
                 },
               },
               {
@@ -53,10 +53,10 @@ export default function FlowsLayout({
               },
               {
                 "@type": "Question",
-                name: "How is the Flow Intensity Score calculated?",
+                name: "What does Pressure Shift vs 30D mean?",
                 acceptedAnswer: {
                   "@type": "Answer",
-                  text: "The Flow Intensity Score (FIS) measures how unusual a coin's current 24-hour net flow is relative to its 30-day rolling baseline. It is computed as: intensity = clamp(-100, 100, z × 50), where z = (currentDailyNet − baselineDailyNet) / max(baselineDailyAbs × 0.3, $1M). A score of 0 means flows match the baseline; negative scores indicate above-baseline burns and positive scores indicate above-baseline mints. A minimum of 7 days of history is required before a score is returned.",
+                  text: "Pressure Shift vs 30D measures how unusual a coin's current 24-hour net flow is relative to its 30-day rolling baseline. It uses the existing Flow Intensity formula: intensity = clamp(-100, 100, z × 50), where z = (currentDailyNet − baselineDailyNet) / max(baselineDailyAbs × 0.3, $1M). A score near 0 means flows match the baseline, negative scores mean pressure is worse than normal, and positive scores mean pressure is improving versus normal. Net flow direction still comes from the raw 24-hour mint-minus-burn value.",
                 },
               },
             ],

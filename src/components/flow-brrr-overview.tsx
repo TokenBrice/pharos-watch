@@ -1,15 +1,27 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  Flame,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { Flame, TrendingDown, TrendingUp } from "lucide-react";
 import { FlowMachineScene } from "@/components/flow-machine-scene";
-import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
-import type { MintBurnCoinFlow, MintBurnGauge, MintBurnHourlyBucket } from "@shared/types";
+import { MintingPressureGauge } from "@/components/minting-pressure-gauge";
+import {
+  formatCurrency,
+  getNetColor,
+  getNetPrefix,
+} from "@shared/lib/format";
+import type {
+  MintBurnCoinFlow,
+  MintBurnGauge,
+  MintBurnHourlyBucket,
+} from "@shared/types";
 import { cn } from "@/lib/utils";
+import {
+  getNetFlowDirection24h,
+  getPressureShiftState,
+  type NetFlowDirection24h,
+  type PressureShiftState,
+} from "@shared/lib/mint-burn-signals";
+import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 
 interface FlowBrrrOverviewProps {
   gauge: MintBurnGauge | null;
@@ -19,12 +31,19 @@ interface FlowBrrrOverviewProps {
   className?: string;
 }
 
-interface PrinterMode {
+interface DirectionUi {
+  label: string;
+  badgeClass: string;
+  accentHex: string;
+  sceneMode: "printer" | "shredder";
+  sceneTitle: string;
+}
+
+interface PressureUi {
   label: string;
   badgeClass: string;
   headlineClass: string;
   panelClass: string;
-  description: string;
 }
 
 interface FlowSnapshot {
@@ -39,9 +58,13 @@ interface FlowSnapshot {
   topMint: MintBurnCoinFlow | null;
   topBurn: MintBurnCoinFlow | null;
   headline: string;
-  brrText: string;
+  description: string;
   leverPct: number | null;
-  mode: PrinterMode;
+  has24hActivity: boolean;
+  netDirection: NetFlowDirection24h;
+  pressureState: PressureShiftState;
+  directionUi: DirectionUi;
+  pressureUi: PressureUi;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -57,99 +80,118 @@ function formatMaybeCurrency(value: number | null): string {
   return formatCurrency(value);
 }
 
-function getHeadline(score: number | null, net24h: number, brrText: string): string {
-  if (score === null) {
-    return "No flow score data";
+const DIRECTION_UI: Record<NetFlowDirection24h, DirectionUi> = {
+  minting: {
+    label: "Net minting",
+    badgeClass:
+      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+    accentHex: "#22c55e",
+    sceneMode: "printer",
+    sceneTitle: "Mint Desk",
+  },
+  burning: {
+    label: "Net burning",
+    badgeClass:
+      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
+    accentHex: "#ef4444",
+    sceneMode: "shredder",
+    sceneTitle: "Burn Desk",
+  },
+  flat: {
+    label: "Flat net flow",
+    badgeClass: "border-border/70 bg-muted/40 text-foreground",
+    accentHex: "#6b7280",
+    sceneMode: "printer",
+    sceneTitle: "Flow Desk",
+  },
+  inactive: {
+    label: "No activity",
+    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
+    accentHex: "#6b7280",
+    sceneMode: "printer",
+    sceneTitle: "Flow Desk",
+  },
+};
+
+const PRESSURE_UI: Record<PressureShiftState, PressureUi> = {
+  improving: {
+    label: "Pressure improving",
+    badgeClass:
+      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
+    headlineClass: "text-emerald-700 dark:text-emerald-300",
+    panelClass:
+      "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
+  },
+  stable: {
+    label: "Pressure stable",
+    badgeClass: "border-border/70 bg-muted/40 text-foreground",
+    headlineClass: "text-foreground",
+    panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
+  },
+  worsening: {
+    label: "Pressure worsening",
+    badgeClass:
+      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
+    headlineClass: "text-red-700 dark:text-red-300",
+    panelClass:
+      "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
+  },
+  nr: {
+    label: "Pressure NR",
+    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
+    headlineClass: "text-muted-foreground",
+    panelClass: "border-border/60 bg-background/35",
+  },
+};
+
+function getHeadline(
+  direction: NetFlowDirection24h,
+  pressureState: PressureShiftState,
+): string {
+  if (direction === "inactive") {
+    return "No aggregate mint/burn activity";
   }
-  if (score >= 70) {
-    return `Money printer go ${brrText}`;
+  if (direction === "burning" && pressureState === "improving") {
+    return "Net burn day, but market pressure is easing";
   }
-  if (score >= -10 && score < 10) {
-    return "Money printer on standby";
+  if (direction === "burning" && pressureState === "stable") {
+    return "Net burn day with steady pressure";
   }
-  if (score < -40 || (score < -10 && net24h < 0)) {
-    return "Money shredder go BRRR";
+  if (direction === "burning" && pressureState === "worsening") {
+    return "Broad burns with worsening pressure";
   }
-  if (score >= 40) {
-    return `Money printer go ${brrText}`;
+  if (direction === "minting" && pressureState === "improving") {
+    return "Broad minting with rising pressure";
   }
-  if (score >= 10) {
-    return "Money printer warming up";
+  if (direction === "minting" && pressureState === "stable") {
+    return "Net mint day with steady pressure";
   }
-  return "Money printer sputtering";
+  if (direction === "minting" && pressureState === "worsening") {
+    return "Minting, but softer than the 30D pace";
+  }
+  if (pressureState === "improving") {
+    return "Balanced net flow, but pressure is improving";
+  }
+  if (pressureState === "stable") {
+    return "Balanced net flow, neutral market pressure";
+  }
+  if (pressureState === "worsening") {
+    return "Balanced net flow, but pressure is weakening";
+  }
+  return "Balanced net flow while the gauge recalibrates";
 }
 
-function getPrinterMode(score: number | null, net24h: number): PrinterMode {
-  if (score === null) {
-    return {
-      label: "NO DATA",
-      badgeClass: "bg-muted text-muted-foreground border-border/70",
-      headlineClass: "text-muted-foreground",
-      panelClass: "border-border/60 bg-background/35",
-      description: "Not enough history to compute a reliable flow-intensity score yet.",
-    };
+function getDescription(
+  direction: NetFlowDirection24h,
+  pressureState: PressureShiftState,
+): string {
+  if (direction === "inactive") {
+    return "No aggregate mint or burn events were recorded in the active 24-hour window.";
   }
-  if (score >= 70) {
-    return {
-      label: "MAX BRRRR",
-      badgeClass: "bg-emerald-500/15 text-emerald-700 border-emerald-600/30 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40",
-      headlineClass: "text-emerald-700 dark:text-emerald-300",
-      panelClass: "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
-      description: "Issuance is extreme relative to baseline activity.",
-    };
+  if (pressureState === "nr") {
+    return "Net flow answers what the market is doing now; pressure shift is NR until enough history is available.";
   }
-  if (score >= 40) {
-    return {
-      label: "PRINT SURGE",
-      badgeClass: "bg-lime-500/15 text-lime-700 border-lime-600/30 dark:bg-lime-500/20 dark:text-lime-300 dark:border-lime-500/40",
-      headlineClass: "text-lime-700 dark:text-lime-300",
-      panelClass: "border-lime-600/30 bg-lime-500/10 dark:border-lime-500/35 dark:bg-lime-500/10",
-      description: "Strong mint pressure. Demand for stable liquidity is elevated.",
-    };
-  }
-  if (score >= 10) {
-    return {
-      label: "PRINTING",
-      badgeClass: "bg-cyan-500/15 text-cyan-700 border-cyan-600/30 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/40",
-      headlineClass: "text-cyan-700 dark:text-cyan-300",
-      panelClass: "border-cyan-600/30 bg-cyan-500/10 dark:border-cyan-500/35 dark:bg-cyan-500/10",
-      description: "Net inflows are positive but not yet euphoric.",
-    };
-  }
-  if (score >= -10) {
-    return {
-      label: "NEUTRAL",
-      badgeClass: "bg-zinc-500/15 text-zinc-700 border-zinc-600/30 dark:bg-zinc-500/20 dark:text-zinc-300 dark:border-zinc-500/40",
-      headlineClass: "text-zinc-800 dark:text-zinc-200",
-      panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
-      description: "Printer and shredder are roughly balanced.",
-    };
-  }
-  if (score >= -40) {
-    return {
-      label: "SHREDDING",
-      badgeClass: "bg-amber-500/15 text-amber-700 border-amber-600/35 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40",
-      headlineClass: "text-amber-700 dark:text-amber-300",
-      panelClass: "border-amber-600/30 bg-amber-500/10 dark:border-amber-500/35 dark:bg-amber-500/10",
-      description: "Burn pressure is climbing versus normal flow.",
-    };
-  }
-  if (net24h < 0) {
-    return {
-      label: "REVERSE BRRRR",
-      badgeClass: "bg-red-500/15 text-red-700 border-red-600/35 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40",
-      headlineClass: "text-red-700 dark:text-red-300",
-      panelClass: "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
-      description: "Net supply is contracting hard. Redemptions dominate.",
-    };
-  }
-  return {
-    label: "STRESSED",
-    badgeClass: "bg-red-500/15 text-red-700 border-red-600/35 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/40",
-    headlineClass: "text-red-700 dark:text-red-300",
-    panelClass: "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
-    description: "Score is weak despite net flow trying to recover.",
-  };
+  return "Net flow tells you what the market is doing right now. The Bank Run Gauge tells you how unusual that pressure is versus the recent 30-day norm.";
 }
 
 function buildSnapshot(
@@ -180,19 +222,23 @@ function buildSnapshot(
     }
   }
 
-  const topMint = [...coins]
-    .filter((coin) => coin.netFlow24hUsd > 0)
-    .sort((a, b) => b.netFlow24hUsd - a.netFlow24hUsd)[0] ?? null;
-
-  const topBurn = [...coins]
-    .filter((coin) => coin.netFlow24hUsd < 0)
-    .sort((a, b) => a.netFlow24hUsd - b.netFlow24hUsd)[0] ?? null;
+  const topMint =
+    [...coins]
+      .filter((coin) => coin.netFlow24hUsd > 0)
+      .sort((a, b) => b.netFlow24hUsd - a.netFlow24hUsd)[0] ?? null;
+  const topBurn =
+    [...coins]
+      .filter((coin) => coin.netFlow24hUsd < 0)
+      .sort((a, b) => a.netFlow24hUsd - b.netFlow24hUsd)[0] ?? null;
 
   const score = gauge?.score ?? null;
+  const has24hActivity = Boolean(mint24h || burn24h || net24h);
+  const netDirection = getNetFlowDirection24h({
+    netFlow24hUsd: net24h,
+    has24hActivity,
+  });
+  const pressureState = getPressureShiftState(score);
   const leverPct = score === null ? null : clamp((score + 100) / 2, 0, 100);
-  const rCount = score === null ? 4 : clamp(Math.round((leverPct ?? 50) / 7), 2, 14);
-  const brrText = `BR${"R".repeat(rCount)}`;
-  const mode = getPrinterMode(score, net24h);
 
   return {
     mint24h,
@@ -205,43 +251,53 @@ function buildSnapshot(
     trackedCoins: gauge?.trackedCoins ?? coins.length,
     topMint,
     topBurn,
-    headline: getHeadline(score, net24h, brrText),
-    brrText,
+    headline: getHeadline(netDirection, pressureState),
+    description: getDescription(netDirection, pressureState),
     leverPct,
-    mode,
+    has24hActivity,
+    netDirection,
+    pressureState,
+    directionUi: DIRECTION_UI[netDirection],
+    pressureUi: PRESSURE_UI[pressureState],
   };
 }
 
 function LoadingState() {
   return (
     <div className="space-y-4">
-      {Array.from({ length: 1 }).map((_, i) => (
-        <div key={i} className="rounded-2xl border bg-card p-4 sm:p-6 animate-pulse">
-          <div className="h-4 w-44 rounded bg-muted/60" />
-          <div className="mt-4 h-9 w-full max-w-[620px] rounded bg-muted/60" />
-          <div className="mt-4 h-4 w-full max-w-[760px] rounded bg-muted/60" />
-          <div className="mt-5 h-32 rounded-xl bg-muted/60" />
-        </div>
-      ))}
+      <div className="animate-pulse rounded-2xl border bg-card p-4 sm:p-6">
+        <div className="h-4 w-44 rounded bg-muted/60" />
+        <div className="mt-4 h-9 w-full max-w-[620px] rounded bg-muted/60" />
+        <div className="mt-4 h-4 w-full max-w-[760px] rounded bg-muted/60" />
+        <div className="mt-5 h-32 rounded-xl bg-muted/60" />
+      </div>
     </div>
   );
 }
 
-function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: MintBurnGauge | null }) {
-  const machineMode = snapshot.net24h < 0 ? "shredder" : "printer";
-  const ratePower = snapshot.score === null ? 0.28 : clamp((snapshot.leverPct ?? 0) / 100, 0.1, 1);
+function IterationOne({
+  snapshot,
+  gauge,
+}: {
+  snapshot: FlowSnapshot;
+  gauge: MintBurnGauge | null;
+}) {
   const totalFlow24h = snapshot.mint24h + snapshot.burn24h;
-  const burnDominance = totalFlow24h > 0 ? snapshot.burn24h / totalFlow24h : 0.5;
-  const burnPower = machineMode === "shredder" ? clamp((burnDominance - 0.5) / 0.5, 0.12, 1) : 0;
-  const sceneIntensity = machineMode === "shredder" ? burnPower : ratePower;
-  const sceneStatus = snapshot.score === null
-    ? "NO DATA"
-    : machineMode === "shredder"
-      ? `Burn ${Math.round(burnPower * 100)}%`
-      : `Rate ${Math.round(ratePower * 100)}%`;
+  const netDominance = snapshot.has24hActivity
+    ? Math.abs(snapshot.net24h) / Math.max(totalFlow24h, 1)
+    : 0.08;
+  const pressurePower = snapshot.score === null
+    ? 0.18
+    : Math.abs(snapshot.score) / 100;
+  const sceneIntensity = snapshot.netDirection === "flat"
+    ? 0.12
+    : clamp(Math.max(netDominance, pressurePower * 0.6), 0.12, 1);
   const sceneStress = snapshot.score === null || snapshot.score >= -10
     ? 0
-    : (-10 - snapshot.score) / 90;
+    : clamp((-10 - snapshot.score) / 90, 0, 1);
+  const gaugeDisplay = snapshot.score == null
+    ? null
+    : getPressureShiftDisplay(snapshot.score);
 
   return (
     <article className="relative h-full overflow-hidden rounded-2xl border bg-card p-4 sm:p-6">
@@ -256,8 +312,21 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
 
       <div className="relative space-y-5">
         <header className="flex flex-wrap items-center gap-2">
-          <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold", snapshot.mode.badgeClass)}>
-            {snapshot.mode.label}
+          <span
+            className={cn(
+              "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+              snapshot.directionUi.badgeClass,
+            )}
+          >
+            {snapshot.directionUi.label}
+          </span>
+          <span
+            className={cn(
+              "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+              snapshot.pressureUi.badgeClass,
+            )}
+          >
+            {snapshot.pressureUi.label}
           </span>
           {gauge?.flightToQuality && (
             <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
@@ -267,73 +336,105 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
         </header>
 
         <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
-          <div className="space-y-4">
-            <h3 className={cn("text-3xl font-black tracking-tight sm:text-5xl", snapshot.mode.headlineClass)}>
+          <div className="flex h-full flex-col gap-4">
+            <h3
+              className={cn(
+                "text-3xl font-black tracking-tight sm:text-5xl",
+                snapshot.pressureUi.headlineClass,
+              )}
+            >
               {snapshot.headline}
             </h3>
-            <p className="text-sm text-muted-foreground">{snapshot.mode.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {snapshot.description}
+            </p>
 
             <div className="grid gap-2 sm:grid-cols-3">
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Minted 24h</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Minted 24h
+                </p>
                 <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   <TrendingUp className="h-3.5 w-3.5" />
                   {formatCurrency(snapshot.mint24h)}
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Burned 24h</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Burned 24h
+                </p>
                 <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-700 dark:text-red-400">
                   <TrendingDown className="h-3.5 w-3.5" />
                   {formatCurrency(snapshot.burn24h)}
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net 24h</p>
-                <p className={cn("mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold", getNetColor(snapshot.net24h))}>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Net 24h
+                </p>
+                <p
+                  className={cn(
+                    "mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold",
+                    getNetColor(snapshot.net24h),
+                  )}
+                >
                   <Flame className="h-3.5 w-3.5" />
                   {formatSignedCurrency(snapshot.net24h)}
                 </p>
               </div>
             </div>
 
-            <div className="hidden lg:grid gap-2 sm:grid-cols-3">
+            <div className="hidden gap-2 sm:grid-cols-3 lg:grid">
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Minted 7d</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Minted 7d
+                </p>
                 <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                   <TrendingUp className="h-3.5 w-3.5" />
                   {formatMaybeCurrency(snapshot.mint7d)}
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Burned 7d</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Burned 7d
+                </p>
                 <p className="mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold text-red-700 dark:text-red-400">
                   <TrendingDown className="h-3.5 w-3.5" />
                   {formatMaybeCurrency(snapshot.burn7d)}
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/40 p-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Net 7d</p>
-                <p className={cn("mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold", getNetColor(snapshot.net7d))}>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Net 7d
+                </p>
+                <p
+                  className={cn(
+                    "mt-1 flex items-center gap-1.5 font-mono text-sm font-semibold",
+                    getNetColor(snapshot.net7d),
+                  )}
+                >
                   <Flame className="h-3.5 w-3.5" />
                   {formatSignedCurrency(snapshot.net7d)}
                 </p>
               </div>
             </div>
 
-            <div className={cn("space-y-2 rounded-xl border p-3", snapshot.mode.panelClass)}>
+            <div className={cn("mt-auto space-y-2 rounded-xl border p-3", snapshot.pressureUi.panelClass)}>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Printer pressure lever</span>
+                <span>Bank Run Gauge (pressure vs 30D)</span>
                 <span className="font-mono">
-                  {snapshot.score === null
-                    ? "NO DATA"
-                    : `${getNetPrefix(snapshot.score)}${Math.round(snapshot.score)} / 100`}
+                  {gaugeDisplay == null
+                    ? "NR"
+                    : `${getNetPrefix(gaugeDisplay)}${gaugeDisplay} / 100`}
                 </span>
               </div>
               <div className="relative h-3 rounded-full border border-border/60 bg-muted/25">
                 <div
                   className="h-full rounded-full"
-                  style={{ background: "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #84cc16 65%, #10b981 100%)" }}
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #ef4444 0%, #f59e0b 35%, #84cc16 65%, #10b981 100%)",
+                  }}
                 />
                 {snapshot.leverPct !== null && (
                   <div
@@ -342,22 +443,28 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
                   />
                 )}
               </div>
+              <p className="text-xs text-muted-foreground">
+                The gauge is a market-cap-weighted pressure-shift signal, not a literal mint-vs-burn direction meter.
+              </p>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="flex h-full flex-col gap-3">
             <FlowMachineScene
               size="full"
-              mode={machineMode}
+              mode={snapshot.directionUi.sceneMode}
               intensity={sceneIntensity}
-              statusText={sceneStatus}
-              title={machineMode === "shredder" ? "Shredder Desk" : "Printer Desk"}
+              statusText={snapshot.directionUi.label}
+              title={snapshot.directionUi.sceneTitle}
               subText={`Tracking ${snapshot.trackedCoins} stablecoins`}
+              accentHex={snapshot.directionUi.accentHex}
               stress={sceneStress}
             />
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top minter</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Top minter
+                </p>
                 <p className="mt-1 font-mono text-xs">
                   {snapshot.topMint ? (
                     <span className="text-emerald-700 dark:text-emerald-400">
@@ -369,7 +476,9 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
                 </p>
               </div>
               <div className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Top burner</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Top burner
+                </p>
                 <p className="mt-1 font-mono text-xs">
                   {snapshot.topBurn ? (
                     <span className="text-red-700 dark:text-red-400">
@@ -381,6 +490,11 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
                 </p>
               </div>
             </div>
+            <MintingPressureGauge
+              mintVolume24hUsd={snapshot.mint24h}
+              burnVolume24hUsd={snapshot.burn24h}
+              className="mt-auto"
+            />
           </div>
         </div>
       </div>
@@ -388,7 +502,13 @@ function IterationOne({ snapshot, gauge }: { snapshot: FlowSnapshot; gauge: Mint
   );
 }
 
-export function FlowBrrrOverview({ gauge, coins, weeklyHourly, isLoading, className }: FlowBrrrOverviewProps) {
+export function FlowBrrrOverview({
+  gauge,
+  coins,
+  weeklyHourly,
+  isLoading,
+  className,
+}: FlowBrrrOverviewProps) {
   const snapshot = useMemo(
     () => buildSnapshot(gauge, coins, weeklyHourly),
     [gauge, coins, weeklyHourly],

@@ -13,6 +13,23 @@ import {
   normalizeToSignedFlowIntensity,
   type FlowIntensitySemantics,
 } from "@/lib/flow-intensity";
+import {
+  getNetFlowDirection24h,
+  getPressureShiftState,
+} from "@shared/lib/mint-burn-signals";
+
+function inferHas24hActivity(
+  coin: MintBurnFlowsResponse["coins"][number],
+): boolean {
+  return Boolean(
+    coin.has24hActivity
+    ?? coin.mintCount24h
+    ?? coin.burnCount24h
+    ?? coin.mintVolume24hUsd
+    ?? coin.burnVolume24hUsd
+    ?? coin.netFlow24hUsd,
+  );
+}
 
 function resolveFlowSemantics(
   response: MintBurnFlowsResponse,
@@ -35,13 +52,38 @@ function normalizeMintBurnFlowsResponse(
           : normalizeToSignedFlowIntensity(response.gauge.score, semantics),
       intensitySemantics: "signed-v2",
     },
-    coins: response.coins.map((coin) => ({
-      ...coin,
-      flowIntensity:
+    coins: response.coins.map((coin) => {
+      const normalizedLegacyScore =
         coin.flowIntensity === null
           ? null
-          : normalizeToSignedFlowIntensity(coin.flowIntensity, semantics),
-    })),
+          : normalizeToSignedFlowIntensity(coin.flowIntensity, semantics);
+      const normalizedPressureShiftScore =
+        coin.pressureShiftScore === undefined
+          ? normalizedLegacyScore
+          : coin.pressureShiftScore === null
+            ? null
+            : normalizeToSignedFlowIntensity(coin.pressureShiftScore, semantics);
+      const has24hActivity = inferHas24hActivity(coin);
+
+      return {
+        ...coin,
+        flowIntensity: normalizedLegacyScore,
+        pressureShiftScore: normalizedPressureShiftScore,
+        pressureShiftState:
+          coin.pressureShiftState
+          ?? getPressureShiftState(normalizedPressureShiftScore),
+        netFlowDirection24h:
+          coin.netFlowDirection24h
+          ?? getNetFlowDirection24h({
+            netFlow24hUsd: coin.netFlow24hUsd,
+            has24hActivity,
+          }),
+        has24hActivity,
+        baselineDailyNetUsd: coin.baselineDailyNetUsd ?? null,
+        baselineDailyAbsUsd: coin.baselineDailyAbsUsd ?? null,
+        baselineDataDays: coin.baselineDataDays ?? null,
+      };
+    }),
   };
 }
 

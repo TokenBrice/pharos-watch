@@ -1,5 +1,5 @@
 /** Canonical Mint/Burn Flow methodology version (no "v" prefix). */
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "4.3";
+export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "4.4";
 
 /** Display-ready Mint/Burn Flow methodology version (with "v" prefix). */
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = `v${MINT_BURN_FLOW_METHODOLOGY_VERSION}`;
@@ -27,6 +27,22 @@ export interface MintBurnFlowMethodologyChangelogEntry {
  *   mint/burn flows did not initially ship with explicit version tags.
  */
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG: readonly MintBurnFlowMethodologyChangelogEntry[] = [
+  {
+    version: "4.4",
+    title: "Two-signal flow semantics and baseline-aware interpretation",
+    date: "2026-03-07",
+    effectiveAt: 1772841600,
+    summary:
+      "Per-coin flow UI now separates raw 24h net flow from baseline-relative pressure shift while preserving the underlying formula.",
+    methodologyImpact: [
+      "Per-coin flow UI now separates raw 24h net flow from baseline-relative pressure shift",
+      "API now exposes canonical `pressureShiftScore` and interpretation fields while retaining `flowIntensity` as a deprecated alias",
+      "Frontend printer and shredder visuals now key off actual net flow direction instead of score sign",
+      "Methodology and product copy now distinguish current direction from pressure-versus-baseline context",
+    ],
+    commits: ["unreleased"],
+    reconstructed: true,
+  },
   {
     version: "4.3",
     title: "NR gating for no-activity flow windows",

@@ -1,6 +1,17 @@
 # Mint/Burn Flow Methodology - Version Timeline
 
-Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.3` (2026-03-01 -> 2026-03-04).
+Internal changelog reconstructed from git history. Covers Mint/Burn Flow `v1.0` through `v4.4` (2026-03-01 -> 2026-03-07).
+
+---
+
+## v4.4 - Two-signal flow semantics and baseline-aware interpretation (Mar 7, 2026)
+
+**Commit:** `unreleased`
+
+- Per-coin flow UI now separates raw 24h net flow from baseline-relative pressure shift
+- API now exposes `pressureShiftScore`, `pressureShiftState`, `netFlowDirection24h`, `has24hActivity`, and baseline context fields
+- `flowIntensity` remains in the API as a deprecated compatibility alias for `pressureShiftScore`
+- Printer/shredder visuals now follow actual net flow direction instead of score sign
 
 ---
 

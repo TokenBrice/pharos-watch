@@ -20,7 +20,7 @@
 | Stability Index | `worker/src/lib/stability-index.ts`, `shared/lib/stability-index-version.ts` |
 | Safety Scores | `shared/lib/report-cards.ts`, `shared/lib/safety-score-version.ts` |
 | Liquidity Score | `worker/src/cron/dex-liquidity/pool-helpers.ts`, `shared/lib/liquidity-score-version.ts` |
-| Mint/Burn Flow | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-flow-version.ts` |
+| Mint/Burn Flow | `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`, `shared/lib/mint-burn-flow-version.ts` |
 | Yield Intelligence | `worker/src/cron/yield-helpers.ts`, `worker/src/lib/constants.ts` (PYS constants), `shared/lib/yield-methodology-version.ts` |
 | PegScore + DEWS | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/depeg-dews-version.ts` |
 | Contagion Stress Test | `shared/lib/report-cards.ts` (`computeStressedGrades`) |
@@ -45,6 +45,6 @@ If a versioned methodology changes, bump the corresponding version module in `sh
 - **Safety score base weights / peg multiplier:** `shared/lib/report-cards.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
 - **Liquidity component weights:** `worker/src/cron/dex-liquidity/pool-helpers.ts`
-- **FIS / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`
+- **Pressure Shift / gauge bands / flight-to-quality:** `worker/src/lib/mint-burn-scoring.ts`, `shared/lib/mint-burn-signals.ts`
 - **DEWS weights / signal thresholds / bands:** `worker/src/lib/dews.ts`
 - **Peg score blend / penalties / min history:** `shared/lib/peg-score.ts`

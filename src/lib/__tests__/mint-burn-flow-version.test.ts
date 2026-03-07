@@ -27,7 +27,9 @@ describe("mint-burn-flow-version", () => {
     expect(getMintBurnFlowMethodologyVersionAt(1772609391)).toBe("4.0");
     expect(getMintBurnFlowMethodologyVersionAt(1772612000)).toBe("4.1");
     expect(getMintBurnFlowMethodologyVersionAt(1772614800)).toBe("4.2");
-    expect(getMintBurnFlowMethodologyVersionAt(1772617000)).toBe("4.2");
+    expect(getMintBurnFlowMethodologyVersionAt(1772657000)).toBe("4.3");
+    expect(getMintBurnFlowMethodologyVersionAt(1772841600)).toBe("4.4");
+    expect(getMintBurnFlowMethodologyVersionAt(1772842600)).toBe("4.4");
   });
 
   it("returns current version for non-finite timestamps", () => {

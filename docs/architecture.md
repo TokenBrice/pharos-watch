@@ -27,7 +27,7 @@
 | `GET /api/safety-score-history` | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`) |
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
 | `GET /api/yield-history` | Per-coin historical yield data (`?stablecoin=ID&days=90`) |
-| `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin FIS, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
+| `GET /api/mint-burn-flows` | Mint/burn flow data with gauge score, per-coin net-flow + pressure-shift signals, hourly timeseries (`?stablecoin=ID`, `?hours=N`) |
 | `GET /api/mint-burn-events` | Individual mint/burn transfer events for a stablecoin (`?stablecoin=ID`, `?direction=`, `?chain=`, `?minAmount=`, `?limit=N&offset=M`) |
 | `GET /api/stress-signals` | DEWS stress signal scores per coin (`?stablecoin=ID`, `?days=N`) |
 | `POST /api/backfill-depegs` | Admin: backfill depeg events (requires `X-Admin-Key` header matching `ADMIN_KEY` secret) |
@@ -146,11 +146,11 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-table-logic.ts # Stablecoin table filtering/sorting/export helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
 │   ├── status/                   # Status dashboard component decomposition
-│   ├── flow-gauge.tsx            # Shared Flow Intensity band configuration map (labels/colors/classes)
+│   ├── flow-gauge.tsx            # Shared Bank Run Gauge band configuration map (labels/colors/classes)
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
-│   ├── flow-table.tsx            # Per-coin flow table with FIS, volumes, net flows
+│   ├── flow-table.tsx            # Per-coin flow table with pressure-shift states, volumes, and net flows
 │   ├── flow-event-feed.tsx       # Live mint/burn event feed with filtering
-│   ├── flow-summary-card.tsx     # Summary card for homepage/detail page
+│   ├── flow-summary-card.tsx     # Detail-page flow summary card with net-flow + pressure-shift signals
 │   ├── filter-bar.tsx            # Homepage filter bar (classification dropdowns)
 │   ├── kpi-bar.tsx               # Homepage KPI bar (total supply, dominance, etc.)
 │   ├── category-stats.tsx        # Summary cards (total, by type, by backing)
@@ -276,7 +276,7 @@ src/                              # Next.js frontend (static export)
     ├── dews-radar-utils.ts       # DEWS radar interaction helpers
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── faq.ts                    # FAQ item type + FAQPage JSON-LD builder
-    ├── flow-intensity.ts         # Mint/burn flow intensity shared UI helpers
+    ├── flow-intensity.ts         # Mint/burn pressure-shift display + compatibility helpers
     ├── mint-burn-timeframes.ts   # Mint/burn timeframe constants/utilities
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
     ├── page-metadata.ts          # Shared metadata builder for feature routes
@@ -298,6 +298,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
     ├── supply.ts                 # Supply helper utilities
     ├── classification.ts         # Classification labels/colors + threat/style maps
+    ├── mint-burn-signals.ts      # Shared mint/burn signal interpretation helpers (direction, pressure, composite state)
     ├── peg-rates.ts              # Peg reference derivation helpers
     ├── report-cards.ts           # Report-card scoring helpers
     └── ...                       # Additional pure cross-runtime modules migrated from `src/lib/`

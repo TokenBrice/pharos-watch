@@ -101,7 +101,7 @@ const FEATURES = [
   },
   {
     title: "Mint & Burn Flows",
-    description: "On-chain mint/burn activity with flow intensity and bank run gauge.",
+    description: "On-chain mint/burn activity with net flow, pressure shift, and bank run gauge.",
     href: "/flows",
     icon: ArrowUpDown,
     borderClass: "border-l-blue-500",

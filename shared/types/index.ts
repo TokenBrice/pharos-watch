@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  NET_FLOW_DIRECTION_24H_VALUES,
+  PRESSURE_SHIFT_STATE_VALUES,
+} from "@shared/lib/mint-burn-signals";
 
 // --- Flag-based classification ---
 
@@ -1119,8 +1123,10 @@ export interface YieldHistoryPoint {
 
 // --- Mint/Burn Flow types ---
 
-// Flow intensity uses signed semantics: -100 (max burn pressure) to +100 (max mint pressure).
+// Baseline-relative mint/burn pressure uses signed semantics: -100 (worsening) to +100 (improving).
 const SignedFlowIntensitySchema = z.number().min(-100).max(100);
+const PressureShiftStateSchema = z.enum(PRESSURE_SHIFT_STATE_VALUES);
+const NetFlowDirection24hSchema = z.enum(NET_FLOW_DIRECTION_24H_VALUES);
 
 export const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
@@ -1136,7 +1142,15 @@ export type MintBurnGauge = z.infer<typeof MintBurnGaugeSchema>;
 export const MintBurnCoinFlowSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
+  // Deprecated alias retained for one compatibility cycle.
   flowIntensity: SignedFlowIntensitySchema.nullable(),
+  pressureShiftScore: SignedFlowIntensitySchema.nullable().optional(),
+  pressureShiftState: PressureShiftStateSchema.optional(),
+  netFlowDirection24h: NetFlowDirection24hSchema.optional(),
+  has24hActivity: z.boolean().optional(),
+  baselineDailyNetUsd: z.number().nullable().optional(),
+  baselineDailyAbsUsd: z.number().nullable().optional(),
+  baselineDataDays: z.number().nullable().optional(),
   netFlow24hUsd: z.number(),
   mintVolume24hUsd: z.number(),
   burnVolume24hUsd: z.number(),

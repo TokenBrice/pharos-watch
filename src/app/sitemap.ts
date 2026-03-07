@@ -12,17 +12,17 @@ const LAST_EDITED: Record<string, string> = {
   "/cemetery/": "2026-02-26",
   "/privacy/": "2026-02-26",
   "/compare/": "2026-02-26",
-  "/methodology/": "2026-03-04",
+  "/methodology/": "2026-03-07",
   "/methodology/scoring-changelog/": "2026-02-28",
   "/methodology/depeg-changelog/": "2026-03-03",
   "/methodology/blacklist-tracker-changelog/": "2026-03-03",
   "/methodology/liquidity-score-changelog/": "2026-03-03",
   "/methodology/stability-index-changelog/": "2026-03-03",
-  "/methodology/mint-burn-flow-changelog/": "2026-03-04",
+  "/methodology/mint-burn-flow-changelog/": "2026-03-07",
   "/methodology/yield-changelog/": "2026-03-04",
   "/depeg/": "2026-03-02",
   "/yield/": "2026-03-02",
-  "/flows/": "2026-03-04",
+  "/flows/": "2026-03-07",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {

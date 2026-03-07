@@ -32,7 +32,27 @@ describe("mint-burn-flows regression: per-coin vs aggregate shape", () => {
   it("aggregate response DOES have a coins array", async () => {
     const aggregateResponse = {
       gauge: { score: 0, band: "NEUTRAL", intensitySemantics: "signed-v2", flightToQuality: false, flightIntensity: 0, trackedCoins: 4, trackedMcapUsd: 1e11 },
-      coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", flowIntensity: 0, netFlow24hUsd: 100, mintVolume24hUsd: 200, burnVolume24hUsd: 100, mintCount24h: 5, burnCount24h: 3, netFlow7dUsd: 500, largestEvent24h: null }],
+      coins: [{
+        stablecoinId: "usdt-tether",
+        symbol: "USDT",
+        flowIntensity: 0,
+        pressureShiftScore: 0,
+        pressureShiftState: "stable",
+        netFlowDirection24h: "minting",
+        has24hActivity: true,
+        baselineDailyNetUsd: 0,
+        baselineDailyAbsUsd: 1000000,
+        baselineDataDays: 30,
+        netFlow24hUsd: 100,
+        mintVolume24hUsd: 200,
+        burnVolume24hUsd: 100,
+        mintCount24h: 5,
+        burnCount24h: 3,
+        netFlow7dUsd: 500,
+        netFlow30dUsd: 1000,
+        netFlow90dUsd: 1000,
+        largestEvent24h: null,
+      }],
       hourly: [],
       updatedAt: 1000,
     };
@@ -163,6 +183,10 @@ describe("handleMintBurnFlows contract tests", () => {
 
     expect(usdt).toBeDefined();
     expect(usdt?.flowIntensity).toBeNull();
+    expect(usdt?.pressureShiftScore).toBeNull();
+    expect(usdt?.pressureShiftState).toBe("nr");
+    expect(usdt?.netFlowDirection24h).toBe("inactive");
+    expect(usdt?.has24hActivity).toBe(false);
     expect(body.gauge.score).toBeNull();
   });
 
@@ -230,8 +254,87 @@ describe("handleMintBurnFlows contract tests", () => {
     const activeCoin = body.coins.find((coin) => coin.stablecoinId === "usdc-circle");
 
     expect(noActivityCoin?.flowIntensity).toBeNull();
+    expect(noActivityCoin?.pressureShiftScore).toBeNull();
+    expect(noActivityCoin?.pressureShiftState).toBe("nr");
+    expect(noActivityCoin?.netFlowDirection24h).toBe("inactive");
+    expect(noActivityCoin?.has24hActivity).toBe(false);
     expect(activeCoin?.flowIntensity).toBe(100);
+    expect(activeCoin?.pressureShiftScore).toBe(100);
+    expect(activeCoin?.pressureShiftState).toBe("improving");
+    expect(activeCoin?.netFlowDirection24h).toBe("minting");
+    expect(activeCoin?.has24hActivity).toBe(true);
     expect(body.gauge.score).toBe(100);
+  });
+
+  it("keeps negative net flow separate from positive pressure shift semantics", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const nowDay = Math.floor(now / 86400) * 86400;
+    const firstHourTs = nowDay - 9 * 86400;
+    const baselineRows = Array.from({ length: 10 }, (_, index) => ({
+      stablecoin_id: "usdf-falcon",
+      day_ts: nowDay - index * 86400,
+      daily_net: -7_500_000,
+      daily_abs: 40_000_000,
+    }));
+    const cache = JSON.stringify({
+      peggedAssets: [{ id: "usdf-falcon", circulating: { peggedUSD: 600_000_000 } }],
+    });
+
+    const regressionDb = mockD1([
+      {
+        match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
+        rows: [
+          {
+            stablecoin_id: "usdf-falcon",
+            chain_id: "ethereum",
+            hour_ts: now - 3600,
+            mint_count: 1,
+            burn_count: 2,
+            mint_volume_usd: 300_000,
+            burn_volume_usd: 500_000,
+            net_flow_usd: -200_000,
+          },
+        ],
+      },
+      {
+        match: "SUM(net_flow_usd) as net_flow_usd",
+        rows: [{ stablecoin_id: "usdf-falcon", net_flow_usd: -200_000 }],
+      },
+      {
+        match: "SUM(net_flow_usd) as daily_net",
+        rows: baselineRows,
+      },
+      {
+        match: "MIN(hour_ts) as first_hour_ts",
+        rows: [{ stablecoin_id: "usdf-falcon", first_hour_ts: firstHourTs }],
+      },
+      { match: "mint_burn_events", rows: [] },
+      {
+        match: "cache",
+        rows: [{ key: "stablecoins", value: cache, updated_at: now }],
+        first: { key: "stablecoins", value: cache, updated_at: now },
+      },
+    ]);
+
+    const res = await handleMintBurnFlows(
+      regressionDb,
+      new URL("https://x/api/mint-burn-flows"),
+    );
+    expect(res.status).toBe(200);
+
+    const body = MintBurnFlowsResponseSchema.parse(await res.json());
+    const usdf = body.coins.find((coin) => coin.stablecoinId === "usdf-falcon");
+
+    expect(usdf).toBeDefined();
+    expect(usdf?.netFlow24hUsd).toBeLessThan(0);
+    expect(usdf?.pressureShiftScore).toBeGreaterThan(0);
+    expect(usdf?.flowIntensity).toBe(usdf?.pressureShiftScore);
+    expect(usdf?.netFlowDirection24h).toBe("burning");
+    expect(usdf?.pressureShiftState).toBe("improving");
+    expect(usdf?.has24hActivity).toBe(true);
+    expect(usdf?.baselineDailyNetUsd).toBe(-7_500_000);
+    expect(usdf?.baselineDailyAbsUsd).toBe(40_000_000);
+    expect(usdf?.baselineDataDays).toBe(10);
   });
 
   it("serves cached aggregate fallback when live query fails", async () => {

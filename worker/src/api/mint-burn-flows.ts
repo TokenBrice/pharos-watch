@@ -11,6 +11,10 @@ import {
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
+import {
+  getNetFlowDirection24h,
+  getPressureShiftState,
+} from "@shared/lib/mint-burn-signals";
 
 // ---------------------------------------------------------------------------
 // Safe-haven classification (flight-to-quality)
@@ -384,6 +388,13 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
       stablecoinId: string;
       symbol: string;
       flowIntensity: number | null;
+      pressureShiftScore: number | null;
+      pressureShiftState: "improving" | "stable" | "worsening" | "nr";
+      netFlowDirection24h: "minting" | "burning" | "flat" | "inactive";
+      has24hActivity: boolean;
+      baselineDailyNetUsd: number | null;
+      baselineDailyAbsUsd: number | null;
+      baselineDataDays: number | null;
       netFlow24hUsd: number;
       mintVolume24hUsd: number;
       burnVolume24hUsd: number;
@@ -432,6 +443,12 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
             dataAgeDays: baseline.dataDays,
           })
         : null;
+      const pressureShiftScore = intensity;
+      const pressureShiftState = getPressureShiftState(pressureShiftScore);
+      const netFlowDirection24h = getNetFlowDirection24h({
+        netFlow24hUsd: netFlow24h,
+        has24hActivity,
+      });
 
       gaugeInputs.push({ intensity, mcap });
 
@@ -457,6 +474,13 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
         stablecoinId: id,
         symbol: config.symbol,
         flowIntensity: intensity,
+        pressureShiftScore,
+        pressureShiftState,
+        netFlowDirection24h,
+        has24hActivity,
+        baselineDailyNetUsd: baseline?.avgNet ?? null,
+        baselineDailyAbsUsd: baseline?.avgAbs ?? null,
+        baselineDataDays: baseline?.dataDays ?? null,
         netFlow24hUsd: netFlow24h,
         mintVolume24hUsd: agg?.mintVolume ?? 0,
         burnVolume24hUsd: agg?.burnVolume ?? 0,

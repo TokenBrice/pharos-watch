@@ -1139,7 +1139,7 @@ Historical yield data for a single stablecoin.
 
 ### `GET /api/mint-burn-flows`
 
-Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin Flow Intensity Scores, and hourly timeseries. Updated every 20 minutes by the sync cron.
+Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-coin net-flow + pressure-shift signals, and hourly timeseries. Updated every 20 minutes by the sync cron.
 
 **Cache:** standard
 
@@ -1172,7 +1172,7 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `score` | `number \| null` | Market-cap-weighted composite FIS (-100 to +100). `null` when insufficient data |
+| `score` | `number \| null` | Market-cap-weighted pressure-shift composite (-100 to +100). `null` when insufficient data |
 | `band` | `string \| null` | Gauge band: `"CRISIS"`, `"STRESS"`, `"CAUTIOUS"`, `"NEUTRAL"`, `"HEALTHY"`, `"CONFIDENT"`, `"SURGE"` |
 | `flightToQuality` | `boolean` | Whether flight-to-quality conditions are active |
 | `flightIntensity` | `number` | Flight-to-quality intensity (0–100). 0 when not active |
@@ -1185,8 +1185,15 @@ Mint/burn flow data across tracked stablecoins — aggregate gauge score, per-co
 |-------|------|-------------|
 | `stablecoinId` | `string` | Pharos stablecoin ID |
 | `symbol` | `string` | Token symbol |
-| `flowIntensity` | `number \| null` | Flow Intensity Score (-100 to +100). `null` if < 7 days of data |
-| `netFlow24hUsd` | `number` | Net flow over the requested window (USD, positive = net minting) |
+| `flowIntensity` | `number \| null` | Deprecated alias for `pressureShiftScore`; retained for compatibility |
+| `pressureShiftScore` | `number \| null` | Canonical baseline-relative pressure score (-100 to +100). `null` if < 7 days of data or no current activity |
+| `pressureShiftState` | `"improving" \| "stable" \| "worsening" \| "nr"` | Interpreted pressure state from `pressureShiftScore` |
+| `netFlowDirection24h` | `"minting" \| "burning" \| "flat" \| "inactive"` | Current 24h direction derived from raw net flow + activity |
+| `has24hActivity` | `boolean` | Whether any 24h mint/burn events were recorded for the coin |
+| `baselineDailyNetUsd` | `number \| null` | Average daily net flow over the baseline window used for scoring |
+| `baselineDailyAbsUsd` | `number \| null` | Average daily absolute flow over the baseline window used for scoring |
+| `baselineDataDays` | `number \| null` | Number of tracked days contributing to the baseline window |
+| `netFlow24hUsd` | `number` | Raw 24h net flow (USD, positive = net minting, negative = net burning) |
 | `mintVolume24hUsd` | `number` | Total mint volume (USD) |
 | `burnVolume24hUsd` | `number` | Total burn volume (USD) |
 | `mintCount24h` | `number` | Number of mint events |
