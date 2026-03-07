@@ -11,65 +11,9 @@ All agents plans (design or implementation), as well as research and processes d
 
 ## cmcs — Orchestration
 
-You are the **orchestrator**. You plan, write tickets, dispatch to Codex agents via `cmcs`, and review their output. You do NOT implement code directly unless trivial.
+While in cmcs workflow, you are the **orchestrator**. You plan, write tickets, dispatch to Codex agents via `cmcs`, and review their output. You do NOT implement code directly unless trivial.
 
-### Dispatch
-
-```
-Dependent tasks?  → Same worktree, sequential tickets (TICKET-001, 002, ...)
-Independent tasks? → Separate worktrees, parallel runs
-Single task?       → Single worktree, single ticket
-```
-
-### Ticket Format
-
-Place in `.cmcs/tickets/TICKET-001.md` (or `<worktree>/.cmcs/tickets/`):
-cmcs agents perform best on narrowly focused tasks. Tickets should be decomposed in the smallest logical chunk possible and using the appropriate `reasoning_effort` and `model` for the task.
-
-**Model selection:** `gpt-5.3-codex` for complex multi-file refactors. `gpt-5.3-codex-spark` for repetitive pattern application. `gpt-5.3-codex-mini` for mechanical/rote fixes. When unsure, use `gpt-5.3-codex`. See `agents/process/cmcs-large-implementation-preparation.md` for the full model guide.
-
-```markdown
----
-title: "Short imperative description"
-agent: "codex"
-model: "gpt-5.3-codex"  # see model selection guide above
-reasoning_effort: "high"         # optional: low, medium, high, xhigh (default: xhigh)
-done: false
----
-
-## Goal
-One sentence.
-
-## Task
-Numbered steps with exact file paths, function signatures, behavior.
-
-## Acceptance Criteria
-Concrete runnable checks.
-```
-
-### Commands
-
-```bash
-cmcs init                        # once per repo
-cmcs worktree create <branch>    # parallel workspace
-cmcs run <path>                  # process tickets (. for current repo)
-cmcs status                      # all runs
-cmcs wait <path>                 # block until done
-cmcs stop <path>                 # terminate run
-cmcs logs <path>                 # view agent output
-cmcs dashboard                   # web UI
-```
-
-### Rules
-
-- **Never use Claude sub-agents for implementation.** All work goes to Codex via tickets.
-- **Never auto-merge.** Review every file Codex creates, run acceptance criteria yourself.
-- **Never run sudo.**
-
-### Large Implementation Preparation
-
-**`/agents/process/cmcs-large-implementation-preparation.md`** — Preparation process for large multi-phase projects executed via cmcs: research → design → implementation plan → execution handover → tickets. **Read before planning any task that touches 10+ files or spans multiple worktrees.**
-
+**Refer to `/agents/process/cmcs-base.md` while in cmcs workflow.**
 
 ## Core Principles
 
@@ -155,3 +99,38 @@ Read these when working on related code:
 - **`docs/status-dashboard.md`** — `/status` architecture: admin auth, cache/cron/data-quality synthesis, endpoint probes, inline admin actions
 - **`docs/worker-and-api-limits.md`** — Hard limits for external services (Cloudflare Workers/D1, CoinGecko, DefiLlama, DexScreener, Alchemy, Etherscan, etc.). **Read before designing any new feature that touches the worker.**
 
+## Design Context
+
+### Users
+
+Crypto/DeFi participants who actively monitor stablecoin health — checking market conditions, peg stability, and risk signals regularly to inform financial decisions. They value density, precision, and speed-to-insight over polish.
+
+### Brand Personality
+
+**Vigilant, precise, authoritative.** Pharos is a lighthouse — it watches every peg so you don't have to. The tone is practitioner-built, not corporate. It earns trust through completeness and specificity, not visual polish.
+
+### Emotional Design
+
+**Calm by default, urgent when needed.** The steady state is composed and analytical — the user feels informed and in control. When risk signals fire (depeg events, DEWS alerts, PSI band shifts), the interface shifts tone to communicate urgency without panic.
+
+### Aesthetic Direction
+
+- **Theme**: Dark-first financial dashboard (light mode supported)
+- **References**: DefiLlama, Token Terminal — clean DeFi dashboards with good data density and practical crypto analytics
+- **Brand accent**: Frost-blue `oklch(0.72 0.14 248)` — used sparingly for navigation active states and brand touches
+- **Fonts**: Geist Sans (UI) + Geist Mono (all numbers) — monospace numbers signal precision and trust
+- **Color use**: Semantic only — color communicates state (health, risk, trend direction), never decoration
+
+### Anti-References (what Pharos must NOT look like)
+
+- **Web3 marketing pages**: Purple gradients, glassmorphism, buzzword-heavy, style over substance
+- **Corporate fintech**: Sterile, over-polished, feels like a bank app — no personality
+- **Generic SaaS dashboards**: Cookie-cutter admin panels with big empty cards and pastel gradients
+
+### Design Principles
+
+1. **Data density over decoration** — every pixel earns its place by communicating information
+2. **Calm authority, not loud urgency** — steady state is composed; risk signals shift the tone
+3. **Precision as personality** — monospace numbers, exact percentages, named bands — trust through specificity
+4. **Semantic color only** — color communicates state (health, risk, trend), never decoration
+5. **DeFi-native, not corporate** — practical, practitioner-built feel; personality through substance not style
