@@ -4,17 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
-  XAxis,
-  YAxis,
-  Tooltip,
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { DateTooltip, MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
 
 interface SeriesData {
   id: string;
@@ -186,36 +183,17 @@ export function ComparisonChart({
                 data={displayData}
                 margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
               >
-                <XAxis
+                <TimeXAxis
                   dataKey="ts"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
                   minTickGap={72}
                   tickFormatter={formatTimestamp}
                 />
-                <YAxis
-                  tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={activeFormatter}
-                />
-                <Tooltip
-                  formatter={(value: number | string | (number | string)[] | undefined, name: string | number | undefined) => {
+                <MonoYAxis tickFormatter={activeFormatter} />
+                <DateTooltip
+                  formatter={(value, name) => {
                     const match = series.find((s) => s.id === name);
                     return [activeFormatter(Number(value)), match?.label ?? String(name ?? "")];
                   }}
-                  labelFormatter={(label) =>
-                    new Date(Number(label)).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  }
-                  {...RECHARTS_TOOLTIP_STYLES}
                 />
                 {series.map((s) => (
                   <Line

@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { AreaChart, Area } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/use-stress-signals";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { THREAT_BAND_COLORS, THREAT_BAND_LABELS, THREAT_BAND_HEX } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
-import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: "Supply Velocity", metricKey: "delta1d", metricLabel: "1d change" },
@@ -167,33 +167,15 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                     <stop offset="95%" stopColor={bandHex} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis
+                <TimeGrid />
+                <TimeXAxis
                   dataKey="ts"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tick={{ fontSize: 12, fontFamily: "var(--font-mono)", fill: "var(--color-muted-foreground)" }}
                   tickFormatter={(ts: number) =>
                     new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                   }
                 />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 12, fontFamily: "var(--font-mono)", fill: "var(--color-muted-foreground)" }}
-                  width={30}
-                />
-                <Tooltip
-                  {...RECHARTS_TOOLTIP_STYLES}
-                  labelFormatter={(ts) =>
-                    new Date(Number(ts)).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  }
-                  formatter={(val) => [`${val}/100`, "DEWS"]}
-                />
+                <MonoYAxis domain={[0, 100]} width={30} />
+                <DateTooltip formatter={(val) => [`${val}/100`, "DEWS"]} />
                 <Area type="monotone" dataKey="score" stroke={bandHex} fill="url(#dewsGrad)" strokeWidth={2} />
               </AreaChart>
             ) : (

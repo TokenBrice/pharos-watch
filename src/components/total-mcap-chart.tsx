@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useCallback } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { AreaChart, Area } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
-import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import { useStablecoinCharts } from "@/hooks/use-stablecoin-charts";
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 
@@ -154,48 +154,17 @@ export function TotalMcapChart() {
                       <stop offset="95%" stopColor={OTHERS_SLATE} stopOpacity={0.05} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis
+                  <TimeGrid />
+                  <TimeXAxis
                     dataKey="ts"
-                    type="number"
-                    scale="time"
-                    domain={["dataMin", "dataMax"]}
-                    tick={{
-                      fontSize: 12,
-                      fontFamily: "var(--font-mono, monospace)",
-                      fill: "var(--color-muted-foreground)",
-                    }}
-                    tickLine={false}
-                    axisLine={false}
                     minTickGap={72}
-                    tickFormatter={(ts: number) =>
-                      new Date(ts).toLocaleDateString("en-US", {
-                        month: "short",
-                        year: "2-digit",
-                      })
-                    }
                   />
-                  <YAxis
-                    tick={{
-                      fontSize: 12,
-                      fontFamily: "var(--font-mono, monospace)",
-                      fill: "var(--color-muted-foreground)",
-                    }}
-                    tickLine={false}
-                    axisLine={false}
+                  <MonoYAxis
                     tickFormatter={(val: number) => formatCurrency(val, 0)}
                     domain={yDomain}
                   />
-                  <Tooltip
+                  <DateTooltip
                     formatter={(value, name) => [formatCurrency(Number(value)), String(name)]}
-                    labelFormatter={(label) =>
-                      new Date(Number(label)).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    }
-                    {...RECHARTS_TOOLTIP_STYLES}
                   />
                   <Area
                     type="monotone"

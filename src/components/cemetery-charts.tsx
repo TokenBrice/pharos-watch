@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import {
   PieChart,
   Pie,
@@ -26,7 +26,7 @@ import type { CauseOfDeath } from "@shared/types";
 
 /* ── Custom tooltip shell ── */
 
-function ChartTooltip({ children }: { children: React.ReactNode }) {
+function ChartTooltip({ children }: { children: ReactNode }) {
   return (
     <div
       className="rounded-lg border px-3 py-2 shadow-md text-sm"
@@ -39,6 +39,25 @@ function ChartTooltip({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
+  );
+}
+
+const CEMETERY_CHART_HEIGHT = "h-[250px] sm:h-[350px]";
+
+function CemeteryChartCard({ title, ariaLabel, children }: { title: string; ariaLabel?: string; children: ReactNode }) {
+  return (
+    <Card className="rounded-xl animate-in fade-in duration-300">
+      <CardHeader className="pb-2">
+        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className={CEMETERY_CHART_HEIGHT} role={ariaLabel ? "figure" : undefined} aria-label={ariaLabel}>
+          {children}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -60,62 +79,47 @@ function CauseOfDeathByCountChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Cause of Death (by Count)
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] sm:h-[350px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-            minWidth={0}
-            minHeight={0}
-            aria-label="Cause of death distribution by count"
+    <CemeteryChartCard title="Cause of Death (by Count)" ariaLabel="Cause of death distribution by count">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={95}
+            dataKey="value"
+            nameKey="name"
+            paddingAngle={3}
+            strokeWidth={0}
           >
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={95}
-                dataKey="value"
-                nameKey="name"
-                paddingAngle={3}
-                strokeWidth={0}
-              >
-                {data.map((d) => (
-                  <Cell key={d.cause} fill={CAUSE_HEX[d.cause]} />
-                ))}
-              </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.[0]) return null;
-                  const d = payload[0].payload as (typeof data)[0];
-                  return (
-                    <ChartTooltip>
-                      <p className="font-semibold" style={{ color: CAUSE_HEX[d.cause] }}>
-                        {d.name}
-                      </p>
-                      <p className="font-mono tabular-nums">
-                        {d.value} stablecoin{d.value !== 1 ? "s" : ""}{" "}
-                        <span className="text-muted-foreground">
-                          ({((d.value / DEAD_STABLECOINS.length) * 100).toFixed(0)}%)
-                        </span>
-                      </p>
-                    </ChartTooltip>
-                  );
-                }}
-              />
-              <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+            {data.map((d) => (
+              <Cell key={d.cause} fill={CAUSE_HEX[d.cause]} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload?.[0]) return null;
+              const d = payload[0].payload as (typeof data)[0];
+              return (
+                <ChartTooltip>
+                  <p className="font-semibold" style={{ color: CAUSE_HEX[d.cause] }}>
+                    {d.name}
+                  </p>
+                  <p className="font-mono tabular-nums">
+                    {d.value} stablecoin{d.value !== 1 ? "s" : ""}{" "}
+                    <span className="text-muted-foreground">
+                      ({((d.value / DEAD_STABLECOINS.length) * 100).toFixed(0)}%)
+                    </span>
+                  </p>
+                </ChartTooltip>
+              );
+            }}
+          />
+          <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
+        </PieChart>
+      </ResponsiveContainer>
+    </CemeteryChartCard>
   );
 }
 
@@ -141,60 +145,45 @@ function CauseOfDeathByMcapChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Cause of Death (by Peak Mcap)
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] sm:h-[350px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-            minWidth={0}
-            minHeight={0}
-            aria-label="Cause of death distribution by peak market cap"
+    <CemeteryChartCard title="Cause of Death (by Peak Mcap)" ariaLabel="Cause of death distribution by peak market cap">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={95}
+            dataKey="value"
+            nameKey="name"
+            paddingAngle={3}
+            strokeWidth={0}
           >
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={95}
-                dataKey="value"
-                nameKey="name"
-                paddingAngle={3}
-                strokeWidth={0}
-              >
-                {data.map((d) => (
-                  <Cell key={d.cause} fill={CAUSE_HEX[d.cause]} />
-                ))}
-              </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.[0]) return null;
-                  const d = payload[0].payload as (typeof data)[0];
-                  return (
-                    <ChartTooltip>
-                      <p className="font-semibold" style={{ color: CAUSE_HEX[d.cause] }}>
-                        {d.name}
-                      </p>
-                      <p className="font-mono tabular-nums">
-                        {formatCurrency(d.value, 1)}{" "}
-                        <span className="text-muted-foreground">({((d.value / total) * 100).toFixed(0)}%)</span>
-                      </p>
-                    </ChartTooltip>
-                  );
-                }}
-              />
-              <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+            {data.map((d) => (
+              <Cell key={d.cause} fill={CAUSE_HEX[d.cause]} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload?.[0]) return null;
+              const d = payload[0].payload as (typeof data)[0];
+              return (
+                <ChartTooltip>
+                  <p className="font-semibold" style={{ color: CAUSE_HEX[d.cause] }}>
+                    {d.name}
+                  </p>
+                  <p className="font-mono tabular-nums">
+                    {formatCurrency(d.value, 1)}{" "}
+                    <span className="text-muted-foreground">({((d.value / total) * 100).toFixed(0)}%)</span>
+                  </p>
+                </ChartTooltip>
+              );
+            }}
+          />
+          <Legend iconType="circle" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
+        </PieChart>
+      </ResponsiveContainer>
+    </CemeteryChartCard>
   );
 }
 
@@ -218,90 +207,75 @@ function DeathsByYearChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Deaths per Year
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] sm:h-[350px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-            minWidth={0}
-            minHeight={0}
-            aria-label="Stablecoin deaths per year"
-          >
-            <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis
-                dataKey="year"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                yAxisId="left"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => formatCurrency(v, 0)}
-              />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null;
-                  return (
-                    <ChartTooltip>
-                      <p className="font-semibold mb-1">{label}</p>
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
-                          <span>Deaths</span>
-                        </div>
-                        <span className="font-mono tabular-nums">{payload[0]?.value}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
-                          <span>Peak Mcap</span>
-                        </div>
-                        <span className="font-mono tabular-nums">
-                          {formatCurrency(Number(payload[1]?.value ?? 0), 1)}
-                        </span>
-                      </div>
-                    </ChartTooltip>
-                  );
-                }}
-              />
-              <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
-              <Bar yAxisId="left" dataKey="count" name="Deaths" fill={CHART_RED} radius={[3, 3, 0, 0]} />
-              <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill={CHART_BLUE} radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <CemeteryChartCard title="Deaths per Year" ariaLabel="Stablecoin deaths per year">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data} barGap={4} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+          <XAxis
+            dataKey="year"
+            tick={{
+              fontSize: 12,
+              fontFamily: "var(--font-mono, monospace)",
+              fill: "var(--color-muted-foreground)",
+            }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            yAxisId="left"
+            tick={{
+              fontSize: 12,
+              fontFamily: "var(--font-mono, monospace)",
+              fill: "var(--color-muted-foreground)",
+            }}
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+          />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            tick={{
+              fontSize: 12,
+              fontFamily: "var(--font-mono, monospace)",
+              fill: "var(--color-muted-foreground)",
+            }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => formatCurrency(v, 0)}
+          />
+          <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null;
+              return (
+                <ChartTooltip>
+                  <p className="font-semibold mb-1">{label}</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_RED }} />
+                      <span>Deaths</span>
+                    </div>
+                    <span className="font-mono tabular-nums">{payload[0]?.value}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: CHART_BLUE }} />
+                      <span>Peak Mcap</span>
+                    </div>
+                    <span className="font-mono tabular-nums">
+                      {formatCurrency(Number(payload[1]?.value ?? 0), 1)}
+                    </span>
+                  </div>
+                </ChartTooltip>
+              );
+            }}
+          />
+          <Legend iconType="square" iconSize={10} wrapperStyle={{ fontSize: 12 }} />
+          <Bar yAxisId="left" dataKey="count" name="Deaths" fill={CHART_RED} radius={[3, 3, 0, 0]} />
+          <Bar yAxisId="right" dataKey="mcap" name="Peak Mcap" fill={CHART_BLUE} radius={[3, 3, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </CemeteryChartCard>
   );
 }
 
@@ -322,65 +296,50 @@ function TopFailuresChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Largest Failures by Peak Mcap
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] sm:h-[350px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-            minWidth={0}
-            minHeight={0}
-            aria-label="Top 10 largest stablecoin failures"
-          >
-            <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
-              <XAxis
-                type="number"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => formatCurrency(v, 0)}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}
-                tickLine={false}
-                axisLine={false}
-                width={60}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.[0]) return null;
-                  const d = payload[0].payload as (typeof data)[0];
-                  return (
-                    <ChartTooltip>
-                      <p className="font-semibold">{d.name}</p>
-                      <p className="font-mono tabular-nums">{formatCurrency(d.mcap, 1)}</p>
-                      <p style={{ color: CAUSE_HEX[d.cause] }}>{CAUSE_META[d.cause].label}</p>
-                    </ChartTooltip>
-                  );
-                }}
-              />
-              <Bar dataKey="mcap" radius={[0, 4, 4, 0]}>
-                {data.map((d) => (
-                  <Cell key={d.name} fill={CAUSE_HEX[d.cause]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <CemeteryChartCard title="Largest Failures by Peak Mcap" ariaLabel="Top 10 largest stablecoin failures">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <BarChart data={data} layout="vertical" margin={{ left: 10 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" horizontal={false} />
+          <XAxis
+            type="number"
+            tick={{
+              fontSize: 12,
+              fontFamily: "var(--font-mono, monospace)",
+              fill: "var(--color-muted-foreground)",
+            }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => formatCurrency(v, 0)}
+          />
+          <YAxis
+            type="category"
+            dataKey="name"
+            tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)" }}
+            tickLine={false}
+            axisLine={false}
+            width={60}
+          />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload?.[0]) return null;
+              const d = payload[0].payload as (typeof data)[0];
+              return (
+                <ChartTooltip>
+                  <p className="font-semibold">{d.name}</p>
+                  <p className="font-mono tabular-nums">{formatCurrency(d.mcap, 1)}</p>
+                  <p style={{ color: CAUSE_HEX[d.cause] }}>{CAUSE_META[d.cause].label}</p>
+                </ChartTooltip>
+              );
+            }}
+          />
+          <Bar dataKey="mcap" radius={[0, 4, 4, 0]}>
+            {data.map((d) => (
+              <Cell key={d.name} fill={CAUSE_HEX[d.cause]} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </CemeteryChartCard>
   );
 }
 
@@ -406,78 +365,63 @@ function CumulativeDestroyedChart() {
   }, []);
 
   return (
-    <Card className="rounded-xl animate-in fade-in duration-300">
-      <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Cumulative Peak Value Destroyed
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px] sm:h-[350px]">
-          <ResponsiveContainer
-            width="100%"
-            height="100%"
-            minWidth={0}
-            minHeight={0}
-            aria-label="Cumulative peak value destroyed over time"
-          >
-            <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
-              <defs>
-                <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_RED} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_RED} stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis
-                dataKey="date"
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-                interval={Math.max(0, Math.floor(data.length / 8))}
-              />
-              <YAxis
-                tick={{
-                  fontSize: 12,
-                  fontFamily: "var(--font-mono, monospace)",
-                  fill: "var(--color-muted-foreground)",
-                }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => formatCurrency(v, 0)}
-              />
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (!active || !payload?.[0]) return null;
-                  const d = payload[0].payload as (typeof data)[0];
-                  return (
-                    <ChartTooltip>
-                      <p className="font-semibold">{d.symbol}</p>
-                      <p className="text-muted-foreground text-xs">{d.date}</p>
-                      <p className="font-mono tabular-nums">+{formatCurrency(d.added, 1)}</p>
-                      <p className="font-mono tabular-nums text-red-700 dark:text-red-400">
-                        Total: {formatCurrency(d.cumulative, 1)}
-                      </p>
-                    </ChartTooltip>
-                  );
-                }}
-              />
-              <Area
-                type="stepAfter"
-                dataKey="cumulative"
-                stroke={CHART_RED}
-                strokeWidth={2}
-                fill="url(#destroyedGradient)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <CemeteryChartCard title="Cumulative Peak Value Destroyed" ariaLabel="Cumulative peak value destroyed over time">
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+        <AreaChart data={data} margin={{ top: 5, right: 5, bottom: 20, left: 5 }}>
+          <defs>
+            <linearGradient id="destroyedGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={CHART_RED} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={CHART_RED} stopOpacity={0.05} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+          <XAxis
+            dataKey="date"
+            tick={{
+              fontSize: 12,
+              fontFamily: "var(--font-mono, monospace)",
+              fill: "var(--color-muted-foreground)",
+            }}
+            tickLine={false}
+            axisLine={false}
+            interval={Math.max(0, Math.floor(data.length / 8))}
+          />
+          <YAxis
+            tick={{
+              fontSize: 12,
+              fontFamily: "var(--font-mono, monospace)",
+              fill: "var(--color-muted-foreground)",
+            }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => formatCurrency(v, 0)}
+          />
+          <Tooltip
+            content={({ active, payload }) => {
+              if (!active || !payload?.[0]) return null;
+              const d = payload[0].payload as (typeof data)[0];
+              return (
+                <ChartTooltip>
+                  <p className="font-semibold">{d.symbol}</p>
+                  <p className="text-muted-foreground text-xs">{d.date}</p>
+                  <p className="font-mono tabular-nums">+{formatCurrency(d.added, 1)}</p>
+                  <p className="font-mono tabular-nums text-red-700 dark:text-red-400">
+                    Total: {formatCurrency(d.cumulative, 1)}
+                  </p>
+                </ChartTooltip>
+              );
+            }}
+          />
+          <Area
+            type="stepAfter"
+            dataKey="cumulative"
+            stroke={CHART_RED}
+            strokeWidth={2}
+            fill="url(#destroyedGradient)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </CemeteryChartCard>
   );
 }
 
@@ -492,27 +436,15 @@ export function CemeteryCharts() {
     return (
       <div className="grid grid-cols-2 gap-3 md:gap-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <Card key={index} className="rounded-xl">
-            <CardHeader className="pb-2">
-              <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Loading chart
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartSkeleton className="h-[250px] sm:h-[350px]" />
-            </CardContent>
-          </Card>
+          <CemeteryChartCard key={index} title="Loading chart">
+            <ChartSkeleton className="h-full w-full" />
+          </CemeteryChartCard>
         ))}
-        <Card className="col-span-2 rounded-xl">
-          <CardHeader className="pb-2">
-            <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Loading chart
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartSkeleton className="h-[250px] sm:h-[350px]" />
-          </CardContent>
-        </Card>
+        <div className="col-span-2">
+          <CemeteryChartCard title="Loading chart">
+            <ChartSkeleton className="h-full w-full" />
+          </CemeteryChartCard>
+        </div>
       </div>
     );
   }

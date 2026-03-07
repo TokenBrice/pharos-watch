@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { AreaChart, Area } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
-import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
+import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
 
 function McapXTick({
@@ -168,40 +169,20 @@ export function McapChart({ data, isLoading }: McapChartProps) {
                     <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis
+                <TimeGrid />
+                <TimeXAxis
                   dataKey="ts"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
                   ticks={xTicks}
                   interval={range === "all" ? 0 : "preserveStartEnd"}
                   tick={<McapXTick range={range} />}
-                  tickLine={false}
-                  axisLine={false}
                   height={range === "all" ? 44 : 30}
                 />
-                <YAxis
-                  tick={{
-                    fontSize: 12,
-                    fontFamily: "var(--font-mono, monospace)",
-                    fill: "var(--color-muted-foreground)",
-                  }}
-                  tickLine={false}
-                  axisLine={false}
+                <MonoYAxis
                   tickFormatter={(val: number) => formatCurrency(val)}
                   domain={yDomain}
                 />
-                <Tooltip
+                <DateTooltip
                   formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
-                  labelFormatter={(label) =>
-                    new Date(Number(label)).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  }
-                  {...RECHARTS_TOOLTIP_STYLES}
                 />
                 <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
               </AreaChart>

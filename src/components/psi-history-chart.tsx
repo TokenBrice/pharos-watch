@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
+import { AreaChart, Area, ReferenceArea, ReferenceLine } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,10 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { PSI_BAND_COLORS, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import { trackEvent } from "@/lib/analytics";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
@@ -304,47 +305,14 @@ export function ScoreChart({
                       />
                     ),
                   )}
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                  <XAxis
+                  <TimeGrid />
+                  <TimeXAxis
                     dataKey="ts"
-                    type="number"
-                    scale="time"
-                    domain={["dataMin", "dataMax"]}
-                    tick={{
-                      fontSize: 12,
-                      fontFamily: "var(--font-mono, monospace)",
-                      fill: "var(--color-muted-foreground)",
-                    }}
-                    tickLine={false}
-                    axisLine={false}
                     minTickGap={72}
-                    tickFormatter={(ts: number) =>
-                      new Date(ts).toLocaleDateString("en-US", {
-                        month: "short",
-                        year: "2-digit",
-                      })
-                    }
                   />
-                  <YAxis
-                    tick={{
-                      fontSize: 12,
-                      fontFamily: "var(--font-mono, monospace)",
-                      fill: "var(--color-muted-foreground)",
-                    }}
-                    tickLine={false}
-                    axisLine={false}
-                    domain={[0, 100]}
-                  />
-                  <Tooltip
+                  <MonoYAxis domain={[0, 100]} />
+                  <DateTooltip
                     formatter={(value) => [Number(value).toFixed(1), "Score"]}
-                    labelFormatter={(label) =>
-                      new Date(Number(label)).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    }
-                    {...RECHARTS_TOOLTIP_STYLES}
                   />
                   <Area
                     type="monotone"
