@@ -12,13 +12,13 @@ export function FeatureStatusBadge({ status, version }: FeatureStatusBadgeProps)
   const { label, cls } = FEATURE_STATUS_CONFIG[status];
   return (
     <span className="inline-flex max-w-full flex-wrap items-center gap-1.5 tracking-normal font-normal">
-      <Badge variant="outline" className={`${cls} shrink-0`}>
+      <Badge variant="outline" className={`${cls} shrink-0`} aria-label={`Feature status: ${label}`}>
         {label}
       </Badge>
       {version && (
         <Badge
           variant="outline"
-          className="w-fit basis-full bg-muted/50 text-muted-foreground border-border/60 sm:basis-auto"
+          className="w-fit basis-full border-border/60 bg-background/35 font-mono text-muted-foreground sm:basis-auto"
         >
           {version}
         </Badge>

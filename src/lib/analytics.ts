@@ -26,6 +26,7 @@ type EventMap = {
   portfolio_coin_removed: { coin_id: string };
   portfolio_shared: { coin_count: number };
   portfolio_cleared: { coin_count: number };
+  portfolio_preset_loaded: { preset: string };
   // Tier 3 — Engagement Signals
   theme_toggled: { theme: string };
   panel_toggled: { panel: string; action: string };
@@ -35,10 +36,7 @@ type EventMap = {
 // Core tracking function
 // ---------------------------------------------------------------------------
 
-export function trackEvent<K extends keyof EventMap>(
-  name: K,
-  params: EventMap[K],
-): void {
+export function trackEvent<K extends keyof EventMap>(name: K, params: EventMap[K]): void {
   if (typeof window !== "undefined" && window.gtag) {
     window.gtag("event", name, params);
   }

@@ -28,7 +28,7 @@ export function ColumnVisibilityDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="min-h-11 border-border/70 sm:min-h-8">
+        <Button variant="outline" size="sm" className="min-h-11 w-full border-border/70 sm:min-h-8 sm:w-auto">
           <Columns3 className="h-3.5 w-3.5" />
           Columns
           {hiddenCount > 0 && (
@@ -49,11 +49,7 @@ export function ColumnVisibilityDropdown({
             checked={visibleSet.has(col.id)}
             disabled={LOCKED_COLUMNS.has(col.id)}
             onCheckedChange={(checked) => {
-              setVisibleColumns((prev) =>
-                checked
-                  ? [...prev, col.id]
-                  : prev.filter((c) => c !== col.id),
-              );
+              setVisibleColumns((prev) => (checked ? [...prev, col.id] : prev.filter((c) => c !== col.id)));
             }}
             onSelect={(e) => e.preventDefault()}
           >

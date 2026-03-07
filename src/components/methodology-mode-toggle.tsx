@@ -36,12 +36,13 @@ export function MethodologyModeToggle() {
   }, []);
 
   return (
-    <div className="inline-flex items-center rounded-md border border-border/60 bg-background p-1 text-xs">
+    <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/85 px-2 py-1 text-xs shadow-sm">
+      <span className="pharos-kicker text-[10px]">View</span>
       <button
         type="button"
         aria-pressed={mode === "reader"}
         onClick={() => setAndApplyMode("reader")}
-        className={`rounded px-2 py-1 transition-colors ${mode === "reader" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        className={`rounded-full px-3 py-1.5 transition-colors ${mode === "reader" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
       >
         Reader
       </button>
@@ -49,7 +50,7 @@ export function MethodologyModeToggle() {
         type="button"
         aria-pressed={mode === "analyst"}
         onClick={() => setAndApplyMode("analyst")}
-        className={`rounded px-2 py-1 transition-colors ${mode === "analyst" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        className={`rounded-full px-3 py-1.5 transition-colors ${mode === "analyst" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"}`}
       >
         Analyst
       </button>

@@ -4,7 +4,14 @@ import { useMemo } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@shared/lib/format";
-import { PROTOCOL_COLORS, PROTOCOL_LOGOS, EXTRA_COLORS, CHAIN_COLORS, prettifyProtocol, normalizeChain } from "@/lib/dex-constants";
+import {
+  PROTOCOL_COLORS,
+  PROTOCOL_LOGOS,
+  EXTRA_COLORS,
+  CHAIN_COLORS,
+  prettifyProtocol,
+  normalizeChain,
+} from "@/lib/dex-constants";
 import { CHAIN_META } from "@shared/lib/chains";
 import { getScoreColor } from "@/lib/severity-colors";
 import type { DexLiquidityData } from "@shared/types";
@@ -86,9 +93,17 @@ function ChainAggregateBar({ data }: { data: Record<string, DexLiquidityData> })
             const meta = CHAIN_META[chain.toLowerCase()];
             return (
               <div key={chain} className="flex items-center gap-2">
-                <span className={`inline-block h-3 w-3 rounded-sm shrink-0 ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`} />
+                <span
+                  className={`inline-block h-3 w-3 rounded-sm shrink-0 ${CHAIN_COLORS[chain.toLowerCase()] ?? "bg-muted-foreground"}`}
+                />
                 {meta?.logoPath && (
-                  <Image src={meta.logoPath} alt="" width={16} height={16} className={`rounded-full shrink-0${meta.darkInvert ? " dark:invert" : ""}`} />
+                  <Image
+                    src={meta.logoPath}
+                    alt=""
+                    width={16}
+                    height={16}
+                    className={`h-4 w-4 rounded-full object-contain shrink-0${meta.darkInvert ? " dark:invert" : ""}`}
+                  />
                 )}
                 <div>
                   <p className="text-sm font-medium">{normalizeChain(chain)}</p>
@@ -144,9 +159,7 @@ function ProtocolAggregateBar({ data }: { data: Record<string, DexLiquidityData>
             return (
               <div key={protocol} className="flex items-center gap-2">
                 <span className={`inline-block h-3 w-3 rounded-sm shrink-0 ${color}`} />
-                {logo && (
-                  <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />
-                )}
+                {logo && <Image src={logo} alt="" width={16} height={16} className="rounded-full shrink-0" />}
                 <div>
                   <p className="text-sm font-medium">{name}</p>
                   <p className="text-xs text-muted-foreground font-mono tabular-nums">{formatCurrency(tvl)}</p>
@@ -167,15 +180,22 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
         <Card className="rounded-xl border-l-[3px] border-l-blue-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total DEX TVL</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Total DEX TVL
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{formatCurrency(stats.totalTvl)}</div>
+            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">
+              {formatCurrency(stats.totalTvl)}
+            </div>
             <p className="text-sm text-muted-foreground">
               Across all tracked stablecoins
               {stats.agg7dChange != null && (
-                <span className={`ml-2 font-mono ${stats.agg7dChange >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}>
-                  {stats.agg7dChange >= 0 ? "\u2191" : "\u2193"}{Math.abs(stats.agg7dChange).toFixed(1)}% 7d
+                <span
+                  className={`ml-2 font-mono ${stats.agg7dChange >= 0 ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"}`}
+                >
+                  {stats.agg7dChange >= 0 ? "\u2191" : "\u2193"}
+                  {Math.abs(stats.agg7dChange).toFixed(1)}% 7d
                 </span>
               )}
             </p>
@@ -184,21 +204,30 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <Card className="rounded-xl border-l-[3px] border-l-emerald-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">24h DEX Volume</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              24h DEX Volume
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{formatCurrency(stats.totalVol)}</div>
+            <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">
+              {formatCurrency(stats.totalVol)}
+            </div>
             <p className="text-sm text-muted-foreground">Trading volume today</p>
           </CardContent>
         </Card>
 
         <Card className="rounded-xl border-l-[3px] border-l-amber-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Liq Score</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Avg Liq Score
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-extrabold font-mono tabular-nums tracking-tight ${getScoreColor(stats.avgScore)}`}>
-              {stats.avgScore}<span className="text-lg text-muted-foreground">/100</span>
+            <div
+              className={`text-2xl font-extrabold font-mono tabular-nums tracking-tight ${getScoreColor(stats.avgScore)}`}
+            >
+              {stats.avgScore}
+              <span className="text-lg text-muted-foreground">/100</span>
             </div>
             <p className="text-sm text-muted-foreground">Mean score of active coins</p>
           </CardContent>
@@ -206,7 +235,9 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <Card className="rounded-xl border-l-[3px] border-l-violet-500">
           <CardHeader className="pb-1">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active on DEX</CardTitle>
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Active on DEX
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.withLiquidity}</div>
@@ -216,7 +247,9 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         {stats.avgBalance != null && (
           <Card className="rounded-xl border-l-[3px] border-l-cyan-500">
             <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Avg Pool Balance</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Avg Pool Balance
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.avgBalance}%</div>
@@ -227,7 +260,9 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         {stats.avgOrganic != null && (
           <Card className="rounded-xl border-l-[3px] border-l-pink-500">
             <CardHeader className="pb-1">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Organic Liquidity</CardTitle>
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Organic Liquidity
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-extrabold font-mono tabular-nums tracking-tight">{stats.avgOrganic}%</div>

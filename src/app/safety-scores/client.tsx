@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,7 +66,12 @@ function LazyCard({ children, className }: { children: React.ReactNode; classNam
     const el = ref.current;
     if (!el) return;
     const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
       { rootMargin: "200px" },
     );
     observer.observe(el);
@@ -122,12 +126,7 @@ export function ReportCardsClient() {
   // Build MCap map from stablecoins data
   const mcapMap = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) return new Map<string, number>();
-    return new Map(
-      stablecoinsData.peggedAssets.map((a) => [
-        a.id,
-        a.circulating ? sumPegBuckets(a.circulating) : 0,
-      ]),
-    );
+    return new Map(stablecoinsData.peggedAssets.map((a) => [a.id, a.circulating ? sumPegBuckets(a.circulating) : 0]));
   }, [stablecoinsData]);
 
   // Stress test
@@ -158,10 +157,7 @@ export function ReportCardsClient() {
     [stressTest.stressedCards, reportData?.cards],
   );
   const affectedIds = stressTest.allAffectedIds;
-  const originalCardMap = useMemo(
-    () => new Map(reportData?.cards?.map((c) => [c.id, c]) ?? []),
-    [reportData?.cards],
-  );
+  const originalCardMap = useMemo(() => new Map(reportData?.cards?.map((c) => [c.id, c]) ?? []), [reportData?.cards]);
   const isSimulating = stressTest.stressedCards !== null;
 
   // Grade distribution counts
@@ -176,10 +172,7 @@ export function ReportCardsClient() {
     return counts;
   }, [reportData, showDefunct]);
 
-  const totalCards = useMemo(
-    () => Object.values(gradeCounts).reduce((s, v) => s + v, 0),
-    [gradeCounts],
-  );
+  const totalCards = useMemo(() => Object.values(gradeCounts).reduce((s, v) => s + v, 0), [gradeCounts]);
 
   // Filtered + sorted cards (uses simulated cards when stress test is active)
   const filteredCards = useMemo(() => {
@@ -210,6 +203,79 @@ export function ReportCardsClient() {
 
     return cards;
   }, [displayCards, gradeFilter, sortKey, showDefunct, mcapMap]);
+
+  const controlsMarkup = (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          aria-pressed={gradeFilter === "all"}
+          onClick={() => {
+            trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: "all" });
+            setGradeFilter("all");
+          }}
+          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            gradeFilter === "all" ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-accent"
+          }`}
+        >
+          All ({totalCards})
+        </button>
+        {GRADE_RANGES.map((range) => {
+          const count = gradeCounts[range] ?? 0;
+          const isActive = gradeFilter === range;
+          const gradeKey = range === "NR" ? "NR" : range === "D" ? "D" : range === "F" ? "F" : (`${range}` as const);
+          const colorClass = REPORT_CARD_GRADE_COLORS[gradeKey as keyof typeof REPORT_CARD_GRADE_COLORS];
+          return (
+            <button
+              key={range}
+              aria-pressed={isActive}
+              onClick={() => {
+                trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: range });
+                setGradeFilter(range);
+              }}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                isActive ? colorClass : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {range} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="h-5 w-px bg-border" />
+
+      <div className="flex flex-wrap items-center gap-1">
+        <span className="text-xs text-muted-foreground mr-1">Sort:</span>
+        {SORT_OPTIONS.map((opt) => (
+          <button
+            key={opt.key}
+            aria-pressed={sortKey === opt.key}
+            onClick={() => {
+              trackEvent("sort_changed", { page: "safety-scores", sort_by: opt.key });
+              setSortKey(opt.key);
+            }}
+            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+              sortKey === opt.key ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="h-5 w-px bg-border" />
+
+      <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+        <input
+          type="checkbox"
+          checked={showDefunct}
+          onChange={(e) => setShowDefunct(e.target.checked)}
+          className="rounded"
+        />
+        Show defunct
+      </label>
+    </div>
+  );
 
   // Loading state
   if (isLoadingCards) {
@@ -245,8 +311,18 @@ export function ReportCardsClient() {
       />
       <StaleDataBanner
         queries={[
-          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportData?.cards?.length },
-          { preset: "stablecoins", dataUpdatedAt: pricesUpdatedAt, error: pricesError, hasData: !!stablecoinsData?.peggedAssets?.length },
+          {
+            preset: "reportCards",
+            dataUpdatedAt: rcUpdatedAt,
+            error: reportCardsError,
+            hasData: !!reportData?.cards?.length,
+          },
+          {
+            preset: "stablecoins",
+            dataUpdatedAt: pricesUpdatedAt,
+            error: pricesError,
+            hasData: !!stablecoinsData?.peggedAssets?.length,
+          },
         ]}
       />
       {/* Grade distribution bar */}
@@ -279,103 +355,21 @@ export function ReportCardsClient() {
       </Card>
 
       {/* Contagion Map panel */}
-      <StressTestPanel
-        stressTest={stressTest}
-        mcapMap={mcapMap}
-        logos={logos}
-      />
-
-      {/* Link to standalone dependency map */}
-      <div className="flex items-center justify-end">
-        <Link
-          href="/dependency-map"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-        >
-          Explore the full dependency map →
-        </Link>
-      </div>
+      <StressTestPanel stressTest={stressTest} mcapMap={mcapMap} logos={logos} />
 
       {/* Filter + Sort controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Grade filter buttons */}
-        <div className="flex flex-wrap items-center gap-1">
-          <button
-            aria-pressed={gradeFilter === "all"}
-            onClick={() => { trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: "all" }); setGradeFilter("all"); }}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              gradeFilter === "all"
-                ? "bg-foreground text-background"
-                : "bg-muted text-muted-foreground hover:bg-accent"
-            }`}
-          >
-            All ({totalCards})
-          </button>
-          {GRADE_RANGES.map((range) => {
-            const count = gradeCounts[range] ?? 0;
-            const isActive = gradeFilter === range;
-            // Use grade badge colors when active
-            const gradeKey = range === "NR" ? "NR" : range === "D" ? "D" : range === "F" ? "F" : `${range}` as const;
-            const colorClass = REPORT_CARD_GRADE_COLORS[gradeKey as keyof typeof REPORT_CARD_GRADE_COLORS];
-            return (
-              <button
-                key={range}
-                aria-pressed={isActive}
-                onClick={() => { trackEvent("filter_applied", { page: "safety-scores", filter_type: "grade", filter_value: range }); setGradeFilter(range); }}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  isActive
-                    ? colorClass
-                    : "bg-muted text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {range} ({count})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Divider */}
-        <div className="h-5 w-px bg-border" />
-
-        {/* Sort buttons */}
-        <div className="flex flex-wrap items-center gap-1">
-          <span className="text-xs text-muted-foreground mr-1">Sort:</span>
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              aria-pressed={sortKey === opt.key}
-              onClick={() => { trackEvent("sort_changed", { page: "safety-scores", sort_by: opt.key }); setSortKey(opt.key); }}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                sortKey === opt.key
-                  ? "bg-foreground text-background"
-                  : "bg-muted text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Divider */}
-        <div className="h-5 w-px bg-border" />
-
-        {/* Defunct toggle */}
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showDefunct}
-            onChange={(e) => setShowDefunct(e.target.checked)}
-            className="rounded"
-          />
-          Show defunct
-        </label>
+      <div className="space-y-3">
+        <details className="rounded-2xl border border-border/60 bg-card/50 px-4 py-3 md:hidden">
+          <summary className="cursor-pointer text-sm font-medium text-foreground">Sort and filter score cards</summary>
+          <div className="pt-4">{controlsMarkup}</div>
+        </details>
+        <div className="hidden md:block">{controlsMarkup}</div>
       </div>
 
       {/* Simulation banner */}
       {stressTest.stressedCards && (
         <div className="sticky top-14 z-30 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 flex items-center justify-between">
-          <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">
-            Viewing simulated grades
-          </span>
+          <span className="text-sm text-amber-700 dark:text-amber-400 font-medium">Viewing simulated grades</span>
           <button
             onClick={stressTest.clear}
             className="text-sm text-amber-700 dark:text-amber-400 underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-300"
@@ -387,9 +381,7 @@ export function ReportCardsClient() {
 
       {/* Card grid */}
       {filteredCards.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-8 text-center">
-          No coins match this filter.
-        </p>
+        <p className="text-sm text-muted-foreground py-8 text-center">No coins match this filter.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {filteredCards.map((card) => (

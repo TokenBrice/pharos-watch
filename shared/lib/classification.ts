@@ -5,7 +5,16 @@
  * Tailwind class strings are always complete static literals (never constructed dynamically).
  */
 
-import type { GovernanceType, BackingType, PegCurrency, ProofOfReservesType, BlacklistEventType, BluechipGrade, BlacklistStablecoin, YieldType } from "../types";
+import type {
+  GovernanceType,
+  BackingType,
+  PegCurrency,
+  ProofOfReservesType,
+  BlacklistEventType,
+  BluechipGrade,
+  BlacklistStablecoin,
+  YieldType,
+} from "../types";
 import { TRACKED_STABLECOINS } from "./stablecoins";
 
 // ---------------------------------------------------------------------------
@@ -132,16 +141,31 @@ interface BadgeStyle {
 
 /** Governance badge styles for the detail page. */
 export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = {
-  centralized: { label: "Centralized", cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20" },
-  "centralized-dependent": { label: "CeFi-Dependent", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20" },
-  decentralized: { label: "Decentralized", cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20" },
+  centralized: {
+    label: "Centralized",
+    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+  },
+  "centralized-dependent": {
+    label: "CeFi-Dependent",
+    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  },
+  decentralized: {
+    label: "Decentralized",
+    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+  },
 };
 
 /** Backing badge styles for the detail page. */
 export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = {
   "rwa-backed": { label: "RWA-Backed", cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
-  "crypto-backed": { label: "Crypto-Backed", cls: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20" },
-  algorithmic: { label: "Algorithmic", cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20" },
+  "crypto-backed": {
+    label: "Crypto-Backed",
+    cls: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
+  },
+  algorithmic: {
+    label: "Algorithmic",
+    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+  },
 };
 
 /** Peg currency badge styles for the detail page. */
@@ -172,9 +196,18 @@ export const PEG_BADGE_STYLES: Record<PegCurrency, BadgeStyle> = {
 
 /** Proof-of-reserves badge styles for the detail page. */
 export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
-  "independent-audit": { label: "Independent Audit", cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
-  "real-time": { label: "Real-Time PoR", cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
-  "self-reported": { label: "Self-Reported PoR", cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20" },
+  "independent-audit": {
+    label: "Independent Audit",
+    cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+  },
+  "real-time": {
+    label: "Real-Time PoR",
+    cls: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  },
+  "self-reported": {
+    label: "Self-Reported PoR",
+    cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -242,7 +275,12 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
   SGD: { label: "SGD", textColor: "text-teal-700 dark:text-teal-400", bgColor: "bg-teal-500", hex: "#14b8a6" },
   TRY: { label: "Lira", textColor: "text-lime-700 dark:text-lime-400", bgColor: "bg-lime-500", hex: "#84cc16" },
   AUD: { label: "AUD", textColor: "text-indigo-700 dark:text-indigo-400", bgColor: "bg-indigo-500", hex: "#6366f1" },
-  ZAR: { label: "Rand", textColor: "text-fuchsia-700 dark:text-fuchsia-400", bgColor: "bg-fuchsia-500", hex: "#d946ef" },
+  ZAR: {
+    label: "Rand",
+    textColor: "text-fuchsia-700 dark:text-fuchsia-400",
+    bgColor: "bg-fuchsia-500",
+    hex: "#d946ef",
+  },
   CAD: { label: "CAD", textColor: "text-blue-700 dark:text-blue-400", bgColor: "bg-blue-500", hex: "#3b82f6" },
   CNY: { label: "Yuan", textColor: "text-purple-700 dark:text-purple-400", bgColor: "bg-purple-500", hex: "#a855f7" },
   PHP: { label: "PHP", textColor: "text-emerald-700 dark:text-emerald-400", bgColor: "bg-emerald-500", hex: "#10b981" },
@@ -260,7 +298,7 @@ export const PEG_CHART_COLORS: Record<string, { label: string; textColor: string
 
 export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
   "lending-vault": "Lending",
-  "rebase": "Rebase",
+  rebase: "Rebase",
   "fee-sharing": "Fee Share",
   "lp-receipt": "LP Receipt",
   "nav-appreciation": "NAV",
@@ -269,19 +307,26 @@ export const YIELD_TYPE_LABELS: Record<YieldType, string> = {
 };
 
 export const YIELD_TYPE_STYLES: Record<YieldType, { badge: string; hex: string }> = {
-  "lending-vault":    { badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",         hex: "#3b82f6" },
-  "rebase":           { badge: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",    hex: "#8b5cf6" },
-  "fee-sharing":      { badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",          hex: "#06b6d4" },
-  "lp-receipt":       { badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",       hex: "#f59e0b" },
-  "nav-appreciation": { badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20", hex: "#10b981" },
-  "governance-set":   { badge: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",    hex: "#f97316" },
-  "lending-opportunity": { badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",           hex: "#0ea5e9" },
+  "lending-vault": { badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20", hex: "#3b82f6" },
+  rebase: { badge: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20", hex: "#8b5cf6" },
+  "fee-sharing": { badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20", hex: "#06b6d4" },
+  "lp-receipt": { badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20", hex: "#f59e0b" },
+  "nav-appreciation": {
+    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+    hex: "#10b981",
+  },
+  "governance-set": {
+    badge: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+    hex: "#f97316",
+  },
+  "lending-opportunity": { badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20", hex: "#0ea5e9" },
 };
 
 /** Chart hex colors for blacklist stablecoin breakdown */
 export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
   USDT: "#06b6d4",
   USDC: "#3b82f6",
+  EURC: "#22c55e",
   PAXG: "#eab308",
   XAUT: "#f59e0b",
 };
@@ -301,19 +346,19 @@ export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {
 };
 
 export const THREAT_BAND_COLORS: Record<ThreatBand, string> = {
-  CALM:    "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-  WATCH:   "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
-  ALERT:   "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+  CALM: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+  WATCH: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
+  ALERT: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
   WARNING: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  DANGER:  "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  DANGER: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
 export const THREAT_BAND_HEX: Record<ThreatBand, string> = {
-  CALM:    "#22c55e",
-  WATCH:   "#14b8a6",
-  ALERT:   "#eab308",
+  CALM: "#22c55e",
+  WATCH: "#14b8a6",
+  ALERT: "#eab308",
   WARNING: "#f97316",
-  DANGER:  "#ef4444",
+  DANGER: "#ef4444",
 };
 
 // ---------------------------------------------------------------------------
@@ -324,15 +369,15 @@ export type FeatureStatus = "mature" | "experimental" | "testing-in-prod";
 
 export const FEATURE_STATUS_CONFIG: Record<FeatureStatus, { label: string; cls: string }> = {
   mature: {
-    label: "Feature Status: Mature",
+    label: "Mature",
     cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400 dark:border-emerald-500/40",
   },
   experimental: {
-    label: "Feature Status: Experimental",
+    label: "Experimental",
     cls: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-400 dark:border-amber-500/40",
   },
   "testing-in-prod": {
-    label: "Feature Status: Testing in Prod",
+    label: "Testing in Prod",
     cls: "bg-orange-500/15 text-orange-700 border-orange-500/30 dark:text-orange-400 dark:border-orange-500/40",
   },
 };

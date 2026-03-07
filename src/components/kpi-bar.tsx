@@ -8,17 +8,21 @@ import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
+import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 
 type TrendDirection = "up" | "down" | "flat";
 type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
 const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
-const KPI_CHIP_BASE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
+const KPI_CHIP_BASE =
+  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
+const SNAPSHOT_PILL_BASE =
+  "inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-sm";
 
 function trendDirection(value: number): TrendDirection {
   if (value === 0) return "flat";
@@ -31,20 +35,17 @@ function trendTextClass(value: number): string {
   return "text-muted-foreground";
 }
 
-function TrendChip({
-  label,
-  value,
-  direction,
-}: {
-  label: string;
-  value: string;
-  direction: TrendDirection;
-}) {
-  const toneClasses = direction === "up"
-    ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
-    : direction === "down"
-      ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
-      : "border-border bg-muted/40 text-muted-foreground";
+function formatSignedCompactCurrency(value: number, decimals = 1): string {
+  return `${getNetPrefix(value)}${formatCurrency(value, decimals)}`;
+}
+
+function TrendChip({ label, value, direction }: { label: string; value: string; direction: TrendDirection }) {
+  const toneClasses =
+    direction === "up"
+      ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
+      : direction === "down"
+        ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
+        : "border-border bg-muted/40 text-muted-foreground";
   const Icon = direction === "up" ? ArrowUpRight : direction === "down" ? ArrowDownRight : Minus;
 
   return (
@@ -65,13 +66,14 @@ function InfoChip({
   value: string | number;
   tone?: "neutral" | "positive" | "negative" | "warning";
 }) {
-  const toneClasses = tone === "positive"
-    ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
-    : tone === "negative"
-      ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
-    : tone === "warning"
-        ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-        : "border-border bg-muted/40 text-muted-foreground";
+  const toneClasses =
+    tone === "positive"
+      ? "border-green-500/25 bg-green-500/10 text-green-700 dark:text-green-400"
+      : tone === "negative"
+        ? "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-400"
+        : tone === "warning"
+          ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+          : "border-border bg-muted/40 text-muted-foreground";
 
   return (
     <span className={`${KPI_CHIP_BASE} ${toneClasses}`}>
@@ -103,26 +105,22 @@ function KpiCell({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex min-h-[108px] flex-col gap-1.5 px-4 py-3">
-      <span className="pharos-kicker">
-        {label}
-      </span>
+    <div className="flex min-h-[92px] flex-col justify-between gap-2 px-4 py-3">
+      <span className="pharos-kicker">{label}</span>
       <span className={`text-xl font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
         {value}
       </span>
-      {sublabel && (
-        <div className="mt-auto flex flex-wrap items-center gap-1 text-xs">{sublabel}</div>
-      )}
+      {sublabel && <div className="flex flex-wrap items-center gap-1 text-xs">{sublabel}</div>}
     </div>
   );
 }
 
 function KpiSkeleton() {
   return (
-    <div className="flex min-h-[108px] flex-col gap-1.5 px-4 py-3">
+    <div className="flex min-h-[92px] flex-col justify-between gap-2 px-4 py-3">
       <Skeleton className="h-3.5 w-20" />
       <Skeleton className="h-7 w-24" />
-      <div className="mt-auto flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5">
         <Skeleton className="h-5 w-24 rounded-full" />
       </div>
     </div>
@@ -143,15 +141,72 @@ function KpiMiniTile({
   valueClassName?: string;
 }) {
   return (
-    <div className="pharos-card-shell min-h-[100px] px-3 py-2.5">
+    <div className="pharos-card-shell flex min-h-[96px] flex-col px-3 py-2.5">
       <p className="pharos-kicker tracking-[0.08em]">{label}</p>
-      <p className={`mt-1 text-lg font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>{value}</p>
-      {metaPrimary && (
-        <div className="mt-1 text-[11px] font-mono leading-snug">{metaPrimary}</div>
+      <p className={`mt-1 text-lg font-extrabold font-mono tabular-nums leading-tight ${valueClassName ?? ""}`}>
+        {value}
+      </p>
+      {(metaPrimary || metaSecondary) && (
+        <div className="mt-auto space-y-0.5 pt-2 text-[11px] font-mono leading-snug">
+          {metaPrimary && <div>{metaPrimary}</div>}
+          {metaSecondary && <div>{metaSecondary}</div>}
+        </div>
       )}
-      {metaSecondary && (
-        <div className="mt-0.5 text-[11px] font-mono leading-snug">{metaSecondary}</div>
-      )}
+    </div>
+  );
+}
+
+function PrimarySnapshotCard({
+  value,
+  band,
+  delta24h,
+  delta7d,
+  valueClassName,
+}: {
+  value: string;
+  band: string;
+  delta24h: string | null;
+  delta7d: string | null;
+  valueClassName?: string;
+}) {
+  return (
+    <div className="rounded-[1.4rem] border border-sky-200/45 bg-[radial-gradient(120%_150%_at_0%_0%,rgba(125,211,252,0.28),transparent_48%),linear-gradient(145deg,rgba(255,255,255,0.94),rgba(239,246,255,0.96)_52%,rgba(226,232,240,0.92))] px-4 py-3.5 shadow-[0_16px_36px_rgba(148,163,184,0.18)] dark:border-sky-500/15 dark:bg-[radial-gradient(120%_150%_at_0%_0%,rgba(34,211,238,0.12),transparent_48%),linear-gradient(145deg,rgba(8,15,28,0.96),rgba(4,19,40,0.96)_55%,rgba(3,9,21,0.98))] dark:shadow-[0_20px_44px_rgba(2,6,23,0.28)] sm:px-5 sm:py-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2">
+        <div className="min-w-0 space-y-2">
+          <div className="flex w-fit flex-col items-center gap-1.5">
+            <p className="text-center text-[14px] font-semibold uppercase tracking-[0.14em] text-slate-600 dark:text-primary/80 sm:text-[13px]">
+              PSI
+            </p>
+            <div
+              className={`font-mono text-[2.8rem] font-extrabold leading-none tabular-nums sm:text-[2.95rem] ${valueClassName ?? ""}`}
+            >
+              {value}
+            </div>
+          </div>
+          <p className={`text-sm font-semibold whitespace-nowrap ${valueClassName ?? "text-foreground"}`}>
+            {band || "No current PSI band"}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-2 pt-0.5">
+          <span
+            className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+          >
+            Live market health
+          </span>
+          <div className="flex flex-col items-end gap-2">
+            <span
+              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+            >
+              24h {delta24h ?? "—"}
+            </span>
+            <span
+              className={`${SNAPSHOT_PILL_BASE} whitespace-nowrap border-slate-300/70 bg-white/76 text-slate-600 dark:border-white/8 dark:bg-black/18 dark:text-slate-300`}
+            >
+              7d {delta7d ?? "—"}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -163,16 +218,12 @@ export function KpiBar() {
   const { data: stablecoinsData, isLoading: stablecoinsLoading } = stablecoinsQuery;
   const { data: pegData, isLoading: pegLoading } = usePegSummary();
   const { data: dexData, isLoading: dexLoading } = useDexLiquidity();
+  const { data: flowData } = useMintBurnFlows(24);
   const { data: stressData } = useStressSignals();
   const primaryError = stablecoinsQuery.error || psiQuery.error;
   const hasPrimaryData = !!psiData || !!stablecoinsData;
 
-  const {
-    totalMcap,
-    mcapChange24hPct,
-    mcapChange7dPct,
-    usdtUsdcSharePct,
-  } = useMemo(() => {
+  const { totalMcap, mcapChange24hPct, mcapChange7dPct, usdtUsdcSharePct } = useMemo(() => {
     if (!stablecoinsData?.peggedAssets) {
       return {
         totalMcap: 0,
@@ -225,10 +276,28 @@ export function KpiBar() {
     return { totalVol24h: vol24h, volVs7dAvgPct: pct, turnoverPct: turnover };
   }, [dexData, totalMcap]);
 
+  const { netFlow24h, netFlow7d } = useMemo(() => {
+    if (!flowData?.coins?.length) {
+      return { netFlow24h: 0, netFlow7d: 0 };
+    }
+
+    let total24h = 0;
+    let total7d = 0;
+    for (const coin of flowData.coins) {
+      total24h += coin.netFlow24hUsd;
+      total7d += coin.netFlow7dUsd;
+    }
+
+    return {
+      netFlow24h: total24h,
+      netFlow7d: total7d,
+    };
+  }, [flowData]);
+
   const psiCurrent = psiData?.current;
   const psiScoreNum = psiCurrent ? (psiCurrent.avg24h ?? psiCurrent.score) : null;
   const psiScore = psiScoreNum !== null ? psiScoreNum.toFixed(1) : "—";
-  const psiBand = psiCurrent ? psiCurrent.avg24hBand ?? psiCurrent.band : "";
+  const psiBand = psiCurrent ? (psiCurrent.avg24hBand ?? psiCurrent.band) : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
   const hasPsiData = !!psiCurrent;
@@ -238,8 +307,12 @@ export function KpiBar() {
   const psiScoreDisplay = hasPsiData ? psiScore : "—";
   const psiBandDisplay = hasPsiData ? psiBand : "";
   const mcapDisplay = hasStablecoinsData ? formatCurrency(totalMcap, 1) : "—";
-  const mcapChange24Display = hasStablecoinsData ? `${mcapChange24hPct >= 0 ? "+" : ""}${mcapChange24hPct.toFixed(2)}%` : "—";
-  const mcapChange7Display = hasStablecoinsData ? `${mcapChange7dPct >= 0 ? "+" : ""}${mcapChange7dPct.toFixed(2)}%` : "—";
+  const mcapChange24Display = hasStablecoinsData
+    ? `${mcapChange24hPct >= 0 ? "+" : ""}${mcapChange24hPct.toFixed(2)}%`
+    : "—";
+  const mcapChange7Display = hasStablecoinsData
+    ? `${mcapChange7dPct >= 0 ? "+" : ""}${mcapChange7dPct.toFixed(2)}%`
+    : "—";
   const mcapColorClass = hasStablecoinsData ? trendTextClass(mcapChange24hPct) : "text-muted-foreground";
   const mcap7ColorClass = hasStablecoinsData ? trendTextClass(mcapChange7dPct) : "text-muted-foreground";
   const pegStatusDisplay = hasSummary ? `${summary.coinsAtPeg}/${summary.totalTracked}` : "—";
@@ -247,6 +320,18 @@ export function KpiBar() {
   const dexVolDisplay = hasDexData ? formatCurrency(totalVol24h, 1) : "—";
   const dexDeltaDisplay = hasDexData ? `${volVs7dAvgPct >= 0 ? "+" : ""}${volVs7dAvgPct.toFixed(1)}%` : "—";
   const turnoverDisplay = hasStablecoinsData && hasDexData && totalMcap > 0 ? `${turnoverPct.toFixed(2)}%` : "—";
+  const hasFlowData = !!flowData?.coins?.length;
+  const netFlow24Display = hasFlowData ? formatSignedCompactCurrency(netFlow24h, 1) : "—";
+  const netFlow7Display = hasFlowData ? formatSignedCompactCurrency(netFlow7d, 1) : "—";
+  const netFlow24Class = hasFlowData ? getNetColor(netFlow24h) : "text-muted-foreground";
+  const netFlow7Class = hasFlowData ? getNetColor(netFlow7d) : "text-muted-foreground";
+  const netFlow7Tone: "neutral" | "positive" | "negative" = !hasFlowData
+    ? "neutral"
+    : netFlow7d > 0
+      ? "positive"
+      : netFlow7d < 0
+        ? "negative"
+        : "neutral";
 
   const { psiDaysInBand, psiDelta24h, psiDelta7d } = useMemo(() => {
     if (!psiBand || !psiData?.history || psiScoreNum === null) {
@@ -282,11 +367,19 @@ export function KpiBar() {
   if (isLoading) {
     return (
       <Card className="pharos-card-shell overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
           <p className="pharos-kicker">Market Snapshot</p>
           <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
         </div>
-        <div className="px-3 py-3 sm:hidden">
+        <div className="space-y-2.5 px-3 py-3 lg:hidden">
+          <div className="rounded-2xl border border-border/60 bg-background/40 px-4 py-4">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="mt-3 h-10 w-28" />
+            <div className="mt-3 flex gap-2">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             {SKELETON_CARDS.map((i) => (
               <div key={i} className="pharos-card-shell min-h-[92px] px-3 py-2.5">
@@ -297,7 +390,15 @@ export function KpiBar() {
             ))}
           </div>
         </div>
-        <div className="hidden sm:grid grid-cols-2 xl:grid-cols-4 divide-x divide-border/50">
+        <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
+          <div className="px-4 py-3">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="mt-3 h-14 w-32" />
+            <div className="mt-4 flex gap-2">
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          </div>
           {SKELETON_CARDS.map((i) => (
             <KpiSkeleton key={i} />
           ))}
@@ -315,7 +416,7 @@ export function KpiBar() {
 
   return (
     <Card className="pharos-card-shell overflow-hidden p-0">
-      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-2.5">
         <p className="pharos-kicker">Market Snapshot</p>
         <p className="text-[11px] text-muted-foreground">Refreshes every 15m</p>
       </div>
@@ -332,29 +433,15 @@ export function KpiBar() {
         </div>
       )}
 
-      <div className="px-3 py-3 sm:hidden">
+      <div className="space-y-2.5 px-3 py-3 lg:hidden">
+        <PrimarySnapshotCard
+          value={psiScoreDisplay}
+          band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+          delta24h={psiDelta24hValue}
+          delta7d={psiDelta7dValue}
+          valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
+        />
         <div className="grid grid-cols-2 gap-2">
-          <KpiMiniTile
-            label="PSI"
-            value={psiScoreDisplay}
-            valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
-            metaPrimary={
-              hasPsiData
-                ? <span className={psiColorClass || "text-muted-foreground"}>{psiBandDisplay} for {psiDaysInBand}d</span>
-                : <span className="text-muted-foreground">—</span>
-            }
-            metaSecondary={
-              <>
-                <span className={psiDelta24h !== null ? trendTextClass(psiDelta24h) : "text-muted-foreground"}>
-                  24h {psiDelta24hValue ?? "—"}
-                </span>
-                <span className="text-muted-foreground"> · </span>
-                <span className={psiDelta7d !== null ? trendTextClass(psiDelta7d) : "text-muted-foreground"}>
-                  7d {psiDelta7dValue ?? "—"}
-                </span>
-              </>
-            }
-          />
           <KpiMiniTile
             label="Mcap"
             value={mcapDisplay}
@@ -401,41 +488,44 @@ export function KpiBar() {
           <KpiMiniTile
             label="DEX Vol"
             value={dexVolDisplay}
-            metaPrimary={<span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>vs 7d avg {dexDeltaDisplay}</span>}
+            metaPrimary={
+              <span className={hasDexData ? trendTextClass(volVs7dAvgPct) : "text-muted-foreground"}>
+                vs 7d avg {dexDeltaDisplay}
+              </span>
+            }
             metaSecondary={<span className="text-muted-foreground">Turnover {turnoverDisplay}</span>}
+          />
+          <KpiMiniTile
+            label="Net Flow"
+            value={netFlow24Display}
+            valueClassName={netFlow24Class}
+            metaPrimary={<span className={netFlow7Class}>7d {netFlow7Display}</span>}
           />
         </div>
       </div>
 
-      <div className="hidden sm:grid grid-cols-2 xl:grid-cols-4 divide-x divide-border/50">
-        <KpiCell
-          label="Pharos Stability Index"
-          value={psiScoreDisplay}
-          valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
-          sublabel={
-            <>
-              {hasPsiData ? (
-                <InfoChip label="Band" value={`${psiBandDisplay} for ${psiDaysInBand}d`} />
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-              {psiDelta24h !== null && (
-                <TrendChip
-                  label="24h"
-                  value={`${psiDelta24h >= 0 ? "+" : ""}${psiDelta24h.toFixed(1)}`}
-                  direction={trendDirection(psiDelta24h)}
-                />
-              )}
-            </>
-          }
-        />
+      <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
+        <div className="px-4 py-3">
+          <PrimarySnapshotCard
+            value={psiScoreDisplay}
+            band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+            delta24h={psiDelta24hValue}
+            delta7d={psiDelta7dValue}
+            valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
+          />
+        </div>
 
         <KpiCell
           label="Total Stablecoin Mcap"
           value={mcapDisplay}
+          valueClassName="text-lg"
           sublabel={
             <>
-              <TrendChip label="24h" value={mcapChange24Display} direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"} />
+              <TrendChip
+                label="24h"
+                value={mcapChange24Display}
+                direction={hasStablecoinsData ? trendDirection(mcapChange24hPct) : "flat"}
+              />
               <InfoChip
                 label="USDT+USDC share"
                 value={usdtShareDisplay}
@@ -448,11 +538,16 @@ export function KpiBar() {
         <KpiCell
           label="Peg Status"
           value={pegStatusDisplay}
+          valueClassName="text-lg"
           sublabel={
             <>
               <span className="pharos-kicker">DEWS:</span>
-              {dewsBandCounts && dewsBandCounts.danger > 0 && <DewsBandChip band="DANGER" count={dewsBandCounts.danger} />}
-              {dewsBandCounts && dewsBandCounts.warning > 0 && <DewsBandChip band="WARNING" count={dewsBandCounts.warning} />}
+              {dewsBandCounts && dewsBandCounts.danger > 0 && (
+                <DewsBandChip band="DANGER" count={dewsBandCounts.danger} />
+              )}
+              {dewsBandCounts && dewsBandCounts.warning > 0 && (
+                <DewsBandChip band="WARNING" count={dewsBandCounts.warning} />
+              )}
               {dewsBandCounts && dewsBandCounts.alert > 0 && <DewsBandChip band="ALERT" count={dewsBandCounts.alert} />}
               {dewsBandCounts && allDewsCalm && <span className="text-[11px] text-muted-foreground">all calm</span>}
               {!dewsBandCounts && <span className="text-[11px] text-muted-foreground">no data</span>}
@@ -463,10 +558,26 @@ export function KpiBar() {
         <KpiCell
           label="Tracked 24H DEX Vol"
           value={dexVolDisplay}
+          valueClassName="text-lg"
           sublabel={
             <>
-              <TrendChip label="vs 7d avg" value={dexDeltaDisplay} direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"} />
+              <TrendChip
+                label="vs 7d avg"
+                value={dexDeltaDisplay}
+                direction={hasDexData ? trendDirection(volVs7dAvgPct) : "flat"}
+              />
               <InfoChip label="Turnover" value={turnoverDisplay} />
+            </>
+          }
+        />
+
+        <KpiCell
+          label="Net Mint/Burn Flow"
+          value={netFlow24Display}
+          valueClassName={`text-lg ${netFlow24Class}`}
+          sublabel={
+            <>
+              <InfoChip label="7d total" value={netFlow7Display} tone={netFlow7Tone} />
             </>
           }
         />

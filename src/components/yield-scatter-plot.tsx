@@ -1,17 +1,10 @@
 "use client";
 
 import { useMemo, useCallback, useEffect, useState } from "react";
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-} from "recharts";
+import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ReferenceArea, ReferenceLine } from "recharts";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { computeApyAxis, computeSafetyDomain, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
@@ -167,6 +160,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<
 
 export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: YieldScatterPlotProps) {
   const isMobile = useIsMobile();
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const rawData = useMemo(() => {
     return rankings
       .filter((r) => r.safetyScore !== null)
@@ -244,166 +238,194 @@ export function YieldScatterPlot({ rankings, riskFreeRate, logos, onDotClick }: 
 
   return (
     <div className="space-y-3">
-      <div className="h-[280px] sm:h-[420px] overflow-hidden">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <ScatterChart
-            margin={
-              isMobile ? { top: 10, right: 8, bottom: 18, left: 8 } : { top: 16, right: 24, bottom: 24, left: 14 }
-            }
-          >
-            {/* Quadrant shading */}
-            {safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
-              <ReferenceArea
-                x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
-                x2={safetyDomain[1]}
-                y1={riskFreeRate}
-                y2={apyAxis.domainMax}
-                fill={CHART_GREEN}
-                fillOpacity={0.05}
+      <div className="h-[240px] overflow-hidden rounded-2xl border border-border/60 bg-background/40 p-2 sm:h-[340px] sm:p-3">
+        <div ref={chartContainerRef} className="h-full w-full">
+          {isChartReady ? (
+            <ScatterChart
+              width={width}
+              height={height}
+              margin={
+                isMobile ? { top: 6, right: 6, bottom: 12, left: 0 } : { top: 10, right: 14, bottom: 16, left: 2 }
+              }
+            >
+              {/* Quadrant shading */}
+              {safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
+                <ReferenceArea
+                  x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
+                  x2={safetyDomain[1]}
+                  y1={riskFreeRate}
+                  y2={apyAxis.domainMax}
+                  fill={CHART_GREEN}
+                  fillOpacity={0.08}
+                  label={
+                    isMobile
+                      ? undefined
+                      : {
+                          value: "Sweet Spot",
+                          position: "insideTopRight",
+                          fill: CHART_GREEN,
+                          fontSize: 11,
+                          opacity: 0.75,
+                        }
+                  }
+                />
+              ) : null}
+              {safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
+                <ReferenceArea
+                  x1={safetyDomain[0]}
+                  x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
+                  y1={riskFreeRate}
+                  y2={apyAxis.domainMax}
+                  fill={CHART_RED}
+                  fillOpacity={0.08}
+                  label={
+                    isMobile
+                      ? undefined
+                      : {
+                          value: "Danger Zone",
+                          position: "insideTopLeft",
+                          fill: CHART_RED,
+                          fontSize: 11,
+                          opacity: 0.75,
+                        }
+                  }
+                />
+              ) : null}
+              {safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
+                <ReferenceArea
+                  x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
+                  x2={safetyDomain[1]}
+                  y1={0}
+                  y2={riskFreeRate}
+                  fill={CHART_BLUE}
+                  fillOpacity={0.08}
+                  label={
+                    isMobile
+                      ? undefined
+                      : {
+                          value: "Play It Safe",
+                          position: "insideBottomRight",
+                          fill: CHART_BLUE,
+                          fontSize: 11,
+                          opacity: 0.7,
+                        }
+                  }
+                />
+              ) : null}
+              {safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
+                <ReferenceArea
+                  x1={safetyDomain[0]}
+                  x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
+                  y1={0}
+                  y2={riskFreeRate}
+                  fill="#94a3b8"
+                  fillOpacity={0.07}
+                  label={
+                    isMobile
+                      ? undefined
+                      : {
+                          value: "Why Bother?",
+                          position: "insideBottomLeft",
+                          fill: "#94a3b8",
+                          fontSize: 11,
+                          opacity: 0.7,
+                        }
+                  }
+                />
+              ) : null}
+
+              <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke="#94a3b8" strokeOpacity={0.35} strokeDasharray="3 4" />
+
+              {/* Risk-free rate reference line */}
+              <ReferenceLine
+                y={riskFreeRate}
+                stroke="#94a3b8"
+                strokeDasharray="4 4"
                 label={
                   isMobile
                     ? undefined
-                    : { value: "Sweet Spot", position: "insideTopRight", fill: CHART_GREEN, fontSize: 12, opacity: 0.7 }
+                    : { value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: "#94a3b8", fontSize: 12 }
                 }
               />
-            ) : null}
-            {safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
-              <ReferenceArea
-                x1={safetyDomain[0]}
-                x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
-                y1={riskFreeRate}
-                y2={apyAxis.domainMax}
-                fill={CHART_RED}
-                fillOpacity={0.05}
-                label={
-                  isMobile
-                    ? undefined
-                    : { value: "Danger Zone", position: "insideTopLeft", fill: CHART_RED, fontSize: 12, opacity: 0.7 }
-                }
-              />
-            ) : null}
-            {safetyDomain[1] > SAFETY_SCORE_THRESHOLD ? (
-              <ReferenceArea
-                x1={Math.max(SAFETY_SCORE_THRESHOLD, safetyDomain[0])}
-                x2={safetyDomain[1]}
-                y1={0}
-                y2={riskFreeRate}
-                fill={CHART_BLUE}
-                fillOpacity={0.05}
+
+              <XAxis
+                type="number"
+                dataKey="x"
+                domain={safetyDomain}
+                name="Safety Score"
                 label={
                   isMobile
                     ? undefined
                     : {
-                        value: "Play It Safe",
-                        position: "insideBottomRight",
-                        fill: CHART_BLUE,
-                        fontSize: 12,
-                        opacity: 0.7,
+                        value: "Safety Score",
+                        position: "insideBottom",
+                        offset: -6,
+                        fill: "var(--color-muted-foreground)",
+                        fontSize: 11,
                       }
                 }
+                tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+                tickCount={isMobile ? 5 : 6}
+                allowDecimals={false}
+                tickLine={false}
+                axisLine={{ stroke: "var(--color-border)" }}
               />
-            ) : null}
-            {safetyDomain[0] < SAFETY_SCORE_THRESHOLD ? (
-              <ReferenceArea
-                x1={safetyDomain[0]}
-                x2={Math.min(SAFETY_SCORE_THRESHOLD, safetyDomain[1])}
-                y1={0}
-                y2={riskFreeRate}
-                fill="#94a3b8"
-                fillOpacity={0.05}
+              <YAxis
+                type="number"
+                dataKey="plotY"
+                domain={[0, apyAxis.domainMax]}
+                name="APY (%)"
                 label={
                   isMobile
                     ? undefined
                     : {
-                        value: "Why Bother?",
-                        position: "insideBottomLeft",
-                        fill: "#94a3b8",
-                        fontSize: 12,
-                        opacity: 0.7,
+                        value: "APY %",
+                        angle: -90,
+                        position: "insideLeft",
+                        offset: -2,
+                        fill: "var(--color-muted-foreground)",
+                        fontSize: 11,
                       }
                 }
+                tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+                tickCount={isMobile ? 5 : 7}
+                tickFormatter={(v: number) => v.toFixed(0)}
+                tickLine={false}
+                axisLine={{ stroke: "var(--color-border)" }}
+                width={isMobile ? 28 : 34}
               />
-            ) : null}
 
-            <ReferenceLine x={SAFETY_SCORE_THRESHOLD} stroke="#94a3b8" strokeOpacity={0.35} strokeDasharray="3 4" />
+              <Tooltip content={<CustomTooltip />} cursor={false} />
 
-            {/* Risk-free rate reference line */}
-            <ReferenceLine
-              y={riskFreeRate}
-              stroke="#94a3b8"
-              strokeDasharray="4 4"
-              label={
-                isMobile
-                  ? undefined
-                  : { value: `T-Bill ${riskFreeRate.toFixed(2)}%`, position: "right", fill: "#94a3b8", fontSize: 12 }
-              }
-            />
-
-            <XAxis
-              type="number"
-              dataKey="x"
-              domain={safetyDomain}
-              name="Safety Score"
-              label={
-                isMobile
-                  ? undefined
-                  : {
-                      value: "Safety Score",
-                      position: "insideBottom",
-                      offset: -10,
-                      fill: "var(--color-muted-foreground)",
-                      fontSize: 12,
-                    }
-              }
-              tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
-              tickCount={isMobile ? 5 : 6}
-              allowDecimals={false}
-              tickLine={false}
-              axisLine={{ stroke: "var(--color-border)" }}
-            />
-            <YAxis
-              type="number"
-              dataKey="plotY"
-              domain={[0, apyAxis.domainMax]}
-              name="APY (%)"
-              label={
-                isMobile
-                  ? undefined
-                  : {
-                      value: "APY %",
-                      angle: -90,
-                      position: "insideLeft",
-                      offset: -5,
-                      fill: "var(--color-muted-foreground)",
-                      fontSize: 12,
-                    }
-              }
-              tick={{ fill: "var(--color-muted-foreground)", fontSize: 12 }}
-              tickCount={isMobile ? 5 : 7}
-              tickFormatter={(v: number) => v.toFixed(0)}
-              tickLine={false}
-              axisLine={{ stroke: "var(--color-border)" }}
-              width={isMobile ? 34 : 40}
-            />
-
-            <Tooltip content={<CustomTooltip />} cursor={false} />
-
-            <Scatter
-              data={data}
-              onClick={handleClick}
-              cursor="pointer"
-              shape={renderLogoMarker}
-              activeShape={renderActiveLogoMarker}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
+              <Scatter
+                data={data}
+                onClick={handleClick}
+                cursor="pointer"
+                shape={renderLogoMarker}
+                activeShape={renderActiveLogoMarker}
+              />
+            </ScatterChart>
+          ) : (
+            <ChartSkeleton className="h-full rounded-xl" />
+          )}
+        </div>
       </div>
-      {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
-        <p className="text-[11px] text-muted-foreground">
-          {apyAxis.clippedCount} high-yield outlier{apyAxis.clippedCount === 1 ? "" : "s"} above{" "}
-          {apyAxis.clipThreshold.toFixed(0)}% {apyAxis.clippedCount === 1 ? "is" : "are"} pinned to the top rail.
-        </p>
-      ) : null}
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          Sweet spot = above {riskFreeRate.toFixed(2)}% and right of {SAFETY_SCORE_THRESHOLD}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+          <span className="h-2 w-2 rounded-full bg-red-400" />
+          Danger zone = high APY on low safety
+        </span>
+        {apyAxis.clippedCount > 0 && apyAxis.clipThreshold !== null ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
+            {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
+            {apyAxis.clipThreshold.toFixed(0)}%
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

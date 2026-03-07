@@ -1,30 +1,16 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/use-stress-signals";
-import {
-  THREAT_BAND_COLORS,
-  THREAT_BAND_LABELS,
-  THREAT_BAND_HEX,
-} from "@shared/lib/classification";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
+import { THREAT_BAND_COLORS, THREAT_BAND_LABELS, THREAT_BAND_HEX } from "@shared/lib/classification";
 import type { ThreatBand } from "@shared/lib/classification";
 import { RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 
-const SIGNAL_META: Record<
-  string,
-  { name: string; metricKey: string; metricLabel: string }
-> = {
+const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: "Supply Velocity", metricKey: "delta1d", metricLabel: "1d change" },
   pool: { name: "Pool Balance Drift", metricKey: "balanceRatio", metricLabel: "balance ratio" },
   liq: { name: "Liquidity Erosion", metricKey: "scoreDelta7d", metricLabel: "7d score \u0394" },
@@ -72,6 +58,7 @@ interface DEWSDetailProps {
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const { data, isLoading, error, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const chartData = useMemo(() => {
     if (!history?.length) return [];
@@ -149,17 +136,12 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
               <div key={key} className="grid grid-cols-[1fr_auto] gap-x-3 items-center text-sm">
                 <div className="space-y-0.5">
                   <div className="flex items-center justify-between">
-                    <span className={signal.available ? "text-foreground" : "text-muted-foreground"}>
-                      {meta.name}
-                    </span>
+                    <span className={signal.available ? "text-foreground" : "text-muted-foreground"}>{meta.name}</span>
                     <span className="font-mono text-xs tabular-nums">
                       {signal.available ? `${Math.round(signal.value)}/100` : "n/a"}
                     </span>
                   </div>
-                  <ProgressBar
-                    value={signal.available ? signal.value : 0}
-                    band={typedBand}
-                  />
+                  <ProgressBar value={signal.available ? signal.value : 0} band={typedBand} />
                 </div>
                 <span className="text-xs text-muted-foreground w-20 text-right truncate" title={meta.metricLabel}>
                   {signal.available ? formatMetric(meta.metricKey, metricVal) : "\u2014"}
@@ -171,9 +153,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
         {/* History chart */}
         {chartData.length > 1 && (
-          <div className="h-[180px]" role="figure" aria-label="DEWS score history">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-              <AreaChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+          <div ref={chartContainerRef} className="h-[180px]" role="figure" aria-label="DEWS score history">
+            {isChartReady ? (
+              <AreaChart
+                width={width}
+                height={height}
+                data={chartData}
+                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+              >
                 <defs>
                   <linearGradient id="dewsGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={bandHex} stopOpacity={0.3} />
@@ -207,15 +194,11 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   }
                   formatter={(val) => [`${val}/100`, "DEWS"]}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke={bandHex}
-                  fill="url(#dewsGrad)"
-                  strokeWidth={2}
-                />
+                <Area type="monotone" dataKey="score" stroke={bandHex} fill="url(#dewsGrad)" strokeWidth={2} />
               </AreaChart>
-            </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full animate-pulse rounded bg-muted" />
+            )}
           </div>
         )}
       </CardContent>

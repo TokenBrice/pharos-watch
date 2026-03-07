@@ -150,7 +150,9 @@
     transform: translateY(1px);
   }
   [data-slot="button"][data-variant="default"] {
-    box-shadow: 0 1px 2px oklch(0 0 0 / 20%), 0 6px 18px oklch(0 0 0 / 16%);
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 20%),
+      0 6px 18px oklch(0 0 0 / 16%);
   }
   [data-slot="button"][data-variant="outline"] {
     background-color: oklch(1 0 0 / 72%);
@@ -182,7 +184,7 @@
 
 @layer components {
   .pharos-kicker {
-    @apply text-[11px] font-semibold uppercase tracking-[0.13em] text-muted-foreground;
+    @apply text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-[11px];
     line-height: 1.2;
   }
 
@@ -199,6 +201,10 @@
   .pharos-card-shell {
     @apply rounded-xl border border-border/70 bg-card/78 shadow-sm;
     backdrop-filter: saturate(1.08);
+  }
+
+  .pharos-mobile-utility-safe {
+    padding-bottom: calc(1.5rem + var(--mobile-utility-safe-offset, 0px));
   }
 
   .pharos-interactive-card {
@@ -222,6 +228,7 @@
 @media (max-width: 767px) {
   :root {
     --table-header-top: 56px;
+    --mobile-utility-safe-offset: calc(4.5rem + env(safe-area-inset-bottom));
   }
 }
 
@@ -241,7 +248,11 @@
       radial-gradient(farthest-side at 0 50%, oklch(0 0 0 / 0.15), transparent) left center,
       radial-gradient(farthest-side at 100% 50%, oklch(0 0 0 / 0.15), transparent) right center;
     background-repeat: no-repeat;
-    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-size:
+      40px 100%,
+      40px 100%,
+      14px 100%,
+      14px 100%;
     background-attachment: local, local, scroll, scroll;
   }
   .dark .scroll-shadow {
@@ -251,13 +262,24 @@
       radial-gradient(farthest-side at 0 50%, oklch(1 0 0 / 0.12), transparent) left center,
       radial-gradient(farthest-side at 100% 50%, oklch(1 0 0 / 0.12), transparent) right center;
     background-repeat: no-repeat;
-    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-size:
+      40px 100%,
+      40px 100%,
+      14px 100%,
+      14px 100%;
     background-attachment: local, local, scroll, scroll;
   }
 
   @keyframes pharos-pulse {
-    0%, 100% { opacity: 0.6; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.05); }
+    0%,
+    100% {
+      opacity: 0.6;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.05);
+    }
   }
   /* Light mode: higher contrast for pulse animation */
   :root .animate-pharos-pulse {
@@ -270,7 +292,9 @@
   }
 
   .dark [data-slot="button"][data-variant="default"] {
-    box-shadow: 0 1px 2px oklch(0 0 0 / 34%), 0 6px 18px oklch(0 0 0 / 28%);
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 34%),
+      0 6px 18px oklch(0 0 0 / 28%);
   }
 
   .dark [data-slot="button"][data-variant="outline"] {

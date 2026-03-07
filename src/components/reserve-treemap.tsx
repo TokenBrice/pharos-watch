@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts";
+import { Treemap, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { ReserveSlice, ReserveRisk } from "@shared/types";
 
 interface ReserveTreemapProps {
@@ -117,10 +119,8 @@ function ReserveTooltip({
 }
 
 export function ReserveTreemap({ reserves }: ReserveTreemapProps) {
-  const data = useMemo(
-    () => reserves.map((r) => ({ ...r, size: r.pct })),
-    [reserves],
-  );
+  const data = useMemo(() => reserves.map((r) => ({ ...r, size: r.pct })), [reserves]);
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
     <Card className="rounded-xl">
@@ -139,12 +139,15 @@ export function ReserveTreemap({ reserves }: ReserveTreemapProps) {
       </CardHeader>
       <CardContent>
         <div
+          ref={chartContainerRef}
           className="h-48"
           role="figure"
           aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
         >
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          {isChartReady ? (
             <Treemap
+              width={width}
+              height={height}
               data={data}
               dataKey="size"
               nameKey="name"
@@ -153,7 +156,9 @@ export function ReserveTreemap({ reserves }: ReserveTreemapProps) {
             >
               <Tooltip content={<ReserveTooltip />} />
             </Treemap>
-          </ResponsiveContainer>
+          ) : (
+            <ChartSkeleton className="h-full w-full" />
+          )}
         </div>
       </CardContent>
     </Card>

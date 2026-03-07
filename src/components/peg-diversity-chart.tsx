@@ -1,17 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
@@ -65,7 +58,10 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
         fontFamily: RECHARTS_TOOLTIP_STYLES.contentStyle.fontFamily,
       }}
     >
-      <p className="font-bold text-card-foreground mb-1.5" style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}>
+      <p
+        className="font-bold text-card-foreground mb-1.5"
+        style={{ fontFamily: RECHARTS_TOOLTIP_STYLES.labelStyle.fontFamily }}
+      >
         {new Date(label).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
@@ -75,15 +71,10 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
       {items.map((item) => (
         <div key={item.key} className="flex items-center justify-between gap-4 py-0.5">
           <span className="flex items-center gap-1.5 text-card-foreground">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: item.color }}
-            />
+            <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
             {pegKeyToLabel(item.key)}
           </span>
-          <span className="font-medium text-card-foreground tabular-nums">
-            {formatCurrency(item.value)}
-          </span>
+          <span className="font-medium text-card-foreground tabular-nums">{formatCurrency(item.value)}</span>
         </div>
       ))}
       <div className="border-t mt-1.5 pt-1.5 flex items-center justify-between text-card-foreground font-semibold">
@@ -96,10 +87,10 @@ function PegTooltip({ active, payload, label, pegKeys }: PegTooltipProps) {
 
 export function PegDiversityChart() {
   const { data, isLoading } = useStablecoinCharts();
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const { chartData, pegKeys, totalNonUsd, pegCount } = useMemo(() => {
-    if (!Array.isArray(data) || data.length === 0)
-      return { chartData: [], pegKeys: [], totalNonUsd: 0, pegCount: 0 };
+    if (!Array.isArray(data) || data.length === 0) return { chartData: [], pegKeys: [], totalNonUsd: 0, pegCount: 0 };
 
     // Discover all non-USD peg keys
     const keySet = new Set<string>();
@@ -111,9 +102,7 @@ export function PegDiversityChart() {
 
     // Sort by latest mcap descending (largest at bottom for visual stability)
     const latest = data[data.length - 1]!.totalCirculatingUSD;
-    const sorted = [...keySet].sort(
-      (a, b) => (latest[b] ?? 0) - (latest[a] ?? 0)
-    );
+    const sorted = [...keySet].sort((a, b) => (latest[b] ?? 0) - (latest[a] ?? 0));
 
     // Build chart points
     const points = data.map((point) => {
@@ -142,9 +131,7 @@ export function PegDiversityChart() {
 
   const yDomain = useMemo((): [number, number | string] => {
     if (range === "all" || filteredData.length === 0) return [0, "auto"];
-    const totals = filteredData.map((d) =>
-      pegKeys.reduce((sum, key) => sum + ((d[key] as number) ?? 0), 0)
-    );
+    const totals = filteredData.map((d) => pegKeys.reduce((sum, key) => sum + ((d[key] as number) ?? 0), 0));
     const min = totals.reduce((m, v) => Math.min(m, v), Infinity);
     const max = totals.reduce((m, v) => Math.max(m, v), -Infinity);
     const padding = (max - min) * 0.15 || max * 0.05;
@@ -166,9 +153,7 @@ export function PegDiversityChart() {
 
   // Legend items: only pegs present in latest data
   const latestPoint = chartData[chartData.length - 1];
-  const legendKeys = latestPoint
-    ? pegKeys.filter((k) => (latestPoint[k] ?? 0) > 0)
-    : pegKeys;
+  const legendKeys = latestPoint ? pegKeys.filter((k) => (latestPoint[k] ?? 0) > 0) : pegKeys;
 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
@@ -187,12 +172,15 @@ export function PegDiversityChart() {
         {filteredData.length > 0 ? (
           <>
             <div
+              ref={chartContainerRef}
               className={CHART_HEIGHT}
               role="figure"
               aria-label={`Fiat-pegged other than USD stacked area chart showing ${pegCount} peg currencies`}
             >
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              {isChartReady ? (
                 <AreaChart
+                  width={width}
+                  height={height}
                   data={filteredData}
                   margin={{ top: 5, right: 5, bottom: 20, left: 5 }}
                 >
@@ -200,14 +188,7 @@ export function PegDiversityChart() {
                     {pegKeys.map((key) => {
                       const hex = pegKeyToHex(key);
                       return (
-                        <linearGradient
-                          key={key}
-                          id={`pegGrad-${pegKeyToCode(key)}`}
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
+                        <linearGradient key={key} id={`pegGrad-${pegKeyToCode(key)}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor={hex} stopOpacity={0.3} />
                           <stop offset="95%" stopColor={hex} stopOpacity={0.05} />
                         </linearGradient>
@@ -220,7 +201,11 @@ export function PegDiversityChart() {
                     type="number"
                     scale="time"
                     domain={["dataMin", "dataMax"]}
-                    tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+                    tick={{
+                      fontSize: 12,
+                      fontFamily: "var(--font-mono, monospace)",
+                      fill: "var(--color-muted-foreground)",
+                    }}
                     tickLine={false}
                     axisLine={false}
                     minTickGap={72}
@@ -232,15 +217,17 @@ export function PegDiversityChart() {
                     }
                   />
                   <YAxis
-                    tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+                    tick={{
+                      fontSize: 12,
+                      fontFamily: "var(--font-mono, monospace)",
+                      fill: "var(--color-muted-foreground)",
+                    }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(val: number) => formatCurrency(val, 0)}
                     domain={yDomain}
                   />
-                  <Tooltip
-                    content={<PegTooltip pegKeys={pegKeys} />}
-                  />
+                  <Tooltip content={<PegTooltip pegKeys={pegKeys} />} />
                   {pegKeys.map((key) => (
                     <Area
                       key={key}
@@ -253,7 +240,9 @@ export function PegDiversityChart() {
                     />
                   ))}
                 </AreaChart>
-              </ResponsiveContainer>
+              ) : (
+                <Skeleton className="h-full w-full" />
+              )}
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-muted-foreground">
               {legendKeys.map((key) => (

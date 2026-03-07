@@ -18,6 +18,9 @@ interface SiteHeaderProps {
   chainCount: number;
 }
 
+const METRIC_PILL_CLASS =
+  "inline-flex items-center rounded-full border px-2.5 py-1 font-mono tabular-nums text-[oklch(0.43_0.01_255)] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-sm border-border/65 bg-background/78 dark:border-white/10 dark:bg-white/[0.035] dark:text-slate-200/90 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_18px_rgba(0,0,0,0.18)]";
+
 export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const { data: health } = useHealth();
   const { data: dexMap } = useDexLiquidity();
@@ -26,27 +29,24 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   const blacklistEvents = health?.blacklist.totalEvents;
   const mintBurnEvents = health?.mintBurn?.totalEvents;
   const totalPools = useMemo(
-    () => dexMap ? Object.values(dexMap).reduce((sum, d) => sum + d.poolCount, 0) : undefined,
+    () => (dexMap ? Object.values(dexMap).reduce((sum, d) => sum + d.poolCount, 0) : undefined),
     [dexMap],
   );
-  const trackedStats = useMemo(
-    () => {
-      const stats: string[] = [];
-      if (totalPools != null) {
-        stats.push(`${formatCount(totalPools)} pools processed`);
-      }
+  const trackedStats = useMemo(() => {
+    const stats: string[] = [];
+    if (totalPools != null) {
+      stats.push(`${formatCount(totalPools)} pools processed`);
+    }
 
-      if (mintBurnEvents != null) {
-        stats.push(`${formatCount(mintBurnEvents)} mint/burn events recorded`);
-      }
-      if (blacklistEvents != null) {
-        stats.push(`${formatCount(blacklistEvents)} blacklist events recorded`);
-      }
+    if (mintBurnEvents != null) {
+      stats.push(`${formatCount(mintBurnEvents)} mint/burn events recorded`);
+    }
+    if (blacklistEvents != null) {
+      stats.push(`${formatCount(blacklistEvents)} blacklist events recorded`);
+    }
 
-      return stats;
-    },
-    [totalPools, blacklistEvents, mintBurnEvents],
-  );
+    return stats;
+  }, [totalPools, blacklistEvents, mintBurnEvents]);
 
   const liveTrackedCount = useMemo(() => {
     const assets = stablecoinsData?.peggedAssets;
@@ -61,44 +61,38 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
   }, [stablecoinsData, total]);
 
   return (
-    <div className="pharos-card-shell hidden lg:flex items-center justify-between gap-4 px-4 py-3.5">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="pharos-card-shell hidden lg:flex items-end justify-between gap-6 px-5 py-5">
+      <div className="flex min-w-0 items-center gap-4">
         <Image
           src="/pharos-icon.png"
           alt=""
-          width={32}
-          height={32}
-          className="rounded-lg ring-1 ring-border/60 bg-slate-900/90 shadow-sm dark:bg-transparent"
+          width={40}
+          height={40}
+          className="rounded-xl ring-1 ring-border/60 bg-slate-900/90 shadow-sm dark:bg-transparent"
           priority
         />
         <div className="min-w-0">
-          <p className="text-[1.02rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">
-            Pharos
-          </p>
-          <p className="mt-0.5 text-xs tracking-[0.01em] text-muted-foreground/85">
-            Stablecoin intelligence: watching every peg.
+          <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
+          <p className="mt-1 max-w-xl text-sm tracking-[0.01em] text-muted-foreground/85">
+            Live market intelligence for stablecoins: peg stress, liquidity, blacklist changes, and hidden dependencies
+            in one research surface.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2 text-[11px]">
-        <span className="inline-flex items-center rounded-full border border-border/65 bg-background/72 px-2.5 py-1 font-mono tabular-nums text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.25)]">
-          {formatCount(liveTrackedCount)} coins
-        </span>
-        <span className="inline-flex items-center rounded-full border border-border/65 bg-background/72 px-2.5 py-1 font-mono tabular-nums text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.25)]">
-          {formatCount(pegCount)} pegs
-        </span>
-        <span className="inline-flex items-center rounded-full border border-border/65 bg-background/72 px-2.5 py-1 font-mono tabular-nums text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.25)]">
-          {formatCount(chainCount)} chains
-        </span>
-        {trackedStats.map((stat) => (
-          <span
-            key={stat}
-            className="inline-flex items-center rounded-full border border-border/65 bg-background/72 px-2.5 py-1 font-mono text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.25)]"
-          >
-            {stat}
-          </span>
-        ))}
+      <div className="grid gap-2 text-[11px]">
+        <div className="flex flex-wrap justify-end gap-2">
+          <span className={METRIC_PILL_CLASS}>{formatCount(liveTrackedCount)} coins</span>
+          <span className={METRIC_PILL_CLASS}>{formatCount(pegCount)} pegs</span>
+          <span className={METRIC_PILL_CLASS}>{formatCount(chainCount)} chains</span>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          {trackedStats.map((stat) => (
+            <span key={stat} className={METRIC_PILL_CLASS}>
+              {stat}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

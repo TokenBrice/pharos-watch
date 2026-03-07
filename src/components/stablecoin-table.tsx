@@ -4,14 +4,7 @@ import { useMemo, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import {
-  TableBody,
-  TableCell,
-  TableHead,
-  TableCaption,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableCaption, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,7 +14,12 @@ import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap, ReportCard } from "@shared/types";
-import { BACKING_COLORS, GOVERNANCE_COLORS, BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
+import {
+  BACKING_COLORS,
+  GOVERNANCE_COLORS,
+  BACKING_LABELS_SHORT,
+  GOVERNANCE_LABELS_SHORT,
+} from "@shared/lib/classification";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { deviationColorClass, getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -60,27 +58,51 @@ interface StablecoinTableProps {
 }
 
 function MiniSparkline({ values }: { values: number[] }) {
-  if (values.length < 2 || values.every(v => v === 0)) return null;
+  if (values.length < 2 || values.every((v) => v === 0)) return null;
   const min = values.reduce((m, v) => Math.min(m, v), Infinity);
   const max = values.reduce((m, v) => Math.max(m, v), -Infinity);
   const range = max - min || 1;
   const h = 16;
   const w = 40;
-  const points = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return `${x},${y}`;
-  }).join(" ");
+  const points = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - ((v - min) / range) * h;
+      return `${x},${y}`;
+    })
+    .join(" ");
   const trending = values[values.length - 1] >= values[0];
   return (
     <svg width={w} height={h} viewBox="0 0 40 16" className="inline-block align-middle mr-1" aria-hidden="true">
-      <polyline points={points} fill="none" stroke={trending ? "var(--color-green-500, #22c55e)" : "var(--color-red-500, #ef4444)"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={trending ? "var(--color-green-500, #22c55e)" : "var(--color-red-500, #ef4444)"}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRates = {}, searchQuery, pegScores, dexLiquidity, reportCards, onClearSearch, onClearFilters }: StablecoinTableProps) {
-  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<StablecoinTableSortKey>("mcap", "desc");
+export function StablecoinTable({
+  data,
+  isLoading,
+  activeFilters,
+  logos,
+  pegRates = {},
+  searchQuery,
+  pegScores,
+  dexLiquidity,
+  reportCards,
+  onClearSearch,
+  onClearFilters,
+}: StablecoinTableProps) {
+  const { sortKey, sortDirection, toggleSort, getAriaSortValue, handleSortKeyDown } = useSort<StablecoinTableSortKey>(
+    "mcap",
+    "desc",
+  );
   const sort = useMemo(() => ({ key: sortKey, direction: sortDirection }), [sortKey, sortDirection]);
   const router = useRouter();
   const prefetch = usePrefetchStablecoin();
@@ -95,17 +117,11 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
 
-  const effectiveSortKey = useMemo(
-    () => resolveEffectiveSortKey(sortKey, visibleSet),
-    [sortKey, visibleSet],
-  );
+  const effectiveSortKey = useMemo(() => resolveEffectiveSortKey(sortKey, visibleSet), [sortKey, visibleSet]);
 
   const trackedIds = useMemo(() => buildTrackedIdSet(activeFilters), [activeFilters]);
 
-  const filtered = useMemo(
-    () => filterStablecoins(data, trackedIds, searchQuery),
-    [data, trackedIds, searchQuery],
-  );
+  const filtered = useMemo(() => filterStablecoins(data, trackedIds, searchQuery), [data, trackedIds, searchQuery]);
 
   const sorted = useMemo(
     () =>
@@ -143,9 +159,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
   const virtualItems = virtualizer.getVirtualItems();
   const totalHeight = virtualizer.getTotalSize();
   const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
-  const paddingBottom = virtualItems.length > 0
-    ? totalHeight - virtualItems[virtualItems.length - 1].end
-    : 0;
+  const paddingBottom = virtualItems.length > 0 ? totalHeight - virtualItems[virtualItems.length - 1].end : 0;
 
   // Visible range for footer
   const rangeStart = virtualItems.length > 0 ? virtualItems[0].index + 1 : 0;
@@ -178,30 +192,45 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
 
   return (
     <div className="pharos-card-shell animate-in fade-in duration-300 overflow-hidden">
-      <div className="flex items-center justify-end gap-2 border-b border-border/60 bg-muted/22 px-3 py-2">
-        <span className="mr-auto text-xs text-muted-foreground sm:hidden">Swipe table for more</span>
-        <ColumnVisibilityDropdown
-          visibleColumns={visibleColumns}
-          setVisibleColumns={setVisibleColumns}
-          resetColumns={resetColumns}
-        />
-        <Button variant="outline" size="sm" className="min-h-11 border-border/70 sm:min-h-8" onClick={handleCsvExport} disabled={sorted.length === 0}>
-          <Download className="h-3.5 w-3.5" />
-          Export CSV
-        </Button>
+      <div className="flex flex-col gap-3 border-b border-border/60 bg-muted/22 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <p className="pharos-kicker sm:hidden">Swipe to reveal more metrics</p>
+          <p className="text-xs text-muted-foreground sm:hidden">
+            Name, price, and market cap stay readable first. Columns and export stay above the table.
+          </p>
+          <p className="hidden text-xs text-muted-foreground sm:block">
+            Scroll horizontally for secondary metrics without leaving the table context.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <ColumnVisibilityDropdown
+            visibleColumns={visibleColumns}
+            setVisibleColumns={setVisibleColumns}
+            resetColumns={resetColumns}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="min-h-11 w-full border-border/70 sm:min-h-8 sm:w-auto"
+            onClick={handleCsvExport}
+            disabled={sorted.length === 0}
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
-      <div
-        ref={scrollRef}
-        className="scroll-shadow max-h-[50vh] overflow-auto sm:max-h-[70vh]"
-      >
-        <table className="w-full caption-bottom text-sm">
+      <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
+        <table className="min-w-[820px] w-full caption-bottom text-sm">
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
               {isVisible("rank") && (
-                <TableHead scope="col" className="w-[50px] text-right">#</TableHead>
+                <TableHead scope="col" className="w-[50px] text-right">
+                  #
+                </TableHead>
               )}
               {isVisible("name") && (
                 <SortableTableHead
@@ -318,19 +347,27 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                 />
               )}
               {isVisible("backing") && (
-                <TableHead scope="col" className="hidden md:table-cell text-center" title="Collateral backing type">Backing</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell text-center" title="Collateral backing type">
+                  Backing
+                </TableHead>
               )}
               {isVisible("type") && (
-                <TableHead scope="col" className="hidden md:table-cell text-center" title="Stablecoin mechanism type">Type</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell text-center" title="Stablecoin mechanism type">
+                  Type
+                </TableHead>
               )}
               {isVisible("flags") && (
-                <TableHead scope="col" className="hidden md:table-cell text-center">Flags</TableHead>
+                <TableHead scope="col" className="hidden md:table-cell text-center">
+                  Flags
+                </TableHead>
               )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paddingTop > 0 && (
-              <tr><td style={{ height: paddingTop, padding: 0 }} /></tr>
+              <tr>
+                <td style={{ height: paddingTop, padding: 0 }} />
+              </tr>
             )}
             {virtualItems.map((virtualRow) => {
               const coin = sorted[virtualRow.index];
@@ -349,13 +386,16 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   style={{ height: ROW_HEIGHT }}
                   onClick={() => router.push(buildStablecoinUrl(coin.id))}
                   onMouseEnter={() => prefetch(coin.id)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(buildStablecoinUrl(coin.id)); } }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(buildStablecoinUrl(coin.id));
+                    }
+                  }}
                   tabIndex={0}
                 >
                   {isVisible("rank") && (
-                    <TableCell className="text-right text-muted-foreground text-xs tabular-nums">
-                      {index + 1}
-                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground text-xs tabular-nums">{index + 1}</TableCell>
                   )}
                   {isVisible("name") && (
                     <TableCell>
@@ -367,7 +407,9 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                       >
                         <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={24} />
                         <span className="font-medium">{coin.symbol}</span>
-                        <span className="truncate max-w-[180px] text-xs text-muted-foreground hidden xl:inline">{coin.name}</span>
+                        <span className="truncate max-w-[180px] text-xs text-muted-foreground hidden xl:inline">
+                          {coin.name}
+                        </span>
                       </Link>
                     </TableCell>
                   )}
@@ -382,25 +424,33 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {isVisible("peg") && (
                     <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">
                       {meta?.flags.navToken ? (
-                        <span className="text-muted-foreground" title={meta.flags.pegCurrency === "VAR" ? "CPI-indexed, price tracks inflation" : "NAV token, price appreciates with yield"}>
+                        <span
+                          className="text-muted-foreground"
+                          title={
+                            meta.flags.pegCurrency === "VAR"
+                              ? "CPI-indexed, price tracks inflation"
+                              : "NAV token, price appreciates with yield"
+                          }
+                        >
                           {meta.flags.pegCurrency === "VAR" ? "CPI" : "NAV"}
                         </span>
-                      ) : (() => {
-                        const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-                        const price = coin.price;
-                        const absBps = (price != null && typeof price === "number" && ref > 0)
-                          ? Math.abs(price / ref - 1) * 10_000
-                          : null;
-                        const colorClass = absBps === null
-                          ? "text-muted-foreground"
-                          : deviationColorClass(absBps);
-                        return (
-                          <span className={`inline-flex items-center gap-0.5 ${colorClass}`}>
-                            {absBps !== null && <DeviationIcon absBps={absBps} />}
-                            {formatPegDeviation(price, ref)}
-                          </span>
-                        );
-                      })()}
+                      ) : (
+                        (() => {
+                          const ref = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
+                          const price = coin.price;
+                          const absBps =
+                            price != null && typeof price === "number" && ref > 0
+                              ? Math.abs(price / ref - 1) * 10_000
+                              : null;
+                          const colorClass = absBps === null ? "text-muted-foreground" : deviationColorClass(absBps);
+                          return (
+                            <span className={`inline-flex items-center gap-0.5 ${colorClass}`}>
+                              {absBps !== null && <DeviationIcon absBps={absBps} />}
+                              {formatPegDeviation(price, ref)}
+                            </span>
+                          );
+                        })()
+                      )}
                     </TableCell>
                   )}
                   {isVisible("mcap") && (
@@ -408,24 +458,40 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   )}
                   {isVisible("change24h") && (
                     <TableCell className="text-right font-mono tabular-nums text-sm">
-                      <span className={change24h >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
+                      <span
+                        className={
+                          change24h >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                        }
+                      >
                         {prevDay > 0 ? (
-                          <>{change24h >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevDay)}</>
-                        ) : "N/A"}
+                          <>
+                            {change24h >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevDay)}
+                          </>
+                        ) : (
+                          "N/A"
+                        )}
                       </span>
                     </TableCell>
                   )}
                   {isVisible("change7d") && (
                     <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
-                      <span className={change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}>
+                      <span
+                        className={
+                          change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                        }
+                      >
                         {prevWeek > 0 ? (
                           <>
                             <span className="hidden sm:inline">
-                              <MiniSparkline values={[getPrevWeekRaw(coin), getPrevDayRaw(coin), getCirculatingRaw(coin)]} />
+                              <MiniSparkline
+                                values={[getPrevWeekRaw(coin), getPrevDayRaw(coin), getCirculatingRaw(coin)]}
+                              />
                             </span>
                             {change7d >= 0 ? "↑" : "↓"} {formatPercentChange(circulating, prevWeek)}
                           </>
-                        ) : "N/A"}
+                        ) : (
+                          "N/A"
+                        )}
                       </span>
                     </TableCell>
                   )}
@@ -481,7 +547,10 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {isVisible("type") && (
                     <TableCell className="hidden md:table-cell text-center">
                       {meta && (
-                        <Badge variant="outline" className={`text-xs ${GOVERNANCE_COLORS[meta.flags.governance] ?? ""}`}>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${GOVERNANCE_COLORS[meta.flags.governance] ?? ""}`}
+                        >
                           {GOVERNANCE_LABELS_SHORT[meta.flags.governance]}
                         </Badge>
                       )}
@@ -502,7 +571,9 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
               );
             })}
             {paddingBottom > 0 && (
-              <tr><td style={{ height: paddingBottom, padding: 0 }} /></tr>
+              <tr>
+                <td style={{ height: paddingBottom, padding: 0 }} />
+              </tr>
             )}
             {sorted.length === 0 && (
               <TableRow>
@@ -511,7 +582,10 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                   {(searchQuery || activeFilters.length > 0) && (
                     <p className="mt-2 text-sm">
                       {searchQuery && onClearSearch && (
-                        <button onClick={onClearSearch} className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline">
+                        <button
+                          onClick={onClearSearch}
+                          className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline"
+                        >
                           Clear search
                         </button>
                       )}
@@ -519,7 +593,10 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
                         <span className="mx-1.5">or</span>
                       )}
                       {activeFilters.length > 0 && onClearFilters && (
-                        <button onClick={onClearFilters} className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline">
+                        <button
+                          onClick={onClearFilters}
+                          className="pharos-focus-ring cursor-pointer rounded text-sm text-primary hover:underline"
+                        >
                           Clear filters
                         </button>
                       )}

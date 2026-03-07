@@ -20,6 +20,7 @@ export function extractGoldPrices(peggedAssets: StablecoinData[]): Record<string
 interface BlacklistStatsResult {
   usdcBlacklisted: number;
   usdtBlacklisted: number;
+  eurcBlacklisted: number;
   goldBlacklisted: number;
   frozenAddresses: number;
   destroyedTotal: number;
@@ -40,6 +41,7 @@ export function computeBlacklistStats(
 
   const usdcAddresses = new Map<string, number>();
   const usdtAddresses = new Map<string, number>();
+  const eurcAddresses = new Map<string, number>();
   const goldAddresses = new Map<string, number>();
   // Combined map counts unique addresses across all stablecoins (used by summary card)
   const allAddresses = new Map<string, number>();
@@ -53,7 +55,9 @@ export function computeBlacklistStats(
       ? goldAddresses
       : evt.stablecoin === "USDC"
         ? usdcAddresses
-        : usdtAddresses;
+        : evt.stablecoin === "USDT"
+          ? usdtAddresses
+          : eurcAddresses;
 
     if (evt.eventType === "blacklist") {
       map.set(evt.address, (map.get(evt.address) ?? 0) + 1);
@@ -73,8 +77,17 @@ export function computeBlacklistStats(
 
   const usdcBlacklisted = Array.from(usdcAddresses.values()).filter((v) => v > 0).length;
   const usdtBlacklisted = Array.from(usdtAddresses.values()).filter((v) => v > 0).length;
+  const eurcBlacklisted = Array.from(eurcAddresses.values()).filter((v) => v > 0).length;
   const goldBlacklisted = Array.from(goldAddresses.values()).filter((v) => v > 0).length;
   const frozenAddresses = Array.from(allAddresses.values()).filter((v) => v > 0).length;
 
-  return { usdcBlacklisted, usdtBlacklisted, goldBlacklisted, frozenAddresses, destroyedTotal, recentCount };
+  return {
+    usdcBlacklisted,
+    usdtBlacklisted,
+    eurcBlacklisted,
+    goldBlacklisted,
+    frozenAddresses,
+    destroyedTotal,
+    recentCount,
+  };
 }

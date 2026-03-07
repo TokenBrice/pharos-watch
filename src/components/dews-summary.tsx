@@ -36,7 +36,10 @@ type BandCounts = Record<ThreatBand, number>;
 const RING_BANDS: ElevatedBand[] = ["WATCH", "ALERT", "WARNING", "DANGER"];
 const LEGEND_BANDS: ThreatBand[] = ["DANGER", "WARNING", "ALERT", "WATCH", "CALM"];
 const RING_RADII: Record<ElevatedBand, number> = {
-  DANGER: 45, WARNING: 95, ALERT: 143, WATCH: 178,
+  DANGER: 45,
+  WARNING: 95,
+  ALERT: 143,
+  WATCH: 178,
 };
 
 const CALM_INNER_R = 212;
@@ -51,8 +54,10 @@ interface CalmDot {
 const SPOKES = Array.from({ length: 8 }, (_, i) => {
   const a = (i * Math.PI) / 4;
   return {
-    x1: CX + 10 * Math.cos(a), y1: CY + 10 * Math.sin(a),
-    x2: CX + OUTER_R * Math.cos(a), y2: CY + OUTER_R * Math.sin(a),
+    x1: CX + 10 * Math.cos(a),
+    y1: CY + 10 * Math.sin(a),
+    x2: CX + OUTER_R * Math.cos(a),
+    y2: CY + OUTER_R * Math.sin(a),
   };
 });
 
@@ -109,7 +114,10 @@ function computePositions(
   logos: Record<string, string> | undefined,
 ): ElevatedCoin[] {
   const byBand: Record<ElevatedBand, Array<{ id: string; score: number }>> = {
-    WATCH: [], ALERT: [], WARNING: [], DANGER: [],
+    WATCH: [],
+    ALERT: [],
+    WARNING: [],
+    DANGER: [],
   };
 
   for (const [id, entry] of Object.entries(signals)) {
@@ -143,9 +151,7 @@ function computePositions(
   return result;
 }
 
-function computeCalmDots(
-  signals: Record<string, { score: number; band: string }>,
-): CalmDot[] {
+function computeCalmDots(signals: Record<string, { score: number; band: string }>): CalmDot[] {
   const calmIds = Object.keys(signals).filter((id) => signals[id].band === "CALM");
   const angles = distributeAngles(calmIds.length);
   return calmIds.map((id, i) => {
@@ -158,9 +164,7 @@ function computeCalmDots(
   });
 }
 
-export function computeBandCounts(
-  signals: Record<string, { score: number; band: string }>,
-): BandCounts {
+export function computeBandCounts(signals: Record<string, { score: number; band: string }>): BandCounts {
   const counts: BandCounts = {
     CALM: 0,
     WATCH: 0,
@@ -246,9 +250,12 @@ function DEWSDot({
       {/* Touch-friendly hit area to improve mobile targeting precision */}
       <circle r={18} fill="transparent" stroke="transparent" />
       {/* Animated glow ring */}
-      <circle r={glowR} fill={hex}
+      <circle
+        r={glowR}
+        fill={hex}
         className="dews-glow-r"
-        style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }} />
+        style={{ animation: `dews-glow ${dur}s ease-in-out infinite` }}
+      />
       {/* Main dot */}
       <circle r={dotR} fill={hex} fillOpacity={0.92} />
       {/* Always-visible label: WARNING and DANGER only */}
@@ -276,42 +283,48 @@ function DEWSTooltip({ coin }: { coin: ElevatedCoin }) {
   // Clamp so tooltip stays within viewBox; flip below the dot when near the top edge
   const tx = Math.min(Math.max(coin.x + 14, 4), VB_W - W - 4);
   const preferAbove = coin.y - H - 10 >= 4;
-  const ty = preferAbove
-    ? coin.y - H - 10
-    : Math.min(coin.y + 14, VB_H - H - 4);
+  const ty = preferAbove ? coin.y - H - 10 : Math.min(coin.y + 14, VB_H - H - 4);
 
   return (
     <g pointerEvents="none">
-      <rect x={tx} y={ty} width={W} height={H} rx={6}
-        fill="var(--color-popover)" stroke="var(--color-border)" strokeWidth={1} />
-      <text x={tx + 10} y={ty + 16}
-        fill="var(--color-foreground)" fontSize={11} fontWeight={600}
-        fontFamily="var(--font-sans)">
+      <rect
+        x={tx}
+        y={ty}
+        width={W}
+        height={H}
+        rx={6}
+        fill="var(--color-popover)"
+        stroke="var(--color-border)"
+        strokeWidth={1}
+      />
+      <text
+        x={tx + 10}
+        y={ty + 16}
+        fill="var(--color-foreground)"
+        fontSize={11}
+        fontWeight={600}
+        fontFamily="var(--font-sans)"
+      >
         {coin.symbol}
       </text>
-      <text x={tx + 10} y={ty + 32}
-        fill={hex} fontSize={10} fontWeight={600}
-        fontFamily="var(--font-mono)">
+      <text x={tx + 10} y={ty + 32} fill={hex} fontSize={10} fontWeight={600} fontFamily="var(--font-mono)">
         {coin.band}
       </text>
-      <text x={tx + W - 10} y={ty + 32}
-        fill="var(--color-muted-foreground)" fontSize={10}
-        fontFamily="var(--font-mono)" textAnchor="end">
+      <text
+        x={tx + W - 10}
+        y={ty + 32}
+        fill="var(--color-muted-foreground)"
+        fontSize={10}
+        fontFamily="var(--font-mono)"
+        textAnchor="end"
+      >
         {coin.score}/100
       </text>
     </g>
   );
 }
 
-function DEWSCenter({
-  highest,
-  totalCount,
-  sweepDur,
-}: {
-  highest: ThreatBand;
-  totalCount: number;
-  sweepDur: number;
-}) {
+function DEWSCenter({ highest, totalCount, sweepDur }: { highest: ThreatBand; totalCount: number; sweepDur: number }) {
   const hex = THREAT_BAND_HEX[highest];
   const label = "SCANNING";
   const sublabel = `${totalCount} monitored`;
@@ -319,24 +332,37 @@ function DEWSCenter({
   return (
     <g>
       <circle
-        cx={CX} cy={CY} r={38}
-        fill={hex} fillOpacity={0.13}
-        stroke={hex} strokeOpacity={0.38} strokeWidth={1.5}
+        cx={CX}
+        cy={CY}
+        r={38}
+        fill={hex}
+        fillOpacity={0.13}
+        stroke={hex}
+        strokeOpacity={0.38}
+        strokeWidth={1.5}
         className="dews-center-r"
         style={{ animation: `dews-center-pulse ${sweepDur}s ease-in-out infinite` }}
       />
       <text
-        x={CX} y={CY - 5}
-        textAnchor="middle" dominantBaseline="middle"
-        fill={hex} fontSize={11} fontWeight={700}
-        fontFamily="var(--font-mono)" letterSpacing={1}
+        x={CX}
+        y={CY - 5}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={hex}
+        fontSize={11}
+        fontWeight={700}
+        fontFamily="var(--font-mono)"
+        letterSpacing={1}
       >
         {label}
       </text>
       <text
-        x={CX} y={CY + 11}
-        textAnchor="middle" dominantBaseline="middle"
-        fill="var(--color-muted-foreground)" fontSize={9}
+        x={CX}
+        y={CY + 11}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill="var(--color-muted-foreground)"
+        fontSize={9}
         fontFamily="var(--font-mono)"
       >
         {sublabel}
@@ -377,37 +403,61 @@ function DEWSRadar({
   const dur = sweepDuration(highest);
 
   return (
-    <svg viewBox="0 0 560 500" width="100%" style={{ maxHeight: compact ? 400 : 440 }}
+    <svg
+      className="mx-auto block"
+      viewBox="0 0 560 500"
+      width="100%"
+      style={{ height: compact ? "100%" : undefined, maxHeight: compact ? 470 : 440 }}
       aria-label={`DEWS radar — ${elevated.length === 0 ? "all coins calm" : `${elevated.length} elevated, highest: ${highest}`}`}
-      role="img">
+      role="img"
+    >
       <defs>
         <style>{RADAR_KEYFRAMES}</style>
         <radialGradient id={wakeGradId} cx={CX} cy={CY} r={OUTER_R} gradientUnits="userSpaceOnUse">
-          <stop offset="0%"   stopColor={hex} stopOpacity={0.18} />
+          <stop offset="0%" stopColor={hex} stopOpacity={0.18} />
           <stop offset="100%" stopColor={hex} stopOpacity={0} />
         </radialGradient>
       </defs>
 
       {/* Spokes */}
       {SPOKES.map((s, i) => (
-        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-          stroke="var(--dews-radar-spoke)" strokeWidth={1} />
+        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke="var(--dews-radar-spoke)" strokeWidth={1} />
       ))}
 
       {/* Band ring boundaries */}
       {RING_BANDS.map((band) => (
-        <circle key={band} cx={CX} cy={CY} r={RING_RADII[band]}
-          fill="none" stroke={THREAT_BAND_HEX[band]}
+        <circle
+          key={band}
+          cx={CX}
+          cy={CY}
+          r={RING_RADII[band]}
+          fill="none"
+          stroke={THREAT_BAND_HEX[band]}
           style={{ strokeOpacity: "var(--dews-radar-band-ring-opacity)" }}
-          strokeWidth={1} strokeDasharray="4 6" />
+          strokeWidth={1}
+          strokeDasharray="4 6"
+        />
       ))}
       {/* Calm zone inner boundary — faint gray, not a threat color */}
-      <circle cx={CX} cy={CY} r={CALM_INNER_R}
-        fill="none" stroke="var(--dews-radar-calm-boundary)" strokeWidth={1} strokeDasharray="4 6" />
-      <circle cx={CX} cy={CY} r={OUTER_R}
-        fill="none" stroke={hex}
+      <circle
+        cx={CX}
+        cy={CY}
+        r={CALM_INNER_R}
+        fill="none"
+        stroke="var(--dews-radar-calm-boundary)"
+        strokeWidth={1}
+        strokeDasharray="4 6"
+      />
+      <circle
+        cx={CX}
+        cy={CY}
+        r={OUTER_R}
+        fill="none"
+        stroke={hex}
         style={{ strokeOpacity: "var(--dews-radar-outer-ring-opacity)" }}
-        strokeWidth={1} strokeDasharray="4 6" />
+        strokeWidth={1}
+        strokeDasharray="4 6"
+      />
 
       {/* Sweep group — wake arc + line, rotates together */}
       <g
@@ -419,8 +469,14 @@ function DEWSRadar({
       >
         <path d={WAKE_PATH} fill={`url(#${wakeGradId})`} />
         <line
-          x1={CX} y1={CY} x2={CX + OUTER_R} y2={CY}
-          stroke={hex} strokeOpacity={0.65} strokeWidth={1.5} strokeLinecap="round"
+          x1={CX}
+          y1={CY}
+          x2={CX + OUTER_R}
+          y2={CY}
+          stroke={hex}
+          strokeOpacity={0.65}
+          strokeWidth={1.5}
+          strokeLinecap="round"
         />
       </g>
 
@@ -448,15 +504,12 @@ function DEWSRadar({
           }}
         />
       ))}
-      {hoveredId && (() => {
-        const hovered = elevated.find((c) => c.id === hoveredId);
-        return hovered ? <DEWSTooltip coin={hovered} /> : null;
-      })()}
-      <DEWSCenter
-        highest={highest}
-        totalCount={totalCount}
-        sweepDur={dur}
-      />
+      {hoveredId &&
+        (() => {
+          const hovered = elevated.find((c) => c.id === hoveredId);
+          return hovered ? <DEWSTooltip coin={hovered} /> : null;
+        })()}
+      <DEWSCenter highest={highest} totalCount={totalCount} sweepDur={dur} />
     </svg>
   );
 }
@@ -485,8 +538,7 @@ function DEWSLegend({
             </svg>
           ) : (
             <svg width={20} height={4} aria-hidden="true">
-              <line x1={0} y1={2} x2={20} y2={2}
-                stroke={THREAT_BAND_HEX[band]} strokeWidth={2} />
+              <line x1={0} y1={2} x2={20} y2={2} stroke={THREAT_BAND_HEX[band]} strokeWidth={2} />
             </svg>
           )}
           <span className="text-xs text-muted-foreground capitalize">
@@ -494,7 +546,12 @@ function DEWSLegend({
           </span>
         </div>
       ))}
-      <span className="ml-auto text-xs text-muted-foreground/50 tabular-nums font-mono">
+      <span
+        className={cn(
+          "text-xs text-muted-foreground/50 tabular-nums font-mono",
+          compact ? "w-full pt-1 sm:ml-auto sm:w-auto sm:pt-0" : "ml-auto",
+        )}
+      >
         Updated {updatedAtLabel}
       </span>
     </div>
@@ -524,7 +581,7 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           </CardHeader>
         )}
         <CardContent className={showHeader ? undefined : "p-4"}>
-          <div className={`${showHeader ? "h-[440px]" : "h-[400px]"} rounded-lg bg-muted animate-pulse`} />
+          <div className={`${showHeader ? "h-[440px]" : "min-h-[440px]"} rounded-lg bg-muted animate-pulse`} />
         </CardContent>
       </Card>
     );
@@ -563,20 +620,18 @@ export function DEWSSummary({ logos, showHeader = true, className }: DEWSSummary
           </div>
         </CardHeader>
       )}
-      <CardContent className={showHeader ? "space-y-0 pb-4" : "flex h-full flex-col space-y-0 p-3"}>
-        <DEWSRadar
-          elevated={elevated}
-          calmDots={calmDots}
-          highest={highest}
-          totalCount={totalCount}
-          onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
-          compact={!showHeader}
-        />
-        <DEWSLegend
-          bandCounts={bandCounts}
-          updatedAtLabel={updatedAtLabel}
-          compact={!showHeader}
-        />
+      <CardContent className={showHeader ? "space-y-0 pb-4" : "flex h-full min-h-0 flex-col gap-2.5 p-3 sm:p-4"}>
+        <div className={cn(showHeader ? undefined : "flex min-h-0 flex-1 items-start justify-center")}>
+          <DEWSRadar
+            elevated={elevated}
+            calmDots={calmDots}
+            highest={highest}
+            totalCount={totalCount}
+            onCoinClick={(id) => router.push(buildStablecoinUrl(id))}
+            compact={!showHeader}
+          />
+        </div>
+        <DEWSLegend bandCounts={bandCounts} updatedAtLabel={updatedAtLabel} compact={!showHeader} />
       </CardContent>
     </Card>
   );

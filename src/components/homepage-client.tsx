@@ -31,20 +31,9 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import type { PegSummaryCoin } from "@shared/types";
 
 export function HomepageClient() {
-  const {
-    data,
-    isLoading,
-    error: pricesError,
-    dataUpdatedAt,
-    refetch: refetchPrices,
-  } = useStablecoins();
+  const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
   const { data: logos } = useLogos();
-  const {
-    data: pegSummaryData,
-    dataUpdatedAt: pegUpdatedAt,
-    error: pegError,
-    refetch: refetchPeg,
-  } = usePegSummary();
+  const { data: pegSummaryData, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
   const {
     data: dexLiquidity,
     dataUpdatedAt: liqUpdatedAt,
@@ -70,31 +59,35 @@ export function HomepageClient() {
     if (!reportCardsData?.cards) return undefined;
     return Object.fromEntries(reportCardsData.cards.map((c) => [c.id, c]));
   }, [reportCardsData]);
-  const { rates: pegRates } = useMemo(() => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates), [data, metaById]);
+  const { rates: pegRates } = useMemo(
+    () => derivePegRates(data?.peggedAssets ?? [], metaById, data?.fxFallbackRates),
+    [data, metaById],
+  );
   const filters = useHomepageFilters();
   const globalError = pricesError ?? pegError ?? liquidityError ?? reportCardsError;
   const handleRetry = useCallback(() => {
-    void Promise.allSettled([
-      refetchPrices(),
-      refetchPeg(),
-      refetchLiquidity(),
-      refetchReportCards(),
-    ]);
+    void Promise.allSettled([refetchPrices(), refetchPeg(), refetchLiquidity(), refetchReportCards()]);
   }, [refetchPeg, refetchLiquidity, refetchPrices, refetchReportCards]);
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice
-        error={globalError}
-        hasData={!!data?.peggedAssets?.length}
-        onRetry={handleRetry}
-      />
+      <QueryErrorNotice error={globalError} hasData={!!data?.peggedAssets?.length} onRetry={handleRetry} />
       <StaleDataBanner
         queries={[
           { preset: "stablecoins", dataUpdatedAt, error: pricesError, hasData: !!data?.peggedAssets?.length },
-          { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummaryData?.coins?.length },
+          {
+            preset: "pegSummary",
+            dataUpdatedAt: pegUpdatedAt,
+            error: pegError,
+            hasData: !!pegSummaryData?.coins?.length,
+          },
           { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: liquidityError, hasData: !!dexLiquidity },
-          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportCardsData?.cards?.length },
+          {
+            preset: "reportCards",
+            dataUpdatedAt: rcUpdatedAt,
+            error: reportCardsError,
+            hasData: !!reportCardsData?.cards?.length,
+          },
         ]}
       />
 
@@ -126,9 +119,7 @@ export function HomepageClient() {
             />
           </div>
           <div className="mt-8 space-y-2.5">
-            <h2 className="pharos-kicker">
-              Browse By Peg
-            </h2>
+            <h2 className="pharos-kicker">Browse By Peg</h2>
             <div className="flex flex-wrap gap-2">
               {ACTIVE_PEGS.map((peg) => {
                 const slug = PEG_SLUGS[peg];
@@ -201,10 +192,7 @@ export function HomepageClient() {
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
-            <PsiHistoryChart
-              excludeEvents={["Tether DOJ Probe", "IRON Finance"]}
-              showHeader={false}
-            />
+            <PsiHistoryChart excludeEvents={["Tether DOJ Probe", "IRON Finance"]} showHeader={false} />
           </section>
         </div>
       </SectionErrorBoundary>
@@ -224,18 +212,29 @@ export function HomepageClient() {
 
       <PegDiversityChart />
 
-      <p className="mx-auto max-w-3xl text-center text-xs leading-relaxed text-muted-foreground">
-        Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR, GBP,
-        gold, silver, and more) with honest governance classification: {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,
-        {" "}{TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
-        deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of
-        fallen stablecoins. Updated every 15 minutes.
-      </p>
-      {dataUpdatedAt > 0 && (
-        <p className="text-xs text-muted-foreground text-center">
-          Last updated: {new Date(dataUpdatedAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })}
+      <section className="space-y-2 border-t border-border/50 pt-6">
+        <p className="mx-auto max-w-5xl text-center text-xs leading-loose text-muted-foreground">
+          Pharos tracks {TRACKED_STABLECOINS.length} stablecoins across {PEG_CURRENCY_COUNT} peg currencies (USD, EUR,
+          GBP, gold, silver, and more) with honest governance classification:{" "}
+          {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized").length} CeFi,{" "}
+          {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "centralized-dependent").length} CeFi-Dependent, and{" "}
+          {TRACKED_STABLECOINS.filter((s) => s.flags.governance === "decentralized").length} DeFi. Live market caps, peg
+          deviation heatmaps, blacklist monitoring, DEX liquidity scores, and a cemetery of fallen stablecoins. Updated
+          every 15 minutes.
         </p>
-      )}
+        {dataUpdatedAt > 0 && (
+          <p className="text-center text-xs text-muted-foreground">
+            Last updated:{" "}
+            {new Date(dataUpdatedAt).toLocaleString(undefined, {
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              timeZoneName: "short",
+            })}
+          </p>
+        )}
+      </section>
     </div>
   );
 }

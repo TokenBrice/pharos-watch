@@ -3,11 +3,11 @@
  * Each returns a complete row with sensible defaults; pass `overrides` for specific values.
  */
 
-import type { StablecoinData } from "@shared/types";
+import type { BlacklistStablecoin, StablecoinData } from "@shared/types";
 
 type BlacklistRow = {
   id: string;
-  stablecoin: "USDC" | "USDT" | "PAXG" | "XAUT";
+  stablecoin: BlacklistStablecoin;
   chain_id: string;
   chain_name: string;
   event_type: "blacklist" | "unblacklist" | "destroy";
@@ -228,8 +228,8 @@ export function makeDexLiquidityRow(overrides: Partial<DexLiquidityRow> = {}): D
     pool_count: 10,
     pair_count: 15,
     chain_count: 3,
-    protocol_tvl_json: "{\"Uniswap\":300000000}",
-    chain_tvl_json: "{\"Ethereum\":400000000}",
+    protocol_tvl_json: '{"Uniswap":300000000}',
+    chain_tvl_json: '{"Ethereum":400000000}',
     top_pools_json: "[]",
     liquidity_score: 85,
     concentration_hhi: 0.3,
@@ -261,9 +261,7 @@ export function makeYieldHistoryRow(overrides: Partial<YieldHistoryRow> = {}): Y
   return { ...defaults, ...overrides };
 }
 
-export function makeDexLiquidityHistoryRow(
-  overrides: Partial<DexLiquidityHistoryRow> = {},
-): DexLiquidityHistoryRow {
+export function makeDexLiquidityHistoryRow(overrides: Partial<DexLiquidityHistoryRow> = {}): DexLiquidityHistoryRow {
   const defaults: DexLiquidityHistoryRow = {
     stablecoin_id: "usdt-tether",
     total_tvl_usd: 500_000_000,

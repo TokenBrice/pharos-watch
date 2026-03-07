@@ -25,9 +25,7 @@ export function LongformScrollspyNav({
   className,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
-  const effectiveActiveId = sections.some((section) => section.id === activeId)
-    ? activeId
-    : (sections[0]?.id ?? "");
+  const effectiveActiveId = sections.some((section) => section.id === activeId) ? activeId : (sections[0]?.id ?? "");
 
   useEffect(() => {
     const sectionNodes = sections
@@ -64,15 +62,20 @@ export function LongformScrollspyNav({
   return (
     <div
       className={cn(
-        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0",
+        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 rounded-2xl border border-border/60 bg-background/95 px-4 py-3 shadow-[0_16px_40px_oklch(0_0_0_/0.12)] backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0",
         className,
       )}
     >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{railLabel}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between gap-3">
+          <p className="pharos-kicker">{railLabel}</p>
+          <span className="text-xs text-muted-foreground">
+            {sections.find((section) => section.id === effectiveActiveId)?.label}
+          </span>
+        </div>
         {rightSlot}
       </div>
-      <nav aria-label={navAriaLabel} className="mt-2 overflow-x-auto scrollbar-none">
+      <nav aria-label={navAriaLabel} className="mt-3 overflow-x-auto scrollbar-none">
         <div className="flex min-w-max items-center gap-2">
           {sections.map((section) => (
             <a
@@ -80,10 +83,10 @@ export function LongformScrollspyNav({
               href={`#${section.id}`}
               onClick={() => setActiveId(section.id)}
               className={cn(
-                "shrink-0 whitespace-nowrap rounded-md border px-2.5 py-1.5 text-xs transition-colors",
+                "pharos-focus-ring shrink-0 whitespace-nowrap rounded-full border px-3.5 py-2 text-sm font-medium transition-colors",
                 effectiveActiveId === section.id
-                  ? "border-foreground/40 bg-muted text-foreground"
-                  : "border-border/60 bg-background text-foreground hover:border-foreground/30 hover:bg-muted",
+                  ? "border-foreground/35 bg-muted text-foreground"
+                  : "border-border/60 bg-background text-muted-foreground hover:border-foreground/20 hover:bg-muted hover:text-foreground",
               )}
             >
               {section.label}

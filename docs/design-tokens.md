@@ -29,19 +29,19 @@ Naming: `--p-{category}-{value}` (e.g., `--p-blue-500`, `--p-space-4`)
 
 Purpose-driven aliases that map primitives to meaning. These switch between light and dark mode.
 
-| Category | Examples | Notes |
-|----------|----------|-------|
-| Surfaces | `--surface-base`, `--surface-raised`, `--surface-overlay` | Page bg, elevated cards, modals |
-| Text | `--text-primary`, `--text-secondary`, `--text-tertiary` | Content hierarchy |
-| Borders | `--border-default`, `--border-subtle`, `--border-strong` | Separator hierarchy |
-| Severity | `--severity-healthy` through `--severity-severe` | Peg deviation bands |
-| PSI Bands | `--psi-bedrock` through `--psi-meltdown` | Stability index zones |
-| DEWS Threat Bands | `--dews-calm` through `--dews-danger` | DEWS threat level zones |
+| Category            | Examples                                                                                                | Notes                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| Surfaces            | `--surface-base`, `--surface-raised`, `--surface-overlay`                                               | Page bg, elevated cards, modals         |
+| Text                | `--text-primary`, `--text-secondary`, `--text-tertiary`                                                 | Content hierarchy                       |
+| Borders             | `--border-default`, `--border-subtle`, `--border-strong`                                                | Separator hierarchy                     |
+| Severity            | `--severity-healthy` through `--severity-severe`                                                        | Peg deviation bands                     |
+| PSI Bands           | `--psi-bedrock` through `--psi-meltdown`                                                                | Stability index zones                   |
+| DEWS Threat Bands   | `--dews-calm` through `--dews-danger`                                                                   | DEWS threat level zones                 |
 | DEWS Radar Contrast | `--dews-radar-spoke`, `--dews-radar-calm-boundary`, `--dews-radar-*-opacity`, `--dews-radar-calm-dot-*` | Theme-aware radar ring/spoke visibility |
-| Score Tiers | `--score-green`, `--score-blue`, `--score-amber`, `--score-red` | Liquidity/durability |
-| Interactive | `--interactive-hover`, `--interactive-active`, `--interactive-focus` | UI states |
-| Chart | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary` | Chart-specific theming |
-| Motion | `--motion-duration-fast`, `--motion-duration-base`, `--motion-ease-standard` | Shared transition timing |
+| Score Tiers         | `--score-green`, `--score-blue`, `--score-amber`, `--score-red`                                         | Liquidity/durability                    |
+| Interactive         | `--interactive-hover`, `--interactive-active`, `--interactive-focus`                                    | UI states                               |
+| Chart               | `--chart-grid-opacity`, `--chart-fill-opacity`, `--chart-primary`                                       | Chart-specific theming                  |
+| Motion              | `--motion-duration-fast`, `--motion-duration-base`, `--motion-ease-standard`                            | Shared transition timing                |
 
 #### Light-Mode Contrast Baseline (March 2026)
 
@@ -57,8 +57,8 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 Recharts (and other SVG/canvas libraries) require literal hex color strings — CSS `var()` doesn't work in SVG attributes rendered by React. For every semantic color used in charts, there's a `-hex` companion:
 
 ```css
---psi-bedrock:     var(--p-green-500);    /* CSS usage */
---psi-bedrock-hex: #22c55e;               /* JS/Recharts usage */
+--psi-bedrock: var(--p-green-500); /* CSS usage */
+--psi-bedrock-hex: #22c55e; /* JS/Recharts usage */
 ```
 
 The JS-side token maps in `chart-colors.ts` and `severity-colors.ts` use the same hex values.
@@ -79,6 +79,7 @@ Existing shadcn/ui variables (`--background`, `--card`, `--foreground`, etc.) ar
 - Migration is gradual — new code uses semantic tokens, old code works through the bridge
 - shadcn/ui primitives in `src/components/ui/` should **not** be edited to use tokens directly
 - Bridge-level visual polish (page glow backgrounds and slot-based transition/elevation defaults) is centralized in `globals.css`
+- Shared layout-safe variables that are not semantic theme tokens, such as `--mobile-utility-safe-offset`, also live in `globals.css` because they coordinate app-shell spacing rather than color or component semantics
 
 ```css
 /* Bridge: shadcn var → semantic token */
@@ -95,10 +96,10 @@ Existing shadcn/ui variables (`--background`, `--card`, `--foreground`, etc.) ar
 
 For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 
-| File | Exports | Purpose |
-|------|---------|---------|
-| `src/lib/chart-colors.ts` | `CHART_PALETTE`, `CHART_BLUE`, `PSI_BAND_COLORS`, `RECHARTS_TOOLTIP_STYLES` | Chart fill/stroke colors (also has module-private `TOKEN` map) |
-| `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
+| File                         | Exports                                                                     | Purpose                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `src/lib/chart-colors.ts`    | `CHART_PALETTE`, `CHART_BLUE`, `PSI_BAND_COLORS`, `RECHARTS_TOOLTIP_STYLES` | Chart fill/stroke colors (also has module-private `TOKEN` map)           |
+| `src/lib/severity-colors.ts` | `deviationColorHex()`, `deviationColorClass()`, tier helpers                | Peg-deviation and score-tier helpers (text classes are light/dark aware) |
 
 These maps use the same hex values as the `--*-hex` CSS custom properties in `semantic.css`.
 

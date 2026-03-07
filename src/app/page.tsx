@@ -34,7 +34,7 @@ export default function HomePage() {
           }),
         }}
       />
-      <div className="space-y-4">
+      <div className="space-y-3">
         <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
         <KpiBar />
       </div>

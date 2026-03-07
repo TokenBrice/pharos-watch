@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     ".worktrees/**",
+    "worktrees/**",
     ".codex-autorunner/**",
     "next-env.d.ts",
     // Wrangler auto-generated build artifacts
@@ -29,30 +30,36 @@ const eslintConfig = defineConfig([
       "react-hooks/purity": "warn",
       "react-hooks/incompatible-library": "warn",
       "@next/next/no-img-element": "off",
-      "@typescript-eslint/no-unused-vars": ["warn", {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_",
-      }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
     },
   },
   {
     files: ["worker/src/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", {
-        patterns: [
-          {
-            group: [
-              "@/lib/*",
-              "src/lib/*",
-              "../src/lib/*",
-              "../../src/lib/*",
-              "../../../src/lib/*",
-              "../../../../src/lib/*",
-            ],
-            message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
-          },
-        ],
-      }],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@/lib/*",
+                "src/lib/*",
+                "../src/lib/*",
+                "../../src/lib/*",
+                "../../../src/lib/*",
+                "../../../../src/lib/*",
+              ],
+              message: "Worker code must import cross-runtime modules from @shared/*, not src/lib/*.",
+            },
+          ],
+        },
+      ],
     },
   },
 ]);

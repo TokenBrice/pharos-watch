@@ -17,23 +17,13 @@ import { apiFetch } from "@/lib/api";
 import { CRON_1H } from "@/hooks/use-api-query";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { CoinSelector } from "@/components/coin-selector";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { Share2, Twitter, Download, Search } from "lucide-react";
+import { Share2, Twitter, Download } from "lucide-react";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
-import {
-  renderCompareShareImage,
-  canvasToBlob,
-  loadImage,
-} from "@/lib/compare-share-image";
+import { renderCompareShareImage, canvasToBlob, loadImage } from "@/lib/compare-share-image";
 import type { ShareCoinData, ShareRadarData } from "@/lib/compare-share-image";
 import { DIMENSION_ORDER, DIMENSION_SHORT_LABELS } from "@shared/lib/report-cards";
 import type { CoinOption } from "@/components/coin-selector";
@@ -43,42 +33,35 @@ import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { CompareEmptyState } from "@/components/compare-empty-state";
+import type { ComparePreset } from "@/components/compare-empty-state";
 
 const MAX_COINS = 5;
 const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"];
 
-const ComparisonTable = dynamic(
-  () => import("@/components/comparison-table").then((m) => m.ComparisonTable),
-  { loading: () => <ChartSkeleton className="h-[340px] rounded-xl" /> },
-);
+const ComparisonTable = dynamic(() => import("@/components/comparison-table").then((m) => m.ComparisonTable), {
+  loading: () => <ChartSkeleton className="h-[340px] rounded-xl" />,
+});
 
-const ComparisonChart = dynamic(
-  () => import("@/components/comparison-chart").then((m) => m.ComparisonChart),
-  { loading: () => <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" /> },
-);
+const ComparisonChart = dynamic(() => import("@/components/comparison-chart").then((m) => m.ComparisonChart), {
+  loading: () => <ChartSkeleton className="h-[300px] sm:h-[400px] rounded-xl" />,
+});
 
-const CompareRadar = dynamic(
-  () => import("@/components/radar-chart").then((m) => m.CompareRadar),
-  { loading: () => <ChartSkeleton className="h-[420px] rounded-xl" /> },
-);
+const CompareRadar = dynamic(() => import("@/components/radar-chart").then((m) => m.CompareRadar), {
+  loading: () => <ChartSkeleton className="h-[420px] rounded-xl" />,
+});
 
 /** Lookup from lowercased symbol to coin — used for preset cards and legacy URL fallback. */
 const SYMBOL_TO_COIN = new Map<string, CoinOption>(
-  TRACKED_STABLECOINS.map((c) => [
-    c.symbol.toLowerCase(),
-    { id: c.id, name: c.name, symbol: c.symbol },
-  ]),
+  TRACKED_STABLECOINS.map((c) => [c.symbol.toLowerCase(), { id: c.id, name: c.name, symbol: c.symbol }]),
 );
 
 /** Lookup from canonical ID string to coin — primary URL identifier (avoids duplicate-symbol collisions). */
 const ID_TO_COIN = new Map<string, CoinOption>(
-  TRACKED_STABLECOINS.map((c) => [
-    c.id,
-    { id: c.id, name: c.name, symbol: c.symbol },
-  ]),
+  TRACKED_STABLECOINS.map((c) => [c.id, { id: c.id, name: c.name, symbol: c.symbol }]),
 );
 
-const COMPARISON_PRESETS = [
+const COMPARISON_PRESETS: readonly ComparePreset[] = [
   {
     title: "The Big Four",
     description: "The four largest USD stablecoins by market cap",
@@ -144,7 +127,7 @@ export function CompareClient() {
         const bySym = SYMBOL_TO_COIN.get(trimmed.toLowerCase());
         if (bySym) return bySym;
         const resolved = resolveStablecoinId(trimmed, { allowLegacy: true });
-        return resolved ? ID_TO_COIN.get(resolved.canonicalId) ?? null : null;
+        return resolved ? (ID_TO_COIN.get(resolved.canonicalId) ?? null) : null;
       })
       .filter((c): c is CoinOption => !!c)
       .slice(0, MAX_COINS)
@@ -218,40 +201,22 @@ export function CompareClient() {
   );
 
   const selectedCoins = useMemo(
-    () =>
-      selectedIds.map(
-        (id) => coinOptions.find((c) => c.id === id) ?? null,
-      ),
+    () => selectedIds.map((id) => coinOptions.find((c) => c.id === id) ?? null),
     [selectedIds, coinOptions],
   );
 
   const disabledIds = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   // Global data hooks
-  const {
-    data: listData,
-    dataUpdatedAt,
-    error: listError,
-    refetch: refetchList,
-  } = useStablecoins();
-  const {
-    data: pegSummary,
-    dataUpdatedAt: pegUpdatedAt,
-    error: pegError,
-    refetch: refetchPeg,
-  } = usePegSummary();
+  const { data: listData, dataUpdatedAt, error: listError, refetch: refetchList } = useStablecoins();
+  const { data: pegSummary, dataUpdatedAt: pegUpdatedAt, error: pegError, refetch: refetchPeg } = usePegSummary();
   const {
     data: bluechipData,
     dataUpdatedAt: bcUpdatedAt,
     error: bluechipError,
     refetch: refetchBluechip,
   } = useBluechipRatings();
-  const {
-    data: dexData,
-    dataUpdatedAt: liqUpdatedAt,
-    error: dexError,
-    refetch: refetchLiquidity,
-  } = useDexLiquidity();
+  const { data: dexData, dataUpdatedAt: liqUpdatedAt, error: dexError, refetch: refetchLiquidity } = useDexLiquidity();
   const {
     data: reportCardsData,
     dataUpdatedAt: rcUpdatedAt,
@@ -285,8 +250,7 @@ export function CompareClient() {
   const detailQueries = useQueries({
     queries: selectedIds.map((id) => ({
       queryKey: ["stablecoin-detail", id],
-      queryFn: () =>
-        apiFetch<StablecoinDetail>(`/api/stablecoin/${encodeURIComponent(id)}`),
+      queryFn: () => apiFetch<StablecoinDetail>(`/api/stablecoin/${encodeURIComponent(id)}`),
       staleTime: CRON_1H,
       enabled: !!id,
     })),
@@ -356,14 +320,7 @@ export function CompareClient() {
       refetchReportCards(),
       ...detailQueries.map((q) => q.refetch()),
     ]);
-  }, [
-    detailQueries,
-    refetchBluechip,
-    refetchLiquidity,
-    refetchList,
-    refetchPeg,
-    refetchReportCards,
-  ]);
+  }, [detailQueries, refetchBluechip, refetchLiquidity, refetchList, refetchPeg, refetchReportCards]);
 
   const handleSelect = (slotIndex: number, coin: CoinOption) => {
     setSelectedIds((prev) => {
@@ -422,10 +379,7 @@ export function CompareClient() {
         price: formatNativePrice(coin.data.price, coin.meta.flags.pegCurrency, pegRef),
         marketCap: formatCurrency(cap),
         pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}/10` : "N/A",
-        weeklyChange:
-          weeklyPct != null
-            ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%`
-            : "N/A",
+        weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "N/A",
         weeklyChangePositive: weeklyPct != null ? weeklyPct >= 0 : true,
         liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}/10` : "N/A",
         governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
@@ -462,9 +416,7 @@ export function CompareClient() {
         const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
         const blob = await canvasToBlob(canvas);
         try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
-          ]);
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
           setToast("Image copied! Paste it in your tweet (Ctrl+V)");
           setTimeout(() => setToast(null), 5000);
         } catch {
@@ -506,9 +458,7 @@ export function CompareClient() {
       } else {
         // Fallback: copy image to clipboard
         try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
-          ]);
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
           setToast("Image copied to clipboard");
           setTimeout(() => setToast(null), 3000);
         } catch {
@@ -564,27 +514,24 @@ export function CompareClient() {
 
   return (
     <div className="space-y-6">
-      <QueryErrorNotice
-        error={globalError}
-        hasData={!!listData?.peggedAssets?.length}
-        onRetry={handleRetry}
-      />
+      <QueryErrorNotice error={globalError} hasData={!!listData?.peggedAssets?.length} onRetry={handleRetry} />
       <StaleDataBanner
         queries={[
           { preset: "stablecoins", dataUpdatedAt, error: listError, hasData: !!listData?.peggedAssets?.length },
           { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegSummary?.coins?.length },
           { preset: "dexLiquidity", dataUpdatedAt: liqUpdatedAt, error: dexError, hasData: !!dexData },
-          { preset: "reportCards", dataUpdatedAt: rcUpdatedAt, error: reportCardsError, hasData: !!reportCardsData?.cards?.length },
+          {
+            preset: "reportCards",
+            dataUpdatedAt: rcUpdatedAt,
+            error: reportCardsError,
+            hasData: !!reportCardsData?.cards?.length,
+          },
           { preset: "bluechip", dataUpdatedAt: bcUpdatedAt, error: bluechipError, hasData: !!bluechipData },
         ]}
       />
       {selectedIds.length >= 2 && (
         <div className="flex items-center justify-end gap-2">
-          {toast && (
-            <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
-              {toast}
-            </span>
-          )}
+          {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
           <button
             onClick={handleTwitterShare}
             disabled={shareLoading}
@@ -617,93 +564,24 @@ export function CompareClient() {
       <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">{slots}</div>
 
       {selectedIds.length < 2 && (
-        <div className="space-y-6">
-          <div className="flex flex-col items-center justify-center border-dashed border-2 rounded-lg py-12 px-4">
-            <Search className="h-8 w-8 text-muted-foreground/50 mb-3" />
-            <p className="text-sm text-muted-foreground">
-              Select at least 2 stablecoins to compare.
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Use the slots above or pick a preset below
-            </p>
-          </div>
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Quick comparisons
-            </h3>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {COMPARISON_PRESETS.map((preset) => {
-                const applyPreset = () => {
-                  trackEvent("comparison_preset_selected", {
-                    preset: preset.title,
-                  });
-                  replaceParams((params) => {
-                    params.set("coins", preset.coins.join(","));
-                    params.delete("range");
-                  });
-                };
-                return (
-                <Card
-                  key={preset.title}
-                  className="cursor-pointer transition-colors hover:border-foreground/25 hover:bg-accent/50"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Compare ${preset.coins.map((s) => s.toUpperCase()).join(", ")}`}
-                  onClick={applyPreset}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      applyPreset();
-                    }
-                  }}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {preset.title}
-                      <span className="inline-flex items-center gap-1 ml-auto">
-                        {preset.coins.map((sym) => {
-                          const coin = SYMBOL_TO_COIN.get(sym);
-                          const src = coin ? logos?.[coin.id] : undefined;
-                          return src ? (
-                            <img
-                              key={sym}
-                              src={src}
-                              alt={sym.toUpperCase()}
-                              loading="lazy"
-                              decoding="async"
-                              width={20}
-                              height={20}
-                              className="h-5 w-5 rounded-full"
-                            />
-                          ) : null;
-                        })}
-                      </span>
-                    </CardTitle>
-                    <CardDescription>{preset.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {preset.coins
-                        .map((s) => s.toUpperCase())
-                        .join(" vs ")}
-                    </p>
-                  </CardContent>
-                </Card>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <CompareEmptyState
+          presets={COMPARISON_PRESETS}
+          logos={logos}
+          onApplyPreset={(preset) => {
+            trackEvent("comparison_preset_selected", {
+              preset: preset.title,
+            });
+            replaceParams((params) => {
+              params.set("coins", preset.coins.join(","));
+              params.delete("range");
+            });
+          }}
+        />
       )}
 
       {selectedIds.length >= 2 && (
         <div className="space-y-6 animate-in fade-in duration-300">
-          <ComparisonTable
-            coins={comparisonCoins}
-            pegRates={pegRates}
-            logos={logos}
-            detailErrors={detailErrors}
-          />
+          <ComparisonTable coins={comparisonCoins} pegRates={pegRates} logos={logos} detailErrors={detailErrors} />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             {detailLoading ? (
@@ -731,10 +609,7 @@ export function CompareClient() {
                   <div className="flex flex-wrap gap-3 justify-center mt-3">
                     {radarCards.map(({ card, color }) => (
                       <div key={card.id} className="flex items-center gap-1.5 text-sm">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
                         <span>
                           {card.symbol}: {card.overallGrade}
                         </span>

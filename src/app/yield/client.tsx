@@ -132,18 +132,47 @@ export function YieldClient() {
       {/* Scatter plot */}
       {data && rankings.length > 0 && (
         <section aria-labelledby="scatter-heading">
-          <div className="space-y-2">
-            <h2 id="scatter-heading" className="text-xl font-semibold">
-              Yield vs Safety
-            </h2>
-            <p className="text-sm text-muted-foreground">Each logo marks a stablecoin. Click to view details.</p>
-            <YieldScatterPlot
-              rankings={rankings}
-              riskFreeRate={data.riskFreeRate}
-              logos={logos}
-              onDotClick={handleNavigate}
-            />
-          </div>
+          <Card className="rounded-2xl border-border/70 bg-card/80">
+            <CardHeader className="space-y-4">
+              <div className="space-y-2">
+                <h2 id="scatter-heading" className="text-xl font-semibold">
+                  Yield vs Safety
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Each logo marks a stablecoin. Click a point to open the detail page.
+                </p>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-2xl border border-border/60 bg-background/45 px-4 py-3">
+                  <p className="pharos-kicker">Below T-Bill</p>
+                  <p className="mt-1 text-sm text-foreground">
+                    Yields under {data.riskFreeRate.toFixed(2)}% are failing the basic hurdle rate.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3">
+                  <p className="pharos-kicker text-emerald-400">Sweet Spot</p>
+                  <p className="mt-1 text-sm text-foreground">
+                    Right side plus above the T-Bill line is where strong yield meets acceptable safety.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3">
+                  <p className="pharos-kicker text-red-400">Danger Zone</p>
+                  <p className="mt-1 text-sm text-foreground">
+                    High yield on weak safety usually means the risk is doing the heavy lifting.
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <YieldScatterPlot
+                rankings={rankings}
+                riskFreeRate={data.riskFreeRate}
+                logos={logos}
+                onDotClick={handleNavigate}
+              />
+            </CardContent>
+          </Card>
         </section>
       )}
 

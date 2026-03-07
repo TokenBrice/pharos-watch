@@ -2,7 +2,12 @@
 
 import { useMemo } from "react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { BlacklistEvent, BlacklistStablecoin, BlacklistEventType } from "@shared/types";
+import {
+  BLACKLIST_STABLECOINS,
+  type BlacklistEvent,
+  type BlacklistStablecoin,
+  type BlacklistEventType,
+} from "@shared/types";
 
 interface BlacklistFiltersProps {
   events: BlacklistEvent[] | undefined;
@@ -44,13 +49,18 @@ export function BlacklistFilters({
           size="sm"
           className="w-full flex-wrap justify-start"
           value={stablecoinFilter}
-          onValueChange={(v) => { if (v) onStablecoinChange(v as BlacklistStablecoin | "all"); }}
+          onValueChange={(v) => {
+            if (v) onStablecoinChange(v as BlacklistStablecoin | "all");
+          }}
         >
-          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">All</ToggleGroupItem>
-          <ToggleGroupItem value="USDC" className="min-h-11 sm:min-h-8">USDC</ToggleGroupItem>
-          <ToggleGroupItem value="USDT" className="min-h-11 sm:min-h-8">USDT</ToggleGroupItem>
-          <ToggleGroupItem value="PAXG" className="min-h-11 sm:min-h-8">PAXG</ToggleGroupItem>
-          <ToggleGroupItem value="XAUT" className="min-h-11 sm:min-h-8">XAUT</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
+            All
+          </ToggleGroupItem>
+          {BLACKLIST_STABLECOINS.map((stablecoin) => (
+            <ToggleGroupItem key={stablecoin} value={stablecoin} className="min-h-11 sm:min-h-8">
+              {stablecoin}
+            </ToggleGroupItem>
+          ))}
         </ToggleGroup>
       </div>
       <div className="space-y-1.5">
@@ -61,9 +71,13 @@ export function BlacklistFilters({
           size="sm"
           className="w-full flex-wrap justify-start"
           value={chainFilter}
-          onValueChange={(v) => { if (v) onChainChange(v); }}
+          onValueChange={(v) => {
+            if (v) onChainChange(v);
+          }}
         >
-          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">All</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
+            All
+          </ToggleGroupItem>
           {chains.map((chain) => (
             <ToggleGroupItem key={chain.id} value={chain.id} className="min-h-11 sm:min-h-8">
               {chain.name}
@@ -79,12 +93,22 @@ export function BlacklistFilters({
           size="sm"
           className="w-full flex-wrap justify-start"
           value={eventTypeFilter}
-          onValueChange={(v) => { if (v) onEventTypeChange(v as BlacklistEventType | "all"); }}
+          onValueChange={(v) => {
+            if (v) onEventTypeChange(v as BlacklistEventType | "all");
+          }}
         >
-          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">All</ToggleGroupItem>
-          <ToggleGroupItem value="blacklist" className="min-h-11 sm:min-h-8">Blacklist</ToggleGroupItem>
-          <ToggleGroupItem value="unblacklist" className="min-h-11 sm:min-h-8">Unblacklist</ToggleGroupItem>
-          <ToggleGroupItem value="destroy" className="min-h-11 sm:min-h-8">Destroy</ToggleGroupItem>
+          <ToggleGroupItem value="all" className="min-h-11 sm:min-h-8">
+            All
+          </ToggleGroupItem>
+          <ToggleGroupItem value="blacklist" className="min-h-11 sm:min-h-8">
+            Blacklist
+          </ToggleGroupItem>
+          <ToggleGroupItem value="unblacklist" className="min-h-11 sm:min-h-8">
+            Unblacklist
+          </ToggleGroupItem>
+          <ToggleGroupItem value="destroy" className="min-h-11 sm:min-h-8">
+            Destroy
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
     </div>

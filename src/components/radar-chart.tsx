@@ -1,14 +1,16 @@
 "use client";
 
-import {
-  Radar,
-  RadarChart as RechartsRadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  ResponsiveContainer,
-} from "recharts";
+import { Radar, RadarChart as RechartsRadarChart, PolarGrid, PolarAngleAxis } from "recharts";
+import { ChartSkeleton } from "@/components/chart-skeleton";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import type { ReportCard } from "@shared/types";
-import { DIMENSION_LABELS, DIMENSION_SHORT_LABELS, DIMENSION_ORDER, gradeRange, GRADE_RADAR_COLORS } from "@shared/lib/report-cards";
+import {
+  DIMENSION_LABELS,
+  DIMENSION_SHORT_LABELS,
+  DIMENSION_ORDER,
+  gradeRange,
+  GRADE_RADAR_COLORS,
+} from "@shared/lib/report-cards";
 
 // ---------------------------------------------------------------------------
 // Data helpers
@@ -34,41 +36,41 @@ interface ReportCardRadarProps {
   className?: string;
 }
 
-export function ReportCardRadar({
-  card,
-  size,
-  labels = "full",
-  className,
-}: ReportCardRadarProps) {
+export function ReportCardRadar({ card, size, labels = "full", className }: ReportCardRadarProps) {
   const data = buildRadarData(card, labels);
   const color = GRADE_RADAR_COLORS[gradeRange(card.overallGrade)] ?? GRADE_RADAR_COLORS.NR;
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   const compact = labels === "short";
 
   return (
     <div
+      ref={chartContainerRef}
       className={`w-full ${className ?? ""}`}
       style={size !== undefined ? { height: size } : { height: "100%" }}
       role="figure"
       aria-label={`Safety score radar chart for ${card.symbol}`}
     >
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius={compact ? "70%" : "80%"}>
+      {isChartReady ? (
+        <RechartsRadarChart
+          width={width}
+          height={height}
+          data={data}
+          cx="50%"
+          cy="50%"
+          outerRadius={compact ? "70%" : "80%"}
+        >
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
             dataKey="dimension"
             tick={{ fontSize: compact ? 10 : 11, fill: "currentColor" }}
             className="text-muted-foreground"
           />
-          <Radar
-            dataKey="score"
-            stroke={color}
-            fill={color}
-            fillOpacity={0.25}
-            strokeWidth={2}
-          />
+          <Radar dataKey="score" stroke={color} fill={color} fillOpacity={0.25} strokeWidth={2} />
         </RechartsRadarChart>
-      </ResponsiveContainer>
+      ) : (
+        <ChartSkeleton className="h-full w-full" />
+      )}
     </div>
   );
 }
@@ -95,16 +97,18 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
     }
     return entry;
   });
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
   return (
     <div
+      ref={chartContainerRef}
       className={`w-full ${className ?? ""}`}
       style={{ height: size }}
       role="figure"
       aria-label={`Safety score comparison for ${cards.map(({ card }) => card.symbol).join(", ")}`}
     >
-      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-        <RechartsRadarChart data={data} cx="50%" cy="50%" outerRadius="75%">
+      {isChartReady ? (
+        <RechartsRadarChart width={width} height={height} data={data} cx="50%" cy="50%" outerRadius="75%">
           <PolarGrid stroke="currentColor" className="text-border" />
           <PolarAngleAxis
             dataKey="dimension"
@@ -112,17 +116,12 @@ export function CompareRadar({ cards, size = 300, className }: CompareRadarProps
             className="text-muted-foreground"
           />
           {cards.map(({ card, color }) => (
-            <Radar
-              key={card.id}
-              dataKey={card.id}
-              stroke={color}
-              fill={color}
-              fillOpacity={0.15}
-              strokeWidth={2}
-            />
+            <Radar key={card.id} dataKey={card.id} stroke={color} fill={color} fillOpacity={0.15} strokeWidth={2} />
           ))}
         </RechartsRadarChart>
-      </ResponsiveContainer>
+      ) : (
+        <ChartSkeleton className="h-full w-full" />
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain events (blacklist, unblacklist, destroy/seize) across 16 contract configurations on 8 chains. Runs every 20 minutes, incrementally scanning from the last processed block.
 
-**Tracked stablecoins:** USDC (6 chains), USDT (8 configs: 7 EVM + 1 Tron), PAXG (Ethereum), XAUT (Ethereum).
+**Tracked stablecoins surfaced in the API/UI:** USDC, USDT, EURC, PAXG, XAUT.
 
 ---
 
@@ -39,10 +39,10 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 ### Rate Limiters
 
-| Service | Rate limit |
-|---------|-----------|
+| Service   | Rate limit        |
+| --------- | ----------------- |
 | Etherscan | 4 requests/second |
-| TronGrid | 3 requests/second |
+| TronGrid  | 3 requests/second |
 
 **Budget:** 900 subrequests per cron cycle, shared across all configs + backfill.
 
@@ -56,26 +56,26 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals: 6.
 
-| Chain | Address |
-|-------|---------|
-| Ethereum | `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
-| Arbitrum | `0xaf88d065e77c8cc2239327c5edb3a432268e5831` |
-| Base | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
-| Optimism | `0x0b2c639c533813f4aa9d7837caf62653d097ff85` |
-| Polygon | `0x3c499c542cef5e3811e1192ce70d8cc03d5c3359` |
+| Chain     | Address                                      |
+| --------- | -------------------------------------------- |
+| Ethereum  | `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48` |
+| Arbitrum  | `0xaf88d065e77c8cc2239327c5edb3a432268e5831` |
+| Base      | `0x833589fcd6edb6e08f4c7c32d4f71b54bda02913` |
+| Optimism  | `0x0b2c639c533813f4aa9d7837caf62653d097ff85` |
+| Polygon   | `0x3c499c542cef5e3811e1192ce70d8cc03d5c3359` |
 | Avalanche | `0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e` |
 
 ### USDT EVM (7 configs across 6 chains, mixed event patterns)
 
-| Chain | Address | Decimals | Events |
-|-------|---------|----------|--------|
-| Ethereum | `0xdac17f958d2ee523a2206206994597c13d831ec7` | 6 | Legacy |
-| Arbitrum | `0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9` | 6 | Legacy + USDT0 |
-| Optimism (legacy) | `0x94b008aa00579c1307b0ef2c499ad98a8ce58e58` | 6 | Legacy |
-| Optimism (USDT0) | `0x01bFF41798a0BcF287b996046Ca68b395DbC1071` | 6 | USDT0 |
-| Polygon | `0xc2132d05d31c914a87c6611c10748aeb04b58e8f` | 6 | Legacy + USDT0 |
-| Avalanche | `0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7` | 6 | Legacy |
-| BSC | `0x55d398326f99059ff775485246999027b3197955` | 18 | Legacy |
+| Chain             | Address                                      | Decimals | Events         |
+| ----------------- | -------------------------------------------- | -------- | -------------- |
+| Ethereum          | `0xdac17f958d2ee523a2206206994597c13d831ec7` | 6        | Legacy         |
+| Arbitrum          | `0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9` | 6        | Legacy + USDT0 |
+| Optimism (legacy) | `0x94b008aa00579c1307b0ef2c499ad98a8ce58e58` | 6        | Legacy         |
+| Optimism (USDT0)  | `0x01bFF41798a0BcF287b996046Ca68b395DbC1071` | 6        | USDT0          |
+| Polygon           | `0xc2132d05d31c914a87c6611c10748aeb04b58e8f` | 6        | Legacy + USDT0 |
+| Avalanche         | `0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7` | 6        | Legacy         |
+| BSC               | `0x55d398326f99059ff775485246999027b3197955` | 18       | Legacy         |
 
 ### USDT Tron
 
@@ -219,10 +219,10 @@ CREATE TABLE blacklist_sync_state (
 
 **Config key format:**
 
-| Chain type | Format | Example |
-|------------|--------|---------|
-| EVM | `{chainId}-{contractAddress}` | `ethereum-0xa0b86991...` |
-| Tron | `tron-{contractAddress}` | `tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` |
+| Chain type | Format                        | Example                                   |
+| ---------- | ----------------------------- | ----------------------------------------- |
+| EVM        | `{chainId}-{contractAddress}` | `ethereum-0xa0b86991...`                  |
+| Tron       | `tron-{contractAddress}`      | `tron-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` |
 
 **Important:** For EVM chains, `last_block` stores block numbers. For Tron, it stores millisecond timestamps (NOT block numbers).
 
@@ -263,15 +263,15 @@ TRON_SAFETY_MS = 900,000 ms
 
 Per-chain block margins (`INDEXING_SAFETY_SEC / blockTime`):
 
-| Chain | Safety margin (blocks) | Block time |
-|-------|----------------------|------------|
-| Ethereum | 75 | 12s |
-| Arbitrum | 3,600 | 0.25s |
-| Base | 450 | 2s |
-| Optimism | 450 | 2s |
-| Polygon | 450 | 2s |
-| Avalanche | 450 | 2s |
-| BSC | 300 | 3s |
+| Chain     | Safety margin (blocks) | Block time |
+| --------- | ---------------------- | ---------- |
+| Ethereum  | 75                     | 12s        |
+| Arbitrum  | 3,600                  | 0.25s      |
+| Base      | 450                    | 2s         |
+| Optimism  | 450                    | 2s         |
+| Polygon   | 450                    | 2s         |
+| Avalanche | 450                    | 2s         |
+| BSC       | 300                    | 3s         |
 
 ---
 
@@ -305,32 +305,34 @@ For destroy events, try fetching from transaction receipt first (`eth_getTransac
 
 **Query parameters:**
 
-| Param | Type | Default | Description |
-|-------|------|---------|-------------|
-| `limit` | number | 0 (all) | Max results (0-5000) |
-| `offset` | number | 0 | Pagination offset |
-| `stablecoin` | string | -- | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`) |
-| `chain` | string | -- | Filter by `chain_name` |
-| `eventType` | string | -- | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
+| Param        | Type   | Default | Description                                                          |
+| ------------ | ------ | ------- | -------------------------------------------------------------------- |
+| `limit`      | number | 0 (all) | Max results (0-5000)                                                 |
+| `offset`     | number | 0       | Pagination offset                                                    |
+| `stablecoin` | string | --      | Filter by name (`"USDC"`, `"USDT"`, `"PAXG"`, `"XAUT"`)              |
+| `chain`      | string | --      | Filter by `chain_name`                                               |
+| `eventType`  | string | --      | Filter by `event_type` (`"blacklist"`, `"unblacklist"`, `"destroy"`) |
 
 **Response:**
 
 ```json
 {
-  "events": [{
-    "id": "ethereum-0x...",
-    "stablecoin": "USDC",
-    "chainId": "ethereum",
-    "chainName": "Ethereum",
-    "eventType": "blacklist",
-    "address": "0x...",
-    "amount": 12345.67,
-    "txHash": "0x...",
-    "blockNumber": 20000000,
-    "timestamp": 1704067200,
-    "explorerTxUrl": "https://etherscan.io/tx/0x...",
-    "explorerAddressUrl": "https://etherscan.io/address/0x..."
-  }],
+  "events": [
+    {
+      "id": "ethereum-0x...",
+      "stablecoin": "USDC",
+      "chainId": "ethereum",
+      "chainName": "Ethereum",
+      "eventType": "blacklist",
+      "address": "0x...",
+      "amount": 12345.67,
+      "txHash": "0x...",
+      "blockNumber": 20000000,
+      "timestamp": 1704067200,
+      "explorerTxUrl": "https://etherscan.io/tx/0x...",
+      "explorerAddressUrl": "https://etherscan.io/address/0x..."
+    }
+  ],
   "total": 12345
 }
 ```
@@ -367,14 +369,14 @@ Both admin endpoints are routed in `worker/src/router.ts` and executed via `work
 
 **File:** `src/app/blacklist/page.tsx`
 
-| Component | File | Description |
-|-----------|------|-------------|
-| BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns |
-| Search | (inline) | Client-side search by address or stablecoin |
-| BlacklistTable | `src/components/blacklist-table.tsx` | Sortable by date/stablecoin/chain/event type, 50 rows per page |
-| BlacklistStats | `src/components/blacklist-stats.tsx` | USDC/USDT unique blacklisted addresses, gold frozen, total destroyed funds, recent events (30d) |
-| BlacklistChart | `src/components/blacklist-chart.tsx` | Quarterly stacked bar chart of blacklisted funds by stablecoin |
-| CSV export | (inline) | Download filtered events as CSV |
+| Component        | File                                   | Description                                                                                     |
+| ---------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| BlacklistFilters | `src/components/blacklist-filters.tsx` | Stablecoin, chain, event type dropdowns                                                         |
+| Search           | (inline)                               | Client-side search by address or stablecoin                                                     |
+| BlacklistTable   | `src/components/blacklist-table.tsx`   | Sortable by date/stablecoin/chain/event type, 50 rows per page                                  |
+| BlacklistStats   | `src/components/blacklist-stats.tsx`   | USDC/USDT unique blacklisted addresses, gold frozen, total destroyed funds, recent events (30d) |
+| BlacklistChart   | `src/components/blacklist-chart.tsx`   | Quarterly stacked bar chart of blacklisted funds by stablecoin                                  |
+| CSV export       | (inline)                               | Download filtered events as CSV                                                                 |
 
 ### Amount Display Logic
 
@@ -384,20 +386,20 @@ Both admin endpoints are routed in `worker/src/router.ts` and executed via `work
 
 ### Special UI Components
 
-| Component | Description |
-|-----------|-------------|
-| UsdsStatusCard | Monitors USDS for freeze capability (currently none) |
-| EurcBlacklistCard | Explains EURC/USDC simultaneous freezing |
+| Component         | Description                                                           |
+| ----------------- | --------------------------------------------------------------------- |
+| UsdsStatusCard    | Monitors USDS for freeze capability (currently none)                  |
+| EurcBlacklistCard | Explains EURC/USDC simultaneous freezes and zero-balance EURC entries |
 
 ---
 
 ## Environment Variables
 
-| Variable | Type | Required | Description |
-|----------|------|----------|-------------|
-| `ETHERSCAN_API_KEY` | Secret | Yes | Etherscan v2 API key (all EVM chains) |
-| `TRONGRID_API_KEY` | Secret | No | TronGrid Pro API key (improves rate limits) |
-| `DRPC_API_KEY` | Secret | No | dRPC key for L2 archive node balance lookups |
+| Variable            | Type   | Required | Description                                  |
+| ------------------- | ------ | -------- | -------------------------------------------- |
+| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key (all EVM chains)        |
+| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)  |
+| `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups |
 
 ---
 
@@ -412,27 +414,27 @@ Both admin endpoints are routed in `worker/src/router.ts` and executed via `work
 7. **L2 Etherscan free plan** cannot do historical `eth_call` -- use dRPC or accept "latest" fallback.
 8. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
 9. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
-10. **EURC not tracked directly** -- Circle freezes USDC + EURC addresses simultaneously; tracking USDC events avoids duplicate zero-balance entries.
+10. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
 
 ---
 
 ## File Index
 
-| File | Role |
-|------|------|
-| `worker/src/cron/sync-blacklist.ts` | Main cron: incremental scan, backfill, balance enrichment, sync state |
-| `worker/src/lib/blacklist-contracts.ts` | Contract configs: addresses, chains, event signatures, decimals |
-| `worker/src/lib/evm-logs.ts` | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256` |
-| `worker/src/api/blacklist.ts` | `GET /api/blacklist` handler |
-| `worker/src/router.ts` | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
-| `worker/src/handlers/scheduled.ts` | Cron scheduling orchestration for `sync-blacklist` |
-| `worker/src/lib/db.ts` | `getLastBlock()`, `setLastBlock()`, `batchExecute()` |
-| `worker/migrations/0001_initial.sql` | `blacklist_events` + `blacklist_sync_state` tables |
-| `worker/migrations/0028_blacklist_indexes.sql` | `chain_name` + `event_type` indexes |
-| `worker/migrations/0037_blacklist_methodology_version.sql` | Adds `methodology_version` to blacklist events and backfills by timestamp windows |
-| `src/hooks/use-blacklist-events.ts` | TanStack Query hook |
-| `src/app/blacklist/page.tsx` | Blacklist page with filters, stats, chart, table |
-| `src/components/blacklist-filters.tsx` | Filter UI (stablecoin, chain, event type) |
-| `src/components/blacklist-table.tsx` | Sortable paginated table |
-| `src/components/blacklist-stats.tsx` | Summary statistics cards |
-| `src/components/blacklist-chart.tsx` | Quarterly stacked bar chart |
+| File                                                       | Role                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `worker/src/cron/sync-blacklist.ts`                        | Main cron: incremental scan, backfill, balance enrichment, sync state                      |
+| `worker/src/lib/blacklist-contracts.ts`                    | Contract configs: addresses, chains, event signatures, decimals                            |
+| `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
+| `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
+| `worker/src/router.ts`                                     | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |
+| `worker/src/handlers/scheduled.ts`                         | Cron scheduling orchestration for `sync-blacklist`                                         |
+| `worker/src/lib/db.ts`                                     | `getLastBlock()`, `setLastBlock()`, `batchExecute()`                                       |
+| `worker/migrations/0001_initial.sql`                       | `blacklist_events` + `blacklist_sync_state` tables                                         |
+| `worker/migrations/0028_blacklist_indexes.sql`             | `chain_name` + `event_type` indexes                                                        |
+| `worker/migrations/0037_blacklist_methodology_version.sql` | Adds `methodology_version` to blacklist events and backfills by timestamp windows          |
+| `src/hooks/use-blacklist-events.ts`                        | TanStack Query hook                                                                        |
+| `src/app/blacklist/page.tsx`                               | Blacklist page with filters, stats, chart, table                                           |
+| `src/components/blacklist-filters.tsx`                     | Filter UI (stablecoin, chain, event type)                                                  |
+| `src/components/blacklist-table.tsx`                       | Sortable paginated table                                                                   |
+| `src/components/blacklist-stats.tsx`                       | Summary statistics cards                                                                   |
+| `src/components/blacklist-chart.tsx`                       | Quarterly stacked bar chart                                                                |

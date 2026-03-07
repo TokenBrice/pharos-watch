@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  NET_FLOW_DIRECTION_24H_VALUES,
-  PRESSURE_SHIFT_STATE_VALUES,
-} from "@shared/lib/mint-burn-signals";
+import { NET_FLOW_DIRECTION_24H_VALUES, PRESSURE_SHIFT_STATE_VALUES } from "@shared/lib/mint-burn-signals";
 
 // --- Flag-based classification ---
 
@@ -10,7 +7,29 @@ import {
 export type BackingType = "rwa-backed" | "crypto-backed" | "algorithmic";
 
 /** Peg currency */
-export type PegCurrency = "USD" | "EUR" | "GBP" | "CHF" | "BRL" | "RUB" | "JPY" | "IDR" | "SGD" | "TRY" | "AUD" | "ZAR" | "CAD" | "CNY" | "PHP" | "MXN" | "UAH" | "ARS" | "GOLD" | "SILVER" | "VAR" | "OTHER";
+export type PegCurrency =
+  | "USD"
+  | "EUR"
+  | "GBP"
+  | "CHF"
+  | "BRL"
+  | "RUB"
+  | "JPY"
+  | "IDR"
+  | "SGD"
+  | "TRY"
+  | "AUD"
+  | "ZAR"
+  | "CAD"
+  | "CNY"
+  | "PHP"
+  | "MXN"
+  | "UAH"
+  | "ARS"
+  | "GOLD"
+  | "SILVER"
+  | "VAR"
+  | "OTHER";
 
 /** Governance model */
 export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
@@ -44,47 +63,47 @@ export interface Jurisdiction {
 }
 
 export interface ContractDeployment {
-  chain: string;      // Chain ID (e.g., "ethereum", "arbitrum", "tron")
-  address: string;    // Contract address (0x... for EVM, T... for Tron)
-  decimals: number;   // Token decimals
+  chain: string; // Chain ID (e.g., "ethereum", "arbitrum", "tron")
+  address: string; // Contract address (0x... for EVM, T... for Tron)
+  decimals: number; // Token decimals
 }
 
 /** Configures how on-chain circulating supply is computed for a stablecoin */
 export interface SupplyMethodConfig {
   type:
-    | "totalSupply"                  // Default: raw totalSupply() is circulating
-    | "totalSupply-minus-addresses"  // totalSupply() - sum(balanceOf(addr)) per chain
-    | "custom-contract"             // Call a dedicated circulating supply contract
-    | "exclude";                    // Skip on-chain supply for this token
+    | "totalSupply" // Default: raw totalSupply() is circulating
+    | "totalSupply-minus-addresses" // totalSupply() - sum(balanceOf(addr)) per chain
+    | "custom-contract" // Call a dedicated circulating supply contract
+    | "exclude"; // Skip on-chain supply for this token
 
   /** For totalSupply-minus-addresses: addresses whose balanceOf() to subtract */
   subtractAddresses?: { chain: string; address: string }[];
 
   /** For custom-contract: dedicated contract returning circulating supply */
   customContract?: {
-    chain: string;     // Chain where the contract lives
-    address: string;   // Contract address
-    selector: string;  // Function selector (e.g., "0x9e2bf22c")
-    decimals: number;  // Decimals for the return value
+    chain: string; // Chain where the contract lives
+    address: string; // Contract address
+    selector: string; // Function selector (e.g., "0x9e2bf22c")
+    decimals: number; // Decimals for the return value
   };
 }
 
 export type DependencyType = "wrapper" | "mechanism" | "collateral";
 
 export interface DependencyWeight {
-  id: string;      // Stablecoin ID (canonical ticker-issuer format in future; currently legacy)
-  weight: number;  // 0-1, fraction of collateral from this source
-  type?: DependencyType;  // default: 'collateral' — see docs/plans/2026-02-27-dependency-type-ceiling-design.md
+  id: string; // Stablecoin ID (canonical ticker-issuer format in future; currently legacy)
+  weight: number; // 0-1, fraction of collateral from this source
+  type?: DependencyType; // default: 'collateral' — see docs/plans/2026-02-27-dependency-type-ceiling-design.md
 }
 
 /** Structured reserve composition for treemap visualization */
 export type ReserveRisk = "very-low" | "low" | "medium" | "high" | "very-high";
 export interface ReserveSlice {
   name: string;
-  pct: number;        // percentage of total reserves (should sum to ~100)
-  risk: ReserveRisk;  // risk tier for coloring
-  coinId?: string;           // Stablecoin ID (canonical ticker-issuer format in future; currently legacy) — links to dependency graph
-  depType?: DependencyType;  // dependency type when coinId is set; defaults to "collateral"
+  pct: number; // percentage of total reserves (should sum to ~100)
+  risk: ReserveRisk; // risk tier for coloring
+  coinId?: string; // Stablecoin ID (canonical ticker-issuer format in future; currently legacy) — links to dependency graph
+  depType?: DependencyType; // dependency type when coinId is set; defaults to "collateral"
 }
 
 /** Maturity tier of the primary chain where the protocol operates */
@@ -100,7 +119,13 @@ export type CollateralQuality = "native" | "rwa" | "eth-lst" | "alt-lst-bridged-
 export type CustodyModel = "onchain" | "institutional" | "cex";
 
 /** Quality of governance decentralization (overrides coarse GovernanceType) */
-export type GovernanceQuality = "immutable-code" | "dao-governance" | "multisig" | "regulated-entity" | "single-entity" | "wrapper";
+export type GovernanceQuality =
+  | "immutable-code"
+  | "dao-governance"
+  | "multisig"
+  | "regulated-entity"
+  | "single-entity"
+  | "wrapper";
 
 /** Important notice displayed on a stablecoin's detail page */
 export interface CoinNotice {
@@ -121,25 +146,25 @@ export interface StablecoinMeta {
   collateral?: string;
   pegMechanism?: string;
   commodityOunces?: number; // troy ounces per token (for gold- and silver-pegged stablecoins)
-  geckoId?: string;        // CoinGecko coin ID (for price/mcap lookups when DefiLlama lacks it)
-  cmcSlug?: string;        // CoinMarketCap slug (fallback price/mcap when DL + CG both miss)
-  protocolSlug?: string;   // DefiLlama protocol slug (for TVL/mcap data via /protocol/ API)
+  geckoId?: string; // CoinGecko coin ID (for price/mcap lookups when DefiLlama lacks it)
+  cmcSlug?: string; // CoinMarketCap slug (fallback price/mcap when DL + CG both miss)
+  protocolSlug?: string; // DefiLlama protocol slug (for TVL/mcap data via /protocol/ API)
   proofOfReserves?: ProofOfReserves;
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
-  contracts?: ContractDeployment[];  // On-chain contract deployments per chain
+  contracts?: ContractDeployment[]; // On-chain contract deployments per chain
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
-  dependencies?: DependencyWeight[];  // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
-  canBeBlacklisted?: boolean | "possible";  // true = active blacklist, "possible" = mutable contract / governance-upgradeable, false/undefined = no
+  dependencies?: DependencyWeight[]; // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
+  canBeBlacklisted?: boolean | "possible"; // true = active blacklist, "possible" = mutable contract / governance-upgradeable, false/undefined = no
   chainTier?: ChainTier;
   deploymentModel?: DeploymentModel;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;
   governanceQuality?: GovernanceQuality;
-  reserves?: ReserveSlice[];  // Structured reserve composition (manually curated)
-  notices?: CoinNotice[];     // Important alerts (winding down, depegged, etc.)
-  tags?: string[];            // Protocol lineage / fork tags (e.g. "Liquity v1 fork")
-  yieldConfig?: YieldConfig;  // Yield intelligence config (only for yieldBearing coins)
+  reserves?: ReserveSlice[]; // Structured reserve composition (manually curated)
+  notices?: CoinNotice[]; // Important alerts (winding down, depegged, etc.)
+  tags?: string[]; // Protocol lineage / fork tags (e.g. "Liquity v1 fork")
+  yieldConfig?: YieldConfig; // Yield intelligence config (only for yieldBearing coins)
 }
 
 // --- Filter tags (used in the UI to filter the table) ---
@@ -175,7 +200,25 @@ export type FilterTag =
   | "algorithmic";
 
 /** Tags that fall under the "Other Peg" umbrella filter on the homepage */
-export const OTHER_PEG_TAGS: FilterTag[] = ["brl-peg", "rub-peg", "jpy-peg", "idr-peg", "sgd-peg", "try-peg", "aud-peg", "zar-peg", "cad-peg", "cny-peg", "php-peg", "mxn-peg", "uah-peg", "ars-peg", "silver-peg", "var-peg", "other-peg"];
+export const OTHER_PEG_TAGS: FilterTag[] = [
+  "brl-peg",
+  "rub-peg",
+  "jpy-peg",
+  "idr-peg",
+  "sgd-peg",
+  "try-peg",
+  "aud-peg",
+  "zar-peg",
+  "cad-peg",
+  "cny-peg",
+  "php-peg",
+  "mxn-peg",
+  "uah-peg",
+  "ars-peg",
+  "silver-peg",
+  "var-peg",
+  "other-peg",
+];
 
 export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "usd-peg": "USD",
@@ -210,28 +253,50 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
 
 export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
   switch (peg) {
-    case "USD": return "usd-peg";
-    case "EUR": return "eur-peg";
-    case "GOLD": return "gold-peg";
-    case "CHF": return "chf-peg";
-    case "GBP": return "gbp-peg";
-    case "BRL": return "brl-peg";
-    case "RUB": return "rub-peg";
-    case "JPY": return "jpy-peg";
-    case "IDR": return "idr-peg";
-    case "SGD": return "sgd-peg";
-    case "TRY": return "try-peg";
-    case "AUD": return "aud-peg";
-    case "ZAR": return "zar-peg";
-    case "CAD": return "cad-peg";
-    case "CNY": return "cny-peg";
-    case "PHP": return "php-peg";
-    case "MXN": return "mxn-peg";
-    case "UAH": return "uah-peg";
-    case "ARS": return "ars-peg";
-    case "SILVER": return "silver-peg";
-    case "VAR": return "var-peg";
-    default: return "other-peg";
+    case "USD":
+      return "usd-peg";
+    case "EUR":
+      return "eur-peg";
+    case "GOLD":
+      return "gold-peg";
+    case "CHF":
+      return "chf-peg";
+    case "GBP":
+      return "gbp-peg";
+    case "BRL":
+      return "brl-peg";
+    case "RUB":
+      return "rub-peg";
+    case "JPY":
+      return "jpy-peg";
+    case "IDR":
+      return "idr-peg";
+    case "SGD":
+      return "sgd-peg";
+    case "TRY":
+      return "try-peg";
+    case "AUD":
+      return "aud-peg";
+    case "ZAR":
+      return "zar-peg";
+    case "CAD":
+      return "cad-peg";
+    case "CNY":
+      return "cny-peg";
+    case "PHP":
+      return "php-peg";
+    case "MXN":
+      return "mxn-peg";
+    case "UAH":
+      return "uah-peg";
+    case "ARS":
+      return "ars-peg";
+    case "SILVER":
+      return "silver-peg";
+    case "VAR":
+      return "var-peg";
+    default:
+      return "other-peg";
   }
 }
 
@@ -312,12 +377,15 @@ export interface DigestInputData {
 }
 
 const PegBucketsSchema = z.record(z.string(), z.number());
-const ChainCirculatingSchema = z.record(z.string(), z.object({
-  current: z.number(),
-  circulatingPrevDay: z.number(),
-  circulatingPrevWeek: z.number(),
-  circulatingPrevMonth: z.number(),
-}));
+const ChainCirculatingSchema = z.record(
+  z.string(),
+  z.object({
+    current: z.number(),
+    circulatingPrevDay: z.number(),
+    circulatingPrevWeek: z.number(),
+    circulatingPrevMonth: z.number(),
+  }),
+);
 
 const PriceConfidenceSchema = z.enum(["high", "single-source", "low", "fallback"]);
 
@@ -379,13 +447,13 @@ export type CauseOfDeath =
 export interface DeadStablecoin {
   name: string;
   symbol: string;
-  llamaId?: string;         // DefiLlama stablecoin ID (historical — may have been reassigned)
-  logo?: string;            // local path under /logos/cemetery/ (e.g. "ust.png")
+  llamaId?: string; // DefiLlama stablecoin ID (historical — may have been reassigned)
+  logo?: string; // local path under /logos/cemetery/ (e.g. "ust.png")
   pegCurrency: PegCurrency;
   causeOfDeath: CauseOfDeath;
-  deathDate: string;        // "YYYY-MM" format
-  peakMcap?: number;        // peak circulating supply in USD (from DefiLlama historical data)
-  epitaph?: string;         // terse inscription for the tombstone face (~25 chars for sm, ~35 for md/lg)
+  deathDate: string; // "YYYY-MM" format
+  peakMcap?: number; // peak circulating supply in USD (from DefiLlama historical data)
+  epitaph?: string; // terse inscription for the tombstone face (~25 chars for sm, ~35 for md/lg)
   obituary: string;
   sourceUrl: string;
   sourceLabel: string;
@@ -405,13 +473,13 @@ export interface BluechipSmidge {
 }
 
 export interface BluechipRating {
-  grade: BluechipGrade;        // "A+", "B-", "D", etc.
-  slug: string;                // "usdc" — for building report URL
-  collateralization: number;   // e.g. 100
+  grade: BluechipGrade; // "A+", "B-", "D", etc.
+  slug: string; // "usdc" — for building report URL
+  collateralization: number; // e.g. 100
   smartContractAudit: boolean;
-  dateOfRating: string;        // ISO date
+  dateOfRating: string; // ISO date
   dateLastChange: string | null;
-  smidge: BluechipSmidge;      // Plain-text summaries (HTML stripped)
+  smidge: BluechipSmidge; // Plain-text summaries (HTML stripped)
 }
 
 export type BluechipRatingsMap = Record<string, BluechipRating>;
@@ -429,23 +497,29 @@ export const DexLiquidityPoolSchema = z.object({
   symbol: z.string(),
   volumeUsd1d: z.number(),
   poolType: z.string(),
-  extra: z.object({
-    amplificationCoefficient: z.number().optional(),
-    balanceRatio: z.number().optional(),
-    feeTier: z.number().optional(),
-    effectiveTvl: z.number().optional(),
-    organicFraction: z.number().optional(),
-    pairQuality: z.number().optional(),
-    stressIndex: z.number().optional(),
-    isMetaPool: z.boolean().optional(),
-    maturityDays: z.number().optional(),
-    registryId: z.string().optional(),
-    balanceDetails: z.array(z.object({
-      symbol: z.string(),
-      balancePct: z.number(),
-      isTracked: z.boolean(),
-    })).optional(),
-  }).optional(),
+  extra: z
+    .object({
+      amplificationCoefficient: z.number().optional(),
+      balanceRatio: z.number().optional(),
+      feeTier: z.number().optional(),
+      effectiveTvl: z.number().optional(),
+      organicFraction: z.number().optional(),
+      pairQuality: z.number().optional(),
+      stressIndex: z.number().optional(),
+      isMetaPool: z.boolean().optional(),
+      maturityDays: z.number().optional(),
+      registryId: z.string().optional(),
+      balanceDetails: z
+        .array(
+          z.object({
+            symbol: z.string(),
+            balancePct: z.number(),
+            isTracked: z.boolean(),
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
 });
 export type DexLiquidityPool = z.infer<typeof DexLiquidityPoolSchema>;
 
@@ -483,14 +557,16 @@ export const DexLiquidityDataSchema = z.object({
   weightedBalanceRatio: z.number().nullable(),
   organicFraction: z.number().nullable(),
   durabilityScore: z.number().nullable(),
-  scoreComponents: z.object({
-    tvlDepth: z.number(),
-    volumeActivity: z.number(),
-    poolQuality: z.number(),
-    durability: z.number(),
-    pairDiversity: z.number(),
-    crossChain: z.number(),
-  }).nullable(),
+  scoreComponents: z
+    .object({
+      tvlDepth: z.number(),
+      volumeActivity: z.number(),
+      poolQuality: z.number(),
+      durability: z.number(),
+      pairDiversity: z.number(),
+      crossChain: z.number(),
+    })
+    .nullable(),
   lockedLiquidityPct: z.number().nullable().optional(),
   methodologyVersion: z.string(),
 });
@@ -537,8 +613,8 @@ export type SafetyScoreHistoryResponse = SafetyScoreHistoryPoint[];
 
 export interface ReportCardDimension {
   grade: ReportCardGrade;
-  score: number | null;   // 0-100, null if NR
-  detail: string;         // Human-readable explanation
+  score: number | null; // 0-100, null if NR
+  detail: string; // Human-readable explanation
 }
 
 export type DimensionKey = "pegStability" | "liquidity" | "resilience" | "decentralization" | "dependencyRisk";
@@ -576,26 +652,33 @@ export interface ReportCard {
 }
 
 export const ReportCardsResponseSchema = z.object({
-  cards: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    symbol: z.string(),
-    overallGrade: z.string(),
-    overallScore: z.number().nullable(),
-    dimensions: z.record(z.string(), z.object({
-      grade: z.string(),
-      score: z.number().nullable(),
-      detail: z.string(),
-    })),
-    ratedDimensions: z.number(),
-    rawInputs: z.object({
-      dependencies: z.array(z.object({ id: z.string() }).passthrough()),
-      navToken: z.boolean(),
-      governanceTier: z.string(),
-    }).passthrough(),
-    dependencies: z.array(z.object({ id: z.string() }).passthrough()).optional(),
-    isDefunct: z.boolean(),
-  })),
+  cards: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      symbol: z.string(),
+      overallGrade: z.string(),
+      overallScore: z.number().nullable(),
+      dimensions: z.record(
+        z.string(),
+        z.object({
+          grade: z.string(),
+          score: z.number().nullable(),
+          detail: z.string(),
+        }),
+      ),
+      ratedDimensions: z.number(),
+      rawInputs: z
+        .object({
+          dependencies: z.array(z.object({ id: z.string() }).passthrough()),
+          navToken: z.boolean(),
+          governanceTier: z.string(),
+        })
+        .passthrough(),
+      dependencies: z.array(z.object({ id: z.string() }).passthrough()).optional(),
+      isDefunct: z.boolean(),
+    }),
+  ),
   methodology: z.object({
     version: z.string(),
     weights: z.record(z.string(), z.number()),
@@ -940,13 +1023,16 @@ export const PegSummaryCoinSchema = z.object({
   lastEventAt: z.number().nullable(),
   trackingSpanDays: z.number(),
   methodologyVersion: z.string(),
-  dexPriceCheck: z.object({
-    dexPrice: z.number(),
-    dexDeviationBps: z.number(),
-    agrees: z.boolean(),
-    sourcePools: z.number(),
-    sourceTvl: z.number(),
-  }).nullable().optional(),
+  dexPriceCheck: z
+    .object({
+      dexPrice: z.number(),
+      dexDeviationBps: z.number(),
+      agrees: z.boolean(),
+      sourcePools: z.number(),
+      sourceTvl: z.number(),
+    })
+    .nullable()
+    .optional(),
 });
 export type PegSummaryCoin = z.infer<typeof PegSummaryCoinSchema>;
 
@@ -970,20 +1056,22 @@ export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 
 // --- Blacklist/Freeze tracker types ---
 
-export type BlacklistStablecoin = "USDC" | "USDT" | "PAXG" | "XAUT";
+export const BLACKLIST_STABLECOINS = ["USDC", "USDT", "EURC", "PAXG", "XAUT"] as const;
+
+export type BlacklistStablecoin = (typeof BLACKLIST_STABLECOINS)[number];
 export type BlacklistEventType = "blacklist" | "unblacklist" | "destroy";
 
 export interface BlacklistEvent {
-  id: string;                      // "${chainId}-${txHash}-${logIndex}"
+  id: string; // "${chainId}-${txHash}-${logIndex}"
   stablecoin: BlacklistStablecoin;
   chainId: string;
   chainName: string;
   eventType: BlacklistEventType;
-  address: string;                 // The affected address
-  amount: number | null;           // Only for "destroy" events (USD value)
+  address: string; // The affected address
+  amount: number | null; // Only for "destroy" events (USD value)
   txHash: string;
   blockNumber: number;
-  timestamp: number;               // Unix seconds
+  timestamp: number; // Unix seconds
   methodologyVersion: string;
   explorerTxUrl: string;
   explorerAddressUrl: string;
@@ -991,7 +1079,7 @@ export interface BlacklistEvent {
 
 export const BlacklistEventSchema = z.object({
   id: z.string(),
-  stablecoin: z.enum(["USDC", "USDT", "PAXG", "XAUT"]),
+  stablecoin: z.enum(BLACKLIST_STABLECOINS),
   chainId: z.string(),
   chainName: z.string(),
   eventType: z.enum(["blacklist", "unblacklist", "destroy"]),
@@ -1012,7 +1100,14 @@ export const BlacklistResponseSchema = z.object({
 export type BlacklistResponse = z.infer<typeof BlacklistResponseSchema>;
 
 // ── Yield Intelligence ──────────────────────────────────────────────
-export type YieldType = "lending-vault" | "rebase" | "fee-sharing" | "lp-receipt" | "nav-appreciation" | "governance-set" | "lending-opportunity";
+export type YieldType =
+  | "lending-vault"
+  | "rebase"
+  | "fee-sharing"
+  | "lp-receipt"
+  | "nav-appreciation"
+  | "governance-set"
+  | "lending-opportunity";
 
 export interface YieldConfig {
   /** DeFiLlama pool UUID for deterministic matching */
@@ -1159,12 +1254,14 @@ export const MintBurnCoinFlowSchema = z.object({
   netFlow7dUsd: z.number(),
   netFlow30dUsd: z.number(),
   netFlow90dUsd: z.number(),
-  largestEvent24h: z.object({
-    direction: z.enum(["mint", "burn"]),
-    amountUsd: z.number(),
-    txHash: z.string(),
-    timestamp: z.number(),
-  }).nullable(),
+  largestEvent24h: z
+    .object({
+      direction: z.enum(["mint", "burn"]),
+      amountUsd: z.number(),
+      txHash: z.string(),
+      timestamp: z.number(),
+    })
+    .nullable(),
 });
 export type MintBurnCoinFlow = z.infer<typeof MintBurnCoinFlowSchema>;
 
@@ -1235,10 +1332,12 @@ export interface MintBurnEventsResponse {
 
 // --- Stress signals (DEWS) types ---
 
-export const SignalDetailSchema = z.object({
-  value: z.number(),
-  available: z.boolean(),
-}).passthrough();
+export const SignalDetailSchema = z
+  .object({
+    value: z.number(),
+    available: z.boolean(),
+  })
+  .passthrough();
 
 export const StressSignalEntrySchema = z.object({
   score: z.number(),

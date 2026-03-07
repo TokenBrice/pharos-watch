@@ -30,11 +30,7 @@ function formatDate(dateStr: string): string {
   });
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ date: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;
   const digest = digestByDate.get(date);
   if (!digest) return {};
@@ -58,11 +54,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function DigestDetailPage({
-  params,
-}: {
-  params: Promise<{ date: string }>;
-}) {
+export default async function DigestDetailPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
   const digest = digestByDate.get(date);
   if (!digest) notFound();
@@ -76,7 +68,7 @@ export default async function DigestDetailPage({
   const older = idx < allDigests.length - 1 ? allDigests[idx + 1] : null;
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <BreadcrumbJsonLd name={`Daily Digest: ${formatted}`} path={`/digest/${digest.date}/`} />
       <script
         type="application/ld+json"
@@ -103,10 +95,7 @@ export default async function DigestDetailPage({
         }}
       />
       <div className="space-y-2">
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground"
-        >
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Link href="/" className="hover:text-foreground transition-colors">
             Dashboard
           </Link>
@@ -121,22 +110,28 @@ export default async function DigestDetailPage({
         <p className="text-sm text-muted-foreground">{formatted}</p>
       </div>
 
-      <article>
-        <p
-          className="text-[1.15rem] leading-relaxed text-foreground/90 italic"
-          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-        >
-          {digest.text}
-        </p>
-        {extendedParagraphs.map((para, i) => (
+      <article className="space-y-6">
+        <div className="rounded-[1.5rem] border border-border/60 bg-card/75 px-5 py-5 shadow-[0_18px_40px_oklch(0_0_0_/0.12)]">
+          <p className="pharos-kicker">Executive Summary</p>
           <p
-            key={i}
-            className="text-[1.15rem] leading-relaxed text-foreground/90 italic mt-4"
+            className="mt-3 text-[1.1rem] leading-8 text-foreground/92"
             style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           >
-            {para}
+            {digest.text}
           </p>
-        ))}
+        </div>
+
+        <div className="mx-auto max-w-[68ch] space-y-4">
+          {extendedParagraphs.map((para, i) => (
+            <p
+              key={i}
+              className="text-[1.05rem] leading-8 text-foreground/92"
+              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+            >
+              {para}
+            </p>
+          ))}
+        </div>
       </article>
 
       <DigestSnapshot date={digest.date} />

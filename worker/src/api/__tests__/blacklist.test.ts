@@ -14,9 +14,7 @@ describe("handleBlacklist", () => {
         }
         return {
           all: async <T>() => ({
-            results: (sql.includes("COUNT")
-              ? [{ total: 0 }]
-              : []) as T[],
+            results: (sql.includes("COUNT") ? [{ total: 0 }] : []) as T[],
             success: true,
             meta: {},
           }),
@@ -128,6 +126,15 @@ describe("handleBlacklist", () => {
       { match: "blacklist_events", rows: [row] },
     ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
+    expect(res.status).toBe(200);
+  });
+
+  it("accepts EURC stablecoin filter", async () => {
+    const db = mockD1([
+      { match: "COUNT", rows: [{ total: 1 }] },
+      { match: "blacklist_events", rows: [makeBlacklistRow({ stablecoin: "EURC" })] },
+    ]);
+    const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=eurc"));
     expect(res.status).toBe(200);
   });
 

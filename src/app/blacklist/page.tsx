@@ -19,12 +19,12 @@ import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/blacklist-tracker-version";
-import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
+import { BLACKLIST_STABLECOINS, type BlacklistStablecoin, type BlacklistEventType } from "@shared/types";
 import { trackEvent, trackSearch } from "@/lib/analytics";
 
 const PAGE_SIZE = 50;
 
-const VALID_STABLECOINS = new Set(["all", "USDC", "USDT", "PAXG", "XAUT"]);
+const VALID_STABLECOINS = new Set<BlacklistStablecoin | "all">(["all", ...BLACKLIST_STABLECOINS]);
 const VALID_EVENT_TYPES = new Set(["all", "blacklist", "unblacklist", "destroy"]);
 
 type FilterState = {
@@ -42,8 +42,11 @@ function parseFilters(search: string): FilterState {
   const rawEventType = params.get("event") ?? "all";
   const rawPage = params.get("page");
   const rawQuery = params.get("q") ?? "";
+  const normalizedStablecoin = rawStablecoin === "all" ? "all" : rawStablecoin.toUpperCase();
 
-  const stablecoinFilter = (VALID_STABLECOINS.has(rawStablecoin) ? rawStablecoin : "all") as BlacklistStablecoin | "all";
+  const stablecoinFilter = (
+    VALID_STABLECOINS.has(normalizedStablecoin as BlacklistStablecoin | "all") ? normalizedStablecoin : "all"
+  ) as BlacklistStablecoin | "all";
   const chainFilter = rawChain || "all";
   const eventTypeFilter = (VALID_EVENT_TYPES.has(rawEventType) ? rawEventType : "all") as BlacklistEventType | "all";
   const page = rawPage ? Math.max(1, Number.parseInt(rawPage, 10) || 1) : 1;
@@ -62,62 +65,68 @@ function BlacklistPageInner() {
   const { data, isLoading, error, dataUpdatedAt, refetch } = useBlacklistEvents();
   const events = data?.events;
   const { searchParams, replaceParams } = useUrlFilters();
-  const parsedFilters = useMemo(
-    () => parseFilters(searchParams.toString()),
-    [searchParams],
+  const parsedFilters = useMemo(() => parseFilters(searchParams.toString()), [searchParams]);
+
+  const { stablecoinFilter, chainFilter, eventTypeFilter, page, searchQuery } = parsedFilters;
+
+  const updateFilters = useCallback(
+    (updates: Partial<FilterState>) => {
+      const next: FilterState = {
+        ...parsedFilters,
+        ...updates,
+      };
+      replaceParams((params) => {
+        if (next.stablecoinFilter !== "all") params.set("stablecoin", next.stablecoinFilter);
+        else params.delete("stablecoin");
+
+        if (next.chainFilter !== "all") params.set("chain", next.chainFilter);
+        else params.delete("chain");
+
+        if (next.eventTypeFilter !== "all") params.set("event", next.eventTypeFilter);
+        else params.delete("event");
+
+        if (next.page > 1) params.set("page", String(next.page));
+        else params.delete("page");
+
+        const query = next.searchQuery.trim();
+        if (query) params.set("q", query);
+        else params.delete("q");
+      });
+    },
+    [parsedFilters, replaceParams],
   );
 
-  const {
-    stablecoinFilter,
-    chainFilter,
-    eventTypeFilter,
-    page,
-    searchQuery,
-  } = parsedFilters;
+  const handleStablecoinChange = useCallback(
+    (v: BlacklistStablecoin | "all") => {
+      trackEvent("filter_applied", { page: "blacklist", filter_type: "stablecoin", filter_value: v });
+      updateFilters({ stablecoinFilter: v, page: 1 });
+    },
+    [updateFilters],
+  );
 
-  const updateFilters = useCallback((updates: Partial<FilterState>) => {
-    const next: FilterState = {
-      ...parsedFilters,
-      ...updates,
-    };
-    replaceParams((params) => {
-      if (next.stablecoinFilter !== "all") params.set("stablecoin", next.stablecoinFilter);
-      else params.delete("stablecoin");
+  const handleChainChange = useCallback(
+    (v: string) => {
+      trackEvent("filter_applied", { page: "blacklist", filter_type: "chain", filter_value: v });
+      updateFilters({ chainFilter: v, page: 1 });
+    },
+    [updateFilters],
+  );
 
-      if (next.chainFilter !== "all") params.set("chain", next.chainFilter);
-      else params.delete("chain");
+  const handleEventTypeChange = useCallback(
+    (v: BlacklistEventType | "all") => {
+      trackEvent("filter_applied", { page: "blacklist", filter_type: "event_type", filter_value: v });
+      updateFilters({ eventTypeFilter: v, page: 1 });
+    },
+    [updateFilters],
+  );
 
-      if (next.eventTypeFilter !== "all") params.set("event", next.eventTypeFilter);
-      else params.delete("event");
-
-      if (next.page > 1) params.set("page", String(next.page));
-      else params.delete("page");
-
-      const query = next.searchQuery.trim();
-      if (query) params.set("q", query);
-      else params.delete("q");
-    });
-  }, [parsedFilters, replaceParams]);
-
-  const handleStablecoinChange = useCallback((v: BlacklistStablecoin | "all") => {
-    trackEvent("filter_applied", { page: "blacklist", filter_type: "stablecoin", filter_value: v });
-    updateFilters({ stablecoinFilter: v, page: 1 });
-  }, [updateFilters]);
-
-  const handleChainChange = useCallback((v: string) => {
-    trackEvent("filter_applied", { page: "blacklist", filter_type: "chain", filter_value: v });
-    updateFilters({ chainFilter: v, page: 1 });
-  }, [updateFilters]);
-
-  const handleEventTypeChange = useCallback((v: BlacklistEventType | "all") => {
-    trackEvent("filter_applied", { page: "blacklist", filter_type: "event_type", filter_value: v });
-    updateFilters({ eventTypeFilter: v, page: 1 });
-  }, [updateFilters]);
-
-  const handleSearchChange = useCallback((v: string) => {
-    trackSearch("blacklist", v.length);
-    updateFilters({ searchQuery: v, page: 1 });
-  }, [updateFilters]);
+  const handleSearchChange = useCallback(
+    (v: string) => {
+      trackSearch("blacklist", v.length);
+      updateFilters({ searchQuery: v, page: 1 });
+    },
+    [updateFilters],
+  );
 
   const filtered = useMemo(() => {
     if (!events) return [];
@@ -160,9 +169,7 @@ function BlacklistPageInner() {
           void refetch();
         }}
       />
-      <StaleDataBanner
-        queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!events?.length }]}
-      />
+      <StaleDataBanner queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: !!events?.length }]} />
 
       <BlacklistStats events={events} isLoading={isLoading} />
 
@@ -190,12 +197,7 @@ function BlacklistPageInner() {
         </div>
       </div>
 
-      <BlacklistTable
-        events={filtered}
-        isLoading={isLoading}
-        page={page}
-        pageSize={PAGE_SIZE}
-      />
+      <BlacklistTable events={filtered} isLoading={isLoading} page={page} pageSize={PAGE_SIZE} />
 
       {filtered.length > 0 && (
         <TablePagination

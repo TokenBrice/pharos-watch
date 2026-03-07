@@ -10,9 +10,7 @@ interface DigestIndexEntry {
   generatedAt: number;
 }
 
-const digestIndex = (digests as DigestIndexEntry[])
-  .slice()
-  .sort((a, b) => b.generatedAt - a.generatedAt);
+const digestIndex = (digests as DigestIndexEntry[]).slice().sort((a, b) => b.generatedAt - a.generatedAt);
 
 export const metadata: Metadata = {
   title: "Daily Digest Archive: Pharos Stablecoin Recaps",
@@ -40,18 +38,16 @@ export default function DigestArchivePage() {
       breadcrumbName="Daily Digest Archive"
       path="/digest/"
       title="Daily Digest Archive"
+      containerClassName="mx-auto max-w-4xl"
       leadParagraphs={[
         "Every daily stablecoin recap, newest first. Browse historical entries to track major peg events, market-cap shifts, and ecosystem risk transitions over time.",
       ]}
     >
-
       <DigestArchiveClient />
 
       {digestIndex.length > 0 && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Digest Directory
-          </h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Digest Directory</h2>
           <details className="rounded-lg border border-border/60 bg-muted/20">
             <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
               Browse all {digestIndex.length} digest entries
@@ -73,11 +69,17 @@ export default function DigestArchivePage() {
       )}
 
       <p className="text-xs text-muted-foreground text-center max-w-2xl mx-auto pt-4">
-        Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging
-        trends across the stablecoin landscape. Also published on the{" "}
-        <a href="https://t.me/pharoswatch" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+        Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging trends across
+        the stablecoin landscape. Also published on the{" "}
+        <a
+          href="https://t.me/pharoswatch"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground transition-colors"
+        >
           Pharos Telegram channel
-        </a>.
+        </a>
+        .
       </p>
     </FeaturePageShell>
   );

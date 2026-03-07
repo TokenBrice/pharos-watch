@@ -69,12 +69,7 @@ export default function StatusClient() {
 
 function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut: () => void }) {
   const { data, isLoading, error, refetch: refetchStatus, dataUpdatedAt: statusUpdatedAt } = useStatus(adminKey);
-  const {
-    data: healthData,
-    error: healthError,
-    refetch: refetchHealth,
-    dataUpdatedAt: healthUpdatedAt,
-  } = useHealth();
+  const { data: healthData, error: healthError, refetch: refetchHealth, dataUpdatedAt: healthUpdatedAt } = useHealth();
   const {
     data: probes,
     isLoading: probesLoading,

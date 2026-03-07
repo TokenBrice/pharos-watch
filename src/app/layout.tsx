@@ -8,6 +8,7 @@ import { Sidebar, SidebarProvider, SidebarSpacer } from "@/components/sidebar";
 import { Footer } from "@/components/footer";
 import { ScrollToTop } from "@/components/scroll-to-top";
 import { FeedbackButton } from "@/components/feedback-button";
+import { MobileUtilityDock } from "@/components/mobile-utility-dock";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
@@ -95,7 +96,10 @@ export default function RootLayout({
             gtag('js', new Date());
             gtag('config', 'G-6TS0KG8H04');`}
         </Script>
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+        >
           Skip to main content
         </a>
         <Providers>
@@ -105,11 +109,17 @@ export default function RootLayout({
               <Sidebar />
               <SidebarSpacer />
               <div className="flex-1 flex flex-col min-w-0">
-                <main id="main-content" className="flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6">{children}</main>
+                <main
+                  id="main-content"
+                  className="pharos-mobile-utility-safe flex-1 container mx-auto px-4 py-6 md:py-7 lg:px-6"
+                >
+                  {children}
+                </main>
                 <Footer />
               </div>
             </div>
           </SidebarProvider>
+          <MobileUtilityDock />
           <ScrollToTop />
           <FeedbackButton />
         </Providers>
@@ -136,10 +146,7 @@ export default function RootLayout({
                 url: "https://pharos.watch",
                 logo: "https://pharos.watch/pharos-icon.png",
                 description: siteDescription,
-                sameAs: [
-                  "https://x.com/PharosWatch",
-                  "https://github.com/TokenBrice/stablecoin-dashboard",
-                ],
+                sameAs: ["https://x.com/PharosWatch", "https://github.com/TokenBrice/stablecoin-dashboard"],
                 founder: {
                   "@type": "Person",
                   name: "TokenBrice",

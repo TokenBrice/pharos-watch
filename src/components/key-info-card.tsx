@@ -17,9 +17,7 @@ import {
 function getExplorerUrl(chainKey: string, address: string): string | null {
   const chain = CHAIN_META[chainKey];
   if (!chain?.explorerUrl) return null;
-  return chainKey === "tron"
-    ? `${chain.explorerUrl}/#/contract/${address}`
-    : `${chain.explorerUrl}/address/${address}`;
+  return chainKey === "tron" ? `${chain.explorerUrl}/#/contract/${address}` : `${chain.explorerUrl}/address/${address}`;
 }
 
 export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
@@ -33,17 +31,16 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
   const hasLinks = meta.links && meta.links.length > 0;
   const hasContracts = meta.contracts && meta.contracts.length > 0;
 
-  const openContract = hasContracts
-    ? (meta.contracts!.find((c) => c.chain === openChain) ?? null)
-    : null;
+  const openContract = hasContracts ? (meta.contracts!.find((c) => c.chain === openChain) ?? null) : null;
 
   return (
     <Card className="rounded-xl border-l-[3px] border-l-violet-500">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Key Information</CardTitle>
+        <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Key Information
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-
         {/* Links (left) + classification badges (right) */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           {hasLinks && (
@@ -67,22 +64,49 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            {gov && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${gov.cls}`}>{gov.label}</span>}
-            {backing && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${backing.cls}`}>{backing.label}</span>}
-            {peg && <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}>{peg.label}</span>}
-            {meta.flags.yieldBearing && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">Yield-Bearing</span>}
-            {meta.flags.rwa && <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">RWA</span>}
-            {!isDecentralized && (
-              meta.proofOfReserves ? (
-                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}>
+            {gov && (
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${gov.cls}`}
+              >
+                {gov.label}
+              </span>
+            )}
+            {backing && (
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${backing.cls}`}
+              >
+                {backing.label}
+              </span>
+            )}
+            {peg && (
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${peg.cls}`}
+              >
+                {peg.label}
+              </span>
+            )}
+            {meta.flags.yieldBearing && (
+              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
+                Yield-Bearing
+              </span>
+            )}
+            {meta.flags.rwa && (
+              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">
+                RWA
+              </span>
+            )}
+            {!isDecentralized &&
+              (meta.proofOfReserves ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${POR_BADGE_STYLES[meta.proofOfReserves.type].cls}`}
+                >
                   {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
                 </span>
               ) : (
                 <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">
                   No PoR
                 </span>
-              )
-            )}
+              ))}
           </div>
         </div>
 
@@ -97,7 +121,9 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
             )}
             {meta.pegMechanism && (
               <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Peg Stability</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Peg Stability
+                </p>
                 <p className="text-sm leading-relaxed">{meta.pegMechanism}</p>
               </div>
             )}
@@ -108,7 +134,9 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         {!isDecentralized && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl bg-muted/50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Proof of Reserves</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Proof of Reserves
+              </p>
               {meta.proofOfReserves ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm leading-relaxed">
@@ -131,7 +159,9 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
 
             {meta.jurisdiction && (
               <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Jurisdiction</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Jurisdiction
+                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">{meta.jurisdiction.country}</span>
                   {meta.jurisdiction.regulator && (
@@ -153,7 +183,9 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
         {/* Contract Addresses */}
         {hasContracts && (
           <div className="rounded-xl bg-muted/50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Contract Addresses</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+              Contract Addresses
+            </p>
             <div className="flex flex-wrap gap-2">
               {meta.contracts!.map((c) => {
                 const chain = CHAIN_META[c.chain];
@@ -174,7 +206,7 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                         alt={chain.name}
                         width={28}
                         height={28}
-                        className={`rounded-full${chain.darkInvert ? " dark:invert" : ""}`}
+                        className={`h-7 w-7 rounded-full object-contain${chain.darkInvert ? " dark:invert" : ""}`}
                       />
                     ) : (
                       <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
@@ -185,42 +217,45 @@ export function KeyInfoCard({ meta }: { meta: StablecoinMeta }) {
                 );
               })}
             </div>
-            {openContract && (() => {
-              const chain = CHAIN_META[openContract.chain];
-              const explorerUrl = getExplorerUrl(openContract.chain, openContract.address);
-              return (
-                <div className="mt-3 rounded-lg bg-background/60 px-3 py-2 space-y-1.5">
-                  <div className="text-sm font-medium">{chain?.name ?? openContract.chain}</div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-muted-foreground truncate">
-                      {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
-                    </span>
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(openContract.address); trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain }); }}
-                      className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                      title="Copy address"
-                      aria-label="Copy address"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                    </button>
+            {openContract &&
+              (() => {
+                const chain = CHAIN_META[openContract.chain];
+                const explorerUrl = getExplorerUrl(openContract.chain, openContract.address);
+                return (
+                  <div className="mt-3 rounded-lg bg-background/60 px-3 py-2 space-y-1.5">
+                    <div className="text-sm font-medium">{chain?.name ?? openContract.chain}</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs text-muted-foreground truncate">
+                        {openContract.address.slice(0, 6)}...{openContract.address.slice(-4)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(openContract.address);
+                          trackEvent("contract_copied", { coin_id: meta.id, chain: openContract.chain });
+                        }}
+                        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                        title="Copy address"
+                        aria-label="Copy address"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {explorerUrl && (
+                      <a
+                        href={explorerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 hover:underline"
+                      >
+                        View on {chain?.name ? `${chain.name} explorer` : "explorer"}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
                   </div>
-                  {explorerUrl && (
-                    <a
-                      href={explorerUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-blue-700 dark:text-blue-400 hover:underline"
-                    >
-                      View on {chain?.name ? `${chain.name} explorer` : "explorer"}
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
-              );
-            })()}
+                );
+              })()}
           </div>
         )}
-
       </CardContent>
     </Card>
   );

@@ -21,18 +21,62 @@ import { trackEvent } from "@/lib/analytics";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { PortfolioEmptyState } from "@/components/portfolio-empty-state";
+import type { PortfolioPreset } from "@/components/portfolio-empty-state";
 
 // ---------------------------------------------------------------------------
 // Coin options (built once at module level)
 // ---------------------------------------------------------------------------
 
-const deadIds = new Set(
-  DEAD_STABLECOINS.filter((d) => d.llamaId).map((d) => d.llamaId!),
-);
+const deadIds = new Set(DEAD_STABLECOINS.filter((d) => d.llamaId).map((d) => d.llamaId!));
 
-const coinOptions = TRACKED_STABLECOINS
-  .filter((s) => !deadIds.has(s.id))
-  .map((s) => ({ id: s.id, name: s.name, symbol: s.symbol }));
+const coinOptions = TRACKED_STABLECOINS.filter((s) => !deadIds.has(s.id)).map((s) => ({
+  id: s.id,
+  name: s.name,
+  symbol: s.symbol,
+}));
+
+const PORTFOLIO_PRESETS: readonly PortfolioPreset[] = [
+  {
+    title: "CeFi Core",
+    description: "A major-issuer blend with high liquidity and limited complexity.",
+    holdings: [
+      { coinId: "usdc-circle", amount: 40 },
+      { coinId: "usdt-tether", amount: 35 },
+      { coinId: "pyusd-paypal", amount: 25 },
+    ],
+  },
+  {
+    title: "Treasury Heavy",
+    description: "A mix tilted toward tokenized T-bills and institutional cash wrappers.",
+    holdings: [
+      { coinId: "buidl-blackrock", amount: 30 },
+      { coinId: "usdy-ondo-finance", amount: 25 },
+      { coinId: "usyc-hashnote", amount: 25 },
+      { coinId: "usdc-circle", amount: 20 },
+    ],
+  },
+  {
+    title: "DeFi Native",
+    description: "Protocol-issued names with more dependency and collateral nuance.",
+    holdings: [
+      { coinId: "dai-makerdao", amount: 35 },
+      { coinId: "usds-sky", amount: 25 },
+      { coinId: "frax-frax", amount: 20 },
+      { coinId: "lusd-liquity", amount: 20 },
+    ],
+  },
+  {
+    title: "Barbell Mix",
+    description: "Core fiat liquidity on one side, higher-yield synthetic exposure on the other.",
+    holdings: [
+      { coinId: "usdc-circle", amount: 45 },
+      { coinId: "usde-ethena", amount: 20 },
+      { coinId: "usdtb-ethena", amount: 20 },
+      { coinId: "dai-makerdao", amount: 15 },
+    ],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // USD formatters
@@ -166,12 +210,8 @@ function ExposureBar({
       <div className="flex items-center justify-between text-xs">
         <span className="truncate font-medium">
           {name}
-          {!isCollateral && (
-            <span className="text-muted-foreground"> ({symbol})</span>
-          )}
-          {isWarning && (
-            <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-700 dark:text-amber-400" />
-          )}
+          {!isCollateral && <span className="text-muted-foreground"> ({symbol})</span>}
+          {isWarning && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-700 dark:text-amber-400" />}
         </span>
         <span className="text-muted-foreground ml-2 shrink-0">
           {formatUsd(usd)} ({pct.toFixed(1)}%)
@@ -211,9 +251,7 @@ export function PortfolioClient() {
 
   const portfolio = usePortfolio(reportData?.cards);
 
-  const exposureToShow = showUpstreamDetail
-    ? portfolio.upstreamExposure
-    : portfolio.upstreamExposureGrouped;
+  const exposureToShow = showUpstreamDetail ? portfolio.upstreamExposure : portfolio.upstreamExposureGrouped;
 
   // URL sync: keep query string in sync with portfolio holdings
   const { setParam } = useUrlFilters();
@@ -251,9 +289,7 @@ export function PortfolioClient() {
           },
         ]),
       ) as ReportCard["dimensions"],
-      ratedDimensions: DIMENSION_ORDER.filter(
-        (k) => portfolio.dimensionScores[k] !== null,
-      ).length,
+      ratedDimensions: DIMENSION_ORDER.filter((k) => portfolio.dimensionScores[k] !== null).length,
       isDefunct: false,
       rawInputs: {
         pegScore: null,
@@ -274,18 +310,10 @@ export function PortfolioClient() {
         navToken: false,
       },
     };
-  }, [
-    portfolio.holdings.length,
-    portfolio.portfolioGrade,
-    portfolio.portfolioScore,
-    portfolio.dimensionScores,
-  ]);
+  }, [portfolio.holdings.length, portfolio.portfolioGrade, portfolio.portfolioScore, portfolio.dimensionScores]);
 
   // Grade card grid: filtered to held coins only
-  const heldCardIds = useMemo(
-    () => new Set(portfolio.holdings.map((h) => h.coinId)),
-    [portfolio.holdings],
-  );
+  const heldCardIds = useMemo(() => new Set(portfolio.holdings.map((h) => h.coinId)), [portfolio.holdings]);
 
   const heldCards = useMemo(
     () => (reportData?.cards ?? []).filter((c) => heldCardIds.has(c.id)),
@@ -309,6 +337,17 @@ export function PortfolioClient() {
     trackEvent("portfolio_cleared", { coin_count: portfolio.holdings.length });
     portfolio.clearAll();
   }, [portfolio]);
+
+  const handleApplyPreset = useCallback(
+    (preset: PortfolioPreset) => {
+      trackEvent("portfolio_preset_loaded", { preset: preset.title });
+      portfolio.clearAll();
+      for (const holding of preset.holdings) {
+        portfolio.addCoin(holding.coinId, holding.amount);
+      }
+    },
+    [portfolio],
+  );
 
   if (isLoadingCards) {
     return (
@@ -352,28 +391,14 @@ export function PortfolioClient() {
               <CardTitle className="text-lg">My Holdings</CardTitle>
             </div>
             <div className="flex items-center gap-2">
-              {toast && (
-                <span className="text-xs text-muted-foreground animate-in fade-in duration-300">
-                  {toast}
-                </span>
-              )}
+              {toast && <span className="text-xs text-muted-foreground animate-in fade-in duration-300">{toast}</span>}
               {portfolio.holdings.length > 0 && (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleShare}
-                    className="text-muted-foreground"
-                  >
+                  <Button variant="ghost" size="xs" onClick={handleShare} className="text-muted-foreground">
                     <Share2 className="h-3 w-3" />
                     Share
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={handleClear}
-                    className="text-muted-foreground"
-                  >
+                  <Button variant="ghost" size="xs" onClick={handleClear} className="text-muted-foreground">
                     <Trash2 className="h-3 w-3" />
                     Clear
                   </Button>
@@ -407,19 +432,25 @@ export function PortfolioClient() {
             }}
             onRemove={() => {}}
           />
+          {portfolio.holdings.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-3 text-sm text-muted-foreground">
+              Add holdings manually or load a starter mix below. Share and clear actions stay hidden until your
+              portfolio has at least one position.
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {portfolio.holdings.length === 0 && (
+        <PortfolioEmptyState presets={PORTFOLIO_PRESETS} logos={logos} onApplyPreset={handleApplyPreset} />
+      )}
 
       {/* Portfolio summary: grade + radar + upstream exposure */}
       {portfolio.holdings.length > 0 && reportData?.cards && (
         <Card>
           <CardContent className="pt-6 space-y-6">
             <div className="flex items-center gap-4">
-              <GradeBadge
-                grade={portfolio.portfolioGrade}
-                score={portfolio.portfolioScore}
-                size="lg"
-              />
+              <GradeBadge grade={portfolio.portfolioGrade} score={portfolio.portfolioScore} size="lg" />
               <div>
                 <div className="text-sm text-muted-foreground">Portfolio Total</div>
                 <div className="text-lg font-semibold">{formatUsd(portfolio.totalUsd)}</div>
@@ -476,8 +507,8 @@ export function PortfolioClient() {
                     <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/20 dark:border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                       <span>
-                        High concentration: a single upstream stablecoin accounts for over 80% of
-                        your portfolio exposure.
+                        High concentration: a single upstream stablecoin accounts for over 80% of your portfolio
+                        exposure.
                       </span>
                     </div>
                   )}
@@ -496,17 +527,11 @@ export function PortfolioClient() {
           </h2>
 
           {heldCards.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Grade data not yet available for your holdings.
-            </p>
+            <p className="text-sm text-muted-foreground">Grade data not yet available for your holdings.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
               {heldCards.map((card) => (
-                <ReportCardMini
-                  key={card.id}
-                  card={card}
-                  logo={logos?.[card.id]}
-                />
+                <ReportCardMini key={card.id} card={card} logo={logos?.[card.id]} />
               ))}
             </div>
           )}

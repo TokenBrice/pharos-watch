@@ -1,16 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { formatCurrency } from "@shared/lib/format";
@@ -38,7 +31,9 @@ function McapXTick({
     return (
       <g transform={`translate(${x},${y})`}>
         <text
-          x={0} y={0} dy={12}
+          x={0}
+          y={0}
+          dy={12}
           textAnchor="middle"
           fontSize={11}
           fontFamily="var(--font-mono, monospace)"
@@ -49,7 +44,9 @@ function McapXTick({
         </text>
         {isJan && (
           <text
-            x={0} y={0} dy={23}
+            x={0}
+            y={0}
+            dy={23}
             textAnchor="middle"
             fontSize={10}
             fontFamily="var(--font-mono, monospace)"
@@ -70,7 +67,9 @@ function McapXTick({
   return (
     <g transform={`translate(${x},${y})`}>
       <text
-        x={0} y={0} dy={12}
+        x={0}
+        y={0}
+        dy={12}
         textAnchor="middle"
         fontSize={12}
         fontFamily="var(--font-mono, monospace)"
@@ -88,6 +87,7 @@ interface McapChartProps {
 }
 
 export function McapChart({ data, isLoading }: McapChartProps) {
+  const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
@@ -149,55 +149,65 @@ export function McapChart({ data, isLoading }: McapChartProps) {
       </CardHeader>
       <CardContent>
         {filteredData.length > 0 ? (
-          <div className="h-[250px] sm:h-[350px]" role="figure" aria-label={`Market cap chart showing ${filteredData.length} data points`}>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <AreaChart data={filteredData} margin={{ top: 5, right: 5, bottom: range === "all" ? 32 : 20, left: 5 }}>
-              <defs>
-                <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis
-                dataKey="ts"
-                type="number"
-                scale="time"
-                domain={["dataMin", "dataMax"]}
-                ticks={xTicks}
-                interval={range === "all" ? 0 : "preserveStartEnd"}
-                tick={<McapXTick range={range} />}
-                tickLine={false}
-                axisLine={false}
-                height={range === "all" ? 44 : 30}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(val: number) => formatCurrency(val)}
-                domain={yDomain}
-              />
-              <Tooltip
-                formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
-                labelFormatter={(label) =>
-                  new Date(Number(label)).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                }
-                {...RECHARTS_TOOLTIP_STYLES}
-              />
-              <Area
-                type="monotone"
-                dataKey="mcap"
-                stroke={CHART_BLUE}
-                fill="url(#mcapGradient)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div
+            ref={chartContainerRef}
+            className="h-[250px] sm:h-[350px]"
+            role="figure"
+            aria-label={`Market cap chart showing ${filteredData.length} data points`}
+          >
+            {isChartReady ? (
+              <AreaChart
+                width={width}
+                height={height}
+                data={filteredData}
+                margin={{ top: 5, right: 5, bottom: range === "all" ? 32 : 20, left: 5 }}
+              >
+                <defs>
+                  <linearGradient id="mcapGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_BLUE} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_BLUE} stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={["dataMin", "dataMax"]}
+                  ticks={xTicks}
+                  interval={range === "all" ? 0 : "preserveStartEnd"}
+                  tick={<McapXTick range={range} />}
+                  tickLine={false}
+                  axisLine={false}
+                  height={range === "all" ? 44 : 30}
+                />
+                <YAxis
+                  tick={{
+                    fontSize: 12,
+                    fontFamily: "var(--font-mono, monospace)",
+                    fill: "var(--color-muted-foreground)",
+                  }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(val: number) => formatCurrency(val)}
+                  domain={yDomain}
+                />
+                <Tooltip
+                  formatter={(value) => [formatCurrency(Number(value)), "Market Cap"]}
+                  labelFormatter={(label) =>
+                    new Date(Number(label)).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  }
+                  {...RECHARTS_TOOLTIP_STYLES}
+                />
+                <Area type="monotone" dataKey="mcap" stroke={CHART_BLUE} fill="url(#mcapGradient)" strokeWidth={2} />
+              </AreaChart>
+            ) : (
+              <ChartSkeleton className="h-full w-full" />
+            )}
           </div>
         ) : isLoading ? (
           <ChartSkeleton className="h-[250px] sm:h-[350px]" />
