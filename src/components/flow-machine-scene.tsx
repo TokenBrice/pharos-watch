@@ -4,6 +4,12 @@ import { type CSSProperties } from "react";
 import { Banknote, Printer, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Visual note: This component uses hardcoded dark-palette colors (slate, rgba shadows)
+ * for artistic effect. It renders on dark surfaces only and does not adapt to light mode.
+ * See design audit 2026-03-07 for rationale.
+ */
+
 type CssVarStyle = CSSProperties & Record<`--${string}`, string | number>;
 
 export type FlowMachineSceneMode = "printer" | "shredder";

@@ -74,7 +74,7 @@ export function SidebarSpacer() {
   const { pinned } = useSidebar();
   return (
     <div
-      className={`hidden md:block shrink-0 transition-all duration-200 ${pinned ? "w-[220px]" : "w-14"}`}
+      className={`hidden md:block shrink-0 transition-all duration-200 ${pinned ? "w-[var(--sidebar-width-expanded)]" : "w-[var(--sidebar-width-collapsed)]"}`}
     />
   );
 }
@@ -154,7 +154,7 @@ export function Sidebar() {
   return (
     <aside
       className="hidden md:flex flex-col fixed top-0 left-0 h-screen border-r border-border/70 bg-card/92 shadow-[0_0_0_1px_oklch(1_0_0_/0.03),0_20px_35px_oklch(0_0_0_/0.2)] backdrop-blur-xl z-40 transition-all duration-200"
-      style={{ width: expanded ? 220 : 56 }}
+      style={{ width: expanded ? "var(--sidebar-width-expanded)" : "var(--sidebar-width-collapsed)" }}
       aria-label="Main navigation"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

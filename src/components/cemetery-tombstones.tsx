@@ -6,6 +6,12 @@ import { CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import { formatCurrency, formatDeathDate } from "@shared/lib/format";
 import type { DeadStablecoin, CauseOfDeath } from "@shared/types";
 
+/**
+ * Visual note: This component uses hardcoded dark-palette colors (slate, rgba shadows)
+ * for artistic effect. It renders on dark surfaces only and does not adapt to light mode.
+ * See design audit 2026-03-07 for rationale.
+ */
+
 type TombSize = "lg" | "md" | "sm";
 
 function getTombSize(peakMcap?: number): TombSize {

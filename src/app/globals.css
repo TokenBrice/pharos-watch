@@ -238,8 +238,18 @@
     background:
       linear-gradient(to right, var(--background) 30%, transparent) left center,
       linear-gradient(to left, var(--background) 30%, transparent) right center,
-      radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.15), transparent) left center,
-      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.15), transparent) right center;
+      radial-gradient(farthest-side at 0 50%, oklch(0 0 0 / 0.15), transparent) left center,
+      radial-gradient(farthest-side at 100% 50%, oklch(0 0 0 / 0.15), transparent) right center;
+    background-repeat: no-repeat;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+  .dark .scroll-shadow {
+    background:
+      linear-gradient(to right, var(--background) 30%, transparent) left center,
+      linear-gradient(to left, var(--background) 30%, transparent) right center,
+      radial-gradient(farthest-side at 0 50%, oklch(1 0 0 / 0.12), transparent) left center,
+      radial-gradient(farthest-side at 100% 50%, oklch(1 0 0 / 0.12), transparent) right center;
     background-repeat: no-repeat;
     background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
     background-attachment: local, local, scroll, scroll;
