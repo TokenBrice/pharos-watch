@@ -1,7 +1,6 @@
 import {
   createMethodologyVersion,
   toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "./methodology-version";
 
 const blacklistTracker = createMethodologyVersion({
@@ -139,9 +138,6 @@ export const BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL = blacklistTracker.vers
 
 /** Public changelog route for Blacklist Tracker methodology history. */
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH = blacklistTracker.changelogPath;
-
-/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
-export type BlacklistTrackerMethodologyChangelogEntry = MethodologyChangelogEntry;
 
 /** Reconstructed changelog data. */
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG = blacklistTracker.changelog;

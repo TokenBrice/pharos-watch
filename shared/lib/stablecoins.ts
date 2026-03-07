@@ -13,23 +13,23 @@ interface StablecoinOpts {
   geckoId?: string;
   cmcSlug?: string;
   protocolSlug?: string;
-  proofOfReserves?: import("../types").ProofOfReserves;
-  links?: import("../types").StablecoinLink[];
-  jurisdiction?: import("../types").Jurisdiction;
-  contracts?: import("../types").ContractDeployment[];
-  tradedContracts?: import("../types").ContractDeployment[];
-  supplyMethod?: import("../types").SupplyMethodConfig;
-  dependencies?: import("../types").DependencyWeight[];
+  proofOfReserves?: StablecoinMeta["proofOfReserves"];
+  links?: StablecoinMeta["links"];
+  jurisdiction?: StablecoinMeta["jurisdiction"];
+  contracts?: StablecoinMeta["contracts"];
+  tradedContracts?: StablecoinMeta["tradedContracts"];
+  supplyMethod?: StablecoinMeta["supplyMethod"];
+  dependencies?: StablecoinMeta["dependencies"];
   canBeBlacklisted?: boolean | "possible";
-  chainTier?: import("../types").ChainTier;
-  deploymentModel?: import("../types").DeploymentModel;
-  collateralQuality?: import("../types").CollateralQuality;
-  custodyModel?: import("../types").CustodyModel;
-  governanceQuality?: import("../types").GovernanceQuality;
-  reserves?: import("../types").ReserveSlice[];
-  notices?: import("../types").CoinNotice[];
+  chainTier?: StablecoinMeta["chainTier"];
+  deploymentModel?: StablecoinMeta["deploymentModel"];
+  collateralQuality?: StablecoinMeta["collateralQuality"];
+  custodyModel?: StablecoinMeta["custodyModel"];
+  governanceQuality?: StablecoinMeta["governanceQuality"];
+  reserves?: StablecoinMeta["reserves"];
+  notices?: StablecoinMeta["notices"];
   tags?: string[];
-  yieldConfig?: import("../types").YieldConfig;
+  yieldConfig?: StablecoinMeta["yieldConfig"];
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {

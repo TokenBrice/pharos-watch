@@ -285,30 +285,6 @@ function collateralScoreLabel(score: number): string {
   return "Very high risk";
 }
 
-/**
- * Detect drift between computed reserve quality and enum classification.
- * Returns warnings for coins where the two disagree by more than 30 points.
- * Run during build or as a manual audit.
- */
-export function validateCollateralQualityDrift(
-  coins: StablecoinMeta[],
-): string[] {
-  const warnings: string[] = [];
-  for (const coin of coins) {
-    if (!coin.reserves || coin.reserves.length === 0) continue;
-    const computed = computeCollateralQualityFromReserves(coin.reserves);
-    const factors = resolveResilienceFactors(coin);
-    const enumScore = COLLATERAL_QUALITY_SCORE[factors.collateralQuality];
-    const drift = Math.abs(computed - enumScore);
-    if (drift > 30) {
-      warnings.push(
-        `${coin.symbol} (${coin.id}): reserve-derived=${computed}, enum=${enumScore}, drift=${drift}`,
-      );
-    }
-  }
-  return warnings;
-}
-
 const CUSTODY_MODEL_SCORE: Record<CustodyModel, number> = {
   onchain: 100,
   institutional: 50,

@@ -34,7 +34,7 @@ export type PegCurrency =
 /** Governance model */
 export type GovernanceType = "centralized" | "centralized-dependent" | "decentralized";
 
-export interface StablecoinFlags {
+interface StablecoinFlags {
   backing: BackingType;
   pegCurrency: PegCurrency;
   governance: GovernanceType;
@@ -43,20 +43,20 @@ export interface StablecoinFlags {
   navToken: boolean; // price appreciates over time as yield accrues (not pegged to $1) — exclude from peg deviation metrics
 }
 
-export type ProofOfReservesType = "independent-audit" | "real-time" | "self-reported";
+type ProofOfReservesType = "independent-audit" | "real-time" | "self-reported";
 
-export interface ProofOfReserves {
+interface ProofOfReserves {
   type: ProofOfReservesType;
   url: string;
   provider?: string;
 }
 
-export interface StablecoinLink {
+interface StablecoinLink {
   label: string;
   url: string;
 }
 
-export interface Jurisdiction {
+interface Jurisdiction {
   country: string;
   regulator?: string;
   license?: string;
@@ -69,7 +69,7 @@ export interface ContractDeployment {
 }
 
 /** Configures how on-chain circulating supply is computed for a stablecoin */
-export interface SupplyMethodConfig {
+interface SupplyMethodConfig {
   type:
     | "totalSupply" // Default: raw totalSupply() is circulating
     | "totalSupply-minus-addresses" // totalSupply() - sum(balanceOf(addr)) per chain
@@ -530,7 +530,6 @@ export const DexPriceSourceSchema = z.object({
   price: z.number(),
   tvl: z.number(),
 });
-export type DexPriceSource = z.infer<typeof DexPriceSourceSchema>;
 
 export const DexLiquidityDataSchema = z.object({
   totalTvlUsd: z.number(),
@@ -707,8 +706,6 @@ export interface ReportCardsResponse {
   updatedAt: number;
 }
 
-export type ReportCardMap = Record<string, ReportCard>;
-
 // --- Stability Index types ---
 
 export const MethodologyEnvelopeSchema = z.object({
@@ -720,7 +717,6 @@ export const MethodologyEnvelopeSchema = z.object({
   asOf: z.number(),
   isCurrent: z.boolean(),
 });
-export type MethodologyEnvelope = z.infer<typeof MethodologyEnvelopeSchema>;
 
 export const StabilityIndexComponentsSchema = z.object({
   severity: z.number(),
@@ -737,8 +733,6 @@ export const StabilityContributorSchema = z.object({
   ageDays: z.number(),
   factor: z.number(),
 });
-
-export const StabilityIndexMethodologySchema = MethodologyEnvelopeSchema;
 
 export const StabilityIndexCurrentSchema = z.object({
   score: z.number(),
@@ -763,11 +757,9 @@ export const StabilityIndexHistoryPointSchema = z.object({
 export const StabilityIndexResponseSchema = z.object({
   current: StabilityIndexCurrentSchema.nullable(),
   history: z.array(StabilityIndexHistoryPointSchema),
-  methodology: StabilityIndexMethodologySchema,
+  methodology: MethodologyEnvelopeSchema,
 });
-export type StabilityIndexComponents = z.infer<typeof StabilityIndexComponentsSchema>;
 export type StabilityContributor = z.infer<typeof StabilityContributorSchema>;
-export type StabilityIndexMethodology = z.infer<typeof StabilityIndexMethodologySchema>;
 export type StabilityIndexCurrent = z.infer<typeof StabilityIndexCurrentSchema>;
 export type StabilityIndexHistoryPoint = z.infer<typeof StabilityIndexHistoryPointSchema>;
 export type StabilityIndexResponse = z.infer<typeof StabilityIndexResponseSchema>;
@@ -1003,8 +995,7 @@ export type DepegEventsResponse = z.infer<typeof DepegEventsResponseSchema>;
 
 // --- Peg Summary types (from /api/peg-summary) ---
 
-export const DepegDewsMethodologySchema = MethodologyEnvelopeSchema;
-export type DepegDewsMethodology = z.infer<typeof DepegDewsMethodologySchema>;
+export type DepegDewsMethodology = z.infer<typeof MethodologyEnvelopeSchema>;
 
 export const PegSummaryCoinSchema = z.object({
   id: z.string(),
@@ -1051,7 +1042,7 @@ export type PegSummaryStats = z.infer<typeof PegSummaryStatsSchema>;
 export const PegSummaryResponseSchema = z.object({
   coins: z.array(PegSummaryCoinSchema),
   summary: PegSummaryStatsSchema.nullable(),
-  methodology: DepegDewsMethodologySchema,
+  methodology: MethodologyEnvelopeSchema,
 });
 export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 
@@ -1208,15 +1199,6 @@ export const YieldRankingsResponseSchema = z.object({
   updatedAt: z.number(),
 });
 
-export interface YieldHistoryPoint {
-  date: number;
-  apy: number;
-  apyBase: number | null;
-  apyReward: number | null;
-  exchangeRate: number | null;
-  sourceTvlUsd: number | null;
-}
-
 // --- Mint/Burn Flow types ---
 
 // Baseline-relative mint/burn pressure uses signed semantics: -100 (worsening) to +100 (improving).
@@ -1290,7 +1272,6 @@ export const MintBurnPerCoinChainSchema = z.object({
   burnCount: z.number(),
   netFlowUsd: z.number(),
 });
-export type MintBurnPerCoinChain = z.infer<typeof MintBurnPerCoinChainSchema>;
 
 export const MintBurnPerCoinResponseSchema = z.object({
   stablecoinId: z.string(),
@@ -1361,7 +1342,7 @@ export const StressSignalsAllResponseSchema = z.object({
   signals: z.record(z.string(), StressSignalEntrySchema),
   updatedAt: z.number(),
   malformedRows: z.number().optional(),
-  methodology: DepegDewsMethodologySchema,
+  methodology: MethodologyEnvelopeSchema,
 });
 
 // Keep manual interface: preserves explicit StressSignalEntry mapping while schema allows passthrough signal keys.
@@ -1384,7 +1365,7 @@ export const StressSignalDetailResponseSchema = z.object({
   current: StressSignalEntrySchema.nullable(),
   history: z.array(StressSignalHistoryEntrySchema),
   malformedRows: z.number().optional(),
-  methodology: DepegDewsMethodologySchema,
+  methodology: MethodologyEnvelopeSchema,
 });
 
 // Keep manual interface: retains explicit history entry shape for consumers while schema signal details are passthrough.

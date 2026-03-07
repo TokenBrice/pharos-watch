@@ -9,9 +9,8 @@ import type {
   GovernanceType,
   BackingType,
   PegCurrency,
-  ProofOfReservesType,
+  StablecoinMeta,
   BlacklistEventType,
-  BluechipGrade,
   BlacklistStablecoin,
   YieldType,
 } from "../types";
@@ -138,6 +137,7 @@ interface BadgeStyle {
   label: string;
   cls: string;
 }
+type ProofOfReservesType = NonNullable<StablecoinMeta["proofOfReserves"]>["type"];
 
 /** Governance badge styles for the detail page. */
 export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = {
@@ -223,24 +223,6 @@ export const GOVERNANCE_TIER_COLORS: Record<GovernanceType, TierColors> = {
   centralized: { text: "text-yellow-700 dark:text-yellow-400", bg: "bg-yellow-500" },
   "centralized-dependent": { text: "text-orange-700 dark:text-orange-400", bg: "bg-orange-500" },
   decentralized: { text: "text-green-700 dark:text-green-400", bg: "bg-green-500" },
-};
-
-// ---------------------------------------------------------------------------
-// Bluechip safety grade colors
-// ---------------------------------------------------------------------------
-
-export const GRADE_COLORS: Record<BluechipGrade, string> = {
-  "A+": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  A: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  "A-": "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
-  "B+": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  B: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  "B-": "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  "C+": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  C: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  "C-": "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
-  D: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-  F: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
 };
 
 // ---------------------------------------------------------------------------

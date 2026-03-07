@@ -1,7 +1,5 @@
 import {
   createMethodologyVersion,
-  toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
@@ -125,13 +123,8 @@ export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = liquidity.versionLabel;
 /** Public changelog route for Liquidity Score methodology history. */
 export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = liquidity.changelogPath;
 
-/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
-export type LiquidityMethodologyChangelogEntry = MethodologyChangelogEntry;
-
 /** Reconstructed changelog data. */
 export const LIQUIDITY_METHODOLOGY_CHANGELOG = liquidity.changelog;
 
 /** Resolve Liquidity Score methodology version active at a given Unix timestamp (seconds). */
 export const getLiquidityMethodologyVersionAt = liquidity.getVersionAt;
-
-export const toLiquidityMethodologyVersionLabel = toMethodologyVersionLabel;

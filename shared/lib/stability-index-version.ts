@@ -1,7 +1,6 @@
 import {
   createMethodologyVersion,
   toMethodologyVersionLabel,
-  type MethodologyChangelogEntry,
 } from "./methodology-version";
 
 const psi = createMethodologyVersion({
@@ -124,9 +123,6 @@ export const PSI_METHODOLOGY_VERSION_LABEL = psi.versionLabel;
 
 /** Public changelog route for PSI methodology history. */
 export const PSI_METHODOLOGY_CHANGELOG_PATH = psi.changelogPath;
-
-/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
-export type PsiMethodologyChangelogEntry = MethodologyChangelogEntry;
 
 /** Reconstructed changelog data. */
 export const PSI_METHODOLOGY_CHANGELOG = psi.changelog;
