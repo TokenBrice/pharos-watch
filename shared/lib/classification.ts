@@ -319,6 +319,18 @@ export const BLACKLIST_CHART_COLORS: Record<BlacklistStablecoin, string> = {
 
 export type ThreatBand = "CALM" | "WATCH" | "ALERT" | "WARNING" | "DANGER";
 
+export const THREAT_BAND_ORDER: Record<ThreatBand, number> = {
+  CALM: 0,
+  WATCH: 1,
+  ALERT: 2,
+  WARNING: 3,
+  DANGER: 4,
+};
+
+export function isThreatBand(value: string): value is ThreatBand {
+  return value in THREAT_BAND_ORDER;
+}
+
 export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {
   CALM: "Calm",
   WATCH: "Watch",

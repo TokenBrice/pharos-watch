@@ -1,5 +1,6 @@
 import type { DepegEvent } from "@shared/types";
-import { mergeDepegSeconds, worstDeviation } from "@shared/lib/peg-utils";
+import { computePegScore } from "@shared/lib/peg-score";
+import { DAY_SECONDS, THIRTY_DAYS_SECONDS } from "@/lib/constants";
 
 interface PegStabilityMetrics {
   /** Percentage of tracked history at peg (0–100) */
@@ -45,38 +46,33 @@ export function computePegStability(
   const historySpanSec = nowSec - earliestSec;
   if (historySpanSec <= 0) return null;
 
-  // Total depeg time — merge overlapping intervals to avoid double-counting
-  const totalDepegSec = mergeDepegSeconds(events, earliestSec, nowSec);
-
-  const pegPct = Math.max(0, (1 - totalDepegSec / historySpanSec) * 100);
-  const limited = historySpanSec < 30 * 86400;
-
-  // Worst deviation (largest absolute value, keep sign)
-  const worstDeviationBps = worstDeviation(events);
+  // Shared peg-score logic is the single source for pegPct, eventCount, worst deviation, and active-depeg state.
+  const pegMetrics = computePegScore(events, earliestSec, nowSec);
+  const limited = historySpanSec < THIRTY_DAYS_SECONDS;
 
   // Current streak: days since last closed event ended
-  const depeggedNow = events.some((e) => e.endedAt === null);
+  const depeggedNow = pegMetrics.activeDepeg;
   let currentStreakDays: number | null = null;
   if (!depeggedNow && events.length > 0) {
     const lastEnded = events.filter((e) => e.endedAt !== null).reduce((m, e) => Math.max(m, e.endedAt!), -Infinity);
     if (lastEnded > 0) {
-      currentStreakDays = Math.floor((nowSec - lastEnded) / 86400);
+      currentStreakDays = Math.floor((nowSec - lastEnded) / DAY_SECONDS);
     }
   }
 
   return {
-    pegPct,
+    pegPct: pegMetrics.pegPct,
     trackingSpan: formatTrackingSpan(historySpanSec),
     limited,
-    eventCount: events.length,
-    worstDeviationBps,
+    eventCount: pegMetrics.eventCount,
+    worstDeviationBps: pegMetrics.worstDeviationBps,
     currentStreakDays,
     depeggedNow,
   };
 }
 
 function formatTrackingSpan(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
+  const days = Math.floor(seconds / DAY_SECONDS);
   if (days < 30) return `${days}d`;
   const months = Math.floor(days / 30.44);
   if (months < 12) return `${months}mo`;

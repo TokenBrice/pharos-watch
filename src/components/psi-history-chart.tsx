@@ -10,19 +10,20 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
-import { RECHARTS_TOOLTIP_STYLES, PSI_BAND_COLORS, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
+import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE, CHART_SLATE } from "@/lib/chart-colors";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import { trackEvent } from "@/lib/analytics";
+import { PSI_HEX_COLORS } from "@shared/lib/psi-colors";
 
 /* ─── Constants ─────────────────────────────────────────────────── */
 
 export const BAND_ZONES = [
-  { y1: 90, y2: 100, color: PSI_BAND_COLORS.BEDROCK, label: "BEDROCK" },
-  { y1: 75, y2: 90, color: PSI_BAND_COLORS.STEADY, label: "STEADY" },
-  { y1: 60, y2: 75, color: PSI_BAND_COLORS.TREMOR, label: "TREMOR" },
-  { y1: 40, y2: 60, color: PSI_BAND_COLORS.FRACTURE, label: "FRACTURE" },
-  { y1: 20, y2: 40, color: PSI_BAND_COLORS.CRISIS, label: "CRISIS" },
-  { y1: 0, y2: 20, color: PSI_BAND_COLORS.MELTDOWN, label: "MELTDOWN" },
+  { y1: 90, y2: 100, color: PSI_HEX_COLORS.BEDROCK, label: "BEDROCK" },
+  { y1: 75, y2: 90, color: PSI_HEX_COLORS.STEADY, label: "STEADY" },
+  { y1: 60, y2: 75, color: PSI_HEX_COLORS.TREMOR, label: "TREMOR" },
+  { y1: 40, y2: 60, color: PSI_HEX_COLORS.FRACTURE, label: "FRACTURE" },
+  { y1: 20, y2: 40, color: PSI_HEX_COLORS.CRISIS, label: "CRISIS" },
+  { y1: 0, y2: 20, color: PSI_HEX_COLORS.MELTDOWN, label: "MELTDOWN" },
 ];
 
 export const PSI_EVENTS = [

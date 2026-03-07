@@ -7,11 +7,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { BAND_ORDER } from "@/lib/depeg-sort";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { StressSignalEntry } from "@shared/types";
-import type { ThreatBand } from "@shared/lib/classification";
+import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 interface DEWSAlertFeedProps {
   signals?: Record<string, StressSignalEntry>;
@@ -28,10 +27,6 @@ interface AlertCoin {
   band: ThreatBand;
 }
 
-function isThreatBand(value: string): value is ThreatBand {
-  return Object.prototype.hasOwnProperty.call(BAND_ORDER, value);
-}
-
 export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAlertFeedProps) {
   const prefetch = usePrefetchStablecoin();
 
@@ -42,7 +37,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
     for (const [id, entry] of Object.entries(signals)) {
       if (allowedIds && !allowedIds.has(id)) continue;
       if (!isThreatBand(entry.band)) continue;
-      if ((BAND_ORDER[entry.band] ?? 0) < BAND_ORDER.ALERT) continue;
+      if ((THREAT_BAND_ORDER[entry.band] ?? 0) < THREAT_BAND_ORDER.ALERT) continue;
 
       const meta = PSI_ELIGIBLE_META_BY_ID.get(id);
       result.push({
@@ -55,7 +50,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className }: DEWSAle
     }
 
     result.sort((a, b) => {
-      const bandDelta = (BAND_ORDER[b.band] ?? 0) - (BAND_ORDER[a.band] ?? 0);
+      const bandDelta = (THREAT_BAND_ORDER[b.band] ?? 0) - (THREAT_BAND_ORDER[a.band] ?? 0);
       if (bandDelta !== 0) return bandDelta;
       if (b.score !== a.score) return b.score - a.score;
       return a.symbol.localeCompare(b.symbol);

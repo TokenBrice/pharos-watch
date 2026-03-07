@@ -10,6 +10,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import { DAY_MS } from "@/lib/constants";
 
 function McapXTick({
   x,
@@ -108,7 +109,7 @@ export function McapChart({ data, isLoading }: McapChartProps) {
     if (range !== "all" || filteredData.length === 0) return undefined;
     const first = filteredData[0].ts;
     const last = filteredData[filteredData.length - 1].ts;
-    const spanDays = (last - first) / 86400000;
+    const spanDays = (last - first) / DAY_MS;
 
     let step = 1;
     if (spanDays > 4 * 365) step = 6;

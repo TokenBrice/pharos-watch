@@ -4,6 +4,7 @@
  * All protocol/chain names, colors, and formatting helpers live here.
  * Tailwind classes are static string literals for purge safety.
  */
+import { CHAIN_META } from "@shared/lib/chains";
 
 const PROTOCOL_NAMES: Record<string, string> = {
   curve: "Curve",
@@ -71,23 +72,10 @@ export const CHAIN_COLORS: Record<string, string> = {
   fantom: "bg-blue-300",
 };
 
-const CHAIN_DISPLAY_NAMES: Record<string, string> = {
-  ethereum: "Ethereum",
-  arbitrum: "Arbitrum",
-  base: "Base",
-  polygon: "Polygon",
-  bsc: "BSC",
-  optimism: "Optimism",
-  avalanche: "Avalanche",
-  solana: "Solana",
-  gnosis: "Gnosis",
-  fantom: "Fantom",
-};
-
 /** Normalize a chain name to lowercase for color lookup, returning a canonical display name. */
 export function normalizeChain(chain: string): string {
   const key = chain.toLowerCase();
-  return CHAIN_DISPLAY_NAMES[key] ?? chain;
+  return CHAIN_META[key]?.name ?? chain;
 }
 
 /** Prettify a DeFiLlama project slug into a display name */

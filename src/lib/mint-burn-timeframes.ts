@@ -1,4 +1,4 @@
-const DAY_HOURS = 24;
+import { DAY_HOURS, WEEK_HOURS, THIRTY_DAYS_HOURS, NINETY_DAYS_HOURS } from "@/lib/constants";
 
 export interface MintBurnSummaryTimeframePreset {
   shortHours: number;
@@ -11,18 +11,18 @@ export interface ResolvedMintBurnSummaryTimeframePreset extends MintBurnSummaryT
 }
 
 const DEFAULT_SUMMARY_TIMEFRAME: MintBurnSummaryTimeframePreset = {
-  shortHours: 24,
-  longHours: 7 * DAY_HOURS,
+  shortHours: DAY_HOURS,
+  longHours: WEEK_HOURS,
 };
 
 const SUMMARY_TIMEFRAME_OVERRIDES: Record<string, MintBurnSummaryTimeframePreset> = {
   // USDT mints/redeems in larger, less frequent batches, so shorter windows are often too sparse.
-  "usdt-tether": { shortHours: 30 * DAY_HOURS, longHours: 90 * DAY_HOURS },
+  "usdt-tether": { shortHours: THIRTY_DAYS_HOURS, longHours: NINETY_DAYS_HOURS },
 };
 
 export function formatMintBurnWindowLabel(hours: number): string {
   if (!Number.isFinite(hours) || hours <= 0) return "N/A";
-  if (hours === 24) return "24h";
+  if (hours === DAY_HOURS) return "24h";
   if (hours % DAY_HOURS === 0) return `${hours / DAY_HOURS}d`;
   return `${hours}h`;
 }
@@ -51,9 +51,9 @@ export function getNetFlowForHours(
   },
   hours: number,
 ): number | null {
-  if (hours === 24) return coin.netFlow24hUsd;
-  if (hours === 7 * DAY_HOURS) return coin.netFlow7dUsd;
-  if (hours === 30 * DAY_HOURS) return coin.netFlow30dUsd;
-  if (hours === 90 * DAY_HOURS) return coin.netFlow90dUsd;
+  if (hours === DAY_HOURS) return coin.netFlow24hUsd;
+  if (hours === WEEK_HOURS) return coin.netFlow7dUsd;
+  if (hours === THIRTY_DAYS_HOURS) return coin.netFlow30dUsd;
+  if (hours === NINETY_DAYS_HOURS) return coin.netFlow90dUsd;
   return null;
 }

@@ -1,5 +1,5 @@
 // src/lib/dews-radar-utils.ts
-import type { ThreatBand } from "@shared/lib/classification";
+import { THREAT_BAND_ORDER, isThreatBand, type ThreatBand } from "@shared/lib/classification";
 
 type ElevatedBand = Exclude<ThreatBand, "CALM">;
 
@@ -31,8 +31,6 @@ const PULSE_DURATION: Record<ElevatedBand, number> = {
   WARNING: 1.2,
   DANGER:  0.6,
 };
-
-const BAND_ORDER: ThreatBand[] = ["CALM", "WATCH", "ALERT", "WARNING", "DANGER"];
 
 /**
  * Map a coin's score to a radius within its band's radial zone.
@@ -81,12 +79,12 @@ export function distributeAngles(n: number): number[] {
  * Returns "CALM" if none are elevated.
  */
 export function highestBand(bands: string[]): ThreatBand {
-  let maxIdx = 0;
+  let highest: ThreatBand = "CALM";
   for (const b of bands) {
-    const idx = BAND_ORDER.indexOf(b as ThreatBand);
-    if (idx > maxIdx) maxIdx = idx;
+    if (!isThreatBand(b)) continue;
+    if (THREAT_BAND_ORDER[b] > THREAT_BAND_ORDER[highest]) highest = b;
   }
-  return BAND_ORDER[maxIdx];
+  return highest;
 }
 
 /** Sweep revolution duration in seconds for a given system threat level. */
