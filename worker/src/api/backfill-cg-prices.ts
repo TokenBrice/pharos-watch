@@ -5,7 +5,7 @@ import { batchExecute } from "../lib/db";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
-import { RATE_LIMITS } from "../lib/rate-limits";
+import { RATE_LIMITS } from "../lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 
 const DEFAULT_BATCH_SIZE = 10;

@@ -89,8 +89,8 @@ vi.mock("../../lib/db", async (importOriginal) => {
   };
 });
 
-// Stub chain-rpcs
-vi.mock("../../lib/chain-rpcs", () => ({
+// Stub chain-registry
+vi.mock("../../lib/chain-registry", () => ({
   getChainRpc: vi.fn(() => null),
 }));
 
@@ -174,7 +174,7 @@ vi.mock("../../lib/constants", () => ({
 import { syncYieldData } from "../sync-yield-data";
 import { getCache, setCache, batchExecute } from "../../lib/db";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
-import { getChainRpc } from "../../lib/chain-rpcs";
+import { getChainRpc } from "../../lib/chain-registry";
 import { mockFetch } from "../../api/__tests__/helpers/mock-fetch";
 import * as safetyScoresModule from "../../lib/safety-scores";
 

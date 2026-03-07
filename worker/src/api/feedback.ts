@@ -2,6 +2,7 @@
 
 import { getCache } from "../lib/db";
 import { errorResponse, jsonResponse } from "../lib/api-utils";
+import { checkFeedbackRateLimit } from "../lib/rate-limit";
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -29,51 +30,6 @@ const GITHUB_OWNER = "TokenBrice";
 const GITHUB_REPO = "stablecoin-dashboard";
 const FEEDBACK_RATE_LIMIT_WINDOW_SEC = 600;
 const FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS = 3;
-
-// ── Rate limiting ─────────────────────────────────────────────────────────
-
-async function checkRateLimit(
-  db: D1Database,
-  ip: string,
-  salt: string
-): Promise<boolean> {
-  const now = Math.floor(Date.now() / 1000);
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + salt);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const ipHash = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
-
-  // Single-statement insert gate avoids race from check-then-insert under concurrency.
-  const insertResult = await db
-    .prepare(
-      `INSERT INTO feedback_rate_limit (ip_hash, submitted_at)
-       SELECT ?, ?
-       WHERE (
-         SELECT COUNT(*) FROM feedback_rate_limit
-         WHERE ip_hash = ? AND submitted_at > ?
-       ) < ?`,
-    )
-    .bind(
-      ipHash,
-      now,
-      ipHash,
-      now - FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-      FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
-    )
-    .run();
-  if ((insertResult.meta?.changes ?? 0) === 0) {
-    return false;
-  }
-
-  // Prune rows older than 1 hour (non-blocking, best-effort)
-  db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
-    .bind(now - 3600)
-    .run()
-    .catch((e) => console.warn("[feedback] rate-limit prune failed:", e));
-
-  return true;
-}
 
 // ── Auto-verification ─────────────────────────────────────────────────────
 
@@ -331,7 +287,13 @@ export async function handleFeedback(
     console.error("[feedback] FEEDBACK_IP_SALT secret not configured");
     return errorResponse(503, "Service misconfigured");
   }
-  const allowed = await checkRateLimit(db, ip, env.FEEDBACK_IP_SALT);
+  const allowed = await checkFeedbackRateLimit(
+    db,
+    ip,
+    env.FEEDBACK_IP_SALT,
+    FEEDBACK_RATE_LIMIT_WINDOW_SEC,
+    FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
+  );
   if (!allowed) {
     return errorResponse(429, "Too many submissions. Please wait a few minutes.");
   }

@@ -6,7 +6,7 @@
 import { fetchWithRetry } from "./fetch-retry";
 import { USER_AGENT } from "./constants";
 import { DS_CHAIN_MAP } from "./chain-registry";
-import { RATE_LIMITS } from "./rate-limits";
+import { RATE_LIMITS } from "./rate-limit";
 import { sleepWithSignal } from "./abort";
 
 // Re-export for downstream consumers

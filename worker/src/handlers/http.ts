@@ -1,6 +1,6 @@
 import { route } from "../router";
 import { initAlerts } from "../lib/alerts";
-import { initChainRpcs } from "../lib/chain-rpcs";
+import { initChainRpcs } from "../lib/chain-registry";
 import { initCoinGecko } from "../lib/coingecko";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { checkRateLimit } from "../lib/rate-limit";

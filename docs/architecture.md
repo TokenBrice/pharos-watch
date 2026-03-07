@@ -401,7 +401,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   └── feedback.ts          # POST /api/feedback (public)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
-        ├── chain-rpcs.ts         # Chain RPC endpoint config (11 chains: EVM + Tron)
+        ├── chain-registry.ts     # Unified chain mappings + chain RPC endpoint config (11 chains: EVM + Tron)
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
@@ -416,7 +416,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── binary-search.ts      # Generic binarySearchNearest<T>() for sorted array lookups
         ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
-        ├── depeg-helpers.ts      # Shared DepegRow interface + rowToDepegEvent() mapper
+        ├── depeg-helpers.ts      # Shared depeg helpers: row mapper, DEX price loader, and event insert statement builder
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── coingecko.ts          # CoinGecko API key initialization (shared across crons)

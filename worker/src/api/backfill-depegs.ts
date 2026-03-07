@@ -8,7 +8,7 @@ import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
-import { RATE_LIMITS } from "../lib/rate-limits";
+import { RATE_LIMITS } from "../lib/rate-limit";
 import type { StablecoinMeta } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";

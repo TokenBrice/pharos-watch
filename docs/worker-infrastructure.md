@@ -630,7 +630,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/cron-schedule.ts` | Canonical cron expressions + per-job expected intervals (`CRON_INTERVALS`) |
 | `worker/src/lib/status-thresholds.ts` | Shared status threshold constants for blacklist/on-chain quality bands |
 | `worker/src/lib/blacklist-gaps.ts` | Shared blacklist gap query helper (Tron null-amount exclusion + recent window) |
-| `worker/src/lib/chain-rpcs.ts` | Chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
+| `worker/src/lib/chain-registry.ts` | Unified chain mappings + chain RPC configs: Alchemy/dRPC/public fallback for 11 chains |
 | `worker/src/lib/coingecko.ts` | CoinGecko init: free/pro URL switching, auth headers |
 | `worker/src/lib/bluechip-slugs.ts` | Bluechip slug → canonical Pharos ID mapping (17 coins) |
 | `worker/src/lib/mint-burn-health-config.ts` | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator |

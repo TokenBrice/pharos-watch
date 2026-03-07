@@ -2,10 +2,10 @@ import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRE
 import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
-import type { DepegRow } from "../lib/depeg-helpers";
+import { buildInsertDepegEventStmt, loadDexPriceMap, type DepegRow } from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import type { PegAssetBase } from "@shared/types";
+import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 
 // --- Depeg event detection ---
@@ -22,33 +22,63 @@ export async function detectDepegEvents(
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
 
-  // Load DEX-implied prices for cross-validation
-  // Wrapped in try/catch for resilience if migration 0011 hasn't been applied yet
-  let dexPrices = new Map<string, {
-    stablecoin_id: string;
-    dex_price_usd: number;
+  const buildLiveEvent = (
+    asset: PegAssetBase,
+    direction: "above" | "below",
+    peakDeviationBps: number,
+    eventPrice: number,
+    pegReference: number,
+  ): DepegEvent => ({
+    id: 0,
+    stablecoinId: asset.id,
+    symbol: asset.symbol,
+    pegType: asset.pegType ?? "",
+    direction,
+    peakDeviationBps,
+    startedAt: now,
+    endedAt: null,
+    startPrice: eventPrice,
+    peakPrice: eventPrice,
+    recoveryPrice: null,
+    pegReference,
+    source: "live",
+  });
+
+  // Load DEX-implied prices for cross-validation.
+  // loadDexPriceMap handles missing-table fallbacks and logging.
+  throwIfAborted(signal);
+  const dexPrices = await loadDexPriceMap(db);
+
+  // Detect-depegs also needs metadata for freshness + TVL gates.
+  let dexMetadata = new Map<string, {
     source_pool_count: number;
     source_total_tvl: number;
     updated_at: number;
   }>();
   try {
     throwIfAborted(signal);
-    const dexPriceResult = await db
-      .prepare("SELECT * FROM dex_prices")
+    const dexMetadataResult = await db
+      .prepare("SELECT stablecoin_id, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
       .all<{
         stablecoin_id: string;
-        dex_price_usd: number;
         source_pool_count: number;
         source_total_tvl: number;
         updated_at: number;
       }>();
-    dexPrices = new Map(
-      (dexPriceResult.results ?? []).map((r) => [r.stablecoin_id, r])
+    dexMetadata = new Map(
+      (dexMetadataResult.results ?? []).map((r) => [
+        r.stablecoin_id,
+        {
+          source_pool_count: r.source_pool_count,
+          source_total_tvl: r.source_total_tvl,
+          updated_at: r.updated_at,
+        },
+      ]),
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("no such table")) {
-      console.error("[depeg] Unexpected error loading dex_prices:", msg);
+      console.error("[depeg] Unexpected error loading dex_prices metadata:", msg);
     }
   }
 
@@ -140,14 +170,7 @@ export async function detectDepegEvents(
               "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
             ).bind(now, price, existing.id)
           );
-          // New event will be created — its ID is unknown until insert,
-          // but it won't be orphaned (handled by started_at check below)
-          stmts.push(
-            db.prepare(
-              `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
-            ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, price, pegRef)
-          );
+          stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
         } else {
           // Same direction — event stays open
           seen.add(existing.id);
@@ -161,26 +184,27 @@ export async function detectDepegEvents(
           }
 
           // DEX cross-validation for ongoing events
-          const dexRow = dexPrices.get(asset.id);
-          const dexFresh = dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC;
-          if (dexFresh) {
+          const dexPrice = dexPrices.get(asset.id);
+          const dexMeta = dexMetadata.get(asset.id);
+          const dexFresh = dexPrice != null && dexMeta && (now - dexMeta.updated_at) < DEX_FRESHNESS_SEC;
+          if (dexFresh && dexMeta) {
             const dexAbsBps = Math.abs(Math.round(
-              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
+              ((dexPrice / pegRef) - 1) * 10000
             ));
             if (dexAbsBps < threshold) {
               // DEX disagrees with ongoing depeg
               const eventAge = now - existing.started_at;
-              if (eventAge >= SECONDS.THIRTY_MINUTES && dexRow.source_total_tvl >= 1_000_000) {
+              if (eventAge >= SECONDS.THIRTY_MINUTES && dexMeta.source_total_tvl >= 1_000_000) {
                 // Event open 30+ min AND DEX has >=$1M TVL — auto-close
                 console.warn(
                   `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
                   `primary=${bps}bps but DEX=${dexAbsBps}bps for ${Math.round(eventAge / 60)}min ` +
-                  `(${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+                  `(${dexMeta.source_pool_count} pools, $${(dexMeta.source_total_tvl / 1e6).toFixed(1)}M TVL)`
                 );
                 stmts.push(
                   db.prepare(
                     "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-                  ).bind(now, dexRow.dex_price_usd, existing.id)
+                  ).bind(now, dexPrice, existing.id)
                 );
                 seen.delete(existing.id); // Remove from seen since we're closing it
               } else {
@@ -210,27 +234,23 @@ export async function detectDepegEvents(
           );
         } else {
           // <$1B coin: existing behavior — DEX cross-validation then instant event
-          const dexRow = dexPrices.get(asset.id);
-          const dexFresh = dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC;
-          if (dexFresh) {
+          const dexPrice = dexPrices.get(asset.id);
+          const dexMeta = dexMetadata.get(asset.id);
+          const dexFresh = dexPrice != null && dexMeta && (now - dexMeta.updated_at) < DEX_FRESHNESS_SEC;
+          if (dexFresh && dexMeta) {
             const dexBps = Math.abs(Math.round(
-              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
+              ((dexPrice / pegRef) - 1) * 10000
             ));
             if (dexBps < threshold) {
               console.log(
                 `[depeg] Suppressed new event for ${asset.symbol}: ` +
-                `primary=${bps}bps but DEX=${dexBps}bps (${dexRow.source_pool_count} pools, ` +
-                `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+                `primary=${bps}bps but DEX=${dexBps}bps (${dexMeta.source_pool_count} pools, ` +
+                `$${(dexMeta.source_total_tvl / 1e6).toFixed(1)}M TVL)`
               );
               continue;
             }
           }
-          stmts.push(
-            db.prepare(
-              `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
-            ).bind(asset.id, asset.symbol, asset.pegType ?? "", direction, bps, now, price, price, pegRef)
-          );
+          stmts.push(buildInsertDepegEventStmt(db, buildLiveEvent(asset, direction, bps, price, pegRef)));
         }
       }
     } else if (existing) {

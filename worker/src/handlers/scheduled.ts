@@ -17,7 +17,7 @@ import { syncYieldData } from "../cron/sync-yield-data";
 import { fetchTbillRate } from "../cron/fetch-tbill-rate";
 import { computeAndStoreDEWS } from "../cron/compute-dews";
 import { runStatusSelfCheck } from "../cron/status-self-check";
-import { initChainRpcs } from "../lib/chain-rpcs";
+import { initChainRpcs } from "../lib/chain-registry";
 import { initAlerts, sendAlert } from "../lib/alerts";
 import { initCoinGecko } from "../lib/coingecko";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";

@@ -11,7 +11,8 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
-import type { PegAssetBase } from "@shared/types";
+import { buildInsertDepegEventStmt, loadDexPriceMap } from "../lib/depeg-helpers";
+import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 
 interface PendingRow {
@@ -61,17 +62,19 @@ export async function confirmPendingDepegs(
   const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
 
   // Load DEX prices
-  let dexPrices = new Map<string, { dex_price_usd: number; updated_at: number }>();
+  throwIfAborted(signal);
+  const dexPrices = await loadDexPriceMap(db);
+  let dexUpdatedAtById = new Map<string, number>();
   try {
     throwIfAborted(signal);
     const dexResult = await db
-      .prepare("SELECT stablecoin_id, dex_price_usd, updated_at FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>();
-    dexPrices = new Map((dexResult.results ?? []).map((r) => [r.stablecoin_id, r]));
+      .prepare("SELECT stablecoin_id, updated_at FROM dex_prices")
+      .all<{ stablecoin_id: string; updated_at: number }>();
+    dexUpdatedAtById = new Map((dexResult.results ?? []).map((r) => [r.stablecoin_id, r.updated_at]));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("no such table")) {
-      console.error("[depeg-confirm] Unexpected error loading dex_prices:", msg);
+      console.error("[depeg-confirm] Unexpected error loading dex_prices metadata:", msg);
     }
   }
 
@@ -168,14 +171,15 @@ export async function confirmPendingDepegs(
 
     // 4. Read DEX median
     let dexAgrees: boolean | null = null;
-    const dexRow = dexPrices.get(row.stablecoin_id);
-    if (dexRow && (now - dexRow.updated_at) < DEX_FRESHNESS_SEC) {
+    const dexPrice = dexPrices.get(row.stablecoin_id);
+    const dexUpdatedAt = dexUpdatedAtById.get(row.stablecoin_id);
+    if (dexPrice != null && dexUpdatedAt != null && (now - dexUpdatedAt) < DEX_FRESHNESS_SEC) {
       const dexBps = Math.abs(Math.round(
-        ((dexRow.dex_price_usd / row.peg_reference) - 1) * 10000
+        ((dexPrice / row.peg_reference) - 1) * 10000
       ));
       dexAgrees = dexBps >= secondaryBar;
       console.log(
-        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexBps}bps, ` +
+        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexPrice}, deviation=${dexBps}bps, ` +
         `bar=${secondaryBar}bps, agrees=${dexAgrees}`
       );
     }
@@ -187,16 +191,25 @@ export async function confirmPendingDepegs(
       const currentBps = asset?.price
         ? Math.round(((asset.price / row.peg_reference) - 1) * 10000)
         : row.first_seen_bps;
+      const event: DepegEvent = {
+        id: 0,
+        stablecoinId: row.stablecoin_id,
+        symbol: row.symbol,
+        pegType: row.peg_type,
+        direction: row.direction as "above" | "below",
+        peakDeviationBps:
+          Math.abs(currentBps) > Math.abs(row.first_seen_bps) ? currentBps : row.first_seen_bps,
+        startedAt: row.first_seen_at,
+        endedAt: null,
+        startPrice: row.first_price,
+        peakPrice: currentPrice,
+        recoveryPrice: null,
+        pegReference: row.peg_reference,
+        source: "live",
+      };
 
       stmts.push(
-        db.prepare(
-          `INSERT INTO depeg_events (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'live')`
-        ).bind(
-          row.stablecoin_id, row.symbol, row.peg_type, row.direction,
-          Math.abs(currentBps) > Math.abs(row.first_seen_bps) ? currentBps : row.first_seen_bps,
-          row.first_seen_at, row.first_price, currentPrice, row.peg_reference,
-        ),
+        buildInsertDepegEventStmt(db, event),
         db.prepare("DELETE FROM depeg_pending WHERE id = ?").bind(row.id),
       );
 

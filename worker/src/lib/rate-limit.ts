@@ -1,8 +1,19 @@
-import { errorResponse } from "./api-utils";
-
 interface RateLimitEntry {
   count: number;
   resetAt: number;
+}
+
+interface RateLimitRunResult {
+  meta?: { changes?: number };
+}
+
+interface RateLimitStatement {
+  bind(...values: unknown[]): { run(): Promise<RateLimitRunResult> };
+  run(): Promise<RateLimitRunResult>;
+}
+
+interface RateLimitDb {
+  prepare(query: string): RateLimitStatement;
 }
 
 const ipCounts = new Map<string, RateLimitEntry>();
@@ -36,10 +47,76 @@ export function checkRateLimit(
 
   entry.count++;
   if (entry.count > limit) {
-    const resp = errorResponse(429, "Rate limit exceeded");
+    const resp = new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" },
+    });
     resp.headers.set("Retry-After", String(Math.max(1, Math.ceil((entry.resetAt - now) / 1000))));
     return resp;
   }
 
   return null;
+}
+
+/** Centralized rate-limit and crawl-budget constants for external APIs */
+export const RATE_LIMITS = {
+  /** CoinGecko onchain API: ~240 req/min paid plan, conservative with headroom */
+  COINGECKO_ONCHAIN_MS: 250,
+  /** CoinGecko backfill: 500 req/min budget → 200ms between calls */
+  COINGECKO_BACKFILL_MS: 200,
+  /** DexScreener: ~60 req/min free tier */
+  DEXSCREENER_MS: 1100,
+  /** GeckoTerminal: 30 req/min = 1 every 2s */
+  GECKO_TERMINAL_MS: 2000,
+} as const;
+
+export const CRAWL_BUDGETS = {
+  /** Max wall time for GT pool crawl (15 min within 30-min cron window) */
+  GECKO_TERMINAL_MS: 15 * 60 * 1000,
+} as const;
+
+async function hashIpWithSalt(ip: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(ip + salt);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+}
+
+export async function checkFeedbackRateLimit(
+  db: RateLimitDb,
+  ip: string,
+  salt: string,
+  windowSec: number,
+  maxSubmissions: number,
+): Promise<boolean> {
+  const now = Math.floor(Date.now() / 1000);
+  const ipHash = await hashIpWithSalt(ip, salt);
+
+  const insertResult = await db
+    .prepare(
+      `INSERT INTO feedback_rate_limit (ip_hash, submitted_at)
+       SELECT ?, ?
+       WHERE (
+         SELECT COUNT(*) FROM feedback_rate_limit
+         WHERE ip_hash = ? AND submitted_at > ?
+       ) < ?`,
+    )
+    .bind(
+      ipHash,
+      now,
+      ipHash,
+      now - windowSec,
+      maxSubmissions,
+    )
+    .run();
+  if ((insertResult.meta?.changes ?? 0) === 0) {
+    return false;
+  }
+
+  db.prepare("DELETE FROM feedback_rate_limit WHERE submitted_at < ?")
+    .bind(now - 3600)
+    .run()
+    .catch((e) => console.warn("[feedback] rate-limit prune failed:", e));
+
+  return true;
 }
