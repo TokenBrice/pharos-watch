@@ -64,7 +64,7 @@ export function LongformScrollspyNav({
   return (
     <div
       className={cn(
-        "sticky top-14 md:top-0 z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85",
+        "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:top-0",
         className,
       )}
     >

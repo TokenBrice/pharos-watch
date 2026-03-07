@@ -209,7 +209,7 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
-      <Card id="stability-index-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-cyan-500">
+      <Card id="stability-index-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Stability Index Methodology</CardTitle>
@@ -436,7 +436,7 @@ export default function MethodologyPage() {
       </Card>
 
       {/* Grading Methodology */}
-      <Card id="safety-scores-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-amber-500">
+      <Card id="safety-scores-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Safety Scores Grading Methodology</CardTitle>
@@ -795,7 +795,7 @@ export default function MethodologyPage() {
       </Card>
 
       {/* Liquidity Score */}
-      <Card id="liquidity-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-cyan-500">
+      <Card id="liquidity-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-cyan-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Liquidity Score</CardTitle>
@@ -986,7 +986,7 @@ export default function MethodologyPage() {
       </Card>
 
       {/* Mint/Burn Flow Scoring */}
-      <Card id="mint-burn-flow-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-orange-500">
+      <Card id="mint-burn-flow-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-orange-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Mint/Burn Flow Scoring</CardTitle>
@@ -1222,7 +1222,7 @@ export default function MethodologyPage() {
       </Card>
 
       {/* Yield Intelligence */}
-      <Card id="yield-intelligence-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-violet-500">
+      <Card id="yield-intelligence-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-violet-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Yield Intelligence</CardTitle>
@@ -1418,7 +1418,7 @@ export default function MethodologyPage() {
       </Card>
 
       {/* PegScore and Depeg Early Warning Score (DEWS) */}
-      <Card id="pegscore-dews-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-amber-500">
+      <Card id="pegscore-dews-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-amber-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">PegScore and Depeg Early Warning Score (DEWS)</CardTitle>
@@ -1800,7 +1800,7 @@ export default function MethodologyPage() {
       </Card>
 
       {/* Contagion Stress Test */}
-      <Card id="contagion-stress-test-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-emerald-500">
+      <Card id="contagion-stress-test-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-emerald-500">
         <CardHeader>
           <CardTitle as="h2">Contagion Stress Test</CardTitle>
         </CardHeader>
@@ -1932,7 +1932,7 @@ export default function MethodologyPage() {
         </CardContent>
       </Card>
 
-      <Card id="blacklist-tracker-methodology" className="scroll-mt-28 rounded-xl border-l-[3px] border-l-rose-500">
+      <Card id="blacklist-tracker-methodology" className="scroll-mt-36 md:scroll-mt-28 rounded-xl border-l-[3px] border-l-rose-500">
         <CardHeader className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle as="h2">Blacklist Tracker Methodology</CardTitle>

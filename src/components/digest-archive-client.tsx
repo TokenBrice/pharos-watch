@@ -111,7 +111,9 @@ export function DigestArchiveClient() {
       />
 
       {/* Broadsheet: today's digest */}
-      <DailyDigest variant="full" />
+      <div className="[&>div]:lg:max-w-[84ch]">
+        <DailyDigest variant="full" />
+      </div>
 
       {/* Archive divider (double-rule) */}
       <div className="my-6 space-y-0.5">
