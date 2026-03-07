@@ -48,7 +48,7 @@
 ```
 src/                              # Next.js frontend (static export)
 ├── app/
-│   ├── page.tsx                  # Homepage: stats, safety/PSI/DEWS/flow snapshots, charts, peg tracker, filters, table
+│   ├── page.tsx                  # Homepage: server-rendered SEO link hubs + interactive dashboard client
 │   ├── blacklist/                # Freeze & blacklist event tracker
 │   │   ├── page.tsx
 │   │   ├── layout.tsx
@@ -56,7 +56,8 @@ src/                              # Next.js frontend (static export)
 │   ├── cemetery/                 # Dead stablecoin graveyard
 │   │   ├── page.tsx
 │   │   └── error.tsx
-│   ├── compare/                  # Side-by-side stablecoin comparison
+│   ├── compare/                  # Live compare tool root (noindex) + static comparison landing pages
+│   │   ├── [slug]/page.tsx       # Static "A vs B" comparison landing pages
 │   │   ├── page.tsx
 │   │   ├── client.tsx
 │   │   └── error.tsx
@@ -88,7 +89,7 @@ src/                              # Next.js frontend (static export)
 │   │   ├── blacklist-tracker-changelog/page.tsx # Blacklist tracker changelog
 │   │   ├── mint-burn-flow-changelog/page.tsx # Mint/Burn flow changelog
 │   │   └── yield-changelog/page.tsx # Yield intelligence methodology changelog
-│   ├── portfolio/                # Portfolio stress testing & upstream exposure
+│   ├── portfolio/                # Portfolio stress testing & upstream exposure (noindex)
 │   │   ├── page.tsx
 │   │   └── client.tsx
 │   ├── privacy/page.tsx          # Privacy policy
@@ -105,6 +106,10 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoins/[peg]/        # Stablecoins filtered by peg currency
 │   │   ├── page.tsx
 │   │   └── client.tsx
+│   ├── stablecoins/backing/[backing]/ # Static backing taxonomy landing pages
+│   │   └── page.tsx
+│   ├── stablecoins/governance/[governance]/ # Static governance taxonomy landing pages
+│   │   └── page.tsx
 │   ├── yield/                    # Yield intelligence leaderboard
 │   │   ├── page.tsx
 │   │   └── client.tsx
@@ -142,6 +147,8 @@ src/                              # Next.js frontend (static export)
 │   ├── homepage-client.tsx       # Homepage interactive wrapper
 │   ├── homepage-flow-overview.tsx # Homepage mint/burn snapshot block (FlowBrrrOverview wrapper)
 │   ├── homepage-safety-overview.tsx # Homepage safety snapshot block (report-card distribution + largest coins)
+│   ├── stablecoin-filtered-table.tsx # Shared hydrated table wrapper for peg/backing/governance landing pages
+│   ├── stablecoin-taxonomy-page.tsx # Shared server-rendered taxonomy landing page shell
 │   ├── stablecoin-table.tsx      # Sortable table with filters
 │   ├── stablecoin-table-logic.ts # Stablecoin table filtering/sorting/export helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
@@ -266,6 +273,7 @@ src/                              # Next.js frontend (static export)
     ├── bluechip.ts               # BluechipGrade order, report URL base (slug map moved to worker)
     ├── chart-colors.ts           # Shared CHART_PALETTE, CHART_BLUE/GREEN/RED, RECHARTS_TOOLTIP_STYLES for Recharts charts
     ├── chart-export.ts           # Chart export utilities (PNG download)
+    ├── compare-pages.ts          # Finite static comparison landing page registry + helpers
     ├── compare-share-image.ts    # Canvas-based share/export image generator for compare page
     ├── constants.ts              # THIRTY_DAYS_SECONDS, CATEGORY_LINKS
     ├── cron-intervals.ts         # Shared cron interval constants for frontend polling policy + health config
@@ -279,10 +287,11 @@ src/                              # Next.js frontend (static export)
     ├── flow-intensity.ts         # Mint/burn pressure-shift display + compatibility helpers
     ├── mint-burn-timeframes.ts   # Mint/burn timeframe constants/utilities
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)
-    ├── page-metadata.ts          # Shared metadata builder for feature routes
+    ├── page-metadata.ts          # Shared metadata builder + sentence-aware SEO description helpers
     ├── peg-landing.ts            # Peg currency landing page data helpers
     ├── peg-stability.ts          # Per-coin peg stability metrics
     ├── severity-colors.ts        # Deviation severity color mapping (threshold-based: green/amber/orange/red)
+    ├── stablecoin-taxonomy.ts    # Governance/backing taxonomy registry + route helpers
     ├── stablecoin-detail-derive.ts # Pure stablecoin detail derivations (supply/deviation/90d reference/border classes)
     └── utils.ts                  # cn() helper for Tailwind class merging
 
@@ -436,3 +445,20 @@ data/
 ├── ai-summaries.json             # Cached AI-generated editorial summaries
 └── digests.json                  # Digest archive data
 ```
+
+## Frontend SEO Surface
+
+- Indexable route families:
+  - `/`
+  - `/stablecoin/[id]/`
+  - `/stablecoins/[peg]/`
+  - `/stablecoins/governance/[governance]/`
+  - `/stablecoins/backing/[backing]/`
+  - `/compare/[slug]/`
+  - `/digest/` and `/digest/[date]/`
+  - major feature pages with standalone static copy (`/blacklist/`, `/depeg/`, `/liquidity/`, `/safety-scores/`, `/stability-index/`, `/yield/`, `/flows/`, `/dependency-map/`, `/cemetery/`, `/about/`, `/methodology/`)
+- Tool roots intentionally marked `noindex,follow`:
+  - `/compare/`
+  - `/portfolio/`
+  - `/status/`
+- Crawlable server-rendered link hubs now live on the homepage, digest archive, safety scores, liquidity, taxonomy landing pages, and stablecoin detail pages. These hubs are part of the static export and are what `npm run seo:check` validates for orphan routes, sitemap coverage, and click depth.

@@ -17,6 +17,10 @@ export const metadata = buildPageMetadata({
   canonical: "/portfolio/",
   ogImage: "https://pharos.watch/og-portfolio.png",
   ogHeight: 664,
+  robots: {
+    index: false,
+    follow: true,
+  },
 });
 
 export default function PortfolioPage() {

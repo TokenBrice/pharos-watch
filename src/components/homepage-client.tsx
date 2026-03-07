@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -9,26 +10,67 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useReportCards } from "@/hooks/use-report-cards";
 import { useHomepageFilters } from "@/hooks/use-homepage-filters";
-import { StablecoinTable } from "@/components/stablecoin-table";
-import { CategoryStats } from "@/components/category-stats";
 import { MarketHighlights } from "@/components/market-highlights";
-import { TotalMcapChart } from "@/components/total-mcap-chart";
-import { PsiHistoryChart } from "@/components/psi-history-chart";
-import { DEWSSummary } from "@/components/dews-summary";
-import { HomepageFlowOverview } from "@/components/homepage-flow-overview";
-import { HomepageSafetyOverview } from "@/components/homepage-safety-overview";
-import { PegDiversityChart } from "@/components/peg-diversity-chart";
-import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { FilterBar } from "@/components/filter-bar";
 import { FeatureHighlights } from "@/components/feature-highlights";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { ACTIVE_PEGS, PEG_LABELS_SHORT, PEG_SLUGS, pegCoinCount } from "@/lib/peg-landing";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import type { PegSummaryCoin } from "@shared/types";
+
+function SectionSkeleton({ className }: { className: string }) {
+  return <Skeleton className={className} />;
+}
+
+const StablecoinTable = dynamic(() => import("@/components/stablecoin-table").then((mod) => mod.StablecoinTable), {
+  loading: () => <SectionSkeleton className="h-[720px] w-full rounded-xl" />,
+});
+
+const CategoryStats = dynamic(() => import("@/components/category-stats").then((mod) => mod.CategoryStats), {
+  loading: () => <SectionSkeleton className="h-[320px] w-full rounded-xl" />,
+});
+
+const TotalMcapChart = dynamic(() => import("@/components/total-mcap-chart").then((mod) => mod.TotalMcapChart), {
+  loading: () => <SectionSkeleton className="h-[360px] w-full rounded-xl" />,
+});
+
+const PsiHistoryChart = dynamic(() => import("@/components/psi-history-chart").then((mod) => mod.PsiHistoryChart), {
+  loading: () => <SectionSkeleton className="h-[360px] w-full rounded-xl" />,
+});
+
+const DEWSSummary = dynamic(() => import("@/components/dews-summary").then((mod) => mod.DEWSSummary), {
+  loading: () => <SectionSkeleton className="h-[320px] w-full rounded-xl" />,
+});
+
+const HomepageFlowOverview = dynamic(
+  () => import("@/components/homepage-flow-overview").then((mod) => mod.HomepageFlowOverview),
+  {
+    loading: () => <SectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
+const HomepageSafetyOverview = dynamic(
+  () => import("@/components/homepage-safety-overview").then((mod) => mod.HomepageSafetyOverview),
+  {
+    loading: () => <SectionSkeleton className="h-[320px] w-full rounded-xl" />,
+  },
+);
+
+const PegDiversityChart = dynamic(
+  () => import("@/components/peg-diversity-chart").then((mod) => mod.PegDiversityChart),
+  {
+    loading: () => <SectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  },
+);
+
+const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod) => mod.DailyDigest), {
+  loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
+});
 
 export function HomepageClient() {
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();

@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
+import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
+import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
+import { PEG_SLUGS } from "@/lib/peg-landing";
+import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
 import StablecoinDetailClient from "./client";
@@ -27,30 +31,8 @@ export async function generateMetadata({
     return { title: "Stablecoin Not Found" };
   }
 
-  const govLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
-  const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
-  const desc = `Live analytics for ${coin.name} (${coin.symbol}). ${govLabel} stablecoin backed by ${backingLabel.toLowerCase()}, pegged to ${pegLabel}. Price, market cap, supply trends, chain distribution, peg score, and depeg history on Pharos.`;
-
-  return {
-    title: `${coin.name} (${coin.symbol}): Stablecoin Analytics`,
-    description: desc,
-    alternates: {
-      canonical: buildStablecoinUrl(id),
-    },
-    openGraph: {
-      title: `${coin.name} (${coin.symbol}): Stablecoin Analytics`,
-      description: desc,
-      url: buildStablecoinUrl(id),
-      type: "website",
-      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
-    },
-    twitter: {
-      images: [{ url: "/og-card.png", width: 1200, height: 628 }],
-    },
-  };
+  return buildStablecoinDetailMetadata(coin);
 }
-
 
 function getRelatedStablecoins(coinId: string, limit = 6) {
   const coin = TRACKED_META_BY_ID.get(coinId);
@@ -78,6 +60,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const { id } = await params;
   const coin = TRACKED_META_BY_ID.get(id);
   const related = getRelatedStablecoins(id);
+  const staticComparisonPages = getStaticComparisonPagesForCoin(id);
   const typedLogos = logos as Record<string, string>;
 
   return (
@@ -104,6 +87,67 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
             coin={coin}
             logoSrc={typedLogos[coin.id]}
           />
+          <section className="mt-8 space-y-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Research Paths</h2>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {PEG_SLUGS[coin.flags.pegCurrency] && (
+                <Link
+                  href={`/stablecoins/${PEG_SLUGS[coin.flags.pegCurrency]}/`}
+                  className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+                >
+                  Browse all {PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} stablecoins
+                </Link>
+              )}
+              <Link
+                href={buildGovernanceTaxonomyUrl(coin.flags.governance)}
+                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                Browse {GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} stablecoins
+              </Link>
+              <Link
+                href={buildBackingTaxonomyUrl(coin.flags.backing)}
+                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                Browse {BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} stablecoins
+              </Link>
+              <Link
+                href="/safety-scores/"
+                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                Review all stablecoin safety scores
+              </Link>
+              <Link
+                href="/liquidity/"
+                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                Review DEX liquidity rankings
+              </Link>
+              <Link
+                href="/depeg/"
+                className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                Review the depeg tracker
+              </Link>
+            </div>
+          </section>
+          {staticComparisonPages.length > 0 && (
+            <section className="mt-8 space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Static Comparison Pages
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {staticComparisonPages.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm transition-colors hover:bg-accent"
+                  >
+                    Compare {page.shortTitle}
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
           {related.length > 0 && (
             <section className="mt-8 space-y-3">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Related Stablecoins</h2>

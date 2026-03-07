@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { DigestSnapshot } from "@/components/digest-snapshot";
 import { splitDigestParagraphs } from "@/lib/digest";
+import { summarizeText } from "@/lib/page-metadata";
 import digests from "../../../../data/digests.json";
 
 interface DigestEntry {
@@ -35,13 +36,13 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
   const digest = digestByDate.get(date);
   if (!digest) return {};
   const formatted = formatDate(digest.date);
-  const description = digest.text.slice(0, 160);
+  const description = summarizeText(digest.text, 160);
   return {
-    title: `Daily Digest: ${formatted}`,
+    title: `${digest.title} (${formatted})`,
     description,
     alternates: { canonical: `/digest/${digest.date}/` },
     openGraph: {
-      title: `Daily Digest: ${formatted} | Pharos`,
+      title: `${digest.title} (${formatted}) | Pharos`,
       description,
       url: `/digest/${digest.date}/`,
       type: "article",
@@ -76,9 +77,9 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Article",
-            headline: `${digest.title}, ${formatted}`,
+            headline: `${digest.title} (${formatted})`,
             datePublished: new Date(digest.generatedAt * 1000).toISOString(),
-            description: digest.text.slice(0, 160),
+            description: summarizeText(digest.text, 160),
             author: {
               "@type": "Organization",
               name: "Pharos",

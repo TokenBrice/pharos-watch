@@ -7,6 +7,7 @@ import { PegGauge } from "@/components/peg-gauge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card } from "@/components/ui/card";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { buildLiveCompareUrl, getPrimaryStaticComparisonPageForCoin } from "@/lib/compare-pages";
 import {
   formatCurrency,
   formatNativePrice,
@@ -78,6 +79,8 @@ export function HeroCard({
   onOpenFeedback,
 }: HeroCardProps) {
   const chainCount = coinData?.chains?.length ?? 0;
+  const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
+  const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
 
   const pegScoreContent = !isNavToken ? (
     pegScoreResult?.pegScore != null ? (
@@ -133,11 +136,11 @@ export function HeroCard({
           </span>
         </nav>
         <Link
-          href={`/compare/?coins=${coin.symbol.toLowerCase()}`}
+          href={compareHref}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeftRight className="h-3.5 w-3.5" />
-          Compare
+          {primaryComparisonPage ? `Compare ${coin.symbol}` : "Compare"}
         </Link>
       </div>
 

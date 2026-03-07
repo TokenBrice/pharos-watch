@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -9,20 +10,51 @@ import { Button } from "@/components/ui/button";
 import { ReportCardDetail } from "@/components/report-card";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import { ChartSection } from "@/components/stablecoin-detail/chart-section";
-import { DepegHistorySection } from "@/components/stablecoin-detail/depeg-history-section";
 import { LongformScrollspyNav } from "@/components/longform-scrollspy-nav";
-import { FlowsSection } from "@/components/stablecoin-detail/flows-section";
 import { HeroCard } from "@/components/stablecoin-detail/hero-card";
-import { InfoSection } from "@/components/stablecoin-detail/info-section";
-import { LiquiditySection } from "@/components/stablecoin-detail/liquidity-section";
 import { NoticesAndSummarySection } from "@/components/stablecoin-detail/notices-and-summary-section";
-import { SafetyScoreHistorySection } from "@/components/stablecoin-detail/safety-score-history-section";
 import {
   useStablecoinDetailViewModel,
   type StablecoinDetailSummary,
 } from "@/hooks/use-stablecoin-detail-view-model";
 import type { StablecoinMeta } from "@shared/types";
+
+function DetailSectionSkeleton({ className }: { className: string }) {
+  return <Skeleton className={className} />;
+}
+
+const ChartSection = dynamic(() => import("@/components/stablecoin-detail/chart-section").then((mod) => mod.ChartSection), {
+  loading: () => <DetailSectionSkeleton className="h-[420px] w-full rounded-xl" />,
+});
+
+const DepegHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/depeg-history-section").then((mod) => mod.DepegHistorySection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  },
+);
+
+const FlowsSection = dynamic(() => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection), {
+  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+});
+
+const InfoSection = dynamic(() => import("@/components/stablecoin-detail/info-section").then((mod) => mod.InfoSection), {
+  loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" />,
+});
+
+const LiquiditySection = dynamic(
+  () => import("@/components/stablecoin-detail/liquidity-section").then((mod) => mod.LiquiditySection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" />,
+  },
+);
+
+const SafetyScoreHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
+  {
+    loading: () => <DetailSectionSkeleton className="h-[220px] w-full rounded-xl" />,
+  },
+);
 
 const DETAIL_SECTIONS = [
   { id: "report-card", label: "Safety Score" },

@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
+import { STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import digests from "../../data/digests.json";
 
@@ -23,6 +25,12 @@ const LAST_EDITED: Record<string, string> = {
   "/depeg/": "2026-03-02",
   "/yield/": "2026-03-02",
   "/flows/": "2026-03-07",
+  "/stablecoins/backing/algorithmic/": "2026-03-07",
+  "/stablecoins/backing/crypto/": "2026-03-07",
+  "/stablecoins/backing/rwa/": "2026-03-07",
+  "/stablecoins/governance/cefi/": "2026-03-07",
+  "/stablecoins/governance/cefi-dependent/": "2026-03-07",
+  "/stablecoins/governance/defi/": "2026-03-07",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -60,12 +68,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: "https://pharos.watch/compare/",
-      lastModified: new Date(LAST_EDITED["/compare/"]!),
-      changeFrequency: "daily",
-      priority: 0.6,
-    },
-    {
       url: "https://pharos.watch/digest/",
       lastModified: now,
       changeFrequency: "daily",
@@ -98,12 +100,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: "https://pharos.watch/flows/",
       lastModified: new Date(LAST_EDITED["/flows/"]!),
-      changeFrequency: "daily",
-      priority: 0.7,
-    },
-    {
-      url: "https://pharos.watch/portfolio/",
-      lastModified: now,
       changeFrequency: "daily",
       priority: 0.7,
     },
@@ -192,5 +188,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }));
 
-  return [...staticPages, ...stablecoinPages, ...pegPages, ...digestPages];
+  const taxonomyPages: MetadataRoute.Sitemap = STABLECOIN_TAXONOMY_PAGES.map((page) => ({
+    url: `https://pharos.watch${page.href}`,
+    lastModified: new Date(LAST_EDITED[page.href] ?? "2026-03-07"),
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
+  const comparisonPages: MetadataRoute.Sitemap = STATIC_COMPARISON_PAGES.map((page) => ({
+    url: `https://pharos.watch${page.href}`,
+    lastModified: new Date("2026-03-07"),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticPages, ...stablecoinPages, ...pegPages, ...taxonomyPages, ...comparisonPages, ...digestPages];
 }
