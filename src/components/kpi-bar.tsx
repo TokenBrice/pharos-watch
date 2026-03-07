@@ -17,6 +17,7 @@ import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification"
 
 type TrendDirection = "up" | "down" | "flat";
 type ElevatedThreatBand = Extract<ThreatBand, "DANGER" | "ALERT" | "WARNING">;
+const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
 const KPI_CHIP_BASE = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] shadow-[inset_0_1px_0_oklch(1_0_0_/0.2)] transition-colors";
 
 function trendDirection(value: number): TrendDirection {
@@ -287,7 +288,7 @@ export function KpiBar() {
         </div>
         <div className="px-3 py-3 sm:hidden">
           <div className="grid grid-cols-2 gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
+            {SKELETON_CARDS.map((i) => (
               <div key={i} className="pharos-card-shell min-h-[92px] px-3 py-2.5">
                 <Skeleton className="h-3 w-20" />
                 <Skeleton className="mt-2 h-6 w-16" />
@@ -297,7 +298,7 @@ export function KpiBar() {
           </div>
         </div>
         <div className="hidden sm:grid grid-cols-2 xl:grid-cols-4 divide-x divide-border/50">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {SKELETON_CARDS.map((i) => (
             <KpiSkeleton key={i} />
           ))}
         </div>

@@ -97,8 +97,7 @@ export function HeroCard({
                   />
                 ) : (
                   <div
-                    className="flex-shrink-0 rounded-full bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground"
-                    style={{ width: 48, height: 48 }}
+                    className="flex-shrink-0 rounded-full bg-muted flex items-center justify-center text-xl font-bold text-muted-foreground w-12 h-12"
                   >
                     {coin.name.charAt(0).toUpperCase()}
                   </div>

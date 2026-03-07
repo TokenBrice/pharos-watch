@@ -36,7 +36,7 @@ export function Footer() {
           <summary className="cursor-pointer list-none text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Browse by category
           </summary>
-          <nav aria-label="Browse by category" className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <nav aria-label="Browse stablecoins by category" className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {CATEGORY_LINKS.map((cat) => (
               <Link
                 key={cat.href}

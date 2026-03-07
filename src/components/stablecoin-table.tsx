@@ -41,6 +41,7 @@ import {
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
 
+const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 const ROW_HEIGHT = 40;
 const OVERSCAN = 12;
 
@@ -158,7 +159,7 @@ export function StablecoinTable({ data, isLoading, activeFilters, logos, pegRate
     return (
       <div className="pharos-card-shell overflow-hidden">
         <div className="bg-muted/50 h-10" />
-        {Array.from({ length: 10 }).map((_, i) => (
+        {SKELETON_ROWS.map((i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
             <Skeleton className="h-4 w-8 shrink-0" />
             <Skeleton className="h-6 w-6 rounded-full shrink-0" />

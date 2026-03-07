@@ -18,6 +18,8 @@ import { formatAddress, formatEventDate, formatCurrency } from "@shared/lib/form
 import { isGoldStablecoin } from "@/lib/blacklist-helpers";
 import type { BlacklistEvent } from "@shared/types";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
+
+const SKELETON_ROWS = Array.from({ length: 10 }, (_, i) => i);
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSortedTableRows, type TableSortState } from "@/hooks/use-sorted-table-rows";
 
@@ -87,7 +89,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
     return (
       <div className="rounded-xl border overflow-x-auto">
         <div className="bg-muted/50 h-10" />
-        {Array.from({ length: 10 }).map((_, i) => (
+        {SKELETON_ROWS.map((i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-2 border-t">
             <Skeleton className="h-4 w-8 shrink-0" />
             <Skeleton className="h-4 w-24" />

@@ -11,6 +11,8 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { formatCurrency } from "@shared/lib/format";
 
+const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
+
 function tsToDateSlug(ts: number): string {
   return new Date(ts * 1000).toISOString().slice(0, 10);
 }
@@ -71,7 +73,7 @@ export function DigestArchiveClient() {
           <Skeleton className="h-4 w-full mt-2" />
           <Skeleton className="h-4 w-4/5" />
         </div>
-        {Array.from({ length: 5 }).map((_, i) => (
+        {SKELETON_ROWS.map((i) => (
           <div key={i} className="flex items-center gap-4 py-2">
             <Skeleton className="h-3 w-14" />
             <Skeleton className="h-3 w-48" />

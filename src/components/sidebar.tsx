@@ -135,6 +135,9 @@ export function Sidebar() {
   const { expanded, pinned, togglePin, onMouseEnter, onMouseLeave } = useSidebar();
   const pathname = usePathname();
 
+  // Keyboard shortcut: [ and ] toggle sidebar pin state.
+  // Inputs/textareas are excluded. No modifier key is used intentionally
+  // to match VS Code-style sidebar toggle conventions.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       // Ignore when typing in inputs

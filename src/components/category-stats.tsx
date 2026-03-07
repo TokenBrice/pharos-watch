@@ -18,6 +18,8 @@ const COLLATERAL_TIERS = [
   { key: "exotic", label: "Exotic", bg: "bg-orange-500", text: "text-orange-700 dark:text-orange-400" },
 ] as const;
 
+const SKELETON_CARDS = Array.from({ length: 4 }, (_, i) => i);
+
 interface CategoryStatsProps {
   data: StablecoinData[] | undefined;
   reportCards?: Record<string, ReportCard>;
@@ -99,7 +101,7 @@ export function CategoryStats({ data, reportCards }: CategoryStatsProps) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {SKELETON_CARDS.map((i) => (
             <Card key={i} className="rounded-xl">
               <CardHeader className="pb-1">
                 <Skeleton className="h-3 w-24" />

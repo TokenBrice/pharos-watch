@@ -12,6 +12,9 @@ import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { TRACKED_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 
+const SKELETON_COLS = Array.from({ length: 2 }, (_, i) => i);
+const SKELETON_ROWS = Array.from({ length: 4 }, (_, i) => i);
+
 interface MarketHighlightsProps {
   data: StablecoinData[] | undefined;
   logos?: Record<string, string>;
@@ -237,13 +240,13 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
   if (!data) {
     return (
       <div className="grid gap-5 lg:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, i) => (
+        {SKELETON_COLS.map((i) => (
           <Card key={i} className="pharos-card-shell">
             <CardHeader className="pb-1.5">
               <Skeleton className="h-3 w-28" />
             </CardHeader>
             <CardContent className="space-y-3">
-              {Array.from({ length: 4 }).map((_, j) => (
+              {SKELETON_ROWS.map((j) => (
                 <Skeleton key={j} className="h-5 w-full" />
               ))}
             </CardContent>
