@@ -12,6 +12,7 @@ import {
   scoreLiquidity,
   chainInfraScore,
   computeCollateralQualityFromReserves,
+  scoreDecentralization,
 } from "@shared/lib/report-cards";
 import type { ReportCardDimension, PegSummaryCoin } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types";
@@ -600,5 +601,139 @@ describe("computeCollateralQualityFromReserves", () => {
   it("returns 0 when all pct values are 0", () => {
     const reserves = [{ name: "Ghost", pct: 0, risk: "very-low" as const }];
     expect(computeCollateralQualityFromReserves(reserves)).toBe(0);
+  });
+});
+
+describe("scoreDecentralization", () => {
+  // --- Governance quality base scores ---
+
+  it("scores 85 for decentralized governance (dao-governance)", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+    });
+    const result = scoreDecentralization("decentralized", meta);
+    expect(result.score).toBe(85);
+    expect(result.grade).toBe("A");
+  });
+
+  it("scores 20 for centralized governance (single-entity) without regulation", () => {
+    const meta = makeMeta();
+    const result = scoreDecentralization("centralized", meta);
+    expect(result.score).toBe(20);
+    expect(result.grade).toBe("F");
+  });
+
+  it("scores 40 for regulated centralized governance", () => {
+    const meta = makeMeta({
+      jurisdiction: { country: "United States", regulator: "NYDFS", license: "BitLicense" },
+      proofOfReserves: { type: "independent-audit", url: "https://example.com", provider: "Deloitte" },
+    });
+    const result = scoreDecentralization("centralized", meta);
+    expect(result.score).toBe(40);
+    expect(result.grade).toBe("D");
+  });
+
+  // --- Chain infra penalty ---
+
+  it("applies no penalty when infra score >= 80 (ethereum + single-chain)", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+    });
+    const result = scoreDecentralization("decentralized", meta);
+    // Base 85, infra 100 >= 80, penalty 0
+    expect(result.score).toBe(85);
+  });
+
+  it("applies -15 penalty when infra score is 50-79", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "stage1-l2",
+      deploymentModel: "single-chain",
+    });
+    const result = scoreDecentralization("decentralized", meta);
+    // Base 85, infra = 66 (50-79 band), penalty = -15 => 70
+    expect(result.score).toBe(70);
+  });
+
+  it("applies -50 penalty when infra score is 15-49", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "established-alt-l1",
+      deploymentModel: "single-chain",
+    });
+    const result = scoreDecentralization("decentralized", meta);
+    // Base 85, infra = 20 (15-49 band), penalty = -50 => 35
+    expect(result.score).toBe(35);
+  });
+
+  it("applies -65 penalty when infra score < 15", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "unproven",
+      deploymentModel: "single-chain",
+    });
+    const result = scoreDecentralization("decentralized", meta);
+    // Base 85, infra = 0 (<15 band), penalty = -65 => 20
+    expect(result.score).toBe(20);
+  });
+
+  // --- Penalty guard: centralized types skip infra penalty ---
+
+  it("does NOT apply infra penalty for single-entity governance", () => {
+    const meta = makeMeta({
+      chainTier: "unproven",
+      deploymentModel: "native-multichain",
+    });
+    const result = scoreDecentralization("centralized", meta);
+    // single-entity = 20, penalty guard skips infra penalty
+    expect(result.score).toBe(20);
+  });
+
+  it("does NOT apply infra penalty for regulated-entity governance", () => {
+    const meta = makeMeta({
+      chainTier: "unproven",
+      deploymentModel: "native-multichain",
+      jurisdiction: { country: "United States", regulator: "NYDFS", license: "BitLicense" },
+      proofOfReserves: { type: "independent-audit", url: "https://example.com", provider: "Deloitte" },
+    });
+    const result = scoreDecentralization("centralized", meta);
+    // regulated-entity = 40, penalty guard skips infra penalty
+    expect(result.score).toBe(40);
+  });
+
+  // --- Score floor ---
+
+  it("floors score at 0 (never negative)", () => {
+    const meta = makeMeta({
+      flags: { governance: "centralized-dependent", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      governanceQuality: "wrapper",
+      chainTier: "unproven",
+      deploymentModel: "native-multichain",
+    });
+    const result = scoreDecentralization("centralized-dependent", meta);
+    // wrapper = 10, infra = 0 (<15 band), penalty = -65 => -55 clamped to 0
+    expect(result.score).toBe(0);
+    expect(result.grade).toBe("F");
+  });
+
+  // --- Detail string ---
+
+  it("includes governance quality label and infra label in detail", () => {
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+    });
+    const result = scoreDecentralization("decentralized", meta);
+    expect(result.detail).toBeTruthy();
+    expect(result.detail.length).toBeGreaterThan(0);
+  });
+
+  // --- No meta fallback ---
+
+  it("works without meta (uses defaults)", () => {
+    const result = scoreDecentralization("decentralized");
+    expect(result.score).toBe(85);
+    expect(result.grade).toBe("A");
   });
 });
