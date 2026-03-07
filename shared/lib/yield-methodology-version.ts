@@ -1,5 +1,5 @@
 /** Canonical Yield Intelligence methodology version (no "v" prefix). */
-export const YIELD_METHODOLOGY_VERSION = "4.0";
+export const YIELD_METHODOLOGY_VERSION = "4.1";
 
 /** Display-ready Yield Intelligence methodology version (with "v" prefix). */
 export const YIELD_METHODOLOGY_VERSION_LABEL = `v${YIELD_METHODOLOGY_VERSION}`;
@@ -27,6 +27,21 @@ export interface YieldMethodologyChangelogEntry {
  *   Intelligence did not ship with explicit version tags/changelog boundaries from day one.
  */
 export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntry[] = [
+  {
+    version: "4.1",
+    title: "Conservative LUSD Stability Pool source",
+    date: "2026-03-07",
+    effectiveAt: 1772884800,
+    summary:
+      "LUSD gained a deterministic B.Protocol / Liquity Stability Pool source that estimates only the LQTY incentive stream and labels that limitation explicitly.",
+    methodologyImpact: [
+      "Added direct on-chain LUSD source using Liquity Stability Pool deposits and CommunityIssuance totals",
+      "APR converts projected LQTY emissions to USD using CoinGecko spot price and excludes ETH liquidation gains by design",
+      "LUSD can now surface both B.Protocol Stability Pool and auto-discovered lending alternatives in the same ranking payload",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.0",
     title: "Multi-source rankings and alternative-source transparency",

@@ -14,6 +14,7 @@ import {
 } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getChainRpc } from "../lib/chain-rpcs";
+import { cgHeaders, cgUrl } from "../lib/coingecko";
 import {
   computeApyFromRate,
   computeApyFromPrice,
@@ -40,6 +41,17 @@ import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
 
 const DL_YIELDS_URL = "https://yields.llama.fi/pools";
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
+const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
+const BPROTOCOL_LQTY_ONLY_SOURCE_LABEL = "B.Protocol Stability Pool (LQTY only)";
+const BPROTOCOL_LQTY_ONLY_SOURCE_TYPE = "lending-vault";
+const LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD = 32_000_000;
+const LIQUITY_DAILY_LQTY_ISSUANCE_FACTOR = 1 - Math.pow(0.5, 1 / 365);
+const LIQUITY_V1_LUSD_ID = "lusd-liquity";
+const LIQUITY_COMMUNITY_ISSUANCE = "0xD8c9D9071123a059C6E0A945cF0e0c82b508d816";
+const LIQUITY_STABILITY_POOL = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
+const LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR = "0xb140384b";
+const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
+const LIQUITY_LQTY_GECKO_ID = "liquity";
 
 interface DlPool {
   pool: string;
@@ -67,6 +79,11 @@ interface ResolvedYield {
   sourceKey: string; // DL pool UUID or "price-derived"
   yieldSource?: string; // label override for variant wrapper rows
   yieldType?: string; // type override for variant wrapper rows
+}
+
+interface JsonRpcCallResponse {
+  result?: string;
+  error?: unknown;
 }
 
 // -- Tier 1: On-chain exchange rates -----------------------------------------
@@ -108,6 +125,117 @@ async function fetchOnChainRates(signal?: AbortSignal): Promise<Map<string, { ra
   }
 
   return results;
+}
+
+async function fetchEthCallUint256(
+  rpcUrl: string,
+  to: string,
+  data: string,
+  signal?: AbortSignal,
+): Promise<bigint | null> {
+  try {
+    const res = await fetchWithRetry(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_call",
+        params: [{ to, data }, "latest"],
+        id: 1,
+      }),
+    });
+
+    if (!res?.ok) return null;
+
+    const body = (await res.json()) as JsonRpcCallResponse;
+    if (!body.result || body.error || body.result === "0x") return null;
+    return BigInt(body.result);
+  } catch (err) {
+    console.warn(`[yield] eth_call failed for ${to} ${data}:`, err);
+    return null;
+  }
+}
+
+async function fetchCoinGeckoUsdPrice(geckoId: string, signal?: AbortSignal): Promise<number | null> {
+  try {
+    const res = await fetchWithRetry(
+      cgUrl(`/simple/price?ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`),
+      {
+        headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
+        signal,
+      },
+      1,
+    );
+    if (!res?.ok) return null;
+
+    const body = (await res.json()) as Record<string, { usd?: number }>;
+    const price = body[geckoId]?.usd;
+    return typeof price === "number" && price > 0 ? price : null;
+  } catch (err) {
+    console.warn(`[yield] CoinGecko price fetch failed for ${geckoId}:`, err);
+    return null;
+  }
+}
+
+async function fetchBprotocolLqtyOnlySource(signal?: AbortSignal): Promise<ResolvedYield | null> {
+  const rpc = getChainRpc("ethereum");
+  if (!rpc) {
+    console.warn("[yield] No Ethereum RPC configured for B.Protocol LQTY-only source");
+    return null;
+  }
+
+  try {
+    const lqtyPriceUsd = await fetchCoinGeckoUsdPrice(LIQUITY_LQTY_GECKO_ID, signal);
+    if (lqtyPriceUsd == null) return null;
+
+    let totalLusdDepositsRaw: bigint | null = null;
+    let totalLqtyIssuedRaw: bigint | null = null;
+    const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter((url): url is string => typeof url === "string" && url.length > 0);
+
+    for (const rpcUrl of rpcUrls) {
+      const [lusdDeposits, lqtyIssued] = await Promise.all([
+        fetchEthCallUint256(rpcUrl, LIQUITY_STABILITY_POOL, LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR, signal),
+        fetchEthCallUint256(rpcUrl, LIQUITY_COMMUNITY_ISSUANCE, LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR, signal),
+      ]);
+      if (lusdDeposits != null && lqtyIssued != null) {
+        totalLusdDepositsRaw = lusdDeposits;
+        totalLqtyIssuedRaw = lqtyIssued;
+        break;
+      }
+    }
+
+    if (totalLusdDepositsRaw == null || totalLqtyIssuedRaw == null) return null;
+
+    const totalLusdDeposits = Number(totalLusdDepositsRaw) / 1e18;
+    const totalLqtyIssued = Number(totalLqtyIssuedRaw) / 1e18;
+    if (!Number.isFinite(totalLusdDeposits) || totalLusdDeposits <= 0) return null;
+    if (!Number.isFinite(totalLqtyIssued) || totalLqtyIssued < 0) return null;
+
+    const remainingLqtyRewards = Math.max(0, LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD - totalLqtyIssued);
+    if (remainingLqtyRewards <= 0) return null;
+
+    const apr =
+      (remainingLqtyRewards * LIQUITY_DAILY_LQTY_ISSUANCE_FACTOR * lqtyPriceUsd * 365 * 100) / totalLusdDeposits;
+    if (!Number.isFinite(apr) || apr <= 0) return null;
+
+    return {
+      currentApy: apr,
+      apyBase: null,
+      apyReward: apr,
+      sourcePool: null,
+      sourceTvlUsd: totalLusdDeposits,
+      dataSource: "onchain",
+      exchangeRate: null,
+      sourceKey: BPROTOCOL_LQTY_ONLY_SOURCE_KEY,
+      yieldSource: BPROTOCOL_LQTY_ONLY_SOURCE_LABEL,
+      yieldType: BPROTOCOL_LQTY_ONLY_SOURCE_TYPE,
+    };
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    console.warn("[yield] B.Protocol LQTY-only source failed:", err);
+    return null;
+  }
 }
 
 // -- Tier 3: Price-derived APY -----------------------------------------------
@@ -353,6 +481,19 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
 
     // No data available
     resolved.push({ id, symbol, yield: null });
+  }
+
+  // Deterministic custom source: conservative LQTY-only APR for LUSD in the B.Protocol/Liquity Stability Pool.
+  const lusdMeta = TRACKED_STABLECOINS.find((meta) => meta.id === LIQUITY_V1_LUSD_ID);
+  if (lusdMeta && !resolved.some((row) => row.id === LIQUITY_V1_LUSD_ID && row.yield?.sourceKey === BPROTOCOL_LQTY_ONLY_SOURCE_KEY)) {
+    const bprotocolLqtyOnlyYield = await fetchBprotocolLqtyOnlySource(signal);
+    if (bprotocolLqtyOnlyYield) {
+      resolved.push({
+        id: lusdMeta.id,
+        symbol: lusdMeta.symbol,
+        yield: bprotocolLqtyOnlyYield,
+      });
+    }
   }
 
   // 5b. Auto-discovery: find lending pools for C+ coins (now runs for ALL coins, including yield-bearing)

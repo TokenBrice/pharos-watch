@@ -1,12 +1,12 @@
 # Yield Intelligence
 
-Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes APY from three sources (on-chain rates, DeFiLlama, price history), scores each coin via the Pharos Yield Score (PYS), and serves a dedicated `/yield` page with scatter plot and leaderboard.
+Risk-adjusted yield tracking and ranking for yield-bearing stablecoins. Computes APY from three sources (direct on-chain reads, DeFiLlama, price history), scores each coin via the Pharos Yield Score (PYS), and serves a dedicated `/yield` page with scatter plot and leaderboard.
 
 ---
 
 ## Tracked Coins
 
-Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. Currently 40 yield-bearing coins, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
+Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins.ts` enters the yield pipeline. The sync also supports deterministic custom sources for select non-yield-bearing coins, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows can synthesize these labels when config is absent.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -33,9 +33,9 @@ Labels and styles are centralized in `shared/lib/classification.ts` (`YIELD_TYPE
 
 The sync cron resolves APY for each coin using a priority-ordered strategy. Tier 1 runs first, Tier 2 still runs afterward to collect additional DeFiLlama source rows, and Tier 3 runs only when neither Tier 1 nor Tier 2 produced any source.
 
-### Tier 1: On-Chain Exchange Rates
+### Tier 1: On-Chain Reads
 
-Reads vault contract exchange rates via `eth_call` RPC, then computes APY from the 7-day rate delta.
+Reads protocol state directly via `eth_call` RPC. The main path reads vault exchange rates and computes APY from the 7-day rate delta; special-case estimators can also derive APR from raw protocol state.
 
 **Config:** `ON_CHAIN_RATE_CONFIGS` in `worker/src/cron/yield-config.ts`
 
@@ -50,7 +50,7 @@ interface OnChainRateConfig {
 }
 ```
 
-Currently configured for sUSDe only (contract `0x9D39...7497`, selector `0x07a2d13a` = `convertToAssets(uint256)`).
+Currently configured for sUSDe only in `ON_CHAIN_RATE_CONFIGS` (contract `0x9D39...7497`, selector `0x07a2d13a` = `convertToAssets(uint256)`).
 
 **APY formula:**
 
@@ -59,6 +59,26 @@ apy = ((rate_now / rate_7d_ago) ^ (365.25 / 7) - 1) * 100
 ```
 
 Even when Tier 1 succeeds, the cron still falls through to Tier 2 to collect additional wrapper/native DeFiLlama rows. If no previous exchange rate exists yet (first sync), Tier 1 contributes no row and Tier 2 becomes the first fallback.
+
+#### Special-case Tier 1 estimator: LUSD / B.Protocol Stability Pool
+
+LUSD also has a deterministic on-chain estimator for the Liquity v1 Stability Pool via B.Protocol. This row is intentionally conservative and is labeled `B.Protocol Stability Pool (LQTY only)`.
+
+**Reads:**
+
+- `stabilityPool.getTotalLUSDDeposits()` on Ethereum
+- `communityIssuance.totalLQTYIssued()` on Ethereum
+- CoinGecko `liquity` USD price
+
+**Formula:**
+
+```
+remainingLqtyRewards = max(0, 32_000_000 - totalLQTYIssued)
+dailyIssuanceFactor  = 1 - 0.5^(1 / 365)
+apr                  = remainingLqtyRewards * dailyIssuanceFactor * lqtyPriceUsd / totalLUSDDeposits * 365 * 100
+```
+
+**Caveat:** This source captures only the projected LQTY incentive stream. It deliberately excludes ETH liquidation gains, so it is a lower-bound estimate of the full Stability Pool return.
 
 ### Tier 2: DeFiLlama Yields API (Multi-Source)
 
@@ -111,7 +131,7 @@ Zero new API calls — reuses cached price data. Falls through if no price histo
 
 ### Automatic Lending Pool Discovery (Wave 2)
 
-For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), the sync cron can append the best lending pool from a curated protocol allowlist. This runs after the base three-tier resolution, so yield-bearing coins can also receive an additional `defillama-auto` source row when a distinct lending market passes filters.
+For tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), the sync cron can append the best lending pool from a curated protocol allowlist. This runs after the base three-tier resolution, so yield-bearing coins can also receive an additional `defillama-auto` source row when a distinct lending market passes filters. LUSD uses this to retain Aave as an alternative source alongside the deterministic B.Protocol estimate.
 
 **Allowlist** (`LENDING_PROTOCOL_ALLOWLIST` in `worker/src/cron/yield-config.ts`):
 
@@ -241,7 +261,7 @@ CREATE TABLE yield_data (
 
 **Indices:** `idx_yield_pys` (PYS DESC), `idx_yield_apy` (apy_30d DESC), `idx_yield_best` (stablecoin_id, is_best).
 
-**Multi-source behavior:** Coins with both a native pool and a savings wrapper get two rows — one with `is_best = 1` (highest current APY), one with `is_best = 0`. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
+**Multi-source behavior:** Coins with both a native pool and a savings wrapper get two rows — one with `is_best = 1` (highest current APY), one with `is_best = 0`. This also covers mixed source types such as LUSD, where a deterministic on-chain B.Protocol row can coexist with an auto-discovered Aave lending row. Rankings queries filter `WHERE is_best = 1`. Alt-source rows are read separately and attached as `altSources[]` in the cached API response. After each batch write, stale rows for coins refreshed in that run are purged so old primary sources cannot linger alongside the new winner.
 
 ### `yield_history` — Historical Data Points
 

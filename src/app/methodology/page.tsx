@@ -1241,7 +1241,7 @@ export default function MethodologyPage() {
           <p>
             Pharos tracks yield-bearing stablecoins and computes a risk-adjusted ranking via the
             Pharos Yield Score (PYS). Data is refreshed every 30 minutes using a three-tier APY
-            resolution strategy.
+            resolution strategy, with alternative sources retained when multiple valid yield paths exist.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -1262,7 +1262,7 @@ export default function MethodologyPage() {
             <MethodologyFacts
               facts={[
                 { label: "Minimum data", value: "Need one resolved APY tier; Tier 1 additionally needs a prior exchange-rate history point" },
-                { label: "Required sources", value: "On-chain rates or DeFiLlama pools; Tier 3 needs current and ~30d-old prices" },
+                { label: "Required sources", value: "Direct on-chain reads or DeFiLlama pools; Tier 3 needs current and ~30d-old prices" },
                 { label: "Failure behavior", value: "No resolved tier skips coin update; PYS returns 0 when apy30d <= 0 (safety defaults to 40 if missing)" },
               ]}
             />
@@ -1288,7 +1288,7 @@ export default function MethodologyPage() {
             <div className="flex flex-col gap-2 flex-1">
               <div className="rounded-lg border p-3 text-center flex-1">
                 <p className="text-foreground font-medium">Tier 1</p>
-                <p className="text-xs text-muted-foreground mt-0.5">On-chain exchange rate</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Direct on-chain reads</p>
               </div>
               <div className="rounded-lg border p-3 text-center flex-1">
                 <p className="text-foreground font-medium">Tier 2</p>
@@ -1330,7 +1330,7 @@ export default function MethodologyPage() {
             <div className="grid grid-cols-3 gap-2 w-full">
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium text-xs">Tier 1</p>
-                <p className="text-xs text-muted-foreground">On-chain rate</p>
+                <p className="text-xs text-muted-foreground">On-chain reads</p>
               </div>
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-foreground font-medium text-xs">Tier 2</p>
@@ -1368,11 +1368,11 @@ export default function MethodologyPage() {
           <div className="space-y-2">
             <h3 className="text-foreground font-medium">APY Resolution (three-tier)</h3>
             <ul className="list-disc list-inside space-y-1">
-              <li><span className="text-foreground">Tier 1 &mdash; On-chain exchange rate</span>: reads the token contract directly (e.g.&nbsp;sDAI, sUSDe) and computes APY from the 7-day rate delta</li>
+              <li><span className="text-foreground">Tier 1 &mdash; Direct on-chain reads</span>: reads protocol state directly, either as an exchange-rate delta (e.g.&nbsp;sUSDe) or a conservative reward-only estimator (e.g.&nbsp;LUSD B.Protocol Stability Pool, LQTY only)</li>
               <li><span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a DeFiLlama yield pool via static mapping or symbol-based fallback</li>
               <li><span className="text-foreground">Tier 3 &mdash; Price-derived</span>: for NAV tokens only, derives APY from the 30-day price appreciation in supply_history</li>
             </ul>
-            <p>Each tier is tried in order; the first successful resolution is used.</p>
+            <p>Each tier is tried in order; Tier 1 and Tier 2 can both contribute rows, then the highest-APY source is marked primary and the rest remain as alternatives.</p>
           </div>
 
           {/* PYS formula */}
@@ -1409,6 +1409,7 @@ export default function MethodologyPage() {
             <ul className="list-disc list-inside space-y-1">
               <li>Trailing averages require sufficient history &mdash; newly tracked coins may show unstable scores until 30 days of data accumulate</li>
               <li>DeFiLlama pool matching uses heuristics; pool mismatches are corrected via the static override map</li>
+              <li>The LUSD B.Protocol Stability Pool row is conservative by design: it includes projected LQTY incentives only and excludes ETH liquidation gains</li>
               <li>Price-derived APY (Tier 3) can be noisy for low-liquidity NAV tokens</li>
             </ul>
           </div>

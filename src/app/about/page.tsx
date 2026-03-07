@@ -9,7 +9,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 
 const DATA_SOURCE_GROUPS = [
   { label: "Supply & Price", sources: "DefiLlama, CoinGecko, CoinMarketCap, DexScreener" },
-  { label: "On-chain Events", sources: "Etherscan v2 (freeze events, mint/burn flows), TronGrid, Alchemy & dRPC (EVM RPCs)" },
+  { label: "On-chain Reads & Events", sources: "Etherscan v2 (freeze events, mint/burn flows), TronGrid, Alchemy & dRPC (EVM RPCs, including direct Liquity/B.Protocol reads)" },
   { label: "Ratings & Reference", sources: "Bluechip, ECB via Frankfurter, fawazahmed0/exchange-api, gold-api.com, FRED DGS3MO (T-bill rates)" },
   { label: "DEX Data", sources: "DeFiLlama Yields & Protocols, Curve Finance API, The Graph, GeckoTerminal, DexScreener" },
   { label: "AI Generation", sources: "Anthropic Claude (daily digest)" },
@@ -89,7 +89,7 @@ export default function AboutPage() {
                   name: "Where does Pharos get its data?",
                   acceptedAnswer: {
                     "@type": "Answer",
-                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2, TronGrid, Alchemy, and dRPC for on-chain freeze events, mint/burn flow tracking, and direct contract calls; Bluechip for safety ratings; ECB via Frankfurter and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
+                    text: "All data is fetched server-side by a Cloudflare Worker and cached in D1. Sources include DefiLlama for supply, price, and chain distribution; CoinGecko for logos and fallback prices; CoinMarketCap and DexScreener as further price fallbacks; Etherscan v2, TronGrid, Alchemy, and dRPC for on-chain freeze events, mint/burn flow tracking, and direct contract calls including Liquity/B.Protocol yield reads; Bluechip for safety ratings; ECB via Frankfurter and fawazahmed0/exchange-api for live FX rates; gold-api.com for gold and silver spot prices; FRED DGS3MO for T-bill rates; DeFiLlama Yields &amp; Protocols, Curve Finance API, The Graph, and GeckoTerminal for DEX liquidity data; and Anthropic Claude for daily digest generation.",
                   },
                 },
               ],

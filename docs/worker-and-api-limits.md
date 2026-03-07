@@ -55,7 +55,7 @@ Primary source for token prices, market caps, and DEX pool discovery.
 | **Addresses per request** | Up to 50 (paid plan) |
 | **Overage billing** | Disabled by default (hard cutoff at quota) |
 
-**Current usage pattern**: The CG onchain API is called during the 30-min DEX liquidity cron with 250 ms between requests (~240 req/min). The monthly quota depends on cron frequency — if all tokens are crawled each run, this can add up quickly.
+**Current usage pattern**: The CG onchain API is called during the 30-min DEX liquidity cron with 250 ms between requests (~240 req/min). The monthly quota depends on cron frequency — if all tokens are crawled each run, this can add up quickly. `sync-yield-data` also adds 1 regular CoinGecko `/simple/price` call per run for the conservative LUSD B.Protocol APR.
 
 **Rate limit in code**: `RATE_LIMITS.COINGECKO_ONCHAIN_MS = 250` ms in `worker/src/lib/rate-limits.ts` (used by `worker/src/lib/coingecko-onchain.ts`)
 
@@ -160,6 +160,8 @@ Primary RPC provider for mint/burn ingestion and shared chain-RPC utilities (Eth
 **Mint/burn usage**: `sync-mint-burn` now uses Alchemy for all `eth_getLogs` and `eth_blockNumber` calls.
 Steady-state: ~35 getLogs + 4 blockNumbers + ~30 batch timestamp lookups per run → ~3,000 CUs/run.
 72 runs/day × 30 days → ~6.5M CUs/month (22% of 30M free-tier CU cap).
+
+**Yield sync usage**: When Ethereum RPC is backed by Alchemy, `sync-yield-data` adds 2 `eth_call`s per 30-minute run for the conservative LUSD B.Protocol source (~2,880 `eth_call`s/month).
 
 **Per-chain `eth_getLogs` block range limits (PAYG):**
 | Chain | Limit |

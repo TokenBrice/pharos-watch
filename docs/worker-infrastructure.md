@@ -237,7 +237,7 @@ crons = [
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | `docs/dex-liquidity.md` |
 | `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/yield-intelligence.md` |
 
-**Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency.
+**Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. Current steady overhead for the LUSD B.Protocol source is small: 2 Ethereum `eth_call`s plus 1 CoinGecko price fetch per 30-minute run.
 
 ### Trigger 4: `0 8 * * *` (daily at 08:00 UTC)
 
