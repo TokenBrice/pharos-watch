@@ -184,28 +184,32 @@ function MoverEntry({
 
 function MarketSignalsSkeleton() {
   return (
-    <div className="pharos-card-shell flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40">
-      {/* Depegs skeleton */}
-      <div className="flex-1 p-4 space-y-2.5">
+    <div className="pharos-card-shell overflow-hidden p-0">
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
         <Skeleton className="h-2.5 w-24" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          {SKELETON_DEPEG_INDICES.map((i) => (
-            <Skeleton key={i} className={`h-5 w-full ${i >= 4 ? "hidden lg:block" : ""}`} />
-          ))}
-        </div>
-      </div>
-      {/* Movers skeleton */}
-      <div className="flex-1 p-4 space-y-2.5">
         <Skeleton className="h-2.5 w-20" />
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          {SKELETON_MOVER_INDICES.map((i) => (
-            <Skeleton key={i} className="h-5 w-full" />
-          ))}
+      </div>
+      <div className="flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40">
+        {/* Depegs skeleton */}
+        <div className="flex-1 px-4 py-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {SKELETON_DEPEG_INDICES.map((i) => (
+              <Skeleton key={i} className={`h-5 w-full ${i >= 4 ? "hidden lg:block" : ""}`} />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-          {SKELETON_MOVER_INDICES.map((i) => (
-            <Skeleton key={i} className="h-5 w-full" />
-          ))}
+        {/* Movers skeleton */}
+        <div className="flex-1 px-4 py-3 space-y-2">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {SKELETON_MOVER_INDICES.map((i) => (
+              <Skeleton key={i} className="h-5 w-full" />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+            {SKELETON_MOVER_INDICES.map((i) => (
+              <Skeleton key={i} className="h-5 w-full" />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -221,59 +225,66 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
   if (!data) return <MarketSignalsSkeleton />;
 
   return (
-    <div className="pharos-card-shell flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40 animate-in fade-in duration-300">
-      {/* ── Depegs zone ── */}
-      <div className="flex-1 p-4">
-        <h2 className="pharos-kicker mb-2.5 text-center">Biggest Depegs</h2>
-        {depegs.length === 0 ? (
-          <p className="text-xs text-muted-foreground">All on-peg</p>
-        ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
-            {depegs.map((d, i) => (
-              <DepegEntry
-                key={d.id}
-                entry={d}
-                logos={logos}
-                visClass={DEPEG_VIS[i] ?? "hidden"}
-              />
-            ))}
-          </div>
-        )}
+    <div className="pharos-card-shell overflow-hidden p-0 animate-in fade-in duration-300">
+      {/* ── Header bar ── */}
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-4 py-3">
+        <h2 className="pharos-kicker">Biggest Depegs</h2>
+        <h2 className="pharos-kicker">Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span></h2>
       </div>
 
-      {/* ── Movers zone ── */}
-      <div className="flex-1 p-4">
-        <h2 className="pharos-kicker mb-2.5 text-center">Movers <span className="normal-case font-normal text-muted-foreground">(7d)</span></h2>
-        {growers.length === 0 && shrinkers.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No significant moves</p>
-        ) : (
-          <div className="space-y-1">
-            {growers.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
-                {growers.map((g, i) => (
-                  <MoverEntry
-                    key={g.id}
-                    entry={g}
-                    logos={logos}
-                    visClass={MOVER_VIS[i] ?? "hidden"}
-                  />
-                ))}
-              </div>
-            )}
-            {shrinkers.length > 0 && (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
-                {shrinkers.map((s, i) => (
-                  <MoverEntry
-                    key={s.id}
-                    entry={s}
-                    logos={logos}
-                    visClass={MOVER_VIS[i] ?? "hidden"}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+      {/* ── Content ── */}
+      <div className="flex flex-col lg:flex-row lg:divide-x lg:divide-border/40 divide-y lg:divide-y-0 divide-border/40">
+        {/* ── Depegs zone ── */}
+        <div className="flex-1 px-4 py-3">
+          {depegs.length === 0 ? (
+            <p className="text-xs text-muted-foreground">All on-peg</p>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+              {depegs.map((d, i) => (
+                <DepegEntry
+                  key={d.id}
+                  entry={d}
+                  logos={logos}
+                  visClass={DEPEG_VIS[i] ?? "hidden"}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Movers zone ── */}
+        <div className="flex-1 px-4 py-3">
+          {growers.length === 0 && shrinkers.length === 0 ? (
+            <p className="text-xs text-muted-foreground">No significant moves</p>
+          ) : (
+            <div className="space-y-1">
+              {growers.length > 0 && (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+                  {growers.map((g, i) => (
+                    <MoverEntry
+                      key={g.id}
+                      entry={g}
+                      logos={logos}
+                      visClass={MOVER_VIS[i] ?? "hidden"}
+                    />
+                  ))}
+                </div>
+              )}
+              {shrinkers.length > 0 && (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+                  {shrinkers.map((s, i) => (
+                    <MoverEntry
+                      key={s.id}
+                      entry={s}
+                      logos={logos}
+                      visClass={MOVER_VIS[i] ?? "hidden"}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
