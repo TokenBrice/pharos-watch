@@ -38,6 +38,25 @@ export const USD_REFERENCE_SYMBOLS = new Set([
   "USDC", "USDT", "DAI", "BUSD", "TUSD", "USDP", "GUSD", "LUSD", "FRAX",
 ]);
 
+const DEX_SYMBOL_ALIASES: Record<string, string> = {
+  "USD₮0": "USDT",
+  "USDT0": "USDT",
+  "AUSDC": "USDC",
+  "AUSDT": "USDT",
+  "USDBC": "USDC",
+  "USDC.E": "USDC",
+  "USDT.E": "USDT",
+};
+
+export function normalizeDexSymbol(symbol: string): string {
+  const normalized = symbol.trim().toUpperCase();
+  return DEX_SYMBOL_ALIASES[normalized] ?? normalized;
+}
+
+export function isUsdReferenceSymbol(symbol: string): boolean {
+  return USD_REFERENCE_SYMBOLS.has(normalizeDexSymbol(symbol));
+}
+
 /** Well-known composite pool names → constituent symbols */
 export const COMPOSITE_POOL_NAMES: Record<string, string[]> = {
   "3pool": ["DAI", "USDC", "USDT"],

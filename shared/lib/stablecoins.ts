@@ -17,6 +17,7 @@ interface StablecoinOpts {
   links?: import("../types").StablecoinLink[];
   jurisdiction?: import("../types").Jurisdiction;
   contracts?: import("../types").ContractDeployment[];
+  tradedContracts?: import("../types").ContractDeployment[];
   supplyMethod?: import("../types").SupplyMethodConfig;
   dependencies?: import("../types").DependencyWeight[];
   canBeBlacklisted?: boolean | "possible";
@@ -32,7 +33,7 @@ interface StablecoinOpts {
 }
 
 function coin(id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], pegCurrency: StablecoinMeta["flags"]["pegCurrency"], opts?: StablecoinOpts): StablecoinMeta {
-  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
+  return { id, name, symbol, flags: { backing, pegCurrency, governance, yieldBearing: opts?.yieldBearing ?? false, rwa: opts?.rwa ?? false, navToken: opts?.navToken ?? false }, collateral: opts?.collateral, pegMechanism: opts?.pegMechanism, commodityOunces: opts?.commodityOunces, llamaId: opts?.llamaId, detailProvider: opts?.detailProvider, geckoId: opts?.geckoId, cmcSlug: opts?.cmcSlug, protocolSlug: opts?.protocolSlug, proofOfReserves: opts?.proofOfReserves, links: opts?.links, jurisdiction: opts?.jurisdiction, contracts: opts?.contracts, tradedContracts: opts?.tradedContracts, supplyMethod: opts?.supplyMethod, dependencies: opts?.dependencies, canBeBlacklisted: opts?.canBeBlacklisted, chainTier: opts?.chainTier, deploymentModel: opts?.deploymentModel, collateralQuality: opts?.collateralQuality, custodyModel: opts?.custodyModel, governanceQuality: opts?.governanceQuality, reserves: opts?.reserves, notices: opts?.notices, tags: opts?.tags, yieldConfig: opts?.yieldConfig };
 }
 const usd   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "USD", opts);
 const eur   = (id: string, name: string, symbol: string, backing: StablecoinMeta["flags"]["backing"], governance: StablecoinMeta["flags"]["governance"], opts?: StablecoinOpts) => coin(id, name, symbol, backing, governance, "EUR", opts);
@@ -98,6 +99,9 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "corn", address: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb", decimals: 6 },
       { chain: "megaeth", address: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb", decimals: 6 },
       { chain: "plasma", address: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb", decimals: 6 },
+    ],
+    tradedContracts: [
+      { chain: "optimism", address: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6 },
     ],
     supplyMethod: {
       type: "totalSupply-minus-addresses",

@@ -26,6 +26,9 @@ describe("liquidity coverage", () => {
       for (const c of meta.contracts ?? []) {
         allChains.add(c.chain);
       }
+      for (const c of meta.tradedContracts ?? []) {
+        allChains.add(c.chain);
+      }
     }
     for (const chain of allChains) {
       if (!CG_CHAIN_MAP[chain] && !DS_CHAIN_MAP[chain] && !UNSUPPORTED_CHAINS.has(chain)) {
@@ -50,8 +53,8 @@ describe("liquidity coverage", () => {
       for (const id of ids) {
         const meta = TRACKED_STABLECOINS.find((m) => m.id === id);
         // Small symbols can rely on external IDs when there is no contract footprint.
-        if (!meta?.contracts?.length && (meta?.geckoId || meta?.cmcSlug)) continue;
-        if (!meta?.contracts?.length) {
+        if (!meta?.contracts?.length && !meta?.tradedContracts?.length && (meta?.geckoId || meta?.cmcSlug)) continue;
+        if (!meta?.contracts?.length && !meta?.tradedContracts?.length) {
           missing.push(`${symbol} (id=${id}) has no contracts for disambiguation`);
         }
       }

@@ -21,6 +21,55 @@ import {
   toDepegDewsMethodologyVersionLabel,
 } from "@shared/lib/depeg-dews-version";
 
+function pegTypeFromCurrency(pegCurrency: string): string | null {
+  switch (pegCurrency) {
+    case "USD": return "peggedUSD";
+    case "EUR": return "peggedEUR";
+    case "GBP": return "peggedGBP";
+    case "CHF": return "peggedCHF";
+    case "BRL": return "peggedBRL";
+    case "RUB": return "peggedRUB";
+    case "JPY": return "peggedJPY";
+    case "IDR": return "peggedIDR";
+    case "SGD": return "peggedSGD";
+    case "TRY": return "peggedTRY";
+    case "AUD": return "peggedAUD";
+    case "ZAR": return "peggedZAR";
+    case "CAD": return "peggedCAD";
+    case "CNY": return "peggedCNY";
+    case "PHP": return "peggedPHP";
+    case "MXN": return "peggedMXN";
+    case "UAH": return "peggedUAH";
+    case "ARS": return "peggedARS";
+    case "GOLD": return "peggedGOLD";
+    case "SILVER": return "peggedSILVER";
+    case "VAR": return "peggedVAR";
+    default: return null;
+  }
+}
+
+function deriveDexDeviationBps(
+  dexPriceUsd: number,
+  pegType: string | null,
+  pegRates: Record<string, number>,
+  commodityOunces: number | undefined,
+  currentDeviationBps: number | null,
+  dexVsPrimaryBps: number | null,
+): number | null {
+  const pegRef = pegType
+    ? getPegReference(pegType, pegRates, commodityOunces)
+    : null;
+  if (pegRef != null && Number.isFinite(pegRef) && pegRef > 0 && Number.isFinite(dexPriceUsd) && dexPriceUsd > 0) {
+    return Math.round(((dexPriceUsd / pegRef) - 1) * 10000);
+  }
+  if (currentDeviationBps != null && dexVsPrimaryBps != null) {
+    const currentMultiplier = 1 + currentDeviationBps / 10000;
+    const dexVsPrimaryMultiplier = 1 + dexVsPrimaryBps / 10000;
+    return Math.round(((currentMultiplier * dexVsPrimaryMultiplier) - 1) * 10000);
+  }
+  return null;
+}
+
 export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
@@ -117,11 +166,16 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
       ? sumPegBuckets(asset.circulating)
       : 0;
     if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_PRICE_CHECK_FRESHNESS_SEC) {
-      const pegRef = asset?.price != null && typeof asset.price === "number"
-        ? getPegReference(asset.pegType, pegRates, meta.commodityOunces)
-        : 0;
-      if (pegRef > 0) {
-        const dexBps = Math.round(((dexRow.dex_price_usd / pegRef) - 1) * 10000);
+      const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency);
+      const dexBps = deriveDexDeviationBps(
+        dexRow.dex_price_usd,
+        pegType,
+        pegRates,
+        meta.commodityOunces,
+        currentBps,
+        dexRow.deviation_from_primary_bps,
+      );
+      if (dexBps != null) {
         // "agrees" = both sources within 50bps of each other (signed comparison
         // catches opposite-direction disagreements, e.g. +200bps vs -200bps)
         const agrees = currentBps != null

@@ -165,9 +165,16 @@ export async function syncDexLiquidity(
     mergeGtPools(metrics, crawlNewPools as Map<string, GtNewPool[]>);
   }
 
-  // 5c. DexScreener fallback for coins still at zero pools
+  // Seed same-run crawl discoveries into the dedupe set before fallback passes.
+  for (const pools of crawlNewPools.values()) {
+    for (const pool of pools) {
+      knownPoolAddrs.add(`${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`);
+    }
+  }
+
+  // 5c. DexScreener fallback for coins still missing pool or price coverage
   try {
-    const dsFallback = await fetchDsFallbackPools(metrics, knownPoolAddrs, signal);
+    const dsFallback = await fetchDsFallbackPools(metrics, priceObservations, knownPoolAddrs, signal);
     mergeGtPools(metrics, dsFallback.newPools);
     for (const [id, obs] of dsFallback.priceObs) {
       const existing = priceObservations.get(id) ?? [];
@@ -182,7 +189,7 @@ export async function syncDexLiquidity(
 
   // 5d. CoinGecko tickers fallback for orderbook DEXes (e.g. Kinesis Exchange for KAG/KAU)
   try {
-    const cgTickersFallback = await fetchCgTickersFallback(metrics, signal);
+    const cgTickersFallback = await fetchCgTickersFallback(metrics, priceObservations, signal);
     mergeGtPools(metrics, cgTickersFallback.newPools);
     for (const [id, obs] of cgTickersFallback.priceObs) {
       const existing = priceObservations.get(id) ?? [];

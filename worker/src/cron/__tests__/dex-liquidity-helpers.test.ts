@@ -1,8 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import {
   parsePoolSymbols,
   classifyPoolType,
   getQualityMultiplier,
+  getPairQuality,
+  computePoolPairQuality,
+  getTrackedContracts,
 } from "../dex-liquidity/pool-helpers";
 
 describe("parsePoolSymbols", () => {
@@ -21,6 +25,11 @@ describe("parsePoolSymbols", () => {
   it("handles triple pools", () => {
     const result = parsePoolSymbols("USDT-USDC-DAI");
     expect(result).toEqual(["USDT", "USDC", "DAI"]);
+  });
+
+  it("normalizes known quote aliases", () => {
+    expect(parsePoolSymbols("USDH-USD₮0")).toEqual(["USDH", "USDT"]);
+    expect(parsePoolSymbols("HOLLAR / AUSDC")).toEqual(["HOLLAR", "USDC"]);
   });
 });
 
@@ -68,5 +77,30 @@ describe("getQualityMultiplier", () => {
   it("returns multiplier without curveA for non-curve types", () => {
     const result = getQualityMultiplier("uniswap-v3-5bp");
     expect(result).toBeGreaterThan(0);
+  });
+});
+
+describe("pair-quality normalization", () => {
+  it("treats trusted quote aliases like their canonical stablecoin", () => {
+    expect(getPairQuality("USD₮0")).toBe(1);
+    expect(getPairQuality("AUSDC")).toBe(1);
+  });
+
+  it("uses normalized quote aliases in pool pair quality", () => {
+    expect(computePoolPairQuality(["HOLLAR", "AUSDT"], "HOLLAR")).toBe(1);
+  });
+});
+
+describe("getTrackedContracts", () => {
+  it("includes traded contract metadata alongside canonical deployments", () => {
+    const usdt = TRACKED_STABLECOINS.find((meta) => meta.id === "usdt-tether");
+    const trackedContracts = getTrackedContracts(usdt!);
+    expect(
+      trackedContracts.some(
+        (contract) =>
+          contract.chain === "optimism" &&
+          contract.address.toLowerCase() === "0x01bff41798a0bcf287b996046ca68b395dbc1071",
+      ),
+    ).toBe(true);
   });
 });

@@ -20,7 +20,7 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed 
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100) |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (16 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins with zero pools from primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins with no on-chain AMM presence, e.g. KAG/KAU on Kinesis Exchange).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (16 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins that still lack pool coverage or DEX price observations after primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins that still lack pool coverage or DEX price observations, e.g. KAG/KAU on Kinesis Exchange).
 
 ### Quality Multipliers (v2)
 
@@ -43,7 +43,7 @@ Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve F
 ### Pool Quality Adjustments
 
 - **Balance health**: Continuous `Math.pow(balanceRatio, 1.5)` instead of binary threshold
-- **Pair quality**: Co-token scored using Pharos governance classification (CeFi->1.0, DeFi->0.9, CeFi-Dep->0.8) + static map for volatile assets (WETH->0.65, WBTC->0.6, unknown->0.3). Multi-asset pools use best co-token score
+- **Pair quality**: Co-token scored using Pharos governance classification (CeFi->1.0, DeFi->0.9, CeFi-Dep->0.8) + static map for volatile assets (WETH->0.65, WBTC->0.6, unknown->0.3). Known quote aliases such as `USD₮0`, `USDT0`, `aUSDC`, `aUSDT`, `USDbC`, and `.e` bridged variants are normalized to canonical symbols before scoring. Multi-asset pools use best co-token score
 - **MetaPool TVL dedup**: Uses `usdTotalExcludingBasePool` to prevent double-counting base pool liquidity across ~322 Curve metapools
 - **Effective TVL**: `poolTvl x mechanismMultiplier x balanceHealth x pairQuality`, summed across all pools
 
@@ -74,7 +74,9 @@ The CG integration extracts three signals unavailable from GeckoTerminal:
 
 ### DexScreener Fallback
 
-After the primary pipeline (DeFiLlama + CG/GT + Curve + UniV3 + Aerodrome), any tracked stablecoin with zero pools is queried via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains.
+After the primary pipeline (DeFiLlama + CG/GT + Curve + UniV3 + Aerodrome), any tracked stablecoin that still has zero pools or no usable DEX price observation is queried via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains.
+
+Address matching uses both canonical `contracts` and optional `tradedContracts` metadata. `tradedContracts` is reserved for wrapper / secondary-market token addresses that are meaningfully used for DEX discovery even when issuer metadata points to a different canonical deployment.
 
 Quality gates:
 - Pool TVL must exceed $1,000
@@ -87,7 +89,7 @@ DexScreener pools are merged using the same `mergeGtPools()` logic — no balanc
 
 ### CoinGecko Tickers Fallback (Orderbook DEXes)
 
-After DexScreener, any coin still at zero pools that has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange).
+After DexScreener, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange).
 
 Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-denominated quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
 
@@ -149,7 +151,7 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 | Source | Chains | Method | Filter |
 |--------|--------|--------|--------|
 | **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin | TVL >= $50K, balance ratio >= 0.3 |
-| **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc., peg-aware price sanity (`isReasonablePrice`) |
+| **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity (`isReasonablePrice`) |
 | **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity |
 | **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K (prices), >= $1K (pool discovery), peg-aware price sanity |
 

@@ -1,9 +1,12 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import {
   isOnchainAvailable, CG_CHAIN_MAP, CG_CHAIN_REVERSE,
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_MAP, GT_CHAIN_REVERSE } from "../../lib/chain-registry";
-import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES } from "../../lib/dex-constants";
+import {
+  QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol,
+} from "../../lib/dex-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
 import { VOLATILE_PAIR_QUALITY, SYMBOL_GOVERNANCE } from "./constants";
 
@@ -12,13 +15,13 @@ export function parsePoolSymbols(symbol: string): string[] {
   // Handle known composite names first
   for (const [name, symbols] of Object.entries(COMPOSITE_POOL_NAMES)) {
     if (symbol === name || symbol.startsWith(`${name}-`)) {
-      return symbols;
+      return symbols.map((sym) => normalizeDexSymbol(sym));
     }
   }
   // Split on common delimiters: "-", "/", "+", " "
   return symbol
     .split(/[-/+ ]+/)
-    .map((s) => s.trim())
+    .map((s) => normalizeDexSymbol(s))
     .filter(Boolean);
 }
 
@@ -204,14 +207,15 @@ export function normalizeProtocol(project: string): string {
  * Uses Pharos classification for tracked stablecoins, static map for known volatile assets.
  */
 export function getPairQuality(symbol: string): number {
-  const gov = SYMBOL_GOVERNANCE.get(symbol.toUpperCase());
+  const normalized = normalizeDexSymbol(symbol);
+  const gov = SYMBOL_GOVERNANCE.get(normalized);
   if (gov) {
     if (gov === "centralized") return 1.0;
     if (gov === "decentralized") return 0.9;
     if (gov === "centralized-dependent") return 0.8;
     return 0.7;
   }
-  return VOLATILE_PAIR_QUALITY[symbol.toUpperCase()] ?? 0.3;
+  return VOLATILE_PAIR_QUALITY[normalized] ?? 0.3;
 }
 
 /**
@@ -219,12 +223,25 @@ export function getPairQuality(symbol: string): number {
  * Returns the best quality among co-tokens (one good exit route suffices).
  */
 export function computePoolPairQuality(poolSymbols: string[], stablecoinSymbol: string): number {
+  const stablecoinKey = normalizeDexSymbol(stablecoinSymbol);
   let best = 0;
   for (const sym of poolSymbols) {
-    if (sym.toUpperCase() === stablecoinSymbol.toUpperCase()) continue;
+    if (normalizeDexSymbol(sym) === stablecoinKey) continue;
     best = Math.max(best, getPairQuality(sym));
   }
   return best || 0.3;
+}
+
+export function getTrackedContracts(meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">): ContractDeployment[] {
+  const result: ContractDeployment[] = [];
+  const seen = new Set<string>();
+  for (const contract of [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]) {
+    const key = `${contract.chain}:${contract.address.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(contract);
+  }
+  return result;
 }
 
 /**
@@ -256,7 +273,7 @@ export function buildSymbolLookups(): SymbolLookups {
   const symbolToIds = new Map<string, string[]>();
   const collidingSymbols = new Set<string>();
   for (const meta of TRACKED_STABLECOINS) {
-    const key = meta.symbol.toUpperCase();
+    const key = normalizeDexSymbol(meta.symbol);
     const existing = symbolToIds.get(key) ?? [];
     existing.push(meta.id);
     symbolToIds.set(key, existing);
@@ -269,8 +286,7 @@ export function buildSymbolLookups(): SymbolLookups {
   // Auto-seed from all contract addresses — resolves symbol collisions automatically
   const addressToId = new Map<string, string>();
   for (const meta of TRACKED_STABLECOINS) {
-    if (!meta.contracts) continue;
-    for (const c of meta.contracts) {
+    for (const c of getTrackedContracts(meta)) {
       addressToId.set(c.address.toLowerCase(), meta.id);
     }
   }

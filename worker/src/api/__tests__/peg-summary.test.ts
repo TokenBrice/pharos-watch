@@ -128,4 +128,34 @@ describe("handlePegSummary", () => {
     const coin = body.coins.find((c) => c.id === "usdt-tether");
     expect(coin?.dexPriceCheck).toBeUndefined();
   });
+
+  it("keeps dexPriceCheck even when the primary price is temporarily missing", async () => {
+    const asset = makeAsset({
+      id: "usdt-tether",
+      symbol: "USDT",
+      price: null,
+    });
+    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{
+        id: string;
+        dexPriceCheck?: {
+          dexPrice: number;
+          dexDeviationBps: number;
+          agrees: boolean;
+          sourcePools: number;
+          sourceTvl: number;
+        } | null;
+      }>;
+    };
+    const coin = body.coins.find((c) => c.id === "usdt-tether");
+    expect(coin?.dexPriceCheck).toEqual({
+      dexPrice: 1.0002,
+      dexDeviationBps: 2,
+      agrees: true,
+      sourcePools: 4,
+      sourceTvl: 10_000_000,
+    });
+  });
 });

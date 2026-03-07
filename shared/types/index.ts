@@ -153,6 +153,7 @@ export interface StablecoinMeta {
   links?: StablecoinLink[];
   jurisdiction?: Jurisdiction;
   contracts?: ContractDeployment[]; // On-chain contract deployments per chain
+  tradedContracts?: ContractDeployment[]; // Wrapper / secondary-market token addresses used for trading and DEX discovery
   supplyMethod?: SupplyMethodConfig; // How to compute circulating supply (default: totalSupply)
   dependencies?: DependencyWeight[]; // Upstream stablecoins with collateral weights (CeFi-Dependent coins only)
   canBeBlacklisted?: boolean | "possible"; // true = active blacklist, "possible" = mutable contract / governance-upgradeable, false/undefined = no

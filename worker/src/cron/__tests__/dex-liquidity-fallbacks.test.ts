@@ -1,0 +1,45 @@
+import { describe, expect, it } from "vitest";
+import { getFallbackTargets } from "../dex-liquidity/fetch-fallbacks";
+import { initMetrics } from "../dex-liquidity/pool-helpers";
+
+describe("getFallbackTargets", () => {
+  it("targets coins with zero pools or missing dex price observations", () => {
+    const metrics = new Map<string, ReturnType<typeof initMetrics>>();
+    const zeroPools = initMetrics("usdt-tether", "USDT");
+    zeroPools.poolCount = 0;
+    metrics.set("usdt-tether", zeroPools);
+
+    const missingPrice = initMetrics("usdc-circle", "USDC");
+    missingPrice.poolCount = 3;
+    metrics.set("usdc-circle", missingPrice);
+
+    const covered = initMetrics("dai-makerdao", "DAI");
+    covered.poolCount = 2;
+    metrics.set("dai-makerdao", covered);
+
+    const priceObservations = new Map([
+      ["usdt-tether", [{ price: 1, tvl: 100_000, chain: "ethereum", protocol: "curve" }]],
+      ["dai-makerdao", [{ price: 1, tvl: 100_000, chain: "ethereum", protocol: "curve" }]],
+    ]);
+
+    const targetIds = new Set(
+      getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true }).map((meta) => meta.id),
+    );
+
+    expect(targetIds.has("usdt-tether")).toBe(true);
+    expect(targetIds.has("usdc-circle")).toBe(true);
+    expect(targetIds.has("dai-makerdao")).toBe(false);
+  });
+
+  it("can restrict orderbook fallback targets to coins with a geckoId", () => {
+    const metrics = new Map<string, ReturnType<typeof initMetrics>>();
+    const noGecko = initMetrics("rwausdi-multipli", "rwaUSDi");
+    metrics.set("rwausdi-multipli", noGecko);
+
+    const targetIds = new Set(
+      getFallbackTargets(metrics, new Map(), { requireGeckoId: true }).map((meta) => meta.id),
+    );
+
+    expect(targetIds.has("rwausdi-multipli")).toBe(false);
+  });
+});

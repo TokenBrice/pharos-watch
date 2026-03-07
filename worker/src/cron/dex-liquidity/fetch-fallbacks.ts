@@ -6,16 +6,35 @@ import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP } from "../../lib/dexscree
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
-import { normalizeProtocol } from "./pool-helpers";
+import { getTrackedContracts, normalizeProtocol } from "./pool-helpers";
 import {
   CG_TICKERS_RATE_MS,
   ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS,
 } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 
-/** DexScreener fallback: fetch pools for tracked stablecoins with 0 pools in the main pipeline. */
+export function getFallbackTargets(
+  metrics: Map<string, LiquidityMetrics>,
+  priceObservations: Map<string, DexPriceObs[]>,
+  options: {
+    requireGeckoId?: boolean;
+    requireTrackedContracts?: boolean;
+  } = {},
+): typeof TRACKED_STABLECOINS {
+  return TRACKED_STABLECOINS.filter((meta) => {
+    if (options.requireGeckoId && !meta.geckoId) return false;
+    if (options.requireTrackedContracts && getTrackedContracts(meta).length === 0) return false;
+    const metric = metrics.get(meta.id);
+    const hasPools = (metric?.poolCount ?? 0) > 0;
+    const hasDexPrice = (priceObservations.get(meta.id)?.length ?? 0) > 0;
+    return !hasPools || !hasDexPrice;
+  });
+}
+
+/** DexScreener fallback: fetch pools for tracked stablecoins with missing pool or price coverage. */
 export async function fetchDsFallbackPools(
   metrics: Map<string, LiquidityMetrics>,
+  priceObservations: Map<string, DexPriceObs[]>,
   knownPoolAddrs: Set<string>,
   signal?: AbortSignal,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
@@ -23,30 +42,22 @@ export async function fetchDsFallbackPools(
   const priceObs = new Map<string, DexPriceObs[]>();
   const nowSec = Date.now() / 1000;
 
-  // Find tracked coins with no pools from the main pipeline
-  const zeroCoinIds = new Set<string>();
-  for (const meta of TRACKED_STABLECOINS) {
-    if (!meta.contracts?.length) continue;
-    const m = metrics.get(meta.id);
-    if (!m || m.poolCount === 0) zeroCoinIds.add(meta.id);
-  }
+  const targetCoins = getFallbackTargets(metrics, priceObservations, { requireTrackedContracts: true });
 
-  if (zeroCoinIds.size === 0) {
-    console.log("[dex-liquidity] DexScreener fallback: no zero-pool coins, skipping");
+  if (targetCoins.length === 0) {
+    console.log("[dex-liquidity] DexScreener fallback: no missing-coverage coins, skipping");
     return { newPools, priceObs };
   }
 
-  console.log(`[dex-liquidity] DexScreener fallback: querying ${zeroCoinIds.size} zero-pool coins`);
+  console.log(`[dex-liquidity] DexScreener fallback: querying ${targetCoins.length} missing-coverage coins`);
 
   let requests = 0;
   let poolsFound = 0;
 
-  for (const meta of TRACKED_STABLECOINS) {
-    if (!zeroCoinIds.has(meta.id)) continue;
-    if (!meta.contracts?.length) continue;
+  for (const meta of targetCoins) {
     throwIfAborted(signal);
 
-    for (const contract of meta.contracts) {
+    for (const contract of getTrackedContracts(meta)) {
       if (!DS_CHAIN_MAP[contract.chain]) continue;
 
       if (requests > 0) await dsRateLimit(signal);
@@ -131,30 +142,27 @@ export async function fetchDsFallbackPools(
 }
 
 /**
- * CoinGecko tickers fallback: fetch trading data for zero-pool coins that
+ * CoinGecko tickers fallback: fetch trading data for missing-coverage coins that
  * are listed on orderbook exchanges tracked by CoinGecko (e.g. Kinesis Money).
  *
- * Runs after DexScreener; only targets coins that still have 0 pools AND
- * have a geckoId configured. Creates one synthetic GtNewPool per exchange,
+ * Runs after DexScreener; targets coins that still lack pools or a usable
+ * DEX price and have a geckoId configured. Creates one synthetic GtNewPool per exchange,
  * aggregating all non-stale USD-denominated pairs.
  *
  * Synthetic TVL = totalVolume × ORDERBOOK_TVL_FACTOR (order-book depth proxy).
  */
 export async function fetchCgTickersFallback(
   metrics: Map<string, LiquidityMetrics>,
+  priceObservations: Map<string, DexPriceObs[]>,
   signal?: AbortSignal,
 ): Promise<{ newPools: Map<string, GtNewPool[]>; priceObs: Map<string, DexPriceObs[]> }> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
 
-  const targetCoins = TRACKED_STABLECOINS.filter((meta) => {
-    if (!meta.geckoId) return false;
-    const m = metrics.get(meta.id);
-    return !m || m.poolCount === 0;
-  });
+  const targetCoins = getFallbackTargets(metrics, priceObservations, { requireGeckoId: true });
 
   if (targetCoins.length === 0) {
-    console.log("[dex-liquidity] CG tickers fallback: no zero-pool coins with geckoId, skipping");
+    console.log("[dex-liquidity] CG tickers fallback: no missing-coverage coins with geckoId, skipping");
     return { newPools, priceObs };
   }
 

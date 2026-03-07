@@ -8,7 +8,7 @@ import {
 } from "../../lib/coingecko-onchain";
 import { GT_CHAIN_REVERSE } from "../../lib/chain-registry";
 import { RATE_LIMITS } from "../../lib/rate-limits";
-import { GT_API_BASE, USD_REFERENCE_SYMBOLS } from "../../lib/dex-constants";
+import { GT_API_BASE, isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type {
   LlamaPool, CurvePool, CurvePoolEntry, DexPriceObs,
@@ -21,7 +21,9 @@ import {
   UNIV3_SUBGRAPHS, UNIV3_POOL_QUERY,
   AERODROME_SUBGRAPHS, AERODROME_PAIR_QUERY,
 } from "./constants";
-import { normalizeProtocol, getActiveChainMap, getActiveChainReverse } from "./pool-helpers";
+import {
+  normalizeProtocol, getActiveChainMap, getActiveChainReverse, getTrackedContracts,
+} from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 
 /** Fetch DeFiLlama Yields, Protocols list, and Curve API data. Returns null only on truly catastrophic failure. */
@@ -197,7 +199,7 @@ export async function buildCurveLookups(
           const usdBal = isNaN(raw) || isNaN(decimals) ? 0 : raw / 10 ** decimals * (c.usdPrice || 1);
           // Learn address→stablecoinId from unambiguous symbol matches
           if (c.address) {
-            const sym = c.symbol.toUpperCase();
+            const sym = normalizeDexSymbol(c.symbol);
             const ids = symbolToIds.get(sym);
             if (ids && ids.length === 1) {
               addressToId.set(c.address.toLowerCase(), ids[0]);
@@ -206,7 +208,7 @@ export async function buildCurveLookups(
           return {
             symbol: c.symbol,
             balancePct: totalUsd > 0 ? Math.round((usdBal / totalUsd) * 1000) / 10 : 0,
-            isTracked: symbolToIds.has(c.symbol.toUpperCase()),
+            isTracked: symbolToIds.has(normalizeDexSymbol(c.symbol)),
           };
         });
 
@@ -218,7 +220,7 @@ export async function buildCurveLookups(
 
         // Build a key from pool coins for matching
         const coinSymbols = pool.coins
-          .map((c) => c.symbol.toUpperCase())
+          .map((c) => normalizeDexSymbol(c.symbol))
           .sort()
           .join("-");
         const entry: CurvePoolEntry = {
@@ -253,7 +255,7 @@ export async function buildCurveLookups(
               if (addrId) resolvedIds = [addrId];
             }
             if (!resolvedIds) {
-              const sym = coin.symbol.toUpperCase();
+              const sym = normalizeDexSymbol(coin.symbol);
               resolvedIds = symbolToIds.get(sym);
             }
             if (!resolvedIds) continue;
@@ -339,7 +341,7 @@ export async function fetchUniV3Data(
         // Address-based lookup
         uniV3PoolFees.set(`${chain}:${p.id.toLowerCase()}`, feeTier);
         // Symbol-based fallback (keep lowest fee tier per pair = most optimized for stables)
-        const syms = [p.token0.symbol.toUpperCase(), p.token1.symbol.toUpperCase()].sort().join(":");
+        const syms = [normalizeDexSymbol(p.token0.symbol), normalizeDexSymbol(p.token1.symbol)].sort().join(":");
         const symKey = `${chain}:${syms}`;
         const existing = uniV3SymbolFees.get(symKey);
         if (existing == null || feeTier < existing) {
@@ -347,7 +349,7 @@ export async function fetchUniV3Data(
         }
         // Learn addresses for disambiguation from Uni V3 token data
         for (const tok of [p.token0, p.token1]) {
-          const sym = tok.symbol.toUpperCase();
+          const sym = normalizeDexSymbol(tok.symbol);
           const ids = symbolToIds.get(sym);
           if (ids?.length === 1 && tok.id) {
             addressToId.set(tok.id.toLowerCase(), ids[0]);
@@ -362,10 +364,10 @@ export async function fetchUniV3Data(
         const token1Price = parseFloat(p.token1Price); // token1 per token0
         if (isNaN(token0Price) || isNaN(token1Price) || token0Price <= 0 || token1Price <= 0) continue;
 
-        const sym0 = p.token0.symbol.toUpperCase();
-        const sym1 = p.token1.symbol.toUpperCase();
-        const isRef0 = USD_REFERENCE_SYMBOLS.has(sym0);
-        const isRef1 = USD_REFERENCE_SYMBOLS.has(sym1);
+        const sym0 = normalizeDexSymbol(p.token0.symbol);
+        const sym1 = normalizeDexSymbol(p.token1.symbol);
+        const isRef0 = isUsdReferenceSymbol(p.token0.symbol);
+        const isRef1 = isUsdReferenceSymbol(p.token1.symbol);
 
         // If neither side is a known USD reference, skip (can't derive USD price reliably)
         if (!isRef0 && !isRef1) continue;
@@ -492,8 +494,8 @@ export async function fetchAerodromeData(
         const balanceRatio = maxReserve > 0 ? minReserve / maxReserve : 0;
         if (balanceRatio < 0.3) continue;
 
-        const sym0 = pair.token0.symbol.toUpperCase();
-        const sym1 = pair.token1.symbol.toUpperCase();
+        const sym0 = normalizeDexSymbol(pair.token0.symbol);
+        const sym1 = normalizeDexSymbol(pair.token1.symbol);
 
         // Extract price observations for tracked stablecoins
         const tokens = [
@@ -585,8 +587,7 @@ export function buildChainAddresses(): Map<string, { address: string; stablecoin
   const chainMap = getActiveChainMap();
   const result = new Map<string, { address: string; stablecoinId: string }[]>();
   for (const meta of TRACKED_STABLECOINS) {
-    if (!meta.contracts) continue;
-    for (const c of meta.contracts) {
+    for (const c of getTrackedContracts(meta)) {
       const mappedChain = chainMap[c.chain.toLowerCase()];
       if (!mappedChain) continue;
       const list = result.get(mappedChain) ?? [];
