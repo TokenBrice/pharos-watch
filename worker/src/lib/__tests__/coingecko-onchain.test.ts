@@ -1,0 +1,134 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../fetch-retry", () => ({
+  fetchWithRetry: vi.fn(),
+}));
+
+vi.mock("../abort", () => ({
+  sleepWithSignal: vi.fn(async () => undefined),
+}));
+
+import { RATE_LIMITS } from "../rate-limits";
+import { sleepWithSignal } from "../abort";
+import { fetchWithRetry } from "../fetch-retry";
+import {
+  fetchCgTokenPools,
+  fetchCgTokensBatch,
+  initOnchainAvailability,
+  isOnchainAvailable,
+  onchainRateLimit,
+  parseCgPoolVolume,
+} from "../coingecko-onchain";
+
+describe("coingecko-onchain", () => {
+  afterEach(() => {
+    initOnchainAvailability(undefined);
+    vi.restoreAllMocks();
+    vi.clearAllMocks();
+  });
+
+  it("tracks API-key availability and rate-limits only after the first request", async () => {
+    initOnchainAvailability("cg-key");
+    expect(isOnchainAvailable()).toBe(true);
+    initOnchainAvailability(undefined);
+    expect(isOnchainAvailable()).toBe(false);
+
+    const signal = new AbortController().signal;
+    await onchainRateLimit(0, signal);
+    expect(sleepWithSignal).not.toHaveBeenCalled();
+
+    await onchainRateLimit(2, signal);
+    expect(sleepWithSignal).toHaveBeenCalledWith(RATE_LIMITS.COINGECKO_ONCHAIN_MS, signal);
+  });
+
+  it("fetches token pools and handles non-array or non-ok responses", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [{ id: "pool-1" }] }), { status: 200 }),
+    );
+
+    const pools = await fetchCgTokenPools("eth", "0xabc");
+    expect(pools).toEqual([{ id: "pool-1" }]);
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      expect.stringContaining("/onchain/networks/eth/tokens/0xabc/pools?include=base_token,quote_token&page=1"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Accept: "application/json",
+          "User-Agent": "Pharos/1.0 (stablecoin analytics)",
+        }),
+      }),
+      1,
+    );
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: { bad: true } }), { status: 200 }),
+    );
+    expect(await fetchCgTokenPools("eth", "0xdef")).toEqual([]);
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 500 }));
+    expect(await fetchCgTokenPools("eth", "0xghi")).toEqual([]);
+  });
+
+  it("fetches token batches, short-circuits empty input, and handles failures", async () => {
+    expect(await fetchCgTokensBatch("base", [])).toEqual([]);
+    expect(fetchWithRetry).not.toHaveBeenCalled();
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [{ id: "token-1" }] }), { status: 200 }),
+    );
+    expect(await fetchCgTokensBatch("base", ["0xa", "0xb"])).toEqual([{ id: "token-1" }]);
+    expect(fetchWithRetry).toHaveBeenCalledWith(
+      expect.stringContaining("/onchain/networks/base/tokens/multi/0xa,0xb"),
+      expect.any(Object),
+      1,
+    );
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 404 }));
+    expect(await fetchCgTokensBatch("base", ["0xc"])).toEqual([]);
+  });
+
+  it("parses pool volume from flat, nested, and invalid payloads", () => {
+    expect(
+      parseCgPoolVolume({
+        address: "0x1",
+        name: "Pool",
+        pool_created_at: null,
+        base_token_price_usd: null,
+        quote_token_price_usd: null,
+        reserve_in_usd: null,
+        h24_volume_usd: "123.45",
+        pool_fee_percentage: null,
+        locked_liquidity_percentage: null,
+      }),
+    ).toBe(123.45);
+
+    expect(
+      parseCgPoolVolume({
+        address: "0x2",
+        name: "Pool",
+        pool_created_at: null,
+        base_token_price_usd: null,
+        quote_token_price_usd: null,
+        reserve_in_usd: null,
+        h24_volume_usd: null,
+        pool_fee_percentage: null,
+        locked_liquidity_percentage: null,
+        volume_usd: { h24: "77" },
+      }),
+    ).toBe(77);
+
+    expect(
+      parseCgPoolVolume({
+        address: "0x3",
+        name: "Pool",
+        pool_created_at: null,
+        base_token_price_usd: null,
+        quote_token_price_usd: null,
+        reserve_in_usd: null,
+        h24_volume_usd: "bad",
+        pool_fee_percentage: null,
+        locked_liquidity_percentage: null,
+        volume_usd: { h24: "0" },
+      }),
+    ).toBe(0);
+  });
+});

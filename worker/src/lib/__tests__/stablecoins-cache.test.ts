@@ -19,6 +19,32 @@ function makeDbWithStablecoinsValue(value: string | null): D1Database {
 }
 
 describe("loadStablecoinsCache", () => {
+  it("returns strict error when cache is missing", async () => {
+    const db = makeDbWithStablecoinsValue(null);
+
+    const result = await loadStablecoinsCache(db, { mode: "strict" });
+
+    expect(result).toEqual({
+      ok: false,
+      reason: "missing-cache",
+      payload: { peggedAssets: [] },
+      updatedAt: null,
+    });
+  });
+
+  it("returns lenient warning when cache is missing", async () => {
+    const db = makeDbWithStablecoinsValue(null);
+
+    const result = await loadStablecoinsCache(db, { mode: "lenient" });
+
+    expect(result).toEqual({
+      ok: true,
+      warningReason: "missing-cache",
+      payload: { peggedAssets: [] },
+      updatedAt: null,
+    });
+  });
+
   it("returns strict error on malformed JSON", async () => {
     const db = makeDbWithStablecoinsValue("{invalid-json");
 
@@ -54,6 +80,23 @@ describe("loadStablecoinsCache", () => {
     }
   });
 
+  it("returns invalid-payload-shape for scalar payloads", async () => {
+    const db = makeDbWithStablecoinsValue("123");
+
+    const strict = await loadStablecoinsCache(db, { mode: "strict" });
+    expect(strict.ok).toBe(false);
+    if (!strict.ok) {
+      expect(strict.reason).toBe("invalid-payload-shape");
+    }
+
+    const lenient = await loadStablecoinsCache(db, { mode: "lenient" });
+    expect(lenient.ok).toBe(true);
+    if (lenient.ok) {
+      expect(lenient.warningReason).toBe("invalid-payload-shape");
+      expect(lenient.payload).toEqual({ peggedAssets: [] });
+    }
+  });
+
   it("supports legacy array shape fallback when enabled", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
@@ -80,6 +123,22 @@ describe("loadStablecoinsCache", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.reason).toBe("legacy-array-not-allowed");
+    }
+  });
+
+  it("filters FX fallback rates down to finite numeric values", async () => {
+    const db = makeDbWithStablecoinsValue(
+      JSON.stringify({
+        peggedAssets: [{ id: "usdt-tether", symbol: "USDT" }],
+        fxFallbackRates: { EUR: 1.09, JPY: "bad", CHF: Infinity, GBP: 1.27 },
+      }),
+    );
+
+    const result = await loadStablecoinsCache(db, { mode: "strict" });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.payload.fxFallbackRates).toEqual({ EUR: 1.09, GBP: 1.27 });
     }
   });
 });

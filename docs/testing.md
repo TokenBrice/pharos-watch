@@ -10,6 +10,7 @@ The project uses **Vitest** for unit tests and **ESLint** (via `eslint-config-ne
 npm test              # Run all tests once (CI mode)
 npm run test:watch    # Watch mode — re-runs on file changes
 npm run lint          # ESLint across frontend + worker code
+npm run seo:check     # Static SEO audit against built `out/` HTML
 npm run check:worker-boundary # Enforce worker/src import boundary (no src/lib/* imports)
 npm run check:migrations # Replay worker D1 migrations against a throwaway SQLite DB
 npm run lint -- --fix # Auto-fix fixable warnings (stale directives, etc.)
@@ -55,6 +56,8 @@ For deployment/worktree operating procedure (including the local merge gate befo
 This ordering prevents a frontend deploy if the newly deployed worker fails critical endpoint smoke checks, then runs a fast post-deploy browser sanity check on the live site.
 
 `npm run check:migrations` replays every file in `worker/migrations/` against a throwaway SQLite database before deploy. It uses Node's built-in `node:sqlite` module on Node 22+ and falls back to the `sqlite3` CLI when needed, which catches schema typos in unapplied D1 migrations before `deploy-worker` touches production.
+
+`npm run seo:check` is the static-export SEO gate. It inspects the built `out/` HTML for missing title/description/canonical/OpenGraph/Twitter tags, duplicate or missing `h1`s on indexable pages, CSR bailout markers, sitemap omissions, orphan pages, and indexable routes that are more than three clicks away from `/`.
 
 ## Test Setup
 
@@ -190,6 +193,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `api-endpoints.test.ts` | `shared/lib/api-endpoints.ts` | Endpoint registry invariants: probe groups, status actions, cache/method flags |
 | `strict-path-drift.test.ts` | `shared/lib/strict-contract-paths.ts` + `scripts/smoke-api.mjs` | Strict contract paths stay aligned with smoke assertion coverage (`shared/lib/strict-contract-paths.json`) |
 | `stablecoin-detail-derive.test.ts` | `src/lib/stablecoin-detail-derive.ts` | Stablecoin detail pure derivations: supply fallback, deviation guards, 90d reference tolerance, peg-reference fallback |
+| `severity-colors.test.ts` | `src/lib/severity-colors.ts` | Deviation threshold classes/icons/hex mapping, score-tier thresholds, peg/durability color helpers |
 
 ### Frontend Component Tests (`src/__tests__/`)
 
@@ -227,7 +231,11 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `safety-scores.test.ts` | `worker/src/lib/safety-scores.ts` | Shared safety score snapshot helper parity modes (`map` vs `full-grades`) |
 | `report-cards-snapshot.test.ts` | `worker/src/lib/report-cards-snapshot.ts` | Shared report-card snapshot parity with `/api/report-cards` and cache-unavailable behavior |
 | `peg-analytics.test.ts` | `worker/src/lib/peg-analytics.ts` | Shared peg analytics derivation (`eventsByCoin`, `pegDataById`) |
-| `stablecoins-cache.test.ts` | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient cache loading, malformed payloads, legacy array compatibility |
+| `stablecoins-cache.test.ts` | `worker/src/lib/stablecoins-cache.ts` | Strict/lenient cache loading, missing cache behavior, malformed payloads, legacy array compatibility, FX fallback-rate filtering |
+| `abort.test.ts` | `worker/src/lib/abort.ts` | Abort reason normalization, `throwIfAborted`, timed sleep resolution, abort-driven sleep rejection |
+| `coingecko-onchain.test.ts` | `worker/src/lib/coingecko-onchain.ts` | API-key availability flag, request pacing, token/pool fetch response handling, volume parsing |
+| `twitter.test.ts` | `worker/src/lib/twitter.ts` | Digest tweet text building, first-mention cashtag injection, truncation, OAuth posting/error handling |
+| `status-reliability.test.ts` | `worker/src/lib/status-reliability.ts` | Hysteresis transitions, state snapshot staleness, transition listing, probe persistence, discrepancy streak/alert state |
 | `cron-leases.test.ts` | `worker/src/lib/db.ts` | `acquireCronLease`, `renewCronLease`, `releaseCronLease`, `runCronWithLease` |
 | `mint-burn-pipeline.test.ts` | `worker/src/lib/mint-burn-pipeline/*` | Shared ingestion helpers: inserted/ignored accounting, burn counters, affected-hour aggregation, sync-state upsert modes |
 
@@ -287,6 +295,11 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for RUB/UAH/ARS |
 | `sync-yield-data.test.ts` | `sync-yield-data.ts` | Yield ranking sync, validation guard, fallback behavior and ranking parity |
 | `dex-liquidity-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | `parsePoolSymbols`, `classifyPoolType`, `getQualityMultiplier` |
+| `dex-liquidity-pool-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | Composite symbol parsing, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
+| `dex-liquidity-process-pools.test.ts` | `dex-liquidity/process-pools.ts` | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation |
+| `dex-liquidity-scoring.test.ts` | `dex-liquidity/scoring.ts` | Pool filtering/scaling, per-coin/global aggregate recomputation, depth-stability persistence, DEX price median persistence |
+| `confirm-pending-depegs.test.ts` | `confirm-pending-depegs.ts` | Pending depeg state-machine decisions, secondary confirmation paths, missing dex table handling, abort propagation |
+| `dex-liquidity-persistence.test.ts` | `dex-liquidity/persistence.ts` | Current-score upserts, zero-score placeholders, global sentinel row, daily snapshot reconciliation/no-op behavior |
 | `sync-mint-burn.test.ts` | `sync-mint-burn.ts` | Incremental event ingestion, burn classification, degraded-mode and sync-state advancement behavior |
 
 ## Conventions
