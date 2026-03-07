@@ -12,6 +12,11 @@ Analytics dashboard tracking 148 stablecoins (+2 shadow assets for PSI). Static 
 - **Verify before done**: Prove it works — build, type-check, test. Never claim done without evidence.
 - **Be autonomous**: Fix bugs end-to-end without hand-holding. Chase logs and errors yourself.
 
+## Folder Structure
+
+All agents plans (design or implementation), as well as research and processes documents are placed in the `/agents/` folder.
+**`/docs/` is to be used for application-related documentation only**
+
 ## Tech Stack
 
 Next.js 16 (static export), React 19, TypeScript strict, Tailwind CSS v4, shadcn/ui, TanStack Query, Recharts, Cloudflare Workers + D1.
