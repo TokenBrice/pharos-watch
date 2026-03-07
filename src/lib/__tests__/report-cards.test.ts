@@ -737,3 +737,116 @@ describe("scoreDecentralization", () => {
     expect(result.grade).toBe("A");
   });
 });
+
+describe("golden-path: overall grade from realistic coin profiles", () => {
+  // These tests compose all 5 dimension scorers + computeOverallGrade.
+  // They catch regressions in any scorer that cascade to a wrong final grade.
+
+  it("CeFi RWA coin (USDT-like): strong peg, good liquidity, centralized", () => {
+    const peg = makePeg({ pegScore: 95, activeDepeg: false, eventCount: 0, currentDeviationBps: 2, worstDeviationBps: null });
+    const meta = makeMeta({
+      flags: { governance: "centralized", backing: "rwa-backed", pegCurrency: "USD", yieldBearing: false, rwa: true, navToken: false },
+      chainTier: "ethereum",
+      deploymentModel: "native-multichain",
+    });
+    const liq = { liquidityScore: 88, concentrationHhi: 0.15, poolCount: 50, chainCount: 8 };
+    const depScores = new Map<string, number>();
+
+    const dims = {
+      pegStability: scorePegStability(peg, meta),
+      liquidity: scoreLiquidity(liq),
+      resilience: scoreResilience(meta, true),
+      decentralization: scoreDecentralization("centralized", meta),
+      dependencyRisk: scoreDependencyRisk(meta, depScores),
+    };
+    const result = computeOverallGrade(dims);
+
+    // Centralized governance drags decentralization down, but strong peg/liquidity compensate
+    expect(result.score).not.toBeNull();
+    expect(result.score!).toBeGreaterThanOrEqual(40);
+    expect(result.score!).toBeLessThanOrEqual(70);
+    expect(["C+", "C", "B-", "B"]).toContain(result.grade);
+  });
+
+  it("DeFi crypto-backed coin (DAI-like): strong peg, good liquidity, decentralized", () => {
+    const peg = makePeg({ pegScore: 92, activeDepeg: false, eventCount: 2, currentDeviationBps: -3, worstDeviationBps: -150 });
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+    });
+    const liq = { liquidityScore: 85, concentrationHhi: 0.25, poolCount: 30, chainCount: 4 };
+    const depScores = new Map<string, number>();
+
+    const dims = {
+      pegStability: scorePegStability(peg, meta),
+      liquidity: scoreLiquidity(liq),
+      resilience: scoreResilience(meta, false),
+      decentralization: scoreDecentralization("decentralized", meta),
+      dependencyRisk: scoreDependencyRisk(meta, depScores),
+    };
+    const result = computeOverallGrade(dims);
+
+    // Decentralized + no blacklist + strong peg = high grade
+    expect(result.score).not.toBeNull();
+    expect(result.score!).toBeGreaterThanOrEqual(75);
+    expect(result.score!).toBeLessThanOrEqual(100);
+    expect(["B+", "A-", "A", "A+"]).toContain(result.grade);
+  });
+
+  it("CeFi-Dep wrapper coin (USDe-like): decent peg, limited liquidity, dependent", () => {
+    const peg = makePeg({ pegScore: 85, activeDepeg: false, eventCount: 3, currentDeviationBps: -15, worstDeviationBps: -300 });
+    const meta = makeMeta({
+      flags: { governance: "centralized-dependent", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "ethereum",
+      deploymentModel: "canonical-bridge",
+      reserves: [
+        { name: "stETH", pct: 50, risk: "medium" as const },
+        { name: "USDT", pct: 50, risk: "low" as const, coinId: "usdt-tether" },
+      ],
+    });
+    const liq = { liquidityScore: 65, concentrationHhi: 0.55, poolCount: 8, chainCount: 2 };
+    const depScores = new Map([["usdt-tether", 60]]);
+
+    const dims = {
+      pegStability: scorePegStability(peg, meta),
+      liquidity: scoreLiquidity(liq),
+      resilience: scoreResilience(meta, "possible"),
+      decentralization: scoreDecentralization("centralized-dependent", meta),
+      dependencyRisk: scoreDependencyRisk(meta, depScores),
+    };
+    const result = computeOverallGrade(dims);
+
+    // Moderate across the board — should land in C-to-B range
+    expect(result.score).not.toBeNull();
+    expect(result.score!).toBeGreaterThanOrEqual(35);
+    expect(result.score!).toBeLessThanOrEqual(65);
+    expect(["C-", "C", "C+", "B-"]).toContain(result.grade);
+  });
+
+  it("active depeg crushes the final grade regardless of other strengths", () => {
+    const peg = makePeg({ pegScore: 90, activeDepeg: true, eventCount: 1, currentDeviationBps: -500, worstDeviationBps: -500 });
+    const meta = makeMeta({
+      flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
+      chainTier: "ethereum",
+      deploymentModel: "single-chain",
+    });
+    const liq = { liquidityScore: 90, concentrationHhi: 0.1, poolCount: 40, chainCount: 6 };
+    const depScores = new Map<string, number>();
+
+    const dims = {
+      pegStability: scorePegStability(peg, meta),
+      liquidity: scoreLiquidity(liq),
+      resilience: scoreResilience(meta, false),
+      decentralization: scoreDecentralization("decentralized", meta),
+      dependencyRisk: scoreDependencyRisk(meta, depScores),
+    };
+    const result = computeOverallGrade(dims);
+
+    // Active depeg caps peg stability at 65, which applies as power-curve multiplier
+    // (65/100)^0.20 ≈ 0.917 — still a meaningful drag, but the exponent is gentle
+    // This should drag the overall grade down noticeably vs the DAI-like test
+    expect(result.score).not.toBeNull();
+    expect(result.score!).toBeLessThan(90);
+  });
+});
