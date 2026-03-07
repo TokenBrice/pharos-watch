@@ -8,7 +8,6 @@ export interface UseTablePaginationOptions {
 }
 
 interface UseTablePaginationReturn<T> {
-  page: number;
   effectivePage: number;
   totalPages: number;
   paginatedRows: T[];
@@ -111,7 +110,6 @@ export function useTablePagination<T>(
   }, [effectivePage, totalPages, totalRows]);
 
   return {
-    page: effectivePage,
     effectivePage,
     totalPages,
     paginatedRows,
