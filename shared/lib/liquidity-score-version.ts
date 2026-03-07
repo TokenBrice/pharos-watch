@@ -1,32 +1,13 @@
-/** Canonical Liquidity Score methodology version (no "v" prefix). */
-export const LIQUIDITY_METHODOLOGY_VERSION = "3.2";
+import {
+  createMethodologyVersion,
+  toMethodologyVersionLabel,
+  type MethodologyChangelogEntry,
+} from "./methodology-version";
 
-/** Display-ready Liquidity Score methodology version (with "v" prefix). */
-export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = `v${LIQUIDITY_METHODOLOGY_VERSION}`;
-
-/** Public changelog route for Liquidity Score methodology version history. */
-export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = "/methodology/liquidity-score-changelog/";
-
-export interface LiquidityMethodologyChangelogEntry {
-  version: string;
-  title: string;
-  date: string; // YYYY-MM-DD
-  effectiveAt: number; // Unix seconds (UTC)
-  summary: string;
-  scoreImpact: readonly string[];
-  commits: readonly string[];
-  reconstructed: boolean;
-}
-
-/**
- * Reconstructed Liquidity Score methodology timeline from git commit history.
- *
- * Notes:
- * - Effective timestamps use commit timestamps (UTC) of methodology-impacting changes.
- * - Entries marked reconstructed=true were inferred from commit history because liquidity
- *   scoring did not ship with explicit methodology version tracking.
- */
-export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChangelogEntry[] = [
+const liquidity = createMethodologyVersion({
+  currentVersion: "3.2",
+  changelogPath: "/methodology/liquidity-score-changelog/",
+  changelog: [
   {
     version: "3.2",
     title: "Effective TVL symbol-fallback inflation fix",
@@ -34,7 +15,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1772449220,
     summary:
       "Corrected effective TVL inflation when symbol fallback matched non-Curve pools to Curve entries.",
-    scoreImpact: [
+    impact: [
       "Metapool-adjusted TVL now applies only to address-matched Curve pools",
       "Symbol-fallback pools keep their own TVL in effective TVL calculations",
       "Removes accidental score inflation from cross-pool symbol collisions",
@@ -49,7 +30,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1772316807,
     summary:
       "Introduced fingerprint-based deduplication and DeFiLlama-anchored cap logic to suppress inflated secondary-source TVLs.",
-    scoreImpact: [
+    impact: [
       "CG/GT/DS pools deduped against DeFiLlama using token-pair fingerprints",
       "Secondary-source pool TVL capped and proportionally scaled by protocol-level DeFiLlama ceilings",
       "Global protocol and chain TVL totals kept consistent after cap reductions",
@@ -64,7 +45,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1772274138,
     summary:
       "Expanded zero-pool recovery with DexScreener and CoinGecko tickers fallbacks for orderbook-heavy assets.",
-    scoreImpact: [
+    impact: [
       "DexScreener fallback adds pools for tracked coins still missing after primary crawl",
       "CoinGecko tickers fallback synthesizes orderbook liquidity where AMM coverage is absent",
       "Reduces false zero-liquidity outcomes for long-tail and niche assets",
@@ -79,7 +60,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1772209768,
     summary:
       "Coins without DEX pools switched from score=0 placeholders to NULL (NR) semantics.",
-    scoreImpact: [
+    impact: [
       "No-liquidity rows now persist liquidity_score as NULL instead of 0",
       "Daily history placeholders for no-pool coins also use NULL scores",
       "Downstream consumers can distinguish not-rated from genuinely low-liquidity assets",
@@ -94,7 +75,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1772035489,
     summary:
       "Primary pool discovery moved to CoinGecko Onchain with locked-liquidity data integrated into durability scoring.",
-    scoreImpact: [
+    impact: [
       "CG Onchain became primary source (with GT fallback) for richer pool metadata",
       "Durability weights changed from 40/25/20/15 to 35/25/20/15/5",
       "Locked liquidity added as an explicit durability sub-component",
@@ -109,7 +90,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1771499167,
     summary:
       "Moved from a five-component heuristic to a six-component model with effective TVL and durability decomposition.",
-    scoreImpact: [
+    impact: [
       "Weights changed from 35/25/20/10/10 to 30/20/20/15/7.5/7.5",
       "TVL depth switched to effective TVL, not raw TVL only",
       "Durability and per-component score breakdown persisted in D1",
@@ -124,7 +105,7 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     effectiveAt: 1771488526,
     summary:
       "Launched baseline DEX liquidity scoring, API surface, and dashboard integration.",
-    scoreImpact: [
+    impact: [
       "Initial five-component composite (TVL depth, volume, pool quality, diversity, cross-chain)",
       "DeFiLlama-driven pool aggregation and top-pool persistence introduced",
       "Liquidity map endpoint and page-level leaderboard shipped",
@@ -132,27 +113,25 @@ export const LIQUIDITY_METHODOLOGY_CHANGELOG: readonly LiquidityMethodologyChang
     commits: ["a7ae273", "443ac1b", "f26fdf3"],
     reconstructed: true,
   },
-] as const;
+  ],
+});
 
-const LIQUIDITY_VERSION_WINDOWS_ASC = [...LIQUIDITY_METHODOLOGY_CHANGELOG]
-  .map((entry) => ({ version: entry.version, effectiveAt: entry.effectiveAt }))
-  .sort((a, b) => a.effectiveAt - b.effectiveAt);
+/** Canonical Liquidity Score methodology version (no "v" prefix). */
+export const LIQUIDITY_METHODOLOGY_VERSION = liquidity.currentVersion;
+
+/** Display-ready Liquidity Score methodology version (with "v" prefix). */
+export const LIQUIDITY_METHODOLOGY_VERSION_LABEL = liquidity.versionLabel;
+
+/** Public changelog route for Liquidity Score methodology history. */
+export const LIQUIDITY_METHODOLOGY_CHANGELOG_PATH = liquidity.changelogPath;
+
+/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
+export type LiquidityMethodologyChangelogEntry = MethodologyChangelogEntry;
+
+/** Reconstructed changelog data. */
+export const LIQUIDITY_METHODOLOGY_CHANGELOG = liquidity.changelog;
 
 /** Resolve Liquidity Score methodology version active at a given Unix timestamp (seconds). */
-export function getLiquidityMethodologyVersionAt(unixSeconds: number): string {
-  if (!Number.isFinite(unixSeconds)) return LIQUIDITY_METHODOLOGY_VERSION;
+export const getLiquidityMethodologyVersionAt = liquidity.getVersionAt;
 
-  let resolved = LIQUIDITY_VERSION_WINDOWS_ASC[0]?.version ?? LIQUIDITY_METHODOLOGY_VERSION;
-  for (const window of LIQUIDITY_VERSION_WINDOWS_ASC) {
-    if (unixSeconds >= window.effectiveAt) {
-      resolved = window.version;
-    } else {
-      break;
-    }
-  }
-  return resolved;
-}
-
-export function toLiquidityMethodologyVersionLabel(version: string): string {
-  return `v${version}`;
-}
+export const toLiquidityMethodologyVersionLabel = toMethodologyVersionLabel;

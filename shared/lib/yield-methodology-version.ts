@@ -1,32 +1,13 @@
-/** Canonical Yield Intelligence methodology version (no "v" prefix). */
-export const YIELD_METHODOLOGY_VERSION = "4.1";
+import {
+  createMethodologyVersion,
+  toMethodologyVersionLabel,
+  type MethodologyChangelogEntry,
+} from "./methodology-version";
 
-/** Display-ready Yield Intelligence methodology version (with "v" prefix). */
-export const YIELD_METHODOLOGY_VERSION_LABEL = `v${YIELD_METHODOLOGY_VERSION}`;
-
-/** Public changelog route for Yield Intelligence methodology history. */
-export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";
-
-export interface YieldMethodologyChangelogEntry {
-  version: string;
-  title: string;
-  date: string; // YYYY-MM-DD
-  effectiveAt: number; // Unix seconds (UTC)
-  summary: string;
-  methodologyImpact: readonly string[];
-  commits: readonly string[];
-  reconstructed: boolean;
-}
-
-/**
- * Reconstructed Yield Intelligence methodology timeline from git commit history.
- *
- * Notes:
- * - Effective timestamps use commit timestamps (UTC) of methodology-impacting changes.
- * - Entries marked reconstructed=true were inferred from commit history because Yield
- *   Intelligence did not ship with explicit version tags/changelog boundaries from day one.
- */
-export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntry[] = [
+const yieldMethodology = createMethodologyVersion({
+  currentVersion: "4.1",
+  changelogPath: "/methodology/yield-changelog/",
+  changelog: [
   {
     version: "4.1",
     title: "Conservative LUSD Stability Pool source",
@@ -34,7 +15,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772884800,
     summary:
       "LUSD gained a deterministic B.Protocol / Liquity Stability Pool source that estimates only the LQTY incentive stream and labels that limitation explicitly.",
-    methodologyImpact: [
+    impact: [
       "Added direct on-chain LUSD source using Liquity Stability Pool deposits and CommunityIssuance totals",
       "APR converts projected LQTY emissions to USD using CoinGecko spot price and excludes ETH liquidation gains by design",
       "LUSD can now surface both B.Protocol Stability Pool and auto-discovered lending alternatives in the same ranking payload",
@@ -49,7 +30,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772559178,
     summary:
       "Yield rankings moved from single-source rows to per-source modeling, so each coin can expose both native and wrapper yield paths.",
-    methodologyImpact: [
+    impact: [
       "yield_data primary key changed to (stablecoin_id, source_key) with per-source rows",
       "is_best now marks the highest-APY source per coin; non-best alternatives are retained",
       "Tier 2 matching aggregates all valid sources (native map, wrapper map, symbol fallback)",
@@ -65,7 +46,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772529534,
     summary:
       "Auto-discovered lending coverage expanded with stricter quality gates, deterministic overrides, and contract-address fallback matching for symbol drift.",
-    methodologyImpact: [
+    impact: [
       "Auto-discovery added minimum APY/TVL filters and expanded protocol allowlist coverage",
       "Deterministic pool overrides introduced for hard-to-match symbols (including explicit safety bypass handling)",
       "findBestLendingPool now falls back to underlying token address matches when symbol matching fails",
@@ -81,7 +62,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772459422,
     summary:
       "Yield sync safety scoring switched to shared blacklistability logic (including reserve inheritance), improving parity with report-card safety behavior.",
-    methodologyImpact: [
+    impact: [
       "Resilience inputs in inline safety computation now use shared isBlacklistable() logic",
       "Risk penalties in PYS better reflect inherited blacklist exposure",
       "Reduced divergence between yield-page safety grades and safety-scores page outputs",
@@ -96,7 +77,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772386997,
     summary:
       "Post-launch hardening pass improved reliability of discovered yield rows and prevented non-finite volatility values from polluting persisted rankings.",
-    methodologyImpact: [
+    impact: [
       "NAV tokens were included in inline safety scoring instead of defaulting to implicit NR behavior",
       "Yield sync now reuses cached DeFiLlama pools from DEX sync to reduce upstream fetch failures",
       "Non-finite 30-day APY volatility values are sanitized before D1 writes",
@@ -111,7 +92,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772380525,
     summary:
       "Yield Intelligence expanded beyond explicitly yield-bearing tokens by automatically discovering best lending pools for safer non-yield-bearing coins.",
-    methodologyImpact: [
+    impact: [
       "Added allowlist-based auto-discovery pass over DeFiLlama lending pools",
       "Eligibility gated by safety score threshold before pool selection",
       "Introduced defillama-auto source type and lending-opportunity yield classification",
@@ -126,7 +107,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772380127,
     summary:
       "Yield rows gained warning-signal state for anomaly detection, while deterministic pool coverage expanded with fxUSD native yield mapping.",
-    methodologyImpact: [
+    impact: [
       "warning_signals persistence added with spike/divergence/trend/reward/TVL-outflow checks",
       "Signal detection now uses market-median APY and prior TVL context per coin",
       "Tier-2 deterministic source map added explicit fxUSD Stability Pool coverage",
@@ -141,7 +122,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772378501,
     summary:
       "Wave-1 expanded native/wrapper mappings and tightened core PYS stability math to avoid edge-case distortion.",
-    methodologyImpact: [
+    impact: [
       "Added wave-1 variant/pool mappings for additional native-yield stablecoins",
       "Near-zero mean handling in stability/variance math prevents coefficient-of-variation blowups",
       "Safety fallback and finite-value guards were formalized for ranking writes",
@@ -156,7 +137,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772375700,
     summary:
       "Early launch audit corrected APY window semantics and cleaned up yield stability presentation/lookup behavior.",
-    methodologyImpact: [
+    impact: [
       "7-day APY switched to timestamp-window filtering instead of proportional sample slicing",
       "Tier-1 previous exchange-rate reads were reused from cached lookup state",
       "Yield stability display normalized as a true 0-100 percentage in UI components",
@@ -171,7 +152,7 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     effectiveAt: 1772370812,
     summary:
       "Launched Yield Intelligence schema, cron computation pipeline, API surface, and dashboard integration.",
-    methodologyImpact: [
+    impact: [
       "Introduced three-tier APY resolution (on-chain rate, DeFiLlama pool, NAV price-derived fallback)",
       "Launched PYS model (risk penalty + variance sustainability multiplier + scaling factor)",
       "Added yield_data/yield_history tables and public yield-rankings/yield-history API handlers",
@@ -179,27 +160,25 @@ export const YIELD_METHODOLOGY_CHANGELOG: readonly YieldMethodologyChangelogEntr
     commits: ["0709a1d", "569664e", "22695dc", "81ba632", "0e7b8b3"],
     reconstructed: true,
   },
-] as const;
+  ],
+});
 
-const YIELD_VERSION_WINDOWS_ASC = [...YIELD_METHODOLOGY_CHANGELOG]
-  .map((entry) => ({ version: entry.version, effectiveAt: entry.effectiveAt }))
-  .sort((a, b) => a.effectiveAt - b.effectiveAt);
+/** Canonical Yield Intelligence methodology version (no "v" prefix). */
+export const YIELD_METHODOLOGY_VERSION = yieldMethodology.currentVersion;
+
+/** Display-ready Yield Intelligence methodology version (with "v" prefix). */
+export const YIELD_METHODOLOGY_VERSION_LABEL = yieldMethodology.versionLabel;
+
+/** Public changelog route for Yield Intelligence methodology history. */
+export const YIELD_METHODOLOGY_CHANGELOG_PATH = yieldMethodology.changelogPath;
+
+/** Re-export MethodologyChangelogEntry as the domain-specific type for backward compat. */
+export type YieldMethodologyChangelogEntry = MethodologyChangelogEntry;
+
+/** Reconstructed changelog data. */
+export const YIELD_METHODOLOGY_CHANGELOG = yieldMethodology.changelog;
 
 /** Resolve Yield Intelligence methodology version active at a given Unix timestamp (seconds). */
-export function getYieldMethodologyVersionAt(unixSeconds: number): string {
-  if (!Number.isFinite(unixSeconds)) return YIELD_METHODOLOGY_VERSION;
+export const getYieldMethodologyVersionAt = yieldMethodology.getVersionAt;
 
-  let resolved = YIELD_VERSION_WINDOWS_ASC[0]?.version ?? YIELD_METHODOLOGY_VERSION;
-  for (const window of YIELD_VERSION_WINDOWS_ASC) {
-    if (unixSeconds >= window.effectiveAt) {
-      resolved = window.version;
-    } else {
-      break;
-    }
-  }
-  return resolved;
-}
-
-export function toYieldMethodologyVersionLabel(version: string): string {
-  return `v${version}`;
-}
+export const toYieldMethodologyVersionLabel = toMethodologyVersionLabel;

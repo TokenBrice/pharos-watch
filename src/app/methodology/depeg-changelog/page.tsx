@@ -18,7 +18,7 @@ const route = createMethodologyChangelogRoute({
   ),
   accentClass: "border-l-amber-500",
   entries: DEPEG_DEWS_METHODOLOGY_CHANGELOG,
-  selectImpact: (entry) => entry.methodologyImpact,
+  selectImpact: (entry) => entry.impact,
 });
 
 export const metadata = route.metadata;

@@ -18,7 +18,7 @@ const route = createMethodologyChangelogRoute({
   ),
   accentClass: "border-l-orange-500",
   entries: MINT_BURN_FLOW_METHODOLOGY_CHANGELOG,
-  selectImpact: (entry) => entry.methodologyImpact,
+  selectImpact: (entry) => entry.impact,
 });
 
 export const metadata = route.metadata;

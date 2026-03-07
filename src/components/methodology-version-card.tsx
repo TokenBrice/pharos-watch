@@ -1,12 +1,6 @@
-export interface MethodologyChangelogEntry {
-  version: string;
-  title: string;
-  date: string;
-  summary: string;
-  impact: readonly string[];
-  commits: readonly string[];
-  reconstructed: boolean;
-}
+import { type MethodologyChangelogEntry } from "@shared/lib/methodology-version";
+
+export type { MethodologyChangelogEntry };
 
 function Pill({ children }: { children: React.ReactNode }) {
   return (
