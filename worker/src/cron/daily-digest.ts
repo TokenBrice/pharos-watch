@@ -124,7 +124,7 @@ interface DigestMeta {
 
 function buildUserPrompt(
   data: DigestInputData,
-  recentDigests: string[] = [],
+  _recentDigests: string[] = [],
   recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = [],
 ): string {
   const regime = classifyRegime(data);
