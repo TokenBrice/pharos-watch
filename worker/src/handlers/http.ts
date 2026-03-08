@@ -142,8 +142,9 @@ export async function handleHttpRequest(
     );
   }
 
-  // Store in edge cache without CORS headers (CORS added per-request)
-  if (!skipCache) {
+  // Store in edge cache without CORS headers (CORS added per-request).
+  // Only cache successful responses to avoid poisoning the edge with 404/5xx.
+  if (!skipCache && response.ok) {
     ctx.waitUntil(cache.put(cacheKey, response.clone()));
   }
 
