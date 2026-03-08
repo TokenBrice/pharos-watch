@@ -93,7 +93,7 @@ export function CardFrame({
       </div>
 
       {/* Content — spread children to fill available space */}
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-evenly" }}>
         {children}
       </div>
     </div>
