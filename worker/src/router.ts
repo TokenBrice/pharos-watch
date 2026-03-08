@@ -45,6 +45,7 @@ import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 
 import { resolveOrReject, withErrorHandler, errorResponse } from "./lib/api-utils";
+import { handleOg } from "./api/og";
 
 interface RouteContext {
   url: URL;
@@ -314,6 +315,11 @@ export function route(
     ctx,
   );
   if (detailResult) return detailResult;
+
+  // OG image generation (dynamic paths under /api/og/)
+  if (path.startsWith("/api/og/")) {
+    return handleOg(db, path).then((r) => r ?? errorResponse(404, "Unknown OG route"));
+  }
 
   return null;
 }

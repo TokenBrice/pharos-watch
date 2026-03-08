@@ -420,6 +420,7 @@ const ENDPOINT_DEFINITION_BY_PATH = new Map<string, EndpointDefinition>(
 
 const STABLECOIN_DETAIL_PATH_PATTERN = /^\/api\/stablecoin\/[^/]+$/;
 const STABLECOIN_SUMMARY_PATH_PATTERN = /^\/api\/stablecoin-summary\/[^/]+$/;
+const OG_IMAGE_PATH_PATTERN = /^\/api\/og\//;
 const GET_ONLY_METHODS = ["GET"] as const satisfies readonly EndpointMethod[];
 const POST_ONLY_METHODS = ["POST"] as const satisfies readonly EndpointMethod[];
 const GET_AND_POST_METHODS = ["GET", "POST"] as const satisfies readonly EndpointMethod[];
@@ -466,6 +467,9 @@ export function getAllowedEndpointMethods(url: URL): readonly EndpointMethod[] |
     return GET_ONLY_METHODS;
   }
   if (STABLECOIN_SUMMARY_PATH_PATTERN.test(url.pathname)) {
+    return GET_ONLY_METHODS;
+  }
+  if (OG_IMAGE_PATH_PATTERN.test(url.pathname)) {
     return GET_ONLY_METHODS;
   }
 

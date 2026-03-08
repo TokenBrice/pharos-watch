@@ -6,6 +6,10 @@ compatibility_date = "2025-01-01"
 type = "Data"
 globs = ["**/*.ttf"]
 
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true }
 ]
