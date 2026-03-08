@@ -10,9 +10,10 @@ import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStressSignals } from "@/hooks/use-stress-signals";
+import { useCountUp } from "@/hooks/use-count-up";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { formatCurrency, formatScore, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 
@@ -37,6 +38,16 @@ function trendTextClass(value: number): string {
 
 function formatSignedCompactCurrency(value: number, decimals = 1): string {
   return `${getNetPrefix(value)}${formatCurrency(value, decimals)}`;
+}
+
+/** Decompose a large number into an abbreviated value + suffix (e.g., 234.5B → { short: 234.5, suffix: "B" }). */
+function abbreviate(value: number): { short: number; suffix: string } {
+  const abs = Math.abs(value);
+  if (abs >= 1e12) return { short: value / 1e12, suffix: "T" };
+  if (abs >= 1e9) return { short: value / 1e9, suffix: "B" };
+  if (abs >= 1e6) return { short: value / 1e6, suffix: "M" };
+  if (abs >= 1e3) return { short: value / 1e3, suffix: "K" };
+  return { short: value, suffix: "" };
 }
 
 function TrendChip({ label, value, direction }: { label: string; value: string; direction: TrendDirection }) {
@@ -308,7 +319,6 @@ export function KpiBar() {
 
   const psiCurrent = psiData?.current;
   const psiScoreNum = psiCurrent ? (psiCurrent.avg24h ?? psiCurrent.score) : null;
-  const psiScore = psiScoreNum !== null ? formatScore(psiScoreNum) : "—";
   const psiBand = psiCurrent ? (psiCurrent.avg24hBand ?? psiCurrent.band) : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;
@@ -316,9 +326,7 @@ export function KpiBar() {
   const hasDexData = !!dexData;
   const summary = pegData?.summary;
   const hasSummary = !!summary;
-  const psiScoreDisplay = hasPsiData ? psiScore : "—";
   const psiBandDisplay = hasPsiData ? psiBand : "";
-  const mcapDisplay = hasStablecoinsData ? formatCurrency(totalMcap, 1) : "—";
   const mcapChange24Display = hasStablecoinsData
     ? `${mcapChange24hPct >= 0 ? "+" : ""}${mcapChange24hPct.toFixed(2)}%`
     : "—";
@@ -373,6 +381,17 @@ export function KpiBar() {
     }
     return { danger, alert, warning };
   }, [stressData]);
+
+  /* ---------- count-up animations (hooks must be called unconditionally) ---------- */
+  const mcapAbbr = abbreviate(totalMcap);
+  const animatedPsi = useCountUp(psiScoreNum ?? 0, { decimals: 1 });
+  const animatedMcap = useCountUp(mcapAbbr.short, {
+    decimals: 1,
+    prefix: "$",
+    suffix: mcapAbbr.suffix,
+  });
+  const psiScoreDisplay = hasPsiData ? animatedPsi : "—";
+  const mcapDisplay = hasStablecoinsData ? animatedMcap : "—";
 
   const isLoading = psiLoading || stablecoinsLoading || pegLoading || dexLoading;
 
