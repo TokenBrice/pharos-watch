@@ -2,6 +2,7 @@ import type { CronResult } from "../lib/db";
 import { sendAlert } from "../lib/alerts";
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { evaluateStatusAndPersist } from "../api/status";
+import { route } from "../router";
 import {
   buildDiscrepancy,
   markProbeFailureAlertSent,
@@ -12,6 +13,7 @@ import {
   writeStatusProbeRun,
   type StatusLevel,
 } from "../lib/status-reliability";
+import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 
 interface ProbeResult {
   path: string;
@@ -61,7 +63,19 @@ function resolveProbeBaseUrl(selfUrl?: string): URL {
   }
 }
 
-async function probePath(
+function shouldUseInternalProbe(probeBaseUrl: URL, ctx?: ExecutionContext): boolean {
+  return !!ctx && probeBaseUrl.origin === DEFAULT_SELF_URL;
+}
+
+async function cancelResponseBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Non-blocking: some runtimes may expose already-consumed or non-cancelable bodies.
+  }
+}
+
+async function probePathExternally(
   path: string,
   probeBaseUrl: URL,
   adminKey: string | undefined,
@@ -94,6 +108,7 @@ async function probePath(
       signal: timeoutController.signal,
     });
     const status = res.status;
+    await cancelResponseBody(res);
     return {
       path,
       status,
@@ -114,17 +129,81 @@ async function probePath(
   }
 }
 
+async function probePathInternally(
+  db: D1Database,
+  path: string,
+  probeBaseUrl: URL,
+  adminKey: string | undefined,
+  ctx: ExecutionContext,
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
+): Promise<ProbeResult> {
+  const startedAt = Date.now();
+  try {
+    const url = new URL(path, probeBaseUrl);
+    const headers = new Headers();
+    if (ADMIN_PROBE_PATHS.includes(path) && adminKey) {
+      headers.set("X-Admin-Key", adminKey);
+    }
+
+    const request = new Request(url.toString(), {
+      method: "GET",
+      headers,
+    });
+    const response = await route(
+      url,
+      db,
+      ctx,
+      request,
+      adminKey,
+      undefined,
+      mintBurnFreshnessConfig,
+    );
+    if (!response) {
+      return {
+        path,
+        status: 404,
+        latencyMs: Math.max(0, Date.now() - startedAt),
+        ok: false,
+        error: "route-not-found",
+      };
+    }
+    const status = response.status;
+    await cancelResponseBody(response);
+    return {
+      path,
+      status,
+      latencyMs: Math.max(0, Date.now() - startedAt),
+      ok: status >= 200 && status < 300,
+    };
+  } catch (error) {
+    return {
+      path,
+      status: 0,
+      latencyMs: Math.max(0, Date.now() - startedAt),
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export async function runStatusSelfCheck(
   db: D1Database,
   adminKey?: string,
   selfUrl?: string,
   signal?: AbortSignal,
+  ctx?: ExecutionContext,
+  mintBurnFreshnessConfig?: MintBurnFreshnessConfig,
 ): Promise<CronResult> {
   const probeBaseUrl = resolveProbeBaseUrl(selfUrl);
+  const probeMode = shouldUseInternalProbe(probeBaseUrl, ctx) ? "internal-router" : "external-http";
   const probes: ProbeResult[] = [];
   for (const path of CRITICAL_PROBE_PATHS) {
     if (signal?.aborted) break;
-    probes.push(await probePath(path, probeBaseUrl, adminKey, signal));
+    probes.push(
+      probeMode === "internal-router" && ctx
+        ? await probePathInternally(db, path, probeBaseUrl, adminKey, ctx, mintBurnFreshnessConfig)
+        : await probePathExternally(path, probeBaseUrl, adminKey, signal)
+    );
   }
   const now = Math.floor(Date.now() / 1000);
 
@@ -241,6 +320,7 @@ export async function runStatusSelfCheck(
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
       probeBaseUrl: probeBaseUrl.origin,
+      probeMode,
       probeFailureStreak: discrepancyState.consecutiveProbeFailures,
       alertAttempted: shouldDiscrepancyAlert,
       alertSent: discrepancyAlertSent,

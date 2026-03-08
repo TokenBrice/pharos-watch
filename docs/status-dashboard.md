@@ -136,7 +136,9 @@ Additional response fields:
 
 `status-self-check` runs on `*/15 * * * *` and:
 
-1. Probes critical public/admin read endpoints over real HTTPS via `fetch()` against `SELF_URL` (fallback: `https://api.pharos.watch`), with a 10s timeout per endpoint.
+1. Probes critical public/admin read endpoints using a hybrid strategy:
+   - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
+   - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.

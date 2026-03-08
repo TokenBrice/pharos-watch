@@ -154,7 +154,17 @@ export async function handleScheduledEvent(
         }
 
         // Status system self-check: persists hysteresis state and probes critical endpoints.
-        await runQuarterHourlyJob("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, env.SELF_URL, signal));
+        await runQuarterHourlyJob(
+          "status-self-check",
+          (signal) => runStatusSelfCheck(
+            db,
+            env.ADMIN_KEY,
+            env.SELF_URL,
+            signal,
+            ctx,
+            mintBurnFreshnessConfig,
+          ),
+        );
 
         // Telegram alert dispatch — must run LAST, after sync-stablecoins + compute-dews
         if (env.TELEGRAM_BOT_TOKEN) {

@@ -38,7 +38,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 |---------|------|----------|---------|
 | `DB` | D1Database | Yes | All crons and API handlers |
 | `CORS_ORIGIN` | string | Yes | CORS headers (`https://pharos.watch`) |
-| `SELF_URL` | string | No | Status self-check probe base URL (defaults to `https://api.pharos.watch`) |
+| `SELF_URL` | string | No | Status self-check external probe base URL; the default production origin (`https://api.pharos.watch`) is router-probed internally to avoid custom-domain self-fetch `522`s |
 | `ETHERSCAN_API_KEY` | string | No | Blacklist sync, USDS status |
 | `TRONGRID_API_KEY` | string | No | Blacklist sync (Tron chain) |
 | `DRPC_API_KEY` | string | No | L2 archive node balance lookups |
@@ -231,7 +231,7 @@ crons = [
 | `sync-blacklist` | `syncBlacklist()` | `worker/src/cron/sync-blacklist.ts` | `docs/blacklist-tracker.md` |
 | `sync-mint-burn` | `syncMintBurn()` | `worker/src/cron/sync-mint-burn.ts` | This doc (below) |
 
-**Provider split + independent controls:** `sync-blacklist` uses Etherscan/TronGrid/dRPC and receives a shared Etherscan `createRateLimiter(4)` to stay below free-tier caps. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker.
+**Provider split + independent controls:** `sync-blacklist` uses Etherscan for supported chains, chain RPC log scans (Alchemy/public fallback) for Base/Optimism/Avalanche/BSC where Etherscan free-tier `getLogs` is unavailable, dRPC for historical L2 balance reads, and TronGrid for Tron. `sync-mint-burn` uses Alchemy JSON-RPC and is governed by its own request budget plus the Alchemy circuit breaker.
 
 ### Trigger 3: `10,40 * * * *` (every 30 minutes, at :10/:40)
 
@@ -656,6 +656,6 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/cron/sync-usds-status.ts` | USDS freeze monitor: ERC-1967 proxy inspection |
 | `worker/src/cron/sync-bluechip.ts` | Bluechip ratings: batch fetch from bluechip.org |
 | `worker/src/cron/snapshot-safety-grade-history.ts` | Daily Safety Score grade history snapshot writer (seed + grade-change events) |
-| `worker/src/cron/status-self-check.ts` | Status reliability self-check: real HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting |
+| `worker/src/cron/status-self-check.ts` | Status reliability self-check: default-origin internal router probes, external `SELF_URL` HTTP probes, hysteresis persistence, discrepancy + probe-failure alerting |
 | `worker/src/lib/status-reliability.ts` | Status state machine + transition/probe/discrepancy persistence helpers |
 | `worker/migrations/0001_initial.sql` | `cache`, `blacklist_events`, `blacklist_sync_state` tables |

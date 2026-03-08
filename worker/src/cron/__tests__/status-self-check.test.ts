@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMock = vi.fn(async () => new Response("{}", { status: 200 }));
+const routeMock = vi.fn(async () => new Response("{}", { status: 200 }));
 const sendAlertMock = vi.fn(async () => true);
 const writeStatusProbeRunMock = vi.fn(async () => {});
 const updateDiscrepancyObservationMock = vi.fn(async () => ({
@@ -31,6 +32,9 @@ vi.mock("../../lib/alerts", () => ({ sendAlert: sendAlertMock }));
 vi.mock("../../api/status", () => ({
   evaluateStatusAndPersist: evaluateStatusAndPersistMock,
 }));
+vi.mock("../../router", () => ({
+  route: routeMock,
+}));
 vi.mock("../../lib/status-reliability", () => ({
   buildDiscrepancy: buildDiscrepancyMock,
   markDiscrepancyAlertSent: markDiscrepancyAlertSentMock,
@@ -59,6 +63,7 @@ describe("runStatusSelfCheck", () => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", fetchMock);
     fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    routeMock.mockResolvedValue(new Response("{}", { status: 200 }));
     buildDiscrepancyMock.mockImplementation(
       (_status: unknown, _probe: unknown, _now: number, streak: number) => ({
         hasDivergence: true,
@@ -143,5 +148,26 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.probeFailureAlertSent).toBe(true);
     expect(metadata.probeFailureStreak).toBe(3);
     expect(metadata.probeBaseUrl).toBe("https://staging.api.pharos.watch");
+  });
+
+  it("uses internal router probes for the default production origin when execution context is available", async () => {
+    const ctx = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    } as unknown as ExecutionContext;
+
+    const result = await runStatusSelfCheck(
+      {} as D1Database,
+      "secret",
+      "https://api.pharos.watch",
+      undefined,
+      ctx,
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(routeMock).toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(metadata.probeMode).toBe("internal-router");
+    expect(metadata.probeBaseUrl).toBe("https://api.pharos.watch");
   });
 });

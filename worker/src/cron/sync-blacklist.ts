@@ -19,11 +19,19 @@ import {
   fetchEvmLogsForTopic,
   getEvmBlockNumber,
 } from "../lib/evm-logs";
+import {
+  fetchAlchemyLogs,
+  getAlchemyBlockNumber,
+  resolveBlockTimestamps,
+  type AlchemyLogEntry,
+} from "../lib/alchemy-logs";
+import { getChainRpc } from "../lib/chain-registry";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
+const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc"]);
 
 type SyncBlacklistResult = {
   itemCount: number;
@@ -69,6 +77,10 @@ function buildExplorerAddressUrl(chain: ChainConfig, address: string): string {
 }
 
 // --- Chain head (current block number) imported from evm-logs.ts ---
+
+function shouldPreferRpcLogScan(chainId: string): boolean {
+  return RPC_LOG_SCAN_CHAIN_IDS.has(chainId);
+}
 
 // --- Balance fetching ---
 
@@ -224,11 +236,19 @@ interface BlacklistRow {
   explorer_address_url: string;
 }
 
+type EvmLogLike = Pick<
+  EtherscanLogEntry,
+  "address" | "topics" | "data" | "blockNumber" | "transactionHash" | "logIndex"
+> & {
+  timeStamp?: string;
+};
+
 function parseEvmLogs(
   config: ContractEventConfig,
   eventType: BlacklistEventType,
   hasAmount: boolean,
-  logs: EtherscanLogEntry[]
+  logs: EvmLogLike[],
+  blockTimestamps?: Map<number, number>,
 ): BlacklistRow[] {
   return logs.map((log) => {
     const addressIndexed = log.topics.length > 1;
@@ -245,7 +265,9 @@ function parseEvmLogs(
       : null;
 
     const blockNumber = parseInt(log.blockNumber, 16);
-    const timestamp = parseInt(log.timeStamp, 16);
+    const timestamp = log.timeStamp
+      ? parseInt(log.timeStamp, 16)
+      : (blockTimestamps?.get(blockNumber) ?? Number.NaN);
     if (isNaN(blockNumber) || isNaN(timestamp)) return null;
     const methodologyVersion = getBlacklistTrackerMethodologyVersionAt(timestamp);
 
@@ -267,6 +289,28 @@ function parseEvmLogs(
   }).filter((r): r is NonNullable<typeof r> => r !== null) as BlacklistRow[];
 }
 
+async function resolveRpcLogTarget(
+  chainId: string,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+): Promise<{ rpcUrl: string; chainHead: number } | null> {
+  const rpc = getChainRpc(chainId);
+  if (!rpc || rpc.type !== "evm") return null;
+
+  const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter(
+    (url): url is string => typeof url === "string" && url.length > 0,
+  );
+
+  for (const rpcUrl of rpcUrls) {
+    const chainHead = await getAlchemyBlockNumber(rpcUrl, budget, signal);
+    if (chainHead != null) {
+      return { rpcUrl, chainHead };
+    }
+  }
+
+  return null;
+}
+
 async function fetchEvmEventsIncremental(
   config: ContractEventConfig,
   apiKey: string | null,
@@ -274,36 +318,110 @@ async function fetchEvmEventsIncremental(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<{ rows: BlacklistRow[]; maxBlock: number; apiError: boolean }> {
+): Promise<{ rows: BlacklistRow[]; maxBlock: number; apiError: boolean; chainHead: number | null; usedRpcLogs: boolean }> {
   const evmChainId = config.chain.evmChainId;
-  if (evmChainId == null) return { rows: [], maxBlock: fromBlock, apiError: false };
+  if (evmChainId == null) {
+    return { rows: [], maxBlock: fromBlock, apiError: false, chainHead: null, usedRpcLogs: false };
+  }
 
   const allRows: BlacklistRow[] = [];
   let maxBlock = fromBlock;
   let apiError = false;
+  let chainHead: number | null = null;
+  let usedRpcLogs = false;
+  const blockTimestampCache = new Map<number, number>();
+  let rpcTargetPromise: Promise<{ rpcUrl: string; chainHead: number } | null> | null = null;
+  const getRpcTarget = (): Promise<{ rpcUrl: string; chainHead: number } | null> => {
+    rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, budget, signal);
+    return rpcTargetPromise;
+  };
 
   for (const eventDef of config.events) {
     if (budgetExhausted(budget)) break;
 
-    const logs = await fetchEvmLogsForTopic(
-      evmChainId,
-      config.contractAddress,
-      eventDef.topicHash,
-      apiKey,
-      fromBlock,
-      99999999,
-      0,
-      rateLimit,
-      budget,
-      signal,
-    );
+    let rows: BlacklistRow[] = [];
+    let fetched = false;
+    let sourceHadGap = false;
+    const preferRpcLogs = shouldPreferRpcLogScan(config.chain.chainId);
 
-    if (logs === null) {
-      apiError = true;
-      continue;  // Skip this event type but try others
+    if (!preferRpcLogs) {
+      const logs = await fetchEvmLogsForTopic(
+        evmChainId,
+        config.contractAddress,
+        eventDef.topicHash,
+        apiKey,
+        fromBlock,
+        99999999,
+        0,
+        rateLimit,
+        budget,
+        signal,
+      );
+
+      if (logs !== null) {
+        rows = parseEvmLogs(config, eventDef.eventType, eventDef.hasAmount, logs);
+        fetched = true;
+      }
     }
 
-    const rows = parseEvmLogs(config, eventDef.eventType, eventDef.hasAmount, logs);
+    if (!fetched) {
+      const rpcTarget = await getRpcTarget();
+      if (rpcTarget) {
+        chainHead = rpcTarget.chainHead;
+        usedRpcLogs = true;
+
+        const fetchedLogs =
+          fromBlock > rpcTarget.chainHead
+            ? { logs: [], complete: true }
+            : await fetchAlchemyLogs(
+                rpcTarget.rpcUrl,
+                config.contractAddress,
+                [{ index: 0, value: eventDef.topicHash }],
+                fromBlock,
+                rpcTarget.chainHead,
+                budget,
+                signal,
+              );
+
+        if (fetchedLogs) {
+          const uniqueBlocks = [
+            ...new Set(
+              fetchedLogs.logs
+                .map((log) => parseInt(log.blockNumber, 16))
+                .filter((block) => Number.isFinite(block)),
+            ),
+          ];
+          const blockTimestamps = uniqueBlocks.length > 0
+            ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, budget, {
+                signal,
+                localCache: blockTimestampCache,
+              })
+            : new Map<number, number>();
+
+          rows = parseEvmLogs(
+            config,
+            eventDef.eventType,
+            eventDef.hasAmount,
+            fetchedLogs.logs as Array<AlchemyLogEntry>,
+            blockTimestamps,
+          );
+          fetched = true;
+          sourceHadGap =
+            !fetchedLogs.complete ||
+            (uniqueBlocks.length > 0 && blockTimestamps.size < uniqueBlocks.length);
+        }
+      }
+    }
+
+    if (!fetched) {
+      apiError = true;
+      continue;
+    }
+
+    if (sourceHadGap) {
+      apiError = true;
+    }
+
     allRows.push(...rows);
 
     for (const row of rows) {
@@ -311,7 +429,7 @@ async function fetchEvmEventsIncremental(
     }
   }
 
-  return { rows: allRows, maxBlock, apiError };
+  return { rows: allRows, maxBlock, apiError, chainHead, usedRpcLogs };
 }
 
 // --- Tron fetching ---
@@ -619,6 +737,7 @@ export async function syncBlacklist(
   let totalNewEvents = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
+  let rpcLogConfigs = 0;
   const apiErrorClasses: Record<string, number> = {};
 
   const configStates = await Promise.all(
@@ -653,7 +772,7 @@ export async function syncBlacklist(
     }
 
     try {
-      let result: { rows: BlacklistRow[]; maxBlock: number; apiError?: boolean };
+      let result: { rows: BlacklistRow[]; maxBlock: number; apiError?: boolean; chainHead?: number | null; usedRpcLogs?: boolean };
 
       if (config.chain.type === "tron") {
         result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget, signal);
@@ -675,6 +794,9 @@ export async function syncBlacklist(
         const wasReset = lastBlock >= EVM_SCANNED_TO_LATEST;
         const fromBlock = wasReset ? 0 : lastBlock > 0 ? lastBlock + 1 : 0;
         result = await fetchEvmEventsIncremental(config, etherscanApiKey, fromBlock, etherscanLimiter, budget, signal);
+        if (result.usedRpcLogs) {
+          rpcLogConfigs++;
+        }
 
         await enrichRowBalances(
           result.rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
@@ -693,7 +815,7 @@ export async function syncBlacklist(
           // Genuine no events — advance sync state toward chain head, but leave a safety
           // margin to avoid permanently skipping events that the explorer hasn't indexed yet.
           if (!chainHeadCache.has(evmChainId)) {
-            const head = await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget, signal);
+            const head = result.chainHead ?? await getEvmBlockNumber(evmChainId, etherscanApiKey, etherscanLimiter, budget, signal);
             if (head) chainHeadCache.set(evmChainId, head);
           }
           const head = chainHeadCache.get(evmChainId);
@@ -730,6 +852,7 @@ export async function syncBlacklist(
     metadata: JSON.stringify({
       contractsSkipped,
       apiErrors,
+      rpcLogConfigs,
       apiErrorClasses,
       budgetUsed: budget.count,
       budgetLimit: budget.limit,

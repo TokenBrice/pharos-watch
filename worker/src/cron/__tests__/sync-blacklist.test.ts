@@ -28,6 +28,26 @@ vi.mock("../../lib/blacklist-contracts", () => ({
     },
     {
       chain: {
+        chainId: "base",
+        chainName: "Base",
+        evmChainId: 8453,
+        explorerUrl: "https://basescan.org",
+        type: "evm",
+      },
+      stablecoin: "USDC",
+      contractAddress: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      decimals: 6,
+      events: [
+        {
+          signature: "Blacklisted(address)",
+          topicHash: "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
+          eventType: "blacklist",
+          hasAmount: false,
+        },
+      ],
+    },
+    {
+      chain: {
         chainId: "tron",
         chainName: "Tron",
         evmChainId: null,
@@ -49,6 +69,12 @@ vi.mock("../../lib/blacklist-contracts", () => ({
   ],
 }));
 
+vi.mock("../../lib/alchemy-logs", () => ({
+  fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, calls: 1, maxDepth: 0 })),
+  getAlchemyBlockNumber: vi.fn(async () => 20000000),
+  resolveBlockTimestamps: vi.fn(async () => new Map()),
+}));
+
 // Stub evm-logs — heavy EVM interaction primitives
 vi.mock("../../lib/evm-logs", () => ({
   createBudget: vi.fn((limit = 900) => ({ count: 0, limit })),
@@ -59,6 +85,20 @@ vi.mock("../../lib/evm-logs", () => ({
   getEvmBlockNumber: vi.fn(async () => 20000000),
   fetchEvmLogsForTopic: vi.fn(async () => []),
   fetchEvmLogsForTopics: vi.fn(async () => []),
+}));
+
+vi.mock("../../lib/chain-registry", () => ({
+  getChainRpc: vi.fn((chainId: string) =>
+    chainId === "base"
+      ? {
+          chainId: "base",
+          chainName: "Base",
+          type: "evm",
+          rpcUrl: "https://base-rpc.example",
+          explorerUrl: "https://basescan.org",
+        }
+      : undefined
+  ),
 }));
 
 // Stub bigint helper
@@ -88,6 +128,12 @@ vi.mock("@shared/lib/chains", () => ({
 import { syncBlacklist } from "../sync-blacklist";
 import { fetchEvmLogsForTopic, getEvmBlockNumber } from "../../lib/evm-logs";
 import { getLastBlock, setLastBlock, batchExecute } from "../../lib/db";
+import {
+  fetchAlchemyLogs,
+  getAlchemyBlockNumber,
+  resolveBlockTimestamps,
+} from "../../lib/alchemy-logs";
+import { getChainRpc } from "../../lib/chain-registry";
 
 // --- Helpers ---
 
@@ -108,6 +154,20 @@ describe("syncBlacklist", () => {
     vi.mocked(batchExecute).mockResolvedValue(0);
     vi.mocked(fetchEvmLogsForTopic).mockResolvedValue([]);
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
+    vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20000000);
+    vi.mocked(resolveBlockTimestamps).mockResolvedValue(new Map());
+    vi.mocked(getChainRpc).mockImplementation((chainId: string) =>
+      chainId === "base"
+        ? {
+            chainId: "base",
+            chainName: "Base",
+            type: "evm",
+            rpcUrl: "https://base-rpc.example",
+            explorerUrl: "https://basescan.org",
+          }
+        : undefined
+    );
   });
 
   afterEach(() => {
@@ -261,5 +321,49 @@ describe("syncBlacklist", () => {
 
     // setLastBlock should be called for both configs (EVM advances to chain head - safety margin)
     expect(setLastBlock).toHaveBeenCalled();
+  });
+
+  it("falls back to RPC log scans for paid-only Etherscan chains", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [
+        {
+          address: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          topics: [
+            "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
+            "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
+          ],
+          data: "0x",
+          blockNumber: "0x1312d00",
+          transactionHash: "0xbase123",
+          transactionIndex: "0x0",
+          blockHash: "0xblockhash",
+          logIndex: "0x0",
+          removed: false,
+        },
+      ],
+      complete: true,
+      calls: 1,
+      maxDepth: 0,
+    });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    );
+
+    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
+
+    expect(result.itemCount).toBe(1);
+    const meta = JSON.parse(result.metadata);
+    expect(meta.apiErrors).toBe(0);
+    expect(meta.rpcLogConfigs).toBeGreaterThanOrEqual(1);
   });
 });

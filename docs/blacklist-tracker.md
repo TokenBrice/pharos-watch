@@ -11,7 +11,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 - **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
 - **Function:** `syncBlacklist(db, etherscanApiKey, trongridApiKey, drpcApiKey)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
-- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, apiErrorClasses, budgetUsed, budgetLimit } }`
+- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit } }`
 
 ---
 
@@ -20,9 +20,18 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 ### Etherscan v2 API
 
 - **Base URL:** `https://api.etherscan.io/v2/api`
-- Supports all EVM chains via `chainid` parameter
+- Primary source for Ethereum, Arbitrum, and Polygon blacklist log scans
 - Max 1000 logs per request (recursive splitting if exceeded, max depth 8)
-- Free plan: `eth_call` + `getLogs` work on all chains; `tokenbalance` fails on L2s
+- Free plan caveats:
+  - historical `eth_call` is unreliable on L2s (we use dRPC for L2 balance lookups)
+  - `getLogs` is not available on Base, Optimism, Avalanche, or BSC without a paid plan
+
+### Chain RPC Log Scans
+
+- Source: `getChainRpc()` from `worker/src/lib/chain-registry.ts`
+- Base, Optimism, Avalanche, and BSC prefer chain RPC `eth_getLogs` scans because Etherscan free-tier coverage is not available
+- Production uses Alchemy primaries when `ALCHEMY_API_KEY` is configured, otherwise public RPC URLs from the chain registry
+- Used for both chain-head discovery and log scans; timestamps are resolved via `eth_getBlockByNumber`
 
 ### dRPC Archive Nodes (L2-specific)
 
@@ -238,7 +247,7 @@ CREATE TABLE blacklist_sync_state (
    - Fetches historical balances via RPC or API
 
 2. **Incremental scan** (per contract config)
-   - EVM: fetch logs from `lastBlock + 1` to latest via Etherscan `getLogs`
+   - EVM: fetch logs from `lastBlock + 1` to latest via Etherscan `getLogs` or chain RPC `eth_getLogs`
    - Tron: fetch events from `lastTimestamp` via TronGrid `/contracts/{addr}/events`
    - Parse events into `BlacklistRow` objects
 
@@ -251,7 +260,7 @@ CREATE TABLE blacklist_sync_state (
    - `INSERT OR IGNORE` enriched rows into `blacklist_events`
 
 4. **Sync state advancement**
-   - EVM: advance to max block of fetched events, or to chain head minus safety margin if no events
+   - EVM: advance to max block of fetched events, or to the active source's chain head minus safety margin if no events
    - Tron: advance to max timestamp, or to `now - TRON_SAFETY_MS` if no events
 
 ### Safety Margins
@@ -397,11 +406,12 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 
 ## Environment Variables
 
-| Variable            | Type   | Required | Description                                  |
-| ------------------- | ------ | -------- | -------------------------------------------- |
-| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key (all EVM chains)        |
-| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)  |
-| `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups |
+| Variable            | Type   | Required | Description                                                   |
+| ------------------- | ------ | -------- | ------------------------------------------------------------- |
+| `ETHERSCAN_API_KEY` | Secret | Yes      | Etherscan v2 API key for supported-chain log scans + L1 calls |
+| `TRONGRID_API_KEY`  | Secret | No       | TronGrid Pro API key (improves rate limits)                   |
+| `DRPC_API_KEY`      | Secret | No       | dRPC key for L2 archive node balance lookups                  |
+| `ALCHEMY_API_KEY`   | Secret | No       | Preferred chain RPC source for Base/Optimism/Avalanche/BSC log scans |
 
 ---
 
@@ -414,9 +424,10 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 5. **PAXG FrozenAddressWiped** has no amount in the event -- must fetch via `balanceOf` at `blockNumber - 1`.
 6. **XAUT uses USDT0 event pattern** (was mistakenly using legacy pattern until 2026-02-11 fix).
 7. **L2 Etherscan free plan** cannot do historical `eth_call` -- use dRPC or accept "latest" fallback.
-8. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
-9. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
-10. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
+8. **Etherscan free-tier `getLogs`** is not available on Base, Optimism, Avalanche, or BSC -- those chains use chain RPC log scans instead.
+9. **EVM sentinel bug (fixed):** storing `99999999` as `last_block` could cause permanent scan stall.
+10. **Budget limit (900 subrequests)** is shared across ALL configs + backfill per cron cycle.
+11. **Circle actions can hit USDC + EURC together** -- expect matching addresses across both tickers, and many EURC rows may show zero balance at blacklist time.
 
 ---
 

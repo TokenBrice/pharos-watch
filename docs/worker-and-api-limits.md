@@ -114,19 +114,19 @@ Primary source for TVL, supply data, and protocol metadata. No documented hard r
 
 ## Etherscan V2
 
-Used for blacklist event fetching and on-chain balance lookups. Mint/burn flows have been migrated to Alchemy.
+Used for supported-chain blacklist log fetching and Ethereum L1 on-chain balance lookups. Mint/burn flows have been migrated to Alchemy.
 
 | Resource | Limit |
 |---|---|
 | **Requests/second** | 5 req/s |
 | **Requests/day** | 100,000 |
-| **Chains available on free tier** | Multi-chain via `chainid` parameter (coverage can change by plan/account) |
+| **Chains available on free tier** | Multi-chain via `chainid` parameter, but Base/BNB/Avalanche/Optimism log access requires a paid plan |
 | **L2 historical `eth_call` via Etherscan free** | Limited / unreliable for several L2s (we use dRPC for L2 balance lookups) |
 | **V1 API** | Deprecated — disabled after May 31, 2025 |
 
 **Budget system in code**: `createBudget(900)` — the blacklist cron self-caps at 900 Etherscan subrequests per run (`worker/src/cron/sync-blacklist.ts`).
 
-> **Key constraint**: Blacklist sync is hard-capped to 900 Etherscan subrequests/run. Historical L2 balance lookups are routed through dRPC archive RPC instead of Etherscan `eth_call`.
+> **Key constraint**: Blacklist sync is hard-capped to 900 Etherscan subrequests/run. Historical L2 balance lookups are routed through dRPC archive RPC instead of Etherscan `eth_call`, and Base/BNB/Avalanche/Optimism log scans must use chain RPC (`eth_getLogs`) rather than Etherscan free-tier `getLogs`.
 
 ---
 
