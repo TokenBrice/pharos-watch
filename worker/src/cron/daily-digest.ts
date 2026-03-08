@@ -124,7 +124,6 @@ interface DigestMeta {
 
 function buildUserPrompt(
   data: DigestInputData,
-  _recentDigests: string[] = [],
   recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = [],
 ): string {
   const regime = classifyRegime(data);
@@ -203,14 +202,16 @@ function buildUserPrompt(
   if (data.mintBurnFlows) {
     const { gaugeScore, gaugeBand, flightToQuality, topPressure } = data.mintBurnFlows;
     lines.push("", "Mint/Burn Flows (24h on-chain):");
-    lines.push(`  Bank Run Gauge: ${gaugeScore} [${gaugeBand}]`);
+    lines.push(`  Bank Run Gauge: ${Math.round(gaugeScore * 10) / 10} [${gaugeBand}]`);
     if (flightToQuality.active) {
       lines.push(`  Flight-to-Quality: ACTIVE, ${formatCurrency(flightToQuality.safeNetUsd)} into safe havens, ${formatCurrency(flightToQuality.riskyNetUsd)} out of risky coins`);
+    } else {
+      lines.push("  Flight-to-Quality: inactive");
     }
     if (topPressure.length > 0) {
       lines.push("  Top pressure shifts vs 30d baseline:");
       for (const p of topPressure) {
-        lines.push(`    ${p.symbol}: ${p.intensity} (net ${formatCurrency(p.net24hUsd)} yesterday)`);
+        lines.push(`    ${p.symbol}: ${Math.round(p.intensity)} (net ${formatCurrency(p.net24hUsd)} yesterday)`);
       }
     }
   }
@@ -334,11 +335,6 @@ export async function generateDailyDigest(
   const recentRows = await db
     .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5")
     .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
-  const recentDigests = (recentRows.results ?? []).map((r) => {
-    const base = r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text;
-    return r.digest_extended ? `${base} ${r.digest_extended}` : base;
-  });
-
   const recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = (recentRows.results ?? []).map((r) => {
     let meta: DigestMeta | null = null;
     if (r.digest_meta) {
@@ -973,7 +969,7 @@ export async function generateDailyDigest(
     gradeTransitions,
   };
 
-  const userPromptContent = buildUserPrompt(inputData, recentDigests, recentMeta);
+  const userPromptContent = buildUserPrompt(inputData, recentMeta);
   console.log("[daily-digest] Calling Claude API with data:\n" + userPromptContent);
 
   // --- Call Claude API ---

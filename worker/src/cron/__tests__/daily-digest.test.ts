@@ -57,7 +57,6 @@ const ANTHROPIC_OK_RESPONSE = {
 function makeBaseTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
-  const _yesterdayTs = todayTs - 86_400;
   const weekAgoTs = todayTs - 7 * 86_400;
 
   return [
