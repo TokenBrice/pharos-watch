@@ -10,5 +10,9 @@
     "typescript": "^5",
     "wrangler": "^4",
     "zod": "^4.3.6"
+  },
+  "dependencies": {
+    "@resvg/resvg-wasm": "^2.6.2",
+    "satori": "^0.25.0"
   }
 }

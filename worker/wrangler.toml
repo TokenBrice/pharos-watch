@@ -2,6 +2,10 @@ name = "stablecoin-api"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+[[rules]]
+type = "Data"
+globs = ["**/*.ttf"]
+
 routes = [
   { pattern = "api.pharos.watch", custom_domain = true }
 ]
