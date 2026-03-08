@@ -32,7 +32,8 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => {}),
 }));
 
-import { generateDailyDigest } from "../daily-digest";
+import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import type { DigestInputData } from "@shared/types";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -56,7 +57,6 @@ const ANTHROPIC_OK_RESPONSE = {
 function makeBaseTables(): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
   const todayTs = nowSec - (nowSec % 86_400);
-  const yesterdayTs = todayTs - 86_400;
   const weekAgoTs = todayTs - 7 * 86_400;
 
   return [
@@ -66,7 +66,7 @@ function makeBaseTables(): MockTableConfig[] {
       first: null,
     },
     {
-      match: "SELECT digest_title, digest_text, digest_extended FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
+      match: "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
       rows: [],
     },
     {
@@ -219,7 +219,7 @@ describe("generateDailyDigest", () => {
         headers: expect.objectContaining({ "x-api-key": "anthropic-key" }),
       }),
       2,
-      { timeoutMs: 60_000 },
+      { timeoutMs: 120_000 },
     );
   });
 
@@ -284,6 +284,208 @@ describe("generateDailyDigest", () => {
     expect(fetchWithRetry).not.toHaveBeenCalled();
   });
 
+  it("includes mint-burn flow data in stored input when hourly data exists", async () => {
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // 24h aggregate — match on SUM(mint_volume_usd) which is unique to this query
+      {
+        match: "SUM(mint_volume_usd)",
+        rows: [
+          { stablecoin_id: "usdt-tether", mint_24h: 500_000_000, burn_24h: 300_000_000, net_24h: 200_000_000 },
+          { stablecoin_id: "usdc-circle", mint_24h: 100_000_000, burn_24h: 150_000_000, net_24h: -50_000_000 },
+        ],
+      },
+      // 30d baseline — match on "/ 30.0" which is unique to this query
+      {
+        match: "/ 30.0",
+        rows: [
+          { stablecoin_id: "usdt-tether", avg_daily_net: 50_000_000, avg_daily_abs: 200_000_000, data_days: 30 },
+          { stablecoin_id: "usdc-circle", avg_daily_net: -10_000_000, avg_daily_abs: 80_000_000, data_days: 25 },
+        ],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.mintBurnFlows).toBeDefined();
+    expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
+    expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
+    expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
+  });
+
+  it("includes DEWS stress data with band changes in stored input", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // Latest DEWS per coin
+      {
+        match: "FROM stress_signals",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 8, band: "CALM", signals_json: '{"supply":{"value":5,"available":true}}', computed_at: nowSec - 600 },
+          { stablecoin_id: "usdc-circle", score: 62, band: "ALERT", signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}', computed_at: nowSec - 600 },
+        ],
+      },
+      // Yesterday's snapshot
+      {
+        match: "FROM stress_signal_history WHERE snapshot_date = ?",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 10, band: "CALM" },
+          { stablecoin_id: "usdc-circle", score: 30, band: "WATCH" },
+        ],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.dewsStress).toBeDefined();
+    expect(storedInput.dewsStress.bandCounts.calm).toBeGreaterThanOrEqual(1);
+    // USDC went WATCH -> ALERT (crosses threshold)
+    expect(storedInput.dewsStress.bandChanges.length).toBeGreaterThanOrEqual(1);
+    expect(storedInput.dewsStress.bandChanges[0].symbol).toBe("USDC");
+    expect(storedInput.dewsStress.bandChanges[0].from).toBe("WATCH");
+    expect(storedInput.dewsStress.bandChanges[0].to).toBe("ALERT");
+  });
+
+  it("includes historical context with PSI precedent and band streak", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // PSI precedent: last time score was at/below current
+      {
+        match: "FROM stability_index WHERE score <= ?",
+        rows: [],
+        first: { computed_at: todayTs - 30 * 86_400, score: 89.0, band: "STEADY" },
+      },
+      // PSI band streak
+      {
+        match: "ORDER BY computed_at DESC LIMIT 90",
+        rows: [
+          { computed_at: todayTs, band: "BEDROCK" },
+          { computed_at: todayTs - 86_400, band: "BEDROCK" },
+          { computed_at: todayTs - 2 * 86_400, band: "BEDROCK" },
+          { computed_at: todayTs - 3 * 86_400, band: "STEADY" },
+        ],
+      },
+      // Supply mover ATH
+      {
+        match: "MAX(circulating_usd)",
+        rows: [],
+        first: { ath_mcap: 120_000_000 },
+      },
+      // Supply mover ATH date
+      {
+        match: "WHERE stablecoin_id = ? AND circulating_usd = ?",
+        rows: [],
+        first: { snapshot_date: todayTs - 60 * 86_400 },
+      },
+      // Supply mover largest weekly change
+      {
+        match: "ABS(s1.circulating_usd - s2.circulating_usd)",
+        rows: [],
+        first: { snapshot_date: todayTs - 45 * 86_400, abs_change: 8_000_000 },
+      },
+      // History depth check (>30 rows means >30 days)
+      {
+        match: "COUNT(*) as cnt FROM stability_index",
+        rows: [],
+        first: { cnt: 90 },
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.historicalContext).toBeDefined();
+    expect(storedInput.historicalContext.psiBandStreak).toBe(3);
+    expect(storedInput.historicalContext.psiPrecedent).toBeDefined();
+    expect(storedInput.historicalContext.psiPrecedent.lastSeenDaysAgo).toBe(30);
+  });
+
+  it("includes grade transitions and excludes methodology bumps", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // Methodology bump check (no bumps)
+      {
+        match: "HAVING COUNT(*) > 10",
+        rows: [],
+      },
+      // Grade transitions in last 48h
+      {
+        match: "FROM safety_grade_history WHERE recorded_at >= ?",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            recorded_at: todayTs,
+            grade: "A-",
+            score: 80,
+            prev_grade: "A",
+            prev_score: 85,
+          },
+        ],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.gradeTransitions).toBeDefined();
+    expect(storedInput.gradeTransitions.length).toBe(1);
+    expect(storedInput.gradeTransitions[0].symbol).toBe("USDT");
+    expect(storedInput.gradeTransitions[0].fromGrade).toBe("A");
+    expect(storedInput.gradeTransitions[0].toGrade).toBe("A-");
+  });
+
+  it("parses meta field from Claude response and stores in digest_meta", async () => {
+    const responseWithMeta = {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          title: "Alert Watch",
+          extended: "PSI dipped below 90.\n\nFRAX entered ALERT on pool drift.",
+          text: "FRAX hit ALERT while PSI slid to 88, the first STEADY reading in 47 days.",
+          meta: { lead: "dews-band-change", tone: "foreboding", coins: ["FRAX"] },
+        }),
+      }],
+    };
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify(responseWithMeta), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    // digest_meta should be the 6th bind (index 5)
+    const metaJson = insertBinds?.[5];
+    expect(metaJson).toBeDefined();
+    const meta = JSON.parse(String(metaJson));
+    expect(meta.lead).toBe("dews-band-change");
+    expect(meta.tone).toBe("foreboding");
+    expect(meta.coins).toEqual(["FRAX"]);
+  });
+
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
@@ -309,5 +511,50 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toContain("tweet: failed:");
     expect(result.metadata).toContain("telegram: failed:");
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
+  });
+});
+
+describe("classifyRegime", () => {
+  const baseData: DigestInputData = {
+    totalMcapUsd: 200_000_000_000,
+    mcap7dDelta: 1_000_000_000,
+    activeDepegCount: 0,
+    topDepegs: [],
+    biggestSupplyChange: null,
+    stabilityIndex: { score: 95, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } },
+    yesterdayIndex: null,
+  };
+
+  it("returns CALM when nothing is elevated", () => {
+    expect(classifyRegime(baseData)).toBe("CALM");
+  });
+
+  it("returns CRISIS when FTQ is active", () => {
+    expect(classifyRegime({
+      ...baseData,
+      mintBurnFlows: { gaugeScore: -20, gaugeBand: "CAUTIOUS", flightToQuality: { active: true, safeNetUsd: 200_000_000, riskyNetUsd: -200_000_000 }, topPressure: [] },
+    })).toBe("CRISIS");
+  });
+
+  it("returns CRISIS when PSI band is TREMOR", () => {
+    expect(classifyRegime({
+      ...baseData,
+      stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } },
+    })).toBe("CRISIS");
+  });
+
+  it("returns TENSION when 3+ coins ALERT+", () => {
+    expect(classifyRegime({
+      ...baseData,
+      dewsStress: {
+        bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
+        yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
+        bandChanges: [], elevatedCoins: [],
+      },
+    })).toBe("TENSION");
+  });
+
+  it("returns WATCHFUL when 1 active depeg", () => {
+    expect(classifyRegime({ ...baseData, activeDepegCount: 1 })).toBe("WATCHFUL");
   });
 });

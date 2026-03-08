@@ -20,6 +20,7 @@ Each digest has three fields produced by the LLM:
 | `title` | 2–6 word punchy headline | — |
 | `text` | Tweet-sized distillation of the day's key take | ≤270 chars combined with title |
 | `extended` | 1–3 sentences of sharp editorial analysis | No limit |
+| `meta` | Editorial choice metadata for variety enforcement | `{ lead, tone, coins }` |
 
 ---
 
@@ -32,7 +33,7 @@ Each digest has three fields produced by the LLM:
 
 ### Data collection
 
-The cron assembles a `DigestInputData` object from 8 sources before calling the LLM:
+The cron assembles a `DigestInputData` object from 12 sources before calling the LLM:
 
 | Category | Source | Key signals |
 |----------|--------|-------------|
@@ -43,19 +44,29 @@ The cron assembles a `DigestInputData` object from 8 sources before calling the 
 | Supply velocity | top 10 coins by mcap | 1d vs 7d changes; signals: "reversed", "accelerating", "decelerating" (threshold: 2.5× weekly avg OR direction reversal) |
 | Safety scores | computed real-time | Report card grades for mentioned coins + 2 "tension" coins (high peg score but low overall grade — structurally fragile despite stable peg) |
 | Resolved depegs | `depeg_events` (last 48h) | Filters: peak >200 bps AND mcap >$50M; top 3 by peak deviation |
+| Mint-burn flows | `mint_burn_hourly` | Bank Run Gauge (mcap-weighted composite), Flight-to-Quality (safe-haven vs risky net flows), top pressure coins (\|FIS\| > 20) |
+| DEWS stress | `stress_signals` + `stress_signal_history` | Band distribution (CALM/WATCH/ALERT/WARNING/DANGER), band changes crossing WATCH/ALERT boundary, elevated coins (ALERT+ with mcap >$10M) |
+| Historical context | `stability_index` + `supply_history` | PSI precedent (last time score was at/below current), band streak, supply mover ATH and largest historical weekly change |
+| Grade transitions | `safety_grade_history` | Report card grade changes (last 48h) with dimensional context; methodology re-grade guard (>10 simultaneous changes excluded) |
 | Recent digests | last 5 rows from `daily_digest` | Passed to LLM to enforce variety |
 
 `DigestInputData` is defined once in `shared/types/index.ts` and imported by the digest cron, digest snapshot API, and frontend snapshot hook.
+
+Four additional optional fields were added to `DigestInputData` in the v2 refinement: `mintBurnFlows`, `dewsStress`, `historicalContext`, and `gradeTransitions`. All are populated only when their source data exists — the LLM writes from what's available.
 
 Safety score computation is shared with the yield cron via `worker/src/lib/safety-scores.ts` (`computeSafetyScoresSnapshot()`), so grade lookups use one canonical scoring path.
 
 ### LLM call
 
-- **Model:** `claude-sonnet-4-6` via `https://api.anthropic.com/v1/messages`
+- **Model:** `claude-opus-4-6` via `https://api.anthropic.com/v1/messages`
+- **Timeout:** 120 seconds (Opus generates slower than Sonnet; the cron runs at 08:00 UTC with no downstream time pressure)
 - **Voice:** sardonic financial columnist — dry, precise, no emojis, no exclamation marks
-- **Priority rule:** rank everything by market impact (deviation × mcap); band transitions lead the headline
-- **Variety enforcement:** last 5 digests are included so the LLM avoids repeating phrasing or structure
-- **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "..." }` — no markdown fences
+- **Priority rule:** rank everything by market impact (deviation × mcap); enrichment priority varies by regime
+- **Regime classification:** a `classifyRegime()` function labels each day as CRISIS, TENSION, WATCHFUL, or CALM based on PSI band, active depegs, gauge score, FTQ status, and DEWS ALERT+ count
+- **Narrative structure:** regime-aware P1/P2/P3 paragraph structure; PSI is always referenced but doesn't have to open; max 3 data categories per digest
+- **Density contract:** 30–60 words per paragraph, 80–160 words total for the extended field
+- **Variety enforcement:** structured `meta` field (lead signal, tone, featured coins) from recent digests replaces raw text dump; falls back to raw text for pre-meta entries
+- **Output:** raw JSON `{ "title": "...", "extended": "...", "text": "...", "meta": { "lead": "...", "tone": "...", "coins": [...] } }` — no markdown fences
 
 ### Failure handling
 
@@ -74,6 +85,7 @@ CREATE TABLE daily_digest (
   digest_text  TEXT    NOT NULL,   -- tweet-sized text
   digest_title TEXT,               -- headline (added migration 0021)
   digest_extended TEXT,            -- longer editorial (added migration 0027)
+  digest_meta    TEXT,             -- editorial metadata (lead, tone, coins) for variety enforcement (added migration 0055)
   input_data   TEXT    NOT NULL    -- full DigestInputData JSON for reconstruction
 );
 
@@ -81,6 +93,8 @@ CREATE INDEX idx_daily_digest_generated_at ON daily_digest(generated_at);
 ```
 
 The full `input_data` JSON is stored verbatim so detail pages can reconstruct the contextual snapshot for any historical date without re-fetching live data.
+
+The `digest_meta` column stores structured metadata about editorial choices (lead signal, tone, featured coins) for variety enforcement across consecutive digests. Older rows with `NULL` `digest_meta` fall back to raw text comparison.
 
 ---
 
@@ -251,6 +265,7 @@ Without `ANTHROPIC_API_KEY`, generation is skipped entirely. Twitter and Telegra
 | `worker/migrations/0018_daily_digest.sql` | Initial `daily_digest` table |
 | `worker/migrations/0021_digest_title.sql` | Added `digest_title` column |
 | `worker/migrations/0027_digest_extended.sql` | Added `digest_extended` column |
+| `worker/migrations/0055_digest_meta.sql` | Added `digest_meta` column |
 | `src/components/daily-digest.tsx` | Broadsheet component (shared: homepage + archive page) |
 | `src/components/digest-archive-client.tsx` | Archive page: broadsheet + wire table with month picker |
 | `src/components/digest-snapshot.tsx` | Date-specific data cards (8 categories) |
