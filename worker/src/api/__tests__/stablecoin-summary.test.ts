@@ -47,6 +47,17 @@ describe("handleStablecoinSummary", () => {
     expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
   });
 
+  it("returns 503 when stablecoins cache payload is structurally invalid", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "cache", rows: [], first: { value: JSON.stringify({ peggedAssets: null }), updated_at: now } },
+    ]);
+    const res = await handleStablecoinSummary(db, "usdt-tether");
+
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "Cached stablecoins data is corrupt" });
+  });
+
   it("returns 404 when stablecoin id is missing in cache payload", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

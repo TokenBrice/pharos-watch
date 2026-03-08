@@ -35,7 +35,11 @@ export const handleStablecoinSummary = withErrorHandler("stablecoin-summary", as
     return errorResponse(503, "Cached stablecoins data is corrupt");
   }
 
-  const coin = (parsed.peggedAssets ?? []).find((item) => item.id === id);
+  if (!parsed.peggedAssets || !Array.isArray(parsed.peggedAssets)) {
+    return errorResponse(503, "Cached stablecoins data is corrupt");
+  }
+
+  const coin = parsed.peggedAssets.find((item) => item.id === id);
   if (!coin) {
     return errorResponse(404, `Stablecoin ${id} not found`);
   }

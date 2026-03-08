@@ -197,6 +197,8 @@ Lightweight per-coin snapshot sourced from cached `stablecoins` data. Designed f
 
 **Cache:** realtime — `X-Data-Age` and `Warning` headers included.
 
+**Error responses:** `503` when the shared `stablecoins` cache is missing or structurally corrupt; `404` when the requested coin ID is absent from an otherwise valid cache snapshot.
+
 **Response**
 
 ```json
