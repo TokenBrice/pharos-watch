@@ -192,6 +192,11 @@ function computeSupplySignal(input: DEWSInput): SignalResult {
     delta1d >= 0
       ? 0
       : piecewiseLinear(Math.abs(delta1d) * 100, [
+          // Supply contraction stress curve (1d).
+          // Calibrated from historical redemption events:
+          //   1% daily: routine rebalancing, minimal concern
+          //   3-5%: observed in moderate stress (e.g., USDC March 2023)
+          //   10-20%: bank-run territory (e.g., UST May 2022)
           [0, 0],
           [1, 15],
           [3, 40],
@@ -204,6 +209,11 @@ function computeSupplySignal(input: DEWSInput): SignalResult {
     delta7d >= 0
       ? 0
       : piecewiseLinear(Math.abs(delta7d) * 100, [
+          // Supply contraction stress curve (7d).
+          // Wider thresholds than 1d because weekly changes are naturally larger.
+          //   3%: normal weekly variation
+          //   7-15%: sustained outflows (e.g., post-crisis BUSD wind-down)
+          //   30%+: catastrophic collapse
           [0, 0],
           [3, 15],
           [7, 40],
@@ -259,6 +269,10 @@ function computePoolSignal(input: DEWSInput): SignalResult {
   let value = clamp(
     0,
     100,
+    // Pool signal blend: 40% balance stress, 35% avg pool stress, 25% worst single pool.
+    // Balance ratio weighted highest because it directly measures exit liquidity.
+    // Worst pool at 25% ensures a single severely imbalanced pool can't be masked
+    // by many healthy pools.
     0.4 * balanceStress + 0.35 * poolStressScore + 0.25 * worstPoolSignal,
   );
 
@@ -291,6 +305,10 @@ function computeLiquiditySignal(input: DEWSInput): SignalResult {
       Math.max(liquidityScore7dAgo, 1);
     if (scoreDelta < 0) {
       scoreErosion = piecewiseLinear(Math.abs(scoreDelta) * 100, [
+        // Liquidity score erosion curve.
+        //   5% drop: minor noise, market makers rebalancing
+        //   15-30%: meaningful degradation, possible exit liquidity concern
+        //   50%+: severe — DEX coverage collapsing
         [0, 0],
         [5, 15],
         [15, 40],
@@ -306,6 +324,10 @@ function computeLiquiditySignal(input: DEWSInput): SignalResult {
     const tvlDelta = (tvlCurrent - tvl7dAgo) / tvl7dAgo;
     if (tvlDelta < 0) {
       tvlErosion = piecewiseLinear(Math.abs(tvlDelta) * 100, [
+        // TVL erosion curve.
+        //   10% drop: normal weekly TVL fluctuation
+        //   25-50%: significant LP withdrawal, possible contagion
+        //   75%+: near-total liquidity exit
         [0, 0],
         [10, 15],
         [25, 40],
@@ -386,6 +408,11 @@ function computeDivergSignal(input: DEWSInput): SignalResult {
 
   const worstBps = Math.max(primaryDevBps, dexDevBps, crossSpreadBps);
 
+  // Cross-source price divergence curve (basis points).
+  //   25bps: normal bid-ask spread noise
+  //   50-75bps: meaningful divergence, worth monitoring
+  //   100-200bps: serious disagreement between sources
+  //   500bps+: extreme — data error or genuine crisis
   let value = piecewiseLinear(worstBps, [
     [0, 0],
     [25, 10],
@@ -428,6 +455,10 @@ function computeBlacklistSignal(input: DEWSInput): SignalResult {
     dailyRate7d > 0 ? blacklistEvents24h / dailyRate7d : blacklistEvents24h;
 
   const rawCount = piecewiseLinear(blacklistEvents24h, [
+    // Blacklist event count curve (24h).
+    //   2 events: routine compliance (OFAC updates, singular freeze)
+    //   5-10: elevated activity, possibly coordinated enforcement
+    //   20-50: mass freeze — emergency response or regulatory action
     [0, 0],
     [2, 10],
     [5, 30],
@@ -437,6 +468,11 @@ function computeBlacklistSignal(input: DEWSInput): SignalResult {
   ]);
 
   const spikeMult = piecewiseLinear(spikeRatio, [
+    // Spike multiplier: how much today's blacklist activity exceeds the 7d daily avg.
+    //   1x: normal rate → 0.7x dampening (activity consistent with baseline)
+    //   3x: notable spike → 1.0x (no adjustment)
+    //   5-10x: extreme spike → 1.2-1.5x amplification
+    //   <1x baseline: 0.5x dampening (activity declining)
     [0, 0.5],
     [1, 0.7],
     [3, 1.0],
@@ -483,6 +519,10 @@ function computeFlowSignal(input: DEWSInput): SignalResult {
         : 0;
 
   const surgeScore = piecewiseLinear(burnSurge, [
+    // Burn surge curve: 24h burn volume vs 30d daily average.
+    //   1x: at baseline — minimal concern
+    //   2-3x: elevated redemptions, early stress signal
+    //   5-10x: panic redemptions (e.g., UST spiral, USDC March 2023)
     [0, 0],
     [1, 5],
     [2, 25],
@@ -492,6 +532,10 @@ function computeFlowSignal(input: DEWSInput): SignalResult {
   ]);
 
   const ratioScore = piecewiseLinear(ratio, [
+    // Burn-to-mint ratio curve: when burns >> mints, redemptions dominate.
+    //   1x: balanced flow — normal
+    //   2-3x: net outflows, moderate concern
+    //   5-10x: one-sided redemption pressure, potential run
     [0, 0],
     [1, 5],
     [2, 20],

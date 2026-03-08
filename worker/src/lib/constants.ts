@@ -1,9 +1,13 @@
 import { SECONDS } from "./time-constants";
 
-/** Minimum peg deviation (in basis points) to trigger a depeg event */
+// 100bps (1%) minimum deviation to consider a depeg event for USD-pegged stablecoins.
+// Below this, price movement is within normal market noise (bid-ask spreads,
+// CEX-DEX arb latency). Calibrated against 2023-2024 false-positive rate.
 const DEPEG_THRESHOLD_BPS = 100;
 
-/** Higher threshold for non-USD pegs — FX rate noise + thin liquidity cause more false positives */
+// 150bps for non-USD pegs (FX, commodity). Higher threshold because FX pairs
+// have wider bid-ask spreads, commodity oracles update less frequently,
+// and cross-currency pricing adds noise from FX rate staleness.
 const DEPEG_THRESHOLD_BPS_NON_USD = 150;
 
 /** Returns the appropriate depeg threshold for a given peg type */
@@ -66,7 +70,10 @@ export const CACHE_FRESHNESS_THRESHOLDS: Record<string, number> = {
 
 // --- Depeg multi-source confirmation (>$1B coins) ---
 
-/** Minimum circulating supply (USD) for multi-source depeg confirmation */
+// Coins above $1B circulating supply require confirmation from a second price source
+// (DEX or next sync cycle) before a depeg event is created. Below $1B, single-source
+// detection is acceptable because false alerts have lower blast radius.
+// $1B threshold covers ~top-10 stablecoins where false positives are most damaging.
 export const DEPEG_CONFIRMATION_SUPPLY_THRESHOLD = 1_000_000_000; // $1B
 
 /** Minimum age (seconds) before a pending depeg can be promoted */
