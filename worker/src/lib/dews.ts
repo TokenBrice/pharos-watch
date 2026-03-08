@@ -122,7 +122,9 @@ const CONFIDENCE_SCORES: Record<string, number> = {
 // Utilities
 // ---------------------------------------------------------------------------
 
-function clamp(min: number, max: number, val: number): number {
+export function clamp(min: number, max: number, val: number): number {
+  if (!Number.isFinite(val))
+    return val !== val ? min : val > 0 ? max : min; // NaN→min, Inf→max, -Inf→min
   return Math.max(min, Math.min(max, val));
 }
 
@@ -135,6 +137,8 @@ export function piecewiseLinear(
   x: number,
   anchors: [number, number][],
 ): number {
+  if (!Number.isFinite(x))
+    return x !== x ? 0 : x > 0 ? anchors[anchors.length - 1][1] : anchors[0][1];
   if (anchors.length === 0) return 0;
   if (x <= anchors[0][0]) return anchors[0][1];
   if (x >= anchors[anchors.length - 1][0]) return anchors[anchors.length - 1][1];

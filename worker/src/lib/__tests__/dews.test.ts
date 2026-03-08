@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeDEWS, piecewiseLinear, getThreatBand } from "../dews";
+import { computeDEWS, piecewiseLinear, getThreatBand, clamp } from "../dews";
 import type { DEWSInput } from "../dews";
 
 // --- piecewiseLinear tests ---
@@ -33,6 +33,38 @@ describe("piecewiseLinear", () => {
 
   it("clamps at 0 for negative input", () => {
     expect(piecewiseLinear(-5, anchors)).toBe(0);
+  });
+
+  it("returns 0 for NaN input", () => {
+    expect(piecewiseLinear(NaN, anchors)).toBe(0);
+  });
+
+  it("returns last anchor value for Infinity input", () => {
+    expect(piecewiseLinear(Infinity, anchors)).toBe(100);
+  });
+
+  it("returns first anchor value for -Infinity input", () => {
+    expect(piecewiseLinear(-Infinity, anchors)).toBe(0);
+  });
+});
+
+describe("clamp", () => {
+  it("returns min when value is NaN", () => {
+    expect(clamp(0, 100, NaN)).toBe(0);
+  });
+
+  it("returns max when value is Infinity", () => {
+    expect(clamp(0, 100, Infinity)).toBe(100);
+  });
+
+  it("returns min when value is -Infinity", () => {
+    expect(clamp(0, 100, -Infinity)).toBe(0);
+  });
+
+  it("clamps normally for finite values", () => {
+    expect(clamp(0, 100, 50)).toBe(50);
+    expect(clamp(0, 100, -10)).toBe(0);
+    expect(clamp(0, 100, 200)).toBe(100);
   });
 });
 
