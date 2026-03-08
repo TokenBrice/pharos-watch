@@ -375,6 +375,67 @@ export interface DigestInputData {
     durationHours: number;
     mcapUsd: number;
   }[];
+  mintBurnFlows?: {
+    gaugeScore: number;
+    gaugeBand: string;
+    flightToQuality: {
+      active: boolean;
+      safeNetUsd: number;
+      riskyNetUsd: number;
+    };
+    topPressure: {
+      symbol: string;
+      intensity: number;
+      net24hUsd: number;
+    }[];
+  };
+  dewsStress?: {
+    bandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number };
+    yesterdayBandCounts: { calm: number; watch: number; alert: number; warning: number; danger: number };
+    bandChanges: {
+      symbol: string;
+      from: string;
+      to: string;
+      score: number;
+      topDriver: string;
+    }[];
+    elevatedCoins: {
+      symbol: string;
+      band: string;
+      score: number;
+      mcapUsd: number;
+    }[];
+  };
+  historicalContext?: {
+    psiPrecedent: {
+      lastSeenDate: number;
+      lastSeenDaysAgo: number;
+      lastSeenScore: number;
+      lastSeenBand: string;
+    } | null;
+    psiBandStreak: number;
+    supplyMoverContext: {
+      allTimeHighMcap: number;
+      allTimeHighDate: number;
+      largestWeeklyChange: number;
+      largestWeeklyChangeDate: number;
+      largestWeeklyChangeDaysAgo: number;
+    } | null;
+  };
+  gradeTransitions?: {
+    symbol: string;
+    fromGrade: string;
+    toGrade: string;
+    fromScore: number;
+    toScore: number;
+    currentDimensions: {
+      peg: number | null;
+      liq: number | null;
+      resilience: number | null;
+      decentralization: number | null;
+    };
+    mcapUsd: number;
+  }[];
 }
 
 const PegBucketsSchema = z.record(z.string(), z.number());
