@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { Check, Download, Image, Link, Loader2, Share2 } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Check, Download, ImageIcon, Link, Loader2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,17 +26,11 @@ async function fetchOgBlob(ogPath: string): Promise<Blob> {
 
 export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
   const [status, setStatus] = useState<Status>("idle");
-  const [canCopyImage, setCanCopyImage] = useState(false);
-
-  useEffect(() => {
-    // ClipboardItem with image/png is not supported in all browsers (e.g. Firefox).
-    // Detect support at mount time and conditionally show the option.
-    setCanCopyImage(
-      typeof window !== "undefined" &&
-        typeof ClipboardItem !== "undefined" &&
-        typeof navigator?.clipboard?.write === "function",
-    );
-  }, []);
+  const [canCopyImage] = useState(() =>
+    typeof window !== "undefined" &&
+    typeof ClipboardItem !== "undefined" &&
+    typeof navigator?.clipboard?.write === "function",
+  );
 
   const resetStatus = useCallback(() => {
     setTimeout(() => setStatus("idle"), 2000);
@@ -109,7 +103,7 @@ export function ShareButton({ ogPath, label = "Share" }: ShareButtonProps) {
         </DropdownMenuItem>
         {canCopyImage && (
           <DropdownMenuItem onSelect={copyImage}>
-            <Image />
+            <ImageIcon />
             Copy as image
           </DropdownMenuItem>
         )}

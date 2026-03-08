@@ -45,7 +45,6 @@ import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
 
 import { resolveOrReject, withErrorHandler, errorResponse } from "./lib/api-utils";
-import { handleOg } from "./api/og";
 
 interface RouteContext {
   url: URL;
@@ -317,8 +316,11 @@ export function route(
   if (detailResult) return detailResult;
 
   // OG image generation (dynamic paths under /api/og/)
+  // Lazy import to avoid pulling resvg-wasm into the main bundle / test environment
   if (path.startsWith("/api/og/")) {
-    return handleOg(db, path).then((r) => r ?? errorResponse(404, "Unknown OG route"));
+    return import("./api/og").then(({ handleOg }) =>
+      handleOg(db, path).then((r) => r ?? errorResponse(404, "Unknown OG route")),
+    );
   }
 
   return null;

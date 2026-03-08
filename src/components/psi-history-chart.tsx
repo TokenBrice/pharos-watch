@@ -159,9 +159,9 @@ export function ScoreChart({
   showHeader?: boolean;
 }) {
   const chartRef = useRef<HTMLDivElement>(null);
-  const hasAnimated = useRef(false);
-  const animProps = hasAnimated.current ? { isAnimationActive: false } : CHART_DRAW_IN;
-  useEffect(() => { hasAnimated.current = true; }, []);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const animProps = hasAnimated ? { isAnimationActive: false } : CHART_DRAW_IN;
+  useEffect(() => { setHasAnimated(true); }, []);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-psi-history");
   }, []);

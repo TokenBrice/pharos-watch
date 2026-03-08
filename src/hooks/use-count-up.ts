@@ -76,7 +76,6 @@ export function useCountUp(target: number, opts?: CountUpOptions): string {
         Math.min((performance.now() - start) / duration, 1),
       );
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target, duration]);
 
   return `${prefix}${formatNumber(display, decimals)}${suffix}`;

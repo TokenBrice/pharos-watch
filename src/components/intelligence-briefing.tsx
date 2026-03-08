@@ -63,6 +63,10 @@ function useBriefingInput(): {
     !!stressQuery.error &&
     !!flowQuery.error;
 
+  // Capture wall-clock time once per data refresh (not on every render).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const nowMs = useMemo(() => Date.now(), [psiQuery.data, pegQuery.data]);
+
   const input = useMemo<BriefingInput | null>(() => {
     const psiData = psiQuery.data;
     const pegData = pegQuery.data;
@@ -101,7 +105,7 @@ function useBriefingInput(): {
     let lastClosedBps: number | null = null;
 
     if (activeCoins.length === 0) {
-      const nowSec = Date.now() / 1000;
+      const nowSec = nowMs / 1000;
       let recentTs = 0;
       for (const c of coins) {
         if (!c.activeDepeg && c.lastEventAt && c.lastEventAt > recentTs) {

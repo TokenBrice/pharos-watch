@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type Phase = "briefing" | "kpi" | "complete";
 
@@ -28,13 +28,13 @@ function prefersReducedMotion(): boolean {
 }
 
 export function useEntranceSequence(): EntranceSequence {
-  const reduced = useRef(prefersReducedMotion());
+  const [isReduced] = useState(() => prefersReducedMotion());
   const [phase, setPhase] = useState<Phase>(
-    reduced.current ? "complete" : "briefing",
+    () => prefersReducedMotion() ? "complete" : "briefing",
   );
 
   useEffect(() => {
-    if (reduced.current) return;
+    if (isReduced) return;
 
     const timers = [
       setTimeout(() => setPhase("kpi"), PHASE_TIMINGS.kpi),
@@ -42,17 +42,17 @@ export function useEntranceSequence(): EntranceSequence {
     ];
 
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [isReduced]);
 
   const delayFor = useCallback(
     (group: string, index: number): number => {
-      if (reduced.current) return 0;
+      if (isReduced) return 0;
       const config = GROUP_OFFSETS[group];
       if (!config) return 0;
       const cappedIndex = Math.min(index, 8);
       return config.base + cappedIndex * config.stagger;
     },
-    [],
+    [isReduced],
   );
 
   return { phase, delayFor };

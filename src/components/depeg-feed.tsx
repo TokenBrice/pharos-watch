@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -27,7 +27,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
 
   // Track seen event IDs so only genuinely new arrivals animate.
   // Seed with initial events to prevent animation on first render.
-  const seenIds = useRef<Set<number>>(new Set(events.map((e) => e.id)));
+  const [seenIds, setSeenIds] = useState<Set<number>>(() => new Set(events.map((e) => e.id)));
 
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 1024px)");
@@ -56,17 +56,21 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
     const map = new Map<number, number>();
     let idx = 0;
     for (const evt of visible) {
-      if (!seenIds.current.has(evt.id) && idx < 3) {
+      if (!seenIds.has(evt.id) && idx < 3) {
         map.set(evt.id, idx++);
       }
     }
     return map;
-  }, [visible]);
+  }, [visible, seenIds]);
 
   // After render, mark all current events as seen.
   useEffect(() => {
     if (events.length > 0) {
-      for (const e of events) seenIds.current.add(e.id);
+      setSeenIds((prev) => {
+        const next = new Set(prev);
+        for (const e of events) next.add(e.id);
+        return next.size === prev.size ? prev : next;
+      });
     }
   }, [events]);
 
