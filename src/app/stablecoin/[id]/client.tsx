@@ -153,7 +153,12 @@ export default function StablecoinDetailClient({ id, summary, coin, logoSrc }: S
       />
 
       <section id="report-card">
-        {viewModel.reportCard && <ReportCardDetail card={viewModel.reportCard} />}
+        {viewModel.reportCard && (
+          <ReportCardDetail
+            card={viewModel.reportCard}
+            liquidityComponents={viewModel.liquidityData?.scoreComponents ?? null}
+          />
+        )}
         <div className="mt-4">
           <SafetyScoreHistorySection stablecoinId={viewModel.id} />
         </div>

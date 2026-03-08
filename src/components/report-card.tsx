@@ -20,13 +20,21 @@ import { buildStablecoinUrl } from "@/lib/urls";
 
 interface ReportCardDetailProps {
   card: ReportCardType;
+  liquidityComponents?: {
+    tvlDepth: number;
+    volumeActivity: number;
+    poolQuality: number;
+    durability: number;
+    pairDiversity: number;
+    crossChain: number;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReportCardDetail({ card }: ReportCardDetailProps) {
+export function ReportCardDetail({ card, liquidityComponents }: ReportCardDetailProps) {
   // Defunct coins get a minimal card
   if (card.isDefunct) {
     return (
@@ -174,6 +182,38 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                         );
                       })}
                     </div>
+                  )}
+                  {key === "liquidity" && liquidityComponents && dim.score !== null && (
+                    <details className="mt-1.5 text-xs text-muted-foreground">
+                      <summary className="cursor-pointer hover:text-foreground transition-colors ml-3">
+                        Show components
+                      </summary>
+                      <div className="mt-2 ml-4 space-y-1">
+                        {[
+                          { label: "TVL Depth", key: "tvlDepth" as const, weight: 30 },
+                          { label: "Volume Activity", key: "volumeActivity" as const, weight: 20 },
+                          { label: "Pool Quality", key: "poolQuality" as const, weight: 20 },
+                          { label: "Durability", key: "durability" as const, weight: 15 },
+                          { label: "Pair Diversity", key: "pairDiversity" as const, weight: 7.5 },
+                          { label: "Cross-chain", key: "crossChain" as const, weight: 7.5 },
+                        ].map(({ label, key: k, weight }) => {
+                          const value = liquidityComponents[k];
+                          return value != null ? (
+                            <div key={k} className="flex items-center gap-2">
+                              <span className="w-28 shrink-0">{label}</span>
+                              <div className="h-1.5 flex-1 rounded-full bg-muted">
+                                <div
+                                  className="h-full rounded-full bg-foreground/40"
+                                  style={{ width: `${Math.min(100, value)}%` }}
+                                />
+                              </div>
+                              <span className="w-8 text-right font-mono tabular-nums">{value.toFixed(0)}</span>
+                              <span className="w-8 text-right text-muted-foreground/60">{weight}%</span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    </details>
                   )}
                 </div>
               );
