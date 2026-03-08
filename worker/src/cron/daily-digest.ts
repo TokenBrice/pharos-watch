@@ -636,6 +636,100 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to collect DEWS stress signals:", e);
   }
 
+  // 4g. Historical context (PSI precedent, band streak, supply mover)
+  let historicalContext: DigestInputData["historicalContext"];
+  try {
+    // Check we have enough history (>30 days)
+    const histDepth = await db
+      .prepare("SELECT COUNT(*) as cnt FROM stability_index")
+      .first<{ cnt: number }>();
+
+    if (displayScore != null && displayBand && (histDepth?.cnt ?? 0) > 30) {
+      // PSI precedent: last time score was at or below current
+      const precedent = await db
+        .prepare(
+          "SELECT computed_at, score, band FROM stability_index WHERE score <= ? AND computed_at < ? ORDER BY computed_at DESC LIMIT 1",
+        )
+        .bind(displayScore, todayTs)
+        .first<{ computed_at: number; score: number; band: string }>();
+
+      const psiPrecedent = precedent
+        ? {
+            lastSeenDate: precedent.computed_at,
+            lastSeenDaysAgo: Math.round((todayTs - precedent.computed_at) / SECONDS.ONE_DAY),
+            lastSeenScore: precedent.score,
+            lastSeenBand: precedent.band,
+          }
+        : null; // null = all-time low
+
+      // PSI band streak: count consecutive days in current band
+      const bandHistory = await db
+        .prepare(
+          "SELECT computed_at, band FROM stability_index WHERE computed_at <= ? ORDER BY computed_at DESC LIMIT 90",
+        )
+        .bind(todayTs)
+        .all<{ computed_at: number; band: string }>();
+
+      let psiBandStreak = 0;
+      for (const row of bandHistory.results ?? []) {
+        if (row.band === displayBand) psiBandStreak++;
+        else break;
+      }
+      if (psiBandStreak === 0) psiBandStreak = 1; // Minimum 1 (today)
+
+      // Supply mover context
+      let supplyMoverContext: NonNullable<DigestInputData["historicalContext"]>["supplyMoverContext"] = null;
+      if (biggestSupplyChange) {
+        const athRow = await db
+          .prepare("SELECT MAX(circulating_usd) as ath_mcap FROM supply_history WHERE stablecoin_id = ?")
+          .bind(biggestSupplyChange.id)
+          .first<{ ath_mcap: number | null }>();
+
+        // ATH date (separate query since D1 doesn't support argmax)
+        let athDate = 0;
+        if (athRow?.ath_mcap) {
+          const athDateRow = await db
+            .prepare(
+              "SELECT snapshot_date FROM supply_history WHERE stablecoin_id = ? AND circulating_usd = ? ORDER BY snapshot_date DESC LIMIT 1",
+            )
+            .bind(biggestSupplyChange.id, athRow.ath_mcap)
+            .first<{ snapshot_date: number }>();
+          athDate = athDateRow?.snapshot_date ?? 0;
+        }
+
+        // Largest historical 7d change
+        const largestChangeRow = await db
+          .prepare(
+            `SELECT s1.snapshot_date, ABS(s1.circulating_usd - s2.circulating_usd) as abs_change
+             FROM supply_history s1
+             JOIN supply_history s2
+               ON s1.stablecoin_id = s2.stablecoin_id
+               AND s2.snapshot_date = s1.snapshot_date - ?
+             WHERE s1.stablecoin_id = ?
+             ORDER BY abs_change DESC LIMIT 1`,
+          )
+          .bind(7 * SECONDS.ONE_DAY, biggestSupplyChange.id)
+          .first<{ snapshot_date: number; abs_change: number }>();
+
+        if (athRow?.ath_mcap && largestChangeRow) {
+          supplyMoverContext = {
+            allTimeHighMcap: athRow.ath_mcap,
+            allTimeHighDate: athDate,
+            largestWeeklyChange: largestChangeRow.abs_change,
+            largestWeeklyChangeDate: largestChangeRow.snapshot_date,
+            largestWeeklyChangeDaysAgo: Math.round(
+              (todayTs - largestChangeRow.snapshot_date) / SECONDS.ONE_DAY,
+            ),
+          };
+        }
+      }
+
+      historicalContext = { psiPrecedent, psiBandStreak, supplyMoverContext };
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect historical context:", e);
+  }
+
   // --- Build input data ---
   const inputData: DigestInputData = {
     totalMcapUsd,
@@ -651,6 +745,7 @@ export async function generateDailyDigest(
     resolvedDepegs,
     mintBurnFlows,
     dewsStress,
+    historicalContext,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentDigests);

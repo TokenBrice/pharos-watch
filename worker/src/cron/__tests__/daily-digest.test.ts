@@ -356,6 +356,66 @@ describe("generateDailyDigest", () => {
     expect(storedInput.dewsStress.bandChanges[0].to).toBe("ALERT");
   });
 
+  it("includes historical context with PSI precedent and band streak", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // PSI precedent: last time score was at/below current
+      {
+        match: "FROM stability_index WHERE score <= ?",
+        rows: [],
+        first: { computed_at: todayTs - 30 * 86_400, score: 89.0, band: "STEADY" },
+      },
+      // PSI band streak
+      {
+        match: "ORDER BY computed_at DESC LIMIT 90",
+        rows: [
+          { computed_at: todayTs, band: "BEDROCK" },
+          { computed_at: todayTs - 86_400, band: "BEDROCK" },
+          { computed_at: todayTs - 2 * 86_400, band: "BEDROCK" },
+          { computed_at: todayTs - 3 * 86_400, band: "STEADY" },
+        ],
+      },
+      // Supply mover ATH
+      {
+        match: "MAX(circulating_usd)",
+        rows: [],
+        first: { ath_mcap: 120_000_000 },
+      },
+      // Supply mover ATH date
+      {
+        match: "WHERE stablecoin_id = ? AND circulating_usd = ?",
+        rows: [],
+        first: { snapshot_date: todayTs - 60 * 86_400 },
+      },
+      // Supply mover largest weekly change
+      {
+        match: "ABS(s1.circulating_usd - s2.circulating_usd)",
+        rows: [],
+        first: { snapshot_date: todayTs - 45 * 86_400, abs_change: 8_000_000 },
+      },
+      // History depth check (>30 rows means >30 days)
+      {
+        match: "COUNT(*) as cnt FROM stability_index",
+        rows: [],
+        first: { cnt: 90 },
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.historicalContext).toBeDefined();
+    expect(storedInput.historicalContext.psiBandStreak).toBe(3);
+    expect(storedInput.historicalContext.psiPrecedent).toBeDefined();
+    expect(storedInput.historicalContext.psiPrecedent.lastSeenDaysAgo).toBe(30);
+  });
+
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
