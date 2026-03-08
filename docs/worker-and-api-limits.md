@@ -74,7 +74,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
 **Rate limit in code**: `GECKO_TERMINAL_MS = 2000` ms (30 req/min) in `worker/src/lib/rate-limit.ts`, used by `worker/src/cron/dex-liquidity/fetch-crawlers.ts`
 
-**Crawl budget**: 15 min max wall-time within the 30-min cron window (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). Not all 252+ token-chain combos can be crawled per run at 30 req/min.
+**Crawl budget**: 11 min max wall-time within the 30-min cron window (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This intentionally leaves ~4 minutes for the rest of `sync-dex-liquidity` before the 15-minute Cloudflare wall-clock cap.
 
 ---
 
@@ -329,6 +329,6 @@ Used to extend FX coverage beyond Frankfurter, including CNH, and as the seconda
 | Etherscan free tier (chains) | Base/BNB/Avalanche/Optimism need paid plan | 🟡 Paid at $49/chain/mo if we track those |
 | Alchemy PAYG CUs (30M free + $0.40/M over) | ~6.5M CUs/month for supply + mint/burn combined | 🟢 Plenty of headroom |
 | CoinMarketCap Basic (10K credits/month) | Fine as last-resort fallback only | 🟢 |
-| GeckoTerminal crawl budget (15 min/run) | Enforced by code — not all coins crawled every run | 🟢 Accepted tradeoff |
+| GeckoTerminal crawl budget (11 min/run) | Enforced by code — not all coins crawled every run | 🟢 Accepted tradeoff |
 | Twitter Free tier (500 posts/month) | 1/day = ~30/month | 🟢 |
 | Telegram / GitHub / Frankfurter / gold-api | No meaningful limits | 🟢 |

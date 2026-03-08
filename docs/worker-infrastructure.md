@@ -312,7 +312,7 @@ Each cron job receives an `AbortSignal` from `logCronRun()` that fires after a c
 | Job | Timeout | Reason |
 |-----|---------|--------|
 | Default | 5 min | Standard jobs complete in <60s |
-| `sync-dex-liquidity` | 15 min | 150+ pool crawl |
+| `sync-dex-liquidity` | 13 min | 150+ pool crawl, with headroom below the platform wall-clock limit |
 | `sync-blacklist` | 8 min | Multi-chain scan + balance enrichment |
 | `sync-mint-burn` | 8 min | Multi-contract EVM log scan |
 | `daily-digest` | 8 min | LLM generation + distribution |
