@@ -35,7 +35,7 @@ export const handleDepegEvents = withErrorHandler("depeg-events", async (db: D1D
   const filterBindings: (string | number)[] = [];
 
   if (stablecoin) {
-    const resolved = resolveOrReject(stablecoin, `path=${url.pathname}`);
+    const resolved = resolveOrReject(stablecoin);
     if (resolved instanceof Response) {
       return resolved;
     }

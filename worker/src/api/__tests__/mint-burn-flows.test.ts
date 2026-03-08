@@ -116,7 +116,7 @@ describe("handleMintBurnFlows contract tests", () => {
   });
 
   it("per-coin mode returns shape matching MintBurnPerCoinResponseSchema", async () => {
-    const url = new URL("https://x/api/mint-burn-flows?stablecoin=1");
+    const url = new URL("https://x/api/mint-burn-flows?stablecoin=usdt-tether");
     const res = await handleMintBurnFlows(db, url);
 
     expect(res.status).toBe(200);

@@ -28,7 +28,7 @@ export const handleStressSignals = withErrorHandler(
     }
 
     if (stablecoinId) {
-      const resolved = resolveOrReject(stablecoinId, `path=${url.pathname}`);
+      const resolved = resolveOrReject(stablecoinId);
       if (resolved instanceof Response) {
         return resolved;
       }

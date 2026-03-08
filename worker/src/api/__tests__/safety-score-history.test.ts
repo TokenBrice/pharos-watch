@@ -53,7 +53,7 @@ describe("handleSafetyScoreHistory", () => {
 
     const res = await handleSafetyScoreHistory(
       db,
-      new URL("https://x/api/safety-score-history?stablecoin=1&days=3650"),
+      new URL("https://x/api/safety-score-history?stablecoin=usdt-tether&days=3650"),
     );
 
     expect(res.status).toBe(200);
@@ -79,7 +79,7 @@ describe("handleSafetyScoreHistory", () => {
 
     const res = await handleSafetyScoreHistory(
       db,
-      new URL("https://x/api/safety-score-history?stablecoin=1"),
+      new URL("https://x/api/safety-score-history?stablecoin=usdt-tether"),
     );
 
     expect(res.status).toBe(200);
@@ -98,7 +98,7 @@ describe("handleSafetyScoreHistory", () => {
 
     const res = await handleSafetyScoreHistory(
       db,
-      new URL("https://x/api/safety-score-history?stablecoin=1"),
+      new URL("https://x/api/safety-score-history?stablecoin=usdt-tether"),
     );
 
     expect(res.headers.has("X-Data-Age")).toBe(true);

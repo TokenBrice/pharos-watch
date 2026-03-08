@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { REGISTRY_BY_ID, REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { scoreToGrade, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import type {
@@ -111,19 +111,20 @@ function migratePortfolioIds(holdings: PortfolioHolding[]): PortfolioHolding[] {
   let changed = false;
   const migrated: PortfolioHolding[] = [];
   for (const holding of holdings) {
-    const resolved = resolveStablecoinId(holding.coinId, { allowLegacy: true });
-    if (!resolved) {
+    const meta = REGISTRY_BY_ID.get(holding.coinId) ?? REGISTRY_BY_LLAMA_ID.get(holding.coinId);
+    if (!meta) {
       // Unknown ID — drop silently (stale/removed coin)
       changed = true;
       continue;
     }
-    if (resolved.canonicalId !== holding.coinId) changed = true;
+    const canonicalId = meta.id;
+    if (canonicalId !== holding.coinId) changed = true;
     // Merge duplicates (two legacy IDs could resolve to the same canonical)
-    const existing = migrated.find((migratedHolding) => migratedHolding.coinId === resolved.canonicalId);
+    const existing = migrated.find((migratedHolding) => migratedHolding.coinId === canonicalId);
     if (existing) {
       existing.amount += holding.amount;
     } else {
-      migrated.push({ coinId: resolved.canonicalId, amount: holding.amount });
+      migrated.push({ coinId: canonicalId, amount: holding.amount });
     }
   }
   return changed ? migrated : holdings;

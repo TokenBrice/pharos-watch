@@ -87,7 +87,7 @@ describe("parseStablecoinHistoryQuery", () => {
 
   it("applies endpoint-specific default and bounds for days", () => {
     const bounded = parseStablecoinHistoryQuery(
-      new URL("https://x/api/supply-history?stablecoin=1&days=9999"),
+      new URL("https://x/api/supply-history?stablecoin=usdt-tether&days=9999"),
       { defaultDays: 365, minDays: 1, maxDays: 1825 },
     );
     if (bounded instanceof Response) {
@@ -96,7 +96,7 @@ describe("parseStablecoinHistoryQuery", () => {
     expect(bounded.days).toBe(1825);
 
     const withDefault = parseStablecoinHistoryQuery(
-      new URL("https://x/api/yield-history?stablecoin=1"),
+      new URL("https://x/api/yield-history?stablecoin=usdt-tether"),
       { defaultDays: 90, minDays: 1, maxDays: 365 },
     );
     if (withDefault instanceof Response) {
@@ -107,7 +107,7 @@ describe("parseStablecoinHistoryQuery", () => {
 
   it("returns 400 when days is malformed", async () => {
     const result = parseStablecoinHistoryQuery(
-      new URL("https://x/api/yield-history?stablecoin=1&days=abc"),
+      new URL("https://x/api/yield-history?stablecoin=usdt-tether&days=abc"),
       { defaultDays: 90, minDays: 1, maxDays: 365 },
     );
     expect(result).toBeInstanceOf(Response);

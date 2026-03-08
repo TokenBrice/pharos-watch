@@ -11,7 +11,7 @@ describe("handleMintBurnEvents", () => {
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "mint_burn_events", rows: [row] },
     ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { events: unknown[]; total: number };
     expect(body.events).toHaveLength(1);
@@ -23,7 +23,7 @@ describe("handleMintBurnEvents", () => {
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "mint_burn_events", rows: [row] },
     ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
     const body = (await res.json()) as { events: Array<Record<string, unknown>> };
     const event = body.events[0];
     expect(event).toHaveProperty("stablecoinId");
@@ -54,19 +54,19 @@ describe("handleMintBurnEvents", () => {
 
   it("rejects invalid direction with 400", async () => {
     const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1&direction=delete"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&direction=delete"));
     expect(res.status).toBe(400);
   });
 
   it("rejects non-ethereum chain filter with 400", async () => {
     const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1&chain=base"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&chain=base"));
     expect(res.status).toBe(400);
   });
 
   it("rejects invalid burnType with 400", async () => {
     const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1&burnType=foo"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&burnType=foo"));
     expect(res.status).toBe(400);
   });
 
@@ -81,7 +81,7 @@ describe("handleMintBurnEvents", () => {
     ]);
     const res = await handleMintBurnEvents(
       db,
-      new URL("https://x/api/mint-burn-events?stablecoin=1&burnType=bridge_burn"),
+      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&burnType=bridge_burn"),
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { events: Array<{ burnType: string | null }> };
@@ -93,7 +93,7 @@ describe("handleMintBurnEvents", () => {
       { match: "COUNT", rows: [{ total: 1 }] },
       { match: "mint_burn_events", rows: [row] },
     ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
 
@@ -104,7 +104,7 @@ describe("handleMintBurnEvents", () => {
       { match: "mint_burn_events", rows: [makeMintBurnRow({ timestamp: now - 10 * 86400 })] },
       { match: "cron_runs", rows: [], first: { started_at: now - 20 } },
     ]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=1"));
+    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
   });

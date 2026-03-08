@@ -140,18 +140,13 @@ export function safeParse<T>(json: string | null | undefined, fallback: T): T {
 }
 
 /**
- * Resolve any accepted stablecoin ID to canonical form.
+ * Resolve a canonical stablecoin ID.
  * Returns a 404 response when unknown so handlers can early-return consistently.
  */
-export function resolveOrReject(id: string, context: string): { canonicalId: string } | Response {
-  const resolved = resolveStablecoinId(id, { allowLegacy: true });
+export function resolveOrReject(id: string): { canonicalId: string } | Response {
+  const resolved = resolveStablecoinId(id);
   if (!resolved) {
     return errorResponse(404, "Unknown stablecoin");
-  }
-  if (resolved.matchedBy !== "canonical") {
-    console.log(
-      `[legacy-id] context=${context} input=${id} resolved=${resolved.canonicalId} matchedBy=${resolved.matchedBy}`,
-    );
   }
   return { canonicalId: resolved.canonicalId };
 }
@@ -239,7 +234,7 @@ export function parseStablecoinHistoryQuery(
     return errorResponse(400, "Missing ?stablecoin= parameter");
   }
 
-  const resolved = resolveOrReject(stablecoinId, `path=${url.pathname}`);
+  const resolved = resolveOrReject(stablecoinId);
   if (resolved instanceof Response) {
     return resolved;
   }

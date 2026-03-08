@@ -57,27 +57,13 @@ describe("resolveStablecoinId", () => {
   it("resolves canonical ID directly", () => {
     expect(resolveStablecoinId(CANONICAL_USDT_ID)).toEqual({
       canonicalId: CANONICAL_USDT_ID,
-      matchedBy: "canonical",
     });
   });
 
-  it("resolves llamaId when allowLegacy is true", () => {
-    const resolved = resolveStablecoinId("1", { allowLegacy: true });
-
-    expect(resolved?.canonicalId).toBe(CANONICAL_USDT_ID);
+  it("returns null for llamaId (legacy IDs no longer accepted)", () => {
     if (CANONICAL_USDT_ID === "1") {
-      expect(resolved?.matchedBy).toBe("canonical");
-      return;
-    }
-    expect(resolved?.matchedBy).toBe("llama");
-  });
-
-  it("returns null for llamaId when allowLegacy is false", () => {
-    if (CANONICAL_USDT_ID === "1") {
-      expect(resolveStablecoinId("1")).toEqual({
-        canonicalId: "1",
-        matchedBy: "canonical",
-      });
+      // If canonical happens to equal llamaId, it resolves via REGISTRY_BY_ID
+      expect(resolveStablecoinId("1")).toEqual({ canonicalId: "1" });
       return;
     }
     expect(resolveStablecoinId("1")).toBeNull();

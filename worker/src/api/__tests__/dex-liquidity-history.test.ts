@@ -8,7 +8,7 @@ describe("handleDexLiquidityHistory", () => {
 
   it("returns 200 with history array", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=1"));
+    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{ tvl: number; volume24h: number; score: number | null; date: number; methodologyVersion: string }>;
     expect(body).toHaveLength(1);
@@ -21,7 +21,7 @@ describe("handleDexLiquidityHistory", () => {
 
   it("returns 200 with empty array when no data", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=1"));
+    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
@@ -43,7 +43,7 @@ describe("handleDexLiquidityHistory", () => {
 
   it("maps snake_case columns to camelCase", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=1"));
+    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
     const body = (await res.json()) as Array<Record<string, unknown>>;
     expect(body[0]).not.toHaveProperty("total_tvl_usd");
     expect(body[0]).not.toHaveProperty("total_volume_24h_usd");
@@ -59,7 +59,7 @@ describe("handleDexLiquidityHistory", () => {
       methodology_version: null,
     };
     const db = mockD1([{ match: "dex_liquidity_history", rows: [legacyRow] }]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=1"));
+    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=usdt-tether"));
     const body = (await res.json()) as Array<{ methodologyVersion: string }>;
     expect(body[0]?.methodologyVersion).toBe("2.2");
   });

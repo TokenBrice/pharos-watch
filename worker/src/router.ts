@@ -242,7 +242,7 @@ function matchDynamicRoute(
   } catch {
     return Promise.resolve(errorResponse(400, "Malformed URI"));
   }
-  const resolved = resolveOrReject(id, `path=${path}`);
+  const resolved = resolveOrReject(id);
   if (resolved instanceof Response) {
     return Promise.resolve(resolved);
   }

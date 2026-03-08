@@ -263,17 +263,11 @@ export async function handleFeedback(
 
   // Validate stablecoinId if provided (strip invalid IDs, preserve original submitted value in payload).
   if (fb.stablecoinId) {
-    const resolved = resolveStablecoinId(fb.stablecoinId, { allowLegacy: true });
+    const resolved = resolveStablecoinId(fb.stablecoinId);
     if (!resolved) {
       fb.stablecoinId = undefined;
     } else {
       canonicalStablecoinId = resolved.canonicalId;
-      if (resolved.matchedBy !== "canonical") {
-        const path = new URL(request.url).pathname;
-        console.log(
-          `[legacy-id] context=path=${path} input=${fb.stablecoinId} resolved=${resolved.canonicalId} matchedBy=${resolved.matchedBy}`,
-        );
-      }
     }
   }
 

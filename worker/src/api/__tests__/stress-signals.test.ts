@@ -73,7 +73,7 @@ describe("handleStressSignals contract tests", () => {
       },
     ]);
 
-    const url = new URL("https://x/api/stress-signals?stablecoin=1&days=7");
+    const url = new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7");
     const res = await handleStressSignals(db, url);
 
     expect(res.status).toBe(200);
@@ -104,7 +104,7 @@ describe("handleStressSignals contract tests", () => {
 
   it("rejects untracked stablecoin ID with 404", async () => {
     const db = mockD1();
-    const url = new URL("https://x/api/stress-signals?stablecoin=3&days=7");
+    const url = new URL("https://x/api/stress-signals?stablecoin=ust-terra&days=7");
     const res = await handleStressSignals(db, url);
 
     expect(res.status).toBe(404);

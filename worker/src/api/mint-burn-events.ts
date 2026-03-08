@@ -44,7 +44,7 @@ export const handleMintBurnEvents = withErrorHandler(
     if (!stablecoinInput) {
       return errorResponse(400, "Missing required parameter: stablecoin");
     }
-    const resolved = resolveOrReject(stablecoinInput, `path=${url.pathname}`);
+    const resolved = resolveOrReject(stablecoinInput);
     if (resolved instanceof Response) {
       return resolved;
     }

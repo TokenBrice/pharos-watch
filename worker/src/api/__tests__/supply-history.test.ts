@@ -8,7 +8,7 @@ describe("handleSupplyHistory", () => {
 
   it("returns 200 with history array", async () => {
     const db = mockD1([{ match: "supply_history", rows: [row] }]);
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=1"));
+    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{ date: number; circulatingUsd: number; price: number | null }>;
     expect(body).toHaveLength(1);
@@ -19,7 +19,7 @@ describe("handleSupplyHistory", () => {
 
   it("returns 200 with empty array when no data", async () => {
     const db = mockD1([{ match: "supply_history", rows: [] }]);
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=1"));
+    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
@@ -41,7 +41,7 @@ describe("handleSupplyHistory", () => {
 
   it("maps snake_case columns to camelCase", async () => {
     const db = mockD1([{ match: "supply_history", rows: [row] }]);
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=1"));
+    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
     const body = (await res.json()) as Array<Record<string, unknown>>;
     expect(body[0]).toHaveProperty("circulatingUsd");
     expect(body[0]).not.toHaveProperty("circulating_usd");

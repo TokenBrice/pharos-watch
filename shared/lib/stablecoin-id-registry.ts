@@ -72,20 +72,12 @@ export function resolveByExternalId(
   }
 }
 
-/** resolveStablecoinId supports canonical IDs and optional legacy DefiLlama IDs during migration. */
+/** Resolve a canonical stablecoin ID. Returns null for unknown IDs. */
 export function resolveStablecoinId(
   input: string,
-  opts?: { allowLegacy?: boolean },
-): { canonicalId: string; matchedBy: "canonical" | "llama" } | null {
+): { canonicalId: string } | null {
   if (REGISTRY_BY_ID.has(input)) {
-    return { canonicalId: input, matchedBy: "canonical" };
-  }
-
-  if (opts?.allowLegacy) {
-    const meta = REGISTRY_BY_LLAMA_ID.get(input);
-    if (meta) {
-      return { canonicalId: meta.id, matchedBy: "llama" };
-    }
+    return { canonicalId: input };
   }
 
   return null;

@@ -8,7 +8,7 @@ describe("handleYieldHistory", () => {
 
   it("returns 200 with history array", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=1"));
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as Array<{
       date: number; apy: number; apyBase: number | null;
@@ -26,7 +26,7 @@ describe("handleYieldHistory", () => {
 
   it("returns 200 with empty array when no data", async () => {
     const db = mockD1([{ match: "yield_history", rows: [] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=1"));
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
@@ -48,7 +48,7 @@ describe("handleYieldHistory", () => {
 
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([{ match: "yield_history", rows: [row] }]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=1"));
+    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     const body = (await res.json()) as Array<Record<string, unknown>>;
     expect(body[0]).not.toHaveProperty("recorded_at");
     expect(body[0]).not.toHaveProperty("apy_base");

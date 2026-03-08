@@ -217,7 +217,7 @@ export const handleMintBurnFlows = withErrorHandler(
     }
 
     if (stablecoinParam) {
-      const resolved = resolveOrReject(stablecoinParam, `path=${url.pathname}`);
+      const resolved = resolveOrReject(stablecoinParam);
       if (resolved instanceof Response) {
         return resolved;
       }
