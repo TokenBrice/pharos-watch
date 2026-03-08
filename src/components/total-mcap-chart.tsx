@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useCallback } from "react";
+import { useMemo, useRef, useCallback, useEffect } from "react";
+import { CHART_DRAW_IN } from "@/lib/chart-animation";
 import { AreaChart, Area } from "recharts";
 import { Camera } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card";
@@ -23,6 +24,9 @@ const OTHERS_SLATE = "#94a3b8";
 
 export function TotalMcapChart() {
   const chartRef = useRef<HTMLDivElement>(null);
+  const hasAnimated = useRef(false);
+  const animProps = hasAnimated.current ? { isAnimationActive: false } : CHART_DRAW_IN;
+  useEffect(() => { hasAnimated.current = true; }, []);
   const handlePngExport = useCallback(() => {
     downloadChartPng(chartRef, "pharos-total-mcap");
   }, []);
@@ -174,6 +178,7 @@ export function TotalMcapChart() {
                     fill="url(#usdtGrad)"
                     strokeWidth={1.5}
                     name="USDT"
+                    {...animProps}
                   />
                   <Area
                     type="monotone"
@@ -183,6 +188,7 @@ export function TotalMcapChart() {
                     fill="url(#usdcGrad)"
                     strokeWidth={1.5}
                     name="USDC"
+                    {...animProps}
                   />
                   <Area
                     type="monotone"
@@ -192,6 +198,7 @@ export function TotalMcapChart() {
                     fill="url(#skyGrad)"
                     strokeWidth={1.5}
                     name="USDS + DAI"
+                    {...animProps}
                   />
                   <Area
                     type="monotone"
@@ -201,6 +208,7 @@ export function TotalMcapChart() {
                     fill="url(#othersGrad)"
                     strokeWidth={1.5}
                     name="Others"
+                    {...animProps}
                   />
                 </AreaChart>
               ) : (
