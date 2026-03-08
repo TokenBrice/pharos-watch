@@ -438,6 +438,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── fetch-retry.ts        # Fetch with retry + exponential backoff, default 15s timeout (configurable 404 handling)
         ├── dexscreener.ts        # DexScreener API client (token price + pool search)
         ├── resolve-market-cap.ts # Multi-source market cap resolution (DL → CG → CMC → DexScreener)
+        ├── telegram-alerts.ts    # Telegram alert subscription parsing, filtering, and message formatting helpers
         └── telegram.ts           # Telegram Bot API client for daily digest distribution
 
 data/
