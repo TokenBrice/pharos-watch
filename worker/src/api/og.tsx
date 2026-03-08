@@ -156,7 +156,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
         .first<{ id: number }>(),
       db
         .prepare(
-          `SELECT SUM(CASE WHEN type = 'mint' THEN amount_usd ELSE -amount_usd END) as net_flow
+          `SELECT SUM(net_flow_usd) as net_flow
            FROM mint_burn_hourly
            WHERE stablecoin_id = ? AND hour_ts >= ?`,
         )
