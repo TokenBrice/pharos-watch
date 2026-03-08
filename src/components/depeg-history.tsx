@@ -35,7 +35,20 @@ export function DepegHistory({ stablecoinId, earliestTrackingDate, hasPriceData 
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
 
   if (isLoading) {
-    return <Skeleton className="h-40" />;
+    return (
+      <Card className="rounded-xl">
+        <CardHeader className="pb-1">
+          <CardTitle as="h2" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Depeg History
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
   }
 
   if (error) {
