@@ -33,11 +33,12 @@ import { SAFETY_SCORE_VERSION } from "./safety-score-version";
 
 export const METHODOLOGY_VERSION = SAFETY_SCORE_VERSION;
 
-/**
- * Base dimension weights for the overall grade.
- * Peg Stability has weight 0 here — it is applied as a post-hoc power-curve
- * multiplier via PEG_MULTIPLIER_EXPONENT instead (see computeOverallGrade).
- */
+// Dimension weights reflect relative importance to stablecoin safety:
+//   Liquidity (30%): exit availability is the primary user concern
+//   Dependency risk (25%): upstream failure cascades directly
+//   Resilience (20%): collateral and custody protect against issuer failure
+//   Decentralization (15%): governance concentration is a slower-moving risk
+//   Peg stability (0%): applied as post-hoc multiplier, not in base weight
 export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   pegStability: 0,
   liquidity: 0.30,
@@ -46,14 +47,17 @@ export const DIMENSION_WEIGHTS: Record<DimensionKey, number> = {
   dependencyRisk: 0.25,
 };
 
-/** Peg stability multiplier: final = base × (pegScore/100)^exponent */
+// Peg multiplier exponent: 0.20 creates a gentle power curve.
+//   pegScore 90+ → ~2% penalty (barely noticeable)
+//   pegScore 50  → ~13% penalty (meaningful but not devastating)
+//   pegScore 10  → ~37% penalty (severe, reflects sustained depegging)
+// Rationale: peg stability is table-stakes — most coins score 95+,
+// so the multiplier only bites for genuinely impaired pegs.
 export const PEG_MULTIPLIER_EXPONENT = 0.20;
 
-/**
- * Penalty multiplier applied to the overall score when a coin has no DEX
- * liquidity data. No free pass — missing liquidity coverage is increasingly
- * suspicious as our data pipeline matures.
- */
+// No-liquidity penalty: 10% score reduction for coins with no DEX liquidity data.
+// Rationale: absence of DEX presence is increasingly suspicious as DEX coverage
+// matures. 10% is large enough to matter but doesn't dominate the grade.
 export const NO_LIQUIDITY_PENALTY = 0.9;
 
 export const DIMENSION_LABELS: Record<DimensionKey, string> = {
