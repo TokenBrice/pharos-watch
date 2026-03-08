@@ -1,10 +1,6 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import {
-  isOnchainAvailable, CG_CHAIN_MAP, CG_CHAIN_REVERSE,
-} from "../../lib/coingecko-onchain";
-import { GT_CHAIN_MAP, GT_CHAIN_REVERSE } from "../../lib/chain-registry";
-import {
   QUALITY_MULTIPLIERS, GT_DEX_QUALITY, COMPOSITE_POOL_NAMES, normalizeDexSymbol,
 } from "../../lib/dex-constants";
 import type { LiquidityMetrics, ScoreComponents, SymbolLookups } from "./types";
@@ -51,14 +47,6 @@ export function getGtDexQuality(dexId: string): number {
     if (dexId.startsWith(prefix)) return quality;
   }
   return QUALITY_MULTIPLIERS["generic"]!;
-}
-
-/** Get the active chain map — CG onchain when available, GT fallback otherwise */
-export function getActiveChainMap(): Record<string, string> {
-  return isOnchainAvailable() ? CG_CHAIN_MAP : GT_CHAIN_MAP;
-}
-export function getActiveChainReverse(): Record<string, string> {
-  return isOnchainAvailable() ? CG_CHAIN_REVERSE : GT_CHAIN_REVERSE;
 }
 
 /**

@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CG_CHAIN_MAP, CG_CHAIN_REVERSE, initOnchainAvailability } from "../../lib/coingecko-onchain";
-import { GT_CHAIN_MAP, GT_CHAIN_REVERSE } from "../../lib/chain-registry";
+import { GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../lib/chain-registry";
 import { QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import {
   buildSymbolLookups,
@@ -9,8 +8,6 @@ import {
   computeLiquidityScore,
   computePoolPairQuality,
   computePoolStress,
-  getActiveChainMap,
-  getActiveChainReverse,
   getGtDexQuality,
   getPairQuality,
   getQualityMultiplier,
@@ -22,7 +19,6 @@ import {
 
 describe("dex-liquidity pool helpers", () => {
   afterEach(() => {
-    initOnchainAvailability(undefined);
     vi.restoreAllMocks();
   });
 
@@ -51,14 +47,14 @@ describe("dex-liquidity pool helpers", () => {
     expect(getGtDexQuality("unknown-dex")).toBe(QUALITY_MULTIPLIERS.generic);
   });
 
-  it("switches active chain maps based on CoinGecko onchain availability", () => {
-    initOnchainAvailability("cg-key");
-    expect(getActiveChainMap()).toBe(CG_CHAIN_MAP);
-    expect(getActiveChainReverse()).toBe(CG_CHAIN_REVERSE);
-
-    initOnchainAvailability(undefined);
-    expect(getActiveChainMap()).toBe(GT_CHAIN_MAP);
-    expect(getActiveChainReverse()).toBe(GT_CHAIN_REVERSE);
+  it("keeps provider-specific GT chain slugs separate from canonical chain ids", () => {
+    expect(GT_CHAIN_MAP.bob).toBe("bob-network");
+    expect(GT_CHAIN_MAP.manta).toBe("manta-pacific");
+    expect(GT_CHAIN_MAP.plume).toBe("plume-network");
+    expect(GT_CHAIN_MAP.sei).toBe("sei-network");
+    expect(GT_CHAIN_MAP.worldchain).toBe("world-chain");
+    expect(GT_ONLY_CHAIN_MAP.plasma).toBe("plasma");
+    expect(GT_ONLY_CHAIN_MAP.mantle).toBe("mantle");
   });
 
   it("computes durability and liquidity scores for default and healthy cases", () => {

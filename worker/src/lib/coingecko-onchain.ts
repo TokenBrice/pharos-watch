@@ -1,7 +1,8 @@
 /**
  * CoinGecko Onchain API helper.
  * Wraps /onchain endpoints for DEX pool discovery.
- * Falls through to GeckoTerminal free API when no CG API key is configured.
+ * The liquidity cron uses these endpoints for canonical chains that have an
+ * explicit CoinGecko network mapping and keeps GeckoTerminal for GT-only chains.
  */
 import { cgUrl, cgHeaders } from "./coingecko";
 import { fetchWithRetry } from "./fetch-retry";

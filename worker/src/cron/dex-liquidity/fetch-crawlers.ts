@@ -2,10 +2,9 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import {
-  onchainRateLimit,
-  fetchCgTokenPools, parseCgPoolVolume,
+  onchainRateLimit, fetchCgTokenPools, parseCgPoolVolume, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
-import { GT_CHAIN_REVERSE } from "../../lib/chain-registry";
+import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS, CRAWL_BUDGETS } from "../../lib/rate-limit";
 import { GT_API_BASE, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { sleepWithSignal } from "../../lib/abort";
@@ -14,19 +13,17 @@ import type {
   GtCrawlResult, GtNewPool, CgNewPool,
 } from "./types";
 import {
-  normalizeProtocol, getActiveChainReverse, getGtDexQuality,
+  normalizeProtocol, getGtDexQuality,
   computePoolPairQuality, computePoolStress, initMetrics,
 } from "./pool-helpers";
-import { buildChainAddresses } from "./fetch-primary";
+import { buildChainAddresses, type ProviderChainAddress } from "./fetch-primary";
 import { crawlTokenPools, type CrawlStats, type CrawlToken } from "./crawl-helpers";
 
-function buildCrawlTokens(chainMapper: (sourceChain: string) => string): CrawlToken[] {
-  const chainAddresses = buildChainAddresses();
+function buildCrawlTokens(chainAddresses: Map<string, ProviderChainAddress[]>): CrawlToken[] {
   const tokens: CrawlToken[] = [];
   for (const [sourceChain, contracts] of chainAddresses) {
-    const ourChain = chainMapper(sourceChain) ?? sourceChain;
-    for (const { address, stablecoinId } of contracts) {
-      tokens.push({ sourceChain, ourChain, address, stablecoinId });
+    for (const { chain, address, stablecoinId } of contracts) {
+      tokens.push({ sourceChain, ourChain: chain, address, stablecoinId });
     }
   }
   return tokens;
@@ -39,11 +36,12 @@ export async function fetchCgPools(
   knownPoolAddrs: Set<string>,
   protocolTvlCaps: Map<string, number>,
   signal?: AbortSignal,
+  chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
 ): Promise<{ newPools: Map<string, CgNewPool[]>; priceObs: Map<string, DexPriceObs[]>; stats: GtCrawlResult["stats"] }> {
   const newPools = new Map<string, CgNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
   const stats: CrawlStats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
-  const allTokens = buildCrawlTokens((cgChain) => getActiveChainReverse()[cgChain] ?? cgChain);
+  const allTokens = buildCrawlTokens(chainAddresses);
 
   await crawlTokenPools({
     sourceLabel: "CG",
@@ -225,11 +223,12 @@ export async function fetchGtPools(
   knownPoolAddrs: Set<string>,
   protocolTvlCaps: Map<string, number>,
   signal?: AbortSignal,
+  chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
 ): Promise<GtCrawlResult> {
   const newPools = new Map<string, GtNewPool[]>();
   const priceObs = new Map<string, DexPriceObs[]>();
   const stats: CrawlStats = { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 };
-  const allTokens = buildCrawlTokens((gtChain) => GT_CHAIN_REVERSE[gtChain] ?? gtChain);
+  const allTokens = buildCrawlTokens(chainAddresses);
 
   // Fisher-Yates shuffle
   for (let i = allTokens.length - 1; i > 0; i--) {

@@ -4,9 +4,9 @@ import { setCache } from "../../lib/db";
 import { USER_AGENT, CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import {
-  fetchCgTokensBatch, onchainRateLimit,
+  fetchCgTokensBatch, onchainRateLimit, CG_CHAIN_MAP,
 } from "../../lib/coingecko-onchain";
-import { GT_CHAIN_REVERSE } from "../../lib/chain-registry";
+import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { GT_API_BASE, isUsdReferenceSymbol, normalizeDexSymbol } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
@@ -22,7 +22,7 @@ import {
   AERODROME_SUBGRAPHS, AERODROME_PAIR_QUERY,
 } from "./constants";
 import {
-  normalizeProtocol, getActiveChainMap, getActiveChainReverse, getTrackedContracts,
+  normalizeProtocol, getTrackedContracts,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { fetchSubgraphEntities, mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
@@ -548,18 +548,24 @@ export function buildKnownPoolAddresses(
   return known;
 }
 
-/** Build chain → addresses map from TRACKED_STABLECOINS contracts, filtered to supported chains */
-export function buildChainAddresses(): Map<string, { address: string; stablecoinId: string }[]> {
-  const chainMap = getActiveChainMap();
-  const result = new Map<string, { address: string; stablecoinId: string }[]>();
+export interface ProviderChainAddress {
+  chain: string;
+  address: string;
+  stablecoinId: string;
+}
+
+/** Build provider chain → tracked token addresses map from canonical chain ids. */
+export function buildChainAddresses(chainMap: Record<string, string>): Map<string, ProviderChainAddress[]> {
+  const result = new Map<string, ProviderChainAddress[]>();
   for (const meta of TRACKED_STABLECOINS) {
     for (const c of getTrackedContracts(meta)) {
-      const mappedChain = chainMap[c.chain.toLowerCase()];
+      const canonicalChain = c.chain.toLowerCase();
+      const mappedChain = chainMap[canonicalChain];
       if (!mappedChain) continue;
       const list = result.get(mappedChain) ?? [];
       // Keep original case — Solana/Sui addresses are case-sensitive base58/base64
       // EVM addresses are case-insensitive so lowercasing at comparison time is safe.
-      list.push({ address: c.address, stablecoinId: meta.id });
+      list.push({ chain: canonicalChain, address: c.address, stablecoinId: meta.id });
       result.set(mappedChain, list);
     }
   }
@@ -571,14 +577,13 @@ export function buildChainAddresses(): Map<string, { address: string; stablecoin
 export async function fetchGtTokenBatch(
   addressToId: Map<string, string>,
   signal?: AbortSignal,
+  chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(GT_CHAIN_MAP),
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
-  const chainAddresses = buildChainAddresses();
   let requestCount = 0;
 
   for (const [gtChain, tokens] of chainAddresses) {
     throwIfAborted(signal);
-    const ourChain = GT_CHAIN_REVERSE[gtChain] ?? gtChain;
 
     // Batch into groups of 30 (GT limit for multi endpoint)
     for (let i = 0; i < tokens.length; i += 30) {
@@ -604,9 +609,9 @@ export async function fetchGtTokenBatch(
         for (const token of json.data) {
           const a = token.attributes;
           const addr = a.address.toLowerCase();
-          const stablecoinId = batch.find((t) => t.address.toLowerCase() === addr)?.stablecoinId
-            ?? addressToId.get(addr);
-          if (!stablecoinId) continue;
+          const trackedToken = batch.find((t) => t.address.toLowerCase() === addr);
+          const stablecoinId = trackedToken?.stablecoinId ?? addressToId.get(addr);
+          if (!stablecoinId || !trackedToken) continue;
 
           const price = parseFloat(a.price_usd ?? "");
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
@@ -615,7 +620,7 @@ export async function fetchGtTokenBatch(
           if (!tvl || tvl < 50_000) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];
-          obs.push({ price, tvl, chain: ourChain, protocol: "geckoterminal-aggregate" });
+          obs.push({ price, tvl, chain: trackedToken.chain, protocol: "geckoterminal-aggregate" });
           priceObs.set(stablecoinId, obs);
         }
       } catch (err) {
@@ -634,14 +639,13 @@ export async function fetchGtTokenBatch(
 export async function fetchCgTokenBatchPrices(
   addressToId: Map<string, string>,
   signal?: AbortSignal,
+  chainAddresses: Map<string, ProviderChainAddress[]> = buildChainAddresses(CG_CHAIN_MAP),
 ): Promise<Map<string, DexPriceObs[]>> {
   const priceObs = new Map<string, DexPriceObs[]>();
-  const chainAddresses = buildChainAddresses();
   let requestCount = 0;
 
   for (const [cgChain, tokens] of chainAddresses) {
     throwIfAborted(signal);
-    const ourChain = getActiveChainReverse()[cgChain] ?? cgChain;
 
     // Batch into groups of 30 (CG limit for multi endpoint)
     for (let i = 0; i < tokens.length; i += 30) {
@@ -656,9 +660,9 @@ export async function fetchCgTokenBatchPrices(
         for (const token of cgTokens) {
           const a = token.attributes;
           const addr = a.address.toLowerCase();
-          const stablecoinId = batch.find((t) => t.address.toLowerCase() === addr)?.stablecoinId
-            ?? addressToId.get(addr);
-          if (!stablecoinId) continue;
+          const trackedToken = batch.find((t) => t.address.toLowerCase() === addr);
+          const stablecoinId = trackedToken?.stablecoinId ?? addressToId.get(addr);
+          if (!stablecoinId || !trackedToken) continue;
 
           const price = parseFloat(a.price_usd ?? "");
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
@@ -667,7 +671,7 @@ export async function fetchCgTokenBatchPrices(
           if (!tvl || tvl < 50_000) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];
-          obs.push({ price, tvl, chain: ourChain, protocol: "coingecko-aggregate" });
+          obs.push({ price, tvl, chain: trackedToken.chain, protocol: "coingecko-aggregate" });
           priceObs.set(stablecoinId, obs);
         }
       } catch (err) {

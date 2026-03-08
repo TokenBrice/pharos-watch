@@ -1,4 +1,5 @@
 import { initOnchainAvailability, isOnchainAvailable } from "../../lib/coingecko-onchain";
+import { CG_CHAIN_MAP, GT_CHAIN_MAP, GT_ONLY_CHAIN_MAP } from "../../lib/chain-registry";
 import type { CronResult } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import type { CgNewPool, GtNewPool, DexPriceObs } from "./types";
@@ -6,7 +7,7 @@ import { buildSymbolLookups } from "./pool-helpers";
 import {
   fetchDataSources, buildCurveLookups, fetchUniV3Data,
   fetchAerodromeData, buildKnownPoolAddresses,
-  fetchGtTokenBatch, fetchCgTokenBatchPrices,
+  buildChainAddresses, fetchGtTokenBatch, fetchCgTokenBatchPrices,
 } from "./fetch-primary";
 import { fetchCgPools, mergeCgPools, fetchGtPools, mergeGtPools } from "./fetch-crawlers";
 import { fetchDsFallbackPools, fetchCgTickersFallback } from "./fetch-fallbacks";
@@ -37,7 +38,13 @@ export async function syncDexLiquidity(
   const criticalSourceFailures: string[] = [];
   const fallbackSignals: string[] = [];
   console.log(`[dex-liquidity] Starting sync`);
-  console.log(`[dex-liquidity] Pool discovery source: ${useCg ? "CoinGecko onchain" : "GeckoTerminal fallback"}`);
+  console.log(
+    `[dex-liquidity] Pool discovery source: ${
+      useCg
+        ? "CoinGecko onchain + GeckoTerminal for GT-only chains"
+        : "GeckoTerminal"
+    }`,
+  );
   throwIfAborted(signal);
 
   // 1. Fetch all external data sources
@@ -92,41 +99,69 @@ export async function syncDexLiquidity(
     curvePoolMap, uniV3PoolFees, aerodromeIsStable,
   );
 
-  // 4d. Token-level batch price observations (CG or GT)
-  let fallbackTokenPriceObs = new Map<string, DexPriceObs[]>();
-  try {
-    fallbackTokenPriceObs = useCg
-      ? await fetchCgTokenBatchPrices(addressToId, signal)
-      : await fetchGtTokenBatch(addressToId, signal);
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} token batch failed (non-fatal):`, err);
-    const source = useCg ? "coingecko-token-batch" : "geckoterminal-token-batch";
-    failedSources.push(source);
-    criticalSourceFailures.push(source);
-    fallbackSignals.push("token-batch-failed");
+  const cgChainAddresses = buildChainAddresses(CG_CHAIN_MAP);
+  const gtChainAddresses = buildChainAddresses(useCg ? GT_ONLY_CHAIN_MAP : GT_CHAIN_MAP);
+
+  // 4d. Token-level batch price observations (provider-specific by mapped chain support)
+  let cgTokenPriceObs = new Map<string, DexPriceObs[]>();
+  let gtTokenPriceObs = new Map<string, DexPriceObs[]>();
+
+  if (useCg) {
+    try {
+      cgTokenPriceObs = await fetchCgTokenBatchPrices(addressToId, signal, cgChainAddresses);
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      console.warn("[dex-liquidity] CG token batch failed (non-fatal):", err);
+      failedSources.push("coingecko-token-batch");
+      criticalSourceFailures.push("coingecko-token-batch");
+      fallbackSignals.push("token-batch-failed");
+    }
   }
 
-  // 4e. Pool crawl for new pool discovery (CG or GT)
-  let crawlNewPools: Map<string, CgNewPool[]> | Map<string, GtNewPool[]> = new Map();
-  let crawlPriceObs = new Map<string, DexPriceObs[]>();
-  try {
-    if (useCg) {
-      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal);
-      crawlNewPools = cgResult.newPools;
-      crawlPriceObs = cgResult.priceObs;
-    } else {
-      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal);
-      crawlNewPools = gtResult.newPools;
-      crawlPriceObs = gtResult.priceObs;
+  if (!useCg || gtChainAddresses.size > 0) {
+    try {
+      gtTokenPriceObs = await fetchGtTokenBatch(addressToId, signal, gtChainAddresses);
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      console.warn(`[dex-liquidity] GT token batch failed (non-fatal):`, err);
+      failedSources.push("geckoterminal-token-batch");
+      criticalSourceFailures.push("geckoterminal-token-batch");
+      fallbackSignals.push(useCg ? "gt-only-token-batch-failed" : "token-batch-failed");
     }
-  } catch (err) {
-    rethrowIfAborted(err, signal);
-    console.warn(`[dex-liquidity] ${useCg ? "CG" : "GT"} pool crawl failed (non-fatal):`, err);
-    const source = useCg ? "coingecko-pool-crawl" : "geckoterminal-pool-crawl";
-    failedSources.push(source);
-    criticalSourceFailures.push(source);
-    fallbackSignals.push("pool-crawl-failed");
+  }
+
+  // 4e. Pool crawl for new pool discovery (CG primary + GT-only backfill when available)
+  let cgCrawlNewPools = new Map<string, CgNewPool[]>();
+  let cgCrawlPriceObs = new Map<string, DexPriceObs[]>();
+  let gtCrawlNewPools = new Map<string, GtNewPool[]>();
+  let gtCrawlPriceObs = new Map<string, DexPriceObs[]>();
+
+  if (useCg) {
+    try {
+      const cgResult = await fetchCgPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal, cgChainAddresses);
+      cgCrawlNewPools = cgResult.newPools;
+      cgCrawlPriceObs = cgResult.priceObs;
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      console.warn("[dex-liquidity] CG pool crawl failed (non-fatal):", err);
+      failedSources.push("coingecko-pool-crawl");
+      criticalSourceFailures.push("coingecko-pool-crawl");
+      fallbackSignals.push("pool-crawl-failed");
+    }
+  }
+
+  if (!useCg || gtChainAddresses.size > 0) {
+    try {
+      const gtResult = await fetchGtPools(addressToId, knownPoolAddrs, dataSources.protocolTvlCaps, signal, gtChainAddresses);
+      gtCrawlNewPools = gtResult.newPools;
+      gtCrawlPriceObs = gtResult.priceObs;
+    } catch (err) {
+      rethrowIfAborted(err, signal);
+      console.warn("[dex-liquidity] GT pool crawl failed (non-fatal):", err);
+      failedSources.push("geckoterminal-pool-crawl");
+      criticalSourceFailures.push("geckoterminal-pool-crawl");
+      fallbackSignals.push(useCg ? "gt-only-pool-crawl-failed" : "pool-crawl-failed");
+    }
   }
 
   // Merge all price observations into a single map
@@ -140,12 +175,22 @@ export async function syncDexLiquidity(
     existing.push(...obs);
     priceObservations.set(id, existing);
   }
-  for (const [id, obs] of fallbackTokenPriceObs) {
+  for (const [id, obs] of cgTokenPriceObs) {
     const existing = priceObservations.get(id) ?? [];
     existing.push(...obs);
     priceObservations.set(id, existing);
   }
-  for (const [id, obs] of crawlPriceObs) {
+  for (const [id, obs] of gtTokenPriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
+  for (const [id, obs] of cgCrawlPriceObs) {
+    const existing = priceObservations.get(id) ?? [];
+    existing.push(...obs);
+    priceObservations.set(id, existing);
+  }
+  for (const [id, obs] of gtCrawlPriceObs) {
     const existing = priceObservations.get(id) ?? [];
     existing.push(...obs);
     priceObservations.set(id, existing);
@@ -159,14 +204,11 @@ export async function syncDexLiquidity(
   );
 
   // 5b. Merge discovered pools into metrics (CG or GT)
-  if (useCg) {
-    mergeCgPools(metrics, crawlNewPools as Map<string, CgNewPool[]>);
-  } else {
-    mergeGtPools(metrics, crawlNewPools as Map<string, GtNewPool[]>);
-  }
+  mergeCgPools(metrics, cgCrawlNewPools);
+  mergeGtPools(metrics, gtCrawlNewPools);
 
   // Seed same-run crawl discoveries into the dedupe set before fallback passes.
-  for (const pools of crawlNewPools.values()) {
+  for (const pools of [...cgCrawlNewPools.values(), ...gtCrawlNewPools.values()]) {
     for (const pool of pools) {
       knownPoolAddrs.add(`${pool.chain.toLowerCase()}:${pool.address.toLowerCase()}`);
     }

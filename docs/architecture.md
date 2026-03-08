@@ -416,7 +416,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   └── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
-        ├── chain-registry.ts     # Unified chain mappings + chain RPC endpoint config (11 chains: EVM + Tron)
+        ├── chain-registry.ts     # Canonical chain ids + provider-specific network slugs + chain RPC endpoint config
         ├── circuit-breaker.ts    # Per-source circuit breaker (3-strike open, 30-min probe, auto-alert on transitions)
         ├── constants.ts          # Shared worker constants (DEPEG_THRESHOLD_BPS, DEX_FRESHNESS_SEC, D1_BATCH_SIZE, MIN_VALID_ASSET_COUNT, CACHE_PROFILES, CIRCUIT_SOURCE)
         ├── auth.ts               # Timing-safe admin key comparison (SHA-256 + crypto.subtle.timingSafeEqual)
@@ -435,7 +435,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
         ├── evm-logs.ts           # EVM log filtering & parsing (Etherscan event decoding)
         ├── coingecko.ts          # CoinGecko API key initialization (shared across crons)
-        ├── coingecko-onchain.ts  # CoinGecko Onchain API client (16 chains, pool discovery, locked liquidity)
+        ├── coingecko-onchain.ts  # CoinGecko Onchain API client (registry-backed network mapping, pool discovery, locked liquidity)
         ├── twitter.ts            # Twitter/X API client for daily digest posting
         ├── stability-index.ts    # Stability index computation helpers
         ├── backfill-query.ts     # Shared admin backfill query parsing/selection helpers (stablecoin/batch/batchSize)

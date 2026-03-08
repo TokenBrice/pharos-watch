@@ -20,7 +20,7 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed 
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100) |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + CoinGecko Onchain API (16 chains, with GeckoTerminal free API as fallback when no CG API key is configured) + DexScreener token API (30+ chains, fallback for coins that still lack pool coverage or DEX price observations after primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins that still lack pool coverage or DEX price observations, e.g. KAG/KAU on Kinesis Exchange).
+Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + registry-backed CoinGecko Onchain / GeckoTerminal pool discovery + DexScreener token API (30+ chains, fallback for coins that still lack pool coverage or DEX price observations after primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins that still lack pool coverage or DEX price observations, e.g. KAG/KAU on Kinesis Exchange).
 
 ### Quality Multipliers (v2)
 
@@ -56,12 +56,12 @@ Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve F
 
 ### CoinGecko Onchain Integration
 
-When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko's `/onchain` endpoints instead of GeckoTerminal's free API:
+Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the worker keeps one canonical internal chain id per deployment (`bob`, `worldchain`, `plasma`, etc.) and maps it to provider-specific network slugs (`bob-network`, `world-chain`, `plasma`, ...). When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko `/onchain` for chains with a `coingecko` mapping and still runs GeckoTerminal for chains that only have a `geckoTerminal` mapping. This avoids the old all-or-nothing mode switch where enabling CoinGecko could silently drop GT-only chains.
 
 | Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
 |---------|--------------------------|--------------------------|
 | Rate limit | 30 req/min | ~240 req/min |
-| Chain coverage | 13 chains | 16 chains (adds tron, ink, rootstock beyond GT's set) |
+| Chain coverage | Registry-backed GT network slugs for canonical chains, including slug aliases such as `bob-network`, `manta-pacific`, and `world-chain` | Registry-backed CG network ids for chains with explicit CG support; GT-only chains still flow through GeckoTerminal in the same run |
 | Balance data | Not available (defaults to 1.0) | Approximated from token prices |
 | Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
 | Locked liquidity | Not available | `locked_liquidity_percentage` field |
