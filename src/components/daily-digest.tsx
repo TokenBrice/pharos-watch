@@ -106,12 +106,23 @@ export function DailyDigest({ variant = "full", showCta }: DailyDigestProps) {
               </p>
             ))}
             {shouldShowCta && (
-              <Link
-                href="/digest/"
-                className="inline-block text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground lg:self-end"
-              >
-                {ctaLabel} &rarr;
-              </Link>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 lg:self-end">
+                <Link
+                  href="/digest/"
+                  className="text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {ctaLabel} &rarr;
+                </Link>
+                <span className="text-border">|</span>
+                <a
+                  href="https://t.me/pharoswatch"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-semibold uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Telegram &rarr;
+                </a>
+              </div>
             )}
           </div>
         </div>

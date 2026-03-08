@@ -24,7 +24,7 @@ export function Footer() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground lg:justify-self-end lg:pt-0.5">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground lg:justify-self-end lg:pt-0.5" aria-label="Social links">
             <a
               href="https://x.com/PharosWatch"
               target="_blank"
