@@ -13,6 +13,8 @@ import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../lib/mint-burn-scoring";
+import { SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 
 const SYSTEM_PROMPT =
   "You write the daily editorial summary for Pharos, a stablecoin analytics dashboard. " +
@@ -464,6 +466,88 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to query resolved depegs:", e);
   }
 
+  // 4e. Mint-burn flows (24h + 30d baseline)
+  let mintBurnFlows: DigestInputData["mintBurnFlows"];
+  try {
+    const cutoff24h = nowSec - SECONDS.ONE_DAY;
+    const cutoff30d = nowSec - 30 * SECONDS.ONE_DAY;
+
+    // 24h aggregate per coin (across all chains)
+    const flow24hRows = await db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(mint_volume_usd) as mint_24h,
+                SUM(burn_volume_usd) as burn_24h,
+                SUM(net_flow_usd) as net_24h
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(cutoff24h)
+      .all<{ stablecoin_id: string; mint_24h: number; burn_24h: number; net_24h: number }>();
+
+    // 30d baseline per coin
+    const flow30dRows = await db
+      .prepare(
+        `SELECT stablecoin_id,
+                SUM(net_flow_usd) / 30.0 as avg_daily_net,
+                SUM(mint_volume_usd + burn_volume_usd) / 30.0 as avg_daily_abs,
+                COUNT(DISTINCT CAST(hour_ts / 86400 AS INTEGER)) as data_days
+         FROM mint_burn_hourly
+         WHERE hour_ts >= ?
+         GROUP BY stablecoin_id`,
+      )
+      .bind(cutoff30d)
+      .all<{ stablecoin_id: string; avg_daily_net: number; avg_daily_abs: number; data_days: number }>();
+
+    const flow24h = new Map((flow24hRows.results ?? []).map((r) => [r.stablecoin_id, r]));
+    const flow30d = new Map((flow30dRows.results ?? []).map((r) => [r.stablecoin_id, r]));
+
+    // Compute FIS per coin
+    const coinIntensities: { id: string; symbol: string; intensity: number | null; net24h: number; mcap: number }[] = [];
+    for (const [id, f24] of flow24h) {
+      const f30 = flow30d.get(id);
+      if (!f30) continue;
+      const coin = trackedStablecoinAssets.find((c) => c.id === id);
+      if (!coin) continue;
+      const intensity = computeFlowIntensity({
+        currentDailyNet: f24.net_24h,
+        baselineDailyNet: f30.avg_daily_net,
+        baselineDailyAbs: f30.avg_daily_abs,
+        dataAgeDays: f30.data_days,
+      });
+      coinIntensities.push({ id, symbol: coin.symbol, intensity, net24h: f24.net_24h, mcap: getCirculatingRaw(coin) });
+    }
+
+    const gaugeScore = computeGaugeScore(coinIntensities.map((c) => ({ intensity: c.intensity, mcap: c.mcap })));
+    if (gaugeScore !== null) {
+      // FTQ: sum net flows for safe vs risky
+      let safeNet24h = 0;
+      let riskyNet24h = 0;
+      for (const c of coinIntensities) {
+        if (SAFE_HAVEN_IDS.has(c.id)) safeNet24h += c.net24h;
+        else riskyNet24h += c.net24h;
+      }
+      const ftq = detectFlightToQuality({ safeNet24h, riskyNet24h });
+
+      // Top pressure: coins with |intensity| > 20, sorted by |intensity|
+      const topPressure = coinIntensities
+        .filter((c) => c.intensity !== null && Math.abs(c.intensity) > 20)
+        .sort((a, b) => Math.abs(b.intensity!) - Math.abs(a.intensity!))
+        .slice(0, 3)
+        .map((c) => ({ symbol: c.symbol, intensity: c.intensity!, net24hUsd: c.net24h }));
+
+      mintBurnFlows = {
+        gaugeScore,
+        gaugeBand: getGaugeBand(gaugeScore).label,
+        flightToQuality: { active: ftq.active, safeNetUsd: safeNet24h, riskyNetUsd: riskyNet24h },
+        topPressure,
+      };
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect mint-burn flows:", e);
+  }
+
   // --- Build input data ---
   const inputData: DigestInputData = {
     totalMcapUsd,
@@ -477,6 +561,7 @@ export async function generateDailyDigest(
     supplyVelocity,
     safetyScores,
     resolvedDepegs,
+    mintBurnFlows,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentDigests);

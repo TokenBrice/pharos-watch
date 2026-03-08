@@ -284,6 +284,39 @@ describe("generateDailyDigest", () => {
     expect(fetchWithRetry).not.toHaveBeenCalled();
   });
 
+  it("includes mint-burn flow data in stored input when hourly data exists", async () => {
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // 24h aggregate — match on SUM(mint_volume_usd) which is unique to this query
+      {
+        match: "SUM(mint_volume_usd)",
+        rows: [
+          { stablecoin_id: "usdt-tether", mint_24h: 500_000_000, burn_24h: 300_000_000, net_24h: 200_000_000 },
+          { stablecoin_id: "usdc-circle", mint_24h: 100_000_000, burn_24h: 150_000_000, net_24h: -50_000_000 },
+        ],
+      },
+      // 30d baseline — match on "/ 30.0" which is unique to this query
+      {
+        match: "/ 30.0",
+        rows: [
+          { stablecoin_id: "usdt-tether", avg_daily_net: 50_000_000, avg_daily_abs: 200_000_000, data_days: 30 },
+          { stablecoin_id: "usdc-circle", avg_daily_net: -10_000_000, avg_daily_abs: 80_000_000, data_days: 25 },
+        ],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.mintBurnFlows).toBeDefined();
+    expect(storedInput.mintBurnFlows.gaugeBand).toBeDefined();
+    expect(typeof storedInput.mintBurnFlows.gaugeScore).toBe("number");
+    expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
+  });
+
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
