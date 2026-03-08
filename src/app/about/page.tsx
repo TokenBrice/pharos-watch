@@ -126,6 +126,13 @@ export default function AboutPage() {
               height={80}
               className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
             />
+            <Image
+              src="/cmcs-logo.png"
+              alt="cmcs"
+              width={80}
+              height={80}
+              className="rounded-xl h-16 w-16 sm:h-20 sm:w-20"
+            />
           </div>
           <div className="space-y-3">
             <p>
@@ -161,6 +168,19 @@ export default function AboutPage() {
               </a>
               . It puts the stablecoin data you want to monitor in one place: honest
               classification, depeg and freeze tracking, liquidity scoring, daily digests and a graveyard for the ones that didn&apos;t make it.
+            </p>
+            <p>
+              Development is orchestrated via{" "}
+              <a
+                href="https://github.com/TokenBrice/cmcs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground underline underline-offset-4 hover:text-sky-500 transition-colors font-mono"
+              >
+                cmcs
+                <ExternalLink className="inline h-3.5 w-3.5 ml-0.5 -mt-0.5" />
+              </a>
+              {" "}— a Claude-master / Codex-slave workflow where Claude acts as architect and orchestrator, dispatching parallel Codex agents to implement features autonomously.
             </p>
           </div>
         </CardContent>
