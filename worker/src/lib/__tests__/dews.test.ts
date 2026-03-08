@@ -200,6 +200,28 @@ describe("computeDEWS", () => {
     expect(result.signals.pool.value).toBeGreaterThan(50);
   });
 
+  it("treats NaN weightedBalanceRatio as unavailable", () => {
+    const result = computeDEWS(
+      baseInput({
+        weightedBalanceRatio: NaN,
+        avgPoolStress: 0,
+        topPools: [],
+      }),
+    );
+    expect(result.signals.pool.available).toBe(false);
+  });
+
+  it("treats NaN avgPoolStress as unavailable", () => {
+    const result = computeDEWS(
+      baseInput({
+        weightedBalanceRatio: 0.95,
+        avgPoolStress: NaN,
+        topPools: [],
+      }),
+    );
+    expect(result.signals.pool.available).toBe(false);
+  });
+
   it("detects price confidence degradation", () => {
     const result = computeDEWS(
       baseInput({

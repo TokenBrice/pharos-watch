@@ -231,7 +231,12 @@ function computeSupplySignal(input: DEWSInput): SignalResult {
 }
 
 function computePoolSignal(input: DEWSInput): SignalResult {
-  if (input.weightedBalanceRatio === null || input.avgPoolStress === null) {
+  if (
+    input.weightedBalanceRatio == null ||
+    !Number.isFinite(input.weightedBalanceRatio) ||
+    input.avgPoolStress == null ||
+    !Number.isFinite(input.avgPoolStress)
+  ) {
     return { value: 0, available: false };
   }
 
