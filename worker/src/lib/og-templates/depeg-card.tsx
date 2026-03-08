@@ -34,55 +34,54 @@ export function DepegCard({ data }: { data: DepegCardData }) {
       <div
         style={{
           display: "flex",
-          gap: 64,
-          marginBottom: 32,
+          gap: 80,
           fontFamily: "Geist Mono",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span
             style={{
-              fontSize: 12,
+              fontSize: 14,
               color: TEXT_SECONDARY,
               letterSpacing: "0.06em",
             }}
           >
             ACTIVE DEPEGS
           </span>
-          <span style={{ fontSize: 56, fontWeight: 700, color: depegColor }}>
+          <span style={{ fontSize: 72, fontWeight: 700, color: depegColor }}>
             {data.activeDepegCount}
           </span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span
             style={{
-              fontSize: 12,
+              fontSize: 14,
               color: TEXT_SECONDARY,
               letterSpacing: "0.06em",
             }}
           >
             PSI SCORE
           </span>
-          <span style={{ fontSize: 56, fontWeight: 700 }}>
+          <span style={{ fontSize: 72, fontWeight: 700 }}>
             {data.psiScore.toFixed(1)}
           </span>
-          <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+          <span style={{ fontSize: 18, color: TEXT_SECONDARY }}>
             {data.psiBand}
           </span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span
             style={{
-              fontSize: 12,
+              fontSize: 14,
               color: TEXT_SECONDARY,
               letterSpacing: "0.06em",
             }}
           >
             AT PEG
           </span>
-          <span style={{ fontSize: 56, fontWeight: 700 }}>
+          <span style={{ fontSize: 72, fontWeight: 700 }}>
             {data.coinsAtPeg}
-            <span style={{ fontSize: 24, color: TEXT_SECONDARY }}>
+            <span style={{ fontSize: 28, color: TEXT_SECONDARY }}>
               /{data.totalCoins}
             </span>
           </span>
@@ -90,10 +89,10 @@ export function DepegCard({ data }: { data: DepegCardData }) {
       </div>
 
       {/* DEWS distribution */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <span
           style={{
-            fontSize: 12,
+            fontSize: 14,
             color: TEXT_SECONDARY,
             letterSpacing: "0.06em",
           }}
@@ -103,7 +102,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
         <div
           style={{
             display: "flex",
-            gap: 32,
+            gap: 40,
             fontFamily: "Geist Mono",
           }}
         >
@@ -120,21 +119,21 @@ export function DepegCard({ data }: { data: DepegCardData }) {
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 8,
+                gap: 10,
               }}
             >
               <div
                 style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 2,
+                  width: 14,
+                  height: 14,
+                  borderRadius: 3,
                   backgroundColor: band.color,
                 }}
               />
-              <span style={{ fontSize: 14, color: TEXT_SECONDARY }}>
+              <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
                 {band.label}
               </span>
-              <span style={{ fontSize: 20, fontWeight: 700 }}>
+              <span style={{ fontSize: 28, fontWeight: 700 }}>
                 {band.count}
               </span>
             </div>

@@ -92,8 +92,8 @@ export function CardFrame({
         {title}
       </div>
 
-      {/* Content */}
-      <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+      {/* Content — spread children to fill available space */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
         {children}
       </div>
     </div>
@@ -113,7 +113,7 @@ export function Sparkline({
   const max = Math.max(...data);
   const range = max - min || 1;
   const w = 1080;
-  const h = 60;
+  const h = 80;
   const step = w / (data.length - 1);
   const points = data.map(
     (v, i) => `${i * step},${h - ((v - min) / range) * h}`,

@@ -40,37 +40,39 @@ export function StabilityIndexCard({
       subtitle="Market-wide Peg Health"
       borderTopColor={bandColor}
     >
-      {/* Score + delta row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: 24,
-          marginBottom: 16,
-          fontFamily: "Geist Mono",
-        }}
-      >
-        <span style={{ fontSize: 72, fontWeight: 700 }}>
-          {data.psiScore.toFixed(1)}
-        </span>
-        <span style={{ fontSize: 28, fontWeight: 600, color: bandColor }}>
-          {data.psiBand}
-        </span>
-        <span style={{ fontSize: 20, color: deltaColor }}>
-          {deltaSign}
-          {data.delta24h.toFixed(2)} 24h
-        </span>
-      </div>
+      {/* Top section: score + sparkline */}
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {/* Score + delta row */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 24,
+            marginBottom: 16,
+            fontFamily: "Geist Mono",
+          }}
+        >
+          <span style={{ fontSize: 88, fontWeight: 700 }}>
+            {data.psiScore.toFixed(1)}
+          </span>
+          <span style={{ fontSize: 32, fontWeight: 600, color: bandColor }}>
+            {data.psiBand}
+          </span>
+          <span style={{ fontSize: 24, color: deltaColor }}>
+            {deltaSign}
+            {data.delta24h.toFixed(2)} 24h
+          </span>
+        </div>
 
-      {/* Sparkline */}
-      <Sparkline data={data.sparklineData} color={bandColor} />
+        {/* Sparkline */}
+        <Sparkline data={data.sparklineData} color={bandColor} />
+      </div>
 
       {/* Band labels */}
       <div
         style={{
           display: "flex",
           gap: 16,
-          marginTop: 24,
           fontFamily: "Geist Mono",
         }}
       >

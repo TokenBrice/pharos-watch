@@ -103,143 +103,145 @@ export function StablecoinCard({ data }: { data: StablecoinCardData }) {
       borderTopColor={treatment.borderTopColor}
       badge={treatment.badge}
     >
-      {/* Primary metrics row */}
-      <div
-        style={{
-          display: "flex",
-          gap: 48,
-          marginBottom: 24,
-          fontFamily: "Geist Mono",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            GRADE
-          </span>
-          <span style={{ fontSize: 36, fontWeight: 700, color: gradeColor }}>
-            {data.grade}
-          </span>
+      {/* Top section: metrics */}
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {/* Primary metrics row */}
+        <div
+          style={{
+            display: "flex",
+            gap: 56,
+            marginBottom: 28,
+            fontFamily: "Geist Mono",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              GRADE
+            </span>
+            <span style={{ fontSize: 44, fontWeight: 700, color: gradeColor }}>
+              {data.grade}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              PEG
+            </span>
+            <span style={{ fontSize: 36, fontWeight: 700 }}>
+              ${data.pegPrice.toFixed(4)}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              DEWS
+            </span>
+            <span style={{ fontSize: 36, fontWeight: 700, color: dewsColor }}>
+              {data.dewsBand}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              LIQUIDITY
+            </span>
+            <span style={{ fontSize: 36, fontWeight: 700 }}>
+              {data.liquidityScore.toFixed(0)}
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              PSI
+            </span>
+            <span style={{ fontSize: 36, fontWeight: 700, color: psiColor }}>
+              {data.psiScore.toFixed(1)}
+            </span>
+          </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            PEG
-          </span>
-          <span style={{ fontSize: 28, fontWeight: 700 }}>
-            ${data.pegPrice.toFixed(4)}
-          </span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            DEWS
-          </span>
-          <span style={{ fontSize: 28, fontWeight: 700, color: dewsColor }}>
-            {data.dewsBand}
-          </span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            LIQUIDITY
-          </span>
-          <span style={{ fontSize: 28, fontWeight: 700 }}>
-            {data.liquidityScore.toFixed(0)}
-          </span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            PSI
-          </span>
-          <span style={{ fontSize: 28, fontWeight: 700, color: psiColor }}>
-            {data.psiScore.toFixed(1)}
-          </span>
+
+        {/* Secondary metrics row */}
+        <div
+          style={{
+            display: "flex",
+            gap: 56,
+            fontFamily: "Geist Mono",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              MARKET CAP
+            </span>
+            <span style={{ fontSize: 24 }}>{formatUsd(data.mcap)}</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              24H VOLUME
+            </span>
+            <span style={{ fontSize: 24 }}>{formatUsd(data.vol24h)}</span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span
+              style={{
+                fontSize: 14,
+                color: TEXT_SECONDARY,
+                letterSpacing: "0.06em",
+              }}
+            >
+              7D FLOW
+            </span>
+            <span
+              style={{
+                fontSize: 24,
+                color: data.flow7d >= 0 ? "#22c55e" : "#ef4444",
+              }}
+            >
+              {sign}
+              {formatUsd(data.flow7d)}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Secondary metrics row */}
-      <div
-        style={{
-          display: "flex",
-          gap: 48,
-          marginBottom: 16,
-          fontFamily: "Geist Mono",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            MARKET CAP
-          </span>
-          <span style={{ fontSize: 20 }}>{formatUsd(data.mcap)}</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            24H VOLUME
-          </span>
-          <span style={{ fontSize: 20 }}>{formatUsd(data.vol24h)}</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          <span
-            style={{
-              fontSize: 12,
-              color: TEXT_SECONDARY,
-              letterSpacing: "0.06em",
-            }}
-          >
-            7D FLOW
-          </span>
-          <span
-            style={{
-              fontSize: 20,
-              color: data.flow7d >= 0 ? "#22c55e" : "#ef4444",
-            }}
-          >
-            {sign}
-            {formatUsd(data.flow7d)}
-          </span>
-        </div>
-      </div>
-
-      {/* Sparkline */}
+      {/* Sparkline — pushed to bottom by space-between */}
       <Sparkline data={data.sparklineData} color={FROST_BLUE} />
     </CardFrame>
   );
