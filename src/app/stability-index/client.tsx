@@ -269,7 +269,7 @@ function useHistoryStats(history: HistoryPoint[]) {
         label: "ATL",
         value: formatScore(worst.score),
         band: worst.band,
-        sub: new Date(worst.date * 1000).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        sub: formatChartDate(worst.date * 1000, "month-year"),
       },
     ] as const;
   }, [history]);
