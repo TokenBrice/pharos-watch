@@ -13,7 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket } from "@shared/types";
 import { DAY_HOURS, HOUR_MS, HOUR_SECONDS } from "@/lib/constants";
@@ -58,14 +58,13 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   }, [chartData]);
 
   const formatXAxisTick = useCallback((ts: number) => {
-    const d = new Date(ts);
     if (rangeHours <= 48) {
-      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
     }
     if (rangeHours <= 8 * DAY_HOURS) {
-      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", hour12: true });
+      return formatChartDate(ts, "with-time");
     }
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return formatChartDate(ts, "short");
   }, [rangeHours]);
 
   if (isLoading) {

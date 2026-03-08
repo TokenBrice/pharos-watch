@@ -21,7 +21,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { DEAD_STABLECOINS, CAUSE_META, CAUSE_HEX } from "@shared/lib/dead-stablecoins";
 import { CHART_RED, CHART_BLUE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-colors";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import type { CauseOfDeath } from "@shared/types";
 
 /* ── Custom tooltip shell ── */
@@ -359,7 +359,7 @@ function CumulativeDestroyedChart() {
       const cumulative = (acc[acc.length - 1]?.cumulative ?? 0) + c.peakMcap!;
       const [y, m] = c.deathDate.split("-");
       const date = new Date(Number(y), Number(m || 1) - 1);
-      const label = date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      const label = formatChartDate(date.getTime(), "compact");
       return [...acc, { date: label, cumulative, symbol: c.symbol, added: c.peakMcap! }];
     }, []);
   }, []);

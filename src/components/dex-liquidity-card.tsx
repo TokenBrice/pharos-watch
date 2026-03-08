@@ -9,7 +9,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useDexLiquidityHistory } from "@/hooks/use-dex-liquidity-history";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
 import {
   PROTOCOL_COLORS,
@@ -219,7 +219,7 @@ function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   const chartData = useMemo(() => {
     if (!history || history.length < 2) return [];
     return history.map((p) => ({
-      date: new Date(p.date * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: formatChartDate(p.date * 1000, "short"),
       tvl: p.tvl,
     }));
   }, [history]);

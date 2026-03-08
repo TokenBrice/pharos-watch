@@ -161,7 +161,7 @@ export function formatApy(value: number | null | undefined): string {
   return value != null ? `${value.toFixed(2)}%` : "-";
 }
 
-type ChartDateFormat = "short" | "month-year" | "compact";
+type ChartDateFormat = "short" | "month-year" | "compact" | "with-time";
 
 /** Centralized date formatter for chart axes and tooltips. */
 export function formatChartDate(
@@ -179,5 +179,12 @@ export function formatChartDate(
       const year = d.toLocaleDateString("en-US", { year: "2-digit" });
       return `${month} '${year}`;
     }
+    case "with-time":
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        hour12: true,
+      });
   }
 }

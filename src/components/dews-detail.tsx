@@ -9,6 +9,7 @@ import { THREAT_BAND_COLORS, THREAT_BAND_LABELS, THREAT_BAND_HEX } from "@shared
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
+import { formatChartDate } from "@shared/lib/format";
 
 const SIGNAL_META: Record<string, { name: string; metricKey: string; metricLabel: string }> = {
   supply: { name: "Supply Velocity", metricKey: "delta1d", metricLabel: "1d change" },
@@ -170,9 +171,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 <TimeGrid />
                 <TimeXAxis
                   dataKey="ts"
-                  tickFormatter={(ts: number) =>
-                    new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                  }
+                  tickFormatter={(ts: number) => formatChartDate(ts, "short")}
                 />
                 <MonoYAxis domain={[0, 100]} width={30} />
                 <DateTooltip formatter={(val) => [`${val}/100`, "DEWS"]} />

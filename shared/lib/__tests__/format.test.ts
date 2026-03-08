@@ -28,4 +28,9 @@ describe("formatChartDate", () => {
   it("compact format: month + 2-digit year", () => {
     expect(formatChartDate(ts, "compact")).toBe("Jun '25");
   });
+  it("with-time format: month + day + hour", () => {
+    const result = formatChartDate(ts, "with-time");
+    expect(result).toMatch(/Jun 15/);
+    expect(result).toMatch(/\d{1,2}\s*(AM|PM)/i);
+  });
 });
