@@ -85,6 +85,31 @@ export function ReportCardDetail({ card }: ReportCardDetailProps) {
                   <span className="text-sm">/100</span>
                 </span>
               )}
+              {card.baseScore != null && card.overallScore != null && card.dimensions.pegStability.score != null && (
+                <details className="mt-2 text-xs text-muted-foreground w-full">
+                  <summary className="cursor-pointer hover:text-foreground transition-colors">
+                    Show score breakdown
+                  </summary>
+                  <div className="mt-2 space-y-1.5 pl-1">
+                    <div className="flex items-center justify-between">
+                      <span>Base score</span>
+                      <span className="font-mono tabular-nums">{card.baseScore.toFixed(1)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Peg multiplier</span>
+                      <span className="font-mono tabular-nums">
+                        {card.baseScore !== card.overallScore
+                          ? `\u2212${(card.baseScore - card.overallScore).toFixed(1)}pts`
+                          : "none"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between font-medium text-foreground">
+                      <span>Final score</span>
+                      <span className="font-mono tabular-nums">{card.overallScore.toFixed(1)}</span>
+                    </div>
+                  </div>
+                </details>
+              )}
             </div>
             {/* Radar chart — fills remaining width and full column height on desktop */}
             <ReportCardRadar card={card} labels="full" className="w-full flex-1 min-h-[260px] md:h-full" />
