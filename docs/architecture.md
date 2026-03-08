@@ -44,7 +44,7 @@
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
 | `POST /api/telegram-webhook` | Telegram bot webhook (command handling, subscription management) |
 
-## Database Tables
+## Telegram Subsystem Tables
 
 | Table | Description |
 |-------|-------------|
@@ -52,7 +52,9 @@
 | `telegram_subscriptions` | Per-user coin subscriptions (`chat_id`, `stablecoin_id`) |
 | `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation |
 
-## Cron Jobs
+These tables are created in `worker/migrations/0054_telegram_subscribers.sql`. For the full bot flow, see `docs/telegram-alerts.md`.
+
+## Telegram Alert Cron Job
 
 | Job | Description |
 |-----|-------------|
@@ -168,7 +170,7 @@ src/                              # Next.js frontend (static export)
 │   ├── stablecoin-table-logic.ts # Stablecoin table filtering/sorting/export helpers
 │   ├── stablecoin-table-column-visibility.tsx # Stablecoin table column picker UI
 │   ├── status/                   # Status dashboard component decomposition
-│   ├── flow-gauge.tsx            # Shared Bank Run Gauge band configuration map (labels/colors/classes)
+│   ├── flow-brrr-overview.tsx    # Shared Bank Run Gauge + Minting Pressure overview shell
 │   ├── flow-chart.tsx            # Mint/burn flow area chart (hourly timeseries)
 │   ├── flow-table.tsx            # Per-coin flow table with pressure-shift states, volumes, and net flows
 │   ├── flow-event-feed.tsx       # Live mint/burn event feed with filtering
@@ -246,7 +248,7 @@ src/                              # Next.js frontend (static export)
 │   ├── yield-scatter-plot.tsx    # Yield vs risk scatter chart with quadrant labels
 │   └── theme-toggle.tsx          # Dark/light mode toggle
 ├── hooks/
-│   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (GET /api/supply-history with fallback)
+│   ├── use-stablecoins.ts        # GET /api/stablecoins + useSupplyHistory (detail-token history derived from GET /api/stablecoin/:id)
 │   ├── use-mint-burn-flows.ts    # GET /api/mint-burn-flows + GET /api/mint-burn-events
 │   ├── use-logos.ts              # Static logos from data/logos.json
 │   ├── use-stablecoin-charts.ts  # GET /api/stablecoin-charts
@@ -329,7 +331,7 @@ shared/                           # Runtime-neutral boundary (import via `@share
 
 worker/                           # Cloudflare Worker (API + cron jobs)
 ├── wrangler.toml                 # Worker config, D1 binding, cron triggers
-├── migrations/                   # D1 SQL migrations (53 total)
+├── migrations/                   # D1 SQL migrations (56 total)
 └── src/
     ├── index.ts                  # Thin worker composition: delegates fetch/scheduled to handler modules
     ├── handlers/
@@ -375,7 +377,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
     │   └── status-self-check.ts  # Status reliability cron: real HTTP probes, hysteresis persistence, discrepancy/probe-failure alerts
     ├── api/
-    │   ├── stablecoins.ts        # GET /api/stablecoins
+    │   ├── cache-handlers.ts     # Cache-backed handlers: stablecoins, stablecoin-charts, bluechip-ratings, usds-status, yield-rankings
     │   ├── stablecoin-detail.ts  # GET /api/stablecoin/:id (orchestrator + branch routing)
     │   ├── stablecoin-summary.ts # GET /api/stablecoin-summary/:id (lightweight per-coin snapshot)
     │   ├── stablecoin-detail/    # Stablecoin detail handler internals (focused modules)
@@ -383,13 +385,10 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   │   ├── commodity.ts      # Commodity token upstream assembly (DL + CG fallback)
     │   │   ├── coingecko-only.ts # CoinGecko-only token branch assembly
     │   │   └── defillama.ts      # DefiLlama detail normalization (non-USD USD-conversion)
-    │   ├── stablecoin-charts.ts  # GET /api/stablecoin-charts
     │   ├── supply-history.ts     # GET /api/supply-history
     │   ├── blacklist.ts          # GET /api/blacklist
     │   ├── depeg-events.ts       # GET /api/depeg-events
     │   ├── peg-summary.ts        # GET /api/peg-summary
-    │   ├── usds-status.ts        # GET /api/usds-status
-    │   ├── bluechip.ts           # GET /api/bluechip-ratings
     │   ├── daily-digest.ts       # GET /api/daily-digest
     │   ├── digest-archive.ts    # GET /api/digest-archive
     │   ├── digest-snapshot.ts   # GET /api/digest-snapshot
@@ -410,7 +409,6 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── backfill-mint-burn-prices.ts # POST /api/backfill-mint-burn-prices (admin)
     │   ├── backfill-mint-burn.ts # POST /api/backfill-mint-burn (admin)
     │   ├── stress-signals.ts    # GET /api/stress-signals (DEWS scores)
-    │   ├── yield-rankings.ts    # GET /api/yield-rankings
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)

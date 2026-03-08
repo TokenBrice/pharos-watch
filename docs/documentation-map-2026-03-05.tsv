@@ -1,7 +1,8 @@
 path	format	description	status	note
 docs/	dir	Canonical product and system docs	current	Active Pharos documentation corpus.
-agents/runbooks/	dir	Operator runbooks	current	Runbooks were moved out of `docs/` after the original March 5 audit.
-agents/audit/	dir	Audit reports and forensic writeups	current	Audit artifacts now live here instead of `docs/`.
+docs/telegram-alerts.md	md	Telegram alert subscriptions and dispatch	current	Dedicated doc for webhook commands, D1 tables, snapshot diffing, and bot operations.
+agents/runbooks/	dir	Operator runbooks	current	Runbooks remain outside `docs/`.
+agents/audits/	dir	Audit reports and forensic writeups	current	Audit artifacts live here instead of `docs/`.
 agents/plans/historical/	dir	Historical plans and design records	current	Non-canonical planning/history archive.
-tasks/	dir	Task trackers and execution boards	current	Execution trackers remain outside `docs/`.
-docs/documentation-audit-report-2026-03-05.md	md	Archival pointer	current	Retained so historical references resolve; do not treat as a live path inventory.
+agents/tasks/	dir	Task trackers and execution boards	current	Execution trackers remain outside `docs/`.
+agents/audits/2026-03-06-full-codebase-audit.md	md	Historical full-codebase audit	historical	Closest surviving audit report after the March 5 restructuring.

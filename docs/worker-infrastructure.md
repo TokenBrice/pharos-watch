@@ -217,7 +217,7 @@ crons = [
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
-| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | This doc (below) |
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
 **Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` run only after a successful `sync-stablecoins`; `status-self-check` runs near the end of the slot and `dispatch-telegram-alerts` runs last to diff DEWS/depeg/safety snapshots and fan out consolidated subscriber alerts using the same bot token as the digest channel integration.
@@ -248,7 +248,7 @@ crons = [
 |-----|----------|------|---------------|
 | `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
-| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | This doc (below) |
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
@@ -263,6 +263,8 @@ crons = [
 - `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
 - Each dispatch run sends at most 50 Telegram messages.
+
+See `docs/telegram-alerts.md` for command syntax, D1 tables, snapshot seeding behavior, and operational setup.
 
 ### Sub-Modules (not directly registered)
 
@@ -577,7 +579,7 @@ Health freshness checks for mint/burn major symbols and scheduler stale alerts u
 
 ### GET /api/status
 
-Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 17 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
+Returns raw and effective status, recent `cron_runs`, data-quality metrics, state-machine metadata, synthetic probe summary, and transition timeline. Tracks 18 cron jobs via `CRON_INTERVALS` from `worker/src/lib/cron-schedule.ts`:
 
 | Job | Interval | Trigger |
 |-----|----------|---------|
@@ -586,18 +588,19 @@ Returns raw and effective status, recent `cron_runs`, data-quality metrics, stat
 | `sync-fx-rates` | 900s (15min) | `*/15 * * * *` |
 | `stability-index` | 900s (15min) | `*/15 * * * *` |
 | `compute-dews` | 900s (15min) | `*/15 * * * *` |
+| `status-self-check` | 900s (15min) | `*/15 * * * *` |
+| `dispatch-telegram-alerts` | 900s (15min) | `*/15 * * * *` |
 | `sync-blacklist` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-mint-burn` | 1,200s (20min) | `3,23,43 * * * *` |
 | `sync-dex-liquidity` | 1,800s (30min) | `10,40 * * * *` |
 | `sync-yield-data` | 1,800s (30min) | `10,40 * * * *` |
+| `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
+| `snapshot-safety-grade-history` | 86,400s (24h) | `0 8 * * *` |
+| `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
+| `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
 | `sync-usds-status` | 86,400s (24h) | `0 8 * * *` |
 | `sync-bluechip` | 86,400s (24h) | `0 8 * * *` |
 | `daily-digest` | 86,400s (24h) | `0 8 * * *` |
-| `snapshot-supply` | 86,400s (24h) | `0 8 * * *` |
-| `snapshot-safety-grade-history` | 86,400s (24h) | `0 8 * * *` |
-| `snapshot-psi` | 86,400s (24h) | `0 8 * * *` |
-| `fetch-tbill-rate` | 86,400s (24h) | `0 8 * * *` |
-| `status-self-check` | 900s (15min) | `*/15 * * * *` |
 
 A job is marked "unhealthy" if its last run had `status='error'` or if the last run started more than 2× its expected interval ago.
 

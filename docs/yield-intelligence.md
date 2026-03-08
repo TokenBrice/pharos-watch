@@ -496,7 +496,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`                                                                |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |
-| `worker/src/api/yield-rankings.ts`                   | `GET /api/yield-rankings` handler                                                                                                            |
+| `worker/src/api/cache-handlers.ts`                   | Cache-backed `GET /api/yield-rankings` handler (`handleYieldRankings`)                                                                       |
 | `worker/src/api/yield-history.ts`                    | `GET /api/yield-history` handler                                                                                                             |
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `shared/lib/classification.ts`                       | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`                                                                                                     |

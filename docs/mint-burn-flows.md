@@ -457,7 +457,7 @@ All hooks use Zod schema validation for aggregate and per-coin responses (`MintB
 
 | Component | File | Description |
 |-----------|------|-------------|
-| `GAUGE_BANDS` | `src/components/flow-gauge.tsx` | Shared Bank Run Gauge band config map (label, hex, Tailwind text/bg classes) consumed by flow summary UI |
+| `FlowBrrrOverview` | `src/components/flow-brrr-overview.tsx` | Shared overview shell used by `/flows` and the homepage snapshot; renders the Bank Run Gauge band returned by the API plus the literal 24h minting-pressure gauge |
 | `FlowChart` | `src/components/flow-chart.tsx` | Recharts composed chart: mint (green area), burn (red area), net flow (blue line), hourly tooltip |
 | `FlowTable` | `src/components/flow-table.tsx` | Sortable per-coin table. Sort keys: net24h, mint24h, burn24h, net7d, largest, pressure. Responsive column hiding |
 | `FlowEventFeed` | `src/components/flow-event-feed.tsx` | Paginated event table: time, direction badge, amount USD, chain, tx link |
@@ -550,7 +550,8 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page |
 | `src/app/flows/layout.tsx` | Page metadata/layout |
-| `src/components/flow-gauge.tsx` | Shared Bank Run Gauge band config map |
+| `worker/src/lib/mint-burn-scoring.ts` | Pure Flow Intensity / Bank Run Gauge / flight-to-quality logic (`getGaugeBand`, `computeGaugeScore`, `detectFlightToQuality`) |
+| `src/components/flow-brrr-overview.tsx` | Shared Bank Run Gauge overview shell for `/flows` and homepage snapshot |
 | `src/components/flow-chart.tsx` | Recharts flow chart |
 | `src/components/flow-table.tsx` | Sortable per-coin table |
 | `src/components/flow-event-feed.tsx` | Paginated event table |
