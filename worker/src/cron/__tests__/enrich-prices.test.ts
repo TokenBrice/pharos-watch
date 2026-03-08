@@ -125,6 +125,16 @@ describe("isReasonablePrice", () => {
       expect(isReasonablePrice(2900, "peggedGOLD")).toBe(true);
     });
 
+    it("accepts fractional-ounce gold tokens when commodityOunces is provided", () => {
+      expect(
+        isReasonablePrice(5.15, "peggedGOLD", { peggedGOLD: 2_915 }, { commodityOunces: 0.001 })
+      ).toBe(true);
+    });
+
+    it("rejects fractional-ounce gold prices when commodityOunces is missing", () => {
+      expect(isReasonablePrice(5.15, "peggedGOLD", { peggedGOLD: 2_915 })).toBe(false);
+    });
+
     it("rejects 50 (too low)", () => {
       expect(isReasonablePrice(50, "peggedGOLD")).toBe(false);
     });
@@ -137,6 +147,12 @@ describe("isReasonablePrice", () => {
   describe("SILVER peg", () => {
     it("accepts silver price ~32", () => {
       expect(isReasonablePrice(32, "peggedSILVER")).toBe(true);
+    });
+
+    it("accepts fractional-ounce silver tokens when commodityOunces is provided", () => {
+      expect(
+        isReasonablePrice(0.4, "peggedSILVER", { peggedSILVER: 32 }, { commodityOunces: 0.01 })
+      ).toBe(true);
     });
 
     it("rejects 2 (too low)", () => {

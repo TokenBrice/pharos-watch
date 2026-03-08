@@ -1,5 +1,5 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { isReasonablePrice } from "../enrich-prices";
+import { buildPriceReasonablenessOptions, isReasonablePrice } from "../enrich-prices";
 
 const metaById = new Map(TRACKED_STABLECOINS.map((meta) => [meta.id, meta]));
 
@@ -25,6 +25,9 @@ export function isPlausibleDexObservationPrice(stablecoinId: string, price: numb
     price,
     pegTypeFromCurrency(meta.flags.pegCurrency),
     undefined,
-    { navToken: !!meta.flags.navToken },
+    buildPriceReasonablenessOptions({
+      navToken: meta.flags.navToken,
+      commodityOunces: meta.commodityOunces,
+    }),
   );
 }

@@ -21,6 +21,7 @@ export interface PeggedAsset {
   geckoId?: string;
   cmcSlug?: string;
   navToken?: boolean;
+  commodityOunces?: number;
   price?: number | null;
   priceSource?: string;
   priceConfidence?: string | null;
@@ -60,12 +61,48 @@ export const PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
   SILVER: [5, 500],
 };
 
+export interface PriceReasonablenessOptions {
+  navToken?: boolean;
+  commodityOunces?: number;
+}
+
+function getCommodityPriceScale(
+  pegType: string | undefined,
+  commodityOunces: number | undefined,
+): number {
+  if (
+    (pegType === "peggedGOLD" || pegType === "peggedSILVER") &&
+    typeof commodityOunces === "number" &&
+    Number.isFinite(commodityOunces) &&
+    commodityOunces > 0
+  ) {
+    return commodityOunces;
+  }
+  return 1;
+}
+
+export function buildPriceReasonablenessOptions(
+  input?: { navToken?: unknown; commodityOunces?: unknown },
+): PriceReasonablenessOptions {
+  const commodityOunces =
+    typeof input?.commodityOunces === "number" &&
+    Number.isFinite(input.commodityOunces) &&
+    input.commodityOunces > 0
+      ? input.commodityOunces
+      : undefined;
+
+  return {
+    navToken: !!input?.navToken,
+    commodityOunces,
+  };
+}
+
 /** Guard against corrupted API prices that would break peg deviation calculations */
 export function isReasonablePrice(
   price: number,
   pegType: string | undefined,
   fxRates?: Record<string, number>,
-  opts?: { navToken?: boolean },
+  opts?: PriceReasonablenessOptions,
 ): boolean {
   if (!Number.isFinite(price) || price <= 0 || price >= 100_000) return false;
 
@@ -74,6 +111,8 @@ export function isReasonablePrice(
   if (opts?.navToken) return true;
 
   if (!pegType) return true;
+
+  const commodityScale = getCommodityPriceScale(pegType, opts?.commodityOunces);
 
   // USD is the base currency — no FX rate, keep tight hardcoded bounds
   if (pegType.includes("USD")) {
@@ -85,14 +124,18 @@ export function isReasonablePrice(
   if (fxRates) {
     const fxRate = fxRates[pegType];
     if (fxRate && fxRate > 0) {
-      return price > 0.01 * fxRate && price < 2 * fxRate;
+      const scaledFxRate = fxRate * commodityScale;
+      return price > 0.01 * scaledFxRate && price < 2 * scaledFxRate;
     }
   }
 
   // Hardcoded fallback when FX rates unavailable (first boot, cache miss)
   for (const [key, [min, max]] of Object.entries(PRICE_BOUNDS)) {
     if (key === "USD") continue; // Already handled above
-    if (pegType.includes(key)) return price > min && price < max;
+    if (pegType.includes(key)) {
+      const scale = key === "GOLD" || key === "SILVER" ? commodityScale : 1;
+      return price > min * scale && price < max * scale;
+    }
   }
   return price > 0 && price < 100_000;
 }
@@ -610,7 +653,12 @@ export async function enrichMissingPrices(
               for (const m of cmcCandidates) {
                 const cmcEntry = bySlug.get(m.asset.cmcSlug!);
                 if (!cmcEntry) continue;
-                if (isReasonablePrice(cmcEntry.price, m.asset.pegType as string | undefined, fxRates, { navToken: !!m.asset.navToken })) {
+                if (isReasonablePrice(
+                  cmcEntry.price,
+                  m.asset.pegType as string | undefined,
+                  fxRates,
+                  buildPriceReasonablenessOptions(m.asset),
+                )) {
                   assets[m.index].price = cmcEntry.price;
                   passCmcCount++;
                 }
@@ -697,7 +745,12 @@ export async function enrichMissingPrices(
             continue;
           }
           // Sanity check: peg-type-aware range
-          if (isReasonablePrice(price, m.asset.pegType as string | undefined, fxRates, { navToken: !!m.asset.navToken })) {
+          if (isReasonablePrice(
+            price,
+            m.asset.pegType as string | undefined,
+            fxRates,
+            buildPriceReasonablenessOptions(m.asset),
+          )) {
             assets[m.index].price = price;
             pass4Count++;
           }

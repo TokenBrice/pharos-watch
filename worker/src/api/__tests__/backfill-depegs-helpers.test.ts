@@ -187,4 +187,27 @@ describe("extractDepegEvents", () => {
       recoveryPrice: 1.0,
     });
   });
+
+  it("accepts fractional commodity prices when commodityOunces scales the peg", () => {
+    const events = extractDepegEvents(
+      [
+        { timestamp: 1_000, price: 5.15 },
+        { timestamp: 2_000, price: 2.9 },
+      ],
+      () => 2.9,
+      "peggedGOLD",
+      [{ ts: 1_000, supply: 2_000_000 }],
+      { peggedGOLD: 2_915 },
+      { commodityOunces: 0.001 },
+    );
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      direction: "above",
+      startedAt: 1_000,
+      endedAt: 2_000,
+      startPrice: 5.15,
+      recoveryPrice: 2.9,
+    });
+  });
 });

@@ -2,7 +2,11 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates, getPegReference, COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { getDepegThresholdBps, DEFILLAMA_COINS, DEFILLAMA_BASE, RUB_FALLBACK, USER_AGENT, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
-import { isReasonablePrice } from "../cron/enrich-prices";
+import {
+  buildPriceReasonablenessOptions,
+  isReasonablePrice,
+  type PriceReasonablenessOptions,
+} from "../cron/enrich-prices";
 import { withErrorHandler, jsonResponse } from "../lib/api-utils";
 import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
@@ -642,7 +646,17 @@ async function backfillCoin(
     });
   }
 
-  return extractDepegEvents(prices, getPegRef, pegType, supplyByDate, fxRates);
+  return extractDepegEvents(
+    prices,
+    getPegRef,
+    pegType,
+    supplyByDate,
+    fxRates,
+    buildPriceReasonablenessOptions({
+      navToken: meta.flags.navToken,
+      commodityOunces: meta.commodityOunces,
+    }),
+  );
 }
 
 async function fetchCgPriceHistoryDaily(geckoId: string): Promise<PricePoint[]> {
@@ -794,6 +808,7 @@ export function extractDepegEvents(
   pegType: string,
   supplyByDate: SupplySnapshot[],
   fxRates?: Record<string, number>,
+  priceValidationOpts?: PriceReasonablenessOptions,
 ): BackfillEvent[] {
   const threshold = getDepegThresholdBps(pegType);
   const events: BackfillEvent[] = [];
@@ -831,7 +846,7 @@ export function extractDepegEvents(
   for (const point of prices) {
     const { timestamp, price } = point;
     if (price <= 0) continue;
-    if (!isReasonablePrice(price, pegType, fxRates)) continue;
+    if (!isReasonablePrice(price, pegType, fxRates, priceValidationOpts)) continue;
 
     if (supplyByDate.length > 0) {
       const supply = findNearestSupply(supplyByDate, timestamp);

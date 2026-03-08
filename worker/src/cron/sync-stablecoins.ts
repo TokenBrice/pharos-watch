@@ -2,7 +2,13 @@ import { setCacheIfNewer, getCache, getPriceCache, savePriceCache } from "../lib
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
-import { enrichMissingPrices, hasMissingPrice, isReasonablePrice, fetchDualPrimaryPrices } from "./enrich-prices";
+import {
+  buildPriceReasonablenessOptions,
+  enrichMissingPrices,
+  hasMissingPrice,
+  isReasonablePrice,
+  fetchDualPrimaryPrices,
+} from "./enrich-prices";
 import type { PeggedAsset } from "./enrich-prices";
 import type { CronResult } from "../lib/db";
 import { detectDepegEvents } from "./detect-depegs";
@@ -146,8 +152,15 @@ function isReasonablePriceForAsset(
   fxRates?: Record<string, number>,
 ): boolean {
   const meta = TRACKED_META_BY_ID.get(String(asset.id));
-  const navToken = !!meta?.flags?.navToken || !!asset.navToken;
-  return isReasonablePrice(price, asset.pegType as string | undefined, fxRates, { navToken });
+  return isReasonablePrice(
+    price,
+    asset.pegType as string | undefined,
+    fxRates,
+    buildPriceReasonablenessOptions({
+      navToken: meta?.flags?.navToken ?? asset.navToken,
+      commodityOunces: meta?.commodityOunces ?? asset.commodityOunces,
+    }),
+  );
 }
 
 /**

@@ -40,12 +40,25 @@ vi.mock("@shared/lib/stablecoins", () => {
     TRACKED_META_BY_ID: new Map([
       ["usdt-tether", { geckoId: "tether", cmcSlug: undefined }],
       ["usdc-circle", { geckoId: "usd-coin", cmcSlug: undefined }],
+      ["ggbr-goldfish-gold", {
+        geckoId: "goldfish-gold",
+        cmcSlug: undefined,
+        commodityOunces: 0.001,
+        flags: { navToken: false },
+      }],
     ]),
   };
 });
 
 // Stub enrich-prices to avoid complex 4-pass pipeline
 vi.mock("../enrich-prices", () => ({
+  buildPriceReasonablenessOptions: vi.fn((input?: { navToken?: unknown; commodityOunces?: unknown }) => ({
+    navToken: !!input?.navToken,
+    commodityOunces:
+      typeof input?.commodityOunces === "number" && Number.isFinite(input.commodityOunces) && input.commodityOunces > 0
+        ? input.commodityOunces
+        : undefined,
+  })),
   enrichMissingPrices: vi.fn(async () => ({
     totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0,
   })),
@@ -94,7 +107,7 @@ vi.mock("../../lib/alerts", () => ({
 }));
 
 import { syncStablecoins } from "../sync-stablecoins";
-import { enrichMissingPrices, fetchDualPrimaryPrices } from "../enrich-prices";
+import { enrichMissingPrices, fetchDualPrimaryPrices, isReasonablePrice } from "../enrich-prices";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
@@ -165,6 +178,7 @@ describe("syncStablecoins", () => {
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({
       totalMissing: 0, pass1: 0, pass1b: 0, pass2: 0, pass3: 0, passCmc: 0, pass4: 0, finalMissing: 0,
     });
+    vi.mocked(isReasonablePrice).mockReset().mockImplementation(() => true);
     vi.mocked(fetchDualPrimaryPrices).mockReset().mockResolvedValue({
       results: new Map(),
       stats: { attempted: 0, high: 0, singleSource: 0, low: 0, divergences: [] },
@@ -616,6 +630,45 @@ describe("syncStablecoins", () => {
     const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
     const normalized = payload?.peggedAssets.find((a) => a.id === "usdt-tether");
     expect(normalized?.price).toBe(0.999);
+  });
+
+  it("passes commodityOunces into price sanity checks for fractional gold tokens", async () => {
+    const db = makeDb();
+    const dlData = makeDlResponse(60);
+    const target = dlData.peggedAssets[0] as Record<string, unknown>;
+    target.id = "ggbr-goldfish-gold";
+    target.name = "Goldfish Gold";
+    target.symbol = "GGBR";
+    target.geckoId = "goldfish-gold";
+    target.price = 5.15;
+    target.pegType = "peggedGOLD";
+    target.circulating = { peggedGOLD: 26_000_000 };
+
+    vi.mocked(isReasonablePrice).mockImplementation((_price, _pegType, _fxRates, opts) => opts?.commodityOunces === 0.001);
+
+    const validateSpy = vi.spyOn(apiUtils, "validatePayloadWithSchema");
+
+    mockFetch([
+      { match: "api.coingecko.com", body: {} },
+      { match: "stablecoins.llama.fi", body: dlData },
+      { match: "coins.llama.fi/prices", body: { coins: {} } },
+    ]);
+
+    const result = await syncStablecoins(db);
+
+    expect(result.itemCount).toBe(60);
+    expect(vi.mocked(isReasonablePrice)).toHaveBeenCalledWith(
+      5.15,
+      "peggedGOLD",
+      undefined,
+      expect.objectContaining({ commodityOunces: 0.001 }),
+    );
+    const finalValidationCall = validateSpy.mock.calls.find(
+      (call) => call[2] === "sync-stablecoins:stablecoins"
+    );
+    const payload = finalValidationCall?.[1] as { peggedAssets: Array<Record<string, unknown>> } | undefined;
+    const normalized = payload?.peggedAssets.find((a) => a.id === "ggbr-goldfish-gold");
+    expect(normalized?.price).toBe(5.15);
   });
 
   it("handles duplicate DefiLlama coin IDs without crashing", async () => {

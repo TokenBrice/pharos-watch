@@ -4,6 +4,7 @@ vi.mock("@shared/lib/stablecoins", () => ({
   TRACKED_STABLECOINS: [
     { id: "eurc-circle", flags: { pegCurrency: "EUR", navToken: false } },
     { id: "xaut-tether", flags: { pegCurrency: "GOLD", navToken: false } },
+    { id: "ggbr-goldfish-gold", flags: { pegCurrency: "GOLD", navToken: false }, commodityOunces: 0.001 },
     { id: "kag-kinesis", flags: { pegCurrency: "SILVER", navToken: false } },
     { id: "jpyc-jpyc", flags: { pegCurrency: "JPY", navToken: false } },
   ],
@@ -20,6 +21,7 @@ describe("isPlausibleDexObservationPrice", () => {
   it("accepts commodity peg prices (gold/silver) in their expected ranges", () => {
     expect(isPlausibleDexObservationPrice("xaut-tether", 3000)).toBe(true);
     expect(isPlausibleDexObservationPrice("xaut-tether", 1.2)).toBe(false);
+    expect(isPlausibleDexObservationPrice("ggbr-goldfish-gold", 5.15)).toBe(true);
     expect(isPlausibleDexObservationPrice("kag-kinesis", 32)).toBe(true);
   });
 
