@@ -5,7 +5,14 @@ import { formatAge, formatDuration, formatInterval } from "./format";
 interface CronCardProps {
   job: string;
   cron: {
-    lastRun: { startedAt: number; durationMs: number; status: string; error?: string; itemCount?: number } | null;
+    lastRun: {
+      startedAt: number;
+      durationMs: number;
+      status: string;
+      error?: string;
+      itemCount?: number;
+      metadata?: Record<string, unknown>;
+    } | null;
     recentRuns: Array<{ startedAt: number; durationMs: number; status: string; error?: string }>;
     expectedIntervalSec: number;
     healthy: boolean;
@@ -13,8 +20,81 @@ interface CronCardProps {
   nowSeconds: number;
 }
 
+function readNumber(value: unknown): number | null {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function formatApiErrorClasses(value: unknown): string | null {
+  const record = readRecord(value);
+  if (!record) return null;
+  const parts = Object.entries(record)
+    .map(([key, raw]) => {
+      const count = readNumber(raw);
+      return count != null ? `${key} x${count}` : null;
+    })
+    .filter((item): item is string => item != null)
+    .sort((a, b) => a.localeCompare(b));
+  return parts.length > 0 ? parts.join(", ") : null;
+}
+
+function summarizeMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {
+  if (!metadata) return [];
+
+  if (job === "status-self-check") {
+    const sampleCount = readNumber(metadata.sampleCount);
+    const failCount = readNumber(metadata.failCount);
+    const probeStatus = readString(metadata.probeStatus);
+    const rawOverallStatus = readString(metadata.rawOverallStatus);
+    const effectiveStatus = readString(metadata.effectiveStatus);
+    const discrepancyStreak = readNumber(metadata.discrepancyStreak);
+    const probeFailureStreak = readNumber(metadata.probeFailureStreak);
+    const p95LatencyMs = readNumber(metadata.p95LatencyMs);
+
+    const lines = [
+      sampleCount != null && failCount != null && probeStatus
+        ? `probes ${sampleCount - failCount}/${sampleCount} ok, ${failCount} failed (${probeStatus})`
+        : null,
+      rawOverallStatus && effectiveStatus ? `status raw ${rawOverallStatus} -> effective ${effectiveStatus}` : null,
+      p95LatencyMs != null ? `p95 latency ${p95LatencyMs}ms` : null,
+      discrepancyStreak != null && discrepancyStreak > 0 ? `divergence streak ${discrepancyStreak}` : null,
+      probeFailureStreak != null && probeFailureStreak > 0 ? `probe failure streak ${probeFailureStreak}` : null,
+    ];
+    return lines.filter((line): line is string => line != null);
+  }
+
+  if (job === "sync-blacklist") {
+    const apiErrors = readNumber(metadata.apiErrors);
+    const contractsSkipped = readNumber(metadata.contractsSkipped);
+    const budgetUsed = readNumber(metadata.budgetUsed);
+    const budgetLimit = readNumber(metadata.budgetLimit);
+    const rpcLogConfigs = readNumber(metadata.rpcLogConfigs);
+    const apiErrorClasses = formatApiErrorClasses(metadata.apiErrorClasses);
+
+    const lines = [
+      apiErrors != null ? `api errors ${apiErrors}` : null,
+      contractsSkipped != null && contractsSkipped > 0 ? `contracts skipped ${contractsSkipped}` : null,
+      budgetUsed != null && budgetLimit != null ? `budget ${budgetUsed}/${budgetLimit}` : null,
+      rpcLogConfigs != null && rpcLogConfigs > 0 ? `rpc-log configs ${rpcLogConfigs}` : null,
+      apiErrorClasses ? `error classes ${apiErrorClasses}` : null,
+    ];
+    return lines.filter((line): line is string => line != null);
+  }
+
+  return [];
+}
+
 export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
   const latestStatus = cron.lastRun?.status;
+  const metadataSummary = summarizeMetadata(job, cron.lastRun?.metadata);
   const borderColor = !cron.healthy
     ? "border-red-500/30"
     : latestStatus === "degraded"
@@ -55,6 +135,21 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
               <details className="text-xs">
                 <summary className="cursor-pointer text-red-600 dark:text-red-400">Error details</summary>
                 <pre className="mt-1 max-h-24 overflow-auto rounded bg-muted p-2 text-xs">{cron.lastRun.error}</pre>
+              </details>
+            )}
+            {metadataSummary.length > 0 && (
+              <div className="space-y-1 rounded border border-amber-500/20 bg-amber-500/5 p-2 text-xs text-amber-700 dark:text-amber-300">
+                {metadataSummary.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
+              </div>
+            )}
+            {cron.lastRun.metadata && Object.keys(cron.lastRun.metadata).length > 0 && (
+              <details className="text-xs">
+                <summary className="cursor-pointer text-muted-foreground">Run metadata</summary>
+                <pre className="mt-1 max-h-40 overflow-auto rounded bg-muted p-2 text-xs">
+                  {JSON.stringify(cron.lastRun.metadata, null, 2)}
+                </pre>
               </details>
             )}
           </div>

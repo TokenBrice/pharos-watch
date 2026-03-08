@@ -164,7 +164,7 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     adminRequired: false,
     mutatingAdmin: false,
     cacheBypass: false,
-    probeGroup: "public",
+    // Requires a date-specific snapshot that is not stable enough for a generic canary probe.
   },
   {
     path: "/api/yield-rankings",
@@ -434,9 +434,9 @@ const CACHE_BYPASS_PATHS = new Set<string>(
   ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.cacheBypass).map((endpoint) => endpoint.path),
 );
 
-const ROUTER_HANDLED_PATHS = ENDPOINT_DEFINITIONS
-  .filter((endpoint) => endpoint.routerHandled !== false)
-  .map((endpoint) => endpoint.path);
+const ROUTER_HANDLED_PATHS = ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.routerHandled !== false).map(
+  (endpoint) => endpoint.path,
+);
 
 export function isMutatingAdminPath(path: string): boolean {
   return MUTATING_ADMIN_PATHS.has(path);
@@ -501,20 +501,22 @@ export function validateEndpointMethod(url: URL, method: string): EndpointMethod
 }
 
 export function getProbePaths(group: EndpointProbeGroup): string[] {
-  return ENDPOINT_DEFINITIONS
-    .filter((endpoint) => endpoint.probeGroup === group)
-    .map((endpoint) => endpoint.probePath ?? endpoint.path);
+  return ENDPOINT_DEFINITIONS.filter((endpoint) => endpoint.probeGroup === group).map(
+    (endpoint) => endpoint.probePath ?? endpoint.path,
+  );
 }
 
 export function getStatusPageActions(): StatusPageAction[] {
   return ENDPOINT_DEFINITIONS.flatMap((endpoint) => {
     if (!endpoint.statusPageAction) return [];
-    return [{
-      label: endpoint.statusPageAction.label,
-      path: endpoint.statusPageAction.path ?? endpoint.probePath ?? endpoint.path,
-      confirm: endpoint.statusPageAction.confirm,
-      destructive: endpoint.statusPageAction.destructive ?? false,
-      method: endpoint.statusPageAction.method,
-    }];
+    return [
+      {
+        label: endpoint.statusPageAction.label,
+        path: endpoint.statusPageAction.path ?? endpoint.probePath ?? endpoint.path,
+        confirm: endpoint.statusPageAction.confirm,
+        destructive: endpoint.statusPageAction.destructive ?? false,
+        method: endpoint.statusPageAction.method,
+      },
+    ];
   });
 }

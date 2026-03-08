@@ -27,7 +27,6 @@ describe("api endpoint registry", () => {
       "/api/supply-history?stablecoin=usdt-tether",
       "/api/daily-digest",
       "/api/digest-archive",
-      "/api/digest-snapshot",
       "/api/yield-rankings",
       "/api/yield-history?stablecoin=usdt-tether",
       "/api/safety-score-history?stablecoin=usdt-tether",
@@ -38,11 +37,7 @@ describe("api endpoint registry", () => {
       "/api/stress-signals",
     ]);
 
-    expect(getProbePaths("admin")).toEqual([
-      "/api/status",
-      "/api/status-history?limit=10",
-      "/api/debug-sync-state",
-    ]);
+    expect(getProbePaths("admin")).toEqual(["/api/status", "/api/status-history?limit=10", "/api/debug-sync-state"]);
 
     expect(getProbePaths("manual")).toEqual([
       "/api/trigger-digest",
@@ -56,6 +51,10 @@ describe("api endpoint registry", () => {
       "/api/audit-depeg-history?dry-run=true",
       "/api/backfill-dews",
     ]);
+  });
+
+  it("excludes digest snapshot from auto-probe coverage because it requires an explicit date", () => {
+    expect(getProbePaths("public")).not.toContain("/api/digest-snapshot");
   });
 
   it("flags mutating admin paths for method guards", () => {
@@ -80,7 +79,7 @@ describe("api endpoint registry", () => {
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin/1"), "GET")).toBeNull();
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoin-summary/1"), "GET")).toBeNull();
     expect(
-      validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET")
+      validateEndpointMethod(new URL("https://api.pharos.watch/api/audit-depeg-history?dry-run=true"), "GET"),
     ).toBeNull();
 
     expect(validateEndpointMethod(new URL("https://api.pharos.watch/api/stablecoins"), "POST")).toEqual({

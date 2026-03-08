@@ -107,6 +107,7 @@ Computed from missing prices + blacklist gaps + on-chain supply monitor:
 - else `healthy`
 
 Mint/burn freshness uses shared defaults from `worker/src/lib/mint-burn-health-config.ts`:
+
 - major symbols: `USDT`, `USDC`, `DAI`, `USDS`, `GHO`, `FRXUSD`, `BOLD`, `reUSD`
 - warning threshold: `6h`
 - critical threshold: `24h`
@@ -192,6 +193,7 @@ Source: `src/hooks/use-endpoint-probes.ts`
 - Parallel probing with `Promise.all`
 - Admin probe paths include `X-Admin-Key`
 - Parameterized routes probe `probePath` values from registry (for example `/api/mint-burn-events?stablecoin=usdt-tether`) to avoid expected `400` validation responses.
+- Routes without a stable canary URL are intentionally excluded from automatic probe coverage. `GET /api/digest-snapshot` is omitted because it requires a valid `date` that must map to a real stored digest.
 - Returned result shape: `{ path, status, latencyMs, error? }`
 
 Manual actions are rendered from `getStatusPageActions()` and executed only on user confirmation.
@@ -222,17 +224,17 @@ Mutating admin paths are protected by method guardrails:
 
 ## Related Files
 
-| File | Role |
-|------|------|
-| `src/app/status/client.tsx` | Auth gate + status dashboard orchestration shell |
-| `src/components/status/*` | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables) |
-| `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel |
-| `src/hooks/use-status.ts` | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth |
-| `src/hooks/use-endpoint-probes.ts` | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions |
-| `shared/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |
-| `worker/src/router.ts` | Static route dispatch for status/manual actions (`feedback`, `trigger-digest`, `reset-blacklist-sync`, `debug-sync-state`) |
-| `worker/src/api/status.ts` | Raw status synthesis + effective state response |
-| `worker/src/api/status-history.ts` | Machine-readable status timeline/history endpoint |
-| `worker/src/api/health.ts` | Public health endpoint for cache/circuit observability |
-| `worker/src/lib/status-reliability.ts` | Hysteresis, transitions, probes, discrepancy helpers |
-| `worker/src/cron/status-self-check.ts` | Real-HTTP self-probe + divergence/probe-failure alert cron |
+| File                                           | Role                                                                                                                                                                                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/app/status/client.tsx`                    | Auth gate + status dashboard orchestration shell                                                                                                                                                                      |
+| `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards surface structured metadata for warning/error runs and expose full raw metadata in a collapsible panel. |
+| `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                         |
+| `src/hooks/use-status.ts`                      | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                 |
+| `src/hooks/use-endpoint-probes.ts`             | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                               |
+| `shared/lib/api-endpoints.ts`                  | Shared endpoint registry for probe groups + status-page actions                                                                                                                                                       |
+| `worker/src/router.ts`                         | Static route dispatch for status/manual actions (`feedback`, `trigger-digest`, `reset-blacklist-sync`, `debug-sync-state`)                                                                                            |
+| `worker/src/api/status.ts`                     | Raw status synthesis + effective state response                                                                                                                                                                       |
+| `worker/src/api/status-history.ts`             | Machine-readable status timeline/history endpoint                                                                                                                                                                     |
+| `worker/src/api/health.ts`                     | Public health endpoint for cache/circuit observability                                                                                                                                                                |
+| `worker/src/lib/status-reliability.ts`         | Hysteresis, transitions, probes, discrepancy helpers                                                                                                                                                                  |
+| `worker/src/cron/status-self-check.ts`         | Real-HTTP self-probe + divergence/probe-failure alert cron                                                                                                                                                            |

@@ -39,6 +39,10 @@ export function EndpointHealthGrid({ probes, isLoading }: EndpointHealthGridProp
         <CardTitle className="text-base">Endpoint Health</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <p className="text-xs text-muted-foreground">
+          Probe coverage skips routes that require volatile parameters or a known dated snapshot, such as digest
+          snapshots.
+        </p>
         {GROUP_LABELS.map(({ key, label }) => {
           const paths = [...ENDPOINT_GROUPS[key]];
           const isInline = key === "manual";
