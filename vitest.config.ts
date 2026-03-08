@@ -1,7 +1,21 @@
 import { configDefaults, defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import path from "path";
 
+// Stub .wasm imports so vitest doesn't try to load WebAssembly modules
+function wasmStubPlugin(): Plugin {
+  return {
+    name: "wasm-stub",
+    load(id) {
+      if (id.endsWith(".wasm")) {
+        return "export default new ArrayBuffer(0);";
+      }
+    },
+  };
+}
+
 export default defineConfig({
+  plugins: [wasmStubPlugin()],
   test: {
     exclude: [
       ...configDefaults.exclude,
@@ -31,8 +45,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
-      // Stub resvg-wasm to prevent WASM loading in vitest (Node can't resolve wbg imports)
-      "@resvg/resvg-wasm/index_bg.wasm": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
+      // Stub resvg-wasm to prevent WASM loading in vitest (Node can't handle Worker WASM imports)
       "@resvg/resvg-wasm": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
     },
   },
