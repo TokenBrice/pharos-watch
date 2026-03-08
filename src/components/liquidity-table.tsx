@@ -361,7 +361,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
           {sorted.length === 0 && (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                {searchQuery ? `No results for "${searchQuery}"` : "No liquidity data available"}
+                {searchQuery ? `No results for "${searchQuery}"` : "No liquidity pools tracked for this stablecoin."}
               </TableCell>
             </TableRow>
           )}

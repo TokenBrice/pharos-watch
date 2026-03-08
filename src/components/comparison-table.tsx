@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { StablecoinData, StablecoinMeta, ReportCardGrade } from "@shared/types";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { formatCurrency, formatNativePrice } from "@shared/lib/format";
+import { formatCurrency, formatNativePrice, formatScore } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { GOVERNANCE_LABELS_SHORT, BACKING_LABELS_SHORT } from "@shared/lib/classification";
 
@@ -183,7 +183,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPrice ? BEST_CLASS : ""}`}>{rowData.prices[i]}</dd>
               <dt className="text-muted-foreground">Peg Score</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}>
-                {rowData.pegScores[i] != null ? `${rowData.pegScores[i]!.toFixed(1)}` : "N/A"}
+                {rowData.pegScores[i] != null ? formatScore(rowData.pegScores[i]) : "N/A"}
               </dd>
               <dt className="text-muted-foreground">Market Cap</dt>
               <dd className="text-right font-mono tabular-nums">{formatCurrency(rowData.marketCaps[i])}</dd>
@@ -195,7 +195,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
               </dd>
               <dt className="text-muted-foreground">Liquidity</dt>
               <dd className={`text-right font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}>
-                {rowData.liquidityScores[i] != null ? `${rowData.liquidityScores[i]!.toFixed(1)}` : "N/A"}
+                {rowData.liquidityScores[i] != null ? formatScore(rowData.liquidityScores[i]) : "N/A"}
               </dd>
               <dt className="text-muted-foreground">Governance</dt>
               <dd className="text-right">{rowData.governanceLabels[i]}</dd>
@@ -260,7 +260,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                     className={`text-center font-mono tabular-nums ${i === rowData.bestPegScore ? BEST_CLASS : ""}`}
                   >
                     {rowData.pegScores[i] != null
-                      ? `${rowData.pegScores[i]!.toFixed(1)}`
+                      ? formatScore(rowData.pegScores[i])
                       : "N/A"}
                   </TableCell>
                 ))}
@@ -305,7 +305,7 @@ export function ComparisonTable({ coins, pegRates, logos, detailErrors }: Compar
                   className={`text-center font-mono tabular-nums ${i === rowData.bestLiquidity ? BEST_CLASS : ""}`}
                 >
                   {rowData.liquidityScores[i] != null
-                    ? `${rowData.liquidityScores[i]!.toFixed(1)}`
+                    ? formatScore(rowData.liquidityScores[i])
                     : "N/A"}
                 </TableCell>
               ))}

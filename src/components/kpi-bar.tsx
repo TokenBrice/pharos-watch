@@ -12,7 +12,7 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
-import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
+import { formatCurrency, formatScore, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { THREAT_BAND_COLORS, type ThreatBand } from "@shared/lib/classification";
 
@@ -308,7 +308,7 @@ export function KpiBar() {
 
   const psiCurrent = psiData?.current;
   const psiScoreNum = psiCurrent ? (psiCurrent.avg24h ?? psiCurrent.score) : null;
-  const psiScore = psiScoreNum !== null ? psiScoreNum.toFixed(1) : "—";
+  const psiScore = psiScoreNum !== null ? formatScore(psiScoreNum) : "—";
   const psiBand = psiCurrent ? (psiCurrent.avg24hBand ?? psiCurrent.band) : "";
   const psiColorClass = PSI_BAND_CLASSES[psiBand as ConditionBand] ?? "";
   const hasStablecoinsData = !!stablecoinsData?.peggedAssets;

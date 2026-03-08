@@ -12,6 +12,7 @@ import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { DateTooltip, MonoYAxis, TimeXAxis } from "@/components/chart-primitives";
+import { formatChartDate } from "@shared/lib/format";
 
 interface SeriesData {
   id: string;
@@ -105,17 +106,10 @@ export function ComparisonChart({
 
   // Determine XAxis date format based on selected range
   const formatTimestamp = useCallback((ts: number) => {
-    const d = new Date(ts);
     if (activeRange === "7d" || activeRange === "30d") {
-      return d.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
+      return formatChartDate(ts, "short");
     }
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      year: "2-digit",
-    });
+    return formatChartDate(ts, "compact");
   }, [activeRange]);
 
   const defaultFormat = (v: number) => v.toLocaleString();

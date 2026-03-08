@@ -18,6 +18,7 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { RECHARTS_TOOLTIP_STYLES, CHART_ORANGE, CHART_BLUE, CHART_CYAN, CHART_GREEN } from "@/lib/chart-colors";
+import { formatChartDate, formatCurrency, formatScore } from "@shared/lib/format";
 import { useStabilityIndexDetail } from "@/hooks/use-stability-index";
 import type { StabilityContributor } from "@/hooks/use-stability-index";
 import { PsiLighthouse } from "@/components/stability-index";
@@ -91,7 +92,7 @@ function EventTimeline({ data }: { data: { ts: number; score: number }[] }) {
               <span className="text-sm font-semibold shrink-0">{evt.label}</span>
               {psi !== null && (
                 <span className={`text-sm tabular-nums font-medium shrink-0 ${psiColor}`}>
-                  PSI {psi.toFixed(1)}
+                  PSI {formatScore(psi)}
                 </span>
               )}
               <div className="flex gap-x-4 min-w-0 overflow-hidden">
@@ -178,12 +179,7 @@ function ComponentChart({
                   tickLine={false}
                   axisLine={false}
                   minTickGap={72}
-                  tickFormatter={(ts: number) =>
-                    new Date(ts).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "2-digit",
-                    })
-                  }
+                  tickFormatter={(ts: number) => formatChartDate(ts, "compact")}
                 />
                 <YAxis
                   tick={{ fontSize: 12, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
@@ -191,7 +187,7 @@ function ComponentChart({
                   axisLine={false}
                 />
                 <Tooltip
-                  formatter={(value, name) => [Number(value).toFixed(1), String(name)]}
+                  formatter={(value, name) => [formatScore(Number(value)), String(name)]}
                   labelFormatter={(label) =>
                     new Date(Number(label)).toLocaleDateString("en-US", {
                       month: "short",
@@ -266,14 +262,14 @@ function useHistoryStats(history: HistoryPoint[]) {
     const low30Band = last30.find((p) => p.score === low30)?.band ?? "";
     const worst = history.reduce((w, p) => (p.score < w.score ? p : w), history[0]);
     return [
-      { label: "30d High", value: high30.toFixed(1), band: high30Band, sub: null },
-      { label: "30d Low", value: low30.toFixed(1), band: low30Band, sub: null },
-      { label: "30d Avg", value: avg30.toFixed(1), band: avg30Band, sub: null },
+      { label: "30d High", value: formatScore(high30), band: high30Band, sub: null },
+      { label: "30d Low", value: formatScore(low30), band: low30Band, sub: null },
+      { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: null },
       {
         label: "ATL",
-        value: worst.score.toFixed(1),
+        value: formatScore(worst.score),
         band: worst.band,
-        sub: new Date(worst.date * 1000).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        sub: formatChartDate(worst.date * 1000, "month-year"),
       },
     ] as const;
   }, [history]);
@@ -527,7 +523,7 @@ function ContributorsTable({
                     {r.bps > 0 ? "+" : ""}{(r.bps / 100).toFixed(2)}%
                   </td>
                   <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">
-                    ${r.mcapUsd >= 1e9 ? `${(r.mcapUsd / 1e9).toFixed(1)}B` : `${(r.mcapUsd / 1e6).toFixed(0)}M`}
+                    {formatCurrency(r.mcapUsd)}
                   </td>
                   <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.severity.toFixed(2)}</td>
                   <td className="py-2 pr-4 text-right tabular-nums hidden sm:table-cell">{r.breadth.toFixed(2)}</td>
@@ -673,7 +669,7 @@ export function StabilityIndexClient() {
             <div className="flex min-w-0 flex-col items-center gap-1 lg:items-start">
               <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 lg:justify-start">
                 <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
-                  {displayScore.toFixed(1)}
+                  {formatScore(displayScore)}
                 </span>
                 <span className={`text-base font-bold uppercase tracking-wide sm:text-lg ${colorClass}`}>
                   {displayBand}
@@ -695,7 +691,7 @@ export function StabilityIndexClient() {
               <div key={c.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
                 <span className="text-xs text-muted-foreground">{c.label}</span>
                 <span className="text-lg font-extrabold tabular-nums leading-none" style={{ color: c.color }}>
-                  {c.sign}{(components[c.key] ?? 0).toFixed(1)}
+                  {c.sign}{formatScore(components[c.key] ?? 0)}
                 </span>
               </div>
             ))}

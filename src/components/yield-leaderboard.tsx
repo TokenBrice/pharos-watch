@@ -17,7 +17,7 @@ import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatScore, formatApy } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import type { YieldRanking, AltYieldSource } from "@shared/types";
@@ -65,7 +65,7 @@ function AltSourcesPopover({ altSources }: { altSources: AltYieldSource[] }) {
           {altSources.map((src) => (
             <div key={src.sourceKey} className="flex items-center justify-between gap-2 py-1 border-b last:border-0">
               <span className="truncate text-foreground">{src.yieldSource}</span>
-              <span className="font-mono text-emerald-700 dark:text-emerald-400 shrink-0">{src.currentApy.toFixed(2)}%</span>
+              <span className="font-mono text-emerald-700 dark:text-emerald-400 shrink-0">{formatApy(src.currentApy)}</span>
             </div>
           ))}
         </div>
@@ -234,7 +234,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
-                  {row.apy30d.toFixed(2)}%
+                  {formatApy(row.apy30d)}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-center">
                   {grade && grade !== "NR" ? (
@@ -259,7 +259,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
                   <span className={getPysColor(row.pharosYieldScore)}>
-                    {row.pharosYieldScore !== null ? row.pharosYieldScore.toFixed(1) : "--"}
+                    {row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "--"}
                   </span>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-left text-sm text-muted-foreground max-w-[160px]">
@@ -307,7 +307,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
           {sorted.length === 0 && (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                No yield data available
+                No yield data available.
               </TableCell>
             </TableRow>
           )}

@@ -150,3 +150,41 @@ export function getNetColor(value: number): string {
 export function getNetPrefix(value: number): string {
   return value > 0 ? "+" : "";
 }
+
+/** Format a 0-100 score to one decimal. Returns "-" for nullish values. */
+export function formatScore(value: number | null | undefined): string {
+  return value != null ? value.toFixed(1) : "-";
+}
+
+/** Format an APY percentage to two decimals with % suffix. Returns "-" for nullish. */
+export function formatApy(value: number | null | undefined): string {
+  return value != null ? `${value.toFixed(2)}%` : "-";
+}
+
+type ChartDateFormat = "short" | "month-year" | "compact" | "with-time";
+
+/** Centralized date formatter for chart axes and tooltips. */
+export function formatChartDate(
+  timestamp: number | string,
+  format: ChartDateFormat = "short",
+): string {
+  const d = new Date(timestamp);
+  switch (format) {
+    case "short":
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    case "month-year":
+      return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    case "compact": {
+      const month = d.toLocaleDateString("en-US", { month: "short" });
+      const year = d.toLocaleDateString("en-US", { year: "2-digit" });
+      return `${month} '${year}`;
+    }
+    case "with-time":
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        hour12: true,
+      });
+  }
+}

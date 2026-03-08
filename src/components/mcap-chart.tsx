@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter, type TimeRangeOption } from "@/hooks/use-time-range-filter";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatChartDate } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartSkeleton } from "@/components/chart-skeleton";
 import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives";
@@ -63,8 +63,8 @@ function McapXTick({
 
   const label =
     range === "7d" || range === "30d"
-      ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-      : d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+      ? formatChartDate(payload.value, "short")
+      : formatChartDate(payload.value, "compact");
 
   return (
     <g transform={`translate(${x},${y})`}>
