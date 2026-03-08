@@ -398,7 +398,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-history.ts     # GET /api/yield-history
     │   ├── mint-burn-flows.ts    # GET /api/mint-burn-flows (aggregate + per-coin modes)
     │   ├── mint-burn-events.ts   # GET /api/mint-burn-events (paginated event log)
-    │   └── feedback.ts          # POST /api/feedback (public)
+    │   ├── feedback.ts          # POST /api/feedback (public)
+    │   └── telegram-webhook.ts  # POST /api/telegram-webhook (Telegram bot command ingress)
     └── lib/
         ├── db.ts                 # D1 read/write helpers (setCacheIfNewer CAS guard, batchExecute, buildPaginatedQuery, buildInClause, logCronRun with protected catch)
         ├── chain-registry.ts     # Unified chain mappings + chain RPC endpoint config (11 chains: EVM + Tron)
@@ -439,7 +440,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── dexscreener.ts        # DexScreener API client (token price + pool search)
         ├── resolve-market-cap.ts # Multi-source market cap resolution (DL → CG → CMC → DexScreener)
         ├── telegram-alerts.ts    # Telegram alert subscription parsing, filtering, and message formatting helpers
-        └── telegram.ts           # Telegram Bot API client for daily digest distribution
+        └── telegram.ts           # Telegram Bot API client for digest delivery and direct bot chat replies
 
 data/
 ├── logos.json                    # Static stablecoin logo URLs (from CoinGecko)

@@ -154,7 +154,7 @@ If either is absent, Telegram posting is skipped silently.
 3. Add the bot as Admin with "Post Messages" permission only
 4. Add secrets: `cd worker && npx wrangler secret put TELEGRAM_BOT_TOKEN` / `npx wrangler secret put TELEGRAM_CHAT_ID`
 
-`telegram.ts` currently exports digest-posting helpers only (`buildTelegramMessage`, `postDigestToTelegram`).
+`telegram.ts` also exports `sendToChat()` for the Telegram webhook command handler, but digest generation still uses the same HTML `sendMessage` API path and credentials.
 
 ### Distribution status logging
 

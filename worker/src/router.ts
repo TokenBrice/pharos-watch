@@ -35,6 +35,7 @@ import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
+import { handleTelegramWebhook } from "./api/telegram-webhook";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { requireAdmin } from "./lib/auth";
 import { generateDailyDigest } from "./cron/daily-digest";
@@ -144,7 +145,9 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     }
     return handleFeedback(db, request, feedbackEnv ?? {});
   })],
-  ["/api/telegram-webhook", () => Promise.resolve(errorResponse(501, "Not yet implemented"))],
+  ["/api/telegram-webhook", withErrorHandler("telegram-webhook", ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
+    handleTelegramWebhook(db, request!, telegramWebhookSecret, telegramBotToken)
+  )],
   ["/api/trigger-digest", withErrorHandler("route-trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;

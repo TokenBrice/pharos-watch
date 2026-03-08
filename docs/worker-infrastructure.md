@@ -57,8 +57,9 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TWITTER_API_SECRET` | string | No | Digest → Twitter (OAuth consumer secret) |
 | `TWITTER_ACCESS_TOKEN` | string | No | Digest → Twitter (access token) |
 | `TWITTER_ACCESS_TOKEN_SECRET` | string | No | Digest → Twitter (access token secret) |
-| `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram |
+| `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram and bot chat replies |
 | `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
+| `TELEGRAM_WEBHOOK_SECRET` | string | No | `POST /api/telegram-webhook` shared-secret query validation |
 | `MAINTENANCE_MODE` | `string?` | No | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-admin requests. Used as a kill switch. |
 | `MINT_BURN_DISABLED_IDS` | string | No | Mint/burn runtime disable list by stablecoin ID (CSV) |
 | `MINT_BURN_DISABLED_SYMBOLS` | string | No | Mint/burn runtime disable list by symbol (CSV) |
