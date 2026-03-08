@@ -1,4 +1,3 @@
-// worker/src/lib/og-templates/stablecoin-card.tsx
 import { CardFrame, Sparkline, TEXT_SECONDARY, FROST_BLUE } from "./shared";
 
 export interface StablecoinCardData {
