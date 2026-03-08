@@ -2,7 +2,6 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { PEG_CURRENCY_COUNT } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/lib/chains";
 import { HomepageClient } from "@/components/homepage-client";
-import { IntelligenceBriefing } from "@/components/intelligence-briefing";
 import { KpiBar } from "@/components/kpi-bar";
 import { SiteHeader } from "@/components/site-header";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -39,7 +38,6 @@ export default function HomePage() {
         <SiteHeader total={total} pegCount={PEG_CURRENCY_COUNT} chainCount={Object.keys(CHAIN_META).length} />
         <KpiBar />
       </div>
-      <IntelligenceBriefing />
       <HomepageClient />
     </div>
   );

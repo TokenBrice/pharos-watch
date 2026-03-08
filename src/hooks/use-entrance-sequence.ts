@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 
-type Phase = "briefing" | "kpi" | "complete";
+type Phase = "kpi" | "complete";
 
 interface EntranceSequence {
   phase: Phase;
@@ -10,16 +10,13 @@ interface EntranceSequence {
 }
 
 const PHASE_TIMINGS: Record<Phase, number> = {
-  briefing: 0,
-  kpi: 400,
-  complete: 800,
+  kpi: 0,
+  complete: 400,
 };
 
 const GROUP_OFFSETS: Record<string, { base: number; stagger: number }> = {
-  briefing: { base: 0, stagger: 60 },
-  "briefing-lines": { base: 150, stagger: 60 },
-  kpi: { base: 400, stagger: 80 },
-  cards: { base: 400, stagger: 60 },
+  kpi: { base: 0, stagger: 80 },
+  cards: { base: 200, stagger: 60 },
 };
 
 function prefersReducedMotion(): boolean {
@@ -30,7 +27,7 @@ function prefersReducedMotion(): boolean {
 export function useEntranceSequence(): EntranceSequence {
   const [isReduced] = useState(() => prefersReducedMotion());
   const [phase, setPhase] = useState<Phase>(
-    () => prefersReducedMotion() ? "complete" : "briefing",
+    () => prefersReducedMotion() ? "complete" : "kpi",
   );
 
   useEffect(() => {
