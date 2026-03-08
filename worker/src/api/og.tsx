@@ -21,7 +21,14 @@ let wasmInitialized = false;
 
 async function ensureWasm(): Promise<void> {
   if (!wasmInitialized) {
-    await initResvg(resvgWasmModule);
+    try {
+      await initResvg(resvgWasmModule);
+    } catch (e: unknown) {
+      // @cf-wasm/resvg throws if already initialized in this isolate
+      if (!(e instanceof Error && e.message.includes("already called"))) {
+        throw e;
+      }
+    }
     wasmInitialized = true;
   }
 }
