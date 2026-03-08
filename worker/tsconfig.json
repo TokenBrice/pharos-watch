@@ -10,12 +10,13 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "jsx": "react-jsx",
     "types": ["@cloudflare/workers-types"],
     "paths": {
       "@/*": ["../src/*"],
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*.ts", "../shared/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "../shared/**/*.ts"],
   "exclude": ["node_modules", "src/scripts"]
 }
