@@ -126,6 +126,7 @@ export async function buildReportCardsSnapshot(db: D1Database): Promise<ReportCa
       symbol: dead.symbol,
       overallGrade: "F" as const,
       overallScore: 0,
+      baseScore: null,
       dimensions: {
         pegStability: nrDim,
         liquidity: nrDim,
@@ -235,6 +236,7 @@ function computeCard(
     symbol: meta.symbol,
     overallGrade: overall.grade,
     overallScore: overall.score,
+    baseScore: overall.baseScore,
     dimensions,
     ratedDimensions: overall.ratedDimensions,
     rawInputs,

@@ -279,6 +279,7 @@ export function PortfolioClient() {
       symbol: "PORT",
       overallGrade: portfolio.portfolioGrade,
       overallScore: portfolio.portfolioScore,
+      baseScore: null,
       dimensions: Object.fromEntries(
         DIMENSION_ORDER.map((key) => [
           key,

@@ -32,6 +32,7 @@ function makeCard(
     symbol: `C${id}`,
     overallGrade: grade,
     overallScore: score,
+    baseScore: null,
     dimensions: {
       pegStability: dim,
       liquidity: dim,

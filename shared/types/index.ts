@@ -705,6 +705,7 @@ export interface ReportCard {
   symbol: string;
   overallGrade: ReportCardGrade;
   overallScore: number | null;
+  baseScore: number | null;
   dimensions: Record<DimensionKey, ReportCardDimension>;
   ratedDimensions: number;
   rawInputs: RawDimensionInputs;
@@ -720,6 +721,7 @@ export const ReportCardsResponseSchema = z.object({
       symbol: z.string(),
       overallGrade: z.string(),
       overallScore: z.number().nullable(),
+      baseScore: z.number().nullable(),
       dimensions: z.record(
         z.string(),
         z.object({

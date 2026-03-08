@@ -649,7 +649,7 @@ export function scoreDependencyRisk(
 export function computeOverallGrade(
   dimensions: Record<DimensionKey, ReportCardDimension>,
   opts?: { navToken?: boolean },
-): { grade: ReportCardGrade; score: number | null; ratedDimensions: number } {
+): { grade: ReportCardGrade; score: number | null; baseScore: number | null; ratedDimensions: number } {
   const keys = Object.keys(DIMENSION_WEIGHTS) as DimensionKey[];
 
   // Compute base score from non-peg dimensions
@@ -669,11 +669,12 @@ export function computeOverallGrade(
 
   // Need at least 2 rated base dimensions
   if (baseRatedCount < 2 || ratedWeight === 0) {
-    return { grade: "NR", score: null, ratedDimensions: baseRatedCount };
+    return { grade: "NR", score: null, baseScore: null, ratedDimensions: baseRatedCount };
   }
 
   // Redistribute weight from NR dimensions proportionally
   let score = weightedSum / ratedWeight;
+  const baseScore = Math.round(score * 10) / 10;
 
   // Apply peg stability as a power-curve multiplier
   const pegScore = dimensions.pegStability.score;
@@ -681,7 +682,7 @@ export function computeOverallGrade(
     score *= pegScore === 0 ? 0 : Math.pow(pegScore / 100, PEG_MULTIPLIER_EXPONENT);
   } else if (!opts?.navToken) {
     // Non-NAV coin with no peg data → overall NR (can't evaluate peg health)
-    return { grade: "NR", score: null, ratedDimensions: baseRatedCount };
+    return { grade: "NR", score: null, baseScore: null, ratedDimensions: baseRatedCount };
   }
   // NAV token with null peg → multiplier 1.0, no change
 
@@ -693,7 +694,7 @@ export function computeOverallGrade(
   const clamped = Math.max(0, Math.min(100, Math.round(score)));
   const ratedDimensions = baseRatedCount + (pegScore !== null ? 1 : 0);
 
-  return { grade: scoreToGrade(clamped), score: clamped, ratedDimensions };
+  return { grade: scoreToGrade(clamped), score: clamped, baseScore, ratedDimensions };
 }
 
 // ---------------------------------------------------------------------------
@@ -743,6 +744,7 @@ export function computeStressedGrades(
         ...card,
         overallGrade: scoreToGrade(newScore),
         overallScore: newScore,
+        baseScore: card.baseScore,
       };
     }
 
@@ -761,6 +763,7 @@ export function computeStressedGrades(
         dimensions: newDimensions,
         overallGrade: overall.grade,
         overallScore: overall.score,
+        baseScore: overall.baseScore,
         ratedDimensions: overall.ratedDimensions,
       };
     }
