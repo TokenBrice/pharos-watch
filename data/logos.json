@@ -261,5 +261,8 @@
   "cg-uscc": "/logos/cg-uscc.jpg",
   "mtbill-midas": "/logos/cg-mtbill.png",
   "usd-dinari": "/logos/cg-dinari-usd.png",
-  "wsrusd-reservoir": "/logos/cg-wrapped-savings-rusd.png"
+  "wsrusd-reservoir": "/logos/cg-wrapped-savings-rusd.png",
+  "ebusd-ebisu": "/logos/cg-ebusd.png",
+  "usnd-nerite": "/logos/287-usnd.png",
+  "usdaf-asymmetry": "/logos/295-usdaf.png"
 }

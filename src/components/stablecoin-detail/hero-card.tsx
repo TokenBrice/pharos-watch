@@ -83,6 +83,13 @@ export function HeroCard({
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
 
+  const tooNewForPegScore =
+    !isNavToken &&
+    pegScoreResult !== null &&
+    pegScoreResult.pegScore === null &&
+    pegScoreResult.trackingSpanDays > 0 &&
+    pegScoreResult.trackingSpanDays < 30;
+
   const pegScoreContent = !isNavToken ? (
     pegScoreResult?.pegScore != null ? (
       <>
@@ -97,6 +104,20 @@ export function HeroCard({
           {pegScoreResult.eventCount} event{pegScoreResult.eventCount !== 1 ? "s" : ""}
         </p>
       </>
+    ) : tooNewForPegScore ? (
+      <details className="group">
+        <summary className="cursor-pointer list-none">
+          <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground flex items-center gap-1.5">
+            NR
+            <span className="text-xs font-sans font-normal text-muted-foreground/50 group-open:hidden">why?</span>
+          </div>
+          <p className="text-xs text-muted-foreground font-mono mt-0.5">{pegScoreResult!.trackingSpanDays}d tracked</p>
+        </summary>
+        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+          Peg score requires 30 days of history.{" "}
+          {Math.ceil(30 - pegScoreResult!.trackingSpanDays)} day{Math.ceil(30 - pegScoreResult!.trackingSpanDays) !== 1 ? "s" : ""} remaining.
+        </p>
+      </details>
     ) : (
       <div className="text-xl font-bold font-mono tracking-tight text-muted-foreground">N/A</div>
     )
