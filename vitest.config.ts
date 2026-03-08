@@ -45,7 +45,9 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
-      // Stub resvg to prevent WASM loading in vitest (Node can't handle Worker WASM imports)
+      // Stub WASM-dependent packages for vitest (Node can't handle Worker WASM imports)
+      "satori/standalone": path.resolve(__dirname, "worker/src/__mocks__/satori-stub.ts"),
+      "satori/yoga.wasm": path.resolve(__dirname, "worker/src/__mocks__/wasm-module-stub.ts"),
       "@cf-wasm/resvg/workerd": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
       "@resvg/resvg-wasm": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
     },

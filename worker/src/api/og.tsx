@@ -1,4 +1,5 @@
-import satori from "satori";
+import satori, { init as initSatori } from "satori/standalone";
+import yogaWasm from "satori/yoga.wasm";
 import { Resvg, initResvg, resvgWasmModule } from "@cf-wasm/resvg/workerd";
 import { OG_FONTS } from "../lib/og-fonts";
 import { StablecoinCard, type StablecoinCardData } from "../lib/og-templates/stablecoin-card";
@@ -14,20 +15,37 @@ import { TRACKED_IDS } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 
 // ---------------------------------------------------------------------------
-// resvg-wasm singleton initialization
+// WASM singleton initialization (yoga for satori + resvg for SVG→PNG)
 // ---------------------------------------------------------------------------
 
 let wasmInitialized = false;
 
 async function ensureWasm(): Promise<void> {
   if (!wasmInitialized) {
+    const errors: unknown[] = [];
+
+    // Initialize yoga WASM for satori layout engine
+    try {
+      await initSatori(yogaWasm);
+    } catch (e: unknown) {
+      // Ignore if already initialized in this isolate
+      if (!(e instanceof Error && e.message.includes("already"))) {
+        errors.push(e);
+      }
+    }
+
+    // Initialize resvg WASM for SVG→PNG rendering
     try {
       await initResvg(resvgWasmModule);
     } catch (e: unknown) {
       // @cf-wasm/resvg throws if already initialized in this isolate
       if (!(e instanceof Error && e.message.includes("already called"))) {
-        throw e;
+        errors.push(e);
       }
+    }
+
+    if (errors.length > 0) {
+      throw errors[0];
     }
     wasmInitialized = true;
   }
