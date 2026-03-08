@@ -441,11 +441,45 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
     const peg = meta.flags.pegCurrency;
     if (peg === "USD") continue;
 
-    const earliestSupplyDate = supplyByDate[0]
-      ? new Date(supplyByDate[0].ts * 1000).toISOString().slice(0, 10)
-      : defaultStartDate;
-    if (earliestSupplyDate < historicalFxStartDate) {
-      historicalFxStartDate = earliestSupplyDate;
+    let earliestDate: string;
+    if (supplyByDate[0]) {
+      earliestDate = new Date(supplyByDate[0].ts * 1000).toISOString().slice(0, 10);
+    } else if (SECONDARY_PEG_TO_FX[peg] && geckoId) {
+      // Secondary FX coins with no DL supply data would otherwise default to 10 years,
+      // triggering ~3,600 per-day CDN fetches for the cold-start FX cache build.
+      // Fetch the CG ATL/genesis date to anchor the window to the coin's actual inception.
+      try {
+        await new Promise(r => setTimeout(r, RATE_LIMITS.COINGECKO_BACKFILL_MS));
+        const cgRes = await fetchWithRetry(
+          cgUrl(`/coins/${geckoId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`),
+          { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
+          1,
+          { timeoutMs: 10_000 },
+        );
+        if (cgRes?.ok) {
+          const cgData = await cgRes.json() as {
+            genesis_date?: string | null;
+            market_data?: { atl_date?: Record<string, string> };
+          };
+          const inceptionStr = cgData.genesis_date ?? cgData.market_data?.atl_date?.["usd"];
+          if (inceptionStr) {
+            const d = new Date(inceptionStr);
+            d.setUTCDate(d.getUTCDate() - 7); // 7-day buffer
+            earliestDate = d.toISOString().slice(0, 10);
+          } else {
+            earliestDate = defaultStartDate;
+          }
+        } else {
+          earliestDate = defaultStartDate;
+        }
+      } catch {
+        earliestDate = defaultStartDate;
+      }
+    } else {
+      earliestDate = defaultStartDate;
+    }
+    if (earliestDate < historicalFxStartDate) {
+      historicalFxStartDate = earliestDate;
     }
 
     if (COMMODITY_PEGS.has(peg)) {
