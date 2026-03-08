@@ -43,6 +43,7 @@ const HELP_MESSAGE = `<b>Commands</b>
 const DISAMBIGUATION_TTL_SEC = 5 * 60;
 
 interface TelegramWebhookUpdate {
+  update_id?: number;
   message?: {
     chat?: {
       id?: number;
@@ -116,6 +117,23 @@ export async function handleTelegramWebhook(
     update = await request.json();
   } catch {
     return ok();
+  }
+
+  // Deduplicate: Telegram may redeliver updates if our response is slow.
+  // Atomic compare-and-swap ensures only the first invocation processes each update.
+  const updateId = update.update_id;
+  if (typeof updateId === "number") {
+    const dedup = await db
+      .prepare(
+        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+         WHERE CAST(cache.value AS INTEGER) < CAST(excluded.value AS INTEGER)`,
+      )
+      .bind("telegram:last-update-id", String(updateId), Math.floor(Date.now() / 1000))
+      .run();
+    if (dedup.meta.changes === 0) {
+      return ok();
+    }
   }
 
   const chatId = update.message?.chat?.id?.toString();
