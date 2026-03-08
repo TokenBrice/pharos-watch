@@ -32,7 +32,8 @@ vi.mock("../../lib/circuit-breaker", () => ({
   recordOutcomeSafe: vi.fn(async () => {}),
 }));
 
-import { generateDailyDigest } from "../daily-digest";
+import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import type { DigestInputData } from "@shared/types";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { computeSafetyScoresSnapshot } from "../../lib/safety-scores";
 import { fetchWithRetry } from "../../lib/fetch-retry";
@@ -481,5 +482,50 @@ describe("generateDailyDigest", () => {
     expect(result.metadata).toContain("tweet: failed:");
     expect(result.metadata).toContain("telegram: failed:");
     expect(getInsertDigestBinds(db as MockD1Database)).toBeDefined();
+  });
+});
+
+describe("classifyRegime", () => {
+  const baseData: DigestInputData = {
+    totalMcapUsd: 200_000_000_000,
+    mcap7dDelta: 1_000_000_000,
+    activeDepegCount: 0,
+    topDepegs: [],
+    biggestSupplyChange: null,
+    stabilityIndex: { score: 95, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } },
+    yesterdayIndex: null,
+  };
+
+  it("returns CALM when nothing is elevated", () => {
+    expect(classifyRegime(baseData)).toBe("CALM");
+  });
+
+  it("returns CRISIS when FTQ is active", () => {
+    expect(classifyRegime({
+      ...baseData,
+      mintBurnFlows: { gaugeScore: -20, gaugeBand: "CAUTIOUS", flightToQuality: { active: true, safeNetUsd: 200_000_000, riskyNetUsd: -200_000_000 }, topPressure: [] },
+    })).toBe("CRISIS");
+  });
+
+  it("returns CRISIS when PSI band is TREMOR", () => {
+    expect(classifyRegime({
+      ...baseData,
+      stabilityIndex: { score: 65, band: "TREMOR", components: { severity: 30, breadth: 5, trend: -3 } },
+    })).toBe("CRISIS");
+  });
+
+  it("returns TENSION when 3+ coins ALERT+", () => {
+    expect(classifyRegime({
+      ...baseData,
+      dewsStress: {
+        bandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
+        yesterdayBandCounts: { calm: 100, watch: 10, alert: 2, warning: 1, danger: 0 },
+        bandChanges: [], elevatedCoins: [],
+      },
+    })).toBe("TENSION");
+  });
+
+  it("returns WATCHFUL when 1 active depeg", () => {
+    expect(classifyRegime({ ...baseData, activeDepegCount: 1 })).toBe("WATCHFUL");
   });
 });

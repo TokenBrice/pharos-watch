@@ -55,8 +55,29 @@ const SYSTEM_PROMPT =
   "The title and text will be concatenated as '{title}\\n\\n{text}' for a tweet. The combined result MUST be under 270 characters (leave ~10 chars headroom for cashtag formatting). " +
   "Pack every character with data and wit — density is a virtue. No sentence count limit.";
 
+export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "WATCHFUL" | "CALM" {
+  const band = data.stabilityIndex?.band ?? "BEDROCK";
+  const activeDepegs = data.activeDepegCount;
+  const gaugeScore = data.mintBurnFlows?.gaugeScore ?? 0;
+  const ftqActive = data.mintBurnFlows?.flightToQuality.active ?? false;
+  const alertPlus = (data.dewsStress?.bandCounts.alert ?? 0)
+    + (data.dewsStress?.bandCounts.warning ?? 0)
+    + (data.dewsStress?.bandCounts.danger ?? 0);
+
+  if (band === "TREMOR" || band === "FRACTURE" || band === "CRISIS" || ftqActive || gaugeScore < -50)
+    return "CRISIS";
+  if (activeDepegs >= 2 || gaugeScore < -20 || alertPlus >= 3)
+    return "TENSION";
+  if ((data.dewsStress?.bandChanges?.length ?? 0) > 0 || activeDepegs >= 1 || gaugeScore < -10)
+    return "WATCHFUL";
+  return "CALM";
+}
+
 function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): string {
+  const regime = classifyRegime(data);
   const lines: string[] = [
+    `Market regime: ${regime}`,
+    "",
     `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`,
     `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${((data.mcap7dDelta / (data.totalMcapUsd - data.mcap7dDelta)) * 100).toFixed(2)}%)`,
     `Active depeg events: ${data.activeDepegCount}`,
@@ -78,6 +99,15 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
     if (data.yesterdayIndex) {
       lines.push(`Yesterday: ${data.yesterdayIndex.score} [${data.yesterdayIndex.band}]`);
     }
+    if (data.historicalContext) {
+      const { psiPrecedent, psiBandStreak } = data.historicalContext;
+      if (psiPrecedent) {
+        const precDate = new Date(psiPrecedent.lastSeenDate * 1000).toISOString().slice(0, 10);
+        lines.push(`Context: last below ${score} on ${precDate}, ${psiPrecedent.lastSeenDaysAgo} days ago. Current ${band} streak: ${psiBandStreak} days.`);
+      } else {
+        lines.push(`Context: all-time low. Current ${band} streak: ${psiBandStreak} days.`);
+      }
+    }
   }
 
   if (data.biggestSupplyChange) {
@@ -86,6 +116,15 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
     lines.push(
       `Biggest 7d supply ${direction}: ${symbol} ${changeUsd >= 0 ? "+" : ""}${formatCurrency(changeUsd)} (now ${formatCurrency(currentMcap)})`,
     );
+    if (data.historicalContext?.supplyMoverContext) {
+      const ctx = data.historicalContext.supplyMoverContext;
+      const athPct = ((ctx.allTimeHighMcap - currentMcap) / ctx.allTimeHighMcap * 100).toFixed(0);
+      const relation = currentMcap < ctx.allTimeHighMcap ? "below" : "above";
+      const athDate = new Date(ctx.allTimeHighDate * 1000).toISOString().slice(0, 10);
+      lines.push(
+        `Context: ${symbol}'s largest single-week change was ${formatCurrency(ctx.largestWeeklyChange)} (${ctx.largestWeeklyChangeDaysAgo} days ago). Current mcap is ${athPct}% ${relation} ATH (${formatCurrency(ctx.allTimeHighMcap)} on ${athDate}).`,
+      );
+    }
   }
 
   // Enrichment: blacklist activity
@@ -104,6 +143,54 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
       const d1 = `${v.change1d >= 0 ? "+" : ""}${formatCurrency(v.change1d)} yesterday`;
       const d7 = `${v.change7d >= 0 ? "+" : ""}${formatCurrency(v.change7d)}/week`;
       lines.push(`  ${v.coin}: ${d1} vs ${d7} — ${v.signal}`);
+    }
+  }
+
+  // Enrichment: mint-burn flows
+  if (data.mintBurnFlows) {
+    const { gaugeScore, gaugeBand, flightToQuality, topPressure } = data.mintBurnFlows;
+    lines.push("", "Mint/Burn Flows (24h on-chain):");
+    lines.push(`  Bank Run Gauge: ${gaugeScore} [${gaugeBand}]`);
+    if (flightToQuality.active) {
+      lines.push(`  Flight-to-Quality: ACTIVE, ${formatCurrency(flightToQuality.safeNetUsd)} into safe havens, ${formatCurrency(flightToQuality.riskyNetUsd)} out of risky coins`);
+    }
+    if (topPressure.length > 0) {
+      lines.push("  Top pressure shifts vs 30d baseline:");
+      for (const p of topPressure) {
+        lines.push(`    ${p.symbol}: ${p.intensity} (net ${formatCurrency(p.net24hUsd)} yesterday)`);
+      }
+    }
+  }
+
+  // Enrichment: DEWS stress signals
+  if (data.dewsStress) {
+    const { bandCounts, yesterdayBandCounts: y, bandChanges, elevatedCoins } = data.dewsStress;
+    lines.push("", "DEWS Stress Signals:");
+    lines.push(
+      `  Band distribution: ${bandCounts.calm} CALM, ${bandCounts.watch} WATCH, ${bandCounts.alert} ALERT, ${bandCounts.warning} WARNING, ${bandCounts.danger} DANGER (vs yesterday: ${y.calm}/${y.watch}/${y.alert}/${y.warning}/${y.danger})`,
+    );
+    if (bandChanges.length > 0) {
+      lines.push("  Band changes (last 24h):");
+      for (const c of bandChanges) {
+        lines.push(`    ${c.symbol}: ${c.from} -> ${c.to} (score ${c.score}, driven by ${c.topDriver})`);
+      }
+    }
+    if (elevatedCoins.length > 0) {
+      lines.push("  Elevated coins (ALERT+):");
+      for (const c of elevatedCoins) {
+        lines.push(`    ${c.symbol}: ${c.band} (score ${c.score}, mcap ${formatCurrency(c.mcapUsd)})`);
+      }
+    }
+  }
+
+  // Enrichment: grade transitions
+  if (data.gradeTransitions && data.gradeTransitions.length > 0) {
+    lines.push("", "Grade Transitions (last 48h):");
+    for (const t of data.gradeTransitions) {
+      const dims = t.currentDimensions;
+      lines.push(
+        `  ${t.symbol}: ${t.fromGrade} (${t.fromScore}) -> ${t.toGrade} (${t.toScore}), mcap ${formatCurrency(t.mcapUsd)} — dimensions: peg=${dims.peg}, liq=${dims.liq}, resilience=${dims.resilience}, decentralization=${dims.decentralization}`,
+      );
     }
   }
 
