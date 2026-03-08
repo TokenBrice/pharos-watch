@@ -15,15 +15,21 @@ interface ColumnVisibilityDropdownProps {
   visibleColumns: ColumnId[];
   setVisibleColumns: (value: ColumnId[] | ((prev: ColumnId[]) => ColumnId[])) => void;
   resetColumns: () => void;
+  defaultColumns: ColumnId[];
 }
 
 export function ColumnVisibilityDropdown({
   visibleColumns,
   setVisibleColumns,
   resetColumns,
+  defaultColumns,
 }: ColumnVisibilityDropdownProps) {
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
-  const hiddenCount = ALL_COLUMNS.length - visibleColumns.length;
+  // Count how many default columns are currently hidden (user has disabled them)
+  const hiddenCount = useMemo(
+    () => defaultColumns.filter((id) => !visibleSet.has(id)).length,
+    [defaultColumns, visibleSet],
+  );
 
   return (
     <DropdownMenu>

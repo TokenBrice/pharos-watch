@@ -211,6 +211,7 @@ export function StablecoinTable({
             visibleColumns={visibleColumns}
             setVisibleColumns={setVisibleColumns}
             resetColumns={resetColumns}
+            defaultColumns={deviceDefault}
           />
           <Button
             variant="outline"
@@ -307,7 +308,7 @@ export function StablecoinTable({
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="hidden sm:table-cell text-right"
+                  className="text-right"
                   title="7-day market cap change"
                 />
               )}
@@ -320,7 +321,7 @@ export function StablecoinTable({
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="hidden md:table-cell text-center"
+                  className="text-center"
                   title="Pharos Grade: overall safety score across peg stability, liquidity, resilience, decentralization, and dependency risk"
                 />
               )}
@@ -333,7 +334,7 @@ export function StablecoinTable({
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="hidden sm:table-cell text-right"
+                  className="text-right"
                   title="Peg Stability Score (0-100): measures peg-holding consistency over 30 days"
                 />
               )}
@@ -346,22 +347,22 @@ export function StablecoinTable({
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="hidden sm:table-cell text-right"
+                  className="text-right"
                   title="DEX Liquidity Score: measures pool depth, volume, and diversity across decentralized exchanges"
                 />
               )}
               {isVisible("backing") && (
-                <TableHead scope="col" className="hidden md:table-cell text-center" title="Collateral backing type">
+                <TableHead scope="col" className="text-center" title="Collateral backing type">
                   Backing
                 </TableHead>
               )}
               {isVisible("type") && (
-                <TableHead scope="col" className="hidden md:table-cell text-center" title="Stablecoin mechanism type">
+                <TableHead scope="col" className="text-center" title="Stablecoin mechanism type">
                   Type
                 </TableHead>
               )}
               {isVisible("flags") && (
-                <TableHead scope="col" className="hidden md:table-cell text-center">
+                <TableHead scope="col" className="text-center">
                   Flags
                 </TableHead>
               )}
@@ -426,7 +427,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("peg") && (
-                    <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums">
+                    <TableCell className="text-right font-mono tabular-nums">
                       {meta?.flags.navToken ? (
                         <span
                           className="text-muted-foreground"
@@ -478,7 +479,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("change7d") && (
-                    <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
+                    <TableCell className="text-right font-mono tabular-nums text-sm">
                       <span
                         className={
                           change7d >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
@@ -500,7 +501,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("grade") && (
-                    <TableCell className="hidden md:table-cell px-3 py-2 text-center">
+                    <TableCell className="px-3 py-2 text-center">
                       {reportCards?.[coin.id] && (
                         <Badge
                           variant="outline"
@@ -513,7 +514,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("stability") && (
-                    <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
+                    <TableCell className="text-right font-mono tabular-nums text-sm">
                       {(() => {
                         if (meta?.flags.navToken) {
                           return <span className="text-muted-foreground">—</span>;
@@ -528,7 +529,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("liquidity") && (
-                    <TableCell className="hidden sm:table-cell text-right font-mono tabular-nums text-sm">
+                    <TableCell className="text-right font-mono tabular-nums text-sm">
                       {(() => {
                         const liq = dexLiquidity?.[coin.id];
                         if (!liq || liq.liquidityScore === null || liq.liquidityScore === 0) {
@@ -540,7 +541,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("backing") && (
-                    <TableCell className="hidden md:table-cell text-center">
+                    <TableCell className="text-center">
                       {meta && (
                         <Badge variant="outline" className={`text-xs ${BACKING_COLORS[meta.flags.backing] ?? ""}`}>
                           {BACKING_LABELS_SHORT[meta.flags.backing]}
@@ -549,7 +550,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("type") && (
-                    <TableCell className="hidden md:table-cell text-center">
+                    <TableCell className="text-center">
                       {meta && (
                         <Badge
                           variant="outline"
@@ -561,7 +562,7 @@ export function StablecoinTable({
                     </TableCell>
                   )}
                   {isVisible("flags") && (
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell className="">
                       <div className="flex flex-wrap gap-1 justify-center">
                         {meta?.flags.pegCurrency !== "USD" && (
                           <Badge variant="secondary" className="text-xs">

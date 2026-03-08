@@ -69,7 +69,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
   { id: "rank", label: "#", locked: true },
   { id: "name", label: "Name", locked: true },
   { id: "price", label: "Price" },
-  { id: "peg", label: "Peg" },
+  { id: "peg", label: "Peg", hiddenMobile: true },
   { id: "mcap", label: "Market Cap" },
   { id: "change24h", label: "24h" },
   { id: "change7d", label: "7d", hiddenMobile: true },
@@ -82,6 +82,7 @@ export const ALL_COLUMNS: ColumnDef[] = [
 ];
 
 export const DEFAULT_VISIBLE_COLUMNS: ColumnId[] = ALL_COLUMNS.map((c) => c.id);
+export const MOBILE_DEFAULT_COLUMNS: ColumnId[] = ALL_COLUMNS.filter((c) => !c.hiddenMobile).map((c) => c.id);
 
 export const LOCKED_COLUMNS: Set<ColumnId> = new Set(
   ALL_COLUMNS.filter((c) => c.locked).map((c) => c.id)
