@@ -875,7 +875,7 @@ Worker health check. Reports cache freshness, blacklist integrity, mint/burn fre
 
 ### `GET /api/stability-index`
 
-Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend.
+Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem health score (0–100) computed from active depeg severity, affected-market breadth, DEWS stress breadth, and 7-day ecosystem trend across the PSI-eligible universe (tracked coins plus shadow assets used for historical continuity).
 
 **Cache:** standard — `X-Data-Age` and `Warning` headers included.
 
@@ -928,6 +928,30 @@ Daily Pharos Stability Index (PSI) scores. The PSI is a composite ecosystem heal
 | `methodology` | `object` | Version metadata for current PSI methodology context |
 | `methodology.version` | `string` | Methodology version used by current score |
 | `methodology.changelogPath` | `string` | Relative path to full methodology changelog |
+
+---
+
+### `GET /api/og/*`
+
+Dynamic Open Graph PNG images used by share buttons and page metadata.
+
+**Supported routes**
+
+- `/api/og/stablecoin/:id`
+- `/api/og/safety-scores`
+- `/api/og/depeg`
+- `/api/og/stability-index`
+
+**Content-Type:** `image/png`
+
+**Cache:** `public, max-age=900, s-maxage=900`
+
+**Error cases**
+
+- `404` for unknown coin IDs or unknown OG routes
+- `503` when required cached data is not yet available
+
+`/api/og/stablecoin/:id` accepts tracked public stablecoin IDs only. The renderer assembles each card from cached stablecoin, DEWS, PSI, report-card, depeg, liquidity, and mint/burn data on the worker.
 
 ---
 
@@ -1515,14 +1539,14 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
   "caches": { ... },
   "crons": {
     "sync-stablecoins": {
-      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 151 },
+      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 156 },
       "recentRuns": [...],
       "expectedIntervalSec": 900,
       "healthy": true
     }
   },
   "dataQuality": {
-    "totalStablecoins": 151,
+    "totalStablecoins": 156,
     "missingPrices": 3,
     "blacklistMissingAmounts": 0,
     "blacklistRecentMissingAmounts": 0,
@@ -1556,6 +1580,8 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
   }
 }
 ```
+
+`itemCount` and `dataQuality.totalStablecoins` are illustrative example values. In the live handler they reflect the current cached stablecoin payload size, not `TRACKED_STABLECOINS.length`.
 
 `crons[*].healthy` reflects availability impact. Fresh cron runs with `status="degraded"` are warning-only and counted in `summary.degradedCrons`, but they do not mark availability unhealthy on their own.
 

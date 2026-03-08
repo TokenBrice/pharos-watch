@@ -13,10 +13,10 @@ The entire backend runs on a single Cloudflare Worker script.
 | **Included requests/month** | 10 M | $0.30/M over |
 | **Included CPU time/month** | 30 M CPU-ms | $0.02/M over |
 | **CPU time per HTTP request** | 30 s default (up to 5 min configurable) | |
-| **CPU time per Cron Trigger** | Up to **15 min** | Our crons run up to 30 min wall-clock, but only ~15 min CPU |
-| **Cron Triggers per Worker** | **5 max** | ⚠️ We use 4 of 5 slots: `*/15`, `3,23,43`, `10,40`, `0 8 * * *`. 1 free slot remaining. For a 5th, piggyback on an existing slot with a minute check |
+| **CPU time per Cron Trigger** | 30 s if the schedule runs more than once per hour; 15 min otherwise | Platform default. This repo additionally sets `cpu_ms = 5000` in `worker/wrangler.toml`, so our effective per-invocation CPU cap is 5 s unless reconfigured |
+| **Cron Triggers** | No current per-worker cap; account quota applies | Cloudflare removed the old per-worker trigger cap. This repo currently uses 4 cron expressions: `*/15`, `3,23,43`, `10,40`, `0 8 * * *` |
 | **Concurrent outbound fetch() per invocation** | **6** | ⚠️ Hard platform limit. DEX liquidity already batches (2 DL fetches, then 4 Curve) to stay within budget |
-| **Subrequests per invocation (default)** | 1,000 | Configurable up to 10,000 via `limits.subrequests` in wrangler.toml |
+| **Subrequests per invocation (Workers Standard default)** | 10,000 | Configurable higher on Workers Paid; the old 1,000-subrequest cap was removed |
 | **D1 connections per invocation** | 6 simultaneous | |
 | **Environment variables** | Unlimited | |
 
@@ -212,7 +212,7 @@ Used exclusively for daily digest generation — one call per day.
 
 **Current usage**: 1 call/day × 800 max output tokens = negligible. Well within any tier.
 
-**Model in use**: `claude-sonnet-4-6` (`worker/src/cron/daily-digest.ts`). 60-second timeout.
+**Model in use**: `claude-opus-4-6` (`worker/src/cron/daily-digest.ts`). 120-second timeout.
 
 ---
 
@@ -322,7 +322,7 @@ Used to extend FX coverage beyond Frankfurter, including CNH, and as the seconda
 
 | Constraint | Current headroom | Risk |
 |---|---|---|
-| Cloudflare cron trigger slots (5 max) | 1 free — 4 of 5 used | 🟡 One slot available; additional jobs can piggyback on existing slots |
+| Cloudflare cron expressions | 4 configured in this repo; no current per-worker cap | 🟢 Scheduling headroom exists, but piggyback existing slots unless cadence truly differs |
 | Cloudflare concurrent fetch() (6/invocation) | Already batching to avoid | 🔴 Cannot add more parallel fetches without refactoring |
 | CoinGecko monthly quota (500K calls) | Medium — pool crawl can spike | 🟡 Monitor `/key` endpoint for usage |
 | D1 storage (10 GB hard cap) | Plenty now, but supply history + liquidity history grows | 🟡 Add periodic pruning if tables grow fast |

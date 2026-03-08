@@ -1,6 +1,6 @@
 # Design Language Reference (Live Baseline)
 
-This document reflects the deployed UI on [pharos.watch](https://pharos.watch) and was re-verified on **March 7, 2026**.
+This document reflects the current UI baseline in the codebase and was re-verified on **March 8, 2026**.
 
 Use this as the visual source of truth for product-facing design decisions. For token definitions (primitive, semantic, component), see [`design-tokens.md`](design-tokens.md).
 

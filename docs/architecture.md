@@ -23,6 +23,7 @@
 | `GET /api/status` | Admin status dashboard (raw/effective status, causes, confidence, staleness, probes, timeline). Requires `X-Admin-Key` header |
 | `GET /api/status-history` | Admin machine-readable status timeline/probe history (`?limit=N`, max 200). Requires `X-Admin-Key` header |
 | `GET /api/stability-index` | Daily Pharos Stability Index scores, bands, and component breakdowns (`?detail=true` for full history) |
+| `GET /api/og/*` | Dynamic Open Graph PNG images for stablecoin detail, safety scores, depeg, and PSI share cards |
 | `GET /api/report-cards` | Stablecoin risk grade cards with dimension scores (peg, liquidity, resilience, decentralization, dependency) |
 | `GET /api/safety-score-history` | Per-coin Safety Score grade transition history (`?stablecoin=ID&days=N`) |
 | `GET /api/yield-rankings` | Pre-computed yield rankings with Pharos Yield Score, risk-adjusted metrics |
@@ -398,6 +399,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── status.ts             # GET /api/status (admin)
     │   ├── status-history.ts     # GET /api/status-history (admin)
     │   ├── stability-index.ts    # GET /api/stability-index
+    │   ├── og.tsx                # GET /api/og/* dynamic Open Graph PNG generation
     │   ├── report-cards.ts       # GET /api/report-cards
     │   ├── safety-score-history.ts # GET /api/safety-score-history
     │   ├── backfill-depegs.ts    # POST /api/backfill-depegs (admin)

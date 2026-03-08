@@ -9,7 +9,7 @@ Public-facing analytics dashboard tracking 156 stablecoins (plus 2 shadow assets
 - **Three-tier classification** — stablecoins categorized as CeFi, CeFi-Dependent, or DeFi based on actual dependency on centralized infrastructure, not marketing claims
 - **Multi-peg support** — USD, EUR, GBP, CHF, BRL, RUB, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN, UAH, ARS, gold, silver, CPI-linked, and other peg currencies with cross-currency FX-adjusted totals
 - **Peg Tracker** — continuous peg monitoring with a composite Peg Score (0–100) for every tracked stablecoin, depeg event detection with direction tracking, deviation heatmaps, and a historical timeline going back 4 years
-- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
+- **Freeze & Blacklist Tracker** — real-time on-chain tracking of USDC, USDT, EURC, PAXG, and XAUT freeze/blacklist events across Ethereum, Arbitrum, Base, Optimism, Polygon, Avalanche, BSC, and Tron with BigInt-precision amounts
 - **DEX Liquidity Score** — composite liquidity score (0–100) per stablecoin from DEX pool TVL, volume, quality, durability, diversity, and cross-chain coverage
 - **DEX Price Cross-Validation** — implied prices from Curve, Uniswap V3, Aerodrome, and DexScreener pools used to suppress false depeg alerts
 - **Compare** — side-by-side stablecoin comparison across key metrics
@@ -128,10 +128,10 @@ worker/                           Cloudflare Worker (API + cron jobs)
 
 ```
 Cloudflare Worker (API layer)
-  ├── Cron: */15 * * * *    → sync stablecoins + chained snapshot-supply retry + charts + FX rates + depeg detection + stability index (PSI) + DEWS + status self-check
+  ├── Cron: */15 * * * *    → sync stablecoins + chained snapshot-supply retry + charts + FX rates + depeg detection + stability index (PSI) + DEWS + status self-check + Telegram alert dispatch
   ├── Cron: 3,23,43 * * * * → blacklist sync + mint/burn sync
   ├── Cron: 10,40 * * * *   → DEX liquidity sync + yield sync
-  └── Cron: 0 8 * * *       → supply snapshot + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI) + T-bill rate
+  └── Cron: 0 8 * * *       → supply snapshot + safety-grade snapshot + daily Telegram alert pass + PSI snapshot + USDS status + Bluechip safety ratings + daily digest (chained after PSI) + T-bill rate
 
 Cloudflare D1 (SQLite database)
   ├── cache                → JSON blobs (stablecoin list, per-coin detail, charts, FX/status/ranking caches) with CAS write guard

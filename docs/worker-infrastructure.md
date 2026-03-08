@@ -192,7 +192,7 @@ Current consumers:
 
 ## Cron Scheduling
 
-Cloudflare Workers supports a maximum of **5 cron triggers**. 4 of 5 slots are used. Adding a new job can use the remaining slot, or piggyback on an existing trigger with a minute check.
+This worker currently declares 4 cron expressions in `worker/wrangler.toml`. Cloudflare's old per-worker cron-trigger cap has been removed; add new schedules deliberately, but prefer piggybacking an existing slot unless a distinct cadence is actually required.
 
 ### wrangler.toml Triggers
 
@@ -248,19 +248,19 @@ crons = [
 |-----|----------|------|---------------|
 | `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
-| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
+| `dispatch-telegram-alerts-daily` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | `docs/telegram-alerts.md` |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
-**Dependencies:** `dispatch-telegram-alerts` (daily pass) is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
+**Dependencies:** `dispatch-telegram-alerts-daily` is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
 
 ## Telegram Alert Bot
 
 - Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
-- `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out.
+- `dispatch-telegram-alerts` and `dispatch-telegram-alerts-daily` diff DEWS/depeg/safety state against cached snapshots before fan-out.
 - Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
 - Each dispatch run sends at most 50 Telegram messages.
 

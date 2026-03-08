@@ -1,6 +1,6 @@
 # Supply Snapshot Pipeline
 
-Daily market cap snapshot pipeline. Captures each tracked stablecoin's circulating supply (in USD) once per day from cached DefiLlama data and stores it in D1 for historical charting.
+Daily market cap snapshot pipeline. Captures each PSI-eligible stablecoin's circulating supply (in USD) once per day from cached DefiLlama data and stores it in D1 for historical charting.
 
 The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama's aggregated supply data cached by the 15-minute `syncStablecoins()` cron. The `supplyMethod` config in `StablecoinMeta` exists for potential future on-chain supply verification but is not used by the snapshot pipeline today.
 
@@ -23,7 +23,7 @@ The snapshot does **not** call on-chain RPCs --- it relies entirely on DefiLlama
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`
    - Cache age > 600 seconds (10 min): log warning but proceed (degraded freshness)
 3. Parse cached JSON, extract the `peggedAssets` array
-4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 153 entries: 151 tracked + 2 shadow)
+4. Filter to only `PSI_ELIGIBLE_STABLECOINS` (currently 158 entries: 156 tracked + 2 shadow)
 5. Floor current date/time to UTC midnight:
    ```typescript
    const snapshotDate = Math.floor(
@@ -285,6 +285,8 @@ Not used by the snapshot cron but available for future on-chain supply fetching.
 | `worker/migrations/0015_supply_history.sql` | `supply_history` table |
 | `worker/migrations/0013_onchain_supply.sql` | `onchain_supply` table (per-chain cache) |
 | `shared/lib/supply.ts` | `sumPegBuckets()`, `getCirculatingRaw()`, other supply helpers |
+| `shared/lib/psi-eligible.ts` | PSI-eligible tracked + shadow stablecoin registry used by the snapshot filter |
+| `shared/lib/shadow-stablecoins.ts` | Shadow-asset metadata referenced by `PSI_ELIGIBLE_STABLECOINS` |
 | `shared/types/index.ts` | `SupplyMethodConfig`, `StablecoinMeta` types |
 | `shared/lib/stablecoins.ts` | Stablecoin metadata including `supplyMethod` configs |
 | `src/hooks/use-stablecoins.ts` | `useSupplyHistory()` hook, `detailToSupplyHistory()` transform |

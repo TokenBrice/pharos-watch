@@ -107,7 +107,7 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 | Input | Source |
 |-------|--------|
 | Active depegs (bps + mcap) | `depeg_events` where `ended_at IS NULL`, with current price from stablecoins cache |
-| Total market cap | Sum of all tracked stablecoins from DefiLlama cache |
+| Total market cap | Sum of the PSI-eligible stablecoins present in the DefiLlama cache (`PSI_ELIGIBLE_IDS` = tracked + shadow) |
 | 7-day market cap change | Current vs previous week total from stablecoins cache |
 | DEWS stress breadth | Latest `stress_signals` rows in warning bands (`ALERT`, `WARNING`, `DANGER`) |
 
@@ -133,7 +133,7 @@ See `docs/api-reference.md` for full response shape.
 
 ## Digest Integration
 
-The daily digest cron (08:00 UTC) queries the latest two stability index rows and passes PSI score, band, components, and yesterday's score to the Sonnet prompt. The digest opens with the current PSI band. The digest job is chained after the PSI snapshot (`snapshot-psi`) via a `.then()` promise — it will not start until the PSI snapshot completes, ensuring it always reads today's score.
+The daily digest cron (08:00 UTC) queries the latest two stability index rows and passes PSI score, band, components, and yesterday's score into the Anthropic digest prompt. The digest opens with the current PSI band. The digest job is chained after the PSI snapshot (`snapshot-psi`) via a `.then()` promise — it will not start until the PSI snapshot completes, ensuring it always reads today's score.
 
 ## Key Files
 
