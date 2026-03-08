@@ -137,9 +137,9 @@ export function piecewiseLinear(
   x: number,
   anchors: [number, number][],
 ): number {
+  if (anchors.length === 0) return 0;
   if (!Number.isFinite(x))
     return x !== x ? 0 : x > 0 ? anchors[anchors.length - 1][1] : anchors[0][1];
-  if (anchors.length === 0) return 0;
   if (x <= anchors[0][0]) return anchors[0][1];
   if (x >= anchors[anchors.length - 1][0]) return anchors[anchors.length - 1][1];
 
