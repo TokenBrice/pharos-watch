@@ -26,7 +26,7 @@ export const metadata = buildPageMetadata({
   title: "Safety Scores: Stablecoin Safety Grades",
   description: reportCardsDescription,
   canonical: "/safety-scores/",
-  ogImage: "https://pharos.watch/og-safety-scores.png",
+  ogImage: "https://api.pharos.watch/api/og/safety-scores",
 });
 
 const FAQ_ITEMS = [

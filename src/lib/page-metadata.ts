@@ -119,6 +119,7 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
     title: `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
     description: buildStablecoinDetailDescription(coin),
     canonical: buildStablecoinUrl(coin.id),
+    ogImage: `https://api.pharos.watch/api/og/stablecoin/${coin.id}`,
   });
 }
 

@@ -21,7 +21,7 @@ export const metadata = buildPageMetadata({
   title: "Depeg Tracker: Live Peg Monitoring & Early Warnings",
   description: depegDescription,
   canonical: "/depeg/",
-  ogImage: "https://pharos.watch/og-depeg.png",
+  ogImage: "https://api.pharos.watch/api/og/depeg",
 });
 
 const faqJsonLd = {

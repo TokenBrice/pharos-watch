@@ -20,7 +20,7 @@ export const metadata = buildPageMetadata({
   title: "Stability Index: Pharos Stablecoin Market Health",
   description,
   canonical: "/stability-index/",
-  ogImage: "https://pharos.watch/og-stability-index.png",
+  ogImage: "https://api.pharos.watch/api/og/stability-index",
 });
 
 const FAQ_ITEMS = [
