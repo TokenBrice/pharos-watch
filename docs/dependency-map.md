@@ -104,9 +104,20 @@ Edge encoding:
 ## Interaction Model
 
 - **Drag**: nodes are draggable and clamped within padded bounds.
-- **Hover node**: highlights connected nodes/edges; shows tooltip (symbol, grade, market cap).
+- **Hover node**: triggers a contagion ripple effect — see below. Shows tooltip (symbol, grade, market cap).
 - **Hover edge**: shows tooltip with dependency pair + percentage weight + dependency type.
 - **Click node**: in `Selected neighborhood` focus mode, sets the neighborhood root to that node.
+
+### Contagion Ripple
+
+When a node is hovered, the graph visualizes how stress could propagate through the dependency chain:
+
+- **Direct neighbors** (both upstream collateral and downstream dependents) highlight at distance 1.
+- **Downstream contagion** (nodes that depend on the hovered node, transitively) ripples outward up to `MAX_RIPPLE_HOPS = 4` hops via BFS following dependency direction (`tgtId` → `srcId`).
+- **Staggered timing**: each hop adds `100ms` of transition delay, creating a visible wave of emphasis radiating from the hovered node.
+- **Distance-based fade**: multi-hop nodes and edges receive slightly reduced opacity further from the source, reinforcing the sense of attenuation.
+- All non-connected nodes dim to `0.4` opacity; non-connected edges dim to `0.05`.
+- CSS transitions (`opacity 200ms`, `stroke-width 160ms`) use `--motion-ease-standard` for smooth, consistent motion.
 
 ## Scope and Limits
 

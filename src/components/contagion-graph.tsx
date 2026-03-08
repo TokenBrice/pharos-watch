@@ -813,19 +813,87 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
     if (hoveredId !== null && !visibleNodeIds.has(hoveredId)) setHoveredId(null);
   }, [hoveredId, visibleNodeIds]);
 
-  // Compute connected nodes/edges for node-hover spotlight
-  const { connectedNodes, connectedEdges } = useMemo(() => {
-    if (!hoveredId) return { connectedNodes: new Set<string>(), connectedEdges: new Set<number>() };
-    const cNodes = new Set<string>();
-    const cEdges = new Set<number>();
+  // Compute connected nodes/edges for node-hover spotlight with multi-hop
+  // contagion ripple. BFS follows the dependency direction: if the hovered
+  // node is collateral (tgtId), contagion ripples to dependents (srcId),
+  // then transitively through further dependency chains.  Direct neighbors
+  // in both directions are included at distance 1 for visual context.
+  const MAX_RIPPLE_HOPS = 4;
+  const RIPPLE_HOP_DELAY_MS = 100;
+
+  const { connectedNodes, connectedEdges, nodeDistance, edgeDistance } = useMemo(() => {
+    const emptyResult = {
+      connectedNodes: new Set<string>(),
+      connectedEdges: new Set<number>(),
+      nodeDistance: new Map<string, number>(),
+      edgeDistance: new Map<number, number>(),
+    };
+    if (!hoveredId) return emptyResult;
+
+    // Build adjacency: downstream = edges where node is target (dependents)
+    const downstreamByTarget = new Map<string, ResolvedLink[]>();
+    // Also track direct connections in both directions for distance-1
+    const directByNode = new Map<string, ResolvedLink[]>();
+
     for (const link of visibleLinks) {
-      if (link.srcId === hoveredId || link.tgtId === hoveredId) {
-        cNodes.add(link.srcId);
-        cNodes.add(link.tgtId);
-        cEdges.add(link.index);
+      // Downstream: hovered is collateral (tgtId), dependents are srcId
+      let list = downstreamByTarget.get(link.tgtId);
+      if (!list) { list = []; downstreamByTarget.set(link.tgtId, list); }
+      list.push(link);
+
+      // Direct connections (both directions)
+      let srcList = directByNode.get(link.srcId);
+      if (!srcList) { srcList = []; directByNode.set(link.srcId, srcList); }
+      srcList.push(link);
+
+      let tgtList = directByNode.get(link.tgtId);
+      if (!tgtList) { tgtList = []; directByNode.set(link.tgtId, tgtList); }
+      tgtList.push(link);
+    }
+
+    const nodeDist = new Map<string, number>();
+    const edgeDist = new Map<number, number>();
+    nodeDist.set(hoveredId, 0);
+
+    // Distance 1: all direct neighbors (both directions)
+    const directLinks = directByNode.get(hoveredId) ?? [];
+    for (const link of directLinks) {
+      const neighborId = link.srcId === hoveredId ? link.tgtId : link.srcId;
+      if (!nodeDist.has(neighborId)) nodeDist.set(neighborId, 1);
+      if (!edgeDist.has(link.index)) edgeDist.set(link.index, 1);
+    }
+
+    // BFS for downstream contagion (hops 2+): from each downstream node at
+    // distance d, follow further downstream edges to distance d+1
+    const queue: string[] = [];
+
+    // Seed BFS with downstream neighbors at distance 1
+    const downstreamFromHovered = downstreamByTarget.get(hoveredId) ?? [];
+    for (const link of downstreamFromHovered) {
+      if (!queue.includes(link.srcId)) queue.push(link.srcId);
+    }
+
+    let queueStart = 0;
+    while (queueStart < queue.length) {
+      const nodeId = queue[queueStart++];
+      const currentDist = nodeDist.get(nodeId) ?? 1;
+      if (currentDist >= MAX_RIPPLE_HOPS) continue;
+
+      const nextDist = currentDist + 1;
+      const downstream = downstreamByTarget.get(nodeId) ?? [];
+      for (const link of downstream) {
+        if (!edgeDist.has(link.index)) edgeDist.set(link.index, nextDist);
+        if (!nodeDist.has(link.srcId)) {
+          nodeDist.set(link.srcId, nextDist);
+          queue.push(link.srcId);
+        }
       }
     }
-    return { connectedNodes: cNodes, connectedEdges: cEdges };
+
+    const cNodes = new Set<string>(nodeDist.keys());
+    const cEdges = new Set<number>(edgeDist.keys());
+
+    return { connectedNodes: cNodes, connectedEdges: cEdges, nodeDistance: nodeDist, edgeDistance: edgeDist };
   }, [hoveredId, visibleLinks]);
 
   if (nodes.length === 0) return null;
@@ -955,9 +1023,20 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const typeColor = TYPE_COLORS[link.type];
               const dashArray = TYPE_DASH[link.type];
 
+              const edgeHopDist = edgeDistance.get(link.index);
               const edgeOpacity = isNodeHovered && !isConnected && !isEdgeDirectHovered
                 ? 0.05
-                : isEdgeDirectHovered ? 0.9 : defaultOpacity;
+                : isEdgeDirectHovered
+                  ? 0.9
+                  : isConnected
+                    // Multi-hop edges fade slightly with distance
+                    ? Math.max(0.3, defaultOpacity * (1 - (edgeHopDist ?? 1) * 0.12))
+                    : defaultOpacity;
+
+              // Staggered transition delay for contagion ripple
+              const edgeDelay = isNodeHovered && isConnected && edgeHopDist != null
+                ? edgeHopDist * RIPPLE_HOP_DELAY_MS
+                : 0;
 
               return (
                 <g key={`${srcId}-${tgtId}-${link.index}`}>
@@ -977,6 +1056,9 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     opacity={edgeOpacity}
                     strokeDasharray={dashArray}
                     pointerEvents="none"
+                    style={{
+                      transition: `opacity 200ms var(--motion-ease-standard) ${edgeDelay}ms, stroke-width 160ms var(--motion-ease-standard)`,
+                    }}
                   />
                 </g>
               );
@@ -995,6 +1077,20 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
               const innerR = node.r - RING_WIDTH;
               const logoUrl = logos?.[node.id];
               const hubLabelY = Math.max(PAD + 10, Math.min(HEIGHT - PAD - 2, pos.y + node.r + (isCoreHub ? 12 : 10)));
+
+              // Contagion ripple: staggered delay based on graph distance
+              const hopDist = nodeDistance.get(node.id);
+              const isInRipple = hoveredId !== null && hopDist != null && hopDist > 0;
+              const nodeDelay = isInRipple ? hopDist * RIPPLE_HOP_DELAY_MS : 0;
+
+              // Multi-hop connected nodes get slightly less emphasis further out
+              const nodeOpacity = isNodeDimmed
+                ? 0.4
+                : isHovered
+                  ? 1
+                  : isInRipple
+                    ? Math.max(0.6, 0.95 - (hopDist - 1) * 0.08)
+                    : 0.85;
 
               return (
                 <g
@@ -1026,7 +1122,10 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     fillOpacity={logoUrl ? 1 : 0.6}
                     stroke={color}
                     strokeWidth={RING_WIDTH + (isCoreHub ? 1.2 : isHub ? 0.8 : 0)}
-                    opacity={isNodeDimmed ? 0.4 : (isHovered ? 1 : 0.85)}
+                    opacity={nodeOpacity}
+                    style={{
+                      transition: `opacity 200ms var(--motion-ease-standard) ${nodeDelay}ms`,
+                    }}
                   />
 
                   {isCoreHub && (
