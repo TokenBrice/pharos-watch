@@ -134,7 +134,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
 
   return (
     <div className="rounded-xl border overflow-x-auto scroll-shadow">
-      <Table>
+      <Table className="min-w-[420px]">
         <TableHeader className="bg-muted/80">
           <TableRow>
             <TableHead className="w-[50px] text-right">#</TableHead>

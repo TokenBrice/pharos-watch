@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { useStablecoins } from "@/hooks/use-stablecoins";
@@ -71,6 +71,48 @@ const PegDiversityChart = dynamic(
 const DailyDigest = dynamic(() => import("@/components/daily-digest").then((mod) => mod.DailyDigest), {
   loading: () => <SectionSkeleton className="h-[220px] w-full rounded-xl" />,
 });
+
+const PEG_PREVIEW_COUNT = 5;
+
+function PegBrowseSection({
+  pegs,
+  pegCoinCount,
+}: {
+  pegs: typeof ACTIVE_PEGS;
+  pegCoinCount: (peg: (typeof ACTIVE_PEGS)[number]) => number;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visible = expanded ? pegs : pegs.slice(0, PEG_PREVIEW_COUNT);
+
+  return (
+    <div className="mt-8 space-y-2.5">
+      <h2 className="pharos-kicker">Browse By Peg</h2>
+      <div className="flex flex-wrap gap-2">
+        {visible.map((peg) => {
+          const slug = PEG_SLUGS[peg];
+          if (!slug) return null;
+          return (
+            <Link
+              key={peg}
+              href={`/stablecoins/${slug}/`}
+              className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-0 sm:py-1"
+            >
+              {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
+            </Link>
+          );
+        })}
+        {!expanded && pegs.length > PEG_PREVIEW_COUNT && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-0 sm:py-1"
+          >
+            +{pegs.length - PEG_PREVIEW_COUNT} more
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function HomepageClient() {
   const { data, isLoading, error: pricesError, dataUpdatedAt, refetch: refetchPrices } = useStablecoins();
@@ -160,24 +202,7 @@ export function HomepageClient() {
               onClearFilters={filters.clearAll}
             />
           </div>
-          <div className="mt-8 space-y-2.5">
-            <h2 className="pharos-kicker">Browse By Peg</h2>
-            <div className="flex flex-wrap gap-2">
-              {ACTIVE_PEGS.map((peg) => {
-                const slug = PEG_SLUGS[peg];
-                if (!slug) return null;
-                return (
-                  <Link
-                    key={peg}
-                    href={`/stablecoins/${slug}/`}
-                    className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-[background-color,border-color,color,box-shadow] hover:border-border hover:bg-accent/65 hover:text-foreground sm:min-h-0 sm:py-1"
-                  >
-                    {PEG_LABELS_SHORT[peg]} ({pegCoinCount(peg)})
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          <PegBrowseSection pegs={ACTIVE_PEGS} pegCoinCount={pegCoinCount} />
         </section>
       </SectionErrorBoundary>
 

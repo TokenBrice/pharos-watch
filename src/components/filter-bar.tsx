@@ -70,7 +70,7 @@ export function FilterBar({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {FILTER_GROUPS.map((group) => (
-          <div key={group.label} className="space-y-2">
+          <div key={group.label} className={`space-y-2${group.label === "Peg" ? " hidden sm:block" : ""}`}>
             <p className="pharos-kicker">{group.label}</p>
             <ToggleGroup
               type="single"

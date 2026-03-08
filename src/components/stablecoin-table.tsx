@@ -28,7 +28,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { usePreference, DEFAULT_VISIBLE_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
+import { usePreference, DEFAULT_VISIBLE_COLUMNS, MOBILE_DEFAULT_COLUMNS, type ColumnId } from "@/hooks/use-preferences";
 import { ColumnVisibilityDropdown } from "@/components/stablecoin-table-column-visibility";
 import {
   buildTrackedIdSet,
@@ -109,10 +109,14 @@ export function StablecoinTable({
   const metaById = TRACKED_META_BY_ID;
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Column visibility
+  // Column visibility — mobile gets a reduced default (hiddenMobile columns start off)
+  const deviceDefault = useMemo(
+    () => (typeof window !== "undefined" && window.innerWidth < 640 ? MOBILE_DEFAULT_COLUMNS : DEFAULT_VISIBLE_COLUMNS),
+    [],
+  );
   const [visibleColumns, setVisibleColumns, resetColumns] = usePreference<ColumnId[]>(
     "pharos-table-columns",
-    DEFAULT_VISIBLE_COLUMNS,
+    deviceDefault,
   );
   const visibleSet = useMemo(() => new Set(visibleColumns), [visibleColumns]);
   const isVisible = useCallback((id: ColumnId) => visibleSet.has(id), [visibleSet]);
@@ -211,7 +215,7 @@ export function StablecoinTable({
           <Button
             variant="outline"
             size="sm"
-            className="min-h-11 w-full border-border/70 sm:min-h-8 sm:w-auto"
+            className="hidden sm:inline-flex border-border/70 sm:min-h-8 sm:w-auto"
             onClick={handleCsvExport}
             disabled={sorted.length === 0}
           >
@@ -223,7 +227,7 @@ export function StablecoinTable({
 
       {/* Scroll container — handles both horizontal and vertical overflow */}
       <div ref={scrollRef} className="scroll-shadow max-h-[50vh] overflow-auto px-0 pb-3 pr-2 sm:max-h-[70vh] sm:pr-0">
-        <table className="min-w-[820px] w-full caption-bottom text-sm">
+        <table className="min-w-[420px] sm:min-w-[820px] w-full caption-bottom text-sm">
           <TableCaption className="sr-only">Stablecoin data table</TableCaption>
           <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
             <TableRow>
@@ -241,7 +245,7 @@ export function StablecoinTable({
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="w-[90px] xl:w-[200px]"
+                  className="w-[90px] xl:w-[200px] max-w-[90px] xl:max-w-none"
                 />
               )}
               {isVisible("price") && (
@@ -265,7 +269,7 @@ export function StablecoinTable({
                   toggleSort={toggleSort}
                   getAriaSortValue={getAriaSortValue}
                   handleSortKeyDown={handleSortKeyDown}
-                  className="hidden sm:table-cell text-right"
+                  className="text-right"
                   title="Sort by peg deviation — ascending shows tightest pegs first, descending shows worst depegs first"
                 />
               )}
