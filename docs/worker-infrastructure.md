@@ -1,6 +1,6 @@
 # Worker Infrastructure
 
-Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 17 cron jobs across 4 trigger slots.
+Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CORS, admin auth, and 18 primary cron jobs across 4 trigger slots (plus one daily chained Telegram dispatch pass).
 
 **Deployed at:** `api.pharos.watch` (custom domain via `wrangler.toml`)
 
@@ -57,7 +57,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TWITTER_API_SECRET` | string | No | Digest → Twitter (OAuth consumer secret) |
 | `TWITTER_ACCESS_TOKEN` | string | No | Digest → Twitter (access token) |
 | `TWITTER_ACCESS_TOKEN_SECRET` | string | No | Digest → Twitter (access token secret) |
-| `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram and bot chat replies |
+| `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram, bot chat replies, subscriber alert dispatch |
 | `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
 | `TELEGRAM_WEBHOOK_SECRET` | string | No | `POST /api/telegram-webhook` shared-secret query validation |
 | `MAINTENANCE_MODE` | `string?` | No | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-admin requests. Used as a kill switch. |
@@ -217,9 +217,10 @@ crons = [
 | `stability-index` | `computeAndStoreStabilityIndex()` | `worker/src/cron/stability-index.ts` | `docs/stability-index.md` |
 | `compute-dews` | `computeAndStoreDEWS()` | `worker/src/cron/compute-dews.ts` | `docs/dews.md` |
 | `status-self-check` | `runStatusSelfCheck()` | `worker/src/cron/status-self-check.ts` | `docs/status-dashboard.md` |
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | This doc (below) |
 | *(inline)* | Stale-cache health alert | `worker/src/handlers/scheduled.ts` | This doc (below) |
 
-**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` run only after a successful `sync-stablecoins`.
+**Execution model:** Jobs in this slot are run sequentially in `worker/src/handlers/scheduled.ts` to respect the Workers shared 6-connection fetch pool per cron trigger. `snapshot-supply` retry, `stability-index`, and `compute-dews` run only after a successful `sync-stablecoins`; `status-self-check` runs near the end of the slot and `dispatch-telegram-alerts` runs last to diff DEWS/depeg/safety snapshots and fan out consolidated subscriber alerts using the same bot token as the digest channel integration.
 
 **Inline staleness alert:** After sync-stablecoins completes, if the `stablecoins` cache is older than 1800 seconds (30 min), `sendAlert()` fires a webhook notification. This is a health check — not a cron job itself.
 
@@ -247,13 +248,14 @@ crons = [
 |-----|----------|------|---------------|
 | `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
+| `dispatch-telegram-alerts-daily` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | This doc (below) |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
-**Dependencies:** Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
+**Dependencies:** `dispatch-telegram-alerts-daily` is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
 
 ### Sub-Modules (not directly registered)
 
@@ -335,7 +337,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `ETHERSCAN` | `etherscan` | `sync-blacklist` |
 | `ALCHEMY` | `alchemy` | `sync-mint-burn` |
 | `TWITTER_API` | `twitter-api` | `daily-digest` social posting |
-| `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting |
+| `TELEGRAM_API` | `telegram-api` | `daily-digest` social posting, `dispatch-telegram-alerts` subscriber fan-out |
 
 ---
 
