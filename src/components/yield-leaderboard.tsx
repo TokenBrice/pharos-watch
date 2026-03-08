@@ -307,7 +307,7 @@ export function YieldLeaderboard({ rankings, logos, onRowClick }: YieldLeaderboa
           {sorted.length === 0 && (
             <TableRow>
               <TableCell colSpan={99} className="text-center text-muted-foreground py-12">
-                No yield data available
+                No yield data available.
               </TableCell>
             </TableRow>
           )}

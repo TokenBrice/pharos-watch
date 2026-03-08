@@ -309,7 +309,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
           })}
           {paginated.length === 0 && (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                 No depeg events detected.
               </TableCell>
             </TableRow>
