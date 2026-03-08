@@ -907,7 +907,35 @@ export default function MethodologyPage() {
                 </li>
                 <li>Cemetery (defunct) coins receive a permanent F</li>
                 <li>Decentralization score is structural, not a value judgment</li>
+                <li>
+                  Blacklist inheritance: stablecoins where &ge;25% of reserves (by weight) are backed
+                  by first-order blacklistable coins are flagged as &ldquo;possible-inherited&rdquo; blacklist risk
+                </li>
               </ul>
+            </div>
+
+            {/* Dependency ceilings */}
+            <div className="space-y-2">
+              <h3 className="text-foreground font-medium">Dependency Ceilings</h3>
+              <p>
+                When a stablecoin depends on another (wrapper, mechanism, or collateral relationship),
+                its dependency risk score is capped relative to its upstream:
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>
+                  <strong>Wrapper dependency:</strong> capped at upstream score minus 3 points
+                </li>
+                <li>
+                  <strong>Mechanism dependency:</strong> capped at upstream score
+                </li>
+                <li>
+                  <strong>Collateral dependency:</strong> blended into dependency risk dimension via weighted average
+                </li>
+              </ul>
+              <p>
+                If any upstream dependency scores below 75, a 10-point penalty is applied.
+                These ceilings prevent a wrapped token from outscoring its underlying asset.
+              </p>
             </div>
 
             {/* Limitations */}
