@@ -407,6 +407,79 @@ describe("detectDepegEvents", () => {
     expect(inserts).toHaveLength(0);
   });
 
+  it("skips prices more than 2x peg reference", async () => {
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    const assets = [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 5.00 }),
+    ];
+
+    await detectDepegEvents(db, assets);
+
+    const inserts = preparedSqls.filter(s =>
+      s.includes("INSERT INTO depeg_events") || s.includes("INSERT INTO depeg_pending")
+    );
+    expect(inserts).toHaveLength(0);
+  });
+
+  it("skips prices less than 0.5x peg reference", async () => {
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    const assets = [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.01 }),
+    ];
+
+    await detectDepegEvents(db, assets);
+
+    const inserts = preparedSqls.filter(s =>
+      s.includes("INSERT INTO depeg_events") || s.includes("INSERT INTO depeg_pending")
+    );
+    expect(inserts).toHaveLength(0);
+  });
+
+  it("allows legitimate depeg prices within bounds", async () => {
+    const preparedSqls: string[] = [];
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      { match: "dex_prices", rows: [] },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    // 0.85 is 85% of peg - severe depeg but within 0.5-2.0 range
+    const assets = [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.85 }),
+    ];
+
+    await detectDepegEvents(db, assets);
+
+    const inserts = preparedSqls.filter(s =>
+      s.includes("INSERT INTO depeg_events")
+    );
+    expect(inserts.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("auto-closes false-positive via DEX cross-validation after 30 min", async () => {
     const now = Math.floor(Date.now() / 1000);
     const preparedSqls: string[] = [];

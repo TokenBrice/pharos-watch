@@ -155,6 +155,15 @@ export async function detectDepegEvents(
     const pegRef = getPegReference(asset.pegType, pegRates, meta.commodityOunces);
     if (!Number.isFinite(pegRef) || pegRef <= 0) continue;
 
+    // Skip wildly unreasonable prices - data glitch or oracle attack
+    const priceRatio = price / pegRef;
+    if (priceRatio > 2 || priceRatio < 0.5) {
+      console.warn(
+        `[depeg] Skipping ${meta.symbol}: price ${price} is ${(priceRatio * 100).toFixed(0)}% of peg ${pegRef}`
+      );
+      continue;
+    }
+
     const bps = Math.round(((price / pegRef) - 1) * 10000);
     const absBps = Math.abs(bps);
     const direction = bps >= 0 ? "above" : "below";
