@@ -45,7 +45,8 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "shared"),
-      // Stub resvg-wasm to prevent WASM loading in vitest (Node can't handle Worker WASM imports)
+      // Stub resvg to prevent WASM loading in vitest (Node can't handle Worker WASM imports)
+      "@cf-wasm/resvg/workerd": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
       "@resvg/resvg-wasm": path.resolve(__dirname, "worker/src/__mocks__/resvg-stub.ts"),
     },
   },

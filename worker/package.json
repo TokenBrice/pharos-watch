@@ -13,7 +13,7 @@
     "zod": "^4.3.6"
   },
   "dependencies": {
-    "@resvg/resvg-wasm": "^2.6.2",
+    "@cf-wasm/resvg": "^0.3.3",
     "satori": "^0.25.0"
   }
 }

@@ -1,6 +1,5 @@
 import satori from "satori";
-import { Resvg, initWasm } from "@resvg/resvg-wasm";
-import resvgWasm from "../../assets/resvg_bg.wasm";
+import { Resvg, initResvg, resvgWasmModule } from "@cf-wasm/resvg/workerd";
 import { OG_FONTS } from "../lib/og-fonts";
 import { StablecoinCard, type StablecoinCardData } from "../lib/og-templates/stablecoin-card";
 import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates/safety-scores-card";
@@ -22,7 +21,7 @@ let wasmInitialized = false;
 
 async function ensureWasm(): Promise<void> {
   if (!wasmInitialized) {
-    await initWasm(resvgWasm);
+    await initResvg(resvgWasmModule);
     wasmInitialized = true;
   }
 }
