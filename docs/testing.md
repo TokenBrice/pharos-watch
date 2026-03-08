@@ -39,6 +39,7 @@ For deployment/worktree operating procedure (including the local merge gate befo
 2. `deploy-worker` (needs `validate`):
    - Apply D1 migrations
    - Deploy worker
+   - Sync routes/domains/cron triggers with `wrangler triggers deploy`
 3. `smoke-api` (needs `deploy-worker`):
    - Run `npm run test:smoke-api`
    - Uses `SMOKE_API_BASE` from `vars.SMOKE_API_BASE_URL` (preferred) or `vars.API_BASE_URL`

@@ -80,6 +80,9 @@ Defined in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `validate`
 2. `deploy-worker`
+   - applies D1 migrations
+   - runs `wrangler deploy`
+   - runs `wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
 3. `smoke-api`
 4. `deploy-pages`
 5. `smoke-ui`

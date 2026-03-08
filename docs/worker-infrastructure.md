@@ -8,7 +8,7 @@ Cloudflare Worker serving the Pharos API. Handles HTTP routing, edge caching, CO
 
 ## Runtime Limits and Observability
 
-Worker runtime safety and telemetry controls are declared in `worker/wrangler.toml` and should be managed in git (the CI deploy job runs `wrangler deploy`, so dashboard-only edits can be overwritten on the next deployment).
+Worker runtime safety and telemetry controls are declared in `worker/wrangler.toml` and should be managed in git (the CI deploy job runs `wrangler deploy` and then `wrangler triggers deploy`, so dashboard-only edits can be overwritten on the next deployment).
 
 ```toml
 [limits]
