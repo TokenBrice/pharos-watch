@@ -1,7 +1,9 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { Bell } from "lucide-react";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CalloutBanner } from "@/components/callout-banner";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -57,6 +59,18 @@ export default function ReportCardsPage() {
         "Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability, liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator lets you model what happens to the broader market when a major stablecoin fails, revealing hidden dependency chains and systemic risk.",
       ]}
     >
+      <CalloutBanner icon={<Bell className="h-4 w-4" />} className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300">
+        Get notified when a safety grade changes.{" "}
+        <a
+          href="https://t.me/PharosDigestBot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
+        >
+          Subscribe via @PharosDigestBot&nbsp;&rarr;
+        </a>
+      </CalloutBanner>
+
       <section className="space-y-3 rounded-2xl border border-border/60 bg-card/60 px-4 py-4">
         <div className="space-y-1.5">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
