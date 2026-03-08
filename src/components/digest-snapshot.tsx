@@ -2,7 +2,7 @@
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDigestSnapshot } from "@/hooks/use-digest-snapshot";
-import { formatCurrency, formatAddress, formatPercentChange } from "@shared/lib/format";
+import { formatCurrency, formatAddress, formatPercentChange, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_BORDER_CLASSES, type ConditionBand } from "@shared/lib/psi-colors";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 
@@ -119,11 +119,11 @@ export function DigestSnapshot({ date }: { date: string }) {
               Score:{" "}
               {prev?.stabilityIndex && (
                 <span className="text-muted-foreground">
-                  {prev.stabilityIndex.score.toFixed(1)} &rarr;{" "}
+                  {formatScore(prev.stabilityIndex.score)} &rarr;{" "}
                 </span>
               )}
               <span className="font-medium">
-                {inputData.stabilityIndex.score.toFixed(1)}
+                {formatScore(inputData.stabilityIndex.score)}
               </span>
             </p>
             <p className="text-sm">
@@ -138,11 +138,11 @@ export function DigestSnapshot({ date }: { date: string }) {
               </span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Severity {inputData.stabilityIndex.components.severity.toFixed(1)}
+              Severity {formatScore(inputData.stabilityIndex.components.severity)}
               {" / "}
-              Breadth {inputData.stabilityIndex.components.breadth.toFixed(1)}
+              Breadth {formatScore(inputData.stabilityIndex.components.breadth)}
               {" / "}
-              Trend {inputData.stabilityIndex.components.trend.toFixed(1)}
+              Trend {formatScore(inputData.stabilityIndex.components.trend)}
             </p>
           </SnapshotCard>
         )}

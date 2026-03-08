@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatNativePrice } from "@shared/lib/format";
 import { deviationBgClass } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@/lib/urls";
 import type { PegSummaryCoin, PegCurrency, GovernanceType } from "@shared/types";
@@ -181,7 +181,7 @@ export function PegHeatmap({
                     href={buildStablecoinUrl(coin.id)}
                     className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-lg border hover:bg-muted/40 transition-colors ${deviationTileClass(absBps)}`}
                     title={dexDisagrees
-                      ? `DEX price disagrees: $${dex.dexPrice.toFixed(4)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
+                      ? `DEX price disagrees: ${formatNativePrice(dex.dexPrice, "USD", 1)} (${dex.dexDeviationBps >= 0 ? "+" : ""}${dex.dexDeviationBps}bps) from ${dex.sourcePools} pool${dex.sourcePools !== 1 ? "s" : ""} (${formatCurrency(dex.sourceTvl)} TVL)`
                       : undefined}
                     onMouseEnter={() => prefetch(coin.id)}
                   >

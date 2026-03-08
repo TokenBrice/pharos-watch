@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { deriveDependencies } from "@shared/lib/reserve-templates";
+import { formatCurrency } from "@shared/lib/format";
 import { GRADE_RADAR_COLORS, gradeRange } from "@shared/lib/report-cards";
 import type { DependencyType, ReportCard, ReportCardGrade } from "@shared/types";
 
@@ -1001,7 +1002,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                   tabIndex={0}
                   data-node-id={node.id}
                   role="button"
-                  aria-label={`${node.symbol} — Grade ${node.grade}, market cap $${node.mcap > 1e9 ? `${(node.mcap / 1e9).toFixed(1)}B` : node.mcap > 1e6 ? `${(node.mcap / 1e6).toFixed(0)}M` : `${(node.mcap / 1e3).toFixed(0)}K`}`}
+                  aria-label={`${node.symbol} — Grade ${node.grade}, market cap ${formatCurrency(node.mcap)}`}
                   style={{ cursor: focusMode === "neighborhood" ? "pointer" : "grab" }}
                   onMouseDown={(e) => handleMouseDown(e, node.id)}
                   onMouseEnter={() => { setHoveredId(node.id); setHoveredEdge(null); }}
@@ -1132,11 +1133,7 @@ export function ContagionGraph({ cards, mcapMap, logos }: ContagionGraphProps) {
                     Grade: {card?.overallGrade ?? "NR"}
                   </text>
                   <text x={tx + 8} y={ty + 46} fill="currentColor" fontSize={10} opacity={0.7} fontFamily="var(--font-mono, monospace)">
-                    {node.mcap > 1e9
-                      ? `$${(node.mcap / 1e9).toFixed(1)}B`
-                      : node.mcap > 1e6
-                        ? `$${(node.mcap / 1e6).toFixed(0)}M`
-                        : `$${(node.mcap / 1e3).toFixed(0)}K`}
+                    {formatCurrency(node.mcap)}
                   </text>
                 </g>
               );

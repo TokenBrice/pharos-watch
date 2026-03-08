@@ -669,7 +669,7 @@ export function StabilityIndexClient() {
             <div className="flex min-w-0 flex-col items-center gap-1 lg:items-start">
               <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1 lg:justify-start">
                 <span className={`text-4xl font-extrabold font-mono tabular-nums leading-none ${colorClass}`}>
-                  {displayScore.toFixed(1)}
+                  {formatScore(displayScore)}
                 </span>
                 <span className={`text-base font-bold uppercase tracking-wide sm:text-lg ${colorClass}`}>
                   {displayBand}
@@ -691,7 +691,7 @@ export function StabilityIndexClient() {
               <div key={c.label} className="flex min-w-0 flex-col items-center gap-0.5 text-center">
                 <span className="text-xs text-muted-foreground">{c.label}</span>
                 <span className="text-lg font-extrabold tabular-nums leading-none" style={{ color: c.color }}>
-                  {c.sign}{(components[c.key] ?? 0).toFixed(1)}
+                  {c.sign}{formatScore(components[c.key] ?? 0)}
                 </span>
               </div>
             ))}

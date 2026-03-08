@@ -4,6 +4,7 @@ import { useId } from "react";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStabilityIndex } from "@/hooks/use-stability-index";
+import { formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, PSI_HEX_COLORS, PSI_PULSE_DURATION, type ConditionBand } from "@shared/lib/psi-colors";
 
 export function PsiLighthouse({ band, color, size = 36 }: { band: string; color: string; size?: number }) {
@@ -138,7 +139,7 @@ export function StabilityIndex() {
         <PsiLighthouse band={displayBand} color={sparkColor} />
         <div className="flex items-baseline gap-2">
           <span className={`text-2xl font-extrabold font-mono tabular-nums ${colorClass}`}>
-            {displayScore.toFixed(1)}
+            {formatScore(displayScore)}
           </span>
           <span className={`text-sm font-bold uppercase tracking-wide ${colorClass}`}>
             {displayBand}
