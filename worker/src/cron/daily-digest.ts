@@ -12,7 +12,7 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../lib/circuit-breaker";
 import { getConditionBand } from "../lib/stability-index";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import { computeSafetyScoresSnapshot, type SafetyGradeRow } from "../lib/safety-scores";
 import { computeFlowIntensity, computeGaugeScore, getGaugeBand, detectFlightToQuality } from "../lib/mint-burn-scoring";
 import { SAFE_HAVEN_IDS } from "../lib/mint-burn-contracts";
 
@@ -394,6 +394,7 @@ export async function generateDailyDigest(
 
   // 4c. Safety scores (for mentioned coins + distribution)
   let safetyScores: DigestInputData["safetyScores"];
+  let safetyGrades: SafetyGradeRow[] | undefined;
   try {
     // Collect IDs of coins already mentioned in other data sections
     const mentionedSymbols = new Set<string>();
@@ -405,6 +406,7 @@ export async function generateDailyDigest(
       outputMode: "full-grades",
     });
     const allGrades = safetySnapshot.grades;
+    safetyGrades = allGrades;
 
     // Distribution stats
     const scores = allGrades.map((g) => g.score).sort((a, b) => a - b);
@@ -730,6 +732,67 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to collect historical context:", e);
   }
 
+  // 4h. Grade transitions (last 48h)
+  let gradeTransitions: DigestInputData["gradeTransitions"];
+  try {
+    const cutoff48h = nowSec - SECONDS.TWO_DAYS;
+
+    // Check for methodology bumps (>10 simultaneous transitions = version change)
+    const bumpRows = await db
+      .prepare(
+        `SELECT recorded_at FROM safety_grade_history
+         WHERE recorded_at >= ? AND prev_grade IS NOT NULL
+         GROUP BY recorded_at HAVING COUNT(*) > 10`,
+      )
+      .bind(cutoff48h)
+      .all<{ recorded_at: number }>();
+    const bumpTimestamps = new Set((bumpRows.results ?? []).map((r) => r.recorded_at));
+
+    // Get transitions sorted by largest score change
+    const transitionRows = await db
+      .prepare(
+        `SELECT stablecoin_id, recorded_at, grade, score, prev_grade, prev_score
+         FROM safety_grade_history WHERE recorded_at >= ? AND prev_grade IS NOT NULL
+         ORDER BY ABS(score - prev_score) DESC
+         LIMIT 10`,
+      )
+      .bind(cutoff48h)
+      .all<{ stablecoin_id: string; recorded_at: number; grade: string; score: number; prev_grade: string; prev_score: number }>();
+
+    const candidates = (transitionRows.results ?? [])
+      .filter((r) => !bumpTimestamps.has(r.recorded_at)) // Exclude methodology bumps
+      .filter((r) => {
+        const coin = trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id);
+        return coin && getCirculatingRaw(coin) > 10_000_000; // mcap > $10M
+      })
+      .slice(0, 5);
+
+    if (candidates.length > 0 && safetyGrades) {
+      const gradeMap = new Map(safetyGrades.map((g) => [g.id, g]));
+
+      gradeTransitions = candidates.map((r) => {
+        const coin = trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id)!;
+        const currentGrade = gradeMap.get(r.stablecoin_id);
+        return {
+          symbol: coin.symbol,
+          fromGrade: r.prev_grade,
+          toGrade: r.grade,
+          fromScore: r.prev_score,
+          toScore: r.score,
+          currentDimensions: {
+            peg: currentGrade?.pegScore ?? null,
+            liq: currentGrade?.liqScore ?? null,
+            resilience: null,
+            decentralization: null,
+          },
+          mcapUsd: getCirculatingRaw(coin),
+        };
+      });
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect grade transitions:", e);
+  }
+
   // --- Build input data ---
   const inputData: DigestInputData = {
     totalMcapUsd,
@@ -746,6 +809,7 @@ export async function generateDailyDigest(
     mintBurnFlows,
     dewsStress,
     historicalContext,
+    gradeTransitions,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentDigests);

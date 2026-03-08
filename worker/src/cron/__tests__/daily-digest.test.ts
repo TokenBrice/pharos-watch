@@ -416,6 +416,46 @@ describe("generateDailyDigest", () => {
     expect(storedInput.historicalContext.psiPrecedent.lastSeenDaysAgo).toBe(30);
   });
 
+  it("includes grade transitions and excludes methodology bumps", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // Methodology bump check (no bumps)
+      {
+        match: "HAVING COUNT(*) > 10",
+        rows: [],
+      },
+      // Grade transitions in last 48h
+      {
+        match: "FROM safety_grade_history WHERE recorded_at >= ?",
+        rows: [
+          {
+            stablecoin_id: "usdt-tether",
+            recorded_at: todayTs,
+            grade: "A-",
+            score: 80,
+            prev_grade: "A",
+            prev_score: 85,
+          },
+        ],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.gradeTransitions).toBeDefined();
+    expect(storedInput.gradeTransitions.length).toBe(1);
+    expect(storedInput.gradeTransitions[0].symbol).toBe("USDT");
+    expect(storedInput.gradeTransitions[0].fromGrade).toBe("A");
+    expect(storedInput.gradeTransitions[0].toGrade).toBe("A-");
+  });
+
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
