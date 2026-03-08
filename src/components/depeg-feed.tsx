@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -25,6 +25,10 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   const [pageSize, setPageSize] = useState(MOBILE_PAGE_SIZE);
   const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
 
+  // Track seen event IDs so only genuinely new arrivals animate.
+  // Seed with initial events to prevent animation on first render.
+  const seenIds = useRef<Set<number>>(new Set(events.map((e) => e.id)));
+
   useEffect(() => {
     const mql = window.matchMedia("(min-width: 1024px)");
     const syncPageSize = () => {
@@ -47,6 +51,25 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   const visible = sorted.slice(0, visibleCount);
   const hasMore = visibleCount < sorted.length;
 
+  // Pre-compute new-event animation index (capped at 3 animated entries).
+  const newIndexMap = useMemo(() => {
+    const map = new Map<number, number>();
+    let idx = 0;
+    for (const evt of visible) {
+      if (!seenIds.current.has(evt.id) && idx < 3) {
+        map.set(evt.id, idx++);
+      }
+    }
+    return map;
+  }, [visible]);
+
+  // After render, mark all current events as seen.
+  useEffect(() => {
+    if (events.length > 0) {
+      for (const e of events) seenIds.current.add(e.id);
+    }
+  }, [events]);
+
   if (events.length === 0) return null;
 
   return (
@@ -59,12 +82,17 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
       <CardContent className="flex-1 overflow-y-auto grid grid-cols-1 gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
         {visible.map((evt) => {
           const isOngoing = evt.endedAt === null;
+          const newIndex = newIndexMap.get(evt.id);
           return (
             <Link
               key={evt.id}
               href={buildStablecoinUrl(evt.stablecoinId)}
               className="flex items-center justify-between gap-3 py-2 px-2 rounded-lg hover:bg-accent/50 transition-colors group"
               onMouseEnter={() => prefetch(evt.stablecoinId)}
+              style={newIndex != null ? {
+                animation: 'pharos-slide-in-right 300ms var(--motion-ease-standard) both',
+                animationDelay: `${newIndex * 100}ms`,
+              } : undefined}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <StablecoinLogo src={logos?.[evt.stablecoinId]} name={evt.symbol} size={20} />
