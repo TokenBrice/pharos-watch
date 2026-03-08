@@ -1515,14 +1515,14 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
   "caches": { ... },
   "crons": {
     "sync-stablecoins": {
-      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 148 },
+      "lastRun": { "startedAt": 1234567890, "durationMs": 2300, "status": "ok", "itemCount": 151 },
       "recentRuns": [...],
       "expectedIntervalSec": 900,
       "healthy": true
     }
   },
   "dataQuality": {
-    "totalStablecoins": 148,
+    "totalStablecoins": 151,
     "missingPrices": 3,
     "blacklistMissingAmounts": 0,
     "blacklistRecentMissingAmounts": 0,

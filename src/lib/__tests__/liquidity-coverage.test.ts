@@ -8,7 +8,7 @@ const UNSUPPORTED_CHAINS = new Set([
   "algorand", "aptos", "astar", "aurora", "bittorrent", "boba",
   "fraxtal", "hedera", "hydration", "icp", "kava",
   "klaytn", "mantra", "metis", "moonbeam", "moonriver", "morph-l2",
-  "near", "noble", "osmosis", "plasma", "polkadot", "polygon-zkevm",
+  "near", "noble", "osmosis", "polkadot", "polygon-zkevm",
   "starknet", "stellar", "swellchain", "tezos", "ton", "viction",
   "xdc", "xlayer", "xrpl", "zircuit", "bitlayer", "apechain",
   // Added with 78-contract enrichment batch — not yet mapped to CG/DS liquidity sources

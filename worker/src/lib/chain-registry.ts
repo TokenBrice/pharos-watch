@@ -28,6 +28,7 @@ const CHAIN_REGISTRY: Record<string, ChainEntry> = {
   berachain:  { coingecko: "berachain",    dexscreener: "berachain",  geckoTerminal: "berachain" },
   sui:        { coingecko: "sui-network",  dexscreener: "sui",        geckoTerminal: "sui-network" },
   rootstock:  { coingecko: "rootstock" },
+  plasma:     { dexscreener: "plasma",     geckoTerminal: "plasma" },
   // DS-only chains (no CG onchain / GT coverage)
   sonic:      { dexscreener: "sonic" },
   mantle:     { dexscreener: "mantle" },
