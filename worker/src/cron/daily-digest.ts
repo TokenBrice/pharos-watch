@@ -548,6 +548,94 @@ export async function generateDailyDigest(
     console.error("[daily-digest] Failed to collect mint-burn flows:", e);
   }
 
+  // 4f. DEWS stress signals
+  let dewsStress: DigestInputData["dewsStress"];
+  try {
+    // Latest DEWS per coin (most recent sample)
+    const latestDews = await db
+      .prepare(
+        `SELECT s.stablecoin_id, s.score, s.band, s.signals_json
+         FROM stress_signals s
+         INNER JOIN (
+           SELECT stablecoin_id, MAX(computed_at) as max_at
+           FROM stress_signals GROUP BY stablecoin_id
+         ) latest ON s.stablecoin_id = latest.stablecoin_id AND s.computed_at = latest.max_at`,
+      )
+      .all<{ stablecoin_id: string; score: number; band: string; signals_json: string }>();
+
+    const todayRows = latestDews.results ?? [];
+    if (todayRows.length > 0) {
+      // Yesterday's snapshot for band-change detection
+      const yesterdayDews = await db
+        .prepare("SELECT stablecoin_id, score, band FROM stress_signal_history WHERE snapshot_date = ?")
+        .bind(yesterdayTs)
+        .all<{ stablecoin_id: string; score: number; band: string }>();
+
+      const yesterdayMap = new Map((yesterdayDews.results ?? []).map((r) => [r.stablecoin_id, r]));
+
+      // Band counts
+      const initCounts = () => ({ calm: 0, watch: 0, alert: 0, warning: 0, danger: 0 });
+      const bandCounts = initCounts();
+      const yesterdayBandCounts = initCounts();
+
+      for (const r of todayRows) {
+        const key = r.band.toLowerCase() as keyof typeof bandCounts;
+        if (key in bandCounts) bandCounts[key]++;
+      }
+      for (const r of yesterdayDews.results ?? []) {
+        const key = r.band.toLowerCase() as keyof typeof yesterdayBandCounts;
+        if (key in yesterdayBandCounts) yesterdayBandCounts[key]++;
+      }
+
+      // Band changes crossing WATCH/ALERT boundary
+      const SIGNAL_LABELS: Record<string, string> = {
+        supply: "supply velocity", pool: "pool balance drift", liq: "liquidity erosion",
+        price: "price confidence", diverg: "cross-source divergence", black: "blacklist activity",
+        flow: "mint/burn flow", yield: "yield anomaly",
+      };
+      const ALERT_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
+      const bandChanges: NonNullable<DigestInputData["dewsStress"]>["bandChanges"] = [];
+
+      for (const today of todayRows) {
+        const yesterday = yesterdayMap.get(today.stablecoin_id);
+        if (!yesterday || yesterday.band === today.band) continue;
+        // Only include if crossing the WATCH/ALERT boundary
+        const wasElevated = ALERT_BANDS.has(yesterday.band);
+        const isElevated = ALERT_BANDS.has(today.band);
+        if (wasElevated === isElevated) continue; // Both above or both below — not crossing
+
+        // Extract top driver from signals_json
+        let topDriver = "unknown";
+        try {
+          const signals = JSON.parse(today.signals_json) as Record<string, { value: number; available: boolean }>;
+          let maxVal = -1;
+          for (const [key, sig] of Object.entries(signals)) {
+            if (sig.available && sig.value > maxVal) { maxVal = sig.value; topDriver = SIGNAL_LABELS[key] ?? key; }
+          }
+        } catch { /* use "unknown" */ }
+
+        const coin = trackedStablecoinAssets.find((c) => c.id === today.stablecoin_id);
+        if (!coin) continue;
+        bandChanges.push({ symbol: coin.symbol, from: yesterday.band, to: today.band, score: today.score, topDriver });
+      }
+
+      // Elevated coins: ALERT+ with mcap > $10M
+      const elevatedCoins = todayRows
+        .filter((r) => ALERT_BANDS.has(r.band))
+        .map((r) => {
+          const coin = trackedStablecoinAssets.find((c) => c.id === r.stablecoin_id);
+          return coin ? { symbol: coin.symbol, band: r.band, score: r.score, mcapUsd: getCirculatingRaw(coin) } : null;
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null && r.mcapUsd > 10_000_000)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+
+      dewsStress = { bandCounts, yesterdayBandCounts, bandChanges: bandChanges.slice(0, 5), elevatedCoins };
+    }
+  } catch (e) {
+    console.error("[daily-digest] Failed to collect DEWS stress signals:", e);
+  }
+
   // --- Build input data ---
   const inputData: DigestInputData = {
     totalMcapUsd,
@@ -562,6 +650,7 @@ export async function generateDailyDigest(
     safetyScores,
     resolvedDepegs,
     mintBurnFlows,
+    dewsStress,
   };
 
   const userPromptContent = buildUserPrompt(inputData, recentDigests);

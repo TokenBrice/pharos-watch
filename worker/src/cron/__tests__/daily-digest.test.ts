@@ -317,6 +317,45 @@ describe("generateDailyDigest", () => {
     expect(storedInput.mintBurnFlows.flightToQuality).toBeDefined();
   });
 
+  it("includes DEWS stress data with band changes in stored input", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const todayTs = nowSec - (nowSec % 86_400);
+
+    const baseTables = makeBaseTables();
+    const db = mockD1([
+      ...baseTables,
+      // Latest DEWS per coin
+      {
+        match: "FROM stress_signals",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 8, band: "CALM", signals_json: '{"supply":{"value":5,"available":true}}', computed_at: nowSec - 600 },
+          { stablecoin_id: "usdc-circle", score: 62, band: "ALERT", signals_json: '{"pool":{"value":70,"available":true},"liq":{"value":50,"available":true}}', computed_at: nowSec - 600 },
+        ],
+      },
+      // Yesterday's snapshot
+      {
+        match: "FROM stress_signal_history WHERE snapshot_date = ?",
+        rows: [
+          { stablecoin_id: "usdt-tether", score: 10, band: "CALM" },
+          { stablecoin_id: "usdc-circle", score: 30, band: "WATCH" },
+        ],
+      },
+    ]);
+
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    const storedInput = JSON.parse(String(insertBinds?.[3]));
+    expect(storedInput.dewsStress).toBeDefined();
+    expect(storedInput.dewsStress.bandCounts.calm).toBeGreaterThanOrEqual(1);
+    // USDC went WATCH -> ALERT (crosses threshold)
+    expect(storedInput.dewsStress.bandChanges.length).toBeGreaterThanOrEqual(1);
+    expect(storedInput.dewsStress.bandChanges[0].symbol).toBe("USDC");
+    expect(storedInput.dewsStress.bandChanges[0].from).toBe("WATCH");
+    expect(storedInput.dewsStress.bandChanges[0].to).toBe("ALERT");
+  });
+
   it("keeps digest persistence even when social posting fails", async () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down"));
     vi.mocked(postDigestToTelegram).mockRejectedValueOnce(new Error("telegram down"));
