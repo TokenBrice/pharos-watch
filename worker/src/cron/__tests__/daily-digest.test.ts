@@ -67,7 +67,7 @@ function makeBaseTables(): MockTableConfig[] {
       first: null,
     },
     {
-      match: "SELECT digest_title, digest_text, digest_extended FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
+      match: "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
       rows: [],
     },
     {
@@ -455,6 +455,37 @@ describe("generateDailyDigest", () => {
     expect(storedInput.gradeTransitions[0].symbol).toBe("USDT");
     expect(storedInput.gradeTransitions[0].fromGrade).toBe("A");
     expect(storedInput.gradeTransitions[0].toGrade).toBe("A-");
+  });
+
+  it("parses meta field from Claude response and stores in digest_meta", async () => {
+    const responseWithMeta = {
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          title: "Alert Watch",
+          extended: "PSI dipped below 90.\n\nFRAX entered ALERT on pool drift.",
+          text: "FRAX hit ALERT while PSI slid to 88, the first STEADY reading in 47 days.",
+          meta: { lead: "dews-band-change", tone: "foreboding", coins: ["FRAX"] },
+        }),
+      }],
+    };
+
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+      new Response(JSON.stringify(responseWithMeta), { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+
+    const db = mockD1(makeBaseTables());
+    const result = await generateDailyDigest(db, "anthropic-key");
+    expect(result.itemCount).toBe(1);
+
+    const insertBinds = getInsertDigestBinds(db as MockD1Database);
+    // digest_meta should be the 6th bind (index 5)
+    const metaJson = insertBinds?.[5];
+    expect(metaJson).toBeDefined();
+    const meta = JSON.parse(String(metaJson));
+    expect(meta.lead).toBe("dews-band-change");
+    expect(meta.tone).toBe("foreboding");
+    expect(meta.coins).toEqual(["FRAX"]);
   });
 
   it("keeps digest persistence even when social posting fails", async () => {

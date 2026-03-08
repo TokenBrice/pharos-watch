@@ -116,7 +116,17 @@ export function classifyRegime(data: DigestInputData): "CRISIS" | "TENSION" | "W
   return "CALM";
 }
 
-function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): string {
+interface DigestMeta {
+  lead?: string;
+  tone?: string;
+  coins?: string[];
+}
+
+function buildUserPrompt(
+  data: DigestInputData,
+  recentDigests: string[] = [],
+  recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = [],
+): string {
   const regime = classifyRegime(data);
   const lines: string[] = [
     `Market regime: ${regime}`,
@@ -261,13 +271,25 @@ function buildUserPrompt(data: DigestInputData, recentDigests: string[] = []): s
     }
   }
 
-  if (recentDigests.length > 0) {
+  // Variety enforcement (meta-based when available, raw text fallback)
+  const metaLines: string[] = [];
+  const rawFallbacks: string[] = [];
+  for (let i = 0; i < recentMeta.length; i++) {
+    const m = recentMeta[i];
+    if (m.meta) {
+      metaLines.push(`  Day -${i + 1}: led with ${m.meta.lead ?? "unknown"}, tone: ${m.meta.tone ?? "unknown"}, coins: ${(m.meta.coins ?? []).join(", ") || "none"}`);
+    } else if (m.rawText) {
+      rawFallbacks.push(`- "${m.rawText}"`);
+    }
+  }
+  if (metaLines.length > 0) {
+    lines.push("", "Recent digest angles (DO NOT repeat any of these approaches):", ...metaLines);
+  }
+  if (rawFallbacks.length > 0) {
     lines.push(
       "",
-      "RECENT DIGESTS — read these carefully, then write something that sounds NOTHING like them. " +
-        "Do not borrow their phrases, metaphors, structure, or framing. " +
-        "DO keep covering ongoing stories (a depeg entering day 3 is bigger news, not old news) but use a completely different angle and wording:",
-      ...recentDigests.map((d) => `- "${d}"`),
+      "RECENT DIGESTS — do NOT reuse phrasing, metaphors, or structure:",
+      ...rawFallbacks,
     );
   }
 
@@ -310,11 +332,20 @@ export async function generateDailyDigest(
 
   // Fetch last 5 digests so the model sees a wider window to avoid repetition
   const recentRows = await db
-    .prepare("SELECT digest_title, digest_text, digest_extended FROM daily_digest ORDER BY generated_at DESC LIMIT 5")
-    .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null }>();
+    .prepare("SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5")
+    .all<{ digest_title: string | null; digest_text: string; digest_extended: string | null; digest_meta: string | null }>();
   const recentDigests = (recentRows.results ?? []).map((r) => {
     const base = r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text;
     return r.digest_extended ? `${base} ${r.digest_extended}` : base;
+  });
+
+  const recentMeta: { meta: DigestMeta | null; rawText: string | null }[] = (recentRows.results ?? []).map((r) => {
+    let meta: DigestMeta | null = null;
+    if (r.digest_meta) {
+      try { meta = JSON.parse(r.digest_meta) as DigestMeta; } catch { /* ignore */ }
+    }
+    const rawText = !meta ? (r.digest_title ? `${r.digest_title}: ${r.digest_text}` : r.digest_text) : null;
+    return { meta, rawText };
   });
 
   // --- Collect data ---
@@ -942,7 +973,7 @@ export async function generateDailyDigest(
     gradeTransitions,
   };
 
-  const userPromptContent = buildUserPrompt(inputData, recentDigests);
+  const userPromptContent = buildUserPrompt(inputData, recentDigests, recentMeta);
   console.log("[daily-digest] Calling Claude API with data:\n" + userPromptContent);
 
   // --- Call Claude API ---
@@ -1000,16 +1031,20 @@ export async function generateDailyDigest(
     }
   }
 
-  // Parse JSON response for title + text + extended
+  // Parse JSON response for title + text + extended + meta
   let digestTitle: string;
   let digestText: string;
   let digestExtended: string;
+  let digestMeta: string | null = null;
   try {
-    const parsed = JSON.parse(jsonText) as { title?: string; text?: string; extended?: string };
+    const parsed = JSON.parse(jsonText) as { title?: string; text?: string; extended?: string; meta?: { lead?: string; tone?: string; coins?: string[] } };
     digestTitle = (parsed.title ?? "").trim();
     digestText = (parsed.text ?? "").trim();
     digestExtended = (parsed.extended ?? "").trim();
     if (!digestText) throw new Error("empty text field");
+    if (parsed.meta) {
+      digestMeta = JSON.stringify(parsed.meta);
+    }
   } catch {
     // Fallback: treat entire response as text with no title or extended
     console.warn("[daily-digest] Failed to parse JSON response, using raw text");
@@ -1028,9 +1063,9 @@ export async function generateDailyDigest(
   const now = Math.floor(Date.now() / 1000);
   await db
     .prepare(
-      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta) VALUES (?, ?, ?, ?, ?, ?)",
     )
-    .bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null)
+    .bind(now, digestText, digestTitle || null, JSON.stringify(inputData), digestExtended || null, digestMeta)
     .run();
 
   // Post to Twitter if credentials are available
