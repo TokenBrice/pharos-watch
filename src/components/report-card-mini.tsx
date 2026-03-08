@@ -19,6 +19,8 @@ interface ReportCardMiniProps {
   isSimulating?: boolean; // any simulation is active
   originalGrade?: ReportCardGrade;
   originalScore?: number | null;
+  /** Grid index used for staggered grade-pop animation delay */
+  animIndex?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,6 +34,7 @@ export function ReportCardMini({
   isSimulating,
   originalGrade,
   originalScore,
+  animIndex = 0,
 }: ReportCardMiniProps) {
   const dimUnaffected = isSimulating && !isSimulated;
 
@@ -76,14 +79,16 @@ export function ReportCardMini({
             <div className="flex items-center gap-1.5">
               <Badge
                 variant="outline"
-                className={`text-base font-bold font-mono px-2 py-0.5 ${REPORT_CARD_GRADE_COLORS[originalGrade]}`}
+                className={`text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop ${REPORT_CARD_GRADE_COLORS[originalGrade]}`}
+                style={{ animationDelay: `${animIndex * 40}ms` }}
               >
                 {originalGrade}
               </Badge>
               <span className="text-muted-foreground text-sm">&rarr;</span>
               <Badge
                 variant="outline"
-                className={`text-base font-bold font-mono px-2 py-0.5 ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
+                className={`text-base font-bold font-mono px-2 py-0.5 pharos-grade-pop ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
+                style={{ animationDelay: `${animIndex * 40 + 80}ms` }}
               >
                 {card.overallGrade}
               </Badge>
@@ -97,7 +102,8 @@ export function ReportCardMini({
           ) : (
             <Badge
               variant="outline"
-              className={`text-xl font-bold font-mono px-3 py-1 ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
+              className={`text-xl font-bold font-mono px-3 py-1 pharos-grade-pop ${REPORT_CARD_GRADE_COLORS[card.overallGrade]}`}
+              style={{ animationDelay: `${animIndex * 40}ms` }}
             >
               {card.overallGrade}
             </Badge>

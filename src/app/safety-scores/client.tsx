@@ -384,7 +384,7 @@ export function ReportCardsClient() {
         <p className="text-sm text-muted-foreground py-8 text-center">No coins match this filter.</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-          {filteredCards.map((card) => (
+          {filteredCards.map((card, i) => (
             <LazyCard key={card.id}>
               <ReportCardMini
                 card={card}
@@ -393,6 +393,7 @@ export function ReportCardsClient() {
                 isSimulating={isSimulating}
                 originalGrade={originalCardMap.get(card.id)?.overallGrade}
                 originalScore={originalCardMap.get(card.id)?.overallScore}
+                animIndex={i % 5}
               />
             </LazyCard>
           ))}
