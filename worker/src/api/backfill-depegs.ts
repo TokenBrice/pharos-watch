@@ -9,12 +9,14 @@ import { binarySearchNearest } from "../lib/binary-search";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { RATE_LIMITS } from "../lib/rate-limit";
+import { getCache, setCache } from "../lib/db";
 import type { StablecoinMeta } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 const BATCH_SIZE = 3;
 const BATCH_CHUNK_SIZE = 100;
+const SECONDARY_FX_FETCH_CONCURRENCY = 8;
 
 /** Consecutive above-threshold data points needed to confirm a large-cap depeg.
  *  Mirrors the live system's pending → re-check → promote flow. */
@@ -38,9 +40,21 @@ const PEG_TO_FX: Record<string, string> = {
   TRY: "TRY",
   AUD: "AUD",
   ZAR: "ZAR",
+  CAD: "CAD",
+  CNY: "CNY",
+  PHP: "PHP",
+  MXN: "MXN",
 };
 
-/** Maps coin ID → frankfurter currency code for OTHER-pegged coins */
+/** Maps pegCurrency → secondary currency-api code for non-ECB historical FX */
+const SECONDARY_PEG_TO_FX: Record<string, string> = {
+  CNH: "CNH",
+  RUB: "RUB",
+  UAH: "UAH",
+  ARS: "ARS",
+};
+
+/** Maps coin ID → historical FX code override for OTHER-pegged coins */
 const OTHER_COIN_FX: Record<string, string> = {
   "xsgd-straitsx": "SGD",  // XSGD
   "gyen-gyen": "JPY",  // GYEN
@@ -61,6 +75,11 @@ interface FrankfurterTimeSeriesResponse {
   start_date: string;
   end_date: string;
   rates: Record<string, Record<string, number>>; // date → { currency: unitsPerUSD }
+}
+
+interface SecondaryFxResponse {
+  date?: string;
+  usd?: Record<string, number>;
 }
 
 /**
@@ -110,6 +129,111 @@ async function fetchHistoricalFxRates(
     console.error(`[backfill-depegs] FX fetch failed:`, err);
     return {};
   }
+}
+
+function enumerateDates(startDate: string, endDate: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(`${startDate}T00:00:00Z`);
+  const end = new Date(`${endDate}T00:00:00Z`);
+  while (current <= end) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return dates;
+}
+
+function mergeDateRates(target: Record<string, Record<string, number>>, date: string, rates: Record<string, number> | null): void {
+  if (!rates) return;
+  target[date] = {
+    ...(target[date] ?? {}),
+    ...rates,
+  };
+}
+
+async function fetchHistoricalSecondaryFxDay(date: string): Promise<Record<string, number> | null> {
+  const primaryUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${date}/v1/currencies/usd.min.json`;
+  const fallbackUrl = `https://${date}.currency-api.pages.dev/v1/currencies/usd.min.json`;
+
+  let res = await fetchWithRetry(primaryUrl, { headers: { "User-Agent": USER_AGENT } });
+  if (!res || !res.ok) {
+    res = await fetchWithRetry(fallbackUrl, { headers: { "User-Agent": USER_AGENT } });
+  }
+  if (!res || !res.ok) {
+    console.warn(`[backfill-depegs] secondary FX API returned ${res?.status ?? "no response"} for ${date}`);
+    return null;
+  }
+
+  const data = await res.json() as SecondaryFxResponse;
+  return data.usd ?? null;
+}
+
+export async function fetchHistoricalSecondaryFxRates(
+  db: D1Database,
+  currencies: string[],
+  startDate: string,
+  endDate: string,
+): Promise<Record<string, FxTimeSeries[]>> {
+  if (currencies.length === 0) return {};
+
+  const normalized = Array.from(new Set(currencies.map((currency) => currency.toUpperCase())));
+  const result: Record<string, FxTimeSeries[]> = Object.fromEntries(
+    normalized.map((currency) => [currency, []]),
+  );
+
+  const startYear = Number.parseInt(startDate.slice(0, 4), 10);
+  const endYear = Number.parseInt(endDate.slice(0, 4), 10);
+
+  for (let year = startYear; year <= endYear; year++) {
+    const yearStart = `${year}-01-01`;
+    const yearEnd = `${year}-12-31`;
+    const rangeStart = startDate > yearStart ? startDate : yearStart;
+    const rangeEnd = endDate < yearEnd ? endDate : yearEnd;
+    const wantedDates = enumerateDates(rangeStart, rangeEnd);
+
+    const cacheKey = `fx-history-secondary:${year}`;
+    let yearCache: Record<string, Record<string, number>> = {};
+    const cached = await getCache(db, cacheKey);
+    if (cached) {
+      try {
+        yearCache = JSON.parse(cached.value) as Record<string, Record<string, number>>;
+      } catch {
+        yearCache = {};
+      }
+    }
+
+    const missingDates = wantedDates.filter((date) => !yearCache[date]);
+    for (let i = 0; i < missingDates.length; i += SECONDARY_FX_FETCH_CONCURRENCY) {
+      const chunk = missingDates.slice(i, i + SECONDARY_FX_FETCH_CONCURRENCY);
+      const fetched = await Promise.all(
+        chunk.map(async (date) => [date, await fetchHistoricalSecondaryFxDay(date)] as const),
+      );
+      for (const [date, dailyRates] of fetched) {
+        mergeDateRates(yearCache, date, dailyRates);
+      }
+    }
+
+    if (missingDates.length > 0) {
+      await setCache(db, cacheKey, JSON.stringify(yearCache));
+    }
+
+    for (const date of wantedDates) {
+      const dailyRates = yearCache[date];
+      if (!dailyRates) continue;
+
+      const timestamp = Math.floor(new Date(`${date}T00:00:00Z`).getTime() / 1000);
+      for (const currency of normalized) {
+        const unitsPerUsd = dailyRates[currency.toLowerCase()];
+        if (typeof unitsPerUsd !== "number" || unitsPerUsd <= 0) continue;
+        result[currency].push({ timestamp, rate: 1 / unitsPerUsd });
+      }
+    }
+  }
+
+  for (const currency of normalized) {
+    result[currency]?.sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  return result;
 }
 
 /**
@@ -227,6 +351,12 @@ interface CoinDetail {
   tokens?: SupplyPoint[];
 }
 
+interface PreparedBackfillCoin {
+  meta: StablecoinMeta;
+  geckoId?: string;
+  supplyByDate: SupplySnapshot[];
+}
+
 export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (db: D1Database, url: URL, adminSecret?: string, request?: Request): Promise<Response> => {
   return withAdmin(request, adminSecret, async () => {
 
@@ -274,42 +404,20 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
   const errors: string[] = [];
   const skipped: string[] = [];
 
-  // Collect FX currencies needed by this batch
+  // Collect coin details and historical FX currencies needed by this batch
   const neededFxCurrencies = new Set<string>();
+  const neededSecondaryFxCurrencies = new Set<string>();
   let needsCommodities = false;
-  for (const meta of processable) {
-    const peg = meta.flags.pegCurrency;
-    if (peg === "USD") continue;
-    if (COMMODITY_PEGS.has(peg)) {
-      needsCommodities = true;
-    } else {
-      const fx = PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
-      if (fx) neededFxCurrencies.add(fx);
-    }
-  }
+  const preparedCoins: PreparedBackfillCoin[] = [];
 
-  // Fetch historical FX rates — 10 years covers most stablecoin history (USDT 2014, DAI 2017)
+  // Fetch historical FX rates only as far back as the oldest supply snapshot in this batch.
+  // If supply history is missing, fall back to 10 years to preserve current behavior.
   const tenYearsAgoMs = Date.now() - 10 * 365 * 86400 * 1000;
-  const startDate = new Date(tenYearsAgoMs).toISOString().slice(0, 10);
+  const defaultStartDate = new Date(tenYearsAgoMs).toISOString().slice(0, 10);
   const endDate = new Date().toISOString().slice(0, 10);
+  let historicalFxStartDate = endDate;
 
-  // Fetch FX rates and commodity peer-median series in parallel.
-  // Commodity peg reference is derived from the median of all tracked gold/silver
-  // token CG prices — same approach as derivePegRates() in the live system.
-  const fxPromise = neededFxCurrencies.size > 0
-    ? fetchHistoricalFxRates([...neededFxCurrencies], startDate, endDate)
-    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
-
-  const commodityPromise = needsCommodities
-    ? buildCommodityMedianSeriesFromCg()
-    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
-
-  const [fxSeries, commoditySeries] = await Promise.all([fxPromise, commodityPromise]);
-
-  // Process coins sequentially — each needs DL detail fetch + CG price history fetch.
-  // Serializing avoids memory pressure from parsing multiple large JSON responses.
   for (const meta of processable) {
-    // Fetch per-coin detail endpoint (includes gecko_id + supply history)
     let detail: CoinDetail | null = null;
     const dlId = meta.llamaId ?? meta.id;
     try {
@@ -323,14 +431,64 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
 
     const trackedMeta = PSI_ELIGIBLE_META_BY_ID.get(meta.id);
     const geckoId = trackedMeta?.geckoId ?? detail?.gecko_id;
+    const supplyByDate = parseSupplyData(detail?.tokens ?? []);
+    preparedCoins.push({ meta, geckoId, supplyByDate });
 
+    const peg = meta.flags.pegCurrency;
+    if (peg === "USD") continue;
+
+    const earliestSupplyDate = supplyByDate[0]
+      ? new Date(supplyByDate[0].ts * 1000).toISOString().slice(0, 10)
+      : defaultStartDate;
+    if (earliestSupplyDate < historicalFxStartDate) {
+      historicalFxStartDate = earliestSupplyDate;
+    }
+
+    if (COMMODITY_PEGS.has(peg)) {
+      needsCommodities = true;
+    } else {
+      const secondaryFx = SECONDARY_PEG_TO_FX[peg];
+      if (secondaryFx) {
+        neededSecondaryFxCurrencies.add(secondaryFx);
+        continue;
+      }
+
+      const fx = PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
+      if (fx) {
+        neededFxCurrencies.add(fx);
+      }
+    }
+  }
+
+  // Fetch FX rates and commodity peer-median series in parallel.
+  // Commodity peg reference is derived from the median of all tracked gold/silver
+  // token CG prices — same approach as derivePegRates() in the live system.
+  const fxPromise = neededFxCurrencies.size > 0
+    ? fetchHistoricalFxRates([...neededFxCurrencies], historicalFxStartDate, endDate)
+    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
+
+  const secondaryFxPromise = neededSecondaryFxCurrencies.size > 0
+    ? fetchHistoricalSecondaryFxRates(db, [...neededSecondaryFxCurrencies], historicalFxStartDate, endDate)
+    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
+
+  const commodityPromise = needsCommodities
+    ? buildCommodityMedianSeriesFromCg()
+    : Promise.resolve({} as Record<string, FxTimeSeries[]>);
+
+  const [fxSeriesPrimary, fxSeriesSecondary, commoditySeries] = await Promise.all([
+    fxPromise,
+    secondaryFxPromise,
+    commodityPromise,
+  ]);
+  const fxSeries = { ...fxSeriesPrimary, ...fxSeriesSecondary };
+
+  // Process coins sequentially — each still needs CG price history fetch.
+  // Serializing avoids memory pressure from parsing multiple large JSON responses.
+  for (const { meta, geckoId, supplyByDate } of preparedCoins) {
     if (!geckoId) {
       skipped.push(meta.symbol);
       continue;
     }
-
-    // Parse supply data from the detail response (avoids extra fetch)
-    const supplyByDate = parseSupplyData(detail?.tokens ?? []);
 
     // Build time-varying peg reference function for this coin
     const peg = meta.flags.pegCurrency;
@@ -340,8 +498,6 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
 
     if (peg === "USD") {
       getPegRef = () => 1;
-    } else if (peg === "RUB") {
-      getPegRef = () => RUB_FALLBACK;
     } else if (COMMODITY_PEGS.has(peg)) {
       // Commodity peg (gold/silver): use historical spot price series
       const series = commoditySeries[peg] ?? [];
@@ -354,9 +510,16 @@ export const handleBackfillDepegs = withErrorHandler("backfill-depegs", async (d
         getPegRef = spotLookup;
       }
     } else {
-      const fxCode = PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
+      const fxCode = PEG_TO_FX[peg] ?? SECONDARY_PEG_TO_FX[peg] ?? OTHER_COIN_FX[meta.id];
       const series = fxCode ? fxSeries[fxCode] ?? [] : [];
-      const fallback = currentPegRef > 0 ? currentPegRef : 1;
+      const fallbackRate = fxRates?.[pegType];
+      const fallback = typeof fallbackRate === "number" && fallbackRate > 0
+        ? fallbackRate
+        : currentPegRef > 0
+          ? currentPegRef
+          : peg === "RUB"
+            ? RUB_FALLBACK
+            : 1;
       const fxLookup = buildFxLookup(series, fallback);
       getPegRef = fxLookup;
     }

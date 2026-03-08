@@ -23,6 +23,8 @@ GOLD_COINS=(
   "xaum-matrixdock"
   "cgo-comtech"
   "dgld-gold-token-sa"
+  "pgold-pleasing"
+  "ggbr-goldfish-gold"
 )
 
 echo "Backfilling gold depeg events against: $WORKER_URL"

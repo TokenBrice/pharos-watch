@@ -108,6 +108,8 @@ The previous source (DefiLlama's `coingecko:gold` / `coingecko:silver` coins API
 - Commodity backfill does **not** call a gold-api.com timeseries endpoint.
 - Instead, it builds daily GOLD/SILVER peg references from CoinGecko historical prices across tracked commodity tokens (`buildCommodityMedianSeriesFromCg()`), normalized to per-troy-ounce and median-aggregated per day.
 - The resulting `{ GOLD: FxTimeSeries[], SILVER: FxTimeSeries[] }` series feeds `buildFxLookup()` for time-varying commodity peg references.
+- Fiat backfill uses Frankfurter historical ranges for ECB-covered currencies and date-addressed `fawazahmed0/exchange-api` snapshots for non-ECB currencies such as CNH, RUB, UAH, and ARS.
+- Secondary historical FX snapshots are cached in D1 by year (`fx-history-secondary:<year>`) so repeated admin backfills do not re-fetch the same daily files.
 - Fallback behavior: if series data is sparse/missing for a timestamp, `buildFxLookup()` falls back to the current peg reference derived from live rates.
 
 ### Budget

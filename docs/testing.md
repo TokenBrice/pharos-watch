@@ -244,7 +244,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 |------|---------|--------------|
 | `router-contract.test.ts` | `route` + strict frontend contract paths | All strict paths resolve in `worker/src/router.ts`, unknown paths return null, mutating admin GET guards hold (with audit dry-run exception) |
 | `backfill-depegs.test.ts` | `handleBackfillDepegs` | Auth guard, unknown stablecoin 404, out-of-range batch no-op |
-| `backfill-depegs-helpers.test.ts` | `backfill-depegs` helper logic | Supply parsing/nearest-snapshot lookup, FX lookup fallback/nearest selection, large-cap depeg confirmation behavior |
+| `backfill-depegs-helpers.test.ts` | `backfill-depegs` helper logic | Supply parsing/nearest-snapshot lookup, historical secondary-FX caching, FX lookup fallback/nearest selection, large-cap depeg confirmation behavior |
 | `backfill-supply-history.test.ts` | `handleBackfillSupplyHistory` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, USD insertion path |
 | `backfill-cg-prices.test.ts` | `handleBackfillCgPrices` | Auth guard, unknown stablecoin 404, out-of-range batch no-op, NULL-price fill |
 | `backfill-stability-index.test.ts` | `handleBackfillStabilityIndex` | Auth guard, no-events 404, rebuild success shape |
@@ -291,7 +291,7 @@ find src/lib/__tests__ worker/src -path '*/__tests__/*' -type f | sort
 | `snapshot-supply.test.ts` | `snapshot-supply.ts` | Cache missing, stale cache (>1200s), valid insert for tracked assets, zero supply skip |
 | `snapshot-safety-grade-history.test.ts` | `snapshot-safety-grade-history.ts` | Seed rows, grade-change inserts, unchanged-grade idempotent reruns |
 | `yield-helpers.test.ts` | `yield-helpers.ts` | `computeApyFromRate`, `computePYS`, `computeYieldStability`, `computeApyVarianceScore`, `detectWarningSignals`, `findBestLendingPool` |
-| `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for RUB/UAH/ARS |
+| `sync-fx-rates.test.ts` | `sync-fx-rates.ts` | Normal path (frankfurter + secondary + metals), degraded (frankfurter 503), secondary API for CNH/RUB/UAH/ARS |
 | `sync-yield-data.test.ts` | `sync-yield-data.ts` | Yield ranking sync, validation guard, fallback behavior and ranking parity |
 | `dex-liquidity-pool-helpers.test.ts` | `dex-liquidity/pool-helpers.ts` | Symbol parsing, pool classification, quality multipliers, chain-map toggles, durability/liquidity scoring branches, protocol normalization, pair/stress helpers |
 | `dex-liquidity-process-pools.test.ts` | `dex-liquidity/process-pools.ts` | Pool filtering, address/symbol matching, collision safety, Curve/Uni v3/Aerodrome enrichment, weighted metric accumulation |

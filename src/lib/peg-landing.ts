@@ -21,6 +21,7 @@ const ALL_SLUGS: Record<PegCurrency, string> = {
   PHP: "php",
   RUB: "rub",
   CNY: "cny",
+  CNH: "cnh",
   MXN: "mxn",
   UAH: "uah",
   ARS: "ars",
@@ -82,6 +83,8 @@ export const PEG_INTRO: Partial<Record<PegCurrency, string>> = {
   ZAR: `The South African Rand stablecoin peg serves the African DeFi ecosystem. Pharos tracks peg deviation and supply for ZAR-pegged stablecoins, bringing transparency to this emerging market.`,
 
   CAD: `Canadian Dollar stablecoins provide on-chain CAD exposure for North American DeFi users. Pharos monitors peg accuracy and market metrics for CAD-pegged tokens.`,
+
+  CNH: `Offshore Yuan stablecoins provide on-chain CNH exposure for cross-border settlement and Asian DeFi markets. Because CNH trades separately from onshore CNY, Pharos evaluates CNH-pegged tokens against a dedicated offshore yuan FX reference rather than folding them into the CNY bucket.`,
 
   PHP: `Philippine Peso stablecoins serve the Southeast Asian remittance and DeFi market. Pharos tracks peg deviation and supply for PHP-pegged tokens.`,
 

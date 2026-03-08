@@ -26,7 +26,7 @@ The key distinction for `centralized-dependent`: these protocols may have on-cha
 
 ### Peg Currency
 
-`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `IDR`, `SGD`, `TRY`, `AUD`, `ZAR`, `CAD`, `CNY`, `PHP`, `MXN`, `UAH`, `ARS`, `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), `OTHER`
+`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `IDR`, `SGD`, `TRY`, `AUD`, `ZAR`, `CAD`, `CNY`, `CNH`, `PHP`, `MXN`, `UAH`, `ARS`, `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), `OTHER`
 
 ### Boolean Flags
 
@@ -67,7 +67,7 @@ Peg deviation for non-USD stablecoins requires knowing the USD value of the peg 
 
 For thin peg groups (often <3 qualifying coins), live `fxFallbackRates` from `sync-fx-rates.ts` are used when available. In `derivePegRates()`, if a peg group has fewer than 3 qualifying coins and a fallback rate exists, the fallback is used directly instead of the peer median. This prevents one or two coins from becoming their own unstable peg reference.
 
-Live FX rates are fetched every 15 minutes by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, MXN. RUB, UAH, and ARS use a secondary API (`fawazahmed0/exchange-api` via jsDelivr CDN) since ECB doesn't publish these currencies.
+Live FX rates are fetched every 15 minutes by `sync-fx-rates.ts` from frankfurter.app (ECB data) for EUR, GBP, CHF, BRL, JPY, IDR, SGD, TRY, AUD, ZAR, CAD, CNY, PHP, and MXN. CNH, RUB, UAH, and ARS use a secondary API (`fawazahmed0/exchange-api` via jsDelivr CDN) because Frankfurter/ECB does not cover the full set needed for peg evaluation.
 
 ## Commodity & Non-DefiLlama Stablecoins
 

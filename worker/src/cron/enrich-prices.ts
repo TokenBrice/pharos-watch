@@ -51,6 +51,7 @@ export const PRICE_BOUNDS: Record<string, [min: number, max: number]> = {
   ZAR: [0.01, 0.5],
   CAD: [0.30, 2],
   CNY: [0.01, 0.50],
+  CNH: [0.01, 0.50],
   PHP: [0.002, 0.10],
   MXN: [0.005, 0.20],
   UAH: [0.002, 0.15],

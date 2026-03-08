@@ -274,7 +274,7 @@ Used for FX rate sync (EUR, GBP, JPY, IDR, and 10+ other currencies against USD)
 | **Data freshness** | Updated daily ~16:00 CET (ECB business days only) |
 | **Historical data** | Back to January 4, 1999 |
 
-> **Caveat**: RUB (Russian Ruble) is not published by the ECB due to sanctions — hardcoded fallback of $0.011 in the codebase.
+> **Caveat**: Frankfurter is not sufficient for every tracked fiat peg. CNH is sourced separately, and RUB (Russian Ruble) still has a hardcoded fallback of $0.011 if the secondary feed is unavailable.
 
 ---
 
@@ -307,7 +307,7 @@ Fallback price source for non-USD fiat and commodity tokens when DefiLlama has n
 
 ## Currency API / fawazahmed0
 
-Fallback for FX rates when Frankfurter is unavailable.
+Used to extend FX coverage beyond Frankfurter, including CNH, and as the secondary source for RUB/UAH/ARS.
 
 | Resource | Limit |
 |---|---|

@@ -43,7 +43,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 - Reads `ADMIN_KEY` from environment first; falls back to `worker/.dev.vars`.
 - Defaults `WORKER_URL` to `https://api.pharos.watch`.
 - Uses `POST` requests (admin mutating endpoint contract).
-- Backfills the tracked gold stablecoins configured in the script (`xaut-tether`, `paxg-paxos`, `kau-kinesis`, `xaum-matrixdock`, `cgo-comtech`, `dgld-gold-token-sa`).
+- Backfills the tracked gold stablecoins configured in the script (`xaut-tether`, `paxg-paxos`, `kau-kinesis`, `xaum-matrixdock`, `cgo-comtech`, `dgld-gold-token-sa`, `pgold-pleasing`, `ggbr-goldfish-gold`).
 
 ### `fetch-logos.ts`
 

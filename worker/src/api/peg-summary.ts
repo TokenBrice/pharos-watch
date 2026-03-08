@@ -37,6 +37,7 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
     case "ZAR": return "peggedZAR";
     case "CAD": return "peggedCAD";
     case "CNY": return "peggedCNY";
+    case "CNH": return "peggedCNH";
     case "PHP": return "peggedPHP";
     case "MXN": return "peggedMXN";
     case "UAH": return "peggedUAH";

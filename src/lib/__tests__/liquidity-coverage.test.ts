@@ -16,6 +16,8 @@ const UNSUPPORTED_CHAINS = new Set([
   "cardano", "pulsechain", "abstract", "katana", "abcore", "flow",
   "provenance", "movement", "nibiru", "immutable-zkevm", "bsquared",
   "songbird", "sophon", "mezo", "bifrost", "hemi",
+  // Tracked for contract display, but not yet wired into the DEX liquidity pipeline
+  "conflux", "harmony",
 ]);
 
 describe("liquidity coverage", () => {

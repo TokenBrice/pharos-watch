@@ -8,7 +8,7 @@ describe("PRICE_BOUNDS", () => {
   it("has entries for all major peg types", () => {
     const expected = [
       "USD", "EUR", "GBP", "CHF", "BRL", "REAL", "JPY", "IDR", "SGD",
-      "TRY", "AUD", "RUB", "ZAR", "CAD", "CNY", "PHP", "MXN", "UAH",
+      "TRY", "AUD", "RUB", "ZAR", "CAD", "CNY", "CNH", "PHP", "MXN", "UAH",
       "ARS", "GOLD", "SILVER",
     ];
     for (const key of expected) {

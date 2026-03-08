@@ -1,10 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildFxLookup,
   extractDepegEvents,
+  fetchHistoricalSecondaryFxRates,
   findNearestSupply,
   parseSupplyData,
 } from "../backfill-depegs";
+import { mockD1 } from "./helpers/mock-d1";
+import { mockFetch } from "./helpers/mock-fetch";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("parseSupplyData", () => {
   it("ignores invalid dates and returns sorted snapshots", () => {
@@ -54,6 +61,70 @@ describe("buildFxLookup", () => {
       1.5,
     );
     expect(lookup(1_750)).toBe(1.2);
+  });
+});
+
+describe("fetchHistoricalSecondaryFxRates", () => {
+  it("fetches date-addressed secondary FX history and converts it to USD-per-unit", async () => {
+    mockFetch([
+      {
+        match: "@2025-06-14/v1/currencies/usd.min.json",
+        body: { date: "2025-06-14", usd: { cnh: 7.2, rub: 90 } },
+      },
+      {
+        match: "@2025-06-15/v1/currencies/usd.min.json",
+        body: { date: "2025-06-15", usd: { cnh: 7.25, rub: 91 } },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+    ]);
+
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH", "RUB"], "2025-06-14", "2025-06-15");
+
+    expect(series.CNH).toEqual([
+      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 7.2 },
+      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 7.25 },
+    ]);
+    expect(series.RUB).toEqual([
+      { timestamp: Math.floor(new Date("2025-06-14T00:00:00Z").getTime() / 1000), rate: 1 / 90 },
+      { timestamp: Math.floor(new Date("2025-06-15T00:00:00Z").getTime() / 1000), rate: 1 / 91 },
+    ]);
+  });
+
+  it("reuses cached secondary FX days and only fetches missing dates", async () => {
+    const fetchSpy = mockFetch([
+      {
+        match: "@2025-06-15/v1/currencies/usd.min.json",
+        body: { date: "2025-06-15", usd: { cnh: 7.25 } },
+      },
+    ]);
+
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            "2025-06-14": { cnh: 7.2 },
+          }),
+          updated_at: Math.floor(Date.now() / 1000),
+        },
+      },
+    ]);
+
+    const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-15");
+
+    expect(series.CNH).toHaveLength(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(fetchSpy.mock.calls[0]?.[0]).toContain("@2025-06-15/v1/currencies/usd.min.json");
   });
 });
 

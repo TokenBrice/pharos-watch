@@ -10,7 +10,8 @@ import { RUB_FALLBACK, USER_AGENT } from "../lib/constants";
  * Format matches FALLBACK_RATES in peg-rates.ts: { peggedEUR: 1.08, ... }
  * where the value is "USD per 1 unit of the currency".
  *
- * RUB is not published by ECB (sanctions) so we keep a hardcoded fallback.
+ * CNH, RUB, UAH, and ARS are sourced from a secondary currency API because
+ * Frankfurter/ECB does not publish them all directly.
  * Runs every 15 minutes.
  */
 
@@ -33,6 +34,13 @@ const CURRENCY_TO_PEG: Record<string, string> = {
   MXN: "peggedMXN",
 };
 
+const SECONDARY_CURRENCY_TO_PEG = {
+  cnh: "peggedCNH",
+  rub: "peggedRUB",
+  uah: "peggedUAH",
+  ars: "peggedARS",
+} as const;
+
 /** Generous bounds for USD-per-unit rates (~50%-200% of typical values).
  *  Any rate outside these bounds is almost certainly corrupted API data. */
 const FX_RATE_BOUNDS: Record<string, [number, number]> = {
@@ -49,6 +57,7 @@ const FX_RATE_BOUNDS: Record<string, [number, number]> = {
   peggedRUB: [0.003, 0.10],    // RUB ~$0.013
   peggedCAD: [0.40, 1.50],     // CAD ~$0.73
   peggedCNY: [0.05, 0.40],     // CNY ~$0.14
+  peggedCNH: [0.05, 0.40],     // CNH ~$0.14
   peggedPHP: [0.01, 0.06],     // PHP ~$0.018
   peggedMXN: [0.02, 0.15],     // MXN ~$0.058
   peggedUAH: [0.01, 0.10],     // UAH ~$0.024
@@ -138,7 +147,8 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
       }
     }
 
-    // Secondary: fetch RUB, UAH, ARS from fawazahmed0/exchange-api (ECB doesn't publish these)
+    // Secondary: fetch CNH, RUB, UAH, and ARS from fawazahmed0/exchange-api
+    // for currencies not reliably covered by Frankfurter/ECB.
     // CDN-backed, no rate limit. Response shape: { date: "...", usd: { rub: 76.5, ... } }
     try {
       const PRIMARY_URL = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.min.json";
@@ -155,12 +165,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
       }
       if (erRes && erRes.ok) {
         const erData = (await erRes.json()) as { usd?: Record<string, number> };
-        const secondaryCurrencies: Array<[string, string]> = [
-          ["rub", "peggedRUB"],
-          ["uah", "peggedUAH"],
-          ["ars", "peggedARS"],
-        ];
-        for (const [currency, pegKey] of secondaryCurrencies) {
+        for (const [currency, pegKey] of Object.entries(SECONDARY_CURRENCY_TO_PEG)) {
           const perUsd = erData?.usd?.[currency];
           if (typeof perUsd === "number" && perUsd > 0) {
             const rate = Number((1 / perUsd).toFixed(6));
@@ -173,7 +178,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
         }
       }
     } catch (e) {
-      console.warn("[sync-fx-rates] Secondary FX API (RUB/UAH/ARS) failed:", e);
+      console.warn("[sync-fx-rates] Secondary FX API (CNH/RUB/UAH/ARS) failed:", e);
       // Fall through to hardcoded fallback for RUB
     }
 
@@ -187,6 +192,11 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
         rates["peggedRUB"] = RUB_FALLBACK;
         console.log(`[sync-fx-rates] Using hardcoded RUB fallback: ${RUB_FALLBACK}`);
       }
+    }
+
+    if (!rates["peggedCNH"] && typeof prevRates["peggedCNH"] === "number" && prevRates["peggedCNH"] > 0) {
+      rates["peggedCNH"] = prevRates["peggedCNH"];
+      console.log(`[sync-fx-rates] Using cached CNH rate: ${rates["peggedCNH"]}`);
     }
 
     // Gold & silver spot prices (USD per troy ounce) from gold-api.com
@@ -230,7 +240,7 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
     }
 
     // Sanity check: we should have rates for all mapped currencies
-    const expected = Object.values(CURRENCY_TO_PEG);
+    const expected = [...Object.values(CURRENCY_TO_PEG), ...Object.values(SECONDARY_CURRENCY_TO_PEG)];
     const missing = expected.filter((k) => !(k in rates));
     if (Object.keys(rates).length === 0) {
       throw new Error("sync-fx-rates produced zero usable rates");
@@ -245,9 +255,14 @@ export async function syncFxRates(db: D1Database, signal?: AbortSignal): Promise
     const metadata = {
       rateCount: Object.keys(rates).length,
       missing: missing.length > 0 ? missing : undefined,
+      secondaryCoverage: Object.values(SECONDARY_CURRENCY_TO_PEG).filter((pegKey) => pegKey in rates).length,
       sources: {
         frankfurter: "ok",
-        fawazahmed0: rates["peggedRUB"] !== RUB_FALLBACK ? "ok" : "fallback",
+        fawazahmed0: Object.values(SECONDARY_CURRENCY_TO_PEG).every((pegKey) => pegKey in rates)
+          ? "ok"
+          : rates["peggedRUB"] !== RUB_FALLBACK
+            ? "partial"
+            : "fallback",
         "gold-api.com": metalsSource,
       },
     };

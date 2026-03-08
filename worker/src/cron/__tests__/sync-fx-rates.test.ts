@@ -34,7 +34,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -56,6 +56,14 @@ describe("syncFxRates", () => {
 
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.rateCount).toBeGreaterThan(5);
+    expect(metadata.sources.fawazahmed0).toBe("ok");
+
+    const write = db.getHistory().find(
+      (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "fx-rates",
+    );
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedCNH).toBeCloseTo(1 / 7.28, 6);
+    expect(cachedRates.peggedCNH).not.toBe(cachedRates.peggedCNY);
   });
 
   it("falls back to cached rates when frankfurter.app is unavailable", async () => {
@@ -84,7 +92,7 @@ describe("syncFxRates", () => {
     expect(metadata.fallbackMode).toBe("cached-fx-rates");
   });
 
-  it("uses secondary API for RUB/UAH/ARS rates", async () => {
+  it("uses secondary API for CNH/RUB/UAH/ARS rates", async () => {
     mockFetch([
       {
         match: "frankfurter.app",
@@ -96,7 +104,7 @@ describe("syncFxRates", () => {
       },
       {
         match: "currency-api",
-        body: { usd: { rub: 90, uah: 41, ars: 1400 } },
+        body: { usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400 } },
       },
       {
         match: "gold-api.com/price/XAU",
@@ -115,6 +123,7 @@ describe("syncFxRates", () => {
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
     // Should include gold and silver prices
-    expect(metadata.rateCount).toBeGreaterThanOrEqual(14);
+    expect(metadata.rateCount).toBeGreaterThanOrEqual(20);
+    expect(metadata.secondaryCoverage).toBe(4);
   });
 });

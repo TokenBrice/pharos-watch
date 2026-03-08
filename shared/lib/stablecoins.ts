@@ -45,7 +45,7 @@ const other = (id: string, name: string, symbol: string, backing: StablecoinMeta
  *
  * Classification flags:
  *   backing:      rwa-backed | crypto-backed | algorithmic
- *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | IDR | SGD | TRY | AUD | ZAR | CAD | CNY | PHP | MXN | UAH | ARS | GOLD | SILVER | VAR | OTHER
+ *   pegCurrency:  USD | EUR | GBP | CHF | BRL | RUB | JPY | IDR | SGD | TRY | AUD | ZAR | CAD | CNY | CNH | PHP | MXN | UAH | ARS | GOLD | SILVER | VAR | OTHER
  *   governance:   centralized | centralized-dependent | decentralized
  *   yieldBearing: token itself accrues yield
  *   rwa:          backed by real-world assets (treasuries, bonds, etc.)
@@ -2546,7 +2546,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
   usd("ebusd-ebisu", "Ebisu ebUSD", "ebUSD", "crypto-backed", "centralized-dependent", {
-    detailProvider: "coingecko",
+    llamaId: "288",
     geckoId: "ebusd-stablecoin",
     deploymentModel: "native-multichain",
     collateral: "Overcollateralized CDP markets on Ethereum and Plasma using weETH, sUSDe, WBTC, stcUSD, and XAUt0, with additional configured WETH, XPL, and LBTC branches",
@@ -3326,6 +3326,69 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
       { chain: "avalanche", address: "0xe7c3d8c9a439fede00d2600032d5db0be71c3c29", decimals: 18 },
     ],
   }),
+  other("axcnh-anchorx", "AxCNH", "AxCNH", "rwa-backed", "centralized", "CNH", {
+    detailProvider: "coingecko",
+    geckoId: "axcnh",
+    collateral: "Offshore Chinese yuan (CNH) cash reserves held 1:1 at regulated financial institutions; issuer materials describe AxCNH as fully reserved and redeemable for CNH",
+    pegMechanism: "Direct 1:1 issuance and redemption through AnchorX for CNH transfers; the issuer publishes reported circulating AxCNH and corresponding CNH reserves on its transparency page",
+    links: [
+      { label: "Website", url: "https://www.anchorx.org/" },
+      { label: "Twitter", url: "https://x.com/AnchorX_Ltd" },
+    ],
+    jurisdiction: { country: "Kazakhstan", regulator: "AFSA", license: "AFSA-A-LA-2025-0013" },
+    contracts: [
+      { chain: "conflux", address: "0x70bfd7f7eadf9b9827541272589a6b2bb760ae2e", decimals: 6 },
+      { chain: "ethereum", address: "0x2925ac3be7d585874b88ea51ed50add376ad8239", decimals: 6 },
+    ],
+    reserves: [
+      { name: "CNH cash reserves at regulated financial institutions", pct: 100, risk: "very-low" },
+    ],
+  }),
+  other("idrt-rupiah-token", "Rupiah Token", "IDRT", "rwa-backed", "centralized", "IDR", {
+    detailProvider: "coingecko",
+    geckoId: "rupiah-token",
+    deploymentModel: "native-multichain",
+    collateral: "Indonesian rupiah bank deposits held 1:1 by PT Rupiah Token Indonesia; issuer materials describe full fiat backing with regular bank reporting",
+    pegMechanism: "Direct 1:1 issuance and redemption through PT Rupiah Token Indonesia after KYC; the issuer publishes bank-reporting and smart-contract audit materials",
+    links: [
+      { label: "Website", url: "https://www.rupiahtoken.com/" },
+      { label: "Twitter", url: "https://x.com/RupiahTokenIDRT" },
+    ],
+    jurisdiction: { country: "Indonesia" },
+    contracts: [
+      { chain: "ethereum", address: "0x998ffe1e43facffb941dc337dd0468d52ba5b48a", decimals: 2 },
+      { chain: "bsc", address: "0x66207e39bb77e6b99aab56795c7c340c08520d83", decimals: 2 },
+      { chain: "harmony", address: "0xcefbea899cfccdc653b171d063481b622086be3f", decimals: 2 },
+      { chain: "polygon", address: "0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b", decimals: 6 },
+    ],
+    reserves: [
+      { name: "IDR bank deposits", pct: 100, risk: "very-low" },
+    ],
+  }),
+  other("tryb-bilira", "BiLira", "TRYB", "rwa-backed", "centralized", "TRY", {
+    llamaId: "300",
+    geckoId: "bilira",
+    deploymentModel: "native-multichain",
+    collateral: "Turkish lira cash reserves held 1:1 by BiLira; issuer materials describe full fiat backing for minted TRYB across supported chains",
+    pegMechanism: "Direct 1:1 issuance and redemption through BiLira; issuer-managed native deployments extend TRYB across multiple chains",
+    links: [
+      { label: "Website", url: "https://www.bilira.co/en/product/tryb-stablecoin" },
+      { label: "Twitter", url: "https://x.com/BiLira_Official" },
+    ],
+    jurisdiction: { country: "Turkey" },
+    contracts: [
+      { chain: "ethereum", address: "0x2c537e5624e4af88a7ae4060c022609376c8d0eb", decimals: 6 },
+      { chain: "base", address: "0xfb8718a69aed7726afb3f04d2bd4bfde1bdcb294", decimals: 6 },
+      { chain: "bsc", address: "0xc1fdbed7dac39cae2ccc0748f7a80dc446f6a594", decimals: 6 },
+      { chain: "avalanche", address: "0x564a341df6c126f90cf3ecb92120fd7190acb401", decimals: 6 },
+      { chain: "polygon", address: "0x4fb71290ac171e1d144f7221d882becac7196eb5", decimals: 6 },
+      { chain: "plasma", address: "0x90729a45948c3078890bc80f2a4e7870a2ea4c5e", decimals: 6 },
+      { chain: "solana", address: "A94X2fRy3wydNShU4dRaDyap2UuoeWJGWyATtyp61WZf", decimals: 6 },
+    ],
+    reserves: [
+      { name: "TRY cash reserves", pct: 100, risk: "very-low" },
+    ],
+  }),
 
   // ── Gold-Pegged (not in DefiLlama stablecoins API — data via DefiLlama coins/protocol APIs) ──
   // commodityOunces: troy ounces per token (used for peg deviation normalization)
@@ -3437,6 +3500,41 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
     reserves: [
       { name: "Allocated LBMA Good Delivery PAMP gold (Swiss vaults)", pct: 100, risk: "very-low" },
+    ],
+  }),
+  other("pgold-pleasing", "Pleasing Gold", "PGOLD", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
+    rwa: true, commodityOunces: 1, geckoId: "pleasing-gold", protocolSlug: "pleasing-gold",
+    deploymentModel: "native-multichain",
+    collateral: "LBMA-standard 99.99% physical gold with 1 PGOLD representing 1 fine troy ounce; issuer materials describe fully gold-backed reserves and physical redemption support",
+    pegMechanism: "Issuer-managed gold-backed token with off-chain custody and redemption workflow; documentation describes physical redemption and delivery through the Pleasing platform subject to KYC and size requirements",
+    links: [
+      { label: "Website", url: "https://www.pleasinggold.com/" },
+      { label: "Docs", url: "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features" },
+      { label: "Twitter", url: "https://x.com/PleasingGolden" },
+    ],
+    contracts: [
+      { chain: "arbitrum", address: "0x3e76bb02286bfeaa89dd35f11253f2cbce634f91", decimals: 18 },
+      { chain: "apechain", address: "0x64ae250e044688ddd04262f17daca23c28d241c2", decimals: 18 },
+    ],
+    reserves: [
+      { name: "Physical gold bullion (LBMA-standard, 99.99% purity)", pct: 100, risk: "very-low" },
+    ],
+  }),
+  other("ggbr-goldfish-gold", "Goldfish Gold", "GGBR", "rwa-backed", "centralized", "GOLD", {
+    detailProvider: "commodity",
+    rwa: true, commodityOunces: 0.001, geckoId: "goldfish-gold",
+    collateral: "Issuer materials and CoinGecko describe GGBR as 1/1000th of a troy ounce of gold per token, backed through issuer-managed gold exposure on the balance sheet of I-On Digital",
+    pegMechanism: "Issuer-managed gold reference rather than on-chain redemption logic; GGBR is marketed as tracking fractional tokenized gold exposure off-chain",
+    links: [
+      { label: "Website", url: "https://goldfishgold.com/" },
+      { label: "Twitter", url: "https://x.com/goldfishggbr" },
+    ],
+    contracts: [
+      { chain: "ethereum", address: "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a", decimals: 18 },
+    ],
+    reserves: [
+      { name: "Issuer-managed gold backing / balance-sheet gold exposure", pct: 100, risk: "high" },
     ],
   }),
 
@@ -3734,7 +3832,7 @@ export const TRACKED_STABLECOINS: StablecoinMeta[] = [
     ],
   }),
 
-  // ── CAD / CNY / PHP / MXN / UAH / ARS pegs ───────────────────────────
+  // ── CAD / CNY / CNH / PHP / MXN / UAH / ARS pegs ─────────────────────
   other("cadc-cad-coin", "CAD Coin", "CADC", "rwa-backed", "centralized", "CAD", {
     llamaId: "145",
     geckoId: "cad-coin",

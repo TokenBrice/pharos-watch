@@ -250,6 +250,8 @@
   "gold-vro": "/logos/gold-vro.png",
   "kag-kinesis": "/logos/silver-kag.png",
   "jpyc-jpyc": "/logos/cg-jpyc.png",
+  "axcnh-anchorx": "/logos/cg-axcnh.png",
+  "idrt-rupiah-token": "/logos/cg-idrt.jpg",
   "eurq-quantoz": "/logos/cg-eurq.png",
   "deuro-deuro": "/logos/cg-deuro.png",
   "zarp-zarp": "/logos/cg-zarp.png",
@@ -263,6 +265,9 @@
   "usd-dinari": "/logos/cg-dinari-usd.png",
   "wsrusd-reservoir": "/logos/cg-wrapped-savings-rusd.png",
   "ebusd-ebisu": "/logos/cg-ebusd.png",
+  "tryb-bilira": "/logos/300-tryb.jpg",
+  "pgold-pleasing": "/logos/gold-pgold.png",
+  "ggbr-goldfish-gold": "/logos/gold-ggbr.svg",
   "usnd-nerite": "/logos/287-usnd.png",
   "usdaf-asymmetry": "/logos/295-usdaf.png"
 }

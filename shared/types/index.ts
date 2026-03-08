@@ -22,6 +22,7 @@ export type PegCurrency =
   | "ZAR"
   | "CAD"
   | "CNY"
+  | "CNH"
   | "PHP"
   | "MXN"
   | "UAH"
@@ -186,6 +187,7 @@ export type FilterTag =
   | "zar-peg"
   | "cad-peg"
   | "cny-peg"
+  | "cnh-peg"
   | "php-peg"
   | "mxn-peg"
   | "uah-peg"
@@ -212,6 +214,7 @@ export const OTHER_PEG_TAGS: FilterTag[] = [
   "zar-peg",
   "cad-peg",
   "cny-peg",
+  "cnh-peg",
   "php-peg",
   "mxn-peg",
   "uah-peg",
@@ -237,6 +240,7 @@ export const FILTER_TAG_LABELS: Record<FilterTag, string> = {
   "zar-peg": "ZAR",
   "cad-peg": "CAD",
   "cny-peg": "CNY",
+  "cnh-peg": "CNH",
   "php-peg": "PHP",
   "mxn-peg": "MXN",
   "uah-peg": "UAH",
@@ -284,6 +288,8 @@ export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
       return "cad-peg";
     case "CNY":
       return "cny-peg";
+    case "CNH":
+      return "cnh-peg";
     case "PHP":
       return "php-peg";
     case "MXN":
