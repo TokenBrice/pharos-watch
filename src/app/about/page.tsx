@@ -356,6 +356,9 @@ export default function AboutPage() {
             </CardContent>
           </Card>
         </div>
+        <p className="text-sm text-muted-foreground">
+          Telegram bot (@PharosWatcher) for per-coin alerts on DEWS state changes, depeg events, and safety grade changes.
+        </p>
       </div>
 
       {/* Section: Learn More About Pharos */}

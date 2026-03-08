@@ -42,6 +42,21 @@
 | `POST /api/backfill-mint-burn-prices` | Admin: backfill mint/burn event prices (requires `X-Admin-Key`) |
 | `GET /api/debug-sync-state` | Admin: view blacklist sync state for all chains (requires `X-Admin-Key`) |
 | `POST /api/feedback` | Public: submit feedback (bug, data-correction, feature-request). Rate-limited, auto-verified |
+| `POST /api/telegram-webhook` | Telegram bot webhook (command handling, subscription management) |
+
+## Database Tables
+
+| Table | Description |
+|-------|-------------|
+| `telegram_subscribers` | Bot subscriber preferences (`chat_id`, alert type flags) |
+| `telegram_subscriptions` | Per-user coin subscriptions (`chat_id`, `stablecoin_id`) |
+| `telegram_pending_disambiguation` | Ephemeral mid-conversation state for ticker disambiguation |
+
+## Cron Jobs
+
+| Job | Description |
+|-----|-------------|
+| `dispatch-telegram-alerts` | Detects DEWS/depeg/safety changes and fans out alerts to subscribers (runs on `*/15` and `0 8` triggers) |
 
 ## Full File Tree
 

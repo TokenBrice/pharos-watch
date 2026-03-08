@@ -59,7 +59,7 @@ The `Env` interface is defined in `worker/src/lib/env.ts` and consumed by `worke
 | `TWITTER_ACCESS_TOKEN_SECRET` | string | No | Digest → Twitter (access token secret) |
 | `TELEGRAM_BOT_TOKEN` | string | No | Digest → Telegram, bot chat replies, subscriber alert dispatch |
 | `TELEGRAM_CHAT_ID` | string | No | Digest → Telegram |
-| `TELEGRAM_WEBHOOK_SECRET` | string | No | `POST /api/telegram-webhook` shared-secret query validation |
+| `TELEGRAM_WEBHOOK_SECRET` | string | No | Random string for webhook URL validation (set via `wrangler secret put`) |
 | `MAINTENANCE_MODE` | `string?` | No | Optional. When set to the exact string `"true"`, the worker returns 503 for all non-admin requests. Used as a kill switch. |
 | `MINT_BURN_DISABLED_IDS` | string | No | Mint/burn runtime disable list by stablecoin ID (CSV) |
 | `MINT_BURN_DISABLED_SYMBOLS` | string | No | Mint/burn runtime disable list by symbol (CSV) |
@@ -248,14 +248,21 @@ crons = [
 |-----|----------|------|---------------|
 | `snapshot-supply` | `snapshotSupply()` | `worker/src/cron/snapshot-supply.ts` | `docs/supply-snapshot.md` |
 | `snapshot-safety-grade-history` | `snapshotSafetyGradeHistory()` | `worker/src/cron/snapshot-safety-grade-history.ts` | `docs/report-cards.md` |
-| `dispatch-telegram-alerts-daily` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | This doc (below) |
+| `dispatch-telegram-alerts` | `dispatchTelegramAlerts()` | `worker/src/cron/dispatch-telegram-alerts.ts` | This doc (below) |
 | `snapshot-psi` | `snapshotPsiDaily()` | `worker/src/cron/snapshot-psi.ts` | `docs/stability-index.md` |
 | `sync-usds-status` | `syncUsdsStatus()` | `worker/src/cron/sync-usds-status.ts` | This doc (below) |
 | `sync-bluechip` | `syncBluechip()` | `worker/src/cron/sync-bluechip.ts` | This doc (below) |
 | `daily-digest` | `generateDailyDigest()` | `worker/src/cron/daily-digest.ts` | `docs/digest-pipeline.md` |
 | `fetch-tbill-rate` | `fetchTbillRate()` | `worker/src/cron/fetch-tbill-rate.ts` | `docs/yield-intelligence.md` |
 
-**Dependencies:** `dispatch-telegram-alerts-daily` is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
+**Dependencies:** `dispatch-telegram-alerts` (daily pass) is chained off `snapshot-safety-grade-history` (`safetyGradePromise.then(...)`) so safety diffs use fresh daily grades. Daily digest waits for `snapshotPsiDaily()` to complete (`psiPromise.then(...)`), since PSI data must be fresh before the LLM call.
+
+## Telegram Alert Bot
+
+- Webhook ingress (`POST /api/telegram-webhook`) receives Telegram commands and writes subscriber/subscription state into D1.
+- `dispatch-telegram-alerts` diffs DEWS/depeg/safety state against cached snapshots before fan-out.
+- Telegram sends are gated by the `telegram-api` circuit breaker to avoid hammering the Bot API during upstream issues.
+- Each dispatch run sends at most 50 Telegram messages.
 
 ### Sub-Modules (not directly registered)
 

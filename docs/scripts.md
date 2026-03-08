@@ -20,6 +20,7 @@ Operational and CI helper scripts live in `scripts/`. They support build integri
 | `scripts/update-critical-coverage-baseline.mjs` | Refresh `.ci/critical-coverage-baseline.json` from current report | `coverage/lcov.info` | Updates baseline coverage ratchet file |
 | `scripts/fetch-logos.ts` | Refresh logo map from DefiLlama + CoinGecko | Public APIs | Writes `data/logos.json` |
 | `scripts/backfill-gold-depegs.sh` | Batch-run depeg backfill for gold coins | `WORKER_URL`, `ADMIN_KEY` (or `worker/.dev.vars`) | Calls `/api/backfill-depegs?stablecoin=...` per gold coin |
+| `scripts/register-telegram-webhook.sh` | One-time Telegram webhook registration | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Calls Telegram `setWebhook` for `https://api.pharos.watch/api/telegram-webhook?secret=...` |
 | `scripts/screenshot-og.mjs` | Capture OG images for public pages | Playwright + live `pharos.watch` | Writes `public/og-*.png` |
 
 ## CI-Critical Scripts

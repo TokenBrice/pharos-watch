@@ -1427,28 +1427,27 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 ---
 
-### `POST /api/telegram-webhook`
+### POST /api/telegram-webhook
 
-Internal webhook ingress endpoint for Telegram bot commands. It accepts Telegram update payloads, validates the shared secret from the `?secret=` query parameter, and processes `/start`, `/help`, `/list`, `/subscribe`, and `/unsubscribe`.
+Telegram Bot API webhook endpoint. Receives user messages, processes bot commands, and manages subscriptions.
 
-**Cache:** no edge cache (POST passthrough)
+**Authentication:** Secret query parameter (`?secret=...`), not the standard `X-Admin-Key`.
 
-**Rate limits**
-- Exempt from the global public API IP limiter.
+**Rate limiting:** Exempt from IP rate limiter (Telegram sends from fixed IPs).
 
-**Behavior**
-- Always returns `200 OK` so Telegram does not retry on handler-side validation failures.
-- Silently ignores requests with a missing/incorrect `secret` query param.
-- Silently ignores malformed JSON and non-message updates.
-- Uses `telegram_pending_disambiguation` to pause `/subscribe` flows when a symbol matches multiple tracked stablecoins.
+**Cache:** no-store
 
-**Command semantics**
-- `/start`: sends the quick-start welcome message.
-- `/help`: sends the command reference.
-- `/list`: returns the current alert flags plus subscribed stablecoins for the chat.
-- `/subscribe <types> <tickers>`: validates alert types (`dews`, `depeg`, `safety`), resolves symbols left-to-right, upserts `telegram_subscribers`, and `INSERT OR IGNORE`s rows into `telegram_subscriptions`.
-- `/unsubscribe <tickers>`: removes matching `telegram_subscriptions` rows.
-- `/unsubscribe all`: clears all coin subscriptions and resets all alert flags to `0`.
+**Request body:** Telegram Update object (JSON, sent by Telegram servers).
+
+**Response:** Always `200 OK` (Telegram retries on non-2xx).
+
+**Commands handled:**
+- `/start` — Welcome message
+- `/subscribe <types> <tickers>` — Subscribe to alerts (types: dews, depeg, safety)
+- `/unsubscribe <tickers>` — Remove coin subscriptions
+- `/unsubscribe all` — Remove all subscriptions
+- `/list` — Show current subscriptions
+- `/help` — Command reference
 
 ---
 
