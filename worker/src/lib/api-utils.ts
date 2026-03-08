@@ -398,8 +398,8 @@ export function createCacheHandler(
         (parsed as Record<string, unknown>)._meta = buildFreshnessMeta(cached.updatedAt, maxAgeSec);
         return new Response(JSON.stringify(parsed), { headers });
       }
-    } catch {
-      // If JSON parse fails, fall through to raw response
+    } catch (err) {
+      console.warn(`[cache] Failed to inject _meta into ${endpoint}:`, err instanceof Error ? err.message : err);
     }
 
     return new Response(cached.value, { headers });

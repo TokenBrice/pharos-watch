@@ -95,7 +95,13 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     source_pool_count: number;
     source_total_tvl: number;
     updated_at: number;
-  }>().catch(() => ({ results: [] as never[] }));
+  }>().catch((err) => {
+    console.warn(
+      "[peg-summary] DEX price query failed, falling back to empty:",
+      err instanceof Error ? err.message : err,
+    );
+    return { results: [] as never[] };
+  });
   const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
     peggedAssets,
     fxFallbackRates,

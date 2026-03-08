@@ -79,6 +79,8 @@ export async function detectDepegEvents(
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("no such table")) {
       console.error("[depeg] Unexpected error loading dex_prices metadata:", msg);
+    } else {
+      console.info("[depeg] dex_prices table not yet created, skipping DEX metadata");
     }
   }
 
