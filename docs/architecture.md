@@ -352,6 +352,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── confirm-pending-depegs.ts # Secondary depeg confirmation for major coins (>$1B)
     │   ├── daily-digest.ts       # AI-generated daily market summary via Claude API (daily, 8AM UTC)
     │   ├── compute-dews.ts       # DEWS computation cron (every 15min, after sync-stablecoins)
+    │   ├── dispatch-telegram-alerts.ts # Subscriber alert fan-out for DEWS/depeg/safety transitions (every 15min + daily post-safety snapshot pass)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)

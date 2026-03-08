@@ -260,6 +260,7 @@ describe("handleStatus", () => {
       "fetch-tbill-rate",
       "compute-dews",
       "status-self-check",
+      "dispatch-telegram-alerts",
     ];
     const cronRows = jobs.map((job) => makeCronRow(job, job === "fetch-tbill-rate" ? "degraded" : "ok", 30));
     const db = mockD1([

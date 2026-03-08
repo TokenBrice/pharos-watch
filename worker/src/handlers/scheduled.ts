@@ -16,6 +16,7 @@ import { snapshotPsiDaily } from "../cron/snapshot-psi";
 import { syncYieldData } from "../cron/sync-yield-data";
 import { fetchTbillRate } from "../cron/fetch-tbill-rate";
 import { computeAndStoreDEWS } from "../cron/compute-dews";
+import { dispatchTelegramAlerts } from "../cron/dispatch-telegram-alerts";
 import { runStatusSelfCheck } from "../cron/status-self-check";
 import { initChainRpcs } from "../lib/chain-registry";
 import { initAlerts, sendAlert } from "../lib/alerts";
@@ -155,6 +156,13 @@ export async function handleScheduledEvent(
         // Status system self-check: persists hysteresis state and probes critical endpoints.
         await runQuarterHourlyJob("status-self-check", (signal) => runStatusSelfCheck(db, env.ADMIN_KEY, env.SELF_URL, signal));
 
+        // Telegram alert dispatch — must run LAST, after sync-stablecoins + compute-dews
+        if (env.TELEGRAM_BOT_TOKEN) {
+          await runQuarterHourlyJob("dispatch-telegram-alerts", (signal) =>
+            dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
+          );
+        }
+
         // Periodic health alert: warn if stablecoins cache is stale for 30+ minutes
         try {
           const cached = await getCache(db, "stablecoins");
@@ -270,7 +278,15 @@ export async function handleScheduledEvent(
     }
     case CRON_SCHEDULES.daily0800Utc: {
       ctx.waitUntil(runLeasedCron("snapshot-supply", (signal) => snapshotSupply(db, signal)));
-      ctx.waitUntil(runLeasedCron("snapshot-safety-grade-history", (signal) => snapshotSafetyGradeHistory(db, signal)));
+      const safetyGradePromise = runLeasedCron("snapshot-safety-grade-history", (signal) => snapshotSafetyGradeHistory(db, signal));
+      ctx.waitUntil(safetyGradePromise);
+      if (env.TELEGRAM_BOT_TOKEN) {
+        ctx.waitUntil(safetyGradePromise.then(() =>
+          runLeasedCron("dispatch-telegram-alerts-daily", (signal) =>
+            dispatchTelegramAlerts(db, env.TELEGRAM_BOT_TOKEN!, signal),
+          ),
+        ));
+      }
       ctx.waitUntil(runLeasedCron("fetch-tbill-rate", (signal) => fetchTbillRate(db, signal)));
       const psiPromise = runLeasedCron("snapshot-psi", (signal) => snapshotPsiDaily(db, signal));
       ctx.waitUntil(psiPromise);

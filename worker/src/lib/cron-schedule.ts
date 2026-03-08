@@ -20,6 +20,7 @@ const CRON_JOB_DEFINITIONS: readonly CronJobDefinition[] = [
   { job: "stability-index", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
   { job: "compute-dews", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
   { job: "status-self-check", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
+  { job: "dispatch-telegram-alerts", intervalSec: 900, schedule: CRON_SCHEDULES.quarterHourly },
   { job: "sync-blacklist", intervalSec: 1200, schedule: CRON_SCHEDULES.twentyMinuteOffset },
   { job: "sync-mint-burn", intervalSec: 1200, schedule: CRON_SCHEDULES.twentyMinuteOffset },
   { job: "sync-dex-liquidity", intervalSec: 1800, schedule: CRON_SCHEDULES.halfHourlyOffset },
