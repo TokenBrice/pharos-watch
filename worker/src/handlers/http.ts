@@ -98,7 +98,7 @@ export async function handleHttpRequest(
   }
 
   const url = new URL(request.url);
-  if (url.pathname.startsWith("/api/") && !isAdminRequest(request, env.ADMIN_KEY)) {
+  if (url.pathname.startsWith("/api/") && url.pathname !== "/api/telegram-webhook" && !isAdminRequest(request, env.ADMIN_KEY)) {
     const rateLimitResponse = checkRateLimit(getClientIp(request));
     if (rateLimitResponse) {
       return addCorsHeaders(rateLimitResponse, origin);
@@ -131,6 +131,8 @@ export async function handleHttpRequest(
     env.ANTHROPIC_API_KEY ?? null,
     twitterCreds,
     telegramCreds,
+    env.TELEGRAM_WEBHOOK_SECRET,
+    env.TELEGRAM_BOT_TOKEN,
   );
 
   if (!response) {

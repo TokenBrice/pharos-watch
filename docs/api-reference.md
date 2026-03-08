@@ -1427,6 +1427,20 @@ Public feedback ingestion endpoint used by the in-app feedback modal. Validates 
 
 ---
 
+### `POST /api/telegram-webhook`
+
+Internal webhook ingress endpoint reserved for Telegram bot updates. The endpoint is registered in the API contract and router, but the handler is intentionally a placeholder until Phase 3.
+
+**Cache:** no edge cache (POST passthrough)
+
+**Rate limits**
+- Exempt from the global public API IP limiter.
+
+**Current behavior**
+- Returns `501 Not yet implemented`.
+
+---
+
 ## Admin Endpoints
 
 These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker secret. Unauthorized requests receive a `401` response. They are not intended for public consumption.

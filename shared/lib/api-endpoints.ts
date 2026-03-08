@@ -240,6 +240,13 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     mutatingAdmin: false,
     cacheBypass: true,
   },
+  {
+    path: "/api/telegram-webhook",
+    methods: ["POST"],
+    adminRequired: false,
+    mutatingAdmin: false,
+    cacheBypass: true,
+  },
 
   // Admin status/probe endpoints.
   {

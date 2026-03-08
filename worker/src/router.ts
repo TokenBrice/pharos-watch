@@ -57,6 +57,8 @@ interface RouteContext {
   anthropicApiKey?: string | null;
   twitterCreds?: TwitterCreds | null;
   telegramCreds?: TelegramCreds | null;
+  telegramWebhookSecret?: string;
+  telegramBotToken?: string;
 }
 
 type StaticRouteHandler = (context: RouteContext) => Promise<Response>;
@@ -142,6 +144,7 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     }
     return handleFeedback(db, request, feedbackEnv ?? {});
   })],
+  ["/api/telegram-webhook", () => Promise.resolve(errorResponse(501, "Not yet implemented"))],
   ["/api/trigger-digest", withErrorHandler("route-trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
@@ -261,6 +264,8 @@ export function route(
   anthropicApiKey?: string | null,
   twitterCreds?: TwitterCreds | null,
   telegramCreds?: TelegramCreds | null,
+  telegramWebhookSecret?: string,
+  telegramBotToken?: string,
 ): Promise<Response> | null {
   const path = url.pathname;
   const methodValidation = validateEndpointMethod(url, request?.method ?? "GET");
@@ -284,6 +289,8 @@ export function route(
       anthropicApiKey,
       twitterCreds,
       telegramCreds,
+      telegramWebhookSecret,
+      telegramBotToken,
     }).then((response) => addAdminGetNoStoreHeader(path, request, response));
   }
 

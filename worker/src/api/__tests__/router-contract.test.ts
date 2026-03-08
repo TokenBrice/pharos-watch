@@ -65,6 +65,10 @@ describe("router contract: strict frontend paths are routable", () => {
           endpoint.path === "/api/audit-depeg-history" &&
           method === "GET" &&
           path.includes("dry-run=true");
+        const expectedPublicStatuses =
+          endpoint.path === "/api/telegram-webhook"
+            ? [200, 400, 501, 502, 503]
+            : [200, 400, 502, 503];
 
         if (endpoint.routerHandled === false) {
           const response = await worker.fetch(
@@ -77,7 +81,7 @@ describe("router contract: strict frontend paths are routable", () => {
           } else if (endpoint.adminRequired) {
             expect(response.status).toBe(401);
           } else {
-            expect([200, 400, 502, 503]).toContain(response.status);
+            expect(expectedPublicStatuses).toContain(response.status);
           }
         } else {
           const response = await route(
@@ -95,7 +99,7 @@ describe("router contract: strict frontend paths are routable", () => {
           } else if (endpoint.adminRequired) {
             expect(response!.status).toBe(401);
           } else {
-            expect([200, 400, 502, 503]).toContain(response!.status);
+            expect(expectedPublicStatuses).toContain(response!.status);
           }
         }
       }

@@ -22,6 +22,7 @@ export interface Env {
   TWITTER_ACCESS_TOKEN_SECRET?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  TELEGRAM_WEBHOOK_SECRET?: string;
   MINT_BURN_DISABLED_IDS?: string;
   MINT_BURN_DISABLED_SYMBOLS?: string;
   MINT_BURN_MAJOR_SYMBOLS?: string;
