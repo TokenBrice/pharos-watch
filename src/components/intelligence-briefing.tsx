@@ -6,6 +6,7 @@ import { useStabilityIndex } from "@/hooks/use-stability-index";
 import { usePegSummary } from "@/hooks/use-peg-summary";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import {
   buildBriefing,
   type BriefingInput,
@@ -293,6 +294,7 @@ const LINE_BULLETS: Record<string, string> = {
 
 export function IntelligenceBriefing() {
   const { input, isLoading, allErrored } = useBriefingInput();
+  const { delayFor } = useEntranceSequence();
 
   const briefing = useMemo<BriefingOutput | null>(
     () => (input ? buildBriefing(input) : null),
@@ -317,7 +319,13 @@ export function IntelligenceBriefing() {
       aria-label="Intelligence Briefing"
     >
       {/* Headline */}
-      <p className="text-sm font-semibold leading-snug text-foreground">
+      <p
+        className="text-sm font-semibold leading-snug text-foreground"
+        style={{
+          animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
+          animationDelay: `${delayFor("briefing", 0)}ms`,
+        }}
+      >
         {renderHeadline(briefing.headline, briefing.bandKeyword)}
       </p>
 
@@ -328,6 +336,10 @@ export function IntelligenceBriefing() {
             <li
               key={i}
               className="flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground"
+              style={{
+                animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
+                animationDelay: `${delayFor("briefing-lines", i)}ms`,
+              }}
             >
               <span
                 className="mt-px shrink-0 text-[9px] opacity-50"

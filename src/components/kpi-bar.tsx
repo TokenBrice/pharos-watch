@@ -11,6 +11,7 @@ import { useDexLiquidity } from "@/hooks/use-dex-liquidity";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { useStressSignals } from "@/hooks/use-stress-signals";
 import { useCountUp } from "@/hooks/use-count-up";
+import { useEntranceSequence } from "@/hooks/use-entrance-sequence";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { formatCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
@@ -382,6 +383,9 @@ export function KpiBar() {
     return { danger, alert, warning };
   }, [stressData]);
 
+  /* ---------- entrance choreography (hooks must be called unconditionally) ---------- */
+  const { delayFor } = useEntranceSequence();
+
   /* ---------- count-up animations (hooks must be called unconditionally) ---------- */
   const mcapAbbr = abbreviate(totalMcap);
   const animatedPsi = useCountUp(psiScoreNum ?? 0, { decimals: 1 });
@@ -522,29 +526,49 @@ export function KpiBar() {
       )}
 
       <div className="space-y-2.5 px-3 py-3 lg:hidden">
-        <PrimarySnapshotCard
-          value={psiScoreDisplay}
-          band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
-          delta24h={psiDelta24hValue}
-          delta7d={psiDelta7dValue}
-          valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
-        />
+        <div
+          style={{
+            animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
+            animationDelay: `${delayFor("kpi", 0)}ms`,
+          }}
+        >
+          <PrimarySnapshotCard
+            value={psiScoreDisplay}
+            band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
+            delta24h={psiDelta24hValue}
+            delta7d={psiDelta7dValue}
+            valueClassName={hasPsiData ? psiColorClass : "text-muted-foreground"}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-2">
-          {metricDefinitions.map((metric) => (
-            <KpiMiniTile
+          {metricDefinitions.map((metric, i) => (
+            <div
               key={metric.key}
-              label={metric.mobileLabel}
-              value={metric.value}
-              metaPrimary={metric.mobileMetaPrimary}
-              metaSecondary={metric.mobileMetaSecondary}
-              valueClassName={metric.mobileValueClassName}
-            />
+              style={{
+                animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
+                animationDelay: `${delayFor("kpi", i + 1)}ms`,
+              }}
+            >
+              <KpiMiniTile
+                label={metric.mobileLabel}
+                value={metric.value}
+                metaPrimary={metric.mobileMetaPrimary}
+                metaSecondary={metric.mobileMetaSecondary}
+                valueClassName={metric.mobileValueClassName}
+              />
+            </div>
           ))}
         </div>
       </div>
 
       <div className="hidden grid-cols-[minmax(0,1.1fr)_repeat(4,minmax(0,0.92fr))] divide-x divide-border/50 lg:grid">
-        <div className="px-4 py-3">
+        <div
+          className="px-4 py-3"
+          style={{
+            animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
+            animationDelay: `${delayFor("kpi", 0)}ms`,
+          }}
+        >
           <PrimarySnapshotCard
             value={psiScoreDisplay}
             band={hasPsiData ? `${psiBandDisplay} for ${psiDaysInBand}d` : ""}
@@ -554,14 +578,21 @@ export function KpiBar() {
           />
         </div>
 
-        {metricDefinitions.map((metric) => (
-          <KpiCell
+        {metricDefinitions.map((metric, i) => (
+          <div
             key={metric.key}
-            label={metric.desktopLabel}
-            value={metric.value}
-            valueClassName={`text-lg${metric.desktopValueClassName ? ` ${metric.desktopValueClassName}` : ""}`}
-            sublabel={metric.desktopSublabel}
-          />
+            style={{
+              animation: "pharos-fade-in-up var(--motion-duration-entrance) var(--motion-ease-standard) both",
+              animationDelay: `${delayFor("kpi", i + 1)}ms`,
+            }}
+          >
+            <KpiCell
+              label={metric.desktopLabel}
+              value={metric.value}
+              valueClassName={`text-lg${metric.desktopValueClassName ? ` ${metric.desktopValueClassName}` : ""}`}
+              sublabel={metric.desktopSublabel}
+            />
+          </div>
         ))}
       </div>
     </Card>
