@@ -133,14 +133,17 @@ function DepegEntry({
   entry,
   logos,
   visClass,
+  staggerIndex,
 }: {
   entry: DepegItem;
   logos?: Record<string, string>;
   visClass: string;
+  staggerIndex?: number;
 }) {
   return (
     <Link
       href={buildStablecoinUrl(entry.id)}
+      style={staggerIndex != null ? { '--stagger-index': staggerIndex } as React.CSSProperties : undefined}
       className={`${visClass} pharos-focus-ring group items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40`}
     >
       <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={16} />
@@ -158,15 +161,18 @@ function MoverEntry({
   entry,
   logos,
   visClass,
+  staggerIndex,
 }: {
   entry: MoverItem;
   logos?: Record<string, string>;
   visClass: string;
+  staggerIndex?: number;
 }) {
   const isGrower = entry.pctChange >= 0;
   return (
     <Link
       href={buildStablecoinUrl(entry.id)}
+      style={staggerIndex != null ? { '--stagger-index': staggerIndex } as React.CSSProperties : undefined}
       className={`${visClass} pharos-focus-ring group items-center gap-1.5 rounded-md px-1.5 py-1 transition-[background-color,color] duration-150 hover:bg-muted/40`}
     >
       <StablecoinLogo src={logos?.[entry.id]} name={entry.name} size={16} />
@@ -239,13 +245,14 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
           {depegs.length === 0 ? (
             <p className="text-xs text-muted-foreground">All on-peg</p>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+            <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
               {depegs.map((d, i) => (
                 <DepegEntry
                   key={d.id}
                   entry={d}
                   logos={logos}
                   visClass={DEPEG_VIS[i] ?? "hidden"}
+                  staggerIndex={i}
                 />
               ))}
             </div>
@@ -259,25 +266,27 @@ export function MarketHighlights({ data, logos, pegRates }: MarketHighlightsProp
           ) : (
             <div className="space-y-1">
               {growers.length > 0 && (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+                <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
                   {growers.map((g, i) => (
                     <MoverEntry
                       key={g.id}
                       entry={g}
                       logos={logos}
                       visClass={MOVER_VIS[i] ?? "hidden"}
+                      staggerIndex={i}
                     />
                   ))}
                 </div>
               )}
               {shrinkers.length > 0 && (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
+                <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1">
                   {shrinkers.map((s, i) => (
                     <MoverEntry
                       key={s.id}
                       entry={s}
                       logos={logos}
                       visClass={MOVER_VIS[i] ?? "hidden"}
+                      staggerIndex={i}
                     />
                   ))}
                 </div>

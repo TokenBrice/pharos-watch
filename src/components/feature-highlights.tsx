@@ -125,11 +125,12 @@ export function FeatureHighlights() {
   return (
     <section>
       <h2 className="mb-4 text-xl font-semibold tracking-tight">Explore</h2>
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-        {selected.map((f) => (
+      <div className="pharos-stagger-entrance grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+        {selected.map((f, i) => (
           <Link
             key={f.href}
             href={f.href}
+            style={{ '--stagger-index': i } as React.CSSProperties}
             className={cn(
               "pharos-card-shell pharos-focus-ring pharos-interactive-card group flex flex-col gap-2 border-l-[3px] bg-gradient-to-b from-background/40 to-transparent p-4",
               f.borderClass,
