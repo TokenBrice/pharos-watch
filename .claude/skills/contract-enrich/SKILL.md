@@ -265,7 +265,7 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy)
 
 ### Step 1 — Load our stablecoin data
 
-1. Read `src/lib/stablecoins.ts`
+1. Read `shared/lib/stablecoins.ts`
 2. For each stablecoin, extract: `id`, `symbol`, `name`, `llamaId`, `geckoId`, `contracts[]` (list of chain IDs already populated)
 
 ### Step 2 — Fetch DefiLlama data
@@ -372,7 +372,7 @@ For each address found:
 ### Step 4 — Check for new chains
 
 If the gap chain is not in `CHAIN_META`:
-1. Add it to `src/lib/chains.ts` following the pattern from contract-populate skill
+1. Add it to `shared/lib/chains.ts` following the pattern from contract-populate skill
 2. Use this reference table for common new chains:
 
 Common new chains reference:

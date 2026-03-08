@@ -17,7 +17,7 @@ Identify stablecoins where the default inference (from backing + governance) is 
 
 ### Step 1 — Identify candidates
 
-Read all coins from `src/lib/stablecoins.ts`. For each, apply the default inference rules (see `inferResilienceDefaults()` in `src/lib/report-cards.ts`). Flag coins where the default is likely wrong based on:
+Read all coins from `shared/lib/stablecoins.ts`. For each, apply the default inference rules (see `inferResilienceDefaults()` in `src/lib/report-cards.ts`). Flag coins where the default is likely wrong based on:
 
 - `collateral` text containing keywords: "Solana", "tBTC", "WBTC", "delta-neutral", "perpetual", "CEX", "off-exchange", "Copper", "Ceffu", "Fireblocks", "bridged"
 - `pegMechanism` text containing: "Solana", "Bitcoin L2", "not Ethereum", "Tron"
@@ -83,10 +83,10 @@ For each coin needing an override, present:
 
 ### Step 5 — Apply
 
-After user approval, edit `src/lib/stablecoins.ts` to add only the override fields that differ from defaults. Example:
+After user approval, edit `shared/lib/stablecoins.ts` to add only the override fields that differ from defaults. Example:
 
 ```typescript
-usd("123", "Example", "EX", "crypto-backed", "decentralized", {
+usd("ex-example", "Example", "EX", "crypto-backed", "decentralized", {
   // ... existing fields ...
   chainTier: "established-alt-l1",
   deploymentModel: "third-party-bridge",

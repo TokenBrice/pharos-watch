@@ -1,16 +1,16 @@
 ---
 name: stablecoin-info-fetch
-description: Use when asked to verify, populate, or audit a single stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in src/lib/stablecoins.ts.
+description: Use when asked to verify, populate, or audit a single stablecoin's detail fields (collateral, peg mechanism, jurisdiction, links, geckoId, contracts). Run per-coin to fill gaps or validate existing data in shared/lib/stablecoins.ts.
 user_invocable: true
 ---
 
 ## Stablecoin Info Fetch & Verify
 
-Verify and populate a single stablecoin's metadata in `src/lib/stablecoins.ts`. Designed to be run sequentially — one coin at a time.
+Verify and populate a single stablecoin's metadata in `shared/lib/stablecoins.ts`. Designed to be run sequentially — one coin at a time.
 
 ### Input
 
-The user provides a stablecoin **name**, **symbol**, or **ID** (DefiLlama numeric or custom). If ambiguous, ask.
+The user provides a stablecoin **name**, **symbol**, or **ID** (ticker-issuer format, e.g. `usdt-tether`). If ambiguous, ask.
 
 ### Fields to Verify / Populate
 
@@ -22,7 +22,7 @@ The user provides a stablecoin **name**, **symbol**, or **ID** (DefiLlama numeri
 | `links` | Official site, Twitter, docs | Labels: `"Website"`, `"Twitter"`, `"Docs"`, `"Proof of Reserve"` |
 | `geckoId` | CoinGecko API | Should be populated for every tracked coin when it exists on CoinGecko |
 | `cmcSlug` | CoinMarketCap | Fallback when both DL + CG miss price |
-| `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `src/lib/chains.ts` only |
+| `contracts` | Official docs > CoinGecko API > block explorer APIs | `{ chain, address, decimals }` — chains from `shared/lib/chains.ts` only |
 | `proofOfReserves` | Official site | `{ type, url, provider? }` — types: `"independent-audit"` / `"real-time"` / `"self-reported"` |
 
 ### Fetching strategy: APIs first, browser as fallback
@@ -44,7 +44,7 @@ Many sites (CoinGecko, Etherscan, etc.) block plain HTTP requests with 403s. **A
 
 #### Step 1 — Read current state
 
-1. Read `src/lib/stablecoins.ts` and locate the coin's entry
+1. Read `shared/lib/stablecoins.ts` and locate the coin's entry
 2. List which fields are **present**, **missing**, or **suspect** (vague placeholders like "U.S. dollar reserves" or "Direct redemption through issuer")
 3. Note the coin's `flags` (backing, pegCurrency, governance) — these are authoritative and should NOT be changed by this skill
 
@@ -65,7 +65,7 @@ For **contract addresses** specifically:
 - **CoinGecko API second**: The `detail_platforms` field from `/coins/{id}` returns chain → address + decimals mappings. Cross-reference with official docs
 - **DefiLlama chain data**: If DL reports supply on a supported chain we have no contract for, actively search for that chain's contract address
 - **Block explorer APIs for verification**: For every contract address found from any source, verify via the explorer API that the token name, symbol, and decimals match. This prevents adding a proxy admin, vault, or wrapper address instead of the actual token. Use the Etherscan-family API pattern: `https://api.{explorer}/api?module=token&action=tokeninfo&contractaddress={addr}`
-- Only include chains defined in `src/lib/chains.ts`: ethereum, arbitrum, base, optimism, polygon, avalanche, bsc, gnosis, fantom, celo, tron
+- Only include chains defined in `shared/lib/chains.ts` (100+ supported chains — read the file for the full list)
 - Note that the core protocol may only live on one chain (e.g. Ethereum) while the stablecoin token itself is bridged to many chains — look for both native and bridged deployments
 
 #### Step 2b — Verify existing data
@@ -110,7 +110,7 @@ For each field that needs updating:
 
 After user approval:
 
-1. Edit the coin's entry in `src/lib/stablecoins.ts` using the `Edit` tool
+1. Edit the coin's entry in `shared/lib/stablecoins.ts` using the `Edit` tool
 2. Preserve the existing code style:
    - Use the `usd()` / `eur()` / `other()` helper functions (don't expand to raw `coin()`)
    - Contract addresses: lowercase hex for EVM, original case for Tron

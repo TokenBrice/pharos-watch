@@ -6,13 +6,13 @@ description: Research and populate reserve composition data for a single stablec
 # Reserve Composition Research
 
 ## Input
-User provides a stablecoin name, symbol, or ID from `src/lib/stablecoins.ts`.
+User provides a stablecoin name, symbol, or ID from `shared/lib/stablecoins.ts`.
 
 ## Process
 
 ### Step 1: Read Current State
 
-Read the coin's entry in `src/lib/stablecoins.ts`. Note:
+Read the coin's entry in `shared/lib/stablecoins.ts`. Note:
 - `collateral` field (text description of backing — this is your starting hypothesis)
 - `pegMechanism` field
 - `flags.backing` (rwa-backed | crypto-backed | algorithmic)
@@ -84,7 +84,7 @@ Wait for user approval before applying.
 
 ### Step 5: Apply Changes
 
-After approval, use the Edit tool to add the `reserves` array to the coin's entry in `src/lib/stablecoins.ts`. Place it as the last field before the closing `})`.
+After approval, use the Edit tool to add the `reserves` array to the coin's entry in `shared/lib/stablecoins.ts`. Place it as the last field before the closing `})`.
 
 Verify: `npm run build` succeeds.
 

@@ -5,7 +5,7 @@ description: Verify CoinGecko IDs for tracked stablecoins by cross-referencing o
 
 # CoinGecko ID Verification
 
-Verifies that the `geckoId` in `src/lib/stablecoins.ts` is correct by cross-referencing three sources:
+Verifies that the `geckoId` in `shared/lib/stablecoins.ts` is correct by cross-referencing three sources:
 
 1. **Our config** (`geckoId` in stablecoins.ts) -> CoinGecko coin endpoint
 2. **DefiLlama's geckoId** (`gecko_id` from stablecoins.llama.fi) -> CoinGecko coin endpoint
@@ -23,7 +23,7 @@ Verifies that the `geckoId` in `src/lib/stablecoins.ts` is correct by cross-refe
 ### Single coin verification
 
 ```bash
-python3 .claude/skills/coingecko-id-verif/verify.py --coin 269
+python3 .claude/skills/coingecko-id-verif/verify.py --coin usdt-tether
 ```
 
 ### Mismatch scan (compares our geckoIds against DefiLlama's)

@@ -2,11 +2,11 @@
 """
 CoinGecko ID Verification Script
 
-Cross-references geckoIds from src/lib/stablecoins.ts against CoinGecko's
+Cross-references geckoIds from shared/lib/stablecoins.ts against CoinGecko's
 contract-address lookup to verify correctness.
 
 Usage:
-    python3 verify.py --coin 269           # Verify single coin by DL id
+    python3 verify.py --coin usdt-tether   # Verify single coin by ticker-issuer ID
     python3 verify.py --scan               # Scan for DL vs our config mismatches
     python3 verify.py --all                # Full audit of all tracked coins
 """
@@ -21,7 +21,7 @@ import time
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", ".."))
-STABLECOINS_TS = os.path.join(REPO_ROOT, "src", "lib", "stablecoins.ts")
+STABLECOINS_TS = os.path.join(REPO_ROOT, "shared", "lib", "stablecoins.ts")
 DEV_VARS = os.path.join(REPO_ROOT, "worker", ".dev.vars")
 
 CG_BASE = "https://pro-api.coingecko.com/api/v3"
@@ -59,7 +59,7 @@ def cg_fetch(path: str, api_key: str | None) -> dict | None:
 
 
 def parse_stablecoins_ts() -> list[dict]:
-    """Parse stablecoins.ts to extract id, symbol, geckoId, and eth contract address."""
+    """Parse stablecoins.ts to extract id, symbol, geckoId, llamaId, and eth contract address."""
     with open(STABLECOINS_TS) as f:
         content = f.read()
 
@@ -68,12 +68,11 @@ def parse_stablecoins_ts() -> list[dict]:
     current_id = None
     current_symbol = None
     current_gecko = None
+    current_llama = None
     current_contracts: list[dict] = []
-    in_contracts = False
-    brace_depth = 0
 
     for line in lines:
-        # Match function calls: usd("ID", "Name", "SYMBOL", ...)
+        # Match function calls: usd("ticker-issuer", "Name", "SYMBOL", ...)
         m = re.match(
             r'\s*(?:usd|eur|other|coin)\("([^"]+)",\s*"[^"]+",\s*"([^"]+)"', line
         )
@@ -90,18 +89,25 @@ def parse_stablecoins_ts() -> list[dict]:
                         "id": current_id,
                         "symbol": current_symbol,
                         "geckoId": current_gecko,
+                        "llamaId": current_llama,
                         "eth_address": eth_addr,
                     }
                 )
             current_id = m.group(1)
             current_symbol = m.group(2)
             current_gecko = None
+            current_llama = None
             current_contracts = []
 
         # Match geckoId
         m2 = re.search(r'geckoId:\s*"([^"]+)"', line)
         if m2 and current_id:
             current_gecko = m2.group(1)
+
+        # Match llamaId
+        m4 = re.search(r'llamaId:\s*"([^"]+)"', line)
+        if m4 and current_id:
+            current_llama = m4.group(1)
 
         # Match contract entries
         m3 = re.search(
@@ -124,6 +130,7 @@ def parse_stablecoins_ts() -> list[dict]:
                 "id": current_id,
                 "symbol": current_symbol,
                 "geckoId": current_gecko,
+                "llamaId": current_llama,
                 "eth_address": eth_addr,
             }
         )
@@ -277,7 +284,7 @@ def print_result(r: dict) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Verify CoinGecko IDs for tracked stablecoins")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--coin", help="Verify a single coin by DefiLlama ID")
+    group.add_argument("--coin", help="Verify a single coin by ticker-issuer ID (e.g. usdt-tether)")
     group.add_argument(
         "--scan",
         action="store_true",
@@ -301,9 +308,10 @@ def main() -> None:
         coin = coins_by_id.get(args.coin)
         if not coin:
             print(f"ERROR: Coin '{args.coin}' not found in tracked list")
+            print(f"  (IDs use ticker-issuer format, e.g. 'usdt-tether')")
             sys.exit(1)
         dl_map = fetch_dl_gecko_ids()
-        dl = dl_map.get(args.coin, {})
+        dl = dl_map.get(coin.get("llamaId", ""), {})
         r = verify_coin(coin, dl.get("gecko_id"), dl.get("price"), api_key)
         print_result(r)
 
@@ -313,9 +321,10 @@ def main() -> None:
 
         mismatches = []
         for coin in coins:
-            if coin["id"].startswith("cg-"):
+            llama_id = coin.get("llamaId")
+            if not llama_id:
                 continue
-            dl = dl_map.get(coin["id"], {})
+            dl = dl_map.get(llama_id, {})
             dl_gecko = dl.get("gecko_id")
             if dl_gecko and dl_gecko != coin["geckoId"]:
                 mismatches.append((coin, dl_gecko, dl.get("price")))
@@ -336,7 +345,7 @@ def main() -> None:
 
         issues = []
         for i, coin in enumerate(coins):
-            dl = dl_map.get(coin["id"], {})
+            dl = dl_map.get(coin.get("llamaId", ""), {})
             r = verify_coin(coin, dl.get("gecko_id"), dl.get("price"), api_key)
             print_result(r)
             if r["verdict"] not in ("OUR_CORRECT", "NOT_ON_CG", "NO_ETH_ADDRESS"):

@@ -38,7 +38,7 @@ Each summary has three fields:
 
 ### Process
 
-1. **Read context**: Load `src/lib/stablecoins.ts` to get the coin's classification (backing, governance, peg, collateral, pegMechanism). Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
+1. **Read context**: Load `shared/lib/stablecoins.ts` to get the coin's classification (backing, governance, peg, collateral, pegMechanism). Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
 2. **Research if needed**: Use web search for recent events (depegs, regulatory actions, governance changes) that would make the summary more current and specific. Check the coin's links in `stablecoins.ts` for official sources
 3. **Write the summary**: Follow voice guidelines above. Reference the coin's actual classification data — don't contradict what's in `stablecoins.ts`
 4. **Update the file**: Add/update entries in `data/ai-summaries.json`. Set `updatedAt` to today's date. Preserve existing entries unless explicitly asked to remove them

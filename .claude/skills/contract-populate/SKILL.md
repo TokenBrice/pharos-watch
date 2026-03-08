@@ -6,7 +6,7 @@ user_invocable: true
 
 ## Contract Address Population
 
-Fetch and merge contract addresses from CoinGecko into `src/lib/stablecoins.ts`. Expands `src/lib/chains.ts` with new chains as discovered.
+Fetch and merge contract addresses from CoinGecko into `shared/lib/stablecoins.ts`. Expands `shared/lib/chains.ts` with new chains as discovered.
 
 ### Input
 
@@ -125,7 +125,7 @@ binancecoin              (BNB Beacon Chain / BEP2 — legacy, not smart contract
 
 #### Step 1 — Read current state
 
-1. Read `src/lib/stablecoins.ts` and locate the coin's entry
+1. Read `shared/lib/stablecoins.ts` and locate the coin's entry
 2. Note the coin's `geckoId` — if missing, skip this coin and flag it
 3. Note all existing chains in the coin's `contracts` array (these are curated and will NOT be overwritten)
 
@@ -147,14 +147,14 @@ For each entry in `detail_platforms`:
    - If not in the mapping → log as "unmapped: {cg_platform_name}" and skip
 2. **Check if chain already exists** in the coin's contracts
    - If yes → skip (preserve curated data)
-3. **Check if chain exists in `src/lib/chains.ts`** (`CHAIN_META`)
+3. **Check if chain exists in `shared/lib/chains.ts`** (`CHAIN_META`)
    - If no → add it (see "Adding New Chains" below)
 4. **Add the contract** to the coin's contracts array:
    - `chain`: our chain ID
    - `address`: from CG, lowercase for EVM chains, original case for non-EVM (Tron, Solana, Aptos, Sui, Near, Stellar, etc.)
    - `decimals`: from CG's `decimal_place` field. If `null`, try to determine from the token standard (most ERC-20s are 6 or 18). If truly unknown, flag and skip
 
-#### Step 4 — Adding new chains to `src/lib/chains.ts`
+#### Step 4 — Adding new chains to `shared/lib/chains.ts`
 
 When a chain ID is not in `CHAIN_META`, add it with:
 
@@ -198,7 +198,7 @@ When a chain ID is not in `CHAIN_META`, add it with:
 
 #### Step 5 — Write changes
 
-1. Edit the coin's `contracts` array in `src/lib/stablecoins.ts` using the Edit tool
+1. Edit the coin's `contracts` array in `shared/lib/stablecoins.ts` using the Edit tool
 2. Append new chains after the existing entries
 3. Maintain code style: `{ chain: "...", address: "...", decimals: N }`
 4. For EVM addresses: lowercase hex (CoinGecko usually returns lowercase, verify)
