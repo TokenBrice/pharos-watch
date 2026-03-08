@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Send } from "lucide-react";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import digests from "../../../data/digests.json";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Daily Digest Archive: Stablecoin Recaps",
@@ -38,6 +40,15 @@ export default function DigestArchivePage() {
       </CalloutBanner>
 
       <DigestArchiveClient />
+
+      {/* Server-rendered digest links for SEO crawlability (client component loads the interactive list) */}
+      <nav aria-label="Digest archive index" className="sr-only">
+        {(digests as { date: string; title: string }[]).map((d) => (
+          <Link key={d.date} href={`/digest/${d.date}/`}>
+            {d.title} — {d.date}
+          </Link>
+        ))}
+      </nav>
 
       <p className="text-xs text-muted-foreground text-center max-w-2xl mx-auto pt-4">
         Each day Pharos generates a market recap covering peg deviations, supply movements, and emerging trends across
