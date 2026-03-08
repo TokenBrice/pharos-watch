@@ -390,7 +390,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
           {sorted.length === 0 && (
             <TableRow>
               <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
-                No flow data available
+                No mint/burn events in this period.
               </TableCell>
             </TableRow>
           )}

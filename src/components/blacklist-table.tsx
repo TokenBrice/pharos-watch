@@ -208,7 +208,7 @@ export function BlacklistTable({ events, isLoading, page, pageSize }: BlacklistT
           {paged.length === 0 && (
             <TableRow>
               <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                No blacklist events found
+                No blacklist events match your filters.
               </TableCell>
             </TableRow>
           )}
