@@ -955,6 +955,32 @@ export interface DatasetFreshness {
   digest: number | null;
 }
 
+export interface TelegramBotTopStablecoin {
+  stablecoinId: string;
+  symbol: string;
+  subscribers: number;
+}
+
+export interface TelegramBotStats {
+  totalChats: number;
+  alertEnabledChats: number;
+  deliverableChats: number;
+  subscribedChats: number;
+  emptyAlertChats: number;
+  mutedChatsWithSubscriptions: number;
+  totalSubscriptions: number;
+  avgSubscriptionsPerSubscribedChat: number;
+  pendingDisambiguations: number;
+  lastSubscriberActivityAt: number | null;
+  alertTypeChats: {
+    dews: number;
+    depeg: number;
+    safety: number;
+    allTypes: number;
+  };
+  topStablecoins: TelegramBotTopStablecoin[];
+}
+
 export interface StatusResponse {
   timestamp: number;
   dbHealthy: boolean;
@@ -976,6 +1002,7 @@ export interface StatusResponse {
   caches: Record<string, CacheStatus>;
   crons: Record<string, CronStatus>;
   dataQuality: DataQuality;
+  telegramBot: TelegramBotStats | null;
   datasetFreshness: DatasetFreshness;
   summary: {
     unhealthyCrons: number;

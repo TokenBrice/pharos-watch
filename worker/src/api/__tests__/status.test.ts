@@ -56,10 +56,7 @@ describe("handleStatus", () => {
       // buildCacheStatuses queries the cache table
       {
         match: "cache WHERE key IN",
-        rows: [
-          makeCacheRow("stablecoins"),
-          makeCacheRow("stablecoin-charts"),
-        ],
+        rows: [makeCacheRow("stablecoins"), makeCacheRow("stablecoin-charts")],
       },
       // Table freshness queries (dex-liquidity, yield-data, dews)
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
@@ -68,11 +65,7 @@ describe("handleStatus", () => {
       // cron_runs query
       {
         match: "cron_runs",
-        rows: [
-          makeCronRow("sync-stablecoins"),
-          makeCronRow("sync-stablecoin-charts"),
-          makeCronRow("sync-blacklist"),
-        ],
+        rows: [makeCronRow("sync-stablecoins"), makeCronRow("sync-stablecoin-charts"), makeCronRow("sync-blacklist")],
       },
       // Data quality: stablecoins cache for missing prices
       {
@@ -101,6 +94,7 @@ describe("handleStatus", () => {
       caches: Record<string, unknown>;
       crons: Record<string, unknown>;
       dataQuality: Record<string, unknown>;
+      telegramBot: Record<string, unknown> | null;
       datasetFreshness: Record<string, number | null>;
     };
 
@@ -110,6 +104,7 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("caches");
     expect(body).toHaveProperty("crons");
     expect(body).toHaveProperty("dataQuality");
+    expect(body).toHaveProperty("telegramBot");
     expect(body).toHaveProperty("datasetFreshness");
     expect(typeof body.dbHealthy).toBe("boolean");
     expect(body.datasetFreshness).toHaveProperty("stablecoins");
@@ -167,6 +162,108 @@ describe("handleStatus", () => {
     expect(syncStablecoins).toHaveProperty("expectedIntervalSec");
   });
 
+  it("includes Telegram bot subscriber stats when Telegram tables are present", async () => {
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("dispatch-telegram-alerts", "ok", 60)] },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      {
+        match: "FROM telegram_subscribers s",
+        rows: [],
+        first: {
+          total_chats: 12,
+          alert_enabled_chats: 10,
+          deliverable_chats: 9,
+          subscribed_chats: 11,
+          empty_alert_chats: 1,
+          muted_chats_with_subscriptions: 2,
+          dews_chats: 8,
+          depeg_chats: 7,
+          safety_chats: 6,
+          all_types_chats: 5,
+          total_subscriptions: 37,
+          avg_subscriptions_per_subscribed_chat: 3.36,
+          last_subscriber_activity_at: 1772000000,
+        },
+      },
+      {
+        match: "FROM telegram_pending_disambiguation",
+        rows: [],
+        first: { pending_count: 3 },
+      },
+      {
+        match: "GROUP BY stablecoin_id",
+        rows: [
+          { stablecoin_id: "usdc-circle", subscribers: 7 },
+          { stablecoin_id: "usde-ethena", subscribers: 4 },
+        ],
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as {
+      telegramBot: {
+        totalChats: number;
+        deliverableChats: number;
+        totalSubscriptions: number;
+        pendingDisambiguations: number;
+        alertTypeChats: { dews: number; depeg: number; safety: number; allTypes: number };
+        topStablecoins: Array<{ stablecoinId: string; symbol: string; subscribers: number }>;
+      } | null;
+    };
+
+    expect(body.telegramBot).not.toBeNull();
+    expect(body.telegramBot?.totalChats).toBe(12);
+    expect(body.telegramBot?.deliverableChats).toBe(9);
+    expect(body.telegramBot?.totalSubscriptions).toBe(37);
+    expect(body.telegramBot?.pendingDisambiguations).toBe(3);
+    expect(body.telegramBot?.alertTypeChats).toEqual({
+      dews: 8,
+      depeg: 7,
+      safety: 6,
+      allTypes: 5,
+    });
+    expect(body.telegramBot?.topStablecoins).toEqual([
+      { stablecoinId: "usdc-circle", symbol: "USDC", subscribers: 7 },
+      { stablecoinId: "usde-ethena", symbol: "USDe", subscribers: 4 },
+    ]);
+  });
+
+  it("returns telegramBot=null when Telegram tables are unavailable", async () => {
+    const db = mockD1([
+      { match: "cache WHERE key IN", rows: [] },
+      { match: "dex_liquidity", rows: [], first: { age: 300 } },
+      { match: "yield_data", rows: [], first: { age: 300 } },
+      { match: "stress_signals", rows: [], first: { age: 300 } },
+      { match: "cron_runs", rows: [makeCronRow("sync-stablecoins", "ok", 100)] },
+      { match: "cache", rows: [] },
+      { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
+      { match: "depeg_events", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at", rows: [], first: { cnt: 0 } },
+      { match: "onchain_supply WHERE updated_at >", rows: [] },
+      {
+        match: "FROM telegram_subscribers s",
+        rows: [],
+        throwError: "no such table: telegram_subscribers",
+      },
+    ]);
+
+    const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus(db, "secret-key", request);
+    const body = (await res.json()) as { telegramBot: unknown };
+
+    expect(res.status).toBe(200);
+    expect(body.telegramBot).toBeNull();
+  });
+
   it("marks status degraded and skips data-quality queries when DB sentinel fails", async () => {
     const db = mockD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
@@ -181,11 +278,15 @@ describe("handleStatus", () => {
         return {
           bind: () => ({
             all: async () => ({ results: [], success: true, meta: {} }),
-            first: async () => { throw new Error("db down"); },
+            first: async () => {
+              throw new Error("db down");
+            },
             run: async () => ({ success: true, meta: {} }),
           }),
           all: async () => ({ results: [], success: true, meta: {} }),
-          first: async () => { throw new Error("db down"); },
+          first: async () => {
+            throw new Error("db down");
+          },
           run: async () => ({ success: true, meta: {} }),
         } as unknown as D1PreparedStatement;
       }
@@ -216,10 +317,7 @@ describe("handleStatus", () => {
       { match: "stress_signals", rows: [], first: { age: 300 } },
       {
         match: "cron_runs",
-        rows: [
-          makeCronRow("sync-stablecoins", "skipped_locked", 30),
-          makeCronRow("sync-stablecoins", "ok", 90),
-        ],
+        rows: [makeCronRow("sync-stablecoins", "skipped_locked", 30), makeCronRow("sync-stablecoins", "ok", 90)],
       },
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
@@ -285,7 +383,7 @@ describe("handleStatus", () => {
       },
       { match: "blacklist_events", rows: [], first: { total: 1000, missing: 1, missing_recent: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -321,7 +419,7 @@ describe("handleStatus", () => {
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
       // Latest on-chain update is too old -> monitor unavailable.
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -359,7 +457,7 @@ describe("handleStatus", () => {
       },
       { match: "blacklist_events", rows: [], first: { total: 20000, missing: 40, missing_recent: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]);
 
     const request = makeApiRequest("/api/status", { adminKey: "secret-key" });
@@ -392,7 +490,7 @@ describe("handleStatus", () => {
       },
       { match: "blacklist_events", rows: [], first: { total: 100, missing: 0 } },
       { match: "depeg_events", rows: [], first: { cnt: 0 } },
-      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - (5 * 86400), tracked: 12 } },
+      { match: "MAX(updated_at) as latest", rows: [], first: { latest: now - 5 * 86400, tracked: 12 } },
     ]) as D1Database & { prepare: (sql: string) => D1PreparedStatement };
 
     const seenSql: string[] = [];

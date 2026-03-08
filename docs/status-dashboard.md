@@ -38,6 +38,8 @@ This page is **admin-only in practice** because all status/probe calls require `
 - `src/hooks/use-endpoint-probes.ts`
   - Probes **public + admin** endpoint probe groups every 60s
   - Manual/admin mutation actions are listed but intentionally not auto-probed
+- `src/components/status/telegram-bot-stats.tsx`
+  - Renders Telegram subscriber adoption metrics, top subscribed coins, and the latest `dispatch-telegram-alerts` delivery summary
 
 ### Endpoint groups
 
@@ -131,6 +133,26 @@ Additional response fields:
 - `probe`: latest synthetic probe aggregate
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
+- `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
+
+### Telegram bot metrics
+
+The `/status` payload now includes a `telegramBot` block derived from:
+
+- `telegram_subscribers`
+- `telegram_subscriptions`
+- `telegram_pending_disambiguation`
+
+The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata` to show:
+
+- total known chats
+- alert-enabled and alert-ready chats
+- total coin follows and average follows per subscribed chat
+- pending disambiguation replies
+- alert-type adoption counts
+- muted / misconfigured chat counts
+- top subscribed stablecoins
+- latest dispatch delivery stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`)
 
 ### Synthetic self-check
 
@@ -204,6 +226,7 @@ Mutating admin paths are protected by method guardrails:
 |------|------|
 | `src/app/status/client.tsx` | Auth gate + status dashboard orchestration shell |
 | `src/components/status/*` | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables) |
+| `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel |
 | `src/hooks/use-status.ts` | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth |
 | `src/hooks/use-endpoint-probes.ts` | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions |
 | `shared/lib/api-endpoints.ts` | Shared endpoint registry for probe groups + status-page actions |

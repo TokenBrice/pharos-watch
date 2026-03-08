@@ -19,7 +19,8 @@ import {
   STATUS_ONCHAIN_THRESHOLDS,
 } from "../lib/status-thresholds";
 import { queryBlacklistGapMetrics } from "../lib/blacklist-gaps";
-import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse } from "@shared/types";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
+import type { CronRun, CronStatus, DataQuality, StatusCause, StatusResponse, TelegramBotStats } from "@shared/types";
 
 // --- Config ---
 
@@ -39,6 +40,7 @@ interface RawStatusComputation {
   caches: StatusResponse["caches"];
   crons: StatusResponse["crons"];
   dataQuality: StatusResponse["dataQuality"];
+  telegramBot: StatusResponse["telegramBot"];
   datasetFreshness: StatusResponse["datasetFreshness"];
   summary: StatusResponse["summary"];
 }
@@ -56,10 +58,7 @@ function pushCause(bucket: StatusCause[], cause: StatusCause): void {
   bucket.push(cause);
 }
 
-function synthesizeOverallCauses(
-  availability: StatusCause[],
-  dataQuality: StatusCause[],
-): StatusCause[] {
+function synthesizeOverallCauses(availability: StatusCause[], dataQuality: StatusCause[]): StatusCause[] {
   const sorted = [...availability, ...dataQuality].sort((a, b) => {
     const severityOrder = { critical: 0, warning: 1, info: 2 };
     return severityOrder[a.severity] - severityOrder[b.severity];
@@ -94,6 +93,24 @@ function maxStatus(a: StatusLevel, b: StatusLevel): StatusLevel {
   return STATUS_SEVERITY[a] >= STATUS_SEVERITY[b] ? a : b;
 }
 
+function coerceCount(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function coerceNullableTimestamp(value: unknown): number | null {
+  if (value == null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function roundMetric(value: unknown, digits = 2): number {
+  const parsed = Number(value ?? 0);
+  if (!Number.isFinite(parsed)) return 0;
+  const factor = 10 ** digits;
+  return Math.round(parsed * factor) / factor;
+}
+
 function fallbackState(rawOverallStatus: StatusLevel, now: number): StatusResponse["state"] {
   return {
     scope: "global",
@@ -103,7 +120,11 @@ function fallbackState(rawOverallStatus: StatusLevel, now: number): StatusRespon
     lastChangedAt: now,
     minDwellSec: 120,
     staleMinDwellSec: 180,
-    consecutiveRaw: { healthy: rawOverallStatus === "healthy" ? 1 : 0, degraded: rawOverallStatus === "degraded" ? 1 : 0, stale: rawOverallStatus === "stale" ? 1 : 0 },
+    consecutiveRaw: {
+      healthy: rawOverallStatus === "healthy" ? 1 : 0,
+      degraded: rawOverallStatus === "degraded" ? 1 : 0,
+      stale: rawOverallStatus === "stale" ? 1 : 0,
+    },
     thresholds: {
       escalateToDegraded: 2,
       escalateToStale: 1,
@@ -121,23 +142,14 @@ export async function evaluateStatusAndPersist(
   effectiveStatus: StatusLevel;
 }> {
   const raw = await computeRawStatus(db, now);
-  const persisted = await reconcileStatusState(
-    db,
-    now,
-    raw.rawOverallStatus,
-    raw.confidence,
-    raw.causes.overall,
-  );
+  const persisted = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
   return {
     raw,
     effectiveStatus: persisted.effectiveStatus,
   };
 }
 
-async function computeRawStatus(
-  db: D1Database,
-  now: number,
-): Promise<RawStatusComputation> {
+async function computeRawStatus(db: D1Database, now: number): Promise<RawStatusComputation> {
   // 1. Cache freshness
   const { caches, worstRatio: worstCacheRatio } = await buildCacheStatuses(db, now);
 
@@ -149,7 +161,7 @@ async function computeRawStatus(
       `SELECT job, started_at, duration_ms, status, error, item_count, metadata
        FROM cron_runs
        WHERE job IN (${cronJobInClause.sql})
-       ORDER BY started_at DESC`
+       ORDER BY started_at DESC`,
     )
     .bind(...cronJobInClause.binds)
     .all<{
@@ -199,17 +211,12 @@ async function computeRawStatus(
     const isFresh = lastRun != null && now - lastRun.startedAt <= interval * 2;
     const hasFreshOk = runs.some((run) => run.status === "ok" && now - run.startedAt <= interval * 2);
     const availabilityUnhealthy =
-      !isFresh ||
-      lastRun == null ||
-      lastRun.status === "error" ||
-      (lastRun.status === "skipped_locked" && !hasFreshOk);
+      !isFresh || lastRun == null || lastRun.status === "error" || (lastRun.status === "skipped_locked" && !hasFreshOk);
     const healthy =
       isFresh &&
-      (
-        lastRun!.status === "ok" ||
+      (lastRun!.status === "ok" ||
         lastRun!.status === "degraded" ||
-        (lastRun!.status === "skipped_locked" && hasFreshOk)
-      );
+        (lastRun!.status === "skipped_locked" && hasFreshOk));
 
     if (availabilityUnhealthy) unhealthyCrons++;
     if (lastRun?.status === "degraded" && isFresh) degradedCronRuns++;
@@ -237,6 +244,7 @@ async function computeRawStatus(
 
   // 4. Data quality + dataset freshness
   const dataQuality = dbHealthy ? await getDataQuality(db, now) : emptyDataQuality();
+  const telegramBot = dbHealthy ? await getTelegramBotStats(db, now) : null;
   const datasetFreshness = dbHealthy ? await getDatasetFreshness(db) : emptyDatasetFreshness();
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
@@ -388,10 +396,7 @@ async function computeRawStatus(
       value: blacklistMissingRatio,
       threshold: STATUS_BLACKLIST_THRESHOLDS.missingRatioStale,
     });
-  } else if (
-    blacklistRecentMissing > 0 ||
-    blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded
-  ) {
+  } else if (blacklistRecentMissing > 0 || blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded) {
     pushCause(dataQualityCauses, {
       code: "blacklist_gaps_degraded",
       layer: "data-quality",
@@ -462,6 +467,7 @@ async function computeRawStatus(
     caches,
     crons,
     dataQuality,
+    telegramBot,
     datasetFreshness,
     summary: {
       unhealthyCrons,
@@ -521,13 +527,14 @@ export const handleStatus = withErrorHandler(
         caches: raw.caches,
         crons: raw.crons,
         dataQuality: raw.dataQuality,
+        telegramBot: raw.telegramBot,
         datasetFreshness: raw.datasetFreshness,
         summary: raw.summary,
       };
 
       return jsonResponse(body, { "Cache-Control": "no-store" });
     });
-  }
+  },
 );
 
 // --- Data quality queries ---
@@ -565,6 +572,118 @@ function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   };
 }
 
+interface TelegramBotAggregateRow {
+  total_chats: number | string | null;
+  alert_enabled_chats: number | string | null;
+  deliverable_chats: number | string | null;
+  subscribed_chats: number | string | null;
+  empty_alert_chats: number | string | null;
+  muted_chats_with_subscriptions: number | string | null;
+  dews_chats: number | string | null;
+  depeg_chats: number | string | null;
+  safety_chats: number | string | null;
+  all_types_chats: number | string | null;
+  total_subscriptions: number | string | null;
+  avg_subscriptions_per_subscribed_chat: number | string | null;
+  last_subscriber_activity_at: number | string | null;
+}
+
+interface TelegramBotPendingRow {
+  pending_count: number | string | null;
+}
+
+interface TelegramBotTopStablecoinRow {
+  stablecoin_id: string;
+  subscribers: number | string | null;
+}
+
+async function getTelegramBotStats(db: D1Database, now: number): Promise<TelegramBotStats | null> {
+  try {
+    const [aggregate, pending, topCoins] = await Promise.all([
+      db
+        .prepare(
+          `SELECT
+             COUNT(*) AS total_chats,
+             SUM(CASE WHEN s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1 THEN 1 ELSE 0 END) AS alert_enabled_chats,
+             SUM(
+               CASE
+                 WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1) AND COALESCE(sub.sub_count, 0) > 0
+                 THEN 1 ELSE 0
+               END
+             ) AS deliverable_chats,
+             SUM(CASE WHEN COALESCE(sub.sub_count, 0) > 0 THEN 1 ELSE 0 END) AS subscribed_chats,
+             SUM(
+               CASE
+                 WHEN (s.alert_dews = 1 OR s.alert_depeg = 1 OR s.alert_safety = 1) AND COALESCE(sub.sub_count, 0) = 0
+                 THEN 1 ELSE 0
+               END
+             ) AS empty_alert_chats,
+             SUM(
+               CASE
+                 WHEN s.alert_dews = 0 AND s.alert_depeg = 0 AND s.alert_safety = 0 AND COALESCE(sub.sub_count, 0) > 0
+                 THEN 1 ELSE 0
+               END
+             ) AS muted_chats_with_subscriptions,
+             SUM(CASE WHEN s.alert_dews = 1 THEN 1 ELSE 0 END) AS dews_chats,
+             SUM(CASE WHEN s.alert_depeg = 1 THEN 1 ELSE 0 END) AS depeg_chats,
+             SUM(CASE WHEN s.alert_safety = 1 THEN 1 ELSE 0 END) AS safety_chats,
+             SUM(CASE WHEN s.alert_dews = 1 AND s.alert_depeg = 1 AND s.alert_safety = 1 THEN 1 ELSE 0 END) AS all_types_chats,
+             SUM(COALESCE(sub.sub_count, 0)) AS total_subscriptions,
+             AVG(CASE WHEN COALESCE(sub.sub_count, 0) > 0 THEN sub.sub_count END) AS avg_subscriptions_per_subscribed_chat,
+             MAX(s.last_active_at) AS last_subscriber_activity_at
+           FROM telegram_subscribers s
+           LEFT JOIN (
+             SELECT chat_id, COUNT(*) AS sub_count
+               FROM telegram_subscriptions
+              GROUP BY chat_id
+           ) sub ON sub.chat_id = s.chat_id`,
+        )
+        .first<TelegramBotAggregateRow>(),
+      db
+        .prepare("SELECT COUNT(*) AS pending_count FROM telegram_pending_disambiguation WHERE expires_at > ?")
+        .bind(now)
+        .first<TelegramBotPendingRow>(),
+      db
+        .prepare(
+          `SELECT stablecoin_id, COUNT(*) AS subscribers
+             FROM telegram_subscriptions
+            GROUP BY stablecoin_id
+            ORDER BY subscribers DESC, stablecoin_id ASC
+            LIMIT 5`,
+        )
+        .all<TelegramBotTopStablecoinRow>()
+        .then((result) => result.results ?? []),
+    ]);
+
+    return {
+      totalChats: coerceCount(aggregate?.total_chats),
+      alertEnabledChats: coerceCount(aggregate?.alert_enabled_chats),
+      deliverableChats: coerceCount(aggregate?.deliverable_chats),
+      subscribedChats: coerceCount(aggregate?.subscribed_chats),
+      emptyAlertChats: coerceCount(aggregate?.empty_alert_chats),
+      mutedChatsWithSubscriptions: coerceCount(aggregate?.muted_chats_with_subscriptions),
+      totalSubscriptions: coerceCount(aggregate?.total_subscriptions),
+      avgSubscriptionsPerSubscribedChat: roundMetric(aggregate?.avg_subscriptions_per_subscribed_chat, 1),
+      pendingDisambiguations: coerceCount(pending?.pending_count),
+      lastSubscriberActivityAt: coerceNullableTimestamp(aggregate?.last_subscriber_activity_at),
+      alertTypeChats: {
+        dews: coerceCount(aggregate?.dews_chats),
+        depeg: coerceCount(aggregate?.depeg_chats),
+        safety: coerceCount(aggregate?.safety_chats),
+        allTypes: coerceCount(aggregate?.all_types_chats),
+      },
+      topStablecoins: topCoins.map((row) => ({
+        stablecoinId: row.stablecoin_id,
+        symbol: TRACKED_META_BY_ID.get(row.stablecoin_id)?.symbol ?? row.stablecoin_id,
+        subscribers: coerceCount(row.subscribers),
+      })),
+    };
+  } catch (err) {
+    console.warn("[status] Telegram bot stats unavailable:", err);
+    return null;
+  }
+}
+
 interface DatasetFreshnessTarget {
   table: string;
   column: string;
@@ -597,16 +716,7 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget): Pr
 }
 
 async function getDatasetFreshness(db: D1Database): Promise<StatusResponse["datasetFreshness"]> {
-  const [
-    stablecoins,
-    blacklist,
-    mintBurn,
-    supply,
-    yieldTs,
-    depegs,
-    dews,
-    digest,
-  ] = await Promise.all([
+  const [stablecoins, blacklist, mintBurn, supply, yieldTs, depegs, dews, digest] = await Promise.all([
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.stablecoins),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.blacklist),
     getLastUpdate(db, DATASET_FRESHNESS_TARGETS.mintBurn),
@@ -634,8 +744,11 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
   if (stablecoinsCacheResult.ok && stablecoinsCacheResult.warningReason) {
     console.warn(`[status] stablecoins cache fallback (${stablecoinsCacheResult.warningReason})`);
   }
-  const stablecoinAssets =
-    stablecoinsCacheResult.payload.peggedAssets as Array<{ id: string; price?: number; circulating?: Record<string, number> }>;
+  const stablecoinAssets = stablecoinsCacheResult.payload.peggedAssets as Array<{
+    id: string;
+    price?: number;
+    circulating?: Record<string, number>;
+  }>;
   const stablecoinAssetMap = new Map(stablecoinAssets.map((asset) => [asset.id, asset]));
 
   // Missing prices: parse stablecoins cache
@@ -676,15 +789,13 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
   let onchainSupplyTrackedCoins = 0;
   try {
     const monitor = await db
-      .prepare(
-        "SELECT MAX(updated_at) as latest, COUNT(DISTINCT stablecoin_id) as tracked FROM onchain_supply"
-      )
+      .prepare("SELECT MAX(updated_at) as latest, COUNT(DISTINCT stablecoin_id) as tracked FROM onchain_supply")
       .first<{ latest: number | null; tracked: number }>();
     onchainSupplyLatestAt = monitor?.latest ?? null;
     onchainSupplyTrackedCoins = monitor?.tracked ?? 0;
 
     // The on-chain supply monitor is considered active only when rows are recent.
-    if (onchainSupplyLatestAt != null && (now - onchainSupplyLatestAt) <= 3 * 86400) {
+    if (onchainSupplyLatestAt != null && now - onchainSupplyLatestAt <= 3 * 86400) {
       onchainSupplyMonitoring = "active";
     }
   } catch (e) {
@@ -701,7 +812,7 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
              FROM onchain_supply
              GROUP BY stablecoin_id
              HAVING latest_update < ?
-           )`
+           )`,
         )
         .bind(now - 7200)
         .first<{ cnt: number }>();
@@ -714,7 +825,7 @@ async function getDataQuality(db: D1Database, now: number): Promise<DataQuality>
     try {
       const onchainRows = await db
         .prepare(
-          "SELECT stablecoin_id, SUM(supply) as total_supply FROM onchain_supply WHERE updated_at > ? GROUP BY stablecoin_id"
+          "SELECT stablecoin_id, SUM(supply) as total_supply FROM onchain_supply WHERE updated_at > ? GROUP BY stablecoin_id",
         )
         .bind(now - 7200)
         .all<{ stablecoin_id: string; total_supply: number }>();

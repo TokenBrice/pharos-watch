@@ -16,6 +16,7 @@ import { EndpointHealthGrid } from "@/components/status/endpoint-health-grid";
 import { RefreshCountdown } from "@/components/status/refresh-countdown";
 import { StatusBanner } from "@/components/status/status-banner";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
+import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TransitionTimeline } from "@/components/status/transition-timeline";
 
 const SESSION_KEY = "pharos-admin-key";
@@ -175,6 +176,15 @@ function StatusDashboard({ adminKey, onSignOut }: { adminKey: string; onSignOut:
       <section>
         <h2 className="mb-3 text-xl font-semibold">Admin Actions</h2>
         <AdminActionsPanel adminKey={adminKey} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-xl font-semibold">Telegram Bot</h2>
+        <TelegramBotStats
+          telegramBot={data.telegramBot}
+          dispatchCron={data.crons["dispatch-telegram-alerts"]}
+          nowSeconds={data.timestamp}
+        />
       </section>
 
       <section>

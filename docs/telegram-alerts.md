@@ -147,6 +147,19 @@ Each alert type checks the corresponding boolean flag column:
 
 When Telegram returns `403`, the send helper reports `{ blocked: true }` and the dispatcher disables that user's alert flags to stop repeated failures.
 
+## Admin Visibility
+
+`GET /api/status` now exposes a `telegramBot` block for the private `/status` dashboard. It aggregates:
+
+- total known chats in `telegram_subscribers`
+- alert-enabled chats vs deliverable chats (enabled + at least one subscribed coin)
+- total `telegram_subscriptions` rows and average follows per subscribed chat
+- pending disambiguation replies still within TTL
+- per-alert-type enablement counts (`dews`, `depeg`, `safety`, all three)
+- top subscribed stablecoins by subscriber count
+
+The status page also reads `crons["dispatch-telegram-alerts"].lastRun.metadata` to show the latest delivery run stats (`subscribersNotified`, `messagesSent`, `blockedUsersCleanedUp`, `eventsDetected`, `snapshotSeeded`, `cappedAtLimit`).
+
 ### Circuit Breaker
 
 The dispatcher is protected by `CIRCUIT_SOURCE.TELEGRAM_API`.

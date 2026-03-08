@@ -1483,7 +1483,7 @@ These endpoints require an `X-Admin-Key` header matching the `ADMIN_KEY` Worker 
 
 ### `GET /api/status`
 
-Full admin dashboard: cron run history, cache freshness for all keys, and data quality metrics.
+Full admin dashboard: cron run history, cache freshness for all keys, data quality metrics, and Telegram bot subscriber stats.
 
 **Headers:** `X-Admin-Key: <secret>` (required)
 
@@ -1562,6 +1562,28 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
     "staleOnchainSupply": 0,
     "onchainStaleRatio": 0
   },
+  "telegramBot": {
+    "totalChats": 128,
+    "alertEnabledChats": 123,
+    "deliverableChats": 121,
+    "subscribedChats": 124,
+    "emptyAlertChats": 2,
+    "mutedChatsWithSubscriptions": 3,
+    "totalSubscriptions": 611,
+    "avgSubscriptionsPerSubscribedChat": 4.9,
+    "pendingDisambiguations": 1,
+    "lastSubscriberActivityAt": 1771856420,
+    "alertTypeChats": {
+      "dews": 121,
+      "depeg": 118,
+      "safety": 102,
+      "allTypes": 95
+    },
+    "topStablecoins": [
+      { "stablecoinId": "usdc-circle", "symbol": "USDC", "subscribers": 82 },
+      { "stablecoinId": "usdt-tether", "symbol": "USDT", "subscribers": 77 }
+    ]
+  },
   "datasetFreshness": {
     "stablecoins": 1771856400,
     "blacklist": 1771856200,
@@ -1588,6 +1610,8 @@ Full admin dashboard: cron run history, cache freshness for all keys, and data q
 `overallStatus` is the effective (hysteresis-smoothed) status. `rawOverallStatus` is the immediate worst-of availability/data-quality signal.
 
 `dbHealthy=false` means the DB sentinel failed (`SELECT 1`), so status is forced to at least degraded and data-quality/database freshness queries are skipped.
+
+`telegramBot` is `null` when the Telegram tables are unavailable in the current environment (for example, migrations not yet applied in dev/staging). The rest of `/api/status` still resolves normally.
 
 ### `GET /api/status-history`
 
