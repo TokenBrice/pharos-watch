@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
+import { ShareButton } from "@/components/share-button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -54,6 +55,7 @@ export default function ReportCardsPage() {
         version: SAFETY_SCORE_VERSION_LABEL,
         changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
       }}
+      headerActions={<ShareButton ogPath="/api/og/safety-scores" />}
       leadParagraphs={[
         "Safety grades and contagion simulation for every tracked stablecoin.",
         "Each stablecoin receives a letter grade from A+ to F based on five dimensions: peg stability, liquidity depth, transparency, resilience, and regulatory standing. The contagion simulator lets you model what happens to the broader market when a major stablecoin fails, revealing hidden dependency chains and systemic risk.",

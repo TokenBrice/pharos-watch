@@ -4,6 +4,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { ShareButton } from "@/components/share-button";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
@@ -66,6 +67,7 @@ export default function DepegPage() {
         version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
         changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
       }}
+      headerActions={<ShareButton ogPath="/api/og/depeg" />}
       preface={
         <script
           type="application/ld+json"

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeftRight, Flag } from "lucide-react";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { PegGauge } from "@/components/peg-gauge";
+import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card } from "@/components/ui/card";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
@@ -135,13 +136,16 @@ export function HeroCard({
             {coin.name}
           </span>
         </nav>
-        <Link
-          href={compareHref}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          {primaryComparisonPage ? `Compare ${coin.symbol}` : "Compare"}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={compareHref}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            {primaryComparisonPage ? `Compare ${coin.symbol}` : "Compare"}
+          </Link>
+          <ShareButton ogPath={`/api/og/stablecoin/${coin.id}`} label="Share" />
+        </div>
       </div>
 
       <div className="px-4 sm:px-5 py-4">

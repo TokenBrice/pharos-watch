@@ -21,6 +21,7 @@ interface FeaturePageShellProps {
     version: string;
     changelogPath: string;
   };
+  headerActions?: React.ReactNode;
   leadParagraphs?: readonly React.ReactNode[];
   preface?: React.ReactNode;
   children: React.ReactNode;
@@ -35,6 +36,7 @@ export function FeaturePageShell({
   breadcrumbLabel,
   statusBadge,
   methodology,
+  headerActions,
   leadParagraphs = [],
   preface,
   children,
@@ -56,13 +58,16 @@ export function FeaturePageShell({
           <span>/</span>
           <span className="text-foreground">{breadcrumbLabel ?? breadcrumbName}</span>
         </nav>
-        <div className="flex max-w-full flex-wrap items-start gap-x-3 gap-y-2">
-          <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">
-            {title}
-          </h1>
-          {statusBadge && (
-            <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />
-          )}
+        <div className="flex max-w-full flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
+            <h1 className="min-w-0 text-3xl font-extrabold tracking-tight leading-[1.08] sm:text-4xl">
+              {title}
+            </h1>
+            {statusBadge && (
+              <FeatureStatusBadge status={statusBadge.status} version={statusBadge.version} />
+            )}
+          </div>
+          {headerActions}
         </div>
         {methodology && (
           <p className="text-xs leading-relaxed text-muted-foreground">
