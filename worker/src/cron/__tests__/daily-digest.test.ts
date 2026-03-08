@@ -220,7 +220,7 @@ describe("generateDailyDigest", () => {
         headers: expect.objectContaining({ "x-api-key": "anthropic-key" }),
       }),
       2,
-      { timeoutMs: 60_000 },
+      { timeoutMs: 120_000 },
     );
   });
 
