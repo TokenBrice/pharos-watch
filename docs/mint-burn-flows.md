@@ -177,13 +177,15 @@ Safe haven IDs (`SAFE_HAVEN_IDS`): 1, 2, 119, 120 — fallback for flight-to-qua
    - Skip if `fromBlock > chainHead` or subrequest budget exhausted.
    - For each event definition, call Alchemy `eth_getLogs` with adaptive recursive block-range splitting on provider/range failures.
    - Resolve block timestamps — batch `eth_getBlockByNumber` for all unique blocks in the returned logs, using local + persistent (`block_timestamp_cache`) caches.
-   - Parse logs: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price).
+   - Parse logs per event definition: decode amount (respecting decimals), derive counterparty address, compute `amount_usd = amount * price` (null if no price), and initialize `flow_type='standard'`.
+   - Classify bridge burns per parsed batch to preserve the shared Alchemy transaction-context budget.
+   - Detect atomic roundtrips after all event definitions for the config are parsed: group rows by `(tx_hash, stablecoin_id)` and flip the whole group to `flow_type='atomic_roundtrip'` when both mint and burn directions appear in the same transaction.
    - Filter out dust events (amount < `dustThreshold`).
    - Batch `INSERT OR IGNORE` into `mint_burn_events`, track parsed vs inserted counts from D1 `meta.changes`.
    - Update `mint_burn_sync_state.last_block`:
      - If events found: advance to `maxBlockSeen`.
      - If no events: advance to `chainHead - safetyMarginBlocks` (avoids skipping not-yet-indexed events).
-6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`.
+6. **Recalculate affected hourly buckets** — for each unique `(stablecoinId, chainId, hourTs)` touched, `INSERT OR REPLACE` into `mint_burn_hourly` by re-aggregating from `mint_burn_events`, counting only `flow_type='standard'` rows so atomic roundtrips do not leak into flow statistics.
 7. **Escalate degraded runs** — emit `status=degraded|error` when sustained coverage/API thresholds are breached, with streak tracking in `mint_burn_run_state`.
 
 **Counterparty resolution:** For mints, `topics[2]` (recipient). For burns, `topics[1]` (sender).
@@ -200,12 +202,17 @@ Cron (`sync-mint-burn`) and admin backfill (`backfill-mint-burn`) now share a si
 |--------|----------------|
 | `types.ts` | Shared ingestion row/context/counter types and sync-state mode union |
 | `parse.ts` | `parseMintBurnLogs()` and event-level price resolution (`supply-history` then `price_cache` fallback) |
+| `roundtrip-detection.ts` | Same-transaction `(tx_hash, stablecoin_id)` atomic roundtrip detection for `flow_type` tagging |
 | `classification.ts` | Bridge-aware burn classification and transaction-context loading |
 | `context.ts` | Shared loaders for current prices and historical price series |
 | `persistence.ts` | `INSERT OR IGNORE` event writes, burn classification updates, affected-hour aggregation |
 | `sync-state.ts` | Sync-state key helpers plus mode-specific upserts (`replace` for cron, `monotonic-max` for backfill) |
 
 Implementation invariant: `worker/src/api/backfill-mint-burn.ts` does not import from `worker/src/cron/sync-mint-burn.ts`; both entrypoints import shared helpers from `mint-burn-pipeline/*`.
+
+`mint_burn_events.flow_type` is orthogonal to `burn_type`: `burn_type` only classifies burns as economic vs bridge/review, while `flow_type` applies to both mints and burns and marks same-transaction mint+burn noise as `atomic_roundtrip`.
+
+Cron metadata includes `atomicRoundtripsDetected`, an observability counter for how many rows were tagged during the run.
 
 ---
 
@@ -426,6 +433,18 @@ Controlled ingestion backfill by explicit config/range/chunk.
   - Advances `mint_burn_sync_state` with monotonic max semantics (never regresses on partial backfills).
   - Returns `done=false` with `nextFromBlock` when additional calls are needed.
 
+### POST /api/reclassify-atomic-roundtrips (admin)
+
+Retroactive cleanup endpoint for historical rows that predate shared roundtrip detection or were ingested before both sides of a transaction were visible to the detector.
+
+- Auth: `X-Admin-Key`
+- Idempotency: `Idempotency-Key` supported via admin idempotency middleware
+- Behavior:
+  - Scans up to `1000` `(tx_hash, stablecoin_id)` groups per call where `flow_type='standard'` but both mint and burn directions exist.
+  - Flips all matching rows in each group to `flow_type='atomic_roundtrip'`.
+  - Recalculates the affected hourly buckets so downstream flow aggregates drop the reclassified rows immediately.
+  - Returns `done=true` when no additional candidate groups remain.
+
 ---
 
 ## Frontend
@@ -546,6 +565,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |
 | `worker/src/api/backfill-mint-burn.ts` | Admin endpoint: controlled event ingestion backfill |
 | `worker/src/api/backfill-mint-burn-prices.ts` | Admin endpoint: backfill NULL amount_usd values |
+| `worker/src/api/reclassify-atomic-roundtrips.ts` | Admin endpoint: retroactively tag same-tx mint/burn rows as atomic roundtrips |
 | `worker/migrations/0031a_mint_burn_v2.sql` | Database schema (3 tables) |
 | `src/hooks/use-mint-burn-flows.ts` | TanStack Query hooks (3 hooks) |
 | `src/app/flows/page.tsx` | Frontend page |

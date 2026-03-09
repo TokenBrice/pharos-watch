@@ -57,6 +57,7 @@ type MintBurnRow = {
   price_source: string | null;
   burn_type: "effective_burn" | "bridge_burn" | "review_required" | null;
   burn_review_reason: string | null;
+  flow_type: "standard" | "atomic_roundtrip";
   counterparty: string | null;
   tx_hash: string;
   block_number: number;
@@ -210,6 +211,7 @@ export function makeMintBurnRow(overrides: Partial<MintBurnRow> = {}): MintBurnR
     price_source: "supply-history-daily",
     burn_type: direction === "burn" ? "effective_burn" : null,
     burn_review_reason: null,
+    flow_type: "standard",
     counterparty: "0x000...000",
     tx_hash: "0xtx1",
     block_number: 19000000,

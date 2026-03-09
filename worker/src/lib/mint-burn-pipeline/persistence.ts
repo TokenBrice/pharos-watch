@@ -11,8 +11,8 @@ export async function insertMintBurnRows(
     db.prepare(
       `INSERT OR IGNORE INTO mint_burn_events
        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, price_used, price_timestamp, price_source,
-        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        burn_type, burn_review_reason, counterparty, tx_hash, block_number, timestamp, explorer_tx_url, flow_type)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       row.id,
       row.stablecoin_id,
@@ -31,6 +31,7 @@ export async function insertMintBurnRows(
       row.block_number,
       row.timestamp,
       row.explorer_tx_url,
+      row.flow_type,
     ),
   );
 
@@ -91,11 +92,11 @@ export async function recalcAffectedHours(
       stablecoin_id,
       chain_id,
       (timestamp / 3600) * 3600 AS hour_ts,
-      SUM(CASE WHEN direction = 'mint' THEN 1 ELSE 0 END),
-      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN 1 ELSE 0 END),
-      COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN amount_usd ELSE 0 END), 0),
-      COALESCE(SUM(CASE WHEN direction = 'mint' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' THEN -amount_usd ELSE 0 END), 0)
+      SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN 1 ELSE 0 END),
+      SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN 1 ELSE 0 END),
+      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN amount_usd ELSE 0 END), 0),
+      COALESCE(SUM(CASE WHEN direction = 'mint' AND flow_type = 'standard' THEN amount_usd WHEN direction = 'burn' AND burn_type = 'effective_burn' AND flow_type = 'standard' THEN -amount_usd ELSE 0 END), 0)
      FROM mint_burn_events
      WHERE stablecoin_id = ? AND chain_id = ?
        AND timestamp >= ? AND timestamp < ?

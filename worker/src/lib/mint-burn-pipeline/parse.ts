@@ -107,6 +107,7 @@ export function parseMintBurnLogs(
       price_source: eventPrice.priceSource,
       burn_type: direction === "burn" ? "effective_burn" : null,
       burn_review_reason: null,
+      flow_type: "standard",
       counterparty,
       tx_hash: log.transactionHash,
       block_number: blockNum,

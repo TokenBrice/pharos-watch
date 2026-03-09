@@ -385,6 +385,14 @@ export const ENDPOINT_DEFINITIONS: readonly EndpointDefinition[] = [
     },
   },
   {
+    path: "/api/reclassify-atomic-roundtrips",
+    methods: ["POST"],
+    adminRequired: true,
+    mutatingAdmin: true,
+    cacheBypass: true,
+    probeGroup: "manual",
+  },
+  {
     path: "/api/audit-depeg-history",
     methods: ["GET", "POST"],
     adminRequired: true,

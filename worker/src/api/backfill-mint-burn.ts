@@ -24,12 +24,13 @@ import {
   recalcAffectedHours,
   updateBurnClassifications,
 } from "../lib/mint-burn-pipeline/persistence";
+import { detectAtomicRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-detection";
 import {
   mintBurnConfigKey,
   readMintBurnSyncState,
   upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
-import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
+import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const ETHEREUM_CHUNK_SIZE = 50_000;
@@ -261,6 +262,7 @@ export const handleBackfillMintBurn = withErrorHandler(
       }
 
       const affectedHours = new Map<string, MintBurnAffectedHour>();
+      const allParsedRows: MintBurnRow[] = [];
 
       for (const { eventDef, logs } of collectedLogs) {
         const parsed = parseMintBurnLogs(
@@ -287,14 +289,17 @@ export const handleBackfillMintBurn = withErrorHandler(
         bridgeBurns += burnCounts.bridgeBurns;
         reviewBurns += burnCounts.reviewBurns;
 
-        collectAffectedHours(parsed.rows, affectedHours);
+        allParsedRows.push(...parsed.rows);
+      }
 
-        if (parsed.rows.length > 0) {
-          const insertResult = await insertMintBurnRows(db, parsed.rows);
-          rowsInserted += insertResult.inserted;
-          rowsIgnored += insertResult.ignored;
-          rowsReclassified += await updateBurnClassifications(db, parsed.rows);
-        }
+      detectAtomicRoundtrips(allParsedRows);
+      collectAffectedHours(allParsedRows, affectedHours);
+
+      if (allParsedRows.length > 0) {
+        const insertResult = await insertMintBurnRows(db, allParsedRows);
+        rowsInserted += insertResult.inserted;
+        rowsIgnored += insertResult.ignored;
+        rowsReclassified += await updateBurnClassifications(db, allParsedRows);
       }
 
       await recalcAffectedHours(db, affectedHours);

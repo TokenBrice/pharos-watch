@@ -32,6 +32,7 @@ import { handleMintBurnFlows } from "./api/mint-burn-flows";
 import { handleMintBurnEvents } from "./api/mint-burn-events";
 import { handleBackfillMintBurnPrices } from "./api/backfill-mint-burn-prices";
 import { handleBackfillMintBurn } from "./api/backfill-mint-burn";
+import { handleReclassifyAtomicRoundtrips } from "./api/reclassify-atomic-roundtrips";
 import { handleStressSignals } from "./api/stress-signals";
 import { handleBackfillDEWS } from "./api/backfill-dews";
 import { handleFeedback, type FeedbackEnv } from "./api/feedback";
@@ -137,6 +138,12 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
     "backfill-mint-burn",
     request,
     () => handleBackfillMintBurn(db, url, adminKey, request, alchemyApiKey ?? null),
+  )],
+  ["/api/reclassify-atomic-roundtrips", ({ db, url, adminKey, request }) => runIdempotentAdminAction(
+    db,
+    "reclassify-atomic-roundtrips",
+    request,
+    () => handleReclassifyAtomicRoundtrips(db, url, adminKey, request),
   )],
   ["/api/stress-signals", ({ db, url }) => handleStressSignals(db, url)],
   ["/api/backfill-dews", ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request)],

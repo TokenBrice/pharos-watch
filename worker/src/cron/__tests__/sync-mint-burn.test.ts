@@ -363,6 +363,32 @@ describe("syncMintBurn", () => {
     expect(meta.burnClassification.reviewBurns).toBe(0);
   });
 
+  it("counts atomic roundtrips across mint and burn event definitions", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [makeMintLog({ txHash: "0xroundtrip", logIndex: 0 })],
+        complete: true,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [makeBurnLog({ txHash: "0xroundtrip", logIndex: 1 })],
+        complete: true,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({ logs: [], complete: true, calls: 1, maxDepth: 0 });
+
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    const meta = JSON.parse(result.metadata);
+
+    expect(meta.atomicRoundtripsDetected).toBe(2);
+  });
+
   it("keeps status ok when only extended configs are deferred", async () => {
     const db = makeDb({ runState: { nextIndex: 0, degradedStreak: 2 } });
     vi.mocked(createBudget).mockImplementation(() => ({ count: 190, limit: 200 }));

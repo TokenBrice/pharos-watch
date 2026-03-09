@@ -1719,6 +1719,25 @@ Backfills mint/burn event ingestion for a specific contract config using the sam
 | `chunkSize` | `integer` | `50000` | Block span per fetch chunk (max 50000) |
 | `maxChunks` | `integer` | `24` | Maximum chunks to process per request |
 
+### `POST /api/reclassify-atomic-roundtrips`
+
+Retroactively tags same-transaction mint+burn pairs for the same stablecoin as `flow_type='atomic_roundtrip'` and recalculates the affected hourly buckets.
+
+**Headers:** `X-Admin-Key: <secret>` (required)
+
+**Response**
+
+```json
+{
+  "done": false,
+  "updated": 428,
+  "hoursRecalculated": 31,
+  "batchSize": 1000
+}
+```
+
+The endpoint processes up to 1000 `(tx_hash, stablecoin_id)` groups per request. Repeat until `done=true`.
+
 ### `GET /api/audit-depeg-history?dry-run=true`
 
 Dry-run preview for the depeg audit endpoint. This is the only supported `GET` mode for `/api/audit-depeg-history`; all mutating executions require `POST`.

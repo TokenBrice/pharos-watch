@@ -13,6 +13,7 @@ export interface MintBurnRow {
   price_source: string | null;
   burn_type: MintBurnType | null;
   burn_review_reason: string | null;
+  flow_type: "standard" | "atomic_roundtrip";
   counterparty: string | null;
   tx_hash: string;
   block_number: number;

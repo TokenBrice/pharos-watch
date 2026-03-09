@@ -26,13 +26,14 @@ import {
   recalcAffectedHours,
   updateBurnClassifications,
 } from "../lib/mint-burn-pipeline/persistence";
+import { detectAtomicRoundtrips } from "../lib/mint-burn-pipeline/roundtrip-detection";
 import {
   ensureMintBurnSyncStateRows,
   mintBurnConfigKey,
   readMintBurnSyncStateBatch,
   upsertMintBurnSyncState,
 } from "../lib/mint-burn-pipeline/sync-state";
-import type { MintBurnAffectedHour } from "../lib/mint-burn-pipeline/types";
+import type { MintBurnAffectedHour, MintBurnRow } from "../lib/mint-burn-pipeline/types";
 
 const ETHEREUM_CHAIN_ID = "ethereum";
 const MAX_SCAN_RANGE = 50_000;
@@ -319,6 +320,7 @@ export async function syncMintBurn(
   let effectiveBurns = 0;
   let bridgeBurns = 0;
   let reviewBurns = 0;
+  let atomicRoundtripsTotal = 0;
   const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
   let criticalContractsSatisfied = 0;
   let criticalContractsUnsatisfied = 0;
@@ -478,6 +480,9 @@ export async function syncMintBurn(
       );
     }
 
+    // Phase 1: Parse + classify bridge burns per eventDef (preserves Alchemy budget batching)
+    const allParsedRows: MintBurnRow[] = [];
+
     for (const { eventDef, logs } of allConfigLogs) {
       const parsed = parseMintBurnLogs(
         config,
@@ -507,22 +512,30 @@ export async function syncMintBurn(
       bridgeBurns += burnCounts.bridgeBurns;
       reviewBurns += burnCounts.reviewBurns;
 
-      for (const row of parsed.rows) {
-        summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
-      }
-      collectAffectedHours(parsed.rows, affectedHours);
+      allParsedRows.push(...parsed.rows);
+    }
 
-      if (parsed.rows.length > 0) {
-        const insertResult = await insertMintBurnRows(db, parsed.rows);
+    // Phase 2: Detect atomic roundtrips across ALL eventDefs for this config.
+    // Must see all rows to find mint+burn pairs in the same transaction.
+    const roundtripsDetected = detectAtomicRoundtrips(allParsedRows);
+    atomicRoundtripsTotal += roundtripsDetected;
 
-        rowsInserted += insertResult.inserted;
-        rowsIgnored += insertResult.ignored;
+    // Phase 3: Track, collect, insert.
+    for (const row of allParsedRows) {
+      summary.maxBlockSeen = Math.max(summary.maxBlockSeen, row.block_number);
+    }
+    collectAffectedHours(allParsedRows, affectedHours);
 
-        summary.rowsInserted += insertResult.inserted;
-        summary.rowsIgnored += insertResult.ignored;
+    if (allParsedRows.length > 0) {
+      const insertResult = await insertMintBurnRows(db, allParsedRows);
 
-        await updateBurnClassifications(db, parsed.rows);
-      }
+      rowsInserted += insertResult.inserted;
+      rowsIgnored += insertResult.ignored;
+
+      summary.rowsInserted += insertResult.inserted;
+      summary.rowsIgnored += insertResult.ignored;
+
+      await updateBurnClassifications(db, allParsedRows);
     }
 
     // Advance sync state whenever at least one event definition completed with full coverage.
@@ -634,6 +647,7 @@ export async function syncMintBurn(
       bridgeBurns,
       reviewBurns,
     },
+    atomicRoundtripsDetected: atomicRoundtripsTotal,
     criticalCoverage: {
       contractsEnabled: criticalContractsEnabled,
       contractsSatisfied: criticalContractsSatisfied,
