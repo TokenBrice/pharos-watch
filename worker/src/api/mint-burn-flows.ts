@@ -443,6 +443,7 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
             baselineDailyNet: baseline.avgNet,
             baselineDailyAbs: baseline.avgAbs,
             dataAgeDays: baseline.dataDays,
+            currentDailyAbs: (agg?.mintVolume ?? 0) + (agg?.burnVolume ?? 0),
           })
         : null;
       const pressureShiftScore = intensity;

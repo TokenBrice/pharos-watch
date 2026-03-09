@@ -44,6 +44,7 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 | `Z_MULTIPLIER` | 50 | Z-score amplification in the pressure-shift formula |
 | Pressure-shift clamp range | -100 to +100 | Signed baseline-relative score output range |
 | `MIN_DATA_DAYS` | 7 | Days of history required before pressure shift returns a value |
+| `MIN_ACTIVITY_USD` | $50,000 | Minimum 24h absolute flow (`|mint| + |burn|`) required for pressure shift scoring |
 | `FTQ_THRESHOLD` | $100,000,000 | Minimum net flow (both sides) to trigger flight-to-quality |
 | `ETHEREUM_SCAN_RANGE` | 50K (Ethereum) | Max block range per contract per cycle |
 | `startBlock` | per-config (non-uniform) | Each contract config has its own start block |
@@ -231,8 +232,8 @@ z = (currentDailyNet - baselineDailyNet) / denominator
 pressureShift = clamp(-100, 100, z * 50)
 ```
 
-- **Input:** 24h net flow, 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
-- **Output:** -100 to +100 score, or `null` (NR) if fewer than 7 days of history or if the coin has no 24h mint/burn activity.
+- **Input:** 24h net flow, 24h absolute flow (`|mint| + |burn|`), 30-day rolling average net flow, 30-day rolling average absolute flow, data age in days.
+- **Output:** -100 to +100 score, or `null` (NR) if fewer than 7 days of history, if 24h absolute flow is below $50,000, or if the coin has no 24h mint/burn activity.
 - Score of 0 = current flow matches baseline. Negative values = pressure is worse than baseline. Positive values = pressure is improving versus baseline.
 
 ### Two-Signal Interpretation Model
