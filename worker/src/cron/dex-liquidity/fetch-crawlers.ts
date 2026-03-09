@@ -30,7 +30,7 @@ function buildCrawlTokens(chainAddresses: Map<string, ProviderChainAddress[]>): 
 }
 
 /** Crawl CG onchain pools for all tracked stablecoins.
- *  No time budget needed — CG paid API is ~8x faster than GT free. */
+ *  Budgeted so CG + GT-only crawls still leave room for scoring/persistence. */
 export async function fetchCgPools(
   addressToId: Map<string, string>,
   knownPoolAddrs: Set<string>,
@@ -53,7 +53,17 @@ export async function fetchCgPools(
     priceObs,
     stats,
     signal,
-    beforeRequest: ({ requestCount, signal: abortSignal }) => onchainRateLimit(requestCount, abortSignal).then(() => true),
+    beforeRequest: async ({ requestCount, totalTokens, startMs, signal: abortSignal }) => {
+      if (Date.now() - startMs > CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS) {
+        console.log(
+          `[dex-liquidity] CG pool crawl time budget exhausted after ${requestCount}/${totalTokens} requests ` +
+          `(${Math.round((Date.now() - startMs) / 1000)}s), yielding partial results`,
+        );
+        return false;
+      }
+      await onchainRateLimit(requestCount, abortSignal);
+      return true;
+    },
     fetchPools: (tokenAddress, cgChain, abortSignal) => fetchCgTokenPools(cgChain, tokenAddress, abortSignal),
     parsePool: (pool) => {
       const a = pool.attributes;

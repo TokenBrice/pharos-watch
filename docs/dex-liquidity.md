@@ -65,7 +65,7 @@ Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the w
 | Balance data | Not available (defaults to 1.0) | Approximated from token prices |
 | Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
 | Locked liquidity | Not available | `locked_liquidity_percentage` field |
-| Time budget | 8 min (partial coverage, leaves cron headroom) | Not needed (full coverage) |
+| Time budget | 3 min (GT-only chains, partial coverage) | 5 min (partial coverage, leaves room for scoring + GT-only chains) |
 
 The CG integration extracts three signals unavailable from GeckoTerminal:
 1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.

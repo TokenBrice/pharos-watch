@@ -59,6 +59,8 @@ Primary source for token prices, market caps, and DEX pool discovery.
 
 **Rate limit in code**: `RATE_LIMITS.COINGECKO_ONCHAIN_MS = 250` ms in `worker/src/lib/rate-limit.ts` (used by `worker/src/lib/coingecko-onchain.ts`)
 
+**Crawl budget**: 5 min max wall-time for CoinGecko onchain pool discovery (`CRAWL_BUDGETS.COINGECKO_ONCHAIN_MS`). This prevents the paid onchain crawl from consuming the entire `sync-dex-liquidity` runtime before scoring and persistence.
+
 > **Key constraint**: 500,000 calls/month ÷ ~1,440 cron runs/month (every 30 min) = ~347 CG calls per cron run on average before hitting the monthly cap. The pool crawl can still blow through this if not throttled.
 
 ---
@@ -74,7 +76,7 @@ Fallback DEX pool data source when CoinGecko onchain API is unavailable.
 
 **Rate limit in code**: `GECKO_TERMINAL_MS = 2000` ms (30 req/min) in `worker/src/lib/rate-limit.ts`, used by `worker/src/cron/dex-liquidity/fetch-crawlers.ts`
 
-**Crawl budget**: 8 min max wall-time within the 30-min cron window (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This intentionally leaves enough room for the post-crawl scoring and persistence phases before the 13-minute app timeout / 15-minute Cloudflare wall-clock cap.
+**Crawl budget**: 3 min max wall-time within the 30-min cron window (`CRAWL_BUDGETS.GECKO_TERMINAL_MS`). This GT-only crawl now shares the total runtime budget with the 5-minute CoinGecko onchain crawl so the combined pool-discovery phase stays under the 13-minute app timeout / 15-minute Cloudflare wall-clock cap.
 
 ---
 
@@ -329,6 +331,7 @@ Used to extend FX coverage beyond Frankfurter, including CNH, and as the seconda
 | Etherscan free tier (chains) | Base/BNB/Avalanche/Optimism need paid plan | 🟡 Paid at $49/chain/mo if we track those |
 | Alchemy PAYG CUs (30M free + $0.40/M over) | ~6.5M CUs/month for supply + mint/burn combined | 🟢 Plenty of headroom |
 | CoinMarketCap Basic (10K credits/month) | Fine as last-resort fallback only | 🟢 |
-| GeckoTerminal crawl budget (8 min/run) | Enforced by code — not all coins crawled every run | 🟢 Accepted tradeoff |
+| CoinGecko onchain crawl budget (5 min/run) | Enforced by code — partial CG coverage per run is acceptable | 🟢 Accepted tradeoff |
+| GeckoTerminal crawl budget (3 min/run) | Enforced by code — GT-only chains get partial coverage per run | 🟢 Accepted tradeoff |
 | Twitter Free tier (500 posts/month) | 1/day = ~30/month | 🟢 |
 | Telegram / GitHub / Frankfurter / gold-api | No meaningful limits | 🟢 |

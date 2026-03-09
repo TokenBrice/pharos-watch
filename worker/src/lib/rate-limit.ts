@@ -71,8 +71,10 @@ export const RATE_LIMITS = {
 } as const;
 
 export const CRAWL_BUDGETS = {
+  /** Max wall time for CG onchain pool crawl, leaving room for GT-only chains and persistence. */
+  COINGECKO_ONCHAIN_MS: 5 * 60 * 1000,
   /** Max wall time for GT pool crawl, leaving headroom for persistence before the Worker hard limit. */
-  GECKO_TERMINAL_MS: 8 * 60 * 1000,
+  GECKO_TERMINAL_MS: 3 * 60 * 1000,
 } as const;
 
 async function hashIpWithSalt(ip: string, salt: string): Promise<string> {
