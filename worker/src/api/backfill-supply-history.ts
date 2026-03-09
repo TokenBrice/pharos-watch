@@ -7,6 +7,7 @@ import { withAdmin } from "../lib/auth";
 import { binarySearchNearest } from "../lib/binary-search";
 import { resolveMarketCap } from "../lib/resolve-market-cap";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
+import { fetchWithRetry } from "../lib/fetch-retry";
 
 const DEFAULT_BATCH_SIZE = 10;
 
@@ -31,18 +32,18 @@ async function backfillCommodity(
 ): Promise<{ rows: number; error?: string }> {
   // Fetch market_chart (prices + market_caps) and current circulating_supply in parallel
   const [cgRes, coinRes] = await Promise.all([
-    fetch(
+    fetchWithRetry(
       cgUrl(`/coins/${config.geckoId}/market_chart?vs_currency=usd&days=max`),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
     ),
-    fetch(
+    fetchWithRetry(
       cgUrl(`/coins/${config.geckoId}?market_data=true&localization=false&tickers=false&community_data=false&developer_data=false`),
       { headers: cgHeaders({ "User-Agent": USER_AGENT }) },
     ),
   ]);
 
-  if (!cgRes.ok) {
-    coinRes.body?.cancel();
+  if (!cgRes?.ok) {
+    await coinRes?.body?.cancel();
   } else {
     const cgData = (await cgRes.json()) as {
       market_caps: [number, number][];
@@ -53,13 +54,13 @@ async function backfillCommodity(
     // Works for slow-growth RWAs (e.g. physical silver vaults) where today's
     // supply is a reliable anchor against corrupt historical market_caps.
     let circulatingSupply: number | undefined;
-    if (coinRes.ok) {
+    if (coinRes?.ok) {
       const coinData = (await coinRes.json()) as {
         market_data?: { circulating_supply?: number };
       };
       circulatingSupply = coinData.market_data?.circulating_supply ?? undefined;
     } else {
-      console.warn(`[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${coinRes.status}), sanity check skipped`);
+      console.warn(`[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${coinRes?.status ?? "no response"}), sanity check skipped`);
     }
 
     const mcaps = cgData.market_caps ?? [];
@@ -105,16 +106,16 @@ async function backfillCommodity(
   }
 
   const [protocolRes, priceRes] = await Promise.all([
-    fetch(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
+    fetchWithRetry(`${DEFILLAMA_API}/protocol/${config.protocolSlug}`, {
       headers: { "User-Agent": USER_AGENT },
     }),
-    fetch(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=0&span=500`, {
+    fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${config.geckoId}?start=0&span=500`, {
       headers: { "User-Agent": USER_AGENT },
     }),
   ]);
 
-  if (!protocolRes.ok) {
-    return { rows: 0, error: `protocol API returned ${protocolRes.status}` };
+  if (!protocolRes?.ok) {
+    return { rows: 0, error: `protocol API returned ${protocolRes?.status ?? "no response"}` };
   }
 
   const protocolData = (await protocolRes.json()) as {
@@ -137,7 +138,7 @@ async function backfillCommodity(
   }
 
   let prices: { timestamp: number; price: number }[] = [];
-  if (priceRes.ok) {
+  if (priceRes?.ok) {
     const priceData = (await priceRes.json()) as {
       coins: Record<string, { prices: { timestamp: number; price: number }[] }>;
     };
@@ -228,15 +229,15 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       const dlId = meta.llamaId ?? meta.id;
 
       // Fetch DL detail + historical prices (for non-USD coins) in parallel
-      const fetches: Promise<Response>[] = [
-        fetch(
+      const fetches: Promise<Response | null>[] = [
+        fetchWithRetry(
           `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(dlId)}`,
           { headers: { "User-Agent": USER_AGENT } },
         ),
       ];
       if (needsConversion && geckoId) {
         fetches.push(
-          fetch(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=500`, {
+          fetchWithRetry(`${DEFILLAMA_COINS}/chart/coingecko:${geckoId}?start=0&span=500`, {
             headers: { "User-Agent": USER_AGENT },
           }),
         );
@@ -247,8 +248,8 @@ export const handleBackfillSupplyHistory = withErrorHandler(
       try {
         const responses = await Promise.all(fetches);
         const detailRes = responses[0];
-        if (!detailRes.ok) {
-          errors.push(`${meta.symbol}: DL returned ${detailRes.status}`);
+        if (!detailRes?.ok) {
+          errors.push(`${meta.symbol}: DL returned ${detailRes?.status ?? "no response"}`);
           continue;
         }
         detail = (await detailRes.json()) as StablecoinDetail;
