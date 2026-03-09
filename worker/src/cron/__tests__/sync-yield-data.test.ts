@@ -64,6 +64,65 @@ vi.mock("@shared/lib/stablecoins", () => ({
       contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
     },
   ],
+  TRACKED_META_BY_ID: new Map([
+    ["100", {
+      id: "100",
+      name: "sDAI",
+      symbol: "sDAI",
+      geckoId: "savings-dai",
+      flags: {
+        pegCurrency: "USD",
+        backing: "crypto-backed",
+        yieldBearing: true,
+        navToken: true,
+        governance: "decentralized",
+      },
+      yieldConfig: {
+        yieldSource: "DSR",
+        yieldType: "nav-appreciation",
+      },
+    }],
+    ["usdc-circle", {
+      id: "usdc-circle",
+      name: "USD Coin",
+      symbol: "USDC",
+      geckoId: "usd-coin",
+      flags: {
+        pegCurrency: "USD",
+        backing: "fiat-backed",
+        yieldBearing: false,
+        navToken: false,
+        governance: "centralized",
+      },
+    }],
+    ["u-united-stables", {
+      id: "u-united-stables",
+      name: "United Stables",
+      symbol: "U",
+      geckoId: "united-stables",
+      flags: {
+        pegCurrency: "USD",
+        backing: "rwa-backed",
+        yieldBearing: false,
+        navToken: false,
+        governance: "centralized",
+      },
+    }],
+    ["lusd-liquity", {
+      id: "lusd-liquity",
+      name: "Liquity USD",
+      symbol: "LUSD",
+      geckoId: "liquity-usd",
+      flags: {
+        pegCurrency: "USD",
+        backing: "crypto-backed",
+        yieldBearing: false,
+        navToken: false,
+        governance: "decentralized",
+      },
+      contracts: [{ chain: "ethereum", address: "0x5f98805a4e8be255a32880fdec7f6728c6568ba0", decimals: 18 }],
+    }],
+  ]),
 }));
 
 // Stub fetch-retry to delegate to global fetch

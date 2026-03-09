@@ -1,5 +1,10 @@
 import { CHAIN_META } from "@shared/lib/chains";
-import type { BlacklistStablecoin, BlacklistEventType } from "@shared/types";
+import {
+  BLACKLIST_STABLECOINS,
+  type BlacklistStablecoin,
+  type BlacklistEventType,
+} from "@shared/types";
+import { findTrackedContract, getTrackedStablecoin } from "@shared/lib/tracked-stablecoin-utils";
 
 export interface ChainConfig {
   chainId: string;          // Internal identifier (e.g. "ethereum")
@@ -11,6 +16,7 @@ export interface ChainConfig {
 
 export interface ContractEventConfig {
   chain: ChainConfig;
+  stablecoinId: string;
   stablecoin: BlacklistStablecoin;
   contractAddress: string;
   decimals: number;        // Token decimals (6 for USDC/USDT/XAUT, 18 for PAXG)
@@ -20,6 +26,16 @@ export interface ContractEventConfig {
     eventType: BlacklistEventType;
     hasAmount: boolean;
   }[];
+}
+
+interface ContractEventConfigSpec {
+  chain: ChainConfig;
+  stablecoinId: string;
+  stablecoin?: BlacklistStablecoin;
+  contractSource?: "primary" | "traded";
+  contractAddressOverride?: string;
+  decimalsOverride?: number;
+  events: ContractEventConfig["events"];
 }
 
 // --- Chain configurations (derived from shared CHAIN_META) ---
@@ -160,32 +176,84 @@ const PAXG_EVENTS: ContractEventConfig["events"] = [
   },
 ];
 
+const BLACKLIST_STABLECOIN_SET = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
+
+function resolveBlacklistStablecoinSymbol(
+  stablecoinId: string,
+  override?: BlacklistStablecoin,
+): BlacklistStablecoin {
+  if (override) return override;
+  const symbol = getTrackedStablecoin(stablecoinId)?.symbol;
+  if (!symbol || !BLACKLIST_STABLECOIN_SET.has(symbol as BlacklistStablecoin)) {
+    throw new Error(`Unsupported blacklist stablecoin symbol for ${stablecoinId}`);
+  }
+  return symbol as BlacklistStablecoin;
+}
+
+function resolveBlacklistContractConfig(
+  spec: ContractEventConfigSpec,
+): ContractEventConfig {
+  const stablecoin = getTrackedStablecoin(spec.stablecoinId);
+  if (!stablecoin) {
+    throw new Error(`Unknown tracked stablecoin: ${spec.stablecoinId}`);
+  }
+
+  const resolvedContract = spec.contractAddressOverride
+    ? {
+        address: spec.contractAddressOverride,
+        decimals:
+          spec.decimalsOverride
+          ?? findTrackedContract(stablecoin, spec.chain.chainId, { source: spec.contractSource ?? "primary" })?.decimals
+          ?? stablecoin.contracts?.[0]?.decimals
+          ?? 18,
+      }
+    : findTrackedContract(stablecoin, spec.chain.chainId, {
+        source: spec.contractSource ?? "primary",
+      });
+  if (!resolvedContract) {
+    throw new Error(`Missing tracked contract for ${spec.stablecoinId} on ${spec.chain.chainId}`);
+  }
+
+  return {
+    chain: spec.chain,
+    stablecoinId: spec.stablecoinId,
+    stablecoin: resolveBlacklistStablecoinSymbol(spec.stablecoinId, spec.stablecoin),
+    contractAddress: resolvedContract.address,
+    decimals: spec.decimalsOverride ?? resolvedContract.decimals,
+    events: spec.events,
+  };
+}
+
 // --- Contract addresses per chain ---
 
-export const CONTRACT_CONFIGS: ContractEventConfig[] = [
+const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // USDC
-  { chain: ETHEREUM, stablecoin: "USDC", contractAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", decimals: 6, events: USDC_EVENTS },
-  { chain: ARBITRUM, stablecoin: "USDC", contractAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", decimals: 6, events: USDC_EVENTS },
-  { chain: BASE, stablecoin: "USDC", contractAddress: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913", decimals: 6, events: USDC_EVENTS },
-  { chain: OPTIMISM, stablecoin: "USDC", contractAddress: "0x0b2c639c533813f4aa9d7837caf62653d097ff85", decimals: 6, events: USDC_EVENTS },
-  { chain: POLYGON, stablecoin: "USDC", contractAddress: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", decimals: 6, events: USDC_EVENTS },
-  { chain: AVALANCHE, stablecoin: "USDC", contractAddress: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", decimals: 6, events: USDC_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
+  { chain: ARBITRUM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
+  { chain: BASE, stablecoinId: "usdc-circle", events: USDC_EVENTS },
+  { chain: OPTIMISM, stablecoinId: "usdc-circle", events: USDC_EVENTS },
+  { chain: POLYGON, stablecoinId: "usdc-circle", events: USDC_EVENTS },
+  { chain: AVALANCHE, stablecoinId: "usdc-circle", events: USDC_EVENTS },
 
   // USDT (EVM)
-  { chain: ETHEREUM, stablecoin: "USDT", contractAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7", decimals: 6, events: USDT_EVENTS },
-  { chain: ARBITRUM, stablecoin: "USDT", contractAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", decimals: 6, events: USDT_UPGRADED_EVENTS },
-  { chain: OPTIMISM, stablecoin: "USDT", contractAddress: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", decimals: 6, events: USDT_EVENTS },
-  { chain: OPTIMISM, stablecoin: "USDT", contractAddress: "0x01bFF41798a0BcF287b996046Ca68b395DbC1071", decimals: 6, events: USDT0_EVENTS },
-  { chain: POLYGON, stablecoin: "USDT", contractAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", decimals: 6, events: USDT_UPGRADED_EVENTS },
-  { chain: AVALANCHE, stablecoin: "USDT", contractAddress: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", decimals: 6, events: USDT_EVENTS },
-  { chain: BSC, stablecoin: "USDT", contractAddress: "0x55d398326f99059ff775485246999027b3197955", decimals: 18, events: USDT_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "usdt-tether", events: USDT_EVENTS },
+  { chain: ARBITRUM, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENTS },
+  { chain: OPTIMISM, stablecoinId: "usdt-tether", events: USDT_EVENTS },
+  { chain: OPTIMISM, stablecoinId: "usdt-tether", contractSource: "traded", events: USDT0_EVENTS },
+  { chain: POLYGON, stablecoinId: "usdt-tether", events: USDT_UPGRADED_EVENTS },
+  { chain: AVALANCHE, stablecoinId: "usdt-tether", events: USDT_EVENTS },
+  { chain: BSC, stablecoinId: "usdt-tether", events: USDT_EVENTS },
 
   // USDT (Tron)
-  { chain: TRON, stablecoin: "USDT", contractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6, events: USDT_EVENTS },
+  { chain: TRON, stablecoinId: "usdt-tether", events: USDT_EVENTS },
 
   // PAXG (Ethereum only)
-  { chain: ETHEREUM, stablecoin: "PAXG", contractAddress: "0x45804880De22913dAFE09f4980848ECE6EcbAf78", decimals: 18, events: PAXG_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "paxg-paxos", events: PAXG_EVENTS },
 
   // XAUT (Ethereum only — same event pattern as USDT0: BlockPlaced/BlockReleased/DestroyedBlockedFunds)
-  { chain: ETHEREUM, stablecoin: "XAUT", contractAddress: "0x68749665FF8D2d112Fa859AA293F07A622782F38", decimals: 6, events: USDT0_EVENTS },
+  { chain: ETHEREUM, stablecoinId: "xaut-tether", events: USDT0_EVENTS },
 ];
+
+export const CONTRACT_CONFIGS: ContractEventConfig[] = CONTRACT_CONFIG_SPECS.map(
+  resolveBlacklistContractConfig,
+);

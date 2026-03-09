@@ -2,8 +2,12 @@
 
 import { useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
-import { CRON_15MIN, CRON_1H, CRON_24H } from "@/hooks/use-api-query";
+import {
+  createApiQueryFn,
+  CRON_15MIN,
+  CRON_1H,
+  CRON_24H,
+} from "@/hooks/use-api-query";
 
 const DEBOUNCE_MS = 100;
 
@@ -17,37 +21,33 @@ export function usePrefetchStablecoin() {
       timerRef.current = setTimeout(() => {
         queryClient.prefetchQuery({
           queryKey: ["stablecoin-detail", coinId],
-          queryFn: () =>
-            apiFetch(
-              `/api/stablecoin/${encodeURIComponent(coinId)}`
-            ),
+          queryFn: createApiQueryFn(
+            `/api/stablecoin/${encodeURIComponent(coinId)}`
+          ),
           staleTime: CRON_1H,
         });
 
         queryClient.prefetchQuery({
           queryKey: ["depeg-events", coinId],
-          queryFn: () =>
-            apiFetch(
-              `/api/depeg-events?stablecoin=${encodeURIComponent(coinId)}`
-            ),
+          queryFn: createApiQueryFn(
+            `/api/depeg-events?stablecoin=${encodeURIComponent(coinId)}`
+          ),
           staleTime: CRON_15MIN,
         });
 
         queryClient.prefetchQuery({
           queryKey: ["dex-liquidity-history", coinId, 90],
-          queryFn: () =>
-            apiFetch(
-              `/api/dex-liquidity-history?stablecoin=${encodeURIComponent(coinId)}&days=90`
-            ),
+          queryFn: createApiQueryFn(
+            `/api/dex-liquidity-history?stablecoin=${encodeURIComponent(coinId)}&days=90`
+          ),
           staleTime: CRON_1H,
         });
 
         queryClient.prefetchQuery({
           queryKey: ["safety-score-history", coinId, 3650],
-          queryFn: () =>
-            apiFetch(
-              `/api/safety-score-history?stablecoin=${encodeURIComponent(coinId)}&days=3650`
-            ),
+          queryFn: createApiQueryFn(
+            `/api/safety-score-history?stablecoin=${encodeURIComponent(coinId)}&days=3650`
+          ),
           staleTime: CRON_24H,
         });
       }, DEBOUNCE_MS);

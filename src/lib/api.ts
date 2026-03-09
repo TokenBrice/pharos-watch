@@ -26,6 +26,17 @@ export const API_BASE = resolveApiBase(browserHostname);
 
 export const STRICT_CONTRACT_PATHS = new Set(STRICT_CONTRACT_PATHS_LIST);
 
+export function buildApiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
+export function apiRequest(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  return fetch(buildApiUrl(path), init);
+}
+
 export class SchemaValidationError extends Error {
   readonly path: string;
   readonly issues: string;
@@ -99,7 +110,7 @@ export async function apiFetch<T>(
   schema?: ZodType<T>,
   init?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, init);
+  const res = await apiRequest(path, init);
   if (!res.ok) throw await buildFetchError(path, res);
 
   const data: unknown = await res.json();
@@ -128,7 +139,7 @@ export async function apiFetchWithMeta<T>(
   schema?: ZodType<T>,
   init?: RequestInit,
 ): Promise<{ data: T; meta: ApiMeta | null }> {
-  const res = await fetch(`${API_BASE}${path}`, init);
+  const res = await apiRequest(path, init);
   if (!res.ok) throw await buildFetchError(path, res);
 
   const json: unknown = await res.json();

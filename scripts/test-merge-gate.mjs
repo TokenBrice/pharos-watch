@@ -41,7 +41,6 @@ function hasCriticalApiContractChange(files) {
     || f === "src/lib/api.ts"
     || f === "shared/lib/api-endpoints.ts"
     || f === "shared/lib/strict-contract-paths.ts"
-    || f === "shared/lib/strict-contract-paths.json"
     || f === "shared/types/index.ts"
   );
 }

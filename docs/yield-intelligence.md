@@ -298,7 +298,7 @@ CREATE TABLE yield_history (
 ### `sync-yield-data`
 
 **Schedule:** `10,40 * * * *` (every 30 min, Trigger 3)
-**File:** `worker/src/cron/sync-yield-data.ts`
+**Files:** `worker/src/cron/sync-yield-data.ts` orchestration + `worker/src/cron/yield-sync/{sources,resolve,rankings}.ts`
 
 **Execution flow:**
 
@@ -317,6 +317,12 @@ CREATE TABLE yield_history (
 13. Query best-source rows, fetch alt-source rows, attach as `altSources[]`, add read-time `data-stale` warning decoration from `updated_at` age, then cache rankings JSON only when safety input is healthy and schema validation succeeds (with safe `warning_signals` JSON parsing on read paths)
 
 **Degraded semantics:** If `computeSafetyScoresSnapshot()` returns a degraded result, safety coverage is below the minimum ratio, or rankings schema validation fails, `sync-yield-data` returns `status: "degraded"` and skips `yield-rankings` cache overwrite. Safety-degraded runs also skip `report_card_cache` writes to preserve last-known-good snapshots.
+
+Implementation stages:
+- `yield-sync/sources.ts`: DL pool loading, on-chain reads, risk-free rate cache, price-derived and B.Protocol helpers
+- `yield-sync/resolve.ts`: per-coin source resolution and auto-discovery
+- `yield-sync/rankings.ts`: rankings row shaping, dedupe, warning parsing, TVL-weighted median helper
+- `sync-yield-data.ts`: safety snapshot handling, persistence, stale-row cleanup, and cache writes
 
 **Shared safety scores:** The report-cards API handler doesn't cache results, so both yield sync and daily digest call the same shared safety-score pipeline. It still uses the two-phase dependency approach (independent first, then CeFi-dependent).
 
@@ -549,7 +555,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `worker/migrations/0031_yield_data.sql`              | D1 schema: `yield_data` + `yield_history` tables                                                                                             |
 | `worker/migrations/0041_yield_data_multi_source.sql` | Adds `source_key` + `is_best` columns, changes PK to `(stablecoin_id, source_key)`                                                           |
 | `worker/migrations/0056_yield_history_warning_signals.sql` | Adds `warning_signals` history persistence support                                                                                       |
-| `worker/src/cron/sync-yield-data.ts`                 | Main sync cron: three-tier resolution, multi-source matching, PYS, safety scores, caching                                                    |
+| `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | Yield sync orchestration and stage modules: source loading, multi-source matching, PYS, safety scores, caching |
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`                                                                |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
 | `worker/src/cron/fetch-tbill-rate.ts`                | Daily T-bill rate cron                                                                                                                       |

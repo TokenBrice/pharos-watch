@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 
-import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { STRICT_CONTRACT_PATHS_LIST } from "../shared/lib/strict-contract-paths.ts";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_RETRY_COUNT = 1;
 const DEFAULT_RETRY_DELAY_MS = 1_500;
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STRICT_PATHS_FILE = path.join(__dirname, "../shared/lib/strict-contract-paths.json");
 
 function parseArgs(argv) {
   const args = {
@@ -139,9 +137,7 @@ function stripMeta(body) {
 }
 
 function loadStrictContractPaths() {
-  const raw = readFileSync(STRICT_PATHS_FILE, "utf8");
-  const parsed = JSON.parse(raw);
-  assert(Array.isArray(parsed), `Invalid strict path file: ${STRICT_PATHS_FILE}`);
+  const parsed = [...STRICT_CONTRACT_PATHS_LIST];
   for (const p of parsed) {
     assert(typeof p === "string" && p.startsWith("/api/"), `Invalid strict API path entry: ${String(p)}`);
   }

@@ -1,5 +1,5 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
@@ -116,9 +116,8 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
   );
 
   // 3. Build lookup maps
-  const metaById = new Map(TRACKED_STABLECOINS.map((s) => [s.id, s]));
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
-  const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, metaById, fxFallbackRates);
+  const { rates: pegRates, sources: pegRateSources } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, fxFallbackRates);
   const methodologyVersion = getDepegDewsMethodologyVersionAt(stablecoinsCache.updatedAt);
 
   // 4. Compute per-coin data

@@ -296,7 +296,7 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 - **Detail timeline**: `src/components/stablecoin-detail/safety-score-history-section.tsx` — per-coin grade transition timeline (seed row + changes) shown under the Safety Score section on `/stablecoin/[id]`
 - **Mini card**: `src/components/report-card-mini.tsx` — compact grid tile with simulation support (dashed border, before→after grade, "Simulated" badge)
 - **Radar chart**: `src/components/radar-chart.tsx` — hexagonal Recharts radar with `ReportCardRadar` (single) and `CompareRadar` (multi-coin overlay)
-- **Hooks**: `src/hooks/use-report-cards.ts` (grade cards + methodology), `src/hooks/use-safety-score-history.ts` (per-coin grade history), `src/hooks/use-portfolio.ts` (portfolio state + localStorage + URL sync), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
+- **Hooks**: `src/hooks/use-report-cards.ts` (grade cards + methodology), `src/hooks/use-safety-score-history.ts` (per-coin grade history), `src/hooks/use-portfolio.ts` (portfolio state + browser persistence), `src/hooks/use-stress-test.ts` (stress test state + recomputation)
 
 ## Key Files
 
@@ -315,5 +315,5 @@ State: `useStressTest` hook. URL sync: `?stress=usdc&grade=D`.
 | `src/app/safety-scores/client.tsx` | Full page with filtering, sorting, grade distribution, simulation mode |
 | `src/hooks/use-report-cards.ts` | TanStack Query hook |
 | `src/hooks/use-safety-score-history.ts` | TanStack Query hook for `/api/safety-score-history` |
-| `src/hooks/use-portfolio.ts` | Portfolio holdings state, localStorage persistence, URL sync, upstream exposure |
+| `src/hooks/use-portfolio.ts` | Portfolio holdings state + browser persistence; delegates codec and exposure math to `src/lib/portfolio-codec.ts` and `src/lib/portfolio-analysis.ts` |
 | `src/hooks/use-stress-test.ts` | Stress test state, `computeStressedGrades` invocation, impact calculation |

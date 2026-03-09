@@ -25,6 +25,19 @@ interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   fetchInit?: RequestInit;
 }
 
+export function createApiQueryFn<T>(
+  path: string,
+  schema?: ZodType<T>,
+  fetchInit?: RequestInit,
+): () => Promise<T> {
+  return () => {
+    if (fetchInit) {
+      return apiFetch<T>(path, schema, fetchInit);
+    }
+    return apiFetch<T>(path, schema);
+  };
+}
+
 export function createPollingQueryOptions<T>(
   key: readonly unknown[],
   queryFn: () => Promise<T>,
@@ -89,12 +102,7 @@ export function useApiQuery<T>(
 ): UseQueryResult<T, Error> {
   return usePollingQuery(
     key,
-    () => {
-      if (opts?.fetchInit) {
-        return apiFetch<T>(path, opts.schema, opts.fetchInit);
-      }
-      return apiFetch<T>(path, opts?.schema);
-    },
+    createApiQueryFn(path, opts?.schema, opts?.fetchInit),
     cronInterval,
     {
       enabled: opts?.enabled,

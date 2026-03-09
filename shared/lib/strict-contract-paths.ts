@@ -1,3 +1,3 @@
-import strictPaths from "./strict-contract-paths.json";
+import { getStrictContractPaths } from "./api-endpoints";
 
-export const STRICT_CONTRACT_PATHS_LIST = strictPaths as readonly string[];
+export const STRICT_CONTRACT_PATHS_LIST = getStrictContractPaths();

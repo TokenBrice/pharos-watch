@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { getStatusPageActions, type StatusPageAction } from "@shared/lib/api-endpoints";
-import { API_BASE } from "@/lib/api";
+import { buildApiUrl } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -30,10 +30,10 @@ function AdminActionButton({ action, adminKey }: AdminActionButtonProps) {
 
   const handleConfirm = async () => {
     setLoading(true);
-    setResult(null);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE}${action.path}`, {
+      setResult(null);
+      setError(null);
+      try {
+      const res = await fetch(buildApiUrl(action.path), {
         method: action.method,
         headers: { "X-Admin-Key": adminKey },
       });

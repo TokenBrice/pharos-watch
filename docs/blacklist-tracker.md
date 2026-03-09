@@ -63,6 +63,8 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 
 **File:** `worker/src/lib/blacklist-contracts.ts`
 
+Canonical token addresses and decimals now resolve from `shared/lib/stablecoins.ts`. `blacklist-contracts.ts` keeps only tracker-specific chain/event configuration, with one traded-contract exception for Optimism `USDT0` sourced from the shared `tradedContracts` metadata.
+
 ### USDC (6 chains)
 
 All use USDC events: `Blacklisted(address)`, `UnBlacklisted(address)`. Decimals: 6.
@@ -444,7 +446,7 @@ The hook delegates to `src/lib/blacklist-api.ts`, which fetches the first page, 
 | File                                                       | Role                                                                                       |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `worker/src/cron/sync-blacklist.ts`                        | Main cron: incremental scan, backfill, balance enrichment, sync state                      |
-| `worker/src/lib/blacklist-contracts.ts`                    | Contract configs: addresses, chains, event signatures, decimals                            |
+| `worker/src/lib/blacklist-contracts.ts`                    | Blacklist event configs: chains, event signatures, and shared-contract resolution rules     |
 | `worker/src/lib/evm-logs.ts`                               | Etherscan v2 log fetching, recursive splitting, rate limiting, `decodeUint256`             |
 | `worker/src/api/blacklist.ts`                              | `GET /api/blacklist` handler                                                               |
 | `worker/src/router.ts`                                     | API route dispatch, including admin endpoints (`reset-blacklist-sync`, `debug-sync-state`) |

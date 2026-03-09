@@ -1,34 +1,27 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { REGISTRY_BY_ID, REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { scoreToGrade, DIMENSION_ORDER } from "@shared/lib/report-cards";
 import type {
   ReportCard,
   DimensionKey,
   ReportCardGrade,
-  DependencyWeight,
-  ReserveSlice,
 } from "@shared/types";
+import {
+  computeGroupedExposure,
+  computeUpstreamExposure,
+  categorizeCollateral,
+  type UpstreamExposure,
+} from "@/lib/portfolio-analysis";
+import {
+  encodePortfolioHoldings,
+  isPortfolioHolding,
+  migratePortfolioIds,
+  parsePortfolioUrlParam,
+  type PortfolioHolding,
+} from "@/lib/portfolio-codec";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface PortfolioHolding {
-  coinId: string;
-  amount: number; // USD
-}
-
-export interface UpstreamExposure {
-  coinId: string;
-  name: string;
-  symbol: string;
-  usd: number;
-  pct: number;
-  isCollateral: boolean; // true = non-stablecoin collateral (ETH, T-bills, etc.)
-}
+export { categorizeCollateral, computeGroupedExposure } from "@/lib/portfolio-analysis";
 
 interface PortfolioState {
   initialized: boolean;
@@ -53,83 +46,6 @@ interface PortfolioState {
 
 const STORAGE_KEY = "pharos:portfolio";
 
-// ---------------------------------------------------------------------------
-// Lookup maps (built once at module level)
-// ---------------------------------------------------------------------------
-
-const symbolToId = new Map<string, string>();
-const idToSymbol = new Map<string, string>();
-const idToMeta = new Map<string, {
-  name: string;
-  symbol: string;
-  backing: string;
-  reserves?: ReserveSlice[];
-}>();
-
-for (const coin of TRACKED_STABLECOINS) {
-  const lower = coin.symbol.toLowerCase();
-  symbolToId.set(lower, coin.id);
-  idToSymbol.set(coin.id, lower);
-  idToMeta.set(coin.id, {
-    name: coin.name,
-    symbol: coin.symbol,
-    backing: coin.flags.backing,
-    reserves: coin.reserves,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function parseUrlParam(param: string): PortfolioHolding[] {
-  if (!param) return [];
-  const holdings: PortfolioHolding[] = [];
-  for (const part of param.split(",")) {
-    const [sym, amtStr] = part.split(":");
-    if (!sym || !amtStr) continue;
-    const coinId = symbolToId.get(sym.toLowerCase());
-    const amount = Number(amtStr);
-    if (coinId && Number.isFinite(amount) && amount > 0) {
-      holdings.push({ coinId, amount });
-    }
-  }
-  return holdings;
-}
-
-function encodeHoldings(holdings: PortfolioHolding[]): string {
-  return holdings
-    .map((h) => {
-      const sym = idToSymbol.get(h.coinId);
-      return sym ? `${sym}:${h.amount}` : null;
-    })
-    .filter(Boolean)
-    .join(",");
-}
-
-function migratePortfolioIds(holdings: PortfolioHolding[]): PortfolioHolding[] {
-  let changed = false;
-  const migrated: PortfolioHolding[] = [];
-  for (const holding of holdings) {
-    const meta = REGISTRY_BY_ID.get(holding.coinId) ?? REGISTRY_BY_LLAMA_ID.get(holding.coinId);
-    if (!meta) {
-      // Unknown ID — drop silently (stale/removed coin)
-      changed = true;
-      continue;
-    }
-    const canonicalId = meta.id;
-    if (canonicalId !== holding.coinId) changed = true;
-    // Merge duplicates (two legacy IDs could resolve to the same canonical)
-    const existing = migrated.find((migratedHolding) => migratedHolding.coinId === canonicalId);
-    if (existing) {
-      existing.amount += holding.amount;
-    } else {
-      migrated.push({ coinId: canonicalId, amount: holding.amount });
-    }
-  }
-  return changed ? migrated : holdings;
-}
-
 function loadFromStorage(): PortfolioHolding[] {
   if (typeof window === "undefined") return [];
   try {
@@ -137,17 +53,14 @@ function loadFromStorage(): PortfolioHolding[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    const validated = parsed.filter(
-      (h): h is PortfolioHolding =>
-        typeof h === "object" &&
-        h !== null &&
-        typeof (h as PortfolioHolding).coinId === "string" &&
-        typeof (h as PortfolioHolding).amount === "number" &&
-        (h as PortfolioHolding).amount > 0,
-    );
-    // Migrate legacy IDs to canonical format
+    const validated = parsed.filter(isPortfolioHolding);
     const migrated = migratePortfolioIds(validated);
-    if (migrated !== validated) {
+    if (migrated.length !== validated.length || migrated.some((holding, index) => {
+      const original = validated[index];
+      return !original
+        || original.coinId !== holding.coinId
+        || original.amount !== holding.amount;
+    })) {
       saveToStorage(migrated);
     }
     return migrated;
@@ -176,7 +89,7 @@ function getInitialPortfolioState(): {
   const urlParam = new URLSearchParams(window.location.search).get("p");
   if (urlParam) {
     return {
-      holdings: parseUrlParam(urlParam),
+      holdings: parsePortfolioUrlParam(urlParam),
       isFromUrl: true,
       initialized: true,
     };
@@ -187,283 +100,6 @@ function getInitialPortfolioState(): {
     initialized: true,
   };
 }
-
-// ---------------------------------------------------------------------------
-// Helpers for reserve-based collateral breakdown
-// ---------------------------------------------------------------------------
-
-const STABLECOIN_SLICE_KEYWORDS = ["usdc", "usdt", "dai", "usds", "busd", "frax", "stablecoin", "stable"];
-
-function isStablecoinSlice(name: string): boolean {
-  const lower = name.toLowerCase();
-  return STABLECOIN_SLICE_KEYWORDS.some((kw) => lower.includes(kw));
-}
-
-function collateralKey(name: string): string {
-  return `__collateral_${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}__`;
-}
-
-function backingFallback(backing: string): { name: string; symbol: string } {
-  if (backing === "algorithmic") return { name: "Algorithmic Mechanism", symbol: "ALGO" };
-  if (backing === "crypto-backed") return { name: "Crypto Collateral", symbol: "CRYPTO" };
-  return { name: "Real-World Assets (RWA)", symbol: "RWA" };
-}
-
-// ---------------------------------------------------------------------------
-// Collateral category lookup
-// ---------------------------------------------------------------------------
-
-const COLLATERAL_CATEGORIES: Array<{ pattern: RegExp; label: string }> = [
-  // Most specific first
-  {
-    pattern: /treasury|treasuries|t-bill|tbill|buidl|usyc|ustb|openeden|repo|money.market|wm.*m0|m0.*wm|ishares.*treasury|government.money.market|government.securities/i,
-    label: "U.S. Treasury Bills",
-  },
-  {
-    pattern: /\beur\b|euro.*deposit|euro.*cash|euro.*bond|eu.*gov|european.*asset|european.*bank|societe.generale|arion.bank|lhv.bank|swissquote|flowbank/i,
-    label: "EUR / European Assets",
-  },
-  {
-    pattern: /\bcash\b|cash.deposit|bank.deposit|bank.*deposit|cash.equivalent|fiat.usd|bny.mellon|usd.*bank|segregated.*cash|cash.*custody|cash.in.bankrupt/i,
-    label: "USD Cash Deposits",
-  },
-  {
-    pattern: /delta.hedged|spot.crypto|perpetual|\bperp\b|basis.trad|short.futures|short.perp|funding.trad/i,
-    label: "Delta-Neutral Positions",
-  },
-  {
-    pattern: /\bbtc(?!-margined)\b|bitcoin|wbtc|cbbtc|tbtc|fbtc|solvbtc|kbtc|ubtc/i,
-    label: "Bitcoin (BTC)",
-  },
-  {
-    pattern: /\bweth\b|wsteth|steth|lseth|\breth\b|liquid.*stak.*eth|eth.*liquid|\beth\b/i,
-    label: "ETH / Liquid Staking",
-  },
-  {
-    pattern: /silver/i,
-    label: "Physical Silver",
-  },
-  {
-    pattern: /\bgold\b|lbma|gold.bullion|pamp.*gold|tokenized.*gold/i,
-    label: "Physical Gold",
-  },
-  {
-    pattern: /morpho|aave|euler|pendle|curve.*lp|yearn|lp.token|lending.position|vault.share|fraxlend|compound/i,
-    label: "DeFi Collateral",
-  },
-  {
-    pattern: /\bsol\b|\bbnb\b|\bavax\b|\bdot\b|\bsui\b|\bxtz\b|\bhype\b|\bsnx\b/i,
-    label: "Other Crypto",
-  },
-];
-
-export function categorizeCollateral(name: string): string {
-  for (const { pattern, label } of COLLATERAL_CATEGORIES) {
-    if (pattern.test(name)) return label;
-  }
-  return "Other RWA";
-}
-
-// Coin IDs that belong to the "Major Centralized Stablecoins" group:
-// fiat majors (USDT, USDC, USDS, PYUSD, FDUSD, USDP) +
-// institutional RWA products used as backing (BUIDL, M, USDtb, USDY, USYC, TBILL)
-const MAJOR_CENTRALIZED_IDS = new Set([
-  "usdt-tether", // USDT — Tether
-  "usdc-circle", // USDC — Circle
-  "usdp-paxos", // USDP — Paxos
-  "fdusd-first-digital", // FDUSD — First Digital
-  "pyusd-paypal", // PYUSD — PayPal
-  "usdy-ondo-finance", // USDY — Ondo
-  "buidl-blackrock", // BUIDL — BlackRock
-  "usds-sky", // USDS — Sky
-  "m-m0", // M — M0 Protocol
-  "usdtb-ethena", // USDtb — Ethena
-  "usyc-hashnote", // USYC — Hashnote
-  "tbill-openeden", // TBILL — OpenEden
-]);
-
-export function computeGroupedExposure(
-  raw: UpstreamExposure[],
-  totalUsd: number,
-): UpstreamExposure[] {
-  // Stablecoin deps: group majors together, pass the rest through individually
-  let majorUsd = 0;
-  const stablecoinEntries: UpstreamExposure[] = [];
-  for (const entry of raw) {
-    if (entry.isCollateral) continue;
-    if (MAJOR_CENTRALIZED_IDS.has(entry.coinId)) {
-      majorUsd += entry.usd;
-    } else {
-      stablecoinEntries.push(entry);
-    }
-  }
-  if (majorUsd > 0) {
-    stablecoinEntries.unshift({
-      coinId: "__group_major_centralized__",
-      name: "Major Centralized Stablecoins",
-      symbol: "",
-      usd: majorUsd,
-      pct: totalUsd > 0 ? (majorUsd / totalUsd) * 100 : 0,
-      isCollateral: false,
-    });
-  }
-
-  // Collateral entries: collapse by category
-  const categoryMap = new Map<string, { usd: number }>();
-  for (const entry of raw) {
-    if (entry.isCollateral) {
-      const category = categorizeCollateral(entry.name);
-      const existing = categoryMap.get(category);
-      if (existing) {
-        existing.usd += entry.usd;
-      } else {
-        categoryMap.set(category, { usd: entry.usd });
-      }
-    }
-  }
-
-  const collateralEntries: UpstreamExposure[] = Array.from(categoryMap.entries()).map(
-    ([category, { usd }]) => ({
-      coinId: `__category_${category.toLowerCase().replace(/[^a-z0-9]/g, "_")}__`,
-      name: category,
-      symbol: category,
-      usd,
-      pct: totalUsd > 0 ? (usd / totalUsd) * 100 : 0,
-      isCollateral: true,
-    }),
-  );
-
-  collateralEntries.sort((a, b) => b.usd - a.usd);
-  return [...stablecoinEntries, ...collateralEntries];
-}
-
-// ---------------------------------------------------------------------------
-// Upstream exposure walker
-// ---------------------------------------------------------------------------
-
-function computeUpstreamExposure(
-  holdings: PortfolioHolding[],
-  cards: ReportCard[],
-): UpstreamExposure[] {
-  const cardMap = new Map<string, ReportCard>();
-  for (const c of cards) cardMap.set(c.id, c);
-
-  // Stablecoin upstream exposure: keyed by tracked coin id
-  const stablecoinUsd = new Map<string, number>();
-  // Collateral exposure: keyed by slug (same name = same bucket across coins)
-  const collateralUsd = new Map<string, { name: string; symbol: string; usd: number }>();
-
-  function addCollateral(name: string, symbol: string, usd: number): void {
-    if (usd < 0.01) return;
-    const key = collateralKey(name);
-    const existing = collateralUsd.get(key);
-    if (existing) {
-      existing.usd += usd;
-    } else {
-      collateralUsd.set(key, { name, symbol, usd });
-    }
-  }
-
-  function applyReservesToRemainder(
-    reserves: ReserveSlice[],
-    remainderUsd: number,
-    backing: string,
-  ): void {
-    const nonStable = reserves.filter((r) => !isStablecoinSlice(r.name));
-    if (nonStable.length === 0) {
-      const { name, symbol } = backingFallback(backing);
-      addCollateral(name, symbol, remainderUsd);
-      return;
-    }
-    const totalPct = nonStable.reduce((s, r) => s + r.pct, 0);
-    for (const slice of nonStable) {
-      addCollateral(slice.name, slice.name, remainderUsd * (slice.pct / totalPct));
-    }
-  }
-
-  for (const holding of holdings) {
-    const card = cardMap.get(holding.coinId);
-    const deps: DependencyWeight[] = card?.rawInputs?.dependencies ?? [];
-    const meta = idToMeta.get(holding.coinId);
-    const backing = meta?.backing ?? "rwa-backed";
-    const reserves = meta?.reserves;
-
-    if (deps.length === 0) {
-      // No stablecoin dependencies — look through to collateral
-      if (reserves && reserves.length > 0) {
-        const totalPct = reserves.reduce((s, r) => s + r.pct, 0);
-        for (const slice of reserves) {
-          addCollateral(slice.name, slice.name, holding.amount * (slice.pct / totalPct));
-        }
-      } else {
-        const { name, symbol } = backingFallback(backing);
-        addCollateral(name, symbol, holding.amount);
-      }
-      continue;
-    }
-
-    // Has stablecoin dependencies
-    let allocatedWeight = 0;
-    for (const dep of deps) {
-      const depUsd = holding.amount * dep.weight;
-      if (idToMeta.has(dep.id)) {
-        stablecoinUsd.set(dep.id, (stablecoinUsd.get(dep.id) ?? 0) + depUsd);
-      }
-      // Untracked deps count toward allocatedWeight but go into remainder
-      allocatedWeight += dep.weight;
-    }
-
-    const remainder = 1 - allocatedWeight;
-    if (remainder > 0.001) {
-      const remainderUsd = holding.amount * remainder;
-      if (reserves && reserves.length > 0) {
-        applyReservesToRemainder(reserves, remainderUsd, backing);
-      } else {
-        const { name, symbol } = backingFallback(backing);
-        addCollateral(name, symbol, remainderUsd);
-      }
-    }
-  }
-
-  const totalUsd = holdings.reduce((s, h) => s + h.amount, 0);
-  const result: UpstreamExposure[] = [];
-
-  for (const [coinId, usd] of stablecoinUsd) {
-    const meta = idToMeta.get(coinId);
-    if (!meta) continue;
-    result.push({
-      coinId,
-      name: meta.name,
-      symbol: meta.symbol,
-      usd,
-      pct: totalUsd > 0 ? (usd / totalUsd) * 100 : 0,
-      isCollateral: false,
-    });
-  }
-
-  for (const [key, { name, symbol, usd }] of collateralUsd) {
-    result.push({
-      coinId: key,
-      name,
-      symbol,
-      usd,
-      pct: totalUsd > 0 ? (usd / totalUsd) * 100 : 0,
-      isCollateral: true,
-    });
-  }
-
-  // Stablecoin entries first (most actionable risk), then collateral; descending USD within each group
-  result.sort((a, b) => {
-    if (a.isCollateral !== b.isCollateral) return a.isCollateral ? 1 : -1;
-    return b.usd - a.usd;
-  });
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
   const [bootState] = useState(getInitialPortfolioState);
@@ -503,7 +139,7 @@ export function usePortfolio(cards: ReportCard[] | undefined): PortfolioState {
   }, []);
 
   const shareUrl = useCallback((): string => {
-    const encoded = encodeHoldings(holdings);
+    const encoded = encodePortfolioHoldings(holdings);
     if (typeof window === "undefined") return "";
     const url = new URL(window.location.href);
     if (encoded) {

@@ -1,321 +1,57 @@
 // worker/src/cron/sync-yield-data.ts
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
-import { fetchWithRetry } from "../lib/fetch-retry";
-import { getCache, setCache, batchExecute, buildInClause } from "../lib/db";
+import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
+import { setCache, batchExecute, buildInClause } from "../lib/db";
 import {
-  USER_AGENT,
-  CIRCUIT_SOURCE,
-  RISK_FREE_RATE_FALLBACK,
   PYS_SCALING_FACTOR,
   DEFAULT_SAFETY_SCORE,
-  MIN_SAFETY_SCORE_FOR_YIELD,
-  MIN_LENDING_POOL_APY,
-  MIN_LENDING_POOL_TVL_USD,
 } from "../lib/constants";
-import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
-import { getChainRpc } from "../lib/chain-registry";
-import { cgHeaders, cgUrl } from "../lib/coingecko";
 import {
   STALE_THRESHOLD_MS,
-  computeApyFromRate,
-  computeApyFromPrice,
   computePYS,
   computeYieldStability,
   computeApyVarianceScore,
   detectWarningSignals,
-  findBestLendingPool,
-  matchAllDlPools,
 } from "./yield-helpers";
-import {
-  YIELD_VARIANT_MAP,
-  YIELD_POOL_MAP,
-  ON_CHAIN_RATE_CONFIGS,
-  LENDING_PROTOCOL_ALLOWLIST,
-  LENDING_PROTOCOL_LABELS,
-  PRICE_DERIVED_FALLBACK_IDS,
-  AUTO_LENDING_POOL_MAP,
-  AUTO_LENDING_SAFETY_BYPASS_IDS,
-} from "./yield-config";
+import { LENDING_PROTOCOL_LABELS } from "./yield-config";
 import { YieldRankingsResponseSchema, type AltYieldSource } from "@shared/types";
 import type { CronResult } from "../lib/db";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { computeSafetyScoresSnapshot } from "../lib/safety-scores";
+import {
+  fetchOnChainRates,
+  loadDlStablecoinPools,
+  loadRiskFreeRate,
+} from "./yield-sync/sources";
+import { resolveYieldSources } from "./yield-sync/resolve";
+import {
+  computeTvlWeightedMedianApy,
+  dedupeLatestBestRows,
+  rowToRanking,
+} from "./yield-sync/rankings";
 
-const DL_YIELDS_URL = "https://yields.llama.fi/pools";
 const MIN_SAFETY_SCORE_COVERAGE_RATIO = 0.5;
-const BPROTOCOL_LQTY_ONLY_SOURCE_KEY = "bprotocol-lqty-only";
-const BPROTOCOL_LQTY_ONLY_SOURCE_LABEL = "B.Protocol Stability Pool (LQTY only)";
-const BPROTOCOL_LQTY_ONLY_SOURCE_TYPE = "lending-vault";
-const LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD = 32_000_000;
-const LIQUITY_DAILY_LQTY_ISSUANCE_FACTOR = 1 - Math.pow(0.5, 1 / 365);
-const LIQUITY_V1_LUSD_ID = "lusd-liquity";
-const LIQUITY_COMMUNITY_ISSUANCE = "0xD8c9D9071123a059C6E0A945cF0e0c82b508d816";
-const LIQUITY_STABILITY_POOL = "0x66017D22b0f8556afDd19FC67041899Eb65a21bb";
-const LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR = "0xb140384b";
-const LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR = "0x9bf2f1ac";
-const LIQUITY_LQTY_GECKO_ID = "liquity";
-
-interface DlPool {
-  pool: string;
-  chain: string;
-  project: string;
-  symbol: string;
-  tvlUsd: number;
-  apy: number;
-  apyBase: number | null;
-  apyReward: number | null;
-  apyMean30d: number;
-  stablecoin: boolean;
-  exposure: string;
-  underlyingTokens: string[] | null;
-}
-
-interface ResolvedYield {
-  currentApy: number;
-  apyBase: number | null;
-  apyReward: number | null;
-  sourcePool: string | null;
-  sourceTvlUsd: number | null;
-  dataSource: "onchain" | "defillama" | "defillama-auto" | "price-derived";
-  exchangeRate: number | null;
-  sourceKey: string; // DL pool UUID or "price-derived"
-  yieldSource?: string; // label override for variant wrapper rows
-  yieldType?: string; // type override for variant wrapper rows
-  project?: string; // DeFiLlama protocol slug for defillama-auto sources
-}
-
-interface JsonRpcCallResponse {
-  result?: string;
-  error?: unknown;
-}
-
-// -- Tier 1: On-chain exchange rates -----------------------------------------
-
-async function fetchOnChainRates(signal?: AbortSignal): Promise<Map<string, { rate: number }>> {
-  const results = new Map<string, { rate: number }>();
-
-  for (const config of ON_CHAIN_RATE_CONFIGS) {
-    try {
-      const rpc = getChainRpc(config.chain);
-      if (!rpc) {
-        console.warn(`[yield] No RPC for chain ${config.chain}`);
-        continue;
-      }
-
-      const callData = config.selector + config.inputAmount.replace("0x", "").padStart(64, "0");
-      const res = await fetchWithRetry(rpc.rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal,
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          method: "eth_call",
-          params: [{ to: config.contract, data: callData }, "latest"],
-          id: 1,
-        }),
-      });
-
-      if (!res?.ok) continue;
-      const body = (await res.json()) as { result?: string };
-      if (!body.result || body.result === "0x") continue;
-
-      const raw = BigInt(body.result);
-      const rate = Number(raw) / 10 ** config.decimals;
-      results.set(config.stablecoinId, { rate });
-    } catch (err) {
-      console.warn(`[yield] On-chain rate failed for ${config.stablecoinId}:`, err);
-    }
-  }
-
-  return results;
-}
-
-async function fetchEthCallUint256(
-  rpcUrl: string,
-  to: string,
-  data: string,
-  signal?: AbortSignal,
-): Promise<bigint | null> {
-  try {
-    const res = await fetchWithRetry(rpcUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "eth_call",
-        params: [{ to, data }, "latest"],
-        id: 1,
-      }),
-    });
-
-    if (!res?.ok) return null;
-
-    const body = (await res.json()) as JsonRpcCallResponse;
-    if (!body.result || body.error || body.result === "0x") return null;
-    return BigInt(body.result);
-  } catch (err) {
-    console.warn(`[yield] eth_call failed for ${to} ${data}:`, err);
-    return null;
-  }
-}
-
-async function fetchCoinGeckoUsdPrice(geckoId: string, signal?: AbortSignal): Promise<number | null> {
-  try {
-    const res = await fetchWithRetry(
-      cgUrl(`/simple/price?ids=${encodeURIComponent(geckoId)}&vs_currencies=usd`),
-      {
-        headers: cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT }),
-        signal,
-      },
-      1,
-    );
-    if (!res?.ok) return null;
-
-    const body = (await res.json()) as Record<string, { usd?: number }>;
-    const price = body[geckoId]?.usd;
-    return typeof price === "number" && price > 0 ? price : null;
-  } catch (err) {
-    console.warn(`[yield] CoinGecko price fetch failed for ${geckoId}:`, err);
-    return null;
-  }
-}
-
-async function fetchBprotocolLqtyOnlySource(signal?: AbortSignal): Promise<ResolvedYield | null> {
-  const rpc = getChainRpc("ethereum");
-  if (!rpc) {
-    console.warn("[yield] No Ethereum RPC configured for B.Protocol LQTY-only source");
-    return null;
-  }
-
-  try {
-    const lqtyPriceUsd = await fetchCoinGeckoUsdPrice(LIQUITY_LQTY_GECKO_ID, signal);
-    if (lqtyPriceUsd == null) return null;
-
-    let totalLusdDepositsRaw: bigint | null = null;
-    let totalLqtyIssuedRaw: bigint | null = null;
-    const rpcUrls = [rpc.rpcUrl, rpc.fallbackRpcUrl].filter((url): url is string => typeof url === "string" && url.length > 0);
-
-    for (const rpcUrl of rpcUrls) {
-      const [lusdDeposits, lqtyIssued] = await Promise.all([
-        fetchEthCallUint256(rpcUrl, LIQUITY_STABILITY_POOL, LIQUITY_TOTAL_LUSD_DEPOSITS_SELECTOR, signal),
-        fetchEthCallUint256(rpcUrl, LIQUITY_COMMUNITY_ISSUANCE, LIQUITY_TOTAL_LQTY_ISSUED_SELECTOR, signal),
-      ]);
-      if (lusdDeposits != null && lqtyIssued != null) {
-        totalLusdDepositsRaw = lusdDeposits;
-        totalLqtyIssuedRaw = lqtyIssued;
-        break;
-      }
-    }
-
-    if (totalLusdDepositsRaw == null || totalLqtyIssuedRaw == null) return null;
-
-    const totalLusdDeposits = Number(totalLusdDepositsRaw) / 1e18;
-    const totalLqtyIssued = Number(totalLqtyIssuedRaw) / 1e18;
-    if (!Number.isFinite(totalLusdDeposits) || totalLusdDeposits <= 0) return null;
-    if (!Number.isFinite(totalLqtyIssued) || totalLqtyIssued < 0) return null;
-
-    const remainingLqtyRewards = Math.max(0, LIQUITY_STABILITY_POOL_TOTAL_LQTY_REWARD - totalLqtyIssued);
-    if (remainingLqtyRewards <= 0) return null;
-
-    const apr =
-      (remainingLqtyRewards * LIQUITY_DAILY_LQTY_ISSUANCE_FACTOR * lqtyPriceUsd * 365 * 100) / totalLusdDeposits;
-    if (!Number.isFinite(apr) || apr <= 0) return null;
-
-    return {
-      currentApy: apr,
-      apyBase: null,
-      apyReward: apr,
-      sourcePool: null,
-      sourceTvlUsd: totalLusdDeposits,
-      dataSource: "onchain",
-      exchangeRate: null,
-      sourceKey: BPROTOCOL_LQTY_ONLY_SOURCE_KEY,
-      yieldSource: BPROTOCOL_LQTY_ONLY_SOURCE_LABEL,
-      yieldType: BPROTOCOL_LQTY_ONLY_SOURCE_TYPE,
-    };
-  } catch (err) {
-    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[yield] B.Protocol LQTY-only source failed:", err);
-    return null;
-  }
-}
-
-// -- Tier 3: Price-derived APY -----------------------------------------------
-
-async function getPriceDerivedApy(db: D1Database, stablecoinId: string): Promise<number | null> {
-  const now = Math.floor(Date.now() / 1000);
-  const thirtyDaysAgo = now - 30 * 86400;
-
-  // Get most recent and ~30d-ago prices from supply_history
-  const [recentRow, oldRow] = await Promise.all([
-    db
-      .prepare(
-        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
-      )
-      .bind(stablecoinId)
-      .first<{ price: number }>(),
-    db
-      .prepare(
-        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL AND snapshot_date <= ? ORDER BY snapshot_date DESC LIMIT 1",
-      )
-      .bind(stablecoinId, thirtyDaysAgo)
-      .first<{ price: number }>(),
-  ]);
-
-  if (!recentRow?.price || !oldRow?.price || oldRow.price <= 0) return null;
-  return computeApyFromPrice(recentRow.price, oldRow.price, 30);
-}
-
+const TRACKED_META_BY_ID = new Map(
+  TRACKED_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]),
+);
 // -- Main sync function ------------------------------------------------------
 
 export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   const startSec = Math.floor(Date.now() / 1000);
   const sevenDaysAgoSec = startSec - 7 * 86400;
-  const yieldCoins = TRACKED_STABLECOINS.filter((m) => m.flags.yieldBearing);
+  const yieldCoins = YIELD_BEARING_STABLECOINS;
 
   if (yieldCoins.length === 0) {
     return { itemCount: 0, metadata: "no yield-bearing coins" };
   }
 
-  // 1. Load DL pools — prefer cached data from DEX sync (avoids redundant 13MB fetch)
-  let dlPools: DlPool[] = [];
-  const cachedPools = await getCache(db, "dl-stablecoin-pools");
-  if (cachedPools) {
-    try {
-      dlPools = JSON.parse(cachedPools.value) as DlPool[];
-      console.log(`[sync-yield-data] Using ${dlPools.length} cached stablecoin pools from DEX sync`);
-    } catch {
-      console.warn("[sync-yield-data] Failed to parse cached DL pools, falling back to direct fetch");
-    }
-  }
-
-  // Fall back to direct fetch if no cache available
-  if (dlPools.length === 0 && (await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_YIELDS))) {
-    try {
-      const res = await fetchWithRetry(DL_YIELDS_URL, {
-        headers: { "User-Agent": USER_AGENT },
-        signal,
-      });
-      if (res?.ok) {
-        const body = (await res.json()) as { data: DlPool[] };
-        dlPools = (body.data ?? []).filter((p) => p.stablecoin);
-        await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, true);
-      } else {
-        await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
-      }
-    } catch (e) {
-      console.warn("[sync-yield-data] DL yields direct fetch failed:", e);
-      await recordOutcome(db, CIRCUIT_SOURCE.DL_YIELDS, false);
-    }
-  }
+  const dlPools = await loadDlStablecoinPools(db, signal);
 
   // 2. Fetch on-chain rates (Tier 1 source)
   const onChainRates = await fetchOnChainRates(signal);
 
   // 3. Read cached risk-free rate
-  const rfCache = await getCache(db, "risk_free_rate");
-  const riskFreeRate = rfCache ? parseFloat(rfCache.value) : RISK_FREE_RATE_FALLBACK;
+  const riskFreeRate = await loadRiskFreeRate(db);
 
   // 4. Compute safety scores inline (report-cards API does NOT cache results)
   //    Follows the same two-phase approach as daily-digest.ts
@@ -353,248 +89,15 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
     console.warn("[sync-yield-data] Skipped report_card_cache write due to degraded safety snapshot");
   }
 
-  // 5. Resolve yield for each coin
-  const resolved: { id: string; symbol: string; yield: ResolvedYield | null }[] = [];
-  const tier1PrevRates = new Map<string, number | null>();
-  const tier1CandidateIds = yieldCoins
-    .map((meta) => meta.id)
-    .filter((id) => ON_CHAIN_RATE_CONFIGS.some((config) => config.stablecoinId === id) && onChainRates.has(id));
-  const tier1PrevRateRows = new Map<string, { exchangeRate: number | null; recordedAt: number }>();
-  if (tier1CandidateIds.length > 0) {
-    const tier1InClause = buildInClause(tier1CandidateIds);
-    const rows = await db
-      .prepare(
-        `SELECT stablecoin_id, exchange_rate, recorded_at
-       FROM yield_history
-       WHERE stablecoin_id IN (${tier1InClause.sql}) AND recorded_at <= ?
-       ORDER BY stablecoin_id ASC, recorded_at DESC`,
-      )
-      .bind(...tier1InClause.binds, sevenDaysAgoSec)
-      .all<{
-        stablecoin_id: string;
-        exchange_rate: number | null;
-        recorded_at: number;
-      }>();
-    for (const row of rows.results ?? []) {
-      if (!tier1PrevRateRows.has(row.stablecoin_id)) {
-        tier1PrevRateRows.set(row.stablecoin_id, {
-          exchangeRate: row.exchange_rate,
-          recordedAt: row.recorded_at,
-        });
-      }
-    }
-  }
-
-  for (const meta of yieldCoins) {
-    const id = meta.id;
-    const symbol = meta.symbol;
-
-    // Tier 1: On-chain rate
-    let hasAnySource = false;
-    const rateConfig = ON_CHAIN_RATE_CONFIGS.find((c) => c.stablecoinId === id);
-    if (rateConfig && onChainRates.has(id)) {
-      const { rate } = onChainRates.get(id)!;
-      const prevRow = tier1PrevRateRows.get(id);
-      tier1PrevRates.set(id, prevRow?.exchangeRate ?? null);
-
-      if (prevRow?.exchangeRate && prevRow.exchangeRate > 0) {
-        const actualDays = (startSec - prevRow.recordedAt) / 86400;
-        const apy = computeApyFromRate(rate, prevRow.exchangeRate, actualDays);
-        // Populate sourcePool from YIELD_POOL_MAP so source_key is a stable UUID.
-        const nativePoolId = YIELD_POOL_MAP[id] ?? null;
-        resolved.push({
-          id,
-          symbol,
-          yield: {
-            currentApy: apy,
-            apyBase: apy,
-            apyReward: null,
-            sourcePool: nativePoolId,
-            sourceTvlUsd: null,
-            dataSource: "onchain",
-            exchangeRate: rate,
-            sourceKey: nativePoolId ?? "price-derived",
-          },
-        });
-        hasAnySource = true;
-        // Do NOT continue — fall through to Tier 2 to check for additional wrapper sources
-      }
-      // Fall through if no previous rate yet (first run)
-    }
-
-    // Tier 2: DeFiLlama pool matching — collect ALL sources for this coin
-    {
-      const alreadyResolvedKeys = new Set(
-        resolved.filter((r) => r.id === id && r.yield != null).map((r) => r.yield!.sourceKey),
-      );
-      const dlSources = matchAllDlPools(id, symbol, dlPools, YIELD_POOL_MAP, YIELD_VARIANT_MAP);
-      for (const dlPool of dlSources) {
-        if (alreadyResolvedKeys.has(dlPool.pool)) continue; // Tier 1 already handled this source
-        if (dlPool.apy == null || dlPool.apy < 0) continue;
-
-        const fullPool = dlPools.find((p) => p.pool === dlPool.pool)!;
-        const variant = YIELD_VARIANT_MAP[id];
-        // Use variant label/type if this pool was found via YIELD_VARIANT_MAP and not the primary pool map
-        const isVariantPool = variant != null && dlPool.pool !== YIELD_POOL_MAP[id];
-        const yieldSourceOverride = isVariantPool ? variant.yieldSource : undefined;
-        const yieldTypeOverride = isVariantPool ? variant.yieldType : undefined;
-
-        resolved.push({
-          id,
-          symbol,
-          yield: {
-            currentApy: fullPool.apy,
-            apyBase: fullPool.apyBase,
-            apyReward: fullPool.apyReward,
-            sourcePool: fullPool.pool,
-            sourceTvlUsd: fullPool.tvlUsd,
-            dataSource: "defillama",
-            exchangeRate: null,
-            sourceKey: fullPool.pool,
-            yieldSource: yieldSourceOverride,
-            yieldType: yieldTypeOverride,
-          },
-        });
-        alreadyResolvedKeys.add(dlPool.pool);
-        hasAnySource = true;
-      }
-    }
-
-    if (hasAnySource) continue; // Skip Tier 3 if any source was found
-
-    // Tier 3: Price-derived fallback for NAV tokens and explicit fallback IDs.
-    if (meta.flags.navToken || PRICE_DERIVED_FALLBACK_IDS.has(id)) {
-      const apy = await getPriceDerivedApy(db, id);
-      if (apy != null) {
-        resolved.push({
-          id,
-          symbol,
-          yield: {
-            currentApy: apy,
-            apyBase: apy,
-            apyReward: null,
-            sourcePool: null,
-            sourceTvlUsd: null,
-            dataSource: "price-derived",
-            exchangeRate: null,
-            sourceKey: "price-derived",
-          },
-        });
-        continue;
-      }
-    }
-
-    // No data available
-    resolved.push({ id, symbol, yield: null });
-  }
-
-  // Deterministic custom source: conservative LQTY-only APR for LUSD in the B.Protocol/Liquity Stability Pool.
-  const lusdMeta = TRACKED_STABLECOINS.find((meta) => meta.id === LIQUITY_V1_LUSD_ID);
-  if (lusdMeta && !resolved.some((row) => row.id === LIQUITY_V1_LUSD_ID && row.yield?.sourceKey === BPROTOCOL_LQTY_ONLY_SOURCE_KEY)) {
-    const bprotocolLqtyOnlyYield = await fetchBprotocolLqtyOnlySource(signal);
-    if (bprotocolLqtyOnlyYield) {
-      resolved.push({
-        id: lusdMeta.id,
-        symbol: lusdMeta.symbol,
-        yield: bprotocolLqtyOnlyYield,
-      });
-    }
-  }
-
-  // 5b. Auto-discovery: find lending pools for C+ coins (now runs for ALL coins, including yield-bearing)
-  if (dlPools.length > 0) {
-    // Track coins that received an auto-discovered source this run (one per coin)
-    const autoDiscoveredIds = new Set<string>();
-    let autoCount = 0;
-    let deterministicCount = 0;
-
-    // Deterministic overrides for edge symbols that can miss dynamic matching.
-    for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP)) {
-      if (autoDiscoveredIds.has(stablecoinId)) continue;
-
-      const pool = dlPools.find((p) => p.pool === poolId);
-      if (!pool) continue;
-
-      const safetyScore = safetyScores.get(stablecoinId)?.score ?? 0;
-      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
-      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
-
-      const eligible =
-        pool.exposure === "single" &&
-        pool.stablecoin &&
-        LENDING_PROTOCOL_ALLOWLIST.has(pool.project) &&
-        pool.apy >= MIN_LENDING_POOL_APY &&
-        pool.tvlUsd >= MIN_LENDING_POOL_TVL_USD;
-      if (!eligible) continue;
-
-      // Skip if this exact pool UUID is already resolved for this coin
-      if (resolved.some((r) => r.id === stablecoinId && r.yield?.sourceKey === poolId)) continue;
-
-      const meta = TRACKED_STABLECOINS.find((m) => m.id === stablecoinId);
-      if (!meta) continue;
-
-      resolved.push({
-        id: meta.id,
-        symbol: meta.symbol,
-        yield: {
-          currentApy: pool.apy,
-          apyBase: pool.apyBase,
-          apyReward: pool.apyReward,
-          sourcePool: pool.pool,
-          sourceTvlUsd: pool.tvlUsd,
-          dataSource: "defillama-auto",
-          exchangeRate: null,
-          sourceKey: pool.pool,
-          project: pool.project,
-        },
-      });
-      autoDiscoveredIds.add(meta.id);
-      autoCount++;
-      deterministicCount++;
-    }
-
-    // Dynamic discovery: all coins with safety >= threshold, no auto-discovered pool yet
-    const lendingCandidates = TRACKED_STABLECOINS.filter(
-      (m) =>
-        !autoDiscoveredIds.has(m.id) &&
-        m.flags.pegCurrency !== "GOLD" &&
-        m.flags.pegCurrency !== "SILVER" &&
-        (safetyScores.get(m.id)?.score ?? 0) >= MIN_SAFETY_SCORE_FOR_YIELD,
-    );
-
-    for (const meta of lendingCandidates) {
-      const pool = findBestLendingPool(meta.symbol, dlPools, LENDING_PROTOCOL_ALLOWLIST, {
-        minApy: MIN_LENDING_POOL_APY,
-        minTvlUsd: MIN_LENDING_POOL_TVL_USD,
-        contractAddresses: (meta.contracts ?? []).map((c) => c.address),
-      });
-      if (!pool) continue;
-
-      // Skip if this pool UUID is already in resolved for this coin
-      if (resolved.some((r) => r.id === meta.id && r.yield?.sourceKey === pool.pool)) continue;
-
-      resolved.push({
-        id: meta.id,
-        symbol: meta.symbol,
-        yield: {
-          currentApy: pool.apy,
-          apyBase: pool.apyBase,
-          apyReward: pool.apyReward,
-          sourcePool: pool.pool,
-          sourceTvlUsd: pool.tvlUsd,
-          dataSource: "defillama-auto",
-          exchangeRate: null,
-          sourceKey: pool.pool,
-          project: pool.project,
-        },
-      });
-      autoDiscoveredIds.add(meta.id);
-      autoCount++;
-    }
-    console.log(
-      `[sync-yield-data] Auto-discovery: ${autoCount} lending pools (${deterministicCount} deterministic, ${autoCount - deterministicCount} dynamic)`,
-    );
-  }
+  const { resolved, tier1PrevRates } = await resolveYieldSources({
+    db,
+    startSec,
+    sevenDaysAgoSec,
+    dlPools,
+    onChainRates,
+    safetyScores,
+    signal,
+  });
 
   // 5c. Determine is_best per coin: source with highest currentApy wins
   const bestSourceKeyByCoin = new Map<string, string>();
@@ -677,7 +180,7 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
   for (const { id, symbol, yield: y } of resolved) {
     if (!y) continue;
 
-    const meta = TRACKED_STABLECOINS.find((m) => m.id === id)!;
+    const meta = TRACKED_META_BY_ID.get(id)!;
     const yieldConfig = meta.yieldConfig;
     // Variant wrapper rows carry their own yieldSource/yieldType overrides
     const yieldSource =
@@ -960,91 +463,4 @@ export async function syncYieldData(db: D1Database, signal?: AbortSignal): Promi
       cacheWriteSkipped: !validation.ok || safetySnapshotDegraded,
     }),
   };
-}
-
-// -- Helpers -----------------------------------------------------------------
-
-function rowToRanking(row: Record<string, unknown>) {
-  return {
-    id: row.stablecoin_id,
-    symbol: row.symbol,
-    name: TRACKED_STABLECOINS.find((m) => m.id === row.stablecoin_id)?.name ?? String(row.symbol),
-    currentApy: row.current_apy,
-    apy7d: row.apy_7d,
-    apy30d: row.apy_30d,
-    apyBase: row.apy_base,
-    apyReward: row.apy_reward,
-    yieldSource: row.yield_source,
-    yieldType: row.yield_type,
-    dataSource: row.data_source,
-    sourceTvlUsd: row.source_tvl_usd,
-    pharosYieldScore: row.pharos_yield_score,
-    safetyScore: row.safety_score,
-    safetyGrade: row.safety_grade,
-    yieldToRisk: row.yield_to_risk,
-    excessYield: row.excess_yield,
-    yieldStability: row.yield_stability,
-    apyVariance30d: row.apy_variance_30d,
-    apyMin30d: row.apy_min_30d,
-    apyMax30d: row.apy_max_30d,
-    warningSignals: parseWarningSignals(row.warning_signals),
-    altSources: [] as AltYieldSource[],
-  };
-}
-
-function dedupeLatestBestRows(rows: Record<string, unknown>[]) {
-  const deduped = new Map<string, Record<string, unknown>>();
-
-  for (const row of rows) {
-    const stablecoinId = String(row.stablecoin_id);
-    const current = deduped.get(stablecoinId);
-    if (!current) {
-      deduped.set(stablecoinId, row);
-      continue;
-    }
-
-    const rowUpdatedAt = typeof row.updated_at === "number" ? row.updated_at : Number.NEGATIVE_INFINITY;
-    const currentUpdatedAt = typeof current.updated_at === "number" ? current.updated_at : Number.NEGATIVE_INFINITY;
-    if (rowUpdatedAt !== currentUpdatedAt) {
-      if (rowUpdatedAt > currentUpdatedAt) {
-        deduped.set(stablecoinId, row);
-      }
-      continue;
-    }
-
-    const rowCurrentApy = typeof row.current_apy === "number" ? row.current_apy : Number.NEGATIVE_INFINITY;
-    const currentApy = typeof current.current_apy === "number" ? current.current_apy : Number.NEGATIVE_INFINITY;
-    if (rowCurrentApy > currentApy) {
-      deduped.set(stablecoinId, row);
-    }
-  }
-
-  return [...deduped.values()];
-}
-
-function parseWarningSignals(raw: unknown): string[] {
-  if (typeof raw !== "string" || raw.trim() === "") return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((value): value is string => typeof value === "string");
-  } catch {
-    return [];
-  }
-}
-
-function computeTvlWeightedMedianApy(rows: Array<{ apy_30d: number; source_tvl_usd: number | null }>): number {
-  const valid = rows.filter((r) => r.source_tvl_usd && r.source_tvl_usd > 0 && r.apy_30d > 0);
-  if (valid.length === 0) return 0;
-
-  valid.sort((a, b) => a.apy_30d - b.apy_30d);
-  const totalTvl = valid.reduce((s, r) => s + r.source_tvl_usd!, 0);
-  let cumulativeTvl = 0;
-
-  for (const row of valid) {
-    cumulativeTvl += row.source_tvl_usd!;
-    if (cumulativeTvl >= totalTvl / 2) return row.apy_30d;
-  }
-
-  return valid[valid.length - 1].apy_30d;
 }

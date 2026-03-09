@@ -9,6 +9,7 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 vi.mock("@shared/lib/api-endpoints", () => ({
+  getStrictContractPaths: () => [],
   getProbePaths: (group: "public" | "admin" | "manual") => {
     if (group === "public") return ["/api/health"];
     if (group === "admin") return ["/api/status"];

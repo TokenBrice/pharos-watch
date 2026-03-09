@@ -40,7 +40,12 @@ import { handleTelegramWebhook } from "./api/telegram-webhook";
 import { runIdempotentAdminAction } from "./lib/idempotency";
 import { requireAdmin } from "./lib/auth";
 import { generateDailyDigest } from "./cron/daily-digest";
-import { getEndpointDefinition, getRouterHandledPaths, validateEndpointMethod } from "@shared/lib/api-endpoints";
+import {
+  getEndpointDefinition,
+  getRouterHandledEndpoints,
+  getRouterHandledPaths,
+  validateEndpointMethod,
+} from "@shared/lib/api-endpoints";
 import type { MintBurnFreshnessConfig } from "./lib/mint-burn-health-config";
 import type { TwitterCreds } from "./lib/twitter";
 import type { TelegramCreds } from "./lib/telegram";
@@ -66,45 +71,45 @@ interface RouteContext {
 
 type StaticRouteHandler = (context: RouteContext) => Promise<Response>;
 
-const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
-  ["/api/stablecoins", ({ db }) => handleStablecoins(db)],
-  ["/api/stablecoin/usdt-tether", ({ db, ctx }) => handleStablecoinDetail(db, "usdt-tether", ctx)],
-  ["/api/stablecoin-summary/usdt-tether", ({ db }) => handleStablecoinSummary(db, "usdt-tether")],
-  ["/api/stablecoin-charts", ({ db }) => handleStablecoinCharts(db)],
-  ["/api/blacklist", ({ db, url }) => handleBlacklist(db, url)],
-  ["/api/depeg-events", ({ db, url }) => handleDepegEvents(db, url)],
-  ["/api/backfill-depegs", ({ db, url, adminKey, request }) => runIdempotentAdminAction(
+const STATIC_ROUTE_HANDLER_BY_KEY: Record<string, StaticRouteHandler> = {
+  "stablecoins": ({ db }) => handleStablecoins(db),
+  "stablecoin-probe-detail": ({ db, ctx }) => handleStablecoinDetail(db, "usdt-tether", ctx),
+  "stablecoin-probe-summary": ({ db }) => handleStablecoinSummary(db, "usdt-tether"),
+  "stablecoin-charts": ({ db }) => handleStablecoinCharts(db),
+  "blacklist": ({ db, url }) => handleBlacklist(db, url),
+  "depeg-events": ({ db, url }) => handleDepegEvents(db, url),
+  "backfill-depegs": ({ db, url, adminKey, request }) => runIdempotentAdminAction(
     db,
     "backfill-depegs",
     request,
     () => handleBackfillDepegs(db, url, adminKey, request),
-  )],
-  ["/api/backfill-supply-history", ({ db, url, adminKey, request }) => runIdempotentAdminAction(
+  ),
+  "backfill-supply-history": ({ db, url, adminKey, request }) => runIdempotentAdminAction(
     db,
     "backfill-supply-history",
     request,
     () => handleBackfillSupplyHistory(db, url, adminKey, request),
-  )],
-  ["/api/peg-summary", ({ db }) => handlePegSummary(db)],
-  ["/api/health", ({ db, mintBurnFreshnessConfig }) => handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig })],
-  ["/api/usds-status", ({ db }) => handleUsdsStatus(db)],
-  ["/api/bluechip-ratings", ({ db }) => handleBluechipRatings(db)],
-  ["/api/dex-liquidity", ({ db }) => handleDexLiquidity(db)],
-  ["/api/dex-liquidity-history", ({ db, url }) => handleDexLiquidityHistory(db, url)],
-  ["/api/supply-history", ({ db, url }) => handleSupplyHistory(db, url)],
-  ["/api/status", ({ db, adminKey, request }) => handleStatus(db, adminKey, request)],
-  ["/api/status-history", ({ db, adminKey, request }) => handleStatusHistory(db, adminKey, request)],
-  ["/api/daily-digest", ({ db }) => handleDailyDigest(db)],
-  ["/api/digest-archive", ({ db }) => handleDigestArchive(db)],
-  ["/api/digest-snapshot", ({ db, url }) => handleDigestSnapshot(db, url)],
-  ["/api/stability-index", ({ db, url }) => handleStabilityIndex(db, url)],
-  ["/api/backfill-stability-index", ({ db, adminKey, request }) => runIdempotentAdminAction(
+  ),
+  "peg-summary": ({ db }) => handlePegSummary(db),
+  "health": ({ db, mintBurnFreshnessConfig }) => handleHealth(db, { mintBurnConfig: mintBurnFreshnessConfig }),
+  "usds-status": ({ db }) => handleUsdsStatus(db),
+  "bluechip-ratings": ({ db }) => handleBluechipRatings(db),
+  "dex-liquidity": ({ db }) => handleDexLiquidity(db),
+  "dex-liquidity-history": ({ db, url }) => handleDexLiquidityHistory(db, url),
+  "supply-history": ({ db, url }) => handleSupplyHistory(db, url),
+  "status": ({ db, adminKey, request }) => handleStatus(db, adminKey, request),
+  "status-history": ({ db, adminKey, request }) => handleStatusHistory(db, adminKey, request),
+  "daily-digest": ({ db }) => handleDailyDigest(db),
+  "digest-archive": ({ db }) => handleDigestArchive(db),
+  "digest-snapshot": ({ db, url }) => handleDigestSnapshot(db, url),
+  "stability-index": ({ db, url }) => handleStabilityIndex(db, url),
+  "backfill-stability-index": ({ db, adminKey, request }) => runIdempotentAdminAction(
     db,
     "backfill-stability-index",
     request,
     () => handleBackfillStabilityIndex(db, adminKey, request),
-  )],
-  ["/api/audit-depeg-history", ({ db, url, adminKey, request }) => {
+  ),
+  "audit-depeg-history": ({ db, url, adminKey, request }) => {
     if (request?.method === "POST") {
       return runIdempotentAdminAction(
         db,
@@ -114,49 +119,49 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
       );
     }
     return handleAuditDepegHistory(db, url, adminKey, request);
-  }],
-  ["/api/backfill-cg-prices", ({ db, url, adminKey, request }) => runIdempotentAdminAction(
+  },
+  "backfill-cg-prices": ({ db, url, adminKey, request }) => runIdempotentAdminAction(
     db,
     "backfill-cg-prices",
     request,
     () => handleBackfillCgPrices(db, url, adminKey, request),
-  )],
-  ["/api/report-cards", ({ db }) => handleReportCards(db)],
-  ["/api/yield-rankings", ({ db }) => handleYieldRankings(db)],
-  ["/api/yield-history", ({ db, url }) => handleYieldHistory(db, url)],
-  ["/api/safety-score-history", ({ db, url }) => handleSafetyScoreHistory(db, url)],
-  ["/api/mint-burn-flows", ({ db, url }) => handleMintBurnFlows(db, url)],
-  ["/api/mint-burn-events", ({ db, url }) => handleMintBurnEvents(db, url)],
-  ["/api/backfill-mint-burn-prices", ({ db, url, adminKey, request }) => runIdempotentAdminAction(
+  ),
+  "report-cards": ({ db }) => handleReportCards(db),
+  "yield-rankings": ({ db }) => handleYieldRankings(db),
+  "yield-history": ({ db, url }) => handleYieldHistory(db, url),
+  "safety-score-history": ({ db, url }) => handleSafetyScoreHistory(db, url),
+  "mint-burn-flows": ({ db, url }) => handleMintBurnFlows(db, url),
+  "mint-burn-events": ({ db, url }) => handleMintBurnEvents(db, url),
+  "backfill-mint-burn-prices": ({ db, url, adminKey, request }) => runIdempotentAdminAction(
     db,
     "backfill-mint-burn-prices",
     request,
     () => handleBackfillMintBurnPrices(db, url, adminKey, request),
-  )],
-  ["/api/backfill-mint-burn", ({ db, url, adminKey, request, alchemyApiKey }) => runIdempotentAdminAction(
+  ),
+  "backfill-mint-burn": ({ db, url, adminKey, request, alchemyApiKey }) => runIdempotentAdminAction(
     db,
     "backfill-mint-burn",
     request,
     () => handleBackfillMintBurn(db, url, adminKey, request, alchemyApiKey ?? null),
-  )],
-  ["/api/reclassify-atomic-roundtrips", ({ db, url, adminKey, request }) => runIdempotentAdminAction(
+  ),
+  "reclassify-atomic-roundtrips": ({ db, url, adminKey, request }) => runIdempotentAdminAction(
     db,
     "reclassify-atomic-roundtrips",
     request,
     () => handleReclassifyAtomicRoundtrips(db, url, adminKey, request),
-  )],
-  ["/api/stress-signals", ({ db, url }) => handleStressSignals(db, url)],
-  ["/api/backfill-dews", ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request)],
-  ["/api/feedback", withErrorHandler("feedback", ({ db, request, feedbackEnv }) => {
+  ),
+  "stress-signals": ({ db, url }) => handleStressSignals(db, url),
+  "backfill-dews": ({ db, url, adminKey, request }) => handleBackfillDEWS(db, url, adminKey, request),
+  "feedback": withErrorHandler("feedback", ({ db, request, feedbackEnv }) => {
     if (!request) {
       return Promise.resolve(errorResponse(400, "Bad request"));
     }
     return handleFeedback(db, request, feedbackEnv ?? {});
-  })],
-  ["/api/telegram-webhook", withErrorHandler("telegram-webhook", ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
+  }),
+  "telegram-webhook": withErrorHandler("telegram-webhook", ({ db, request, telegramWebhookSecret, telegramBotToken }) =>
     handleTelegramWebhook(db, request!, telegramWebhookSecret, telegramBotToken)
-  )],
-  ["/api/trigger-digest", withErrorHandler("route-trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
+  ),
+  "trigger-digest": withErrorHandler("route-trigger-digest", async ({ db, request, adminKey, anthropicApiKey, twitterCreds, telegramCreds }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     if (!request) {
@@ -178,8 +183,8 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
         return jsonResponse({ ok: true, result });
       },
     );
-  })],
-  ["/api/reset-blacklist-sync", withErrorHandler("route-reset-blacklist-sync", async ({ db, request, adminKey }) => {
+  }),
+  "reset-blacklist-sync": withErrorHandler("route-reset-blacklist-sync", async ({ db, request, adminKey }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     if (!request) {
@@ -200,16 +205,28 @@ const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>([
         return jsonResponse({ ok: true, evmReset: evmChanged, tronReset: tronChanged });
       },
     );
-  })],
-  ["/api/debug-sync-state", withErrorHandler("route-debug-sync-state", async ({ db, request, adminKey }) => {
+  }),
+  "debug-sync-state": withErrorHandler("route-debug-sync-state", async ({ db, request, adminKey }) => {
     const authError = await requireAdmin(request, adminKey);
     if (authError) return authError;
     const rows = await db
       .prepare("SELECT config_key, last_block FROM blacklist_sync_state ORDER BY config_key")
       .all();
     return jsonResponse(rows.results);
-  })],
-]);
+  }),
+};
+
+const STATIC_ROUTE_HANDLERS = new Map<string, StaticRouteHandler>(
+  getRouterHandledEndpoints().map((endpoint) => {
+    const handler = endpoint.handlerKey
+      ? STATIC_ROUTE_HANDLER_BY_KEY[endpoint.handlerKey]
+      : null;
+    if (!handler) {
+      throw new Error(`Endpoint "${endpoint.path}" is router-handled but has no handler binding`);
+    }
+    return [endpoint.path, handler];
+  }),
+);
 
 function addAdminGetNoStoreHeader(path: string, request: Request | undefined, response: Response): Response {
   if (request?.method !== "GET") return response;

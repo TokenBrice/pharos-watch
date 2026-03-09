@@ -276,13 +276,13 @@ src/                              # Next.js frontend (static export)
 │   ├── use-time-range-filter.ts  # Generic time range state + data filtering hook
 │   ├── use-homepage-filters.ts   # Homepage filter state + URL sync
 │   ├── use-prefetch-stablecoin.ts # Prefetch stablecoin detail on hover
-│   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring + derived view model
+│   ├── use-stablecoin-detail-view-model.ts # Stablecoin detail query wiring; delegates pure derivation to src/lib/stablecoin-detail-view-model.ts
 │   ├── use-api-query.ts          # Generic typed fetch hook wrapping TanStack Query (used by 18 data hooks)
 │   ├── use-url-filters.ts        # Shared URL search param management (getParam, setParam, setParams, replaceParams)
 │   ├── use-stability-index.ts    # GET /api/stability-index (daily PSI scores + history)
 │   ├── use-report-cards.ts       # GET /api/report-cards (grade cards + methodology)
 │   ├── use-safety-score-history.ts # GET /api/safety-score-history (per-coin grade transitions)
-│   ├── use-portfolio.ts          # Portfolio holdings state, localStorage, URL sync, upstream exposure
+│   ├── use-portfolio.ts          # Portfolio holdings state + browser persistence; delegates codec/analysis to src/lib/portfolio-*.ts
 │   ├── use-preferences.ts        # User preference state (persistent settings)
 │   ├── use-stress-signals.ts     # GET /api/stress-signals (DEWS stress scores per coin)
 │   ├── use-stress-test.ts        # Stress test state, computeStressedGrades invocation, impact calculation
@@ -322,9 +322,8 @@ shared/                           # Runtime-neutral boundary (import via `@share
 ├── types/
 │   └── index.ts                  # Shared TypeScript types + Zod schemas
 └── lib/
-    ├── api-endpoints.ts          # Authoritative endpoint metadata + method/cache/probe/status-action helpers
-    ├── strict-contract-paths.ts  # Strict API contract path exports
-    ├── strict-contract-paths.json # Strict API contract path source for smoke checks
+    ├── api-endpoints.ts          # Authoritative endpoint metadata + router/status/smoke/strict-contract helpers
+    ├── strict-contract-paths.ts  # Strict API contract path exports derived from api-endpoints.ts
     ├── stablecoins.ts            # Tracked stablecoin metadata list
     ├── stablecoin-id-registry.ts # Canonical/external ID lookup maps + resolution helpers
     ├── supply.ts                 # Supply helper utilities
@@ -384,7 +383,8 @@ worker/                           # Cloudflare Worker (API + cron jobs)
     │   ├── yield-config.ts       # Yield source configs: pool UUIDs, source types, scoring params
     │   ├── yield-helpers.ts      # Pure yield computation helpers: Pharos Yield Score, excess yield, stability
     │   ├── fetch-tbill-rate.ts   # T-bill proxy fetcher (FRED DGS3MO)
-    │   ├── sync-yield-data.ts    # Yield data sync cron: DeFiLlama yields → D1 + rankings cache
+    │   ├── sync-yield-data.ts    # Yield data sync orchestration: source load + resolution + persistence/cache stages
+    │   ├── yield-sync/           # Yield sync stage modules (source loading, resolution, rankings shaping)
     │   ├── sync-mint-burn.ts     # On-chain mint/burn event sync via Alchemy JSON-RPC (every 20min)
     │   └── status-self-check.ts  # Status reliability cron: real HTTP probes, hysteresis persistence, discrepancy/probe-failure alerts
     ├── api/
@@ -442,7 +442,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── mint-burn-health-config.ts # Shared mint/burn stale thresholds + major symbol defaults
         ├── bigint.ts             # bigIntToDecimal() helper for safe BigInt-to-number conversion (used by blacklist sync)
         ├── binary-search.ts      # Generic binarySearchNearest<T>() for sorted array lookups
-        ├── blacklist-contracts.ts # Blacklist contract addresses + event configs (worker-only, imports CHAIN_META)
+        ├── blacklist-contracts.ts # Blacklist event configs resolved from shared stablecoin contract metadata + CHAIN_META
         ├── bluechip-slugs.ts     # BLUECHIP_SLUG_MAP (worker-only, split from src/lib/bluechip.ts)
         ├── depeg-helpers.ts      # Shared depeg helpers: row mapper, DEX price loader, and event insert statement builder
         ├── dews.ts               # DEWS computation: 8 sub-signals, weighted average, threat bands
@@ -454,7 +454,7 @@ worker/                           # Cloudflare Worker (API + cron jobs)
         ├── backfill-query.ts     # Shared admin backfill query parsing/selection helpers (stablecoin/batch/batchSize)
         ├── api-utils.ts          # withErrorHandler(), CacheStatus (from shared types), buildCacheStatuses()
         ├── status-reliability.ts # Status hysteresis, transitions, probe/discrepancy persistence
-        ├── mint-burn-contracts.ts # Mint/burn contract configs per stablecoin/chain (mint addresses, decimals)
+        ├── mint-burn-contracts.ts # Mint/burn event configs resolved from shared stablecoin contract metadata, plus explicit vault overrides
         ├── mint-burn-scoring.ts  # Flow Intensity Score (FIS), Bank Run Gauge, flight-to-quality detection
         ├── mint-burn-pipeline/   # Shared ingestion helpers used by cron + admin backfill paths
         │   ├── types.ts          # Shared row/context/counter + sync-state mode types

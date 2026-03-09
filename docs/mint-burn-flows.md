@@ -57,6 +57,8 @@ Scheduled/http handlers apply env overrides on top of these defaults (`worker/sr
 
 **File:** `worker/src/lib/mint-burn-contracts.ts`
 
+Token identity now resolves from shared metadata in `shared/lib/stablecoins.ts`. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. The only explicit address overrides are the two `reUSD` vault-event configs, which intentionally track non-token contracts.
+
 ### Tracked Stablecoins
 
 Current scope: **84 contract configs** across **81 symbols** (81 transfer-only ERC-20 configs + 1 USDT mixed-event config + 2 reUSD custom-event configs).
@@ -581,7 +583,7 @@ Current production scope is Ethereum-only ingestion. Planned expansions:
 | `worker/src/lib/mint-burn-pipeline/persistence.ts` | Shared event write + hourly recompute helpers |
 | `worker/src/lib/mint-burn-pipeline/price-heal.ts` | Shared NULL-price auto-heal helper |
 | `worker/src/lib/mint-burn-pipeline/sync-state.ts` | Shared sync-state read/init/upsert helpers |
-| `worker/src/lib/mint-burn-contracts.ts` | Contract configs, event definitions, safe haven IDs |
+| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit override addresses for special vault events |
 | `worker/src/lib/mint-burn-scoring.ts` | Pure scoring functions: pressure shift (FIS), gauge, flight-to-quality |
 | `worker/src/api/mint-burn-flows.ts` | API handler: aggregate + per-coin flow data |
 | `worker/src/api/mint-burn-events.ts` | API handler: paginated event feed |

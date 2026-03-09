@@ -245,7 +245,7 @@ Discovery uses strictly sequential fetches (1 connection at a time). Shared Alch
 | Job | Function | File | Documentation |
 |-----|----------|------|---------------|
 | `sync-dex-liquidity` | `syncDexLiquidity()` | `worker/src/cron/dex-liquidity/orchestrator.ts` | `docs/dex-liquidity.md` |
-| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` | `docs/yield-intelligence.md` |
+| `sync-yield-data` | `syncYieldData()` | `worker/src/cron/sync-yield-data.ts` + `worker/src/cron/yield-sync/*` | `docs/yield-intelligence.md` |
 
 **Connection budget:** `sync-yield-data` is chained after `sync-dex-liquidity` in the same trigger. The slot still shares the Workers 6-connection limit, so fetch-heavy additions must account for total in-slot concurrency. Current steady overhead for the LUSD B.Protocol source is small: 2 Ethereum `eth_call`s plus 1 CoinGecko price fetch per 30-minute run.
 
@@ -659,7 +659,7 @@ Admin timeline feed for machine consumers. Returns persisted status state, statu
 | `worker/src/lib/mint-burn-health-config.ts` | Shared mint/burn freshness defaults, env override resolver, stale-symbol evaluator |
 | `worker/src/lib/dex-liquidity.ts` | Shared `dex_liquidity` table loader (`loadDexLiquidityMap`) |
 | `worker/src/lib/psi-recompute.ts` | Shared historical PSI day-input builder used by audit/backfill admin APIs |
-| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn contract configs: stablecoin/chain mappings, mint addresses, decimals, `startBlock` (earliest block to scan), `SAFE_HAVEN_IDS` |
+| `worker/src/lib/mint-burn-contracts.ts` | Mint/burn event configs resolved from shared stablecoin contracts, plus explicit vault overrides, `startBlock`, and `SAFE_HAVEN_IDS` |
 | `worker/src/lib/mint-burn-scoring.ts` | FIS computation, gauge bands, flight-to-quality detection (pure functions) |
 | `worker/src/cron/sync-stablecoin-charts.ts` | Chart sync: DefiLlama charts, FX fix, downsampling |
 | `worker/src/cron/sync-mint-burn.ts` | Mint/burn flow sync: Alchemy log scanning (Transfer + custom topics), hourly aggregation |

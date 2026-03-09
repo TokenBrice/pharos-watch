@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { buildPageMetadata } from "@/lib/page-metadata";
@@ -14,7 +14,7 @@ const YieldClient = dynamic(
   { loading: () => <Skeleton className="h-[600px] w-full rounded-xl" /> },
 );
 
-const yieldBearingCount = TRACKED_STABLECOINS.filter((m) => m.flags.yieldBearing).length;
+const yieldBearingCount = YIELD_BEARING_STABLECOINS.length;
 const desc = `Risk-adjusted yield rankings for ${yieldBearingCount} yield-bearing stablecoins. Compare APY, safety grades, and the Pharos Yield Score.`;
 
 export const metadata = buildPageMetadata({

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { buildApiUrl } from "@/lib/api";
 
 type FeedbackType = "bug" | "data-correction" | "feature-request";
 
@@ -87,7 +88,7 @@ export function FeedbackModal({
     };
 
     try {
-      const res = await fetch("https://api.pharos.watch/api/feedback", {
+      const res = await fetch(buildApiUrl("/api/feedback"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

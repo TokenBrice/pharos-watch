@@ -67,7 +67,7 @@ These are wired into deploy workflow (`.github/workflows/deploy-cloudflare.yml`)
 
 ### `smoke-api.mjs`
 
-- Validates `/api/health` and every strict contract endpoint from `shared/lib/strict-contract-paths.json`.
+- Validates `/api/health` and every strict contract endpoint derived from `shared/lib/api-endpoints.ts` via `shared/lib/strict-contract-paths.ts`.
 - Executes strict endpoint checks sequentially to avoid post-deploy request fan-out against a freshly deployed worker.
 - Retries transient request failures once by default (timeouts/network errors/5xx/429/408); tune with `SMOKE_API_RETRY_COUNT` and `SMOKE_API_RETRY_DELAY_MS`.
 - Per-request timeout defaults to `12000ms`; tune with `SMOKE_API_TIMEOUT_MS`.

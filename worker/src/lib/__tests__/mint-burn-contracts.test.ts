@@ -1,10 +1,15 @@
 import { describe, it, expect } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins";
 import { decodeUint256AtSlot } from "../evm-logs";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 
 const REUSD_DEPOSITED_TOPIC = "0x8752a472e571a816aea92eec8dae9baf628e840f4929fbcc2d155e6233ff68a7";
 const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO_ADDRESS_PADDED = "0x0000000000000000000000000000000000000000000000000000000000000000";
+const MINT_BURN_ADDRESS_OVERRIDES = new Set([
+  "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+  "0x8aeb9453ef22cb38abc7a3af9c208f65c1bfe31e",
+]);
 const REMOVED_STABLECOIN_IDS = [
   "u-united-stables",
   "usdai-usd-ai",
@@ -90,6 +95,28 @@ describe("mint-burn-contracts Ethereum-only scope", () => {
   it("keeps all tracked configs on ethereum", () => {
     const uniqueChains = new Set(MINT_BURN_CONFIGS.map((c) => c.chain.chainId));
     expect(uniqueChains).toEqual(new Set(["ethereum"]));
+  });
+});
+
+describe("mint-burn-contracts shared metadata alignment", () => {
+  it("resolves tracked token identities from shared metadata unless explicitly overridden", () => {
+    for (const config of MINT_BURN_CONFIGS) {
+      const meta = TRACKED_META_BY_ID.get(config.stablecoinId);
+      expect(meta, `missing tracked metadata for ${config.stablecoinId}`).toBeDefined();
+
+      const matchingDeployment = meta?.contracts?.find(
+        (deployment) =>
+          deployment.chain === config.chain.chainId
+          && deployment.address.toLowerCase() === config.contractAddress.toLowerCase()
+          && deployment.decimals === config.decimals,
+      );
+      if (matchingDeployment) continue;
+
+      expect(
+        MINT_BURN_ADDRESS_OVERRIDES.has(config.contractAddress.toLowerCase()),
+        `expected ${config.stablecoinId} ${config.contractAddress} to be declared in shared metadata or allowlisted override`,
+      ).toBe(true);
+    }
   });
 });
 

@@ -22,7 +22,7 @@ export async function detectDepegEvents(
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(signal);
-  const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((s) => [s.id, s]));
+  const metaById = new Map(PSI_ELIGIBLE_STABLECOINS.map((stablecoin) => [stablecoin.id, stablecoin]));
   const { rates: pegRates } = derivePegRates(assets, metaById, fxFallbackRates);
   const syncStart = Math.floor(Date.now() / 1000);
   const now = syncStart;
