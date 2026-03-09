@@ -11,7 +11,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 - **Pattern:** `3,23,43 * * * *` (every 20 minutes, offset at :03/:23/:43)
 - **Function:** `syncBlacklist(db, etherscanApiKey, trongridApiKey, drpcApiKey)`
 - **File:** `worker/src/cron/sync-blacklist.ts`
-- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit } }`
+- **Returns:** `{ itemCount, metadata: JSON { contractsSkipped, apiErrors, rpcLogConfigs, apiErrorClasses, budgetUsed, budgetLimit, runtimeBudgetReached, runtimeBudgetMs } }`
 
 ---
 
@@ -55,6 +55,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Monitors on-chain ev
 | TronGrid  | 3 requests/second |
 
 **Budget:** 900 subrequests per cron cycle, shared across all configs + backfill.
+**Runtime guard:** 7-minute in-app budget with a 60-second per-config start buffer, so the job exits cleanly before the outer 8-minute `logCronRun()` timeout.
 
 ---
 
@@ -244,14 +245,16 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
 ### Execution Order (each cron cycle)
 
 1. **Backfill** (runs FIRST to prioritize budget)
-   - Targets rows with NULL amount (or 0 for blacklist events)
+   - Targets rows with NULL amount only
    - Batch size: 50 rows per cycle
+   - Confirmed zero balances are treated as complete and are not retried
    - Fetches historical balances via RPC or API
 
 2. **Incremental scan** (per contract config)
    - EVM: fetch logs from `lastBlock + 1` to latest via Etherscan `getLogs` or chain RPC `eth_getLogs`
    - Tron: fetch events from `lastTimestamp` via TronGrid `/contracts/{addr}/events`
    - Parse events into `BlacklistRow` objects
+   - If the runtime guard is nearly exhausted, the cron stops before starting another config and defers the remainder to the next cycle
 
 3. **Balance enrichment** (in-memory, before DB insertion)
    - Enrich parsed rows with balances BEFORE inserting into D1
@@ -259,6 +262,7 @@ For RPC log-scan chains (Base, Optimism, Avalanche, BSC), partial `eth_getLogs` 
    - EVM L2 (with dRPC): archive node `eth_call` at historical block
    - EVM L2 (no dRPC): Etherscan `eth_call` with historical block tag (Etherscan free plan may silently return latest balance on L2s)
    - Tron: TronGrid `/accounts/{addr}` (convert `0x` to `41` prefix)
+   - RPC-log chains reuse persistent block-timestamp cache rows to avoid re-resolving the same blocks every run
    - `INSERT OR IGNORE` enriched rows into `blacklist_events`
 
 4. **Sync state advancement**

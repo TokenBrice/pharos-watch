@@ -307,6 +307,34 @@ describe("syncBlacklist", () => {
     expect(meta.apiErrors).toBe(0);
   });
 
+  it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
+    const db = makeDb();
+
+    vi.mocked(fetchEvmLogsForTopic)
+      .mockImplementationOnce(async () => {
+        vi.setSystemTime(new Date("2025-06-15T12:06:30Z"));
+        return [];
+      })
+      .mockResolvedValue([]);
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    );
+
+    const result = await syncBlacklist(db, "etherscan-key", "tron-key", null);
+
+    expect(result.status).toBe("degraded");
+    const meta = JSON.parse(result.metadata);
+    expect(meta.runtimeBudgetReached).toBe(true);
+    expect(meta.contractsSkipped).toBeGreaterThan(0);
+  });
+
   it("advances sync state for EVM chains toward chain head when no events", async () => {
     const db = makeDb();
 

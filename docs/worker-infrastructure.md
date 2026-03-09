@@ -316,6 +316,8 @@ async function logCronRun(
 
 Each cron job receives an `AbortSignal` from `logCronRun()` that fires after a configurable timeout. Jobs that exceed their timeout are aborted and logged with `status='error'`. The signal is threaded through to `fetchWithRetry()` so that in-flight HTTP requests are also cancelled.
 
+Some long-running jobs also enforce their own earlier wall-clock guard so they can return a controlled `degraded` result with metadata instead of hard-failing at the wrapper timeout. `sync-blacklist`, for example, self-stops after 7 minutes and avoids starting a new config when fewer than 60 seconds remain.
+
 | Job | Timeout | Reason |
 |-----|---------|--------|
 | Default | 5 min | Standard jobs complete in <60s |

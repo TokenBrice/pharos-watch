@@ -28,10 +28,13 @@ import {
 import { getChainRpc } from "../lib/chain-registry";
 import { getBlacklistTrackerMethodologyVersionAt } from "@shared/lib/blacklist-tracker-version";
 import { fetchWithRetry } from "../lib/fetch-retry";
+import { throwIfAborted } from "../lib/abort";
 
 const EVM_SCANNED_TO_LATEST = 99999999;
 const BACKFILL_BATCH_SIZE = 50;
 const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc"]);
+const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 7 * 60_000;
+const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
 
 type SyncBlacklistResult = {
   itemCount: number;
@@ -80,6 +83,14 @@ function buildExplorerAddressUrl(chain: ChainConfig, address: string): string {
 
 function shouldPreferRpcLogScan(chainId: string): boolean {
   return RPC_LOG_SCAN_CHAIN_IDS.has(chainId);
+}
+
+function runtimeBudgetReached(deadlineMs: number): boolean {
+  return Date.now() >= deadlineMs;
+}
+
+function shouldStopBeforeNextConfig(deadlineMs: number): boolean {
+  return Date.now() + SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS >= deadlineMs;
 }
 
 // --- Balance fetching ---
@@ -312,9 +323,12 @@ async function resolveRpcLogTarget(
 }
 
 async function fetchEvmEventsIncremental(
+  db: D1Database,
   config: ContractEventConfig,
   apiKey: string | null,
   fromBlock: number,
+  timestampCache: Map<number, number>,
+  deadlineMs: number,
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
@@ -325,10 +339,19 @@ async function fetchEvmEventsIncremental(
   chainHead: number | null;
   usedRpcLogs: boolean;
   scannedToBlock: number | null;
+  incomplete: boolean;
 }> {
   const evmChainId = config.chain.evmChainId;
   if (evmChainId == null) {
-    return { rows: [], maxBlock: fromBlock, apiError: false, chainHead: null, usedRpcLogs: false, scannedToBlock: null };
+    return {
+      rows: [],
+      maxBlock: fromBlock,
+      apiError: false,
+      chainHead: null,
+      usedRpcLogs: false,
+      scannedToBlock: null,
+      incomplete: false,
+    };
   }
 
   const allRows: BlacklistRow[] = [];
@@ -337,7 +360,7 @@ async function fetchEvmEventsIncremental(
   let chainHead: number | null = null;
   let usedRpcLogs = false;
   let scannedToBlock: number | null = null;
-  const blockTimestampCache = new Map<number, number>();
+  let incomplete = false;
   let rpcTargetPromise: Promise<{ rpcUrl: string; chainHead: number } | null> | null = null;
   const getRpcTarget = (): Promise<{ rpcUrl: string; chainHead: number } | null> => {
     rpcTargetPromise ??= resolveRpcLogTarget(config.chain.chainId, budget, signal);
@@ -345,6 +368,11 @@ async function fetchEvmEventsIncremental(
   };
 
   for (const eventDef of config.events) {
+    throwIfAborted(signal);
+    if (runtimeBudgetReached(deadlineMs)) {
+      incomplete = true;
+      break;
+    }
     if (budgetExhausted(budget)) break;
 
     let rows: BlacklistRow[] = [];
@@ -402,7 +430,11 @@ async function fetchEvmEventsIncremental(
           const blockTimestamps = uniqueBlocks.length > 0
             ? await resolveBlockTimestamps(rpcTarget.rpcUrl, uniqueBlocks, budget, {
                 signal,
-                localCache: blockTimestampCache,
+                localCache: timestampCache,
+                persistentCache: {
+                  db,
+                  chainId: config.chain.chainId,
+                },
               })
             : new Map<number, number>();
           let eventScannedToBlock = fetchedLogs.scannedToBlock;
@@ -449,7 +481,15 @@ async function fetchEvmEventsIncremental(
     }
   }
 
-  return { rows: allRows, maxBlock, apiError, chainHead, usedRpcLogs, scannedToBlock };
+  return {
+    rows: allRows,
+    maxBlock,
+    apiError,
+    chainHead,
+    usedRpcLogs,
+    scannedToBlock,
+    incomplete,
+  };
 }
 
 // --- Tron fetching ---
@@ -487,22 +527,34 @@ async function fetchTronEventsIncremental(
   config: ContractEventConfig,
   apiKey: string | null,
   lastTimestampMs: number,
+  deadlineMs: number,
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
-): Promise<{ rows: BlacklistRow[]; maxBlock: number }> {
+): Promise<{ rows: BlacklistRow[]; maxBlock: number; incomplete: boolean }> {
   const rows: BlacklistRow[] = [];
   let maxBlock = 0;
+  let incomplete = false;
   const headers: Record<string, string> = {};
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
   for (const eventName of TRON_EVENT_NAMES) {
+    throwIfAborted(signal);
+    if (runtimeBudgetReached(deadlineMs)) {
+      incomplete = true;
+      break;
+    }
     if (budgetExhausted(budget)) break;
 
     const tsFilter = lastTimestampMs > 0 ? `&min_block_timestamp=${lastTimestampMs}` : "";
     let url: string | null = `https://api.trongrid.io/v1/contracts/${config.contractAddress}/events?event_name=${eventName}&limit=200&order_by=block_timestamp,desc${tsFilter}`;
 
     while (url) {
+      throwIfAborted(signal);
+      if (runtimeBudgetReached(deadlineMs)) {
+        incomplete = true;
+        break;
+      }
       if (budgetExhausted(budget)) break;
 
       budget.count++;
@@ -547,9 +599,11 @@ async function fetchTronEventsIncremental(
 
       url = json.meta?.links?.next || null;
     }
+
+    if (incomplete) break;
   }
 
-  return { rows, maxBlock };
+  return { rows, maxBlock, incomplete };
 }
 
 // --- Enrichment: fetch balances for blacklist/unblacklist events ---
@@ -561,9 +615,12 @@ async function enrichRowBalances(
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
   budget: SubrequestBudget,
+  deadlineMs: number,
   signal?: AbortSignal,
 ): Promise<void> {
   for (const row of rows) {
+    throwIfAborted(signal);
+    if (runtimeBudgetReached(deadlineMs)) break;
     if (budgetExhausted(budget)) break;
     if (row.amount != null) continue;
     if (row.event_type !== "blacklist" && row.event_type !== "unblacklist" && row.event_type !== "destroy") continue;
@@ -652,8 +709,13 @@ async function backfillAmounts(
   drpcApiKey: string | null,
   etherscanLimiter: RateLimitedFetch,
   budget: SubrequestBudget,
+  deadlineMs: number,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<{ runtimeBudgetReached: boolean }> {
+  if (runtimeBudgetReached(deadlineMs)) {
+    return { runtimeBudgetReached: true };
+  }
+
   const result = await db
     .prepare(
       `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash
@@ -665,11 +727,17 @@ async function backfillAmounts(
     .bind(BACKFILL_BATCH_SIZE)
     .all<{ id: string; chain_id: string; event_type: string; address: string; block_number: number; stablecoin: string; tx_hash: string }>();
 
-  if (!result.results?.length) return;
+  if (!result.results?.length) return { runtimeBudgetReached: false };
 
   const stmts: D1PreparedStatement[] = [];
+  let runtimeBudgetHit = false;
 
   for (const row of result.results) {
+    throwIfAborted(signal);
+    if (runtimeBudgetReached(deadlineMs)) {
+      runtimeBudgetHit = true;
+      break;
+    }
     if (budgetExhausted(budget)) break;
 
     const config = CONTRACT_CONFIGS.find((c) => c.chain.chainId === row.chain_id && c.stablecoin === row.stablecoin);
@@ -710,6 +778,8 @@ async function backfillAmounts(
     await batchExecute(db, stmts);
     console.log(`[sync-blacklist] Backfilled amounts for ${stmts.length} events`);
   }
+
+  return { runtimeBudgetReached: runtimeBudgetHit };
 }
 
 // --- Orchestrator ---
@@ -754,11 +824,22 @@ export async function syncBlacklist(
   const etherscanLimiter = externalEtherscanRL ?? createRateLimiter(4);
   const tronLimiter = createRateLimiter(3);
   const budget = createBudget(900);
+  const deadlineMs = Date.now() + SYNC_BLACKLIST_RUNTIME_BUDGET_MS;
   let totalNewEvents = 0;
   let contractsSkipped = 0;
   let apiErrors = 0;
   let rpcLogConfigs = 0;
+  let runtimeBudgetHit = false;
   const apiErrorClasses: Record<string, number> = {};
+  const chainTimestampCaches = new Map<string, Map<number, number>>();
+  const getChainTimestampCache = (chainId: string): Map<number, number> => {
+    let cache = chainTimestampCaches.get(chainId);
+    if (!cache) {
+      cache = new Map<number, number>();
+      chainTimestampCaches.set(chainId, cache);
+    }
+    return cache;
+  };
 
   const configStates = await Promise.all(
     CONTRACT_CONFIGS.map(async (config) => {
@@ -771,7 +852,16 @@ export async function syncBlacklist(
   // Backfill NULL amounts first — this has priority over new event scanning
   // because the worker may time out before completing the full config loop.
   try {
-    await backfillAmounts(db, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal);
+    const backfill = await backfillAmounts(
+      db,
+      etherscanApiKey,
+      drpcApiKey,
+      etherscanLimiter,
+      budget,
+      deadlineMs,
+      signal,
+    );
+    runtimeBudgetHit ||= backfill.runtimeBudgetReached;
   } catch (err) {
     console.warn("[sync-blacklist] Backfill failed:", err);
   }
@@ -784,6 +874,15 @@ export async function syncBlacklist(
   const chainHeadCache = new Map<number, number>();
 
   for (let ci = 0; ci < configStates.length; ci++) {
+    throwIfAborted(signal);
+    if (shouldStopBeforeNextConfig(deadlineMs)) {
+      runtimeBudgetHit = true;
+      contractsSkipped = configStates.length - ci;
+      console.warn(
+        `[sync-blacklist] Runtime budget reached, skipping ${contractsSkipped} remaining contracts`
+      );
+      break;
+    }
     const { config, configKey, lastBlock } = configStates[ci];
     if (budgetExhausted(budget)) {
       contractsSkipped = configStates.length - ci;
@@ -799,39 +898,85 @@ export async function syncBlacklist(
         chainHead?: number | null;
         usedRpcLogs?: boolean;
         scannedToBlock?: number | null;
+        incomplete?: boolean;
       };
 
       if (config.chain.type === "tron") {
-        result = await fetchTronEventsIncremental(config, trongridApiKey, lastBlock, tronLimiter, budget, signal);
+        result = await fetchTronEventsIncremental(
+          config,
+          trongridApiKey,
+          lastBlock,
+          deadlineMs,
+          tronLimiter,
+          budget,
+          signal,
+        );
 
         await enrichRowBalances(
-          result.rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
+          result.rows,
+          config,
+          etherscanApiKey,
+          drpcApiKey,
+          etherscanLimiter,
+          budget,
+          deadlineMs,
+          signal,
         );
         await insertRows(db, result.rows);
 
-        // When no events found, advance toward current time but leave a safety margin
-        // to avoid permanently skipping events the explorer hasn't indexed yet.
-        const newBlock = result.rows.length > 0 ? result.maxBlock : Math.max(Date.now() - TRON_SAFETY_MS, lastBlock);
-        if (newBlock > lastBlock) {
-          await setLastBlock(db, configKey, newBlock);
+        if (result.incomplete) {
+          runtimeBudgetHit = true;
+          console.warn(
+            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at ts ${lastBlock}`
+          );
+        } else {
+          // When no events found, advance toward current time but leave a safety margin
+          // to avoid permanently skipping events the explorer hasn't indexed yet.
+          const newBlock = result.rows.length > 0 ? result.maxBlock : Math.max(Date.now() - TRON_SAFETY_MS, lastBlock);
+          if (newBlock > lastBlock) {
+            await setLastBlock(db, configKey, newBlock);
+          }
         }
       } else {
         const evmChainId = config.chain.evmChainId!;
         // If lastBlock hit the sentinel (99999999), reset to 0 to re-scan.
         const wasReset = lastBlock >= EVM_SCANNED_TO_LATEST;
         const fromBlock = wasReset ? 0 : lastBlock > 0 ? lastBlock + 1 : 0;
-        result = await fetchEvmEventsIncremental(config, etherscanApiKey, fromBlock, etherscanLimiter, budget, signal);
+        result = await fetchEvmEventsIncremental(
+          db,
+          config,
+          etherscanApiKey,
+          fromBlock,
+          getChainTimestampCache(config.chain.chainId),
+          deadlineMs,
+          etherscanLimiter,
+          budget,
+          signal,
+        );
         if (result.usedRpcLogs) {
           rpcLogConfigs++;
         }
 
         await enrichRowBalances(
-          result.rows, config, etherscanApiKey, drpcApiKey, etherscanLimiter, budget, signal
+          result.rows,
+          config,
+          etherscanApiKey,
+          drpcApiKey,
+          etherscanLimiter,
+          budget,
+          deadlineMs,
+          signal,
         );
         await insertRows(db, result.rows);
 
         let newBlock: number;
-        if (result.apiError) {
+        if (result.incomplete) {
+          runtimeBudgetHit = true;
+          newBlock = lastBlock;
+          console.warn(
+            `[sync-blacklist] Runtime budget reached while scanning ${config.stablecoin} on ${config.chain.chainName}, keeping sync at block ${lastBlock}`
+          );
+        } else if (result.apiError) {
           const partialAdvance = result.scannedToBlock;
           apiErrors++;
           if (partialAdvance != null && partialAdvance > lastBlock) {
@@ -879,7 +1024,7 @@ export async function syncBlacklist(
   console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   const status: SyncBlacklistResult["status"] = apiErrors > 0
     ? (apiErrors > CONTRACT_CONFIGS.length / 2 ? "error" : "degraded")
-    : "ok";
+    : runtimeBudgetHit ? "degraded" : "ok";
   return {
     status,
     itemCount: totalNewEvents,
@@ -890,6 +1035,8 @@ export async function syncBlacklist(
       apiErrorClasses,
       budgetUsed: budget.count,
       budgetLimit: budget.limit,
+      runtimeBudgetReached: runtimeBudgetHit,
+      runtimeBudgetMs: SYNC_BLACKLIST_RUNTIME_BUDGET_MS,
     }),
   };
 }

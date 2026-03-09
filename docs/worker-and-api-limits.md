@@ -128,7 +128,7 @@ Used for supported-chain blacklist log fetching and Ethereum L1 on-chain balance
 | **L2 historical `eth_call` via Etherscan free** | Limited / unreliable for several L2s (we use dRPC for L2 balance lookups) |
 | **V1 API** | Deprecated — disabled after May 31, 2025 |
 
-**Budget system in code**: `createBudget(900)` — the blacklist cron self-caps at 900 Etherscan subrequests per run (`worker/src/cron/sync-blacklist.ts`).
+**Budget system in code**: `createBudget(900)` plus a 7-minute in-app runtime guard — the blacklist cron self-caps both request volume and wall-clock time per run (`worker/src/cron/sync-blacklist.ts`).
 
 > **Key constraint**: Blacklist sync is hard-capped to 900 Etherscan subrequests/run. Historical L2 balance lookups are routed through dRPC archive RPC instead of Etherscan `eth_call`, and Base/BNB/Avalanche/Optimism log scans must use chain RPC (`eth_getLogs`) rather than Etherscan free-tier `getLogs`.
 
