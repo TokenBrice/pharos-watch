@@ -85,10 +85,9 @@ function McapXTick({
 
 interface McapChartProps {
   data: SupplyHistoryPoint[];
-  isLoading?: boolean;
 }
 
-export function McapChart({ data, isLoading }: McapChartProps) {
+export function McapChart({ data }: McapChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
@@ -191,8 +190,6 @@ export function McapChart({ data, isLoading }: McapChartProps) {
               <ChartSkeleton className="h-full w-full" />
             )}
           </div>
-        ) : isLoading ? (
-          <ChartSkeleton className="h-[250px] sm:h-[350px]" />
         ) : (
           <div className="flex h-[250px] sm:h-[350px] items-center justify-center text-muted-foreground">
             No market cap data available

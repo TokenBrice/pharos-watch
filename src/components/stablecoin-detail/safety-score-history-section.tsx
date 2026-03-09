@@ -6,7 +6,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { useSafetyScoreHistory } from "@/hooks/use-safety-score-history";
 import type { SafetyScoreHistoryPoint } from "@shared/types";
 
-export function formatSafetyScoreHistoryDate(date: number): string {
+function formatSafetyScoreHistoryDate(date: number): string {
   return new Date(date * 1000).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",

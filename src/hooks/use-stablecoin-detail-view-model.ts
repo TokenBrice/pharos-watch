@@ -52,7 +52,7 @@ interface NotFoundViewModel extends BaseViewModel {
   status: "not-found";
 }
 
-export interface StablecoinDetailReadyViewModel extends BaseViewModel {
+interface StablecoinDetailReadyViewModel extends BaseViewModel {
   status: "ready";
   id: string;
   coin: StablecoinMeta;
@@ -88,7 +88,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   usesFallbackPegRate: boolean;
 }
 
-export type StablecoinDetailViewModel =
+type StablecoinDetailViewModel =
   | LoadingViewModel
   | ListErrorViewModel
   | NotFoundViewModel

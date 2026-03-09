@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-export interface UseTablePaginationOptions {
+interface UseTablePaginationOptions {
   pageSize: number;
   resetPageOnTotalChange?: boolean;
 }
@@ -24,7 +24,7 @@ export interface TablePaginationState {
   totalRowsSnapshot: number;
 }
 
-export interface DerivedPagination {
+interface DerivedPagination {
   basePage: number;
   effectivePage: number;
   totalPages: number;

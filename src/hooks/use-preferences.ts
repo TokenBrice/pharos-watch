@@ -56,7 +56,7 @@ export type ColumnId =
   | "type"
   | "flags";
 
-export interface ColumnDef {
+interface ColumnDef {
   id: ColumnId;
   label: string;
   /** Always visible — cannot be toggled off */

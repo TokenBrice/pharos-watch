@@ -5,16 +5,12 @@ import {
   StabilityIndexResponseSchema,
   type StabilityIndexResponse,
   type StabilityContributor,
-  type StabilityIndexCurrent,
-  type StabilityIndexHistoryPoint,
 } from "@shared/types";
 
-export type { StabilityContributor, StabilityIndexCurrent, StabilityIndexHistoryPoint };
-
-export type StabilityIndexData = StabilityIndexResponse;
+export type { StabilityContributor };
 
 export function useStabilityIndex() {
-  return useApiQuery<StabilityIndexData>(
+  return useApiQuery<StabilityIndexResponse>(
     ["stability-index"],
     "/api/stability-index",
     CRON_15MIN,
@@ -22,11 +18,8 @@ export function useStabilityIndex() {
   );
 }
 
-export type StabilityIndexDetailHistoryPoint = StabilityIndexHistoryPoint;
-export type StabilityIndexDetailData = StabilityIndexResponse;
-
 export function useStabilityIndexDetail() {
-  return useApiQuery<StabilityIndexDetailData>(
+  return useApiQuery<StabilityIndexResponse>(
     ["stability-index-detail"],
     "/api/stability-index?detail=true",
     CRON_15MIN,

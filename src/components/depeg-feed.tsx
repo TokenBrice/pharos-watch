@@ -14,13 +14,12 @@ import type { DepegEvent } from "@shared/types";
 interface DepegFeedProps {
   events: DepegEvent[];
   logos?: Record<string, string>;
-  className?: string;
 }
 
 const MOBILE_PAGE_SIZE = 3;
 const DESKTOP_PAGE_SIZE = 6;
 
-export function DepegFeed({ events, logos, className }: DepegFeedProps) {
+export function DepegFeed({ events, logos }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
   const [pageSize, setPageSize] = useState(MOBILE_PAGE_SIZE);
   const [visibleCount, setVisibleCount] = useState(MOBILE_PAGE_SIZE);
@@ -79,7 +78,7 @@ export function DepegFeed({ events, logos, className }: DepegFeedProps) {
   if (events.length === 0) return null;
 
   return (
-    <Card className={["rounded-xl flex flex-col", className].filter(Boolean).join(" ")}>
+    <Card className="rounded-xl flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle as="h2" className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Recent Depeg Events

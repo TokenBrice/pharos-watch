@@ -21,9 +21,8 @@ import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { formatCurrency } from "@shared/lib/format";
 import { prettifyProtocol, PROTOCOL_LOGOS } from "@/lib/dex-constants";
 import { getScoreColor, getDurabilityColor } from "@/lib/severity-colors";
+import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import type { StablecoinMeta, DexLiquidityData } from "@shared/types";
-
-const PAGE_SIZE = 25;
 
 export type LiquiditySortKey =
   | "score"
@@ -145,7 +144,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick }: Liquidi
       defaultKey: "score",
       defaultDirection: "desc",
       compareRows,
-      pageSize: PAGE_SIZE,
+      pageSize: TABLE_PAGE_SIZE,
       resetPageOnTotalChange: true,
     },
   );

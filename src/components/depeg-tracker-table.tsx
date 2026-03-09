@@ -20,10 +20,9 @@ import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import { deviationColorClass, pegScoreColor } from "@/lib/severity-colors";
 import { attentionScore, type DepegTrackerRow } from "@/lib/depeg-sort";
 import type { ThreatBand } from "@shared/lib/classification";
+import { TABLE_PAGE_SIZE } from "@/lib/constants";
 
 export type { DepegTrackerRow } from "@/lib/depeg-sort";
-
-const PAGE_SIZE = 25;
 
 type SortKey =
   | "__attention"
@@ -127,7 +126,7 @@ export function DepegTrackerTable({ rows, logos, onRowClick }: DepegTrackerTable
       defaultKey: "__attention",
       defaultDirection: "desc",
       compareRows,
-      pageSize: PAGE_SIZE,
+      pageSize: TABLE_PAGE_SIZE,
     },
   );
   const prefetch = usePrefetchStablecoin();

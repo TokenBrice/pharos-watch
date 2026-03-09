@@ -25,7 +25,7 @@ const BACKING_COPY = {
   algorithmic: "algorithmic",
 } as const;
 
-export interface StaticComparisonPage {
+interface StaticComparisonPage {
   slug: string;
   href: string;
   title: string;

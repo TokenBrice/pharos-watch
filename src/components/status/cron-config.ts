@@ -1,18 +1,18 @@
-export type StatusCronGroupKey =
+type StatusCronGroupKey =
   | "quarter-hourly"
   | "twenty-minute"
   | "half-hourly"
   | "daily"
   | "other";
 
-export interface StatusCronGroupDefinition {
+interface StatusCronGroupDefinition {
   key: StatusCronGroupKey;
   title: string;
   badge: string;
   description: string;
 }
 
-export interface StatusCronDisplayMeta {
+interface StatusCronDisplayMeta {
   group: StatusCronGroupKey;
   label: string;
 }

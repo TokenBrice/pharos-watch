@@ -20,10 +20,9 @@ const SERIF = { fontFamily: "Georgia, 'Times New Roman', serif" };
 
 interface DailyDigestProps {
   variant?: "preview" | "full";
-  showCta?: boolean;
 }
 
-export function DailyDigest({ variant = "full", showCta }: DailyDigestProps) {
+export function DailyDigest({ variant = "full" }: DailyDigestProps) {
   const { data, isLoading, error, refetch } = useDailyDigest();
   const paragraphs = getDigestBodyParagraphs({
     digest: data?.digest,
@@ -31,7 +30,7 @@ export function DailyDigest({ variant = "full", showCta }: DailyDigestProps) {
   });
   const isPreview = variant === "preview";
   const visibleParagraphs = variant === "preview" ? paragraphs.slice(0, 1) : paragraphs;
-  const shouldShowCta = showCta ?? variant === "preview";
+  const shouldShowCta = variant === "preview";
   const ctaLabel = variant === "preview" ? "Read today's full digest" : "Read all previous recaps";
 
   if (!isLoading && !data) {
