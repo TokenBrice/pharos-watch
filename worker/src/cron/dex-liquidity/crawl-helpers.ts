@@ -53,6 +53,8 @@ export type CrawlTokenPoolsConfig<TRawPool, TNewPool extends GtNewPool> = {
   priceObs: Map<string, DexPriceObs[]>;
   stats: CrawlStats;
   signal?: AbortSignal;
+  /** Minimum TVL (USD) required to consider a pool. Defaults to 10k. */
+  minTvlUsd?: number;
   beforeRequest?: (ctx: {
     requestCount: number;
     totalTokens: number;
@@ -95,6 +97,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
 ): Promise<CrawlTokenPoolsResult> {
   const nowSec = Date.now() / 1000;
   const startMs = Date.now();
+  const minTvlUsd = config.minTvlUsd ?? 10_000;
 
   for (const token of config.tokens) {
     throwIfAborted(config.signal);
@@ -119,7 +122,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         if (!parsed) continue;
 
         config.stats.poolsSeen++;
-        if (!parsed.tvlUsd || parsed.tvlUsd < 10_000 || parsed.tvlUsd > 1e12) continue;
+        if (!parsed.tvlUsd || parsed.tvlUsd < minTvlUsd || parsed.tvlUsd > 1e12) continue;
         if (BLOCKED_DEX_IDS.has(parsed.dexId)) continue;
 
         if (parsed.dexId.startsWith("curve")) {
