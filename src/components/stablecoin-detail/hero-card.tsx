@@ -25,10 +25,10 @@ interface HeroCardProps {
   logoSrc?: string;
   isNavToken: boolean;
   mcap: number;
-  supply: number;
-  prevDay: number;
-  prevWeek: number;
-  prevMonth: number;
+  supply: number | null;
+  prevDay: number | null;
+  prevWeek: number | null;
+  prevMonth: number | null;
   prev90d: number;
   pegRef: number;
   deviationBps: number;
@@ -82,6 +82,24 @@ export function HeroCard({
   const chainCount = coinData?.chains?.length ?? 0;
   const primaryComparisonPage = getPrimaryStaticComparisonPageForCoin(coin.id);
   const compareHref = primaryComparisonPage?.href ?? buildLiveCompareUrl([coin.id]);
+  const hasPrevDay = typeof prevDay === "number" && prevDay > 0;
+  const hasPrevWeek = typeof prevWeek === "number" && prevWeek > 0;
+  const hasPrevMonth = typeof prevMonth === "number" && prevMonth > 0;
+  const prevDayTrendClass = hasPrevDay
+    ? mcap >= prevDay
+      ? "text-green-700 dark:text-green-400"
+      : "text-red-700 dark:text-red-400"
+    : "text-muted-foreground";
+  const prevWeekTrendClass = hasPrevWeek
+    ? mcap >= prevWeek
+      ? "text-green-700 dark:text-green-400"
+      : "text-red-700 dark:text-red-400"
+    : "text-muted-foreground";
+  const prevMonthTrendClass = hasPrevMonth
+    ? mcap >= prevMonth
+      ? "text-green-700 dark:text-green-400"
+      : "text-red-700 dark:text-red-400"
+    : "text-muted-foreground";
 
   const tooNewForPegScore =
     !isNavToken &&
@@ -252,10 +270,8 @@ export function HeroCard({
           <div className="grid gap-3 sm:grid-cols-2">
             <HeroMetricCard label="Market Cap">
               <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
-              <p
-                className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
-              >
-                {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
+              <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
+                {hasPrevDay ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
                 <span className="text-muted-foreground">24h</span>
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -278,25 +294,16 @@ export function HeroCard({
             <div className="grid gap-3 border-t border-border/50 px-4 pb-4 pt-4 sm:grid-cols-2">
               <HeroMetricCard label="Supply">
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">
-                  {formatSupply(supply)} <span className="text-sm text-muted-foreground">{coin.symbol}</span>
+                  {supply != null ? formatSupply(supply) : "N/A"}{" "}
+                  <span className="text-sm text-muted-foreground">{coin.symbol}</span>
                 </div>
                 <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span
-                    className={
-                      mcap >= prevWeek ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-                    }
-                  >
-                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
-                  </span>
+                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "N/A"}</span>
                   <span className="text-muted-foreground"> 7d</span>
-                  {prevMonth > 0 && (
+                  {hasPrevMonth && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span
-                        className={
-                          mcap >= prevMonth ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-                        }
-                      >
+                      <span className={prevMonthTrendClass}>
                         {formatPercentChange(mcap, prevMonth)}
                       </span>
                       <span className="text-muted-foreground"> 30d</span>
@@ -389,10 +396,8 @@ export function HeroCard({
             <div className="grid grid-cols-2 gap-3">
               <HeroMetricCard label="Market Cap">
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">{formatCurrency(mcap)}</div>
-                <p
-                  className={`text-xs font-mono tabular-nums mt-0.5 ${mcap >= prevDay ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
-                >
-                  {prevDay > 0 ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
+                <p className={`text-xs font-mono tabular-nums mt-0.5 ${prevDayTrendClass}`}>
+                  {hasPrevDay ? formatPercentChange(mcap, prevDay) : "N/A"}{" "}
                   <span className="text-muted-foreground">24h</span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -402,25 +407,16 @@ export function HeroCard({
 
               <HeroMetricCard label="Supply">
                 <div className="text-xl font-bold font-mono tracking-tight leading-none">
-                  {formatSupply(supply)} <span className="text-sm text-muted-foreground">{coin.symbol}</span>
+                  {supply != null ? formatSupply(supply) : "N/A"}{" "}
+                  <span className="text-sm text-muted-foreground">{coin.symbol}</span>
                 </div>
                 <p className="text-xs font-mono tabular-nums mt-0.5">
-                  <span
-                    className={
-                      mcap >= prevWeek ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-                    }
-                  >
-                    {prevWeek > 0 ? formatPercentChange(mcap, prevWeek) : "N/A"}
-                  </span>
+                  <span className={prevWeekTrendClass}>{hasPrevWeek ? formatPercentChange(mcap, prevWeek) : "N/A"}</span>
                   <span className="text-muted-foreground"> 7d</span>
-                  {prevMonth > 0 && (
+                  {hasPrevMonth && (
                     <>
                       <span className="text-muted-foreground"> · </span>
-                      <span
-                        className={
-                          mcap >= prevMonth ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
-                        }
-                      >
+                      <span className={prevMonthTrendClass}>
                         {formatPercentChange(mcap, prevMonth)}
                       </span>
                       <span className="text-muted-foreground"> 30d</span>

@@ -59,9 +59,15 @@ describe("stablecoin detail derivations", () => {
       expect(deriveSupplyFromMarketCap(250_000_000, 2.5)).toBe(100_000_000);
     });
 
-    it("falls back to marketCap when price is missing or non-positive", () => {
-      expect(deriveSupplyFromMarketCap(250_000_000, null)).toBe(250_000_000);
-      expect(deriveSupplyFromMarketCap(250_000_000, 0)).toBe(250_000_000);
+    it("returns null when price is missing or non-positive", () => {
+      expect(deriveSupplyFromMarketCap(250_000_000, null)).toBeNull();
+      expect(deriveSupplyFromMarketCap(250_000_000, 0)).toBeNull();
+    });
+
+    it("returns null when market cap is missing or non-positive", () => {
+      expect(deriveSupplyFromMarketCap(null, 1)).toBeNull();
+      expect(deriveSupplyFromMarketCap(undefined, 1)).toBeNull();
+      expect(deriveSupplyFromMarketCap(0, 1)).toBeNull();
     });
   });
 
