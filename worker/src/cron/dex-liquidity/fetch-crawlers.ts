@@ -1,4 +1,5 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { STAGED_POOL_DEFAULTS } from "../dex-discovery/types";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import {
@@ -164,9 +165,10 @@ export function mergeCgPools(
     }
 
     for (const pool of pools) {
-      const balanceRatio = pool.balanceRatio ?? 1.0;
+      const balanceRatio = pool.balanceRatio ?? STAGED_POOL_DEFAULTS.balanceRatioFallback;
       const balanceHealth = Math.pow(balanceRatio, 1.5);
-      const organicFraction = 0.5; // neutral default (no APY data from CG)
+      const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
+      const lockedLiquidityPct = pool.lockedLiquidityPct ?? STAGED_POOL_DEFAULTS.lockedLiquidityFallback;
       const coinPairQuality = computePoolPairQuality(
         pool.symbol.split(/\s*\/\s*/).map((s) => s.trim()),
         meta.symbol,
@@ -186,8 +188,8 @@ export function mergeCgPools(
       m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
 
       // Locked liquidity tracking (CG pools only)
-      if (pool.lockedLiquidityPct != null && pool.lockedLiquidityPct > 0) {
-        m.lockedLiqWeightedSum += pool.tvlUsd * (pool.lockedLiquidityPct / 100);
+      if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
+        m.lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
         m.totalTvlForLocked += pool.tvlUsd;
       }
 
@@ -358,8 +360,8 @@ export function mergeGtPools(
     }
 
     for (const pool of pools) {
-      const organicFraction = 0.5; // neutral default for GT pools
-      const balanceRatio = 1.0;    // no balance data from GT
+      const organicFraction = STAGED_POOL_DEFAULTS.organicFraction;
+      const balanceRatio = STAGED_POOL_DEFAULTS.balanceRatioFallback;
       // Note: GT pools intentionally excluded from balanceRatioWeightedSum and
       // organicTvlWeightedSum to avoid diluting those signals with neutral defaults.
       // Only Curve (balance) and DeFiLlama-APY (organic) pools contribute real data.

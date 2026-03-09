@@ -279,7 +279,7 @@ export async function handleScheduledEvent(
     // DEX liquidity + yield data on a 30-min cycle (offset at :10/:40)
     // Yield depends on dex_liquidity for safety scores — chain after DEX sync
     case CRON_SCHEDULES.halfHourlyOffset: {
-      const dexSync = runLeasedCron("sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, env.COINGECKO_API_KEY ?? null, signal));
+      const dexSync = runLeasedCron("sync-dex-liquidity", (signal) => syncDexLiquidity(db, env.GRAPH_API_KEY ?? null, signal));
       ctx.waitUntil(dexSync);
       ctx.waitUntil(dexSync.then(() =>
         runLeasedCron("sync-yield-data", (signal) => syncYieldData(db, signal))

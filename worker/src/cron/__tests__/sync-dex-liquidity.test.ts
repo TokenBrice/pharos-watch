@@ -1,35 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../lib/coingecko-onchain", () => ({
-  initOnchainAvailability: vi.fn(),
-  isOnchainAvailable: vi.fn(() => true),
-}));
-
 vi.mock("../dex-liquidity/fetch-primary", () => ({
   fetchDataSources: vi.fn(async () => null),
   buildCurveLookups: vi.fn(async () => ({ curvePoolMap: new Map(), priceObservations: new Map() })),
   fetchUniV3Data: vi.fn(async () => ({ uniV3PoolFees: new Map(), uniV3SymbolFees: new Map(), uniV3PriceObs: new Map() })),
   fetchAerodromeData: vi.fn(async () => ({ aerodromePriceObs: new Map(), aerodromeIsStable: new Map() })),
   buildKnownPoolAddresses: vi.fn(() => new Set<string>()),
-  buildChainAddresses: vi.fn((chainMap: Record<string, string>) => new Map(
-    Object.keys(chainMap).length > 0
-      ? [[Object.values(chainMap)[0]!, [{ chain: Object.keys(chainMap)[0]!, address: "0x1", stablecoinId: "usdt-tether" }]]]
-      : [],
-  )),
-  fetchGtTokenBatch: vi.fn(async () => new Map()),
-  fetchCgTokenBatchPrices: vi.fn(async () => new Map()),
-}));
-
-vi.mock("../dex-liquidity/fetch-crawlers", () => ({
-  fetchCgPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
-  mergeCgPools: vi.fn(),
-  fetchGtPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
-  mergeGtPools: vi.fn(),
-}));
-
-vi.mock("../dex-liquidity/fetch-fallbacks", () => ({
-  fetchDsFallbackPools: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
-  fetchCgTickersFallback: vi.fn(async () => ({ newPools: new Map(), priceObs: new Map() })),
 }));
 
 vi.mock("../dex-liquidity/process-pools", () => ({
@@ -48,12 +24,7 @@ vi.mock("../dex-liquidity/persistence", () => ({
 }));
 
 import { syncDexLiquidity } from "../dex-liquidity";
-import {
-  fetchDataSources,
-  fetchGtTokenBatch,
-  fetchCgTokenBatchPrices,
-} from "../dex-liquidity/fetch-primary";
-import { fetchCgPools, fetchGtPools } from "../dex-liquidity/fetch-crawlers";
+import { fetchDataSources } from "../dex-liquidity/fetch-primary";
 
 const db = {
   prepare: () => ({
@@ -87,51 +58,42 @@ describe("syncDexLiquidity", () => {
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce(null);
-    await expect(syncDexLiquidity(db, "graph-key", "cg-key")).rejects.toThrow(
+    await expect(syncDexLiquidity(db, "graph-key")).rejects.toThrow(
       "catastrophic source failure",
     );
   });
 
   it("returns degraded when non-catastrophic critical source family fails", async () => {
-    vi.mocked(fetchCgTokenBatchPrices).mockRejectedValueOnce(new Error("token batch down"));
+    vi.mocked(fetchDataSources).mockResolvedValueOnce({
+      pools: [],
+      dexProjects: new Set<string>(),
+      protocolTvlCaps: new Map<string, number>(),
+      curveResponses: [],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: false,
+    });
 
-    const result = await syncDexLiquidity(db, "graph-key", "cg-key");
+    const result = await syncDexLiquidity(db, "graph-key");
 
     expect(result.status).toBe("degraded");
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
       fallbackMode?: string[];
     };
-    expect(metadata.failedSources).toContain("coingecko-token-batch");
-    expect(metadata.fallbackMode).toContain("token-batch-failed");
+    expect(metadata.failedSources).toContain("defillama-protocols");
+    expect(metadata.fallbackMode).toContain("dl-protocols-unavailable");
   });
 
   it("returns ok when required source families succeed", async () => {
-    const result = await syncDexLiquidity(db, "graph-key", "cg-key");
+    const result = await syncDexLiquidity(db, "graph-key");
 
     expect(result.status).toBe("ok");
-    expect(fetchCgTokenBatchPrices).toHaveBeenCalledTimes(1);
-    expect(fetchGtTokenBatch).toHaveBeenCalledTimes(1);
-    expect(fetchCgPools).toHaveBeenCalledTimes(1);
-    expect(fetchGtPools).toHaveBeenCalledTimes(1);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
       sourceCoverage?: { nearCoverageGuard?: boolean };
     };
     expect(metadata.failedSources).toEqual([]);
     expect(metadata.sourceCoverage?.nearCoverageGuard).toBe(false);
-  });
-
-  it("uses GeckoTerminal only when CoinGecko onchain is unavailable", async () => {
-    const { isOnchainAvailable } = await import("../../lib/coingecko-onchain");
-    vi.mocked(isOnchainAvailable).mockReturnValue(false);
-
-    const result = await syncDexLiquidity(db, "graph-key", null);
-
-    expect(result.status).toBe("ok");
-    expect(fetchCgTokenBatchPrices).not.toHaveBeenCalled();
-    expect(fetchCgPools).not.toHaveBeenCalled();
-    expect(fetchGtTokenBatch).toHaveBeenCalledTimes(1);
-    expect(fetchGtPools).toHaveBeenCalledTimes(1);
   });
 });

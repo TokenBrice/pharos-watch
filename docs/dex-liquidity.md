@@ -6,10 +6,10 @@
 
 Cron result status semantics:
 - `ok`: all required source families succeeded and coverage is within normal range.
-- `degraded`: one or more critical non-fatal source families failed (for example token-batch or pool-crawl paths), or coverage falls near the guardrail band.
+- `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
-Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
+Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
 
 | Component | Weight | Source | How Computed |
 |-----------|--------|--------|-------------|
@@ -20,9 +20,9 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, and detailed 
 | **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
 | **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100) |
 
-Data sources: DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base) + registry-backed CoinGecko Onchain / GeckoTerminal pool discovery + DexScreener token API (30+ chains, fallback for coins that still lack pool coverage or DEX price observations after primary sources) + CoinGecko Tickers API (orderbook DEX fallback for coins that still lack pool coverage or DEX price observations, e.g. KAG/KAU on Kinesis Exchange).
+Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
-Optional discovery stages (CG token batch, GT token batch, CG pool crawl, GT-only pool crawl, DexScreener fallback, CG tickers fallback) now share a single 5-minute wall-clock budget inside the cron. When that shared budget is exhausted, the run keeps the data gathered so far, skips the remaining optional phases, and proceeds to scoring/persistence instead of timing out the entire cron.
+`dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
 ## Discovery Staging Orchestrator
 
@@ -69,6 +69,8 @@ Optional discovery stages (CG token batch, GT token batch, CG pool crawl, GT-onl
 
 ### CoinGecko Onchain Integration
 
+CoinGecko Onchain is now a discovery-stage source rather than a direct scoring-cron fetch. Its outputs are written into `dex_pool_staging` and later merged by `syncDexLiquidity()` if the staged rows are fresh.
+
 Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the worker keeps one canonical internal chain id per deployment (`bob`, `worldchain`, `plasma`, etc.) and maps it to provider-specific network slugs (`bob-network`, `world-chain`, `plasma`, ...). When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko `/onchain` for chains with a `coingecko` mapping and still runs GeckoTerminal for chains that only have a `geckoTerminal` mapping. This avoids the old all-or-nothing mode switch where enabling CoinGecko could silently drop GT-only chains.
 
 | Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
@@ -87,6 +89,8 @@ The CG integration extracts three signals unavailable from GeckoTerminal:
 
 ### DexScreener Fallback
 
+DexScreener is now a discovery-stage source rather than an in-cron fallback pass. It populates `dex_pool_staging`, and the scoring cron merges those staged pools after primary-source processing.
+
 After the primary pipeline (DeFiLlama + CG/GT + Curve + UniV3 + Aerodrome), any tracked stablecoin that still has zero pools or no usable DEX price observation is queried via DexScreener's `/tokens/v1/{chainId}/{address}` endpoint. This covers 30+ chains including Solana, Berachain, Monad, MegaETH, Plume, and other exotic chains.
 
 Address matching uses both canonical `contracts` and optional `tradedContracts` metadata. `tradedContracts` is reserved for wrapper / secondary-market token addresses that are meaningfully used for DEX discovery even when issuer metadata points to a different canonical deployment.
@@ -101,6 +105,8 @@ Quality gates:
 DexScreener pools are merged using the same `mergeGtPools()` logic — no balance ratio data, neutral organic fraction default (0.5).
 
 ### CoinGecko Tickers Fallback (Orderbook DEXes)
+
+CoinGecko Tickers is now a discovery-stage source rather than a direct scoring-cron fallback pass. Its synthetic orderbook pools enter scoring through `dex_pool_staging`.
 
 After DexScreener, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange).
 
