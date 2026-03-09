@@ -111,10 +111,10 @@ Collects **all** matching DL pools per coin via `matchAllDlPools` (three layers)
 | Falcon USD (246)      | sUSDf   | Falcon Finance savings      |
 | Avant USD (271)       | savUSD  | Avant savings               |
 | Unitas (283)          | sUSDu   | Unitas savings              |
-| Yuzu USD (344)        | sYUSD   | Yuzu savings                |
+| Yuzu USD (344)        | syzUSD   | Yuzu savings                |
 | fxUSD (168)           | fxSAVE  | Concentrator savings        |
 | Noon USN (230)        | sUSN    | Noon savings                |
-| Main Street USD (297) | sUSDM   | Main Street savings         |
+| Main Street USD (297) | msY   | Main Street savings         |
 | GAIB AID (353)        | sAID    | GAIB AID staking            |
 
 APY, base/reward split, pool TVL, and pool UUID are all taken directly from the DL response.
