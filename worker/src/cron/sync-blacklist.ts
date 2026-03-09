@@ -659,7 +659,7 @@ async function backfillAmounts(
       `SELECT id, chain_id, event_type, address, block_number, stablecoin, tx_hash
        FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
-         AND (amount IS NULL OR (amount = 0 AND event_type = 'blacklist'))
+         AND amount IS NULL
        LIMIT ?`
     )
     .bind(BACKFILL_BATCH_SIZE)
