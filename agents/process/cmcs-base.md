@@ -16,6 +16,8 @@ cmcs run worktrees/branch-c 2>&1 &
 wait
 ```
 
+**File ownership in parallel worktrees:** When two parallel worktrees might create or modify the same file, explicitly assign ownership to one worktree. The other must import from the owned file or be sequenced after it. Document expected merge conflicts in the plan. Common culprits: shared types files, constants, documentation.
+
 ### Ticket Format
 
 Place in `.cmcs/tickets/TICKET-001.md` (or `<worktree>/.cmcs/tickets/`):
@@ -51,6 +53,10 @@ Numbered steps with exact file paths, function signatures, behavior.
 Concrete runnable checks.
 ```
 
+**D1 scale awareness:** For tickets that create admin/batch/retroactive endpoints, specify worst-case data volume in the ticket. Require per-ID batched SQL for tables over 100K rows. Never use UPDATE-with-JOIN across large tables — D1 CPU limits will kill it.
+
+**Smoke tests must be self-contained:** Any smoke test commands in tickets or execution handovers must include required auth tokens or use public endpoints. Don't assume the reviewer has env vars set.
+
 ### Commands
 
 ```bash
@@ -67,8 +73,20 @@ cmcs dashboard                   # web UI
 ### Rules
 
 - **Never use Claude sub-agents for implementation.** All work goes to Codex via tickets.
-- **Never auto-merge.** Review every file Codex creates, run acceptance criteria yourself.
+- **Never auto-merge.** Two-stage review before merging:
+  1. **Spec review** — does the output match the ticket contract? Missing fields, wrong signatures, unmet acceptance criteria.
+  2. **Quality review** — SQL patterns (N+1, INSERT OR REPLACE vs ON CONFLICT), dead code, timestamp semantics, edge cases. Different lens, different catches.
 - **Never run sudo.**
+- **cmcs auto-resolves the main repo root** — running from inside a worktree now works (it uses `git rev-parse --git-common-dir`). After a `cmcs.db` reset, `cmcs init` or `cmcs run` auto-reconciles orphaned worktrees from disk. No manual DB surgery needed.
+
+### Post-Merge Checklist
+
+After merging each phase:
+1. Run `npm install` if `package.json` changed (new dependencies won't resolve otherwise)
+2. Run full build + type-check (`npm run build`)
+3. Run tests (`npm test`)
+4. Check for duplicate exports/constants from parallel worktree merges
+5. Delete the worktree only after confirming all commits are reachable on main
 
 ### Large Implementation Preparation
 
