@@ -129,6 +129,23 @@ export async function computeAndStoreStabilityIndex(db: D1Database, _signal?: Ab
   }
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
+  if (!result) {
+    console.warn(
+      `[stability-index] skipped sample due to insufficient market-cap input (totalMcapUsd=${totalMcapUsd})`,
+    );
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        fallbackMode: "insufficient-market-cap",
+        totalMcapUsd,
+        depegCount: depegs.length,
+        dewsStressBreadth,
+        dewsUnavailable,
+        dewsFailureReason,
+      }),
+    };
+  }
 
   await db
     .prepare(

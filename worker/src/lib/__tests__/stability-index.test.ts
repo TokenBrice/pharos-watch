@@ -20,6 +20,12 @@ function baseInput(overrides: Partial<StabilityInput> = {}): StabilityInput {
   };
 }
 
+function computeIndex(input: StabilityInput) {
+  const result = computeStabilityIndex(input);
+  expect(result).not.toBeNull();
+  return result!;
+}
+
 // ---------------------------------------------------------------------------
 // getDepreciationFactor
 // ---------------------------------------------------------------------------
@@ -96,7 +102,7 @@ describe("getConditionBand", () => {
 
 describe("computeStabilityIndex", () => {
   it("returns 100 BEDROCK when no depegs and neutral trend", () => {
-    const result = computeStabilityIndex(baseInput());
+    const result = computeIndex(baseInput());
     expect(result.score).toBe(100);
     expect(result.band).toBe("BEDROCK");
     expect(result.components.severity).toBe(0);
@@ -106,14 +112,14 @@ describe("computeStabilityIndex", () => {
   });
 
   it("gets a trend boost from positive 7d mcap change", () => {
-    const result = computeStabilityIndex(baseInput({ mcap7dChangePct: 3 }));
+    const result = computeIndex(baseInput({ mcap7dChangePct: 3 }));
     // 100 - 0 - 0 - 0 + 3 = 103, clamped to 100
     expect(result.score).toBe(100);
     expect(result.components.trend).toBe(3);
   });
 
   it("gets a trend penalty from negative 7d mcap change", () => {
-    const result = computeStabilityIndex(baseInput({ mcap7dChangePct: -4 }));
+    const result = computeIndex(baseInput({ mcap7dChangePct: -4 }));
     // 100 - 0 - 0 - 0 + (-4) = 96
     expect(result.score).toBe(96);
     expect(result.components.trend).toBe(-4);
@@ -125,22 +131,22 @@ describe("computeStabilityIndex", () => {
   // -----------------------------------------------------------------------
 
   it("clamps trend at +5", () => {
-    const result = computeStabilityIndex(baseInput({ mcap7dChangePct: 20 }));
+    const result = computeIndex(baseInput({ mcap7dChangePct: 20 }));
     expect(result.components.trend).toBe(5);
   });
 
   it("clamps trend at -5", () => {
-    const result = computeStabilityIndex(baseInput({ mcap7dChangePct: -15 }));
+    const result = computeIndex(baseInput({ mcap7dChangePct: -15 }));
     expect(result.components.trend).toBe(-5);
   });
 
   it("treats NaN mcap7dChangePct as 0", () => {
-    const result = computeStabilityIndex(baseInput({ mcap7dChangePct: NaN }));
+    const result = computeIndex(baseInput({ mcap7dChangePct: NaN }));
     expect(result.components.trend).toBe(0);
   });
 
   it("treats Infinity mcap7dChangePct as 0", () => {
-    const result = computeStabilityIndex(
+    const result = computeIndex(
       baseInput({ mcap7dChangePct: Infinity }),
     );
     expect(result.components.trend).toBe(0);
@@ -157,7 +163,7 @@ describe("computeStabilityIndex", () => {
       // amplifier = log2(1 + 10e9 / 1e9) = log2(11) ≈ 3.459
       // factor = 1.0 (age = 0)
       // severity = (100 / 100) * 0.05 * 3.459 * 60 * 1.0 ≈ 10.38
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 10e9 }],
         }),
@@ -167,10 +173,10 @@ describe("computeStabilityIndex", () => {
     });
 
     it("treats negative bps (premium) same as positive (uses abs)", () => {
-      const depeg = computeStabilityIndex(
+      const depeg = computeIndex(
         baseInput({ depegs: [{ bps: -200, mcapUsd: 5e9 }] }),
       );
-      const premium = computeStabilityIndex(
+      const premium = computeIndex(
         baseInput({ depegs: [{ bps: 200, mcapUsd: 5e9 }] }),
       );
       expect(depeg.components.severity).toBe(premium.components.severity);
@@ -178,7 +184,7 @@ describe("computeStabilityIndex", () => {
 
     it("caps severity at 68", () => {
       // Massive depeg: USDT-sized coin depegging 500bps
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 500, mcapUsd: 145e9 }],
           totalMcapUsd: 200e9,
@@ -188,10 +194,10 @@ describe("computeStabilityIndex", () => {
     });
 
     it("severity scales with mcap share", () => {
-      const large = computeStabilityIndex(
+      const large = computeIndex(
         baseInput({ depegs: [{ bps: 100, mcapUsd: 50e9 }] }),
       );
-      const small = computeStabilityIndex(
+      const small = computeIndex(
         baseInput({ depegs: [{ bps: 100, mcapUsd: 1e9 }] }),
       );
       expect(large.components.severity).toBeGreaterThan(
@@ -201,13 +207,13 @@ describe("computeStabilityIndex", () => {
 
     it("severity scales with log2 amplifier", () => {
       // Same share but different absolute mcap
-      const mega = computeStabilityIndex(
+      const mega = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 100e9 }],
           totalMcapUsd: 1000e9,
         }),
       );
-      const mid = computeStabilityIndex(
+      const mid = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 1e9 }],
           totalMcapUsd: 10e9,
@@ -220,12 +226,12 @@ describe("computeStabilityIndex", () => {
     });
 
     it("severity is reduced by depreciation factor for old depegs", () => {
-      const fresh = computeStabilityIndex(
+      const fresh = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 10e9, depegAgeDays: 0 }],
         }),
       );
-      const old = computeStabilityIndex(
+      const old = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 10e9, depegAgeDays: 90 }],
         }),
@@ -237,24 +243,23 @@ describe("computeStabilityIndex", () => {
       );
     });
 
-    it("severity is zero when totalMcapUsd is zero", () => {
+    it("returns null when totalMcapUsd is zero", () => {
       const result = computeStabilityIndex(
         baseInput({
           depegs: [{ bps: 200, mcapUsd: 5e9 }],
           totalMcapUsd: 0,
         }),
       );
-      // share = 0 when totalMcapUsd = 0, so severity = 0
-      expect(result.components.severity).toBe(0);
+      expect(result).toBeNull();
     });
 
     it("accumulates severity across multiple depegs", () => {
-      const single = computeStabilityIndex(
+      const single = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 10e9 }],
         }),
       );
-      const double = computeStabilityIndex(
+      const double = computeIndex(
         baseInput({
           depegs: [
             { bps: 100, mcapUsd: 10e9 },
@@ -277,7 +282,7 @@ describe("computeStabilityIndex", () => {
   describe("breadth", () => {
     it("computes breadth from sqrt(mcap/$1B)", () => {
       // $4B coin: sqrt(4e9 / 1e9) * 3 = sqrt(4) * 3 = 2 * 3 = 6
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 50, mcapUsd: 4e9 }],
         }),
@@ -287,7 +292,7 @@ describe("computeStabilityIndex", () => {
 
     it("caps breadth at 17", () => {
       // Multiple massive coins: each contributes sqrt(100) * 3 = 30
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [
             { bps: 50, mcapUsd: 100e9 },
@@ -300,7 +305,7 @@ describe("computeStabilityIndex", () => {
 
     it("micro-cap coins contribute minimal breadth", () => {
       // $50M coin: sqrt(0.05) * 3 ≈ 0.67
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 50e6 }],
         }),
@@ -309,12 +314,12 @@ describe("computeStabilityIndex", () => {
     });
 
     it("breadth is reduced by depreciation for old depegs", () => {
-      const fresh = computeStabilityIndex(
+      const fresh = computeIndex(
         baseInput({
           depegs: [{ bps: 50, mcapUsd: 4e9, depegAgeDays: 0 }],
         }),
       );
-      const old = computeStabilityIndex(
+      const old = computeIndex(
         baseInput({
           depegs: [{ bps: 50, mcapUsd: 4e9, depegAgeDays: 90 }],
         }),
@@ -332,7 +337,7 @@ describe("computeStabilityIndex", () => {
         bps: 100,
         mcapUsd: 50e6,
       }));
-      const result = computeStabilityIndex(baseInput({ depegs }));
+      const result = computeIndex(baseInput({ depegs }));
       expect(result.components.breadth).toBeLessThan(10);
     });
   });
@@ -343,12 +348,12 @@ describe("computeStabilityIndex", () => {
 
   describe("stressBreadth", () => {
     it("defaults to 0 when dewsStressBreadth not provided", () => {
-      const result = computeStabilityIndex(baseInput());
+      const result = computeIndex(baseInput());
       expect(result.components.stressBreadth).toBe(0);
     });
 
     it("passes through values <= 5", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({ dewsStressBreadth: 3.5 }),
       );
       expect(result.components.stressBreadth).toBe(3.5);
@@ -357,7 +362,7 @@ describe("computeStabilityIndex", () => {
     });
 
     it("caps at 5", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({ dewsStressBreadth: 10 }),
       );
       expect(result.components.stressBreadth).toBe(5);
@@ -370,7 +375,7 @@ describe("computeStabilityIndex", () => {
 
   describe("score clamping and rounding", () => {
     it("clamps score at 0 for catastrophic scenarios", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [
             { bps: 5000, mcapUsd: 145e9 },
@@ -388,7 +393,7 @@ describe("computeStabilityIndex", () => {
     });
 
     it("clamps score at 100 for positive trend with no depegs", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({ mcap7dChangePct: 10 }),
       );
       // 100 + 5 (clamped trend) = 105, clamped to 100
@@ -397,7 +402,7 @@ describe("computeStabilityIndex", () => {
 
     it("rounds score to 1 decimal place", () => {
       // Pick inputs that produce a non-round score
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 37, mcapUsd: 1e9 }],
         }),
@@ -414,7 +419,7 @@ describe("computeStabilityIndex", () => {
 
   describe("band assignment", () => {
     it("assigns BEDROCK for healthy market (no depegs)", () => {
-      const result = computeStabilityIndex(baseInput());
+      const result = computeIndex(baseInput());
       expect(result.band).toBe("BEDROCK");
     });
 
@@ -422,7 +427,7 @@ describe("computeStabilityIndex", () => {
       // USDT ($145B) at 10bps in $200B market:
       // severity ≈ 31.28 (share=0.725, amplifier≈7.18, K=60), breadth=17 (cap)
       // score ≈ 100 - 31.28 - 17 + 0.26 = 52 → FRACTURE
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 10, mcapUsd: 145e9 }],
           totalMcapUsd: 200e9,
@@ -436,7 +441,7 @@ describe("computeStabilityIndex", () => {
     it("drops to MELTDOWN for USDT 30bps wobble", () => {
       // USDT at 30bps: severity hits cap (68), breadth=17 (cap)
       // score ≈ 100 - 68 - 17 + 0.26 = 15.3 → MELTDOWN
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 30, mcapUsd: 145e9 }],
           totalMcapUsd: 200e9,
@@ -449,7 +454,7 @@ describe("computeStabilityIndex", () => {
 
     it("assigns MELTDOWN for USDT 50bps + USDC 20bps + market drop", () => {
       // Calibration example: USDT 50bps + USDC 20bps - 3% mcap → ~12.0 MELTDOWN
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [
             { bps: 50, mcapUsd: 145e9 },
@@ -477,7 +482,7 @@ describe("computeStabilityIndex", () => {
         bps: 100,
         mcapUsd: 50e6,
       }));
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs,
           totalMcapUsd: 200e9,
@@ -495,14 +500,14 @@ describe("computeStabilityIndex", () => {
 
   describe("edge cases", () => {
     it("handles empty depegs array", () => {
-      const result = computeStabilityIndex(baseInput({ depegs: [] }));
+      const result = computeIndex(baseInput({ depegs: [] }));
       expect(result.score).toBe(100);
       expect(result.components.severity).toBe(0);
       expect(result.components.breadth).toBe(0);
     });
 
     it("handles depeg with zero bps", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 0, mcapUsd: 10e9 }],
         }),
@@ -513,7 +518,7 @@ describe("computeStabilityIndex", () => {
     });
 
     it("handles depeg with zero mcapUsd", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 200, mcapUsd: 0 }],
         }),
@@ -524,12 +529,12 @@ describe("computeStabilityIndex", () => {
     });
 
     it("defaults depegAgeDays to 0 (full impact) when not provided", () => {
-      const withAge = computeStabilityIndex(
+      const withAge = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 10e9, depegAgeDays: 0 }],
         }),
       );
-      const withoutAge = computeStabilityIndex(
+      const withoutAge = computeIndex(
         baseInput({
           depegs: [{ bps: 100, mcapUsd: 10e9 }],
         }),
@@ -539,7 +544,7 @@ describe("computeStabilityIndex", () => {
     });
 
     it("result components are rounded to 2 decimal places", () => {
-      const result = computeStabilityIndex(
+      const result = computeIndex(
         baseInput({
           depegs: [{ bps: 77, mcapUsd: 3.3e9 }],
           mcap7dChangePct: 1.111,
@@ -559,7 +564,7 @@ describe("computeStabilityIndex", () => {
 
   describe("return shape", () => {
     it("returns all required fields", () => {
-      const result = computeStabilityIndex(baseInput());
+      const result = computeIndex(baseInput());
       expect(result).toHaveProperty("score");
       expect(result).toHaveProperty("band");
       expect(result).toHaveProperty("components");
@@ -570,7 +575,7 @@ describe("computeStabilityIndex", () => {
     });
 
     it("score is a number between 0 and 100", () => {
-      const result = computeStabilityIndex(baseInput());
+      const result = computeIndex(baseInput());
       expect(typeof result.score).toBe("number");
       expect(result.score).toBeGreaterThanOrEqual(0);
       expect(result.score).toBeLessThanOrEqual(100);
@@ -585,7 +590,7 @@ describe("computeStabilityIndex", () => {
         "CRISIS",
         "MELTDOWN",
       ];
-      const result = computeStabilityIndex(baseInput());
+      const result = computeIndex(baseInput());
       expect(validBands).toContain(result.band);
     });
   });

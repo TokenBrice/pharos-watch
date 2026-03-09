@@ -20,7 +20,8 @@ export const handleStabilityIndex = withErrorHandler("stability-index", async (d
   const now = Math.floor(Date.now() / 1000);
   const todayMidnight = now - (now % 86400);
 
-  // Latest sample (live score)
+  // Latest valid sample (live score). If a compute cycle was skipped (insufficient inputs),
+  // the previous sample remains the source of truth.
   const latestSample = await db
     .prepare("SELECT stored_at, score, band, components, input_snapshot, methodology_version FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1")
     .first<{ stored_at: number; score: number; band: string; components: string; input_snapshot: string | null; methodology_version: string | null }>();

@@ -131,9 +131,15 @@ function baseInput(overrides: Partial<DEWSInput> = {}): DEWSInput {
   };
 }
 
+function computeDews(input: DEWSInput) {
+  const result = computeDEWS(input);
+  expect(result).not.toBeNull();
+  return result!;
+}
+
 describe("computeDEWS", () => {
   it("returns CALM for a healthy large-cap coin with all signals available", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         weightedBalanceRatio: 0.97,
         avgPoolStress: 2,
@@ -152,14 +158,14 @@ describe("computeDEWS", () => {
 
   it("produces a non-zero score when supply and price are available", () => {
     // Supply always available (from cache), price always available
-    const result = computeDEWS(baseInput({ price: null, priceConfidence: null }));
+    const result = computeDews(baseInput({ price: null, priceConfidence: null }));
     // S_price = 100 for null price, S_supply = 0 (no change)
     // 2 signals available => score should be >0
     expect(result.score).toBeGreaterThan(0);
   });
 
   it("detects supply velocity stress", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         circulatingCurrent: 4.5e9, // -10% from prev day
         circulatingPrevDay: 5e9,
@@ -171,14 +177,14 @@ describe("computeDEWS", () => {
   });
 
   it("dampens supply velocity for small coins", () => {
-    const large = computeDEWS(
+    const large = computeDews(
       baseInput({
         mcapUsd: 5e9,
         circulatingCurrent: 4.75e9,
         circulatingPrevDay: 5e9,
       }),
     );
-    const small = computeDEWS(
+    const small = computeDews(
       baseInput({
         mcapUsd: 10e6,
         circulatingCurrent: 9.5e6,
@@ -189,7 +195,7 @@ describe("computeDEWS", () => {
   });
 
   it("detects pool balance drift", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         weightedBalanceRatio: 0.45,
         avgPoolStress: 70,
@@ -201,7 +207,7 @@ describe("computeDEWS", () => {
   });
 
   it("treats NaN weightedBalanceRatio as unavailable", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         weightedBalanceRatio: NaN,
         avgPoolStress: 0,
@@ -212,7 +218,7 @@ describe("computeDEWS", () => {
   });
 
   it("treats NaN avgPoolStress as unavailable", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         weightedBalanceRatio: 0.95,
         avgPoolStress: NaN,
@@ -223,7 +229,7 @@ describe("computeDEWS", () => {
   });
 
   it("detects price confidence degradation", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         priceConfidence: "low",
         prevPriceConfidence: "high",
@@ -234,7 +240,7 @@ describe("computeDEWS", () => {
   });
 
   it("detects cross-source price divergence", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         price: 0.995, // 50bps off peg
         dexPriceUsd: 0.99, // 100bps off peg
@@ -245,14 +251,14 @@ describe("computeDEWS", () => {
   });
 
   it("dampens S_diverg for non-USD pegs", () => {
-    const usd = computeDEWS(
+    const usd = computeDews(
       baseInput({
         pegType: "peggedUSD",
         price: 0.995,
         dexPriceUsd: 0.99,
       }),
     );
-    const eur = computeDEWS(
+    const eur = computeDews(
       baseInput({
         pegType: "peggedEUR",
         price: 0.995,
@@ -263,7 +269,7 @@ describe("computeDEWS", () => {
   });
 
   it("detects blacklist activity spike", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         hasBlacklistTracking: true,
         blacklistEvents24h: 15,
@@ -275,12 +281,12 @@ describe("computeDEWS", () => {
   });
 
   it("marks blacklist unavailable for untracked coins", () => {
-    const result = computeDEWS(baseInput({ hasBlacklistTracking: false }));
+    const result = computeDews(baseInput({ hasBlacklistTracking: false }));
     expect(result.signals.black.available).toBe(false);
   });
 
   it("integrates mint/burn flow signal when available", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         burnVolume24hUsd: 5e8,
         mintVolume24hUsd: 1e7,
@@ -293,12 +299,12 @@ describe("computeDEWS", () => {
   });
 
   it("marks flow unavailable when no mint/burn data", () => {
-    const result = computeDEWS(baseInput());
+    const result = computeDews(baseInput());
     expect(result.signals.flow.available).toBe(false);
   });
 
   it("marks flow unavailable when data too young (<7 days)", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         burnVolume24hUsd: 5e8,
         mintVolume24hUsd: 1e7,
@@ -310,7 +316,7 @@ describe("computeDEWS", () => {
   });
 
   it("computes yield anomaly signal from warning strings", () => {
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         yieldWarnings: ["yield-spike", "tvl-outflow"],
       }),
@@ -321,14 +327,14 @@ describe("computeDEWS", () => {
   });
 
   it("amplifies score when PSI indicates market stress", () => {
-    const calm = computeDEWS(
+    const calm = computeDews(
       baseInput({
         circulatingCurrent: 4.5e9,
         circulatingPrevDay: 5e9,
         psiScore: 90,
       }),
     );
-    const stressed = computeDEWS(
+    const stressed = computeDews(
       baseInput({
         circulatingCurrent: 4.5e9,
         circulatingPrevDay: 5e9,
@@ -340,7 +346,7 @@ describe("computeDEWS", () => {
 
   it("returns score 0 when fewer than 2 signals available", () => {
     // Only supply is available (always available) — 1 signal
-    const result = computeDEWS(
+    const result = computeDews(
       baseInput({
         priceConfidence: "high",
         price: 1.0,
@@ -361,14 +367,14 @@ describe("computeDEWS", () => {
   });
 
   it("smooths pool signal with previous reading", () => {
-    const withoutSmoothing = computeDEWS(
+    const withoutSmoothing = computeDews(
       baseInput({
         weightedBalanceRatio: 0.45,
         avgPoolStress: 70,
         topPools: [{ tvlUsd: 5e6, balanceRatio: 0.3 }],
       }),
     );
-    const withSmoothing = computeDEWS(
+    const withSmoothing = computeDews(
       baseInput({
         weightedBalanceRatio: 0.45,
         avgPoolStress: 70,

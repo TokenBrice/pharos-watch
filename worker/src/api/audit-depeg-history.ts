@@ -315,6 +315,7 @@ export const handleAuditDepegHistory = withErrorHandler(
 async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>): Promise<number> {
   const sortedDays = [...affectedDays].sort((a, b) => a - b);
   const now = Math.floor(Date.now() / 1000);
+  let recomputedCount = 0;
 
   const remainingDepegs = await db
     .prepare("SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events ORDER BY started_at")
@@ -336,6 +337,9 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
       totalMcapUsd: input.totalMcapUsd,
       mcap7dChangePct: input.mcap7dChangePct,
     });
+    if (!indexResult) {
+      continue;
+    }
     const methodologyVersion = getPsiMethodologyVersionAt(day);
 
     stmts.push(
@@ -362,8 +366,9 @@ async function recomputeStabilityDays(db: D1Database, affectedDays: Set<number>)
         methodologyVersion,
       )
     );
+    recomputedCount++;
   }
 
   await batchExecute(db, stmts);
-  return sortedDays.length;
+  return recomputedCount;
 }

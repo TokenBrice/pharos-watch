@@ -14,7 +14,7 @@ DEWS  = round(clamp(0, 100, base * amp))
 
 Only signals where `available = true` participate. Weights are redistributed proportionally across available signals.
 
-**Minimum signal requirement:** At least 2 available signal sources (total weight >= 0.30) to produce a non-zero score. Otherwise returns 0.
+**Minimum signal requirement:** At least 2 available signal sources (total weight >= 0.30). If weight is below 0.30, `computeDEWS()` returns `null` (insufficient data) instead of emitting `0/CALM`.
 
 **Systemic backdrop amplifier:** When PSI drops below 75 (STEADY band), individual DEWS scores are amplified by up to 30%. At PSI=40, amplification is ~14%. At PSI=0, amplification is 30%. This reflects that individual coin stress is more dangerous during systemic instability.
 
@@ -150,7 +150,7 @@ Score = `min(100, sum of active signal points)`.
 4. Read previous `stress_signals` for smoothing
 5. Read `mint_burn_hourly` aggregates
 6. Compute DEWS per PSI-eligible coin
-7. Batch write to `stress_signals`
+7. Batch write to `stress_signals` (only for coins where `computeDEWS()` returned a score)
 8. Daily snapshot to `stress_signal_history` (first run of UTC day)
 9. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 10. Prune old data
@@ -162,6 +162,8 @@ Score = `min(100, sum of active signal points)`.
 ### `GET /api/stress-signals`
 
 **All coins (no params):** Returns latest DEWS for tracked stablecoins only.
+
+When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
 
 ```json
 {

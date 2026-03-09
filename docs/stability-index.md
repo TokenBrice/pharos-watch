@@ -111,9 +111,11 @@ The API surfaces this array in `current.contributors` (not in history). The fron
 | 7-day market cap change | Current vs previous week total from stablecoins cache |
 | DEWS stress breadth | Latest `stress_signals` rows in warning bands (`ALERT`, `WARNING`, `DANGER`) |
 
+If `totalMcapUsd` is missing or `<= 0`, `computeStabilityIndex()` returns `null` (insufficient data) and no new score is produced for that cycle.
+
 ## Cron & Storage
 
-- **15-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
+- **15-min samples**: `computeAndStoreStabilityIndex()` in `worker/src/cron/stability-index.ts` — runs every **15 minutes** (`*/15 * * * *`). Computes severity/breadth from active depegs, stress breadth from DEWS, and trend from 7-day market cap change. If DEWS input is unavailable, the run records `dewsUnavailable=true` in `input_snapshot`, defaults stress breadth to 0 for continuity, and returns cron `status: "degraded"`. If total market cap input is missing/zero, PSI compute returns `null`, the cron skips writing that sample, and the API continues serving the last valid stored value. Samples are stored in `stability_index_samples` (migration 0026) and pruned after 90 days.
 - **Daily aggregation**: `snapshotPsiDaily()` in `worker/src/cron/snapshot-psi.ts` — runs daily at **08:00 UTC**. Averages all 15-min samples from the previous UTC day and stores one row in the `stability_index` table using `INSERT OR REPLACE` on the midnight-keyed `computed_at`.
 - **Pure compute**: `computeStabilityIndex()` in `worker/src/lib/stability-index.ts` — stateless, deterministic
 - **Tables**: `stability_index_samples` (migration 0026) — per-sample: `stored_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON). `stability_index` (migration 0022) — daily averages: `computed_at`, `score`, `band`, `components` (JSON), `input_snapshot` (JSON)

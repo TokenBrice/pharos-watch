@@ -388,6 +388,7 @@ export async function computeAndStoreDEWS(
     signals: Record<string, unknown>;
   }[] = [];
   let liqHistCoverageCount = 0;
+  let insufficientDataCount = 0;
 
   for (const meta of PSI_ELIGIBLE_STABLECOINS) {
     // Skip NAV tokens (price appreciates, not pegged to $1)
@@ -466,6 +467,10 @@ export async function computeAndStoreDEWS(
     };
 
     const result = computeDEWS(input);
+    if (!result) {
+      insufficientDataCount++;
+      continue;
+    }
     results.push({
       stablecoinId: meta.id,
       score: result.score,
@@ -542,6 +547,7 @@ export async function computeAndStoreDEWS(
   const hardFailures = sourceFailures.filter((failure) => !failure.bootstrapAllowed);
   sourceCoverage.liquidityHistoryCoveragePct = Number((liqHistCoverage * 100).toFixed(2));
   sourceCoverage.coinsComputed = results.length;
+  sourceCoverage.coinsSkippedInsufficientData = insufficientDataCount;
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
   return {
@@ -550,6 +556,7 @@ export async function computeAndStoreDEWS(
     metadata: JSON.stringify({
       rowsRead: assets.length + dexLiqRows.results.length + liqHistRowsRead,
       rowsWritten: results.length,
+      rowsSkippedInsufficientData: insufficientDataCount,
       rowsDropped,
       sourceCoverage,
       sourceFailures,

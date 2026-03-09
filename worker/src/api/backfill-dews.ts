@@ -130,6 +130,9 @@ export const handleBackfillDEWS = withErrorHandler(
           };
 
           const result = computeDEWS(input);
+          if (!result) {
+            continue;
+          }
           preDepegScores.push({
             daysBeforeDepeg: d,
             score: result.score,
