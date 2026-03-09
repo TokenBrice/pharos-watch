@@ -74,7 +74,7 @@ export function SiteHeader({ total, pegCount, chainCount }: SiteHeaderProps) {
         <div className="min-w-0">
           <p className="text-[1.06rem] font-mono font-semibold uppercase tracking-[0.16em] text-foreground">Pharos</p>
           <p className="mt-1 max-w-xl text-sm tracking-[0.01em] text-muted-foreground/85">
-            Live market intelligence for stablecoins: peg stress, liquidity, blacklist changes, and hidden dependencies
+            Live market intelligence for stablecoins: peg stress, liquidity analysis, blacklist tracking, risk-adjusted-yield and hidden dependencies
             in one research surface.
           </p>
         </div>
