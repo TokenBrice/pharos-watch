@@ -5,6 +5,7 @@ import { getDepegThresholdBps, DEPEG_SECONDARY_THRESHOLD_RATIO, USER_AGENT } fro
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { computeStabilityIndex } from "../lib/stability-index";
 import { batchExecute } from "../lib/db";
+import { fetchWithRetry } from "../lib/fetch-retry";
 import type { DepegRow } from "../lib/depeg-helpers";
 import { getPsiMethodologyVersionAt } from "@shared/lib/stability-index-version";
 import {
@@ -204,18 +205,10 @@ export const handleAuditDepegHistory = withErrorHandler(
 
         const cgEndpoint = cgUrl(`/coins/${geckoId}/market_chart/range?vs_currency=usd&from=${from}&to=${to}&precision=full`);
         const cgFetchHeaders = cgHeaders({ Accept: "application/json", "User-Agent": USER_AGENT });
-        let cgRes = await fetch(cgEndpoint, { headers: cgFetchHeaders });
+        const cgRes = await fetchWithRetry(cgEndpoint, { headers: cgFetchHeaders }, 1);
 
-        // Retry once on 429 with backoff
-        if (cgRes.status === 429) {
-          const retryAfter = parseInt(cgRes.headers.get("Retry-After") ?? "10", 10);
-          console.warn(`[audit] CG 429 for ${event.symbol}, waiting ${retryAfter}s`);
-          await new Promise((r) => setTimeout(r, retryAfter * 1000));
-          cgRes = await fetch(cgEndpoint, { headers: cgFetchHeaders });
-        }
-
-        if (!cgRes.ok) {
-          console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes.status}`);
+        if (!cgRes?.ok) {
+          console.warn(`[audit] CG fetch failed for ${event.symbol} (${geckoId}): ${cgRes?.status ?? "no response"}`);
           result.auditedEvents.push({
             id: event.id,
             symbol: event.symbol,
