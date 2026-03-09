@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import { safeJsonLd } from "@/lib/json-ld";
 import {
   ACTIVE_PEGS,
   PEG_SLUGS,
@@ -76,7 +77,7 @@ export default async function PegLandingPage({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+            __html: safeJsonLd({
               "@context": "https://schema.org",
               "@type": "ItemList",
               name: `${label} Stablecoins`,

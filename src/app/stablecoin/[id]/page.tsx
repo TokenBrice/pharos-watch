@@ -5,6 +5,7 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { PEG_SLUGS } from "@/lib/peg-landing";
+import { safeJsonLd } from "@/lib/json-ld";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy";
 import { buildStablecoinUrl } from "@/lib/urls";
 import { GOVERNANCE_LABELS, BACKING_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
@@ -169,7 +170,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{
-              __html: JSON.stringify({
+              __html: safeJsonLd({
                 "@context": "https://schema.org",
                 "@type": "Dataset",
                 name: `${coin.name} Stablecoin Analytics`,

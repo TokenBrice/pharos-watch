@@ -7,6 +7,7 @@ import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/yield-methodology-version";
+import { safeJsonLd } from "@/lib/json-ld";
 
 const YieldClient = dynamic(
   () => import("./client").then((m) => ({ default: m.YieldClient })),
@@ -68,7 +69,7 @@ export default function YieldPage() {
       preface={
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(faqJsonLd) }}
         />
       }
       leadParagraphs={[

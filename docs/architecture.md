@@ -303,6 +303,7 @@ src/                              # Next.js frontend (static export)
     ├── dews-radar-utils.ts       # DEWS radar interaction helpers
     ├── dex-constants.ts          # DEX protocol name map, prettifyProtocol() helper
     ├── faq.ts                    # FAQ item type + FAQPage JSON-LD builder
+    ├── json-ld.ts                # safeJsonLd() serializer escaping <, >, / for JSON-LD script injection safety
     ├── flow-intensity.ts         # Mint/burn pressure-shift display + compatibility helpers
     ├── mint-burn-timeframes.ts   # Mint/burn timeframe constants/utilities
     ├── nav-config.ts             # Navigation menu structure (sidebar links, sections)

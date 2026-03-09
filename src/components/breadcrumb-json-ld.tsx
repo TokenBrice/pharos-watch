@@ -1,9 +1,11 @@
+import { safeJsonLd } from "@/lib/json-ld";
+
 export function BreadcrumbJsonLd({ name, path }: { name: string; path: string }) {
   return (
     <script
       type="application/ld+json"
       dangerouslySetInnerHTML={{
-        __html: JSON.stringify({
+        __html: safeJsonLd({
           "@context": "https://schema.org",
           "@type": "BreadcrumbList",
           itemListElement: [
