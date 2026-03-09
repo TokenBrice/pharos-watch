@@ -174,6 +174,7 @@ export function mergeCgPools(
         meta.symbol,
       );
       const combinedQuality = pool.qualityMultiplier * balanceHealth * coinPairQuality;
+      const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier * balanceHealth;
       const poolEffTvl = pool.tvlUsd * combinedQuality;
       const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
 
@@ -182,7 +183,7 @@ export function mergeCgPools(
       m.poolCount++;
       m.chains.add(pool.chain);
       m.pairs.add(pool.symbol);
-      m.qualityAdjustedTvl += pool.tvlUsd * pool.qualityMultiplier * balanceHealth;
+      m.qualityAdjustedTvl += qualityAdjustedTvl;
       m.effectiveTvl += poolEffTvl;
       m.stressWeightedSum += pool.tvlUsd * stressIdx;
       m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
@@ -213,16 +214,20 @@ export function mergeCgPools(
         tvlUsd: pool.tvlUsd,
         symbol: pool.symbol,
         volumeUsd1d: pool.volume24hUsd,
+        volumeUsd7d: pool.volume7dUsd ?? null,
         poolType: pool.poolType,
         source: "cg",
         extra: {
           ...(pool.balanceRatio != null ? { balanceRatio: Math.round(pool.balanceRatio * 100) / 100 } : {}),
           ...(pool.feePercentage != null ? { feeTier: Math.round(pool.feePercentage * 10000) } : {}),
+          qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),
           organicFraction,
+          hasMeasuredOrganicFraction: false,
           pairQuality: Math.round(coinPairQuality * 100) / 100,
           stressIndex: stressIdx,
           maturityDays: pool.maturityDays,
+          lockedLiquidityPct,
         },
       });
 
@@ -370,6 +375,7 @@ export function mergeGtPools(
         meta.symbol,
       );
       const combinedQuality = pool.qualityMultiplier * coinPairQuality;
+      const qualityAdjustedTvl = pool.tvlUsd * pool.qualityMultiplier;
       const poolEffTvl = pool.tvlUsd * combinedQuality;
       const stressIdx = computePoolStress(balanceRatio, organicFraction, pool.maturityDays, coinPairQuality);
 
@@ -378,7 +384,7 @@ export function mergeGtPools(
       m.poolCount++;
       m.chains.add(pool.chain);
       m.pairs.add(pool.symbol);
-      m.qualityAdjustedTvl += pool.tvlUsd * pool.qualityMultiplier;
+      m.qualityAdjustedTvl += qualityAdjustedTvl;
       m.effectiveTvl += poolEffTvl;
       m.stressWeightedSum += pool.tvlUsd * stressIdx;
       m.oldestPoolDays = Math.max(m.oldestPoolDays, pool.maturityDays);
@@ -396,11 +402,14 @@ export function mergeGtPools(
         tvlUsd: pool.tvlUsd,
         symbol: pool.symbol,
         volumeUsd1d: pool.volume24hUsd,
+        volumeUsd7d: pool.volume7dUsd ?? null,
         poolType: pool.poolType,
         source: "gt",
         extra: {
+          qualityAdjustedTvl: Math.round(qualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),
           organicFraction,
+          hasMeasuredOrganicFraction: false,
           pairQuality: Math.round(coinPairQuality * 100) / 100,
           stressIndex: stressIdx,
           maturityDays: pool.maturityDays,

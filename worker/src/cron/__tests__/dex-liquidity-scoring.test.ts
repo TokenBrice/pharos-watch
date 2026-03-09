@@ -125,9 +125,19 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 100_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 50_000,
+        volumeUsd7d: 35_000,
         poolType: "curve-stableswap",
         source: "dl",
-        extra: { effectiveTvl: 90_000 },
+        extra: {
+          qualityAdjustedTvl: 95_000,
+          effectiveTvl: 90_000,
+          balanceRatio: 0.75,
+          organicFraction: 0.625,
+          hasMeasuredOrganicFraction: true,
+          stressIndex: 0,
+          maturityDays: 500,
+          lockedLiquidityPct: 50,
+        },
       },
       {
         poolId: "ethereum:sushi-dl",
@@ -136,6 +146,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 20_000,
         symbol: "USDT-USDE",
         volumeUsd1d: 5_000,
+        volumeUsd7d: 3_500,
         poolType: "generic",
         source: "dl",
       },
@@ -146,6 +157,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 80_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 40_000,
+        volumeUsd7d: 28_000,
         poolType: "generic",
         source: "cg",
         extra: { effectiveTvl: 80_000 },
@@ -157,6 +169,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 70_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 35_000,
+        volumeUsd7d: 24_500,
         poolType: "generic",
         source: "gt",
         extra: { effectiveTvl: 70_000 },
@@ -168,6 +181,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 1_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 100_000,
+        volumeUsd7d: 700_000,
         poolType: "curve-stableswap",
         source: "dl",
       },
@@ -178,6 +192,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 150_000_000,
         symbol: "USDT-USDC",
         volumeUsd1d: 10_000,
+        volumeUsd7d: 70_000,
         poolType: "generic",
         source: "gt",
       },
@@ -188,6 +203,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 10_000,
         symbol: `USDT-PAIR-${index + 1}`,
         volumeUsd1d: 30_000 - index * 1_000,
+        volumeUsd7d: 21_000 - index * 1_000,
         poolType: "curve-stableswap",
         source: "dl" as const,
       })),
@@ -204,6 +220,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 100_000,
         symbol: "USDC-USDT",
         volumeUsd1d: 50_000,
+        volumeUsd7d: 35_000,
         poolType: "curve-stableswap",
         source: "dl",
       },
@@ -214,6 +231,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 90_000,
         symbol: "USDC-USDE",
         volumeUsd1d: 30_000,
+        volumeUsd7d: 21_000,
         poolType: "generic",
         source: "gt",
         extra: { effectiveTvl: 90_000 },
@@ -225,6 +243,7 @@ describe("dex-liquidity scoring", () => {
         tvlUsd: 40_000,
         symbol: "USDC-DAI",
         volumeUsd1d: 10_000,
+        volumeUsd7d: 7_000,
         poolType: "curve-stableswap",
         source: "dl",
       },
@@ -276,17 +295,17 @@ describe("dex-liquidity scoring", () => {
     const usdtScore = scores.get("usdt-tether");
     expect(usdtScore).toMatchObject({
       tvl: 290_000,
-      vol24h: 777_000,
+      vol24h: 364_000,
       weightedBalanceRatio: 0.75,
       organicFrac: 0.625,
       avgStress: 0,
       lockedLiqPct: 0.5,
     });
-    expect(usdtScore?.hhi).toBeCloseTo(0.2226, 4);
+    expect(usdtScore?.hhi).toBeCloseTo(0.1726, 4);
 
     expect(globalAgg.poolCount).toBe(15);
     expect(globalAgg.totalVol24h).toBe(404_000);
-    expect(globalAgg.totalVol7d).toBe(6_292_100);
+    expect(globalAgg.totalVol7d).toBe(272_000);
     expect(globalAgg.totalTvl).toBeCloseTo(330_000, 6);
     expect(globalAgg.protocolTvl.sushiswap).toBe(100_000);
     expect(globalAgg.chainTvl.ethereum).toBeCloseTo(222_982.632, 3);

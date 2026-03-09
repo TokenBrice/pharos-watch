@@ -1,16 +1,19 @@
 import type { DiscoveryMeta, StagedPool } from "./types";
 
 const STAGING_UPSERT_SQL = `INSERT INTO dex_pool_staging
-  (pool_id, stablecoin_id, source, chain, protocol, symbol, tvl_usd, volume_24h, fee_tier, balance_ratio,
+  (pool_id, stablecoin_id, source, chain, protocol, dex_id, symbol, tvl_usd, volume_24h, quality_multiplier, pool_type, fee_tier, balance_ratio,
    is_stable, base_token, quote_token, quote_symbol, price_usd, locked_liq_pct, raw_json, discovered_at, refreshed_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(pool_id, stablecoin_id) DO UPDATE SET
   source = excluded.source,
   chain = excluded.chain,
   protocol = excluded.protocol,
+  dex_id = excluded.dex_id,
   symbol = excluded.symbol,
   tvl_usd = excluded.tvl_usd,
   volume_24h = excluded.volume_24h,
+  quality_multiplier = excluded.quality_multiplier,
+  pool_type = excluded.pool_type,
   fee_tier = excluded.fee_tier,
   balance_ratio = excluded.balance_ratio,
   is_stable = excluded.is_stable,
@@ -46,9 +49,12 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[]): Pr
           pool.source,
           pool.chain,
           pool.protocol,
+          pool.dexId,
           pool.symbol,
           pool.tvlUsd,
           pool.volume24h,
+          pool.qualityMultiplier,
+          pool.poolType,
           pool.feeTier,
           pool.balanceRatio,
           pool.isStable === null ? null : pool.isStable ? 1 : 0,

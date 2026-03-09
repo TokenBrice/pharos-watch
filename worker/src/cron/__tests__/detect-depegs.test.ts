@@ -358,6 +358,37 @@ describe("detectDepegEvents", () => {
     expect(inserts).toHaveLength(0);
   });
 
+  it("does not suppress a new event when fresh DEX data is below the depeg trust TVL floor", async () => {
+    const preparedSqls: string[] = [];
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      { match: "depeg_events", rows: [] },
+      {
+        match: "dex_prices",
+        rows: [{
+          stablecoin_id: "usdt-tether",
+          dex_price_usd: 1.0005,
+          deviation_from_primary_bps: 5,
+          source_pool_count: 1,
+          source_total_tvl: 250_000,
+          updated_at: now - 60,
+        }],
+      },
+    ]);
+    const origPrepare = db.prepare.bind(db);
+    db.prepare = vi.fn((sql: string) => {
+      preparedSqls.push(sql);
+      return origPrepare(sql);
+    }) as typeof db.prepare;
+
+    await detectDepegEvents(db, [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 0.98 }),
+    ]);
+
+    const inserts = preparedSqls.filter((sql) => sql.includes("INSERT INTO depeg_events"));
+    expect(inserts.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("skips NAV tokens", async () => {
     const preparedSqls: string[] = [];
     const db = mockD1([

@@ -1,8 +1,13 @@
-import { getDepegThresholdBps, DEX_FRESHNESS_SEC, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
+import { getDepegThresholdBps, DEPEG_CONFIRMATION_SUPPLY_THRESHOLD } from "../lib/constants";
 import { SECONDS } from "../lib/time-constants";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
-import { buildInsertDepegEventStmt, loadDexPriceMap, type DepegRow } from "../lib/depeg-helpers";
+import {
+  buildInsertDepegEventStmt,
+  isTrustedDexPriceRow,
+  loadDexPriceRows,
+  type DepegRow,
+} from "../lib/depeg-helpers";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import type { DepegEvent, PegAssetBase } from "@shared/types";
@@ -47,42 +52,7 @@ export async function detectDepegEvents(
   // Load DEX-implied prices for cross-validation.
   // loadDexPriceMap handles missing-table fallbacks and logging.
   throwIfAborted(signal);
-  const dexPrices = await loadDexPriceMap(db);
-
-  // Detect-depegs also needs metadata for freshness + TVL gates.
-  let dexMetadata = new Map<string, {
-    source_pool_count: number;
-    source_total_tvl: number;
-    updated_at: number;
-  }>();
-  try {
-    throwIfAborted(signal);
-    const dexMetadataResult = await db
-      .prepare("SELECT stablecoin_id, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
-      .all<{
-        stablecoin_id: string;
-        source_pool_count: number;
-        source_total_tvl: number;
-        updated_at: number;
-      }>();
-    dexMetadata = new Map(
-      (dexMetadataResult.results ?? []).map((r) => [
-        r.stablecoin_id,
-        {
-          source_pool_count: r.source_pool_count,
-          source_total_tvl: r.source_total_tvl,
-          updated_at: r.updated_at,
-        },
-      ]),
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
-      console.error("[depeg] Unexpected error loading dex_prices metadata:", msg);
-    } else {
-      console.info("[depeg] dex_prices table not yet created, skipping DEX metadata");
-    }
-  }
+  const dexPriceRows = await loadDexPriceRows(db);
 
   // Load all open events in one query
   throwIfAborted(signal);
@@ -195,27 +165,26 @@ export async function detectDepegEvents(
           }
 
           // DEX cross-validation for ongoing events
-          const dexPrice = dexPrices.get(asset.id);
-          const dexMeta = dexMetadata.get(asset.id);
-          const dexFresh = dexPrice != null && dexMeta && (now - dexMeta.updated_at) < DEX_FRESHNESS_SEC;
-          if (dexFresh && dexMeta) {
+          const dexRow = dexPriceRows.get(asset.id);
+          const dexFresh = dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+          if (dexFresh && dexRow) {
             const dexAbsBps = Math.abs(Math.round(
-              ((dexPrice / pegRef) - 1) * 10000
+              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
             ));
             if (dexAbsBps < threshold) {
               // DEX disagrees with ongoing depeg
               const eventAge = now - existing.started_at;
-              if (eventAge >= SECONDS.THIRTY_MINUTES && dexMeta.source_total_tvl >= 1_000_000) {
+              if (eventAge >= SECONDS.THIRTY_MINUTES) {
                 // Event open 30+ min AND DEX has >=$1M TVL — auto-close
                 console.warn(
                   `[depeg] Auto-closing false-positive event for ${asset.symbol} (id=${existing.id}): ` +
                   `primary=${bps}bps but DEX=${dexAbsBps}bps for ${Math.round(eventAge / 60)}min ` +
-                  `(${dexMeta.source_pool_count} pools, $${(dexMeta.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+                  `(${dexRow.source_pool_count} pools, $${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
                 );
                 stmts.push(
                   db.prepare(
                     "UPDATE depeg_events SET ended_at = ?, recovery_price = ? WHERE id = ?"
-                  ).bind(now, dexPrice, existing.id)
+                  ).bind(now, dexRow.dex_price_usd, existing.id)
                 );
                 seen.delete(existing.id); // Remove from seen since we're closing it
               } else {
@@ -245,18 +214,17 @@ export async function detectDepegEvents(
           );
         } else {
           // <$1B coin: existing behavior — DEX cross-validation then instant event
-          const dexPrice = dexPrices.get(asset.id);
-          const dexMeta = dexMetadata.get(asset.id);
-          const dexFresh = dexPrice != null && dexMeta && (now - dexMeta.updated_at) < DEX_FRESHNESS_SEC;
-          if (dexFresh && dexMeta) {
+          const dexRow = dexPriceRows.get(asset.id);
+          const dexFresh = dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg");
+          if (dexFresh && dexRow) {
             const dexBps = Math.abs(Math.round(
-              ((dexPrice / pegRef) - 1) * 10000
+              ((dexRow.dex_price_usd / pegRef) - 1) * 10000
             ));
             if (dexBps < threshold) {
               console.log(
                 `[depeg] Suppressed new event for ${asset.symbol}: ` +
-                `primary=${bps}bps but DEX=${dexBps}bps (${dexMeta.source_pool_count} pools, ` +
-                `$${(dexMeta.source_total_tvl / 1e6).toFixed(1)}M TVL)`
+                `primary=${bps}bps but DEX=${dexBps}bps (${dexRow.source_pool_count} pools, ` +
+                `$${(dexRow.source_total_tvl / 1e6).toFixed(1)}M TVL)`
               );
               continue;
             }

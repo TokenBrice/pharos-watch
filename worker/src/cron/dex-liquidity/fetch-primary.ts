@@ -1,7 +1,7 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { setCache } from "../../lib/db";
-import { USER_AGENT, CIRCUIT_SOURCE } from "../../lib/constants";
+import { USER_AGENT, CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import {
   fetchCgTokensBatch, onchainRateLimit, CG_CHAIN_MAP,
@@ -23,6 +23,7 @@ import {
 } from "./constants";
 import {
   normalizeProtocol, getTrackedContracts,
+  buildPoolFingerprint,
 } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { fetchSubgraphEntities, mergePriceObservations, type SubgraphPriceObservation } from "./subgraph-helpers";
@@ -246,7 +247,7 @@ export async function buildCurveLookups(
 
         // Extract per-token price observations for DEX cross-validation
         // Filter: pool TVL >= $50K, balance ratio >= 0.3, coin has valid usdPrice
-        if (metapoolAdjustedTvl >= 50_000 && balanceRatio >= 0.3) {
+        if (metapoolAdjustedTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && balanceRatio >= 0.3) {
           for (const coin of pool.coins) {
             if (!coin.usdPrice || coin.usdPrice <= 0) continue;
             // Resolve stablecoin ID: prefer address match, fall back to symbol
@@ -359,7 +360,7 @@ export async function fetchUniV3Data(
         }
 
         // Only for pools with TVL >= $50K
-        if (isNaN(tvl) || tvl < 50_000) return [];
+        if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
 
         const token0Price = parseFloat(pool.token0Price); // token0 per token1
         const token1Price = parseFloat(pool.token1Price); // token1 per token0
@@ -432,7 +433,7 @@ export async function fetchAerodromeData(
       extractEntities: (data) => (data as { pairs?: AerodromeSubgraphPair[] } | undefined)?.pairs,
       mapEntity: (pair) => {
         const reserveUSD = parseFloat(pair.reserveUSD);
-        if (isNaN(reserveUSD) || reserveUSD < 50_000) return [];
+        if (isNaN(reserveUSD) || reserveUSD < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
 
         // Store isStable flag for pool type refinement in processPoolMetrics
         isStableMap.set(`${chain}:${pair.id.toLowerCase()}`, pair.isStable);
@@ -518,11 +519,9 @@ export function buildKnownPoolAddresses(
     // Token-pair fingerprint so CG/GT pools (which use on-chain addresses)
     // can match against DL pools despite the UUID/address format mismatch.
     // Format: fp:<chain>:<normalized_protocol>:<sorted_token_addresses>
-    if (pool.underlyingTokens && pool.underlyingTokens.length >= 2) {
-      const chain = pool.chain.toLowerCase();
-      const proto = normalizeProtocol(pool.project);
-      const sorted = pool.underlyingTokens.map((t) => t.toLowerCase()).sort().join(":");
-      known.add(`fp:${chain}:${proto}:${sorted}`);
+    const fingerprint = buildPoolFingerprint(pool.chain, pool.project, pool.underlyingTokens ?? []);
+    if (fingerprint) {
+      known.add(fingerprint);
       fingerprintCount++;
     }
   }
@@ -622,7 +621,7 @@ export async function fetchGtTokenBatch(
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
           if (!price || price <= 0 || isNaN(price)) continue;
           if (!isPlausibleDexObservationPrice(stablecoinId, price)) continue;
-          if (!tvl || tvl < 50_000) continue;
+          if (!tvl || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];
           obs.push({ price, tvl, chain: trackedToken.chain, protocol: "geckoterminal-aggregate" });
@@ -678,7 +677,7 @@ export async function fetchCgTokenBatchPrices(
           const tvl = parseFloat(a.total_reserve_in_usd ?? "");
           if (!price || price <= 0 || isNaN(price)) continue;
           if (!isPlausibleDexObservationPrice(stablecoinId, price)) continue;
-          if (!tvl || tvl < 50_000) continue;
+          if (!tvl || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) continue;
 
           const obs = priceObs.get(stablecoinId) ?? [];
           obs.push({ price, tvl, chain: trackedToken.chain, protocol: "coingecko-aggregate" });

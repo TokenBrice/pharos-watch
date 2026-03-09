@@ -450,7 +450,7 @@ Composite peg scores and aggregate statistics for all tracked stablecoins. Score
 | `lastEventAt` | `number \| null` | Unix seconds of most recent depeg event |
 | `trackingSpanDays` | `number` | Days of history used for score computation |
 | `methodologyVersion` | `string` | Methodology version attributed to this coin snapshot |
-| `dexPriceCheck` | `DexPriceCheck \| null` | Optional cross-validation against DEX price (shown when coin supply ≥ $1M and DEX price data is ≤ 60 minutes old) |
+| `dexPriceCheck` | `DexPriceCheck \| null` | Optional cross-validation against DEX price (shown when coin supply ≥ $1M, DEX data is ≤ 60 minutes old, and aggregate source TVL is ≥ $250K) |
 
 **`DexPriceCheck`**
 
@@ -570,16 +570,16 @@ DEX liquidity scores, pool breakdowns, and on-chain DEX price data for all track
 | `chainCount` | `number` | Number of chains with active pools |
 | `protocolTvl` | `Record<string, number>` | TVL per DEX protocol (e.g. `{ "uniswap-v3": 100000 }`) |
 | `chainTvl` | `Record<string, number>` | TVL per chain (e.g. `{ "Ethereum": 500000 }`) |
-| `topPools` | `DexLiquidityPool[]` | Top pools sorted by TVL |
+| `topPools` | `DexLiquidityPool[]` | Top 10 retained pools sorted by 24h volume, then TVL |
 | `liquidityScore` | `number \| null` | Composite liquidity score 0–100 |
-| `concentrationHhi` | `number \| null` | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed) |
+| `concentrationHhi` | `number \| null` | Herfindahl–Hirschman Index for pool concentration (0–1; lower = more distributed), computed from the full retained pool set before top-10 truncation |
 | `depthStability` | `number \| null` | Pool depth stability metric |
 | `tvlChange24h` | `number \| null` | % TVL change vs. 24 h ago |
 | `tvlChange7d` | `number \| null` | % TVL change vs. 7 days ago |
 | `updatedAt` | `number` | Unix seconds of last cron update |
 | `dexPriceUsd` | `number \| null` | DEX-derived price (USD) |
 | `dexDeviationBps` | `number \| null` | DEX price deviation from peg (basis points, signed) |
-| `priceSourceCount` | `number \| null` | Number of pools used for DEX price |
+| `priceSourceCount` | `number \| null` | Number of pools used for DEX price (all must meet the shared $50K observation floor) |
 | `priceSourceTvl` | `number \| null` | Combined TVL of price-source pools (USD) |
 | `priceSources` | `DexPriceSource[] \| null` | Detailed per-pool price sources |
 | `effectiveTvlUsd` | `number` | TVL after applying quality multipliers |
@@ -1280,7 +1280,8 @@ Paginated list of individual mint/burn events for a specific stablecoin. Events 
 | `direction` | `string` | — | `"mint"` or `"burn"` | Filter by direction |
 | `chain` | `string` | — | `"ethereum"` | Filter by chain ID (current production scope is Ethereum only) |
 | `burnType` | `string` | — | `"effective_burn"`, `"bridge_burn"`, `"review_required"` | Filter burn rows by classification |
-| `minAmount` | `number` | — | — | Minimum USD amount |
+| `scope` | `string` | `"all"` | `"all"` or `"counted"` | `counted` returns only rows used in economic-flow aggregates (`flow_type='standard'` and mint/effective-burn semantics) |
+| `minAmount` | `number` | — | — | Minimum USD amount; unpriced rows are excluded when this filter is used |
 | `limit` | `integer` | `50` | 1–500 | Max results |
 | `offset` | `integer` | `0` | — | Pagination offset |
 
@@ -1304,6 +1305,7 @@ Results are ordered by `timestamp` descending (most recent first).
 | `symbol` | `string` | Token symbol |
 | `chainId` | `string` | Chain identifier (e.g. `"ethereum"`) |
 | `direction` | `"mint" \| "burn"` | Whether tokens were minted or burned |
+| `flowType` | `"standard" \| "atomic_roundtrip"` | Flow-noise classification; `atomic_roundtrip` rows are excluded from aggregate flow metrics |
 | `amount` | `number` | Amount in native token units |
 | `amountUsd` | `number \| null` | USD value at time of event |
 | `burnType` | `"effective_burn" \| "bridge_burn" \| "review_required" \| null` | Burn classification; `null` for mint rows |

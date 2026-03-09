@@ -22,6 +22,7 @@ function makePegSummaryDb(assets: ReturnType<typeof makeAsset>[] = []) {
 function makePegSummaryDbWithDexPrice(
   assets: ReturnType<typeof makeAsset>[],
   updatedAt: number,
+  sourceTotalTvl = 10_000_000,
 ) {
   const cacheValue = JSON.stringify({ peggedAssets: assets });
   return mockD1([
@@ -39,7 +40,7 @@ function makePegSummaryDbWithDexPrice(
           dex_price_usd: 1.0002,
           deviation_from_primary_bps: 2,
           source_pool_count: 4,
-          source_total_tvl: 10_000_000,
+          source_total_tvl: sourceTotalTvl,
           updated_at: updatedAt,
         },
       ],
@@ -121,6 +122,17 @@ describe("handlePegSummary", () => {
   it("hides dexPriceCheck when data is too stale for UI display", async () => {
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
     const db = makePegSummaryDbWithDexPrice([asset], nowSec - 7200);
+    const res = await handlePegSummary(db);
+    const body = (await res.json()) as {
+      coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;
+    };
+    const coin = body.coins.find((c) => c.id === "usdt-tether");
+    expect(coin?.dexPriceCheck).toBeUndefined();
+  });
+
+  it("hides dexPriceCheck when DEX source TVL is below the UI trust floor", async () => {
+    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
+    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 1800, 200_000);
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
       coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;

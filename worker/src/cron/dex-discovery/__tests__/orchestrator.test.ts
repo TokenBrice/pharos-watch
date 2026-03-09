@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { DiscoveryMeta } from "../types";
+import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
 import {
   compareDiscoveryMeta,
   computeEffectiveTier,
@@ -85,18 +86,19 @@ describe("compareDiscoveryMeta", () => {
 });
 
 describe("chain-aware routing", () => {
-  it("coin contracts array determines crawl chains", () => {
-    const usdc = TRACKED_STABLECOINS.find((stablecoin) => stablecoin.id.includes("usdc"));
-    expect(usdc).toBeDefined();
-    expect(usdc?.contracts).toBeDefined();
-    expect(Array.isArray(usdc?.contracts)).toBe(true);
+  it("discovery targets include traded contracts and preserve same-chain deployments", () => {
+    const usdt = TRACKED_STABLECOINS.find((stablecoin) => stablecoin.id === "usdt-tether");
+    expect(usdt).toBeDefined();
+    expect(usdt?.tradedContracts?.length ?? 0).toBeGreaterThan(0);
 
-    const coinChains = new Map((usdc?.contracts ?? []).map((contract) => [contract.chain, contract.address]));
+    const targets = getTrackedContracts(usdt!);
 
-    expect(coinChains.size).toBeGreaterThan(0);
-    for (const [chain] of coinChains) {
-      expect(usdc?.contracts?.some((contract) => contract.chain === chain)).toBe(true);
-    }
+    expect(targets.some((contract) =>
+      usdt?.tradedContracts?.some((traded) =>
+        traded.chain === contract.chain && traded.address === contract.address
+      )
+    )).toBe(true);
+    expect(targets.length).toBeGreaterThanOrEqual((usdt?.contracts?.length ?? 0) + (usdt?.tradedContracts?.length ?? 0) - 1);
   });
 });
 

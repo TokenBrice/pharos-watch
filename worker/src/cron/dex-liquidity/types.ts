@@ -75,6 +75,7 @@ export interface PoolEntry {
   tvlUsd: number;
   symbol: string;
   volumeUsd1d: number;
+  volumeUsd7d?: number | null;
   poolType: string;
   /** Data source: "dl" = DeFiLlama, "cg" = CoinGecko, "gt" = GeckoTerminal, "ds" = DexScreener */
   source: "dl" | "cg" | "gt" | "ds";
@@ -82,13 +83,16 @@ export interface PoolEntry {
     amplificationCoefficient?: number;
     balanceRatio?: number;
     feeTier?: number;
+    qualityAdjustedTvl?: number;
     effectiveTvl?: number;
     organicFraction?: number;
+    hasMeasuredOrganicFraction?: boolean;
     pairQuality?: number;
     stressIndex?: number;
     isMetaPool?: boolean;
     maturityDays?: number;
     registryId?: string;
+    lockedLiquidityPct?: number | null;
     balanceDetails?: {
       symbol: string;
       balancePct: number;
@@ -219,11 +223,14 @@ export interface GtNewPool {
   volume24hUsd: number;
   qualityMultiplier: number;
   maturityDays: number;
-  poolType: string;
   /** The stablecoin's price in this pool */
   price: number;
   /** Pool symbol (e.g., "USDC / USDT") */
   symbol: string;
+  /** Discovery/source-specific pool type used for quality weighting */
+  poolType: string;
+  /** Optional per-pool 7d volume when source provides it */
+  volume7dUsd?: number | null;
 }
 
 export interface CgNewPool extends GtNewPool {

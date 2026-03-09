@@ -1,4 +1,10 @@
 import type { DepegEvent } from "@shared/types";
+import {
+  DEX_FRESHNESS_SEC,
+  DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
+  DEX_PRICE_CHECK_FRESHNESS_SEC,
+  DEX_PRICE_CHECK_UI_MIN_TVL_USD,
+} from "./constants";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -17,19 +23,45 @@ export interface DepegRow {
   source: string;
 }
 
-export async function loadDexPriceMap(db: D1Database): Promise<Map<string, number>> {
+export interface DexPriceRow {
+  stablecoin_id: string;
+  dex_price_usd: number;
+  deviation_from_primary_bps: number | null;
+  source_pool_count: number;
+  source_total_tvl: number;
+  updated_at: number;
+}
+
+export type DexPriceTrustTier = "ui" | "depeg";
+
+export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexPriceRow>> {
   try {
     const dexResult = await db
-      .prepare("SELECT stablecoin_id, dex_price_usd FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number }>();
-    return new Map((dexResult.results ?? []).map((row) => [row.stablecoin_id, row.dex_price_usd]));
+      .prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
+      .all<DexPriceRow>();
+    return new Map((dexResult.results ?? []).map((row) => [row.stablecoin_id, row]));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (!msg.includes("no such table")) {
       console.error("[depeg-helpers] Unexpected error loading dex_prices:", msg);
     }
-    return new Map<string, number>();
+    return new Map<string, DexPriceRow>();
   }
+}
+
+export async function loadDexPriceMap(db: D1Database): Promise<Map<string, number>> {
+  const rows = await loadDexPriceRows(db);
+  return new Map([...rows.entries()].map(([id, row]) => [id, row.dex_price_usd]));
+}
+
+export function isTrustedDexPriceRow(
+  row: Pick<DexPriceRow, "updated_at" | "source_total_tvl">,
+  nowSec: number,
+  tier: DexPriceTrustTier,
+): boolean {
+  const maxAgeSec = tier === "ui" ? DEX_PRICE_CHECK_FRESHNESS_SEC : DEX_FRESHNESS_SEC;
+  const minTvlUsd = tier === "ui" ? DEX_PRICE_CHECK_UI_MIN_TVL_USD : DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD;
+  return (nowSec - row.updated_at) < maxAgeSec && row.source_total_tvl >= minTvlUsd;
 }
 
 export function buildInsertDepegEventStmt(

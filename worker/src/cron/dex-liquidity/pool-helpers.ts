@@ -190,6 +190,21 @@ export function normalizeProtocol(project: string): string {
   return project;
 }
 
+/** Build the canonical cross-source pool fingerprint for token-pair dedup. */
+export function buildPoolFingerprint(
+  chain: string,
+  protocol: string,
+  tokenAddresses: string[],
+): string | null {
+  if (tokenAddresses.length < 2) return null;
+  const normalized = tokenAddresses
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean)
+    .sort();
+  if (normalized.length < 2) return null;
+  return `fp:${chain.toLowerCase()}:${normalizeProtocol(protocol)}:${normalized.join(":")}`;
+}
+
 /**
  * Get pairing quality score for a token symbol.
  * Uses Pharos classification for tracked stablecoins, static map for known volatile assets.

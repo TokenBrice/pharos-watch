@@ -1,16 +1,17 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import type { ContractDeployment } from "@shared/types";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { dsRateLimit, fetchDsTokenPools } from "../../lib/dexscreener";
 import { CHAIN_REGISTRY, CG_CHAIN_MAP, GT_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { normalizeProtocol, getGtDexQuality } from "../dex-liquidity/pool-helpers";
 import { crawlTokenPools, type CrawlToken } from "../dex-liquidity/crawl-helpers";
-import { CG_TICKERS_RATE_MS, ORDERBOOK_TVL_FACTOR } from "../dex-liquidity/constants";
-import { GT_API_BASE } from "../../lib/dex-constants";
+import { CG_TICKERS_RATE_MS, ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS } from "../dex-liquidity/constants";
+import { GT_API_BASE, QUALITY_MULTIPLIERS } from "../../lib/dex-constants";
 import { fetchCgTokenPools, parseCgPoolVolume } from "../../lib/coingecko-onchain";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { USER_AGENT } from "../../lib/constants";
+import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 import type { GtPool, DexPriceObs, GtNewPool } from "../dex-liquidity/types";
 import type { StagedPool } from "./types";
@@ -28,7 +29,7 @@ export interface CrawlResult {
 
 export async function crawlCoin(
   stablecoinId: string,
-  coinChains: Map<string, string>,
+  coinTargets: ContractDeployment[],
   cgApiKey: string | null,
   knownPoolIds: Set<string>,
   signal?: AbortSignal,
@@ -53,7 +54,7 @@ export async function crawlCoin(
   if (cgApiKey?.trim()) {
     let cgRequests = 0;
 
-    for (const [chain, address] of coinChains) {
+    for (const { chain, address } of coinTargets) {
       throwIfAborted(signal);
       if (timeExceeded()) return { pools, priceObs };
 
@@ -104,6 +105,21 @@ export async function crawlCoin(
 
           const dexId = pool.relationships.dex.data.id;
           const protocol = normalizeProtocol(dexId);
+          let qualityMultiplier: number;
+          let poolType: string;
+          if (feePct != null && !isNaN(feePct)) {
+            if (feePct <= 0.01) { qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!; poolType = "cg-cl-1bp"; }
+            else if (feePct <= 0.05) { qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!; poolType = "cg-cl-5bp"; }
+            else if (feePct <= 0.30) { qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!; poolType = "cg-cl-30bp"; }
+            else { qualityMultiplier = QUALITY_MULTIPLIERS["generic"]!; poolType = "cg-wide-fee"; }
+          } else {
+            qualityMultiplier = getGtDexQuality(dexId);
+            poolType = dexId.includes("v3") || dexId.includes("v4")
+              ? "cg-concentrated"
+              : dexId.includes("stable")
+                ? "cg-stable-amm"
+                : "cg-amm";
+          }
 
           const stagedPool: StagedPool = {
             poolId,
@@ -111,9 +127,12 @@ export async function crawlCoin(
             source: "cg_onchain",
             chain,
             protocol,
+            dexId,
             symbol: attrs.name,
             tvlUsd,
             volume24h,
+            qualityMultiplier,
+            poolType,
             feeTier,
             balanceRatio,
             isStable: null,
@@ -132,7 +151,7 @@ export async function crawlCoin(
           if (
             stagedPool.priceUsd != null &&
             isPlausibleDexObservationPrice(stablecoinId, stagedPool.priceUsd) &&
-            tvlUsd >= 50_000
+            tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD
           ) {
             addPriceObs({
               stablecoinId,
@@ -153,7 +172,7 @@ export async function crawlCoin(
   // Stage 2: GeckoTerminal (chains not already covered by CG)
   const gtTokens: CrawlToken[] = [];
   const gtAddressToId = new Map<string, string>();
-  for (const [chain, address] of coinChains) {
+  for (const { chain, address } of coinTargets) {
     const registry = CHAIN_REGISTRY[chain];
     const gtNetwork = GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal;
     if (!gtNetwork) continue;
@@ -247,9 +266,12 @@ export async function crawlCoin(
         source: "gecko_terminal",
         chain: pool.chain,
         protocol: normalizeProtocol(pool.dexId),
+        dexId: pool.dexId,
         symbol: pool.name,
         tvlUsd: pool.tvlUsd,
         volume24h: pool.volume24hUsd,
+        qualityMultiplier: pool.qualityMultiplier,
+        poolType: pool.poolType,
         feeTier: null,
         balanceRatio: null,
         isStable: null,
@@ -274,7 +296,7 @@ export async function crawlCoin(
 
   // Stage 3: DexScreener (gap-filler)
   const uncoveredChains: Array<[string, string]> = [];
-  for (const [chain, address] of coinChains) {
+  for (const { chain, address } of coinTargets) {
     const registry = CHAIN_REGISTRY[chain];
     const hasCg = !!(CG_CHAIN_MAP[chain] ?? registry?.coingecko);
     const hasGt = !!(GT_CHAIN_MAP[chain] ?? registry?.geckoTerminal);
@@ -283,7 +305,7 @@ export async function crawlCoin(
     }
   }
 
-  const dsTargets = pools.length === 0 ? [...coinChains.entries()] : uncoveredChains;
+  const dsTargets = pools.length === 0 ? coinTargets.map(({ chain, address }) => [chain, address] as const) : uncoveredChains;
 
   if (dsTargets.length > 0 && !timeExceeded()) {
     let dsRequests = 0;
@@ -322,9 +344,16 @@ export async function crawlCoin(
           source: "dexscreener",
           chain,
           protocol: normalizeProtocol(pair.dexId),
+          dexId: pair.dexId,
           symbol: `${pair.baseToken.symbol} / ${pair.quoteToken.symbol}`,
           tvlUsd: tvl,
           volume24h: vol24h,
+          qualityMultiplier: getGtDexQuality(pair.dexId),
+          poolType: pair.labels?.includes("CLMM") || pair.labels?.includes("V3")
+            ? "ds-concentrated"
+            : pair.labels?.includes("StableSwap")
+              ? "ds-stableswap"
+              : "ds-amm",
           feeTier: null,
           balanceRatio: null,
           isStable: null,
@@ -338,7 +367,7 @@ export async function crawlCoin(
           refreshedAt: nowSec,
         });
 
-        if (Number.isFinite(price) && price > 0 && tvl >= 10_000 && isPlausibleDexObservationPrice(stablecoinId, price)) {
+        if (Number.isFinite(price) && price > 0 && tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(stablecoinId, price)) {
           addPriceObs({
             stablecoinId,
             price,
@@ -352,7 +381,7 @@ export async function crawlCoin(
   }
 
   // Stage 4: CoinGecko Tickers (orderbook fallback)
-  if (pools.length === 0 && !timeExceeded()) {
+  if ((pools.length === 0 || priceObs.length === 0) && !timeExceeded()) {
     const geckoId = stablecoinMeta?.geckoId;
     if (geckoId) {
       try {
@@ -369,24 +398,32 @@ export async function crawlCoin(
             market: { name: string; identifier: string };
             converted_last: { usd: number };
             converted_volume: { usd: number };
+            target_coin_id?: string;
             is_anomaly: boolean;
             is_stale: boolean;
             trust_score: string | null;
           }> };
           const valid = (data.tickers ?? []).filter((t) => {
             if (t.is_stale || t.is_anomaly || !t.trust_score) return false;
-            const isUsdQuote = t.target === "USD" || t.target === "USDT" || t.target === "USDC";
+            const isUsdQuote =
+              t.target === "USD" ||
+              (t.target_coin_id != null && USD_QUOTE_COIN_IDS.has(t.target_coin_id));
             return isUsdQuote && t.converted_volume.usd >= 1_000;
           });
 
-          const byExchange = new Map<string, { name: string; volume: number; price: number }>();
+          const byExchange = new Map<string, { name: string; volume: number; priceVolumeWeightedSum: number }>();
           for (const t of valid) {
             const id = t.market.identifier;
             const entry = byExchange.get(id);
             if (entry) {
               entry.volume += t.converted_volume.usd;
+              entry.priceVolumeWeightedSum += t.converted_last.usd * t.converted_volume.usd;
             } else {
-              byExchange.set(id, { name: t.market.name, volume: t.converted_volume.usd, price: t.converted_last.usd });
+              byExchange.set(id, {
+                name: t.market.name,
+                volume: t.converted_volume.usd,
+                priceVolumeWeightedSum: t.converted_last.usd * t.converted_volume.usd,
+              });
             }
           }
 
@@ -394,6 +431,7 @@ export async function crawlCoin(
             const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
             const poolId = `orderbook:${exchangeId}:${stablecoinId}`.toLowerCase();
             if (knownPoolIds.has(poolId)) continue;
+            const price = exch.volume > 0 ? exch.priceVolumeWeightedSum / exch.volume : 0;
 
             addPool({
               poolId,
@@ -401,26 +439,29 @@ export async function crawlCoin(
               source: "cg_tickers",
               chain: "cex",
               protocol: exchangeId,
+              dexId: exchangeId,
               symbol: `${stablecoinMeta?.symbol ?? stablecoinId} / USD`,
               tvlUsd: syntheticTvl,
               volume24h: exch.volume,
+              qualityMultiplier: QUALITY_MULTIPLIERS["orderbook"],
+              poolType: "orderbook",
               feeTier: null,
               balanceRatio: null,
               isStable: null,
               baseToken: null,
               quoteToken: null,
               quoteSymbol: "USD",
-              priceUsd: exch.price,
+              priceUsd: price,
               lockedLiqPct: null,
               rawJson: null,
               discoveredAt: nowSec,
               refreshedAt: nowSec,
             });
 
-            if (isPlausibleDexObservationPrice(stablecoinId, exch.price)) {
+            if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(stablecoinId, price)) {
               addPriceObs({
                 stablecoinId,
-                price: exch.price,
+                price,
                 tvl: syntheticTvl,
                 chain: "cex",
                 protocol: `cg-ticker-${exchangeId}`,

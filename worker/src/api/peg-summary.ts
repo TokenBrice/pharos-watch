@@ -1,4 +1,3 @@
-import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../lib/constants";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import type { StablecoinData } from "@shared/types";
@@ -13,6 +12,7 @@ import {
 import { CACHE_PROFILES } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
+import { isTrustedDexPriceRow } from "../lib/depeg-helpers";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -172,7 +172,7 @@ export const handlePegSummary = withErrorHandler("peg-summary", async (db: D1Dat
     const supply = asset?.circulating
       ? sumPegBuckets(asset.circulating)
       : 0;
-    if (dexRow && supply >= 1_000_000 && (now - dexRow.updated_at) < DEX_PRICE_CHECK_FRESHNESS_SEC) {
+    if (dexRow && supply >= 1_000_000 && isTrustedDexPriceRow(dexRow, now, "ui")) {
       const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency);
       const dexBps = deriveDexDeviationBps(
         dexRow.dex_price_usd,

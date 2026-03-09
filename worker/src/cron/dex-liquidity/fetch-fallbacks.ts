@@ -1,12 +1,12 @@
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../../lib/fetch-retry";
-import { USER_AGENT } from "../../lib/constants";
+import { USER_AGENT, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { cgUrl, cgHeaders } from "../../lib/coingecko";
 import { fetchDsTokenPools, dsRateLimit, DS_CHAIN_MAP } from "../../lib/dexscreener";
 import { QUALITY_MULTIPLIERS, GT_DEX_QUALITY } from "../../lib/dex-constants";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import type { LiquidityMetrics, DexPriceObs, GtNewPool, CgTicker } from "./types";
-import { getTrackedContracts, normalizeProtocol } from "./pool-helpers";
+import { buildPoolFingerprint, getTrackedContracts } from "./pool-helpers";
 import {
   CG_TICKERS_RATE_MS,
   ORDERBOOK_TVL_FACTOR, USD_QUOTE_COIN_IDS,
@@ -86,9 +86,8 @@ export async function fetchDsFallbackPools(
         const poolKey = `${contract.chain}:${pair.pairAddress.toLowerCase()}`;
         const baseAddr = pair.baseToken.address.toLowerCase();
         const quoteAddr = pair.quoteToken.address.toLowerCase();
-        const sortedTokens = [baseAddr, quoteAddr].sort().join(":");
-        const fpKey = `fp:${contract.chain}:${normalizeProtocol(pair.dexId)}:${sortedTokens}`;
-        if (knownPoolAddrs.has(poolKey) || knownPoolAddrs.has(fpKey)) continue;
+        const fpKey = buildPoolFingerprint(contract.chain, pair.dexId, [baseAddr, quoteAddr]);
+        if (knownPoolAddrs.has(poolKey) || (fpKey != null && knownPoolAddrs.has(fpKey))) continue;
         knownPoolAddrs.add(poolKey);
 
         // Ensure our token is the base token (not some random meme pairing)
@@ -135,7 +134,7 @@ export async function fetchDsFallbackPools(
         poolsFound++;
 
         // Price observation
-        if (isPlausibleDexObservationPrice(meta.id, price) && tvl >= 10_000) {
+        if (isPlausibleDexObservationPrice(meta.id, price) && tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({ price, tvl, chain: contract.chain, protocol: `dexscreener-${pair.dexId}` });
           priceObs.set(meta.id, obs);
@@ -234,7 +233,7 @@ export async function fetchCgTickersFallback(
         const syntheticTvl = exch.volume * ORDERBOOK_TVL_FACTOR;
 
         // Price observation (only if price is plausible — skip if near 0)
-        if (isPlausibleDexObservationPrice(meta.id, exch.price)) {
+        if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(meta.id, exch.price)) {
           const obs = priceObs.get(meta.id) ?? [];
           obs.push({
             price: exch.price,

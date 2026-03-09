@@ -982,6 +982,11 @@ export default function MethodologyPage() {
             Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes.
             Aggregates pool data across all major DEXes and chains.
           </p>
+          <p>
+            After bad pools are filtered and secondary-source TVL caps are applied, every exported aggregate and score
+            input is rebuilt from the retained pool set. That keeps filtered or downscaled pools from lingering in the
+            final score through stale pre-filter totals.
+          </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
               <p className="text-xs uppercase tracking-wide">Update cadence</p>
@@ -1175,6 +1180,11 @@ export default function MethodologyPage() {
                   <span className="text-foreground">Metapool dedup</span> &mdash; uses TVL excluding base pool to
                   prevent double-counting across Curve metapools
                 </li>
+                <li>
+                  <span className="text-foreground">Retained-pool recomputation</span> &mdash; HHI, depth, volume, and
+                  balance/organic/durability inputs are all recomputed from the same retained pool set before the UI
+                  truncates to the top 10 displayed pools
+                </li>
               </ul>
             </div>
           </MethodologyDetails>
@@ -1208,7 +1218,8 @@ export default function MethodologyPage() {
           <p>
             Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns
             plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and exposed as two separate
-            signals: raw net flow for current direction, and a baseline-relative pressure score for context.
+            signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
+            flow excludes bridge burns, review-required burns, and atomic roundtrips.
           </p>
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
@@ -1237,6 +1248,10 @@ export default function MethodologyPage() {
                   label: "Failure behavior",
                   value:
                     "Pressure shift can be null (NR); gauge is null when no weighted inputs contribute; FtQ needs ±$100M dual threshold",
+                },
+                {
+                  label: "Counted rows",
+                  value: "Economic-flow aggregates count standard mints plus effective burns only",
                 },
               ]}
             />
@@ -1388,7 +1403,11 @@ export default function MethodologyPage() {
                 </li>
                 <li>
                   <span className="text-foreground">Activity gate</span> &mdash; windows with no 24h mint/burn activity
-                  are marked NR and excluded from gauge weighting
+                  or less than $50K absolute 24h flow are marked NR and excluded from gauge weighting
+                </li>
+                <li>
+                  <span className="text-foreground">Ingestion safety</span> &mdash; sync state advances only to the
+                  shared safe coverage frontier when some event definitions or block timestamps are incomplete
                 </li>
                 <li>
                   <span className="text-foreground">Floor</span> &mdash; denominator is floored at $1M to prevent noise
@@ -1762,6 +1781,11 @@ export default function MethodologyPage() {
           <p>
             Depeg Tracker combines live event detection, secondary-source confirmation rules for large-cap assets, and a
             per-coin peg score that penalizes time off peg, event severity, active depegs, and unstable event spread.
+          </p>
+          <p>
+            DEX cross-validation uses explicit trust gates. Detection and pending confirmation only trust fresh DEX
+            rows with at least $1M of aggregate source TVL, while the public DEX Price Check UI requires a lighter but
+            still non-trivial floor of $250K.
           </p>
           <p>
             DEWS (Depeg Early Warning System) computes forward-looking stress every 15 minutes from market, liquidity,

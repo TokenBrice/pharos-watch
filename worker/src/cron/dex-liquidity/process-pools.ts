@@ -93,6 +93,7 @@ export function processPoolMetrics(
     let balanceHealth = 1;
     let poolMaturityDays = 0;
     let organicFraction = 0.5; // neutral default
+    let hasMeasuredOrganicFraction = false;
     let effectivePoolTvl = pool.tvlUsd;
     let balanceDetails: { symbol: string; balancePct: number; isTracked: boolean }[] | undefined;
 
@@ -146,8 +147,10 @@ export function processPoolMetrics(
     // Organic fraction from DeFiLlama APY data
     if (pool.apyBase != null && pool.apy > 0.01) {
       organicFraction = Math.min(1, Math.max(0, pool.apyBase / pool.apy));
+      hasMeasuredOrganicFraction = true;
     } else if (pool.apyBase != null) {
       organicFraction = pool.apyBase > 0 ? 1.0 : 0;
+      hasMeasuredOrganicFraction = true;
     }
 
     // Pool maturity from DeFiLlama count (fallback for non-Curve)
@@ -170,6 +173,7 @@ export function processPoolMetrics(
 
       // Combined pool quality (mechanism × balance × pair)
       const combinedQuality = qualMult * balanceHealth * coinPairQuality;
+      const poolQualityAdjustedTvl = pool.tvlUsd * qualMult * balanceHealth;
       const poolEffTvl = effectivePoolTvl * combinedQuality;
 
       // Pool stress for this pool
@@ -181,7 +185,7 @@ export function processPoolMetrics(
       m.poolCount++;
       m.chains.add(pool.chain);
       m.pairs.add(pool.symbol);
-      m.qualityAdjustedTvl += pool.tvlUsd * qualMult * balanceHealth;
+      m.qualityAdjustedTvl += poolQualityAdjustedTvl;
       m.effectiveTvl += poolEffTvl;
 
       // Weighted balance ratio tracking (Curve pools only)
@@ -191,7 +195,7 @@ export function processPoolMetrics(
       }
 
       // Weighted organic fraction tracking
-      if (pool.apyBase != null) {
+      if (hasMeasuredOrganicFraction) {
         m.organicTvlWeightedSum += pool.tvlUsd * organicFraction;
         m.totalTvlForOrganic += pool.tvlUsd;
       }
@@ -214,6 +218,7 @@ export function processPoolMetrics(
         tvlUsd: pool.tvlUsd,
         symbol: pool.symbol,
         volumeUsd1d: vol1d,
+        volumeUsd7d: vol7d,
         poolType: resolvedPoolType,
         source: "dl",
         extra: {
@@ -228,8 +233,10 @@ export function processPoolMetrics(
             : feeTierForExtra != null
               ? { feeTier: feeTierForExtra }
               : {}),
+          qualityAdjustedTvl: Math.round(poolQualityAdjustedTvl),
           effectiveTvl: Math.round(poolEffTvl),
           organicFraction: Math.round(organicFraction * 100) / 100,
+          hasMeasuredOrganicFraction,
           pairQuality: Math.round(coinPairQuality * 100) / 100,
           stressIndex: stressIdx,
           maturityDays: poolMaturityDays,

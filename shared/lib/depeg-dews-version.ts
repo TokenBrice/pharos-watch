@@ -4,9 +4,24 @@ import {
 } from "./methodology-version";
 
 const depegDews = createMethodologyVersion({
-  currentVersion: "4.4",
+  currentVersion: "4.5",
   changelogPath: "/methodology/depeg-changelog/",
   changelog: [
+  {
+    version: "4.5",
+    title: "Trusted DEX-price gating for depeg suppression, confirmation, and UI checks",
+    date: "2026-03-09",
+    effectiveAt: 1773056006,
+    summary:
+      "DEX cross-validation now shares an explicit trust policy so thin pools cannot suppress or confirm depegs, and low-confidence rows no longer surface on the public DEX Price Check UI.",
+    impact: [
+      "Depeg suppression/confirmation now requires fresh DEX rows with >= $1M aggregate source TVL",
+      "UI-facing dexPriceCheck exposure now requires fresh data with >= $250K aggregate source TVL",
+      "Thin DEX rows can no longer veto new depeg events or promote pending confirmations on their own",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "4.4",
     title: "No-history coins now return null peg score",

@@ -109,6 +109,39 @@ describe("mergeStagedPools", () => {
     expect(result.mergedCount).toBe(0);
   });
 
+  it("skips staged pools whose token-pair fingerprint is already known", async () => {
+    const mockDb = createMockDb([{
+      pool_id: "ethereum:0xnewpool",
+      stablecoin_id: "usdt-tether",
+      source: "gecko_terminal",
+      chain: "ethereum",
+      protocol: "pancakeswap",
+      dex_id: "pancakeswap-v3",
+      symbol: "USDT/USDC",
+      tvl_usd: 100000,
+      volume_24h: 50000,
+      quality_multiplier: 0.5,
+      pool_type: "gt-concentrated",
+      fee_tier: null,
+      balance_ratio: null,
+      is_stable: 1,
+      base_token: "0xbase",
+      quote_token: "0xquote",
+      quote_symbol: "USDC",
+      price_usd: 1,
+      locked_liq_pct: null,
+      discovered_at: 1709900000,
+      refreshed_at: 1710000000,
+    }]);
+    const metrics = new Map();
+    const knownPoolAddrs = new Set(["fp:ethereum:pancakeswap:0xbase:0xquote"]);
+
+    const result = await mergeStagedPools(mockDb, metrics, knownPoolAddrs, 1710000000);
+
+    expect(result.skippedCount).toBe(1);
+    expect(result.mergedCount).toBe(0);
+  });
+
   it("gracefully handles missing staging table", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const mockDb = createMockDb(async () => {

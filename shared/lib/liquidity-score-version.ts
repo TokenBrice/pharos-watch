@@ -3,9 +3,25 @@ import {
 } from "./methodology-version";
 
 const liquidity = createMethodologyVersion({
-  currentVersion: "3.3",
+  currentVersion: "3.4",
   changelogPath: "/methodology/liquidity-score-changelog/",
   changelog: [
+  {
+    version: "3.4",
+    title: "Retained-pool score recomputation and trusted staged-price hardening",
+    date: "2026-03-09",
+    effectiveAt: 1773056006,
+    summary:
+      "Liquidity scoring now rebuilds every aggregate from the retained pool set after filtering/caps, while staged discovery preserves pool-quality metadata and stricter DEX-price trust rules.",
+    impact: [
+      "Filtered or TVL-capped pools can no longer keep influencing score inputs through stale aggregate fields",
+      "HHI now uses the full retained pool set before display truncation; global 7d volume is pool-deduped",
+      "Staged pool merge now dedups against token-pair fingerprints and preserves raw DEX metadata/quality multipliers",
+      "DEX price observations require a consistent $50K post-confidence TVL floor across source families",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
   {
     version: "3.3",
     title: "Separated discovery pipeline with staged pool confidence decay",

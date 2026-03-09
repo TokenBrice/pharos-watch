@@ -5,9 +5,12 @@ export interface StagedPool {
   source: "cg_onchain" | "gecko_terminal" | "dexscreener" | "cg_tickers";
   chain: string;
   protocol: string;
+  dexId: string | null;
   symbol: string;
   tvlUsd: number | null;
   volume24h: number | null;
+  qualityMultiplier: number | null;
+  poolType: string | null;
   feeTier: number | null;
   balanceRatio: number | null;
   isStable: boolean | null;

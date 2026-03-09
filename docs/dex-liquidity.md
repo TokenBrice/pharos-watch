@@ -22,6 +22,8 @@ Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool m
 
 Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
+After pool filtering and protocol-level TVL caps are applied, the scorer rebuilds every aggregate (`total_tvl_usd`, `total_volume_24h_usd`, `effective_tvl_usd`, balance/organic/stress weights, protocol/chain breakdowns) from the retained pool set before computing the final score. Filtered or capped pools cannot continue influencing the score through stale pre-filter aggregates.
+
 `dex_pool_staging` is the handoff point for discovery-only sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers). The scoring cron does not call those discovery APIs directly anymore; it consumes staged rows refreshed within the last 24 hours and gracefully falls back to primary-only scoring when the staging table is absent or empty.
 
 Data sources are split across two cron families: scoring remains on `10,40 * * * *`, while discovery sources (CoinGecko Onchain, GeckoTerminal, DexScreener, CoinGecko Tickers) now run only on `3,23,43 * * * *` and write to `dex_pool_staging` for later merge.
@@ -102,11 +104,12 @@ CoinGecko Tickers is now a discovery-stage source rather than a direct scoring-c
 
 After DexScreener, any coin that still has zero pools or no usable DEX price observation and has a `geckoId` is queried via CoinGecko's `/coins/{id}/tickers` endpoint. This covers coins whose primary liquidity lives on orderbook exchanges not tracked by DeFiLlama or DexScreener (e.g. KAG and KAU on Kinesis Exchange).
 
-Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-denominated quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
+Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
 
-Per-exchange aggregation: all valid tickers from the same exchange are summed into one synthetic pool entry:
+Per-exchange aggregation: all valid tickers from the same exchange are combined into one synthetic pool entry:
 - `syntheticTvl = totalVolume × 3` (assumes ~33% daily turnover — conservative for precious-metals orderbooks)
 - `poolType: "orderbook"`, quality multiplier 0.6x
+- `priceUsd = volume-weighted average` across accepted tickers on that exchange
 - Maturity defaults to 365 days (established exchange)
 
 The 0.6x quality multiplier reflects that orderbook exchanges are legitimate but centralized (not fully on-chain), placing them between Aerodrome volatile (0.4x) and Balancer stable (0.85x).
@@ -129,6 +132,8 @@ Each `PoolEntry` carries a `poolId` field formatted as `chain:address` (lowercas
 
 DeFiLlama's yields API uses opaque UUIDs as pool identifiers (e.g., `6b6de6c7-...`), while CoinGecko/GeckoTerminal/DexScreener return on-chain pool addresses. Since these formats never match, `buildKnownPoolAddresses()` also stores **token-pair fingerprints** in the format `fp:<chain>:<normalized_protocol>:<sorted_token_addresses>`. When CG/GT/DS discover a pool, they compute the same fingerprint from their base/quote token addresses and check against the known set. This prevents the same physical pool from being counted twice across data sources.
 
+The scoring cron applies the same fingerprint dedup during staged-pool merge, so a discovery-stage row cannot be re-counted when DeFiLlama already covers the same physical pool under a UUID.
+
 ### Storage
 
 Stored in D1 `dex_liquidity` table (created in migration 0009; extended in 0010, 0012, 0024, and 0036) with per-stablecoin aggregate metrics, protocol/chain TVL breakdowns, top 10 pools as JSON columns, plus v2 columns: `avg_pool_stress`, `weighted_balance_ratio`, `organic_fraction`, `effective_tvl_usd`, `durability_score`, `score_components_json`, `locked_liquidity_pct`, and `methodology_version`. Stablecoins with no DEX presence store `liquidity_score = NULL` (NR semantics).
@@ -145,20 +150,20 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
   - Scoring cron: `syncDexLiquidity()` every 30 minutes (`10,40 * * * *`).
   - Discovery cron: `syncDexDiscovery()` every 20 minutes (`3,23,43 * * * *`).
   - Discovery writes normalized candidates to `dex_pool_staging`; scoring cron consumes and merges them.
-- **Discovery staging schema**: `dex_pool_staging` includes `pool_id`, `stablecoin_id`, `source`, `chain`, `protocol`, `symbol`, `tvl_usd`, `volume_24h`, `fee_tier`, `balance_ratio`, `is_stable`, `base_token`, `quote_token`, `quote_symbol`, `price_usd`, `locked_liq_pct`, `raw_json`, `discovered_at`, `refreshed_at`; PK is `(pool_id, stablecoin_id)`.
+- **Discovery staging schema**: `dex_pool_staging` includes `pool_id`, `stablecoin_id`, `source`, `chain`, `protocol`, `dex_id`, `symbol`, `tvl_usd`, `volume_24h`, `quality_multiplier`, `pool_type`, `fee_tier`, `balance_ratio`, `is_stable`, `base_token`, `quote_token`, `quote_symbol`, `price_usd`, `locked_liq_pct`, `raw_json`, `discovered_at`, `refreshed_at`; PK is `(pool_id, stablecoin_id)`.
 - **Discovery meta schema**: `dex_discovery_meta` stores `stablecoin_id` (PK), `consecutive_misses`, `last_crawl_at`, `last_hit_at`.
 - **Tiered priority**:
   - T1: coins with 0 pools (or effectively eligible baseline), every run.
   - T2: 1–4 pools or 1 chain, every 3rd run.
   - T3: `>=5` pools on `>=2` chains, every 10th run.
-  - Sorting within each tier is by staleness (oldest crawl first) to prioritize stale coverage.
+  - Global scheduling is tier-first (`T1 -> T2 -> T3 -> dormant`), with staleness used only as the tie-breaker inside a tier.
 - **Exponential backoff**:
   - `consecutiveMisses` 0: T1
   - 3–5: T2
   - 6–9: T3
   - 10+: dormant (daily gate)
   - Any discovery hit resets `consecutiveMisses` to 0 and returns the coin to T1 immediately.
-- **Chain-aware source routing**: discovery only queries chains with defined entries in a stablecoin’s `contracts` map; this avoids unnecessary API calls against un-deployed chains.
+- **Chain-aware source routing**: discovery only queries chains with defined entries in a stablecoin’s `contracts` plus optional `tradedContracts` metadata; this avoids unnecessary API calls against un-deployed chains while preserving wrapper/secondary-market discovery addresses.
 - **Freshness confidence decay**: staged pool effective TVL is multiplied by `max(0.5, 1 - ageHours / 48)`; rows older than 24h are excluded from scoring merge.
 - **Staged pool defaults**: `organic_fraction = 0.5`, `balanceRatio = 1.0`, `lockedLiquidity = null`, `maturity = min(daysSinceDiscovered, 30)`, `isStable` inferred from normalized `quoteSymbol`.
 - **Source order and transport**: `CG Onchain -> GeckoTerminal -> DexScreener -> CG Tickers`, executed sequentially with one active fetch at a time (`1` connection).
@@ -167,14 +172,14 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 
 A sentinel row with `stablecoin_id = '__global__'` stores cross-stablecoin aggregates where each physical pool is counted only once (deduped by `poolId`). This prevents double-counting when a pool contains multiple tracked stablecoins (e.g., a USDT/USDC pool would otherwise add its full TVL to both USDT and USDC rows).
 
-The `__global__` row contains deduped `total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `pool_count`, `chain_count`, `protocol_tvl_json`, and `chain_tvl_json`. Score-related fields (`liquidity_score`, `concentration_hhi`, etc.) are NULL.
+The `__global__` row contains deduped `total_tvl_usd`, `total_volume_24h_usd`, `total_volume_7d_usd`, `pool_count`, `chain_count`, `protocol_tvl_json`, and `chain_tvl_json`. 24h and 7d volumes are deduped by `poolId` the same way TVL is. Score-related fields (`liquidity_score`, `concentration_hhi`, etc.) are NULL.
 
 The frontend reads `__global__` for overview stats (total DEX TVL, 24h volume, protocol/chain breakdown bars) instead of naively summing per-stablecoin values. The constant `DEX_GLOBAL_KEY` (`shared/types/index.ts`) provides the key.
 The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries total: the top 9 protocols render individually, and the remainder is grouped into `Other`.
 
 ### Additional Liquidity Metrics
 
-- **Concentration HHI**: Herfindahl-Hirschman Index computed from pool TVL shares before top-10 truncation. Range 0-1 (1.0 = single pool). Stored as `concentration_hhi`.
+- **Concentration HHI**: Herfindahl-Hirschman Index computed from the full retained pool set after filtering/caps but before top-10 display truncation. Range 0-1 (1.0 = single pool). Stored as `concentration_hhi`.
 - **Depth Stability**: Coefficient of variation of daily TVL over 30-day rolling window, inverted to 0-1 scale. Requires >=7 days of data. Stored as `depth_stability`.
 - **TVL Trends**: 24h and 7d percentage changes computed from daily history snapshots. Returned as `tvlChange24h`/`tvlChange7d`.
 - **Daily Snapshots**: One snapshot per stablecoin per day in `dex_liquidity_history` table (migration 0010). Written on first sync after UTC midnight.
@@ -192,25 +197,28 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 | **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin | TVL >= $50K, balance ratio >= 0.3 |
 | **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity (`isReasonablePrice`) |
 | **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity |
-| **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K (prices), >= $1K (pool discovery), peg-aware price sanity |
+| **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity |
 
 **Price extraction pipeline:**
-1. Collect price observations from all four sources during data fetching phase
+1. Collect price observations from all four source families during data fetching phase
 2. Merge all observations into a single map keyed by stablecoin ID
 3. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
 4. Compare with primary price from D1 cache to compute `deviation_from_primary_bps`
 5. Store in `dex_prices` with top 5 source pools as JSON (shows mixed protocols)
 
+Every source family now uses the same minimum liquidity rule for DEX prices: a pool must contribute at least `$50K` of liquidity at observation time. For staged discovery rows, the floor is applied after freshness confidence decay.
+
 **Confirmation gate in `detectDepegEvents()`:**
 - When primary price shows depeg (>=100bps), check DEX price
-- If DEX price is fresh (<20 min) and shows coin at peg (<100bps): **suppress** new depeg event (likely false positive)
+- Only **trusted** DEX rows are used for depeg suppression/confirmation: freshness `<20 min` and aggregate source TVL `>= $1M`
+- If a trusted DEX price shows coin at peg (<100bps): **suppress** new depeg event (likely false positive)
 - If DEX unavailable, stale, or confirms depeg: open event normally
 - Only affects **opening new** events — existing event updates/closures unchanged
 - ~80-100 stablecoins covered by multi-source observations; remainder fall through to primary-only detection
 
 **API exposure:**
 - `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`
-- `/api/peg-summary`: adds optional `dexPriceCheck` per coin
+- `/api/peg-summary`: adds optional `dexPriceCheck` per coin when the row passes a UI trust gate (fresh within 60 minutes and aggregate source TVL `>= $250K`)
 
 **Frontend:**
 - `dex-liquidity-card.tsx`: shows DEX-implied price section when available

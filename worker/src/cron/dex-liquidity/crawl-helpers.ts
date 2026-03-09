@@ -1,7 +1,8 @@
 import { BLOCKED_DEX_IDS } from "../../lib/dex-constants";
+import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
 import type { DexPriceObs, GtNewPool } from "./types";
-import { normalizeProtocol } from "./pool-helpers";
+import { buildPoolFingerprint, normalizeProtocol } from "./pool-helpers";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 
 export type CrawlStats = {
@@ -141,16 +142,18 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
 
         const price = side === "base" ? parsed.baseTokenPriceUsd : parsed.quoteTokenPriceUsd;
 
-        if (isPlausibleDexObservationPrice(token.stablecoinId, price) && parsed.tvlUsd >= 50_000) {
+        if (isPlausibleDexObservationPrice(token.stablecoinId, price) && parsed.tvlUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD) {
           const obs = config.priceObs.get(token.stablecoinId) ?? [];
           obs.push({ price, tvl: parsed.tvlUsd, chain: token.ourChain, protocol: parsed.dexId });
           config.priceObs.set(token.stablecoinId, obs);
         }
 
         const poolKey = `${token.ourChain}:${parsed.poolAddress}`;
-        const sortedTokens = [parsed.baseTokenAddress, parsed.quoteTokenAddress].sort().join(":");
-        const fpKey = `fp:${token.ourChain}:${normalizeProtocol(parsed.dexId)}:${sortedTokens}`;
-        if (config.knownPoolAddrs.has(poolKey) || config.knownPoolAddrs.has(fpKey)) {
+        const fpKey = buildPoolFingerprint(token.ourChain, parsed.dexId, [
+          parsed.baseTokenAddress,
+          parsed.quoteTokenAddress,
+        ]);
+        if (config.knownPoolAddrs.has(poolKey) || (fpKey != null && config.knownPoolAddrs.has(fpKey))) {
           config.stats.poolsSkippedKnown++;
           continue;
         }

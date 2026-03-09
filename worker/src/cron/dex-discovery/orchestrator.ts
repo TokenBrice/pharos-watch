@@ -1,6 +1,8 @@
 import type { CronResult } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
+import type { ContractDeployment } from "@shared/types";
+import { getTrackedContracts } from "../dex-liquidity/pool-helpers";
 import type { DiscoveryMeta } from "./types";
 import { DISCOVERY_TIERS } from "./types";
 import { crawlCoin } from "./crawl-sources";
@@ -27,7 +29,8 @@ interface DiscoveryCoverage {
 
 interface DiscoveryCandidate {
   stablecoinId: string;
-  coinChains: Map<string, string>;
+  tier: Exclude<EffectiveTier, "skip">;
+  targets: ContractDeployment[];
   meta: DiscoveryMeta | undefined;
 }
 
@@ -86,6 +89,19 @@ export function compareDiscoveryMeta(
   return aLast - bLast;
 }
 
+function discoveryTierPriority(tier: Exclude<EffectiveTier, "skip">): number {
+  switch (tier) {
+    case "t1":
+      return 0;
+    case "t2":
+      return 1;
+    case "t3":
+      return 2;
+    case "dormant":
+      return 3;
+  }
+}
+
 async function readLiquidityCoverage(db: D1Database): Promise<Map<string, DiscoveryCoverage>> {
   const rows = await db
     .prepare(
@@ -142,12 +158,16 @@ export async function syncDexDiscovery(
       tierBreakdown[tier] += 1;
       eligibleCoins.push({
         stablecoinId: coin.id,
-        coinChains: new Map((coin.contracts ?? []).map((contract) => [contract.chain, contract.address])),
+        tier,
+        targets: getTrackedContracts(coin),
         meta: metaById.get(coin.id),
       });
     }
 
-    eligibleCoins.sort((a, b) => compareDiscoveryMeta(a.meta, b.meta));
+    eligibleCoins.sort((a, b) =>
+      discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) ||
+      compareDiscoveryMeta(a.meta, b.meta)
+    );
 
     const deadlineMs = Date.now() + 13 * 60_000;
     const knownPoolIds = new Set<string>();
@@ -156,17 +176,16 @@ export async function syncDexDiscovery(
       throwIfAborted(signal);
 
       try {
-        const result = await crawlCoin(
-          candidate.stablecoinId,
-          candidate.coinChains,
-          cgApiKey,
-          knownPoolIds,
+          const result = await crawlCoin(
+            candidate.stablecoinId,
+            candidate.targets,
+            cgApiKey,
+            knownPoolIds,
           signal,
           deadlineMs,
         );
 
         await upsertStagedPools(db, result.pools);
-        // TODO(phase-2): Persist result.priceObs to a staging table for DEX price cross-validation in the scoring cron
         await updateDiscoveryMeta(db, candidate.stablecoinId, result.pools.length, nowSec);
 
         for (const pool of result.pools) {

@@ -63,7 +63,14 @@ function makeNeutralUsdAssets(count = 6) {
 
 function makeDb(config: {
   pendingRows?: PendingRow[];
-  dexRows?: Array<{ stablecoin_id: string; dex_price_usd: number; updated_at: number }>;
+  dexRows?: Array<{
+    stablecoin_id: string;
+    dex_price_usd: number;
+    updated_at: number;
+    source_pool_count?: number;
+    source_total_tvl?: number;
+    deviation_from_primary_bps?: number | null;
+  }>;
   openRows?: Array<{ stablecoin_id: string }>;
   dexError?: unknown;
 }): D1Database {
@@ -225,8 +232,20 @@ describe("confirmPendingDepegs", () => {
           }),
         ],
         dexRows: [
-          { stablecoin_id: "usdc-circle", dex_price_usd: 0.96, updated_at: nowSec - 30 },
-          { stablecoin_id: "usde-ethena", dex_price_usd: 1.001, updated_at: nowSec - 30 },
+          {
+            stablecoin_id: "usdc-circle",
+            dex_price_usd: 0.96,
+            updated_at: nowSec - 30,
+            source_pool_count: 4,
+            source_total_tvl: 5_000_000,
+          },
+          {
+            stablecoin_id: "usde-ethena",
+            dex_price_usd: 1.001,
+            updated_at: nowSec - 30,
+            source_pool_count: 4,
+            source_total_tvl: 5_000_000,
+          },
         ],
       }),
       [
@@ -273,6 +292,40 @@ describe("confirmPendingDepegs", () => {
       1,
     ]);
     expect(deletes).toEqual([10, 11, 12, 13]);
+  });
+
+  it("does not let a thin DEX row promote a pending event without CoinGecko support", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.mocked(fetchWithRetry).mockResolvedValue(null);
+
+    await confirmPendingDepegs(
+      makeDb({
+        pendingRows: [
+          makePendingRow({
+            id: 21,
+            stablecoin_id: "usdt-tether",
+            symbol: "USDT",
+            first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
+          }),
+        ],
+        dexRows: [
+          {
+            stablecoin_id: "usdt-tether",
+            dex_price_usd: 0.96,
+            updated_at: nowSec - 30,
+            source_pool_count: 1,
+            source_total_tvl: 250_000,
+          },
+        ],
+      }),
+      [
+        makeAsset({ id: "usdt-tether", symbol: "USDT", geckoId: "tether", price: 0.94 }),
+        ...makeNeutralUsdAssets(),
+      ],
+    );
+
+    expect(batchExecute).not.toHaveBeenCalled();
   });
 
   it("handles a missing dex_prices table without failing the run", async () => {

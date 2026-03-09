@@ -3,6 +3,121 @@ import { getCache, batchExecute } from "../../lib/db";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg, DexPriceObs } from "./types";
 import { computeDurabilityScore, computeLiquidityScore, normalizeProtocol } from "./pool-helpers";
 
+function getPoolExtraNumber(
+  extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
+  key: string,
+): number | null {
+  const value = extra?.[key as keyof NonNullable<typeof extra>];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function getPoolExtraBoolean(
+  extra: LiquidityMetrics["topPools"][number]["extra"] | undefined,
+  key: string,
+): boolean | null {
+  const value = extra?.[key as keyof NonNullable<typeof extra>];
+  return typeof value === "boolean" ? value : null;
+}
+
+function rebuildMetricsFromPools(pools: LiquidityMetrics["topPools"]) {
+  const protocolTvl: Record<string, number> = {};
+  const chainTvl: Record<string, number> = {};
+  const chains = new Set<string>();
+  const pairs = new Set<string>();
+
+  let totalTvlUsd = 0;
+  let totalVolume24hUsd = 0;
+  let totalVolume7dUsd = 0;
+  let qualityAdjustedTvl = 0;
+  let effectiveTvl = 0;
+  let balanceRatioWeightedSum = 0;
+  let totalTvlForBalance = 0;
+  let organicTvlWeightedSum = 0;
+  let totalTvlForOrganic = 0;
+  let stressWeightedSum = 0;
+  let oldestPoolDays = 0;
+  let lockedLiqWeightedSum = 0;
+  let totalTvlForLocked = 0;
+
+  for (const pool of pools) {
+    const proto = normalizeProtocol(pool.project);
+    protocolTvl[proto] = (protocolTvl[proto] ?? 0) + pool.tvlUsd;
+    chainTvl[pool.chain] = (chainTvl[pool.chain] ?? 0) + pool.tvlUsd;
+    chains.add(pool.chain);
+    pairs.add(pool.symbol);
+
+    totalTvlUsd += pool.tvlUsd;
+    totalVolume24hUsd += pool.volumeUsd1d || 0;
+    totalVolume7dUsd += pool.volumeUsd7d ?? 0;
+    qualityAdjustedTvl += getPoolExtraNumber(pool.extra, "qualityAdjustedTvl") ?? pool.tvlUsd;
+    effectiveTvl += getPoolExtraNumber(pool.extra, "effectiveTvl") ?? pool.tvlUsd;
+
+    const balanceRatio = getPoolExtraNumber(pool.extra, "balanceRatio");
+    if (balanceRatio != null) {
+      balanceRatioWeightedSum += pool.tvlUsd * balanceRatio;
+      totalTvlForBalance += pool.tvlUsd;
+    }
+
+    const organicFraction = getPoolExtraNumber(pool.extra, "organicFraction");
+    const hasMeasuredOrganicFraction = getPoolExtraBoolean(pool.extra, "hasMeasuredOrganicFraction") ?? false;
+    if (organicFraction != null && hasMeasuredOrganicFraction) {
+      organicTvlWeightedSum += pool.tvlUsd * organicFraction;
+      totalTvlForOrganic += pool.tvlUsd;
+    }
+
+    const stressIndex = getPoolExtraNumber(pool.extra, "stressIndex");
+    if (stressIndex != null) {
+      stressWeightedSum += pool.tvlUsd * stressIndex;
+    }
+
+    const maturityDays = getPoolExtraNumber(pool.extra, "maturityDays");
+    if (maturityDays != null) {
+      oldestPoolDays = Math.max(oldestPoolDays, maturityDays);
+    }
+
+    const lockedLiquidityPct = getPoolExtraNumber(pool.extra, "lockedLiquidityPct");
+    if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
+      lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
+      totalTvlForLocked += pool.tvlUsd;
+    }
+  }
+
+  let hhi = 0;
+  if (totalTvlUsd > 0) {
+    for (const pool of pools) {
+      const share = pool.tvlUsd / totalTvlUsd;
+      hhi += share * share;
+    }
+  }
+
+  const visiblePools = [...pools]
+    .sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd)
+    .slice(0, 10);
+
+  return {
+    totalTvlUsd,
+    totalVolume24hUsd,
+    totalVolume7dUsd,
+    poolCount: pools.length,
+    chains,
+    pairs,
+    protocolTvl,
+    chainTvl,
+    qualityAdjustedTvl,
+    effectiveTvl,
+    balanceRatioWeightedSum,
+    totalTvlForBalance,
+    organicTvlWeightedSum,
+    totalTvlForOrganic,
+    stressWeightedSum,
+    oldestPoolDays,
+    lockedLiqWeightedSum,
+    totalTvlForLocked,
+    hhi,
+    visiblePools,
+  };
+}
+
 /** Compute HHI, durability, and 6-component composite score per stablecoin. */
 export async function computeStablecoinScores(
   db: D1Database,
@@ -107,6 +222,7 @@ export async function computeStablecoinScores(
             p.tvlUsd = Math.round(p.tvlUsd * scale);
             if (p.extra) {
               const ex = p.extra as Record<string, number>;
+              if (ex.qualityAdjustedTvl != null) ex.qualityAdjustedTvl = Math.round(ex.qualityAdjustedTvl * scale);
               if (ex.effectiveTvl != null) ex.effectiveTvl = Math.round(ex.effectiveTvl * scale);
             }
           }
@@ -114,32 +230,38 @@ export async function computeStablecoinScores(
       }
     }
 
-    // Recompute aggregates from filtered pools so bogus data
-    // (e.g. fake-TVL exchanges like Dnax) doesn't pollute breakdown or scores.
-    m.protocolTvl = {};
-    m.chainTvl = {};
-    m.totalTvlUsd = 0;
-    m.effectiveTvl = 0;
-    m.poolCount = m.topPools.length;
-    m.chains = new Set();
-    m.pairs = new Set();
-    for (const p of m.topPools) {
-      const proto = normalizeProtocol(p.project);
-      m.protocolTvl[proto] = (m.protocolTvl[proto] ?? 0) + p.tvlUsd;
-      m.chainTvl[p.chain] = (m.chainTvl[p.chain] ?? 0) + p.tvlUsd;
-      m.totalTvlUsd += p.tvlUsd;
-      m.effectiveTvl += (p.extra as Record<string, number>)?.effectiveTvl ?? p.tvlUsd;
-      m.chains.add(p.chain);
-      m.pairs.add(p.symbol);
-    }
+    const retainedPools = [...m.topPools];
+    const rebuilt = rebuildMetricsFromPools(retainedPools);
+
+    // Recompute aggregates from retained pools so filtered/capped pools cannot
+    // continue influencing score inputs through stale pre-filter metrics.
+    m.protocolTvl = rebuilt.protocolTvl;
+    m.chainTvl = rebuilt.chainTvl;
+    m.totalTvlUsd = rebuilt.totalTvlUsd;
+    m.totalVolume24hUsd = rebuilt.totalVolume24hUsd;
+    m.totalVolume7dUsd = rebuilt.totalVolume7dUsd;
+    m.poolCount = rebuilt.poolCount;
+    m.chains = rebuilt.chains;
+    m.pairs = rebuilt.pairs;
+    m.qualityAdjustedTvl = rebuilt.qualityAdjustedTvl;
+    m.effectiveTvl = rebuilt.effectiveTvl;
+    m.balanceRatioWeightedSum = rebuilt.balanceRatioWeightedSum;
+    m.totalTvlForBalance = rebuilt.totalTvlForBalance;
+    m.organicTvlWeightedSum = rebuilt.organicTvlWeightedSum;
+    m.totalTvlForOrganic = rebuilt.totalTvlForOrganic;
+    m.stressWeightedSum = rebuilt.stressWeightedSum;
+    m.oldestPoolDays = rebuilt.oldestPoolDays;
+    m.lockedLiqWeightedSum = rebuilt.lockedLiqWeightedSum;
+    m.totalTvlForLocked = rebuilt.totalTvlForLocked;
 
     // Global dedup: accumulate from ALL pools (pre-truncation) so every physical
     // pool is counted once even when shared by multiple stablecoins.
-    for (const p of m.topPools) {
+    for (const p of retainedPools) {
       if (globalSeenPools.has(p.poolId)) continue;
       globalSeenPools.add(p.poolId);
       globalTotalTvl += p.tvlUsd;
       globalTotalVol24h += p.volumeUsd1d;
+      globalTotalVol7d += p.volumeUsd7d ?? 0;
       globalPoolCount++;
       const chainKey = p.chain.toLowerCase();
       globalChains.add(chainKey);
@@ -150,21 +272,8 @@ export async function computeStablecoinScores(
       const pcKey = `${proto}:${chainKey}`;
       globalProtoChainTvl[pcKey] = (globalProtoChainTvl[pcKey] ?? 0) + p.tvlUsd;
     }
-    globalTotalVol7d += m.totalVolume7dUsd;
 
-    // Sort and trim top pools to 10 BEFORE HHI so stored HHI matches displayed pools
-    m.topPools.sort((a, b) => (b.volumeUsd1d || 0) - (a.volumeUsd1d || 0) || b.tvlUsd - a.tvlUsd);
-    m.topPools.length = Math.min(m.topPools.length, 10);
-
-    // Compute HHI from visible (truncated) pools
-    let hhi = 0;
-    const visibleTvl = m.topPools.reduce((s, p) => s + p.tvlUsd, 0);
-    if (visibleTvl > 0) {
-      for (const p of m.topPools) {
-        const share = p.tvlUsd / visibleTvl;
-        hhi += share * share;
-      }
-    }
+    m.topPools = rebuilt.visiblePools;
 
     // v2: Compute durability score
     const tvlStab = stabilityMap.get(id) ?? null;
@@ -192,7 +301,7 @@ export async function computeStablecoinScores(
       tvl: m.totalTvlUsd,
       vol24h: m.totalVolume24hUsd,
       score,
-      hhi: Math.round(hhi * 10000) / 10000,
+      hhi: Math.round(rebuilt.hhi * 10000) / 10000,
       durability,
       components,
       weightedBalanceRatio,

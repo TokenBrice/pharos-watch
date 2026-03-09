@@ -1,6 +1,5 @@
 import {
   getDepegThresholdBps,
-  DEX_FRESHNESS_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
   DEPEG_PENDING_EXPIRY_SEC,
   DEPEG_SECONDARY_THRESHOLD_RATIO,
@@ -11,7 +10,7 @@ import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins";
 import { fetchWithRetry } from "../lib/fetch-retry";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { throwIfAborted } from "../lib/abort";
-import { buildInsertDepegEventStmt, loadDexPriceMap } from "../lib/depeg-helpers";
+import { buildInsertDepegEventStmt, isTrustedDexPriceRow, loadDexPriceRows } from "../lib/depeg-helpers";
 import type { DepegEvent, PegAssetBase } from "@shared/types";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
 
@@ -63,20 +62,7 @@ export async function confirmPendingDepegs(
 
   // Load DEX prices
   throwIfAborted(signal);
-  const dexPrices = await loadDexPriceMap(db);
-  let dexUpdatedAtById = new Map<string, number>();
-  try {
-    throwIfAborted(signal);
-    const dexResult = await db
-      .prepare("SELECT stablecoin_id, updated_at FROM dex_prices")
-      .all<{ stablecoin_id: string; updated_at: number }>();
-    dexUpdatedAtById = new Map((dexResult.results ?? []).map((r) => [r.stablecoin_id, r.updated_at]));
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (!msg.includes("no such table")) {
-      console.error("[depeg-confirm] Unexpected error loading dex_prices metadata:", msg);
-    }
-  }
+  const dexPriceRows = await loadDexPriceRows(db);
 
   // Check for existing open events to avoid duplicates
   throwIfAborted(signal);
@@ -171,15 +157,14 @@ export async function confirmPendingDepegs(
 
     // 4. Read DEX median
     let dexAgrees: boolean | null = null;
-    const dexPrice = dexPrices.get(row.stablecoin_id);
-    const dexUpdatedAt = dexUpdatedAtById.get(row.stablecoin_id);
-    if (dexPrice != null && dexUpdatedAt != null && (now - dexUpdatedAt) < DEX_FRESHNESS_SEC) {
+    const dexRow = dexPriceRows.get(row.stablecoin_id);
+    if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
       const dexBps = Math.abs(Math.round(
-        ((dexPrice / row.peg_reference) - 1) * 10000
+        ((dexRow.dex_price_usd / row.peg_reference) - 1) * 10000
       ));
       dexAgrees = dexBps >= secondaryBar;
       console.log(
-        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexPrice}, deviation=${dexBps}bps, ` +
+        `[depeg-confirm] ${row.symbol} DEX check: price=$${dexRow.dex_price_usd}, deviation=${dexBps}bps, ` +
         `bar=${secondaryBar}bps, agrees=${dexAgrees}`
       );
     }

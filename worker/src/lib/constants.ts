@@ -18,12 +18,21 @@ export function getDepegThresholdBps(pegType: string | undefined): number {
 /** Maximum age (in seconds) for a DEX price observation to be considered fresh */
 export const DEX_FRESHNESS_SEC = 1200;
 
+/** Minimum per-pool liquidity required for a DEX price observation to be stored. */
+export const DEX_PRICE_OBSERVATION_MIN_TVL_USD = 50_000;
+
 /**
  * UI-facing peg-summary DEX price check freshness window.
  * Dex liquidity sync runs every 30 minutes, so this allows one missed slot
  * before hiding the DEX cross-check column data.
  */
 export const DEX_PRICE_CHECK_FRESHNESS_SEC = 3600;
+
+/** Minimum aggregate DEX source TVL required before showing a UI-facing DEX price check. */
+export const DEX_PRICE_CHECK_UI_MIN_TVL_USD = 250_000;
+
+/** Minimum aggregate DEX source TVL required before depeg logic trusts a DEX price row. */
+export const DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD = 1_000_000;
 
 /** D1 batch statement limit per db.batch() call */
 export const D1_BATCH_SIZE = 100;

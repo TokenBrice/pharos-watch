@@ -13,6 +13,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 | `DEPEG_PENDING_EXPIRY_SEC` | 2700 (45 min) | Maximum time before a pending record expires |
 | `DEPEG_SECONDARY_THRESHOLD_RATIO` | 0.5 | Secondary source agreement bar (50% of primary threshold) |
 | `DEX_FRESHNESS_SEC` | 1200 (20 min) | DEX prices older than this are ignored |
+| `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
 
@@ -92,6 +93,8 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
 4. Merge duplicate open events: for each coin with multiple open events, keep earliest, absorb worst peak, delete rest
 
+`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 20 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress, confirm, or auto-close events.
+
 ### Per-Asset Processing
 
 Validation gates (skip if any fail):
@@ -115,12 +118,12 @@ direction = bps >= 0 ? "above" : "below"
 
 - If direction changed (was above, now below or vice versa): close old event, open new one
 - Same direction: mark as legitimately open (add to `seen` set), update peak if worse
-- DEX cross-validation for ongoing events: if DEX disagrees AND event is >= 30 min old AND DEX has >= $1M TVL, auto-close the event
+- DEX cross-validation for ongoing events: if a **trusted** DEX row disagrees AND event is >= 30 min old, auto-close the event
 
 **Path B -- Deviation >= threshold AND no event open**
 
 - Supply >= $1B: insert into `depeg_pending` (`ON CONFLICT DO NOTHING`) for multi-source confirmation
-- Supply < $1B: check DEX cross-validation. If DEX disagrees, suppress (skip). Otherwise, insert into `depeg_events` immediately
+- Supply < $1B: check trusted DEX cross-validation. If a trusted DEX row disagrees, suppress (skip). Otherwise, insert into `depeg_events` immediately
 
 **Path C -- Deviation < threshold AND event open**
 
@@ -160,7 +163,7 @@ Age checks:
 **DEX check:**
 
 - Read from `dex_prices` table (same data as Stage 1)
-- Must be within 20-minute freshness window
+- Must be within 20-minute freshness window and have aggregate source TVL >= $1M
 - Agrees if deviation >= `secondaryBar`
 
 ### Decision Matrix
@@ -196,7 +199,7 @@ Price crosses threshold
 While event is open:
   - Peak deviation updated if worse price seen
   - Direction change: close old, open new
-  - DEX disagrees + event >= 30min + DEX TVL >= $1M: auto-close
+  - Trusted DEX row disagrees + event >= 30min: auto-close
   - Price recovers below threshold: close with recovery_price
 
 Orphan cleanup:
