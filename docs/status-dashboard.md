@@ -162,10 +162,17 @@ The UI uses that block plus `crons["dispatch-telegram-alerts"].lastRun.metadata`
 1. Probes critical public/admin read endpoints using a hybrid strategy:
    - default production origin (`https://api.pharos.watch`): router-dispatched internal `GET` requests to avoid Cloudflare custom-domain self-fetch `522` false negatives while still exercising the real handler/auth path
    - explicit non-default `SELF_URL`: real HTTPS `fetch()` probes with a 10s timeout per endpoint
+   - internal-router timings reflect uncached worker handler execution, not browser-visible edge-cache latency
 2. Persists probe aggregate to `status_probe_runs`.
 3. Reconciles raw status into persisted effective state.
 4. Tracks divergence streak and probe-failure streak in `status_discrepancy_state`.
 5. Sends alert on sustained divergence and independently alerts on sustained probe failures (3+ consecutive failing checks).
+
+The cron metadata now includes:
+
+- `probeMode` / `probeBaseUrl`
+- `latencySummary` (`minMs`, `medianMs`, `p95Ms`, `maxMs`)
+- `slowestProbes` (top slow endpoints for the run)
 
 `status_discrepancy_state` persists both divergence and probe-failure alert state:
 `consecutive_divergent`, `last_divergent_at`, `last_alert_at`,
@@ -227,7 +234,7 @@ Mutating admin paths are protected by method guardrails:
 | File                                           | Role                                                                                                                                                                                                                  |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/app/status/client.tsx`                    | Auth gate + status dashboard orchestration shell                                                                                                                                                                      |
-| `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards surface structured metadata for warning/error runs and expose full raw metadata in a collapsible panel. |
+| `src/components/status/*`                      | Decomposed status UI modules (banner, diagnostics, probe grid, cron cards, admin actions, tables). Cron cards surface structured metadata for warning/error runs, show textual recent-run counts alongside history dots, and expose full raw metadata in a collapsible panel. |
 | `src/components/status/telegram-bot-stats.tsx` | Telegram bot subscriber metrics + last dispatch summary panel                                                                                                                                                         |
 | `src/hooks/use-status.ts`                      | Shared polling policy for `/api/status` (`staleTime=60s`, `refetchInterval=120s`) with admin key auth                                                                                                                 |
 | `src/hooks/use-endpoint-probes.ts`             | Shared polling policy for endpoint probes (`staleTime=60s`, `refetchInterval=120s`) + group definitions                                                                                                               |

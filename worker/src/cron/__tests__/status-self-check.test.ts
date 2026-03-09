@@ -111,6 +111,24 @@ describe("runStatusSelfCheck", () => {
     expect(metadata.alertSent).toBe(true);
   });
 
+  it("records latency summary and slowest probes in cron metadata", async () => {
+    const result = await runStatusSelfCheck({} as D1Database, "secret");
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      p95LatencyMs?: number;
+      latencySummary?: { p95Ms?: number; medianMs?: number; maxMs?: number; minMs?: number };
+      slowestProbes?: Array<{ path?: string; latencyMs?: number; status?: number }>;
+    };
+
+    expect(metadata.latencySummary?.p95Ms).toBe(metadata.p95LatencyMs);
+    expect(metadata.latencySummary?.medianMs).toBeTypeOf("number");
+    expect(metadata.latencySummary?.maxMs).toBeTypeOf("number");
+    expect(metadata.latencySummary?.minMs).toBeTypeOf("number");
+    expect(Array.isArray(metadata.slowestProbes)).toBe(true);
+    expect(metadata.slowestProbes).toHaveLength(2);
+    expect(metadata.slowestProbes?.every((probe) => typeof probe.path === "string")).toBe(true);
+    expect(metadata.slowestProbes?.every((probe) => typeof probe.latencyMs === "number")).toBe(true);
+  });
+
   it("alerts on sustained probe failures even when no status divergence exists", async () => {
     fetchMock
       .mockResolvedValueOnce(new Response("{}", { status: 503 }))

@@ -33,6 +33,10 @@ function readRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
+function readArray(value: unknown): unknown[] | null {
+  return Array.isArray(value) ? value : null;
+}
+
 function formatApiErrorClasses(value: unknown): string | null {
   const record = readRecord(value);
   if (!record) return null;
@@ -44,6 +48,24 @@ function formatApiErrorClasses(value: unknown): string | null {
     .filter((item): item is string => item != null)
     .sort((a, b) => a.localeCompare(b));
   return parts.length > 0 ? parts.join(", ") : null;
+}
+
+function formatSlowestProbes(value: unknown): string | null {
+  const probes = readArray(value);
+  if (!probes || probes.length === 0) return null;
+
+  const parts = probes
+    .map((probe) => {
+      const record = readRecord(probe);
+      const path = readString(record?.path);
+      const latencyMs = readNumber(record?.latencyMs);
+      if (!path || latencyMs == null) return null;
+      return `${path} ${latencyMs}ms`;
+    })
+    .filter((item): item is string => item != null)
+    .slice(0, 2);
+
+  return parts.length > 0 ? `slowest ${parts.join(", ")}` : null;
 }
 
 function summarizeMetadata(job: string, metadata: Record<string, unknown> | undefined): string[] {
@@ -58,13 +80,22 @@ function summarizeMetadata(job: string, metadata: Record<string, unknown> | unde
     const discrepancyStreak = readNumber(metadata.discrepancyStreak);
     const probeFailureStreak = readNumber(metadata.probeFailureStreak);
     const p95LatencyMs = readNumber(metadata.p95LatencyMs);
+    const probeMode = readString(metadata.probeMode);
+    const latencySummary = readRecord(metadata.latencySummary);
+    const medianLatencyMs = readNumber(latencySummary?.medianMs);
+    const maxLatencyMs = readNumber(latencySummary?.maxMs);
+    const slowestProbes = formatSlowestProbes(metadata.slowestProbes);
 
     const lines = [
       sampleCount != null && failCount != null && probeStatus
         ? `probes ${sampleCount - failCount}/${sampleCount} ok, ${failCount} failed (${probeStatus})`
         : null,
       rawOverallStatus && effectiveStatus ? `status raw ${rawOverallStatus} -> effective ${effectiveStatus}` : null,
-      p95LatencyMs != null ? `p95 latency ${p95LatencyMs}ms` : null,
+      probeMode ? `probe mode ${probeMode}` : null,
+      p95LatencyMs != null
+        ? `latency${medianLatencyMs != null ? ` median ${medianLatencyMs}ms,` : ""} p95 ${p95LatencyMs}ms${maxLatencyMs != null ? `, max ${maxLatencyMs}ms` : ""}`
+        : null,
+      slowestProbes,
       discrepancyStreak != null && discrepancyStreak > 0 ? `divergence streak ${discrepancyStreak}` : null,
       probeFailureStreak != null && probeFailureStreak > 0 ? `probe failure streak ${probeFailureStreak}` : null,
     ];
@@ -159,6 +190,9 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
 
         <div className="flex items-center gap-1">
           <span className="mr-1 text-xs text-muted-foreground">History:</span>
+          <span className="mr-2 text-xs text-muted-foreground">
+            {cron.recentRuns.length > 0 ? `${cron.recentRuns.length} runs` : "none"}
+          </span>
           {cron.recentRuns.map((run, i) => (
             <div
               key={i}
@@ -174,7 +208,6 @@ export function CronCard({ job, cron, nowSeconds }: CronCardProps) {
               title={`${run.status} — ${new Date(run.startedAt * 1000).toLocaleString()} (${formatDuration(run.durationMs)})`}
             />
           ))}
-          {cron.recentRuns.length === 0 && <span className="text-xs text-muted-foreground">none</span>}
         </div>
       </CardContent>
     </Card>

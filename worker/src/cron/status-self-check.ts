@@ -23,6 +23,13 @@ interface ProbeResult {
   error?: string;
 }
 
+interface ProbeLatencySummary {
+  minMs: number;
+  medianMs: number;
+  p95Ms: number;
+  maxMs: number;
+}
+
 const PUBLIC_PROBE_PATHS = getProbePaths("public");
 const ADMIN_PROBE_PATHS = getProbePaths("admin").filter((path) => path !== "/api/status");
 
@@ -40,6 +47,41 @@ function percentile95(latencies: number[]): number {
   const sorted = [...latencies].sort((a, b) => a - b);
   const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
   return sorted[idx];
+}
+
+function percentile(latencies: number[], quantile: number): number {
+  if (latencies.length === 0) return 0;
+  const sorted = [...latencies].sort((a, b) => a - b);
+  const bounded = Math.min(1, Math.max(0, quantile));
+  const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * bounded));
+  return sorted[idx];
+}
+
+function buildLatencySummary(probes: ProbeResult[]): ProbeLatencySummary {
+  const latencies = probes.map((probe) => probe.latencyMs);
+  return {
+    minMs: probes.length > 0 ? Math.min(...latencies) : 0,
+    medianMs: percentile(latencies, 0.5),
+    p95Ms: percentile95(latencies),
+    maxMs: probes.length > 0 ? Math.max(...latencies) : 0,
+  };
+}
+
+function getSlowestProbes(probes: ProbeResult[], limit = 3): Array<{
+  path: string;
+  status: number;
+  latencyMs: number;
+  error: string | null;
+}> {
+  return [...probes]
+    .sort((a, b) => b.latencyMs - a.latencyMs)
+    .slice(0, limit)
+    .map((probe) => ({
+      path: probe.path,
+      status: probe.status,
+      latencyMs: probe.latencyMs,
+      error: probe.error ?? null,
+    }));
 }
 
 function classifyProbeStatus(sampleCount: number, failCount: number, p95LatencyMs: number): StatusLevel {
@@ -211,7 +253,9 @@ export async function runStatusSelfCheck(
   const passCount = probes.filter((probe) => probe.ok).length;
   const failCount = sampleCount - passCount;
   const hasProbeFailure = failCount > 0;
-  const p95LatencyMs = percentile95(probes.map((probe) => probe.latencyMs));
+  const latencySummary = buildLatencySummary(probes);
+  const slowestProbes = getSlowestProbes(probes);
+  const p95LatencyMs = latencySummary.p95Ms;
   const probeStatus = classifyProbeStatus(sampleCount, failCount, p95LatencyMs);
 
   await writeStatusProbeRun(db, now, {
@@ -230,6 +274,10 @@ export async function runStatusSelfCheck(
           latencyMs: probe.latencyMs,
           error: probe.error ?? null,
         })),
+      latencySummary,
+      slowestProbes,
+      probeBaseUrl: probeBaseUrl.origin,
+      probeMode,
     },
   });
 
@@ -314,11 +362,13 @@ export async function runStatusSelfCheck(
       passCount,
       failCount,
       p95LatencyMs,
+      latencySummary,
       probeStatus,
       rawOverallStatus: raw.rawOverallStatus,
       effectiveStatus,
       discrepancy,
       discrepancyStreak: discrepancyState.consecutiveDivergent,
+      slowestProbes,
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
       probeFailureStreak: discrepancyState.consecutiveProbeFailures,
