@@ -208,7 +208,7 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 
 ## Warning Signals (Phase 2)
 
-`yield-helpers.ts::detectWarningSignals()` runs in the sync cron and stores results in the `warning_signals` column of `yield_data`. It detects:
+`yield-helpers.ts::detectWarningSignals()` runs in the sync cron and stores baseline results in the `warning_signals` column of `yield_data`. Rankings responses also add a read-time freshness signal. Frontend-visible warning keys are:
 
 | Signal             | Condition                        | Meaning                              |
 | ------------------ | -------------------------------- | ------------------------------------ |
@@ -217,8 +217,9 @@ https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS3MO
 | `negative-trend`   | `currentApy < apy30d * 0.7`      | 30% decline from average             |
 | `reward-heavy`     | `apyReward / apy > 0.8`          | 80%+ from incentives, not base yield |
 | `tvl-outflow`      | TVL dropped > 20% from prev week | Capital leaving the protocol         |
+| `data-stale`       | `updated_at` > 90 min old        | Yield data hasn't refreshed in 90+ min |
 
-At rankings cache-build time, `sync-yield-data` also decorates rows with a read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
+At rankings cache-build time, `sync-yield-data` decorates rows with the read-time-only `data-stale` signal when `updated_at` is older than 90 minutes (`STALE_THRESHOLD_MS`). This signal is included in cached rankings responses but is not written back to `yield_data`.
 
 The sync also performs an operational cross-source check after metric computation: if a coin has both native yield (`onchain` / `defillama` / `price-derived`) and auto-discovered lending yield (`defillama-auto`), and the APYs diverge by more than 50% (relative to the larger APY), it emits a `[yield-sync] APY divergence ...` `console.warn` log. This is observability-only and does not affect persisted data or ranking behavior.
 
@@ -226,7 +227,7 @@ The sync also performs an operational cross-source check after metric computatio
 
 ## Database Schema
 
-**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK)
+**Migrations:** `worker/migrations/0031_yield_data.sql` (initial), `worker/migrations/0041_yield_data_multi_source.sql` (multi-source PK), `worker/migrations/0056_yield_history_warning_signals.sql` (adds historical warning signal persistence)
 
 ### `yield_data` — Current Snapshot (one row per coin per source)
 
@@ -387,7 +388,9 @@ Pre-computed rankings served from cache. Written by `sync-yield-data`.
 
 Default sort: `pharos_yield_score` DESC. `altSources` is an empty array for coins with only one yield source. `medianApy` is the TVL-weighted median of best-source `apy30d` values and is used by peer-reference warning heuristics.
 
-### `GET /api/yield-history?stablecoin=<id>&days=<n>`
+`medianApy` type: `number`.
+
+### `GET /api/yield-history`
 
 Historical APY data points for a single coin. Reads from `yield_history` directly.
 
@@ -400,6 +403,8 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 
 **Response:** Array of `{ date, apy, apyBase, apyReward, exchangeRate, sourceTvlUsd, warningSignals }` sorted by `date` ASC.
 
+`warningSignals` type: `string[]`.
+
 ---
 
 ## Frontend
@@ -410,16 +415,17 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 
 **Layout (top to bottom):**
 
-1. New-feature notice banner (amber)
-2. Stale data banner (triggers at 2 × 30 min = 60 min)
-3. Summary stat cards — Average Yield (TVL-weighted), Risk-Free Rate, Best Risk-Adjusted (highest PYS)
-4. Yield vs Safety scatter plot
-5. Yield leaderboard table
-6. Disclaimer
+1. Stale data banner (triggers at 2 × 30 min = 60 min)
+2. Summary stat cards — Average Yield (TVL-weighted), Risk-Free Rate, Best Risk-Adjusted (highest PYS)
+3. Yield vs Safety scatter plot
+4. Yield leaderboard table
+5. Disclaimer
 
 ### Stablecoin Detail: `YieldDetailSection` (`src/components/yield-detail-section.tsx`)
 
-Detail pages can mount a per-coin yield section that reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, then passes the shared risk-free rate and peer median into `YieldHistoryChart`.
+Yield intelligence section for stablecoin detail pages. Shows stat cards (Current APY, 30d APY, PYS with breakdown, Stability, Excess Yield), source info, alt sources, warning callouts, and embedded `YieldHistoryChart`. Conditional: only renders for coins with yield data.
+
+It reuses the cached `/api/yield-rankings` payload to find the coin's best-source row, then passes the shared risk-free rate and peer median into `YieldHistoryChart`.
 
 **Layout (top to bottom):**
 
@@ -479,7 +485,9 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 ### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
 
-Shared Recharts history module for per-coin yield trends. It reads `/api/yield-history` through `useYieldHistory`, renders the main APY line with optional base/reward overlays, and layers two horizontal benchmarks: the current T-bill rate and the current peer median. Points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip.
+Recharts line chart. Primary APY line with optional base/reward breakdown toggle. Two reference lines: T-bill rate and peer median APY. Warning signal markers on data points. Time presets: 7d / 30d / 90d / 1y.
+
+It reads `/api/yield-history` through `useYieldHistory`, and points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip.
 
 The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) plus an optional breakdown toggle. Compact mode keeps the same data semantics for inline leaderboard expansion, but shortens the chart height to 200px and drops reference-line labels to protect legibility in tighter rows.
 
@@ -540,6 +548,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `worker/migrations/0031_yield_data.sql`              | D1 schema: `yield_data` + `yield_history` tables                                                                                             |
 | `worker/migrations/0041_yield_data_multi_source.sql` | Adds `source_key` + `is_best` columns, changes PK to `(stablecoin_id, source_key)`                                                           |
+| `worker/migrations/0056_yield_history_warning_signals.sql` | Adds `warning_signals` history persistence support                                                                                       |
 | `worker/src/cron/sync-yield-data.ts`                 | Main sync cron: three-tier resolution, multi-source matching, PYS, safety scores, caching                                                    |
 | `worker/src/cron/yield-config.ts`                    | Static config: `YIELD_POOL_MAP`, `YIELD_VARIANT_MAP`, `ON_CHAIN_RATE_CONFIGS`                                                                |
 | `worker/src/cron/yield-helpers.ts`                   | Pure functions: APY, PYS, stability, variance, warning signals, `matchAllDlPools`                                                            |
@@ -549,6 +558,7 @@ Covers all pure functions in `yield-helpers.ts`:
 | `shared/types/index.ts`                              | `YieldConfig`, `YieldType`, `YieldRanking` (`.altSources: AltYieldSource[]`), `AltYieldSource`, `YieldRankingsResponse`, `YieldHistoryPoint` |
 | `shared/lib/classification.ts`                       | `YIELD_TYPE_LABELS`, `YIELD_TYPE_STYLES`                                                                                                     |
 | `src/hooks/use-yield-rankings.ts`                    | TanStack Query hook for rankings                                                                                                             |
+| `src/hooks/use-yield-history.ts`                     | TanStack Query hook for per-coin APY history                                                                                                 |
 | `src/lib/yield-constants.ts`                         | Shared warning-signal labels and formatter used by yield detail/history surfaces                                                             |
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |

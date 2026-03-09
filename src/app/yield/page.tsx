@@ -60,7 +60,7 @@ export default function YieldPage() {
       breadcrumbName="Yield Intelligence"
       path="/yield/"
       title="Yield Intelligence"
-      statusBadge={{ status: "experimental", version: YIELD_METHODOLOGY_VERSION_LABEL }}
+      statusBadge={{ status: "mature", version: YIELD_METHODOLOGY_VERSION_LABEL }}
       methodology={{
         version: YIELD_METHODOLOGY_VERSION_LABEL,
         changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
