@@ -398,7 +398,7 @@ Historical APY data points for a single coin. Reads from `yield_history` directl
 | `stablecoin` | string  | required | —      | Pharos stablecoin ID |
 | `days`       | integer | 90       | 1–365  | Lookback window      |
 
-**Response:** Array of `{ date, apy, apyBase, apyReward, exchangeRate, sourceTvlUsd }` sorted by `date` ASC.
+**Response:** Array of `{ date, apy, apyBase, apyReward, exchangeRate, sourceTvlUsd, warningSignals }` sorted by `date` ASC.
 
 ---
 
@@ -442,11 +442,18 @@ Stability display multiplies the raw 0–1 value by 100 for both the bar width a
 
 **Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name and its current APY.
 
+### `YieldHistoryChart` (`src/components/yield-history-chart.tsx`)
+
+Shared Recharts history module for per-coin yield trends. It reads `/api/yield-history` through `useYieldHistory`, renders the main APY line with optional base/reward overlays, and layers two horizontal benchmarks: the current T-bill rate and the current peer median. Points carrying `warningSignals` get amber markers so spike/divergence/reward-heavy regimes are visible without expanding the tooltip.
+
+The control row exposes four fixed lookback presets (`7d`, `30d`, `90d`, `1y`) plus an optional breakdown toggle. Compact mode keeps the same data semantics for inline leaderboard expansion, but shortens the chart height to 200px and drops reference-line labels to protect legibility in tighter rows.
+
 ### Hooks
 
 | Hook               | File                              | Endpoint              | Stale Time            |
 | ------------------ | --------------------------------- | --------------------- | --------------------- |
 | `useYieldRankings` | `src/hooks/use-yield-rankings.ts` | `/api/yield-rankings` | `CRON_30MIN` (30 min) |
+| `useYieldHistory`  | `src/hooks/use-yield-history.ts`  | `/api/yield-history`  | `CRON_30MIN` (30 min) |
 
 ---
 
@@ -510,5 +517,6 @@ Covers all pure functions in `yield-helpers.ts`:
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
+| `src/components/yield-history-chart.tsx`             | Shared APY history chart with T-bill / peer-median reference lines, optional base-reward split, and warning markers                         |
 | `src/components/yield-scatter-plot.tsx`              | Risk-adjusted scatter visualization                                                                                                          |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`    | Unit tests for all pure yield functions                                                                                                      |
