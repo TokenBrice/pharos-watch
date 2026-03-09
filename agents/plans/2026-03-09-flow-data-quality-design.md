@@ -109,6 +109,53 @@
 
 ---
 
+## Cross-Cutting: Impact Measurement
+
+**Goal:** Prove each change improved data quality with concrete before/after metrics.
+
+**Approach:**
+- Before running Q1/Q2 retroactive migrations, capture a "before" snapshot:
+  - Aggregate 30d burn volume (total USD)
+  - Bank Run Gauge score
+  - Per-coin pressure shift for the top 10 coins by market cap
+  - Count of coins returning NR vs scored
+- After each migration, capture "after" snapshot and compute the diff
+- Produces concrete evidence: e.g., "Q1 reclassified 2,847 events as atomic_roundtrip, reducing 30d aggregate burn volume by 8%"
+- Also validates Q4 threshold calibration — shows how many coins flip to NR at $50K
+
+**Output:** Summary logged to console during migration; no persistent storage needed.
+
+---
+
+## Cross-Cutting: Methodology Versioning
+
+**Goal:** Transparency for users who make financial decisions based on flow data.
+
+**Approach:**
+- Bump methodology version from v4.4 → v4.5
+- Update the `/methodology` page's mint/burn flow section to document:
+  - Atomic roundtrip exclusion (Q1)
+  - Expanded bridge detection (Q2)
+  - Minimum activity gate (Q4)
+- Add changelog entry at `/methodology/mint-burn-flow-changelog/`
+- Update `docs/mint-burn-flows.md` to reflect new constants, flow_type column, and bridge coverage
+
+---
+
+## Cross-Cutting: Cron Observability Counters
+
+**Goal:** Production visibility into whether the new filters are firing correctly.
+
+**Approach:**
+- The sync already returns `{ itemCount, status, metadata }` — extend `metadata` with:
+  - `atomicRoundtripsDetected` — count of events flagged as atomic_roundtrip this cycle
+  - `bridgeBurnsClassified` — count of burns classified as bridge_burn this cycle
+  - `nullPricesHealed` — count of NULL amount_usd events backfilled this cycle
+- These counters flow into the existing `/status` dashboard health view with zero new endpoints
+- Enables monitoring: if `bridgeBurnsClassified` drops to zero for weeks, the address list may be stale
+
+---
+
 ## Non-Goals
 
 - Multi-chain expansion (deferred — adds significant Alchemy budget and D1 load)
