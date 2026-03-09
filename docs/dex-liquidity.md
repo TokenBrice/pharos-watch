@@ -5,20 +5,21 @@
 `syncDexLiquidity()` in `worker/src/cron/dex-liquidity/orchestrator.ts` runs every 30 minutes (on the `10,40 * * * *` cron schedule) and computes a composite liquidity score (0-100) per stablecoin from 6 components:
 
 Cron result status semantics:
+
 - `ok`: all required source families succeeded and coverage is within normal range.
 - `degraded`: one or more critical non-fatal source families failed (for example DeFiLlama yields/protocol coverage), or coverage falls near the guardrail band.
 - throw/error: catastrophic source failure (for example DL+Curve hard failure) still aborts the run.
 
 Run metadata now includes `failedSources`, `fallbackMode` signals, staged-pool merge counters (`stagedPoolsMerged`, `stagedPoolsSkipped`, `stagedPoolsSkippedByAddress`, `stagedPoolsSkippedByFingerprint`), and detailed `sourceCoverage` values (`currentCoverage`, `previousCoverage`, `minExpectedCoverage`, `nearCoverageGuard`).
 
-| Component | Weight | Source | How Computed |
-|-----------|--------|--------|-------------|
-| **TVL Depth** | 30% | DeFiLlama Yields | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
-| **Volume Activity** | 20% | DeFiLlama Yields | Volume/TVL ratio. 0->0, 0.5->100 |
-| **Pool Quality** | 20% | Curve API + DeFiLlama | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below) |
-| **Durability** | 15% | DeFiLlama Yields + History | 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity |
-| **Pair Diversity** | 7.5% | DeFiLlama Yields | Pool count, diminishing returns: min(100, poolCount x 5) |
-| **Cross-chain** | 7.5% | DeFiLlama Yields | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100) |
+| Component           | Weight | Source                     | How Computed                                                                                                           |
+| ------------------- | ------ | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **TVL Depth**       | 30%    | DeFiLlama Yields           | Log-scale using effective TVL (quality-adjusted, metapool-deduped): $100K->20, $1M->40, $10M->60, $100M->80, $1B+->100 |
+| **Volume Activity** | 20%    | DeFiLlama Yields           | Volume/TVL ratio. 0->0, 0.5->100                                                                                       |
+| **Pool Quality**    | 20%    | Curve API + DeFiLlama      | Quality-adjusted TVL using mechanism x balance health x pair quality multipliers (see below)                           |
+| **Durability**      | 15%    | DeFiLlama Yields + History | 35% organic fraction, 25% TVL stability, 20% volume consistency, 15% maturity, 5% locked liquidity                     |
+| **Pair Diversity**  | 7.5%   | DeFiLlama Yields           | Pool count, diminishing returns: min(100, poolCount x 5)                                                               |
+| **Cross-chain**     | 7.5%   | DeFiLlama Yields           | 1 chain→15, then +12 per chain, capped at 100 (e.g. 2→27, 5→63, 9+→100)                                                |
 
 Primary scoring inputs are DeFiLlama Yields API (single request for all ~18K pools) + Curve Finance API (per-chain requests for A-factor, balance data, registry IDs, and metapool structure) + Uniswap V3 Subgraph (4 chains) + Aerodrome Subgraph (Base). After primary-source pool matching, the scoring cron also reads fresh rows from `dex_pool_staging` (when present), applies freshness confidence decay to staged TVL/volume, skips staged pools already covered by primary sources, and merges the remaining pools before final scoring.
 
@@ -32,21 +33,21 @@ See the [Discovery Cron](#discovery-cron) section below for the full discovery p
 
 ### Quality Multipliers (v2)
 
-| Pool Type | Multiplier | Detection |
-|-----------|-----------|-----------|
-| Curve StableSwap A>=500 | 1.0x | `registryId` not containing `crypto` + A>=500 |
-| Curve StableSwap A<500 | 0.85x | `registryId` not containing `crypto` + A<500 |
-| Curve CryptoSwap | 0.5x | `registryId` containing `crypto`/`twocrypto`/`tricrypto` |
-| Uniswap V3 1bp | 1.1x | fee tier <= 100 |
-| Uniswap V3 5bp | 0.85x | fee tier <= 500 |
-| Uniswap V3 30bp+ | 0.4x | fee tier > 500 |
-| Fluid DEX | 0.85x | project contains `fluid` |
-| Aerodrome Stable (sAMM) | 0.85x | project contains `aerodrome` + `isStable` flag |
-| Aerodrome Volatile (vAMM) | 0.4x | project contains `aerodrome`, non-stable |
-| Balancer Stable | 0.85x | project contains `balancer` + stable pattern |
-| Balancer Weighted | 0.4x | project contains `balancer`, non-stable |
-| Generic AMM | 0.3x | fallback |
-| Orderbook | 0.6x | CoinGecko tickers fallback (centralized exchange, no AMM) |
+| Pool Type                 | Multiplier | Detection                                                 |
+| ------------------------- | ---------- | --------------------------------------------------------- |
+| Curve StableSwap A>=500   | 1.0x       | `registryId` not containing `crypto` + A>=500             |
+| Curve StableSwap A<500    | 0.85x      | `registryId` not containing `crypto` + A<500              |
+| Curve CryptoSwap          | 0.5x       | `registryId` containing `crypto`/`twocrypto`/`tricrypto`  |
+| Uniswap V3 1bp            | 1.1x       | fee tier <= 100                                           |
+| Uniswap V3 5bp            | 0.85x      | fee tier <= 500                                           |
+| Uniswap V3 30bp+          | 0.4x       | fee tier > 500                                            |
+| Fluid DEX                 | 0.85x      | project contains `fluid`                                  |
+| Aerodrome Stable (sAMM)   | 0.85x      | project contains `aerodrome` + `isStable` flag            |
+| Aerodrome Volatile (vAMM) | 0.4x       | project contains `aerodrome`, non-stable                  |
+| Balancer Stable           | 0.85x      | project contains `balancer` + stable pattern              |
+| Balancer Weighted         | 0.4x       | project contains `balancer`, non-stable                   |
+| Generic AMM               | 0.3x       | fallback                                                  |
+| Orderbook                 | 0.6x       | CoinGecko tickers fallback (centralized exchange, no AMM) |
 
 ### Pool Quality Adjustments
 
@@ -68,15 +69,16 @@ CoinGecko Onchain is now a discovery-stage source rather than a direct scoring-c
 
 Chain resolution is registry-backed in `worker/src/lib/chain-registry.ts`: the worker keeps one canonical internal chain id per deployment (`bob`, `worldchain`, `plasma`, etc.) and maps it to provider-specific network slugs (`bob-network`, `world-chain`, `plasma`, ...). When `COINGECKO_API_KEY` is configured, pool discovery uses CoinGecko `/onchain` for chains with a `coingecko` mapping and still runs GeckoTerminal for chains that only have a `geckoTerminal` mapping. This avoids the old all-or-nothing mode switch where enabling CoinGecko could silently drop GT-only chains.
 
-| Feature | GeckoTerminal (fallback) | CoinGecko Onchain (paid) |
-|---------|--------------------------|--------------------------|
-| Rate limit | 30 req/min | ~240 req/min |
-| Chain coverage | Registry-backed GT network slugs for canonical chains, including slug aliases such as `bob-network`, `manta-pacific`, and `world-chain` | Registry-backed CG network ids for chains with explicit CG support; GT-only chains still flow through GeckoTerminal in the same run |
-| Balance data | Not available (defaults to 1.0) | Approximated from token prices |
-| Fee tier | DEX-prefix lookup only | `pool_fee_percentage` field |
-| Locked liquidity | Not available | `locked_liquidity_percentage` field |
+| Feature          | GeckoTerminal (fallback)                                                                                                                | CoinGecko Onchain (paid)                                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Rate limit       | 30 req/min                                                                                                                              | ~240 req/min                                                                                                                        |
+| Chain coverage   | Registry-backed GT network slugs for canonical chains, including slug aliases such as `bob-network`, `manta-pacific`, and `world-chain` | Registry-backed CG network ids for chains with explicit CG support; GT-only chains still flow through GeckoTerminal in the same run |
+| Balance data     | Not available (defaults to 1.0)                                                                                                         | Approximated from token prices                                                                                                      |
+| Fee tier         | DEX-prefix lookup only                                                                                                                  | `pool_fee_percentage` field                                                                                                         |
+| Locked liquidity | Not available                                                                                                                           | `locked_liquidity_percentage` field                                                                                                 |
 
 The CG integration extracts three signals unavailable from GeckoTerminal:
+
 1. **Balance ratio approximation**: Computed from `base_token_price_usd`/`quote_token_price_usd` for stable pairs. Feeds into `balanceHealth`, `balanceRatioWeightedSum`, and pool stress.
 2. **Fee tier classification**: `pool_fee_percentage` enables proper quality multipliers for non-Uniswap concentrated liquidity pools (PancakeSwap V3, SushiSwap V3, etc.).
 3. **Locked liquidity**: Weighted into durability scoring at 5% weight.
@@ -90,6 +92,7 @@ After the primary pipeline (DeFiLlama + CG/GT + Curve + UniV3 + Aerodrome), any 
 Address matching uses both canonical `contracts` and optional `tradedContracts` metadata. `tradedContracts` is reserved for wrapper / secondary-market token addresses that are meaningfully used for DEX discovery even when issuer metadata points to a different canonical deployment.
 
 Quality gates:
+
 - Pool TVL must exceed $1,000
 - Pool must have 24h volume > 0 or TVL > $10,000
 - Only pools where our token is the base token are counted
@@ -107,6 +110,7 @@ After DexScreener, any coin that still has zero pools or no usable DEX price obs
 Ticker filtering: `!is_stale && !is_anomaly && trust_score !== null && convertedVolumeUsd >= 1,000`. Only USD-equivalent quote assets are accepted (USD, USDT, USDC, DAI, C1USD, etc.).
 
 Per-exchange aggregation: all valid tickers from the same exchange are combined into one synthetic pool entry:
+
 - `syntheticTvl = totalVolume × 3` (assumes ~33% daily turnover — conservative for precious-metals orderbooks)
 - `poolType: "orderbook"`, quality multiplier 0.6x
 - `priceUsd = volume-weighted average` across accepted tickers on that exchange
@@ -167,6 +171,7 @@ Discovery and merge staging tables are documented in the [Discovery Cron](#disco
 - **Freshness confidence decay**: staged pool effective TVL is multiplied by `max(0.5, 1 - ageHours / 48)`; rows older than 24h are excluded from scoring merge.
 - **Staged pool defaults**: `organic_fraction = 0.5`, `balanceRatio = 1.0`, `lockedLiquidity = null`, `maturity = min(daysSinceDiscovered, 30)`, `isStable` inferred from normalized `quoteSymbol`.
 - **Source order and transport**: `CG Onchain -> GeckoTerminal -> DexScreener -> CG Tickers`, executed sequentially with one active fetch at a time (`1` connection).
+- **Failure telemetry**: cron metadata records both `failedCoins` and `failedCoinErrors`; DexScreener malformed-pair or per-target errors are downgraded to warnings so a single bad fallback payload does not fail the whole coin crawl.
 
 ### Global Deduped Aggregates (`__global__`)
 
@@ -192,14 +197,15 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 
 **Price observation sources:**
 
-| Source | Chains | Method | Filter |
-|--------|--------|--------|--------|
-| **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin | TVL >= $50K, balance ratio >= 0.3 |
-| **Uniswap V3** | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity (`isReasonablePrice`) |
-| **Aerodrome** | Base | Subgraph `token0Price`/`token1Price` + `reserveUSD` | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity |
-| **DexScreener** | 30+ chains (universal fallback) | Token pools API `priceUsd` | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity |
+| Source               | Chains                            | Method                                                                | Filter                                                                                                                                               |
+| -------------------- | --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Curve StableSwap** | Ethereum, Base, Arbitrum, Polygon | Curve Finance API `usdPrice` per coin                                 | TVL >= $50K, balance ratio >= 0.3                                                                                                                    |
+| **Uniswap V3**       | Ethereum, Base, Arbitrum, Polygon | Subgraph `token0Price`/`token1Price` relative to USD reference tokens | TVL >= $50K, one side must be USDC/USDT/DAI/etc. (after alias normalization such as `USD₮0` -> `USDT`), peg-aware price sanity (`isReasonablePrice`) |
+| **Aerodrome**        | Base                              | Subgraph `token0Price`/`token1Price` + `reserveUSD`                   | TVL >= $50K, balance ratio >= 0.3, peg-aware price sanity                                                                                            |
+| **DexScreener**      | 30+ chains (universal fallback)   | Token pools API `priceUsd`                                            | Pair liquidity >= $50K for price observations, >= $1K for pool discovery, peg-aware price sanity                                                     |
 
 **Price extraction pipeline:**
+
 1. Collect price observations from all four source families during data fetching phase
 2. Merge all observations into a single map keyed by stablecoin ID
 3. Compute TVL-weighted median per stablecoin (robust against distorted pools from any single source)
@@ -209,6 +215,7 @@ The liquidity overview's `Protocol TVL Breakdown` legend is capped at 10 entries
 Every source family now uses the same minimum liquidity rule for DEX prices: a pool must contribute at least `$50K` of liquidity at observation time. For staged discovery rows, the floor is applied after freshness confidence decay.
 
 **Confirmation gate in `detectDepegEvents()`:**
+
 - When primary price shows depeg (>=100bps), check DEX price
 - Only **trusted** DEX rows are used for depeg suppression/confirmation: freshness `<20 min` and aggregate source TVL `>= $1M`
 - If a trusted DEX price shows coin at peg (<100bps): **suppress** new depeg event (likely false positive)
@@ -217,9 +224,11 @@ Every source family now uses the same minimum liquidity rule for DEX prices: a p
 - ~80-100 stablecoins covered by multi-source observations; remainder fall through to primary-only detection
 
 **API exposure:**
+
 - `/api/dex-liquidity`: adds `dexPriceUsd`, `dexDeviationBps`, `priceSourceCount`, `priceSourceTvl`, `priceSources`
 - `/api/peg-summary`: adds optional `dexPriceCheck` per coin when the row passes a UI trust gate (fresh within 60 minutes and aggregate source TVL `>= $250K`)
 
 **Frontend:**
+
 - `dex-liquidity-card.tsx`: shows DEX-implied price section when available
 - `peg-heatmap.tsx`: amber "!" badge on tiles where DEX disagrees with primary

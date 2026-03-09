@@ -38,6 +38,14 @@ function rethrowIfAborted(err: unknown, signal?: AbortSignal): void {
   if (signal?.aborted) throw err;
 }
 
+function summarizeDiscoveryError(err: unknown): string {
+  if (err instanceof Error) {
+    const name = err.name && err.name !== "Error" ? `${err.name}: ` : "";
+    return `${name}${err.message}`.slice(0, 240);
+  }
+  return String(err).slice(0, 240);
+}
+
 function cadenceEligible(tier: Exclude<EffectiveTier, "skip">, runSeq: number): boolean {
   if (tier === "t1") return true;
   if (tier === "t2") return runSeq % DISCOVERY_TIERS.T2_MODULO === 0;
@@ -104,9 +112,7 @@ function discoveryTierPriority(tier: Exclude<EffectiveTier, "skip">): number {
 
 async function readLiquidityCoverage(db: D1Database): Promise<Map<string, DiscoveryCoverage>> {
   const rows = await db
-    .prepare(
-      "SELECT stablecoin_id, pool_count, chain_count FROM dex_liquidity WHERE stablecoin_id != '__global__'",
-    )
+    .prepare("SELECT stablecoin_id, pool_count, chain_count FROM dex_liquidity WHERE stablecoin_id != '__global__'")
     .all<LiquidityCoverageRow>();
 
   const coverage = new Map<string, DiscoveryCoverage>();
@@ -130,6 +136,7 @@ export async function syncDexDiscovery(
   let poolsDiscovered = 0;
   let budgetExhausted = false;
   const failedCoins: string[] = [];
+  const failedCoinErrors: Record<string, string> = {};
   const tierBreakdown = { t1: 0, t2: 0, t3: 0, dormant: 0, skipped: 0 };
 
   try {
@@ -164,9 +171,8 @@ export async function syncDexDiscovery(
       });
     }
 
-    eligibleCoins.sort((a, b) =>
-      discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) ||
-      compareDiscoveryMeta(a.meta, b.meta)
+    eligibleCoins.sort(
+      (a, b) => discoveryTierPriority(a.tier) - discoveryTierPriority(b.tier) || compareDiscoveryMeta(a.meta, b.meta),
     );
 
     const deadlineMs = Date.now() + 13 * 60_000;
@@ -176,11 +182,11 @@ export async function syncDexDiscovery(
       throwIfAborted(signal);
 
       try {
-          const result = await crawlCoin(
-            candidate.stablecoinId,
-            candidate.targets,
-            cgApiKey,
-            knownPoolIds,
+        const result = await crawlCoin(
+          candidate.stablecoinId,
+          candidate.targets,
+          cgApiKey,
+          knownPoolIds,
           signal,
           deadlineMs,
         );
@@ -198,11 +204,14 @@ export async function syncDexDiscovery(
         rethrowIfAborted(err, signal);
         console.warn("[dex-discovery]", candidate.stablecoinId, err);
         failedCoins.push(candidate.stablecoinId);
+        failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(err);
         // Count crawl errors as misses so perpetually-failing coins get demoted
         // instead of staying at T1 and consuming budget every run.
         try {
           await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec);
-        } catch { /* non-blocking */ }
+        } catch {
+          /* non-blocking */
+        }
       }
 
       if (Date.now() >= deadlineMs) {
@@ -223,6 +232,7 @@ export async function syncDexDiscovery(
         budgetExhausted,
         runSeq,
         failedCoins,
+        failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
       }),
     };
   } catch (err) {
@@ -238,6 +248,7 @@ export async function syncDexDiscovery(
         budgetExhausted,
         runSeq,
         failedCoins,
+        failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,
         error,
       }),
     };

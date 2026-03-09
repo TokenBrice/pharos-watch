@@ -80,7 +80,8 @@ export async function crawlCoin(
           const poolId = `${chain.toLowerCase()}:${poolAddress}`;
           if (knownPoolIds.has(poolId)) continue;
 
-          const side = address.toLowerCase() === baseToken ? "base" : address.toLowerCase() === quoteToken ? "quote" : null;
+          const side =
+            address.toLowerCase() === baseToken ? "base" : address.toLowerCase() === quoteToken ? "quote" : null;
           if (!side) continue;
 
           const basePrice = parseFloat(attrs.base_token_price_usd ?? "");
@@ -93,9 +94,8 @@ export async function crawlCoin(
 
           const feePct = attrs.pool_fee_percentage != null ? parseFloat(attrs.pool_fee_percentage) : null;
           const feeTier = feePct != null && !isNaN(feePct) ? Math.round(feePct * 100) : null;
-          const lockedLiqPct = attrs.locked_liquidity_percentage != null
-            ? parseFloat(attrs.locked_liquidity_percentage)
-            : null;
+          const lockedLiqPct =
+            attrs.locked_liquidity_percentage != null ? parseFloat(attrs.locked_liquidity_percentage) : null;
 
           let balanceRatio: number | null = null;
           if (basePrice > 0 && quotePrice > 0) {
@@ -108,17 +108,27 @@ export async function crawlCoin(
           let qualityMultiplier: number;
           let poolType: string;
           if (feePct != null && !isNaN(feePct)) {
-            if (feePct <= 0.01) { qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!; poolType = "cg-cl-1bp"; }
-            else if (feePct <= 0.05) { qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!; poolType = "cg-cl-5bp"; }
-            else if (feePct <= 0.30) { qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!; poolType = "cg-cl-30bp"; }
-            else { qualityMultiplier = QUALITY_MULTIPLIERS["generic"]!; poolType = "cg-wide-fee"; }
+            if (feePct <= 0.01) {
+              qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!;
+              poolType = "cg-cl-1bp";
+            } else if (feePct <= 0.05) {
+              qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!;
+              poolType = "cg-cl-5bp";
+            } else if (feePct <= 0.3) {
+              qualityMultiplier = QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!;
+              poolType = "cg-cl-30bp";
+            } else {
+              qualityMultiplier = QUALITY_MULTIPLIERS["generic"]!;
+              poolType = "cg-wide-fee";
+            }
           } else {
             qualityMultiplier = getGtDexQuality(dexId);
-            poolType = dexId.includes("v3") || dexId.includes("v4")
-              ? "cg-concentrated"
-              : dexId.includes("stable")
-                ? "cg-stable-amm"
-                : "cg-amm";
+            poolType =
+              dexId.includes("v3") || dexId.includes("v4")
+                ? "cg-concentrated"
+                : dexId.includes("stable")
+                  ? "cg-stable-amm"
+                  : "cg-amm";
           }
 
           const stagedPool: StagedPool = {
@@ -187,7 +197,10 @@ export async function crawlCoin(
   }
 
   if (gtTokens.length > 0 && !timeExceeded()) {
-    const gtNewPools = new Map<string, (GtNewPool & { baseToken: string; quoteToken: string; quoteSymbol: string | null })[]>();
+    const gtNewPools = new Map<
+      string,
+      (GtNewPool & { baseToken: string; quoteToken: string; quoteSymbol: string | null })[]
+    >();
     const gtPriceObs = new Map<string, DexPriceObs[]>();
 
     await crawlTokenPools<GtPool, GtNewPool & { baseToken: string; quoteToken: string; quoteSymbol: string | null }>({
@@ -198,7 +211,14 @@ export async function crawlCoin(
       protocolTvlCaps: new Map(),
       newPools: gtNewPools,
       priceObs: gtPriceObs,
-      stats: { requests: 0, poolsSeen: 0, poolsNew: 0, poolsSkippedCurve: 0, poolsSkippedKnown: 0, poolsSkippedRatio: 0 },
+      stats: {
+        requests: 0,
+        poolsSeen: 0,
+        poolsNew: 0,
+        poolsSkippedCurve: 0,
+        poolsSkippedKnown: 0,
+        poolsSkippedRatio: 0,
+      },
       signal,
       minTvlUsd: 1_000,
       beforeRequest: async ({ requestCount }) => {
@@ -241,11 +261,12 @@ export async function crawlCoin(
         volume24hUsd: parsed.volume24hUsd,
         qualityMultiplier: getGtDexQuality(parsed.dexId),
         maturityDays,
-        poolType: parsed.dexId.includes("v3") || parsed.dexId.includes("v4")
-          ? "gt-concentrated"
-          : parsed.dexId.includes("stable")
-            ? "gt-stable-amm"
-            : "gt-amm",
+        poolType:
+          parsed.dexId.includes("v3") || parsed.dexId.includes("v4")
+            ? "gt-concentrated"
+            : parsed.dexId.includes("stable")
+              ? "gt-stable-amm"
+              : "gt-amm",
         price,
         symbol: parsed.poolName,
         baseToken: parsed.baseTokenAddress,
@@ -305,7 +326,8 @@ export async function crawlCoin(
     }
   }
 
-  const dsTargets = pools.length === 0 ? coinTargets.map(({ chain, address }) => [chain, address] as const) : uncoveredChains;
+  const dsTargets =
+    pools.length === 0 ? coinTargets.map(({ chain, address }) => [chain, address] as const) : uncoveredChains;
 
   if (dsTargets.length > 0 && !timeExceeded()) {
     let dsRequests = 0;
@@ -320,62 +342,84 @@ export async function crawlCoin(
       if (dsRequests > 0) await dsRateLimit(signal);
       dsRequests++;
 
-      const pairs = await fetchDsTokenPools(chain, address, signal);
-      if (pairs.length === 0) continue;
+      try {
+        const pairs = await fetchDsTokenPools(chain, address, signal);
+        if (pairs.length === 0) continue;
 
-      for (const pair of pairs) {
-        const tvl = pair.liquidity?.usd ?? 0;
-        if (tvl < 1_000) continue;
-        const vol24h = pair.volume?.h24 ?? 0;
-        if (vol24h === 0 && tvl < 10_000) continue;
+        for (const pair of pairs) {
+          const tvl = pair.liquidity?.usd ?? 0;
+          if (tvl < 1_000) continue;
+          const vol24h = pair.volume?.h24 ?? 0;
+          if (vol24h === 0 && tvl < 10_000) continue;
 
-        const poolId = `${chain.toLowerCase()}:${pair.pairAddress.toLowerCase()}`;
-        if (knownPoolIds.has(poolId)) continue;
+          const poolAddress = pair.pairAddress?.toLowerCase();
+          const dexId = pair.dexId;
+          const baseAddr = pair.baseToken?.address?.toLowerCase();
+          const quoteAddr = pair.quoteToken?.address?.toLowerCase();
+          if (!poolAddress || !dexId || !baseAddr || !quoteAddr) {
+            console.warn(`[dex-discovery] dexscreener malformed pair for ${chain}:${address}`, {
+              pairAddress: pair.pairAddress ?? null,
+              dexId: pair.dexId ?? null,
+              baseToken: pair.baseToken?.address ?? null,
+              quoteToken: pair.quoteToken?.address ?? null,
+            });
+            continue;
+          }
 
-        const baseAddr = pair.baseToken.address.toLowerCase();
-        const quoteAddr = pair.quoteToken.address.toLowerCase();
-        if (baseAddr !== address.toLowerCase()) continue;
+          const poolId = `${chain.toLowerCase()}:${poolAddress}`;
+          if (knownPoolIds.has(poolId)) continue;
+          if (baseAddr !== address.toLowerCase()) continue;
 
-        const price = parseFloat(pair.priceUsd ?? "");
+          const price = parseFloat(pair.priceUsd ?? "");
 
-        addPool({
-          poolId,
-          stablecoinId,
-          source: "dexscreener",
-          chain,
-          protocol: normalizeProtocol(pair.dexId),
-          dexId: pair.dexId,
-          symbol: `${pair.baseToken.symbol} / ${pair.quoteToken.symbol}`,
-          tvlUsd: tvl,
-          volume24h: vol24h,
-          qualityMultiplier: getGtDexQuality(pair.dexId),
-          poolType: pair.labels?.includes("CLMM") || pair.labels?.includes("V3")
-            ? "ds-concentrated"
-            : pair.labels?.includes("StableSwap")
-              ? "ds-stableswap"
-              : "ds-amm",
-          feeTier: null,
-          balanceRatio: null,
-          isStable: null,
-          baseToken: baseAddr,
-          quoteToken: quoteAddr,
-          quoteSymbol: pair.quoteToken.symbol ?? null,
-          priceUsd: Number.isFinite(price) && price > 0 ? price : null,
-          lockedLiqPct: null,
-          rawJson: null,
-          discoveredAt: nowSec,
-          refreshedAt: nowSec,
-        });
-
-        if (Number.isFinite(price) && price > 0 && tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(stablecoinId, price)) {
-          addPriceObs({
+          addPool({
+            poolId,
             stablecoinId,
-            price,
-            tvl,
+            source: "dexscreener",
             chain,
-            protocol: `dexscreener-${pair.dexId}`,
+            protocol: normalizeProtocol(dexId),
+            dexId,
+            symbol: `${pair.baseToken.symbol ?? stablecoinId} / ${pair.quoteToken.symbol ?? "UNKNOWN"}`,
+            tvlUsd: tvl,
+            volume24h: vol24h,
+            qualityMultiplier: getGtDexQuality(dexId),
+            poolType:
+              pair.labels?.includes("CLMM") || pair.labels?.includes("V3")
+                ? "ds-concentrated"
+                : pair.labels?.includes("StableSwap")
+                  ? "ds-stableswap"
+                  : "ds-amm",
+            feeTier: null,
+            balanceRatio: null,
+            isStable: null,
+            baseToken: baseAddr,
+            quoteToken: quoteAddr,
+            quoteSymbol: pair.quoteToken?.symbol ?? null,
+            priceUsd: Number.isFinite(price) && price > 0 ? price : null,
+            lockedLiqPct: null,
+            rawJson: null,
+            discoveredAt: nowSec,
+            refreshedAt: nowSec,
           });
+
+          if (
+            Number.isFinite(price) &&
+            price > 0 &&
+            tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
+            isPlausibleDexObservationPrice(stablecoinId, price)
+          ) {
+            addPriceObs({
+              stablecoinId,
+              price,
+              tvl,
+              chain,
+              protocol: `dexscreener-${dexId}`,
+            });
+          }
         }
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
       }
     }
   }
@@ -387,27 +431,28 @@ export async function crawlCoin(
       try {
         const url = cgUrl(`/coins/${geckoId}/tickers?include_exchange_logo=false&order=trust_score_desc&depth=false`);
         const timeout = AbortSignal.timeout(10_000);
-        const res = await fetchWithRetry(
-          url,
-          { headers: cgHeaders({ "User-Agent": USER_AGENT }), signal: signal ? AbortSignal.any([signal, timeout]) : timeout },
-        );
+        const res = await fetchWithRetry(url, {
+          headers: cgHeaders({ "User-Agent": USER_AGENT }),
+          signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+        });
         if (res?.ok) {
-          const data = (await res.json()) as { tickers?: Array<{
-            base: string;
-            target: string;
-            market: { name: string; identifier: string };
-            converted_last: { usd: number };
-            converted_volume: { usd: number };
-            target_coin_id?: string;
-            is_anomaly: boolean;
-            is_stale: boolean;
-            trust_score: string | null;
-          }> };
+          const data = (await res.json()) as {
+            tickers?: Array<{
+              base: string;
+              target: string;
+              market: { name: string; identifier: string };
+              converted_last: { usd: number };
+              converted_volume: { usd: number };
+              target_coin_id?: string;
+              is_anomaly: boolean;
+              is_stale: boolean;
+              trust_score: string | null;
+            }>;
+          };
           const valid = (data.tickers ?? []).filter((t) => {
             if (t.is_stale || t.is_anomaly || !t.trust_score) return false;
             const isUsdQuote =
-              t.target === "USD" ||
-              (t.target_coin_id != null && USD_QUOTE_COIN_IDS.has(t.target_coin_id));
+              t.target === "USD" || (t.target_coin_id != null && USD_QUOTE_COIN_IDS.has(t.target_coin_id));
             return isUsdQuote && t.converted_volume.usd >= 1_000;
           });
 
@@ -458,7 +503,10 @@ export async function crawlCoin(
               refreshedAt: nowSec,
             });
 
-            if (syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD && isPlausibleDexObservationPrice(stablecoinId, price)) {
+            if (
+              syntheticTvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
+              isPlausibleDexObservationPrice(stablecoinId, price)
+            ) {
               addPriceObs({
                 stablecoinId,
                 price,
