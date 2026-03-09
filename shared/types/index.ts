@@ -1217,6 +1217,16 @@ export interface AltYieldSource {
   dataSource: string;
 }
 
+export interface YieldHistoryPoint {
+  date: string;
+  apy: number;
+  apyBase: number | null;
+  apyReward: number | null;
+  exchangeRate: number | null;
+  sourceTvlUsd: number | null;
+  warningSignals: string[];
+}
+
 export const AltYieldSourceSchema = z.object({
   sourceKey: z.string(),
   yieldSource: z.string(),
