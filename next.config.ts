@@ -7,7 +7,13 @@ const baseConfig: NextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   experimental: {
-    optimizePackageImports: ["recharts", "lucide-react"],
+    optimizePackageImports: [
+      "recharts",
+      "lucide-react",
+      "@tanstack/react-query",
+      "@tanstack/react-virtual",
+      "zod",
+    ],
   },
 };
 

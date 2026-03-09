@@ -120,7 +120,6 @@
     line-height: 1.45;
     background-image: var(--page-glow-top), var(--page-glow-bottom);
     background-repeat: no-repeat;
-    background-attachment: fixed;
   }
   a {
     transition: color var(--motion-duration-fast) var(--motion-ease-standard);
