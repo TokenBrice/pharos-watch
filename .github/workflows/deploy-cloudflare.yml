@@ -85,11 +85,22 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE: ${{ vars.API_BASE_URL }}
       - run: npm run seo:check
-      - uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65 # v3.14.1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"
+      - name: Deploy Pages with retry
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for attempt in 1 2 3; do
+            echo "[deploy-pages] Attempt ${attempt}/3"
+            if npx --yes wrangler@4.71.0 pages deploy out --project-name=stablecoin-dashboard --commit-dirty=true --commit-message="${{ github.sha }}"; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "[deploy-pages] Exhausted retries"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
 
   smoke-ui:
     needs: deploy-pages

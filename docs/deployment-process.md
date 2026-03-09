@@ -85,6 +85,7 @@ Defined in `.github/workflows/deploy-cloudflare.yml`:
    - runs `wrangler triggers deploy` to explicitly sync cron/routes/domain triggers after the worker deploy
 3. `smoke-api`
 4. `deploy-pages`
+   - uses explicit Wrangler CLI retries for transient Pages API failures during `pages deploy`
 5. `smoke-ui`
 
 Action dependencies in this workflow are pinned by full commit SHA. When bumping an action version, resolve the tag against the upstream action repo and pin that real commit SHA, not an unavailable tarball or transient hash.
