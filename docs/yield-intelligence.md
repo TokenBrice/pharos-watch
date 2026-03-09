@@ -434,11 +434,25 @@ Dashed reference line at the T-bill rate. Click a dot to navigate to that coin's
 
 ### `YieldLeaderboard` (`src/components/yield-leaderboard.tsx`)
 
-Sortable, paginated table (25 rows/page). Default sort: PYS descending.
+Tabbed, sortable, paginated table (25 rows/page). Default sort: PYS descending.
 
-**Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range.
+The leaderboard is split into two source-aware tabs:
+
+- `Native Yield` — best-source rows where `dataSource !== "defillama-auto"`
+- `Lending Opportunities` — auto-discovered rows where `dataSource === "defillama-auto"`
+
+Each tab includes a filter row above the table:
+
+- **Yield type pills (multi-select):** One pill per yield type present in the current tab's data (not global). Active pills use `YIELD_TYPE_STYLES[type].badge`; inactive pills use a muted outline. Users can toggle any subset on/off.
+- **Hide warned checkbox:** Excludes rows with one or more active warning signals (`warningSignals.length > 0`) when enabled.
+
+Tab selection and both filters feed rows into the shared sort/pagination pipeline. With `resetPageOnTotalChange: true`, page index automatically resets to 0 whenever those controls change the input row count.
+
+**Columns:** Rank, Coin (logo + symbol), APY (30d), Grade, PYS, Source, Type (badge), TVL, Stability (bar + %), 30d Range, Signals.
 
 Stability display multiplies the raw 0–1 value by 100 for both the bar width and the percentage text.
+
+**Signals column (desktop/tablet):** Rows with no active warnings show an em dash. Rows with one warning show an amber outline alert icon. Rows with two or more warnings show a filled amber icon and an additional subtle amber left border on the row. Hovering the icon opens a tooltip with human-readable warning descriptions (`yield-spike`, `yield-divergence`, `negative-trend`, `reward-heavy`, `tvl-outflow`, `data-stale`).
 
 **Alt-sources badge:** When a coin has `altSources.length > 0`, a `+N` pill badge appears next to the source name in the Source column. Clicking it opens a small inline popover listing each alternative source name and its current APY.
 
@@ -517,6 +531,6 @@ Covers all pure functions in `yield-helpers.ts`:
 | `src/app/yield/page.tsx`                             | SSG page wrapper with metadata                                                                                                               |
 | `src/app/yield/client.tsx`                           | Interactive page: stats, scatter, leaderboard                                                                                                |
 | `src/components/yield-leaderboard.tsx`               | Sortable rankings table with `+N` alt-source pill badge                                                                                      |
-| `src/components/yield-history-chart.tsx`             | Shared APY history chart with T-bill / peer-median reference lines, optional base-reward split, and warning markers                         |
+| `src/components/yield-history-chart.tsx`             | Shared APY history chart with T-bill / peer-median reference lines, optional base-reward split, and warning markers                          |
 | `src/components/yield-scatter-plot.tsx`              | Risk-adjusted scatter visualization                                                                                                          |
 | `worker/src/cron/__tests__/yield-helpers.test.ts`    | Unit tests for all pure yield functions                                                                                                      |
